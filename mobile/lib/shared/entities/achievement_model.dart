@@ -34,6 +34,8 @@ enum AchievementType {
   studyTime,
   @JsonValue('node_explore')
   nodeExplore,
+  @JsonValue('sprint')
+  sprint,
 }
 
 /// 视觉特效类型

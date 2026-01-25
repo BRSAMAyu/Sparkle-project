@@ -32,6 +32,39 @@ service AgentService {
 
   // SubmitContentReviewFeedback submits user feedback for a content review (Phase 2c).
   rpc SubmitContentReviewFeedback(ContentReviewFeedbackRequest) returns (ContentReviewFeedbackResponse);
+
+  // Phase 2e: Review Override & Appeal
+  // SubmitReviewOverride allows user to override a review decision
+  rpc SubmitReviewOverride(ReviewOverrideRequest) returns (ReviewOverrideResponse);
+
+  // SubmitReviewAppeal submits an appeal against a review
+  rpc SubmitReviewAppeal(ReviewAppealRequest) returns (ReviewAppealResponse);
+
+  // GetAppealStatus retrieves the status of an appeal
+  rpc GetAppealStatus(AppealStatusRequest) returns (AppealStatusResponse);
+
+  // Phase 2f: Review Feedback & Regeneration
+  // SubmitReviewFeedback allows user to rate and provide feedback on reviews
+  rpc SubmitReviewFeedback(ReviewFeedbackRequest) returns (ReviewFeedbackResponse);
+
+  // RequestRegeneration requests content regeneration based on feedback
+  rpc RequestRegeneration(RegenerationRequest) returns (RegenerationResponse);
+
+  // GetFeedbackStatistics retrieves feedback statistics
+  rpc GetFeedbackStatistics(FeedbackStatisticsRequest) returns (FeedbackStatisticsResponse);
+
+  // Phase 2g: Arbitration System
+  // GetArbitrationQueue retrieves pending arbitration cases for admins
+  rpc GetArbitrationQueue(GetArbitrationQueueRequest) returns (GetArbitrationQueueResponse);
+
+  // AssignArbitrationCase assigns a case to an arbitrator
+  rpc AssignArbitrationCase(AssignArbitrationCaseRequest) returns (AssignArbitrationCaseResponse);
+
+  // SubmitArbitrationDecision submits an arbitrator's decision
+  rpc SubmitArbitrationDecision(SubmitArbitrationDecisionRequest) returns (SubmitArbitrationDecisionResponse);
+
+  // GetArbitrationQueueStats retrieves queue statistics
+  rpc GetArbitrationQueueStats(GetArbitrationQueueStatsRequest) returns (GetArbitrationQueueStatsResponse);
 }
 
 // ============================================================================
@@ -302,6 +335,238 @@ message ContentReviewFeedbackResponse {
   bool success = 1;
   string message = 2;
   string feedback_id = 3;
+}
+
+// ============================================================================
+// Review Override & Appeal (Phase 2e)
+// ============================================================================
+
+// User overrides review decision
+message ReviewOverrideRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string original_decision = 3;      // Original review decision: passed/failed/needs_refinement
+  string new_decision = 4;           // User's new decision: passed/failed
+  string reason = 5;                 // User's reason for override
+  string session_id = 6;
+  map<string, string> meta = 7;
+}
+
+message ReviewOverrideResponse {
+  bool success = 1;
+  string message = 2;
+  string override_id = 3;
+}
+
+// User appeals against a review
+message ReviewAppealRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string appeal_reason = 3;                    // Main reason for appeal
+  repeated string issues_with_review = 4;      // Specific issues with the review
+  string session_id = 5;
+  map<string, string> meta = 6;
+}
+
+message ReviewAppealResponse {
+  bool success = 1;
+  string appeal_id = 2;
+  string status = 3;                           // pending, in_review, resolved, rejected, escalated
+  string message = 4;
+}
+
+// Get appeal status
+message AppealStatusRequest {
+  string user_id = 1;
+  string appeal_id = 2;
+}
+
+message AppealStatusResponse {
+  string appeal_id = 1;
+  string review_id = 2;
+  string status = 3;
+  string submitted_at = 4;
+  string appeal_reason = 5;
+  string resolution = 6;
+  string resolved_by = 7;
+  string resolved_at = 8;
+  string secondary_decision = 9;
+  double secondary_score = 10;
+}
+
+// ============================================================================
+// Phase 2f: Review Feedback & Regeneration Messages
+// ============================================================================
+
+// ReviewFeedbackRequest - submit feedback on a review
+message ReviewFeedbackRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string feedback_type = 3; // rating, quality, accuracy, specificity
+
+  // Rating feedback (1-5)
+  int32 rating = 4;
+
+  // Quality feedback
+  bool was_helpful = 5;
+
+  // Accuracy feedback
+  bool was_accurate = 6;
+  repeated string inaccurate_points = 7;
+
+  // Specificity feedback: too_vague, appropriate, too_detailed
+  string specificity_level = 8;
+
+  // Free-form comments
+  string comments = 9;
+
+  // Tags
+  repeated string tags = 10;
+}
+
+// ReviewFeedbackResponse - response to feedback submission
+message ReviewFeedbackResponse {
+  bool success = 1;
+  string feedback_id = 2;
+  string message = 3;
+}
+
+// RegenerationRequest - request content regeneration
+message RegenerationRequest {
+  string user_id = 1;
+  string original_content_id = 2;
+  string review_id = 3;
+
+  // Regeneration type: improve_quality, fix_issues, change_style, add_details, simplify, custom
+  string regeneration_type = 4;
+
+  // Improvement hints
+  repeated string improvement_hints = 5;
+
+  // Focus areas
+  repeated string focus_areas = 6;
+
+  // Custom instructions
+  string custom_instructions = 7;
+}
+
+// RegenerationResponse - response to regeneration request
+message RegenerationResponse {
+  bool success = 1;
+  string request_id = 2;
+  string new_content = 3;
+  string new_content_id = 4;
+  string improvement_summary = 5;
+  repeated string changes_made = 6;
+  double score_improvement = 7;
+  int32 generation_time_ms = 8;
+}
+
+// FeedbackStatisticsRequest - request feedback statistics
+message FeedbackStatisticsRequest {
+  string user_id = 1;
+  int32 period_days = 2; // Statistics period in days
+}
+
+// FeedbackStatisticsResponse - feedback statistics
+message FeedbackStatisticsResponse {
+  int32 total_feedbacks = 1;
+  double avg_rating = 2;
+  double helpful_rate = 3;
+  double accuracy_rate = 4;
+  int32 regeneration_requests = 5;
+  int32 successful_regenerations = 6;
+  int32 period_days = 7;
+}
+
+// ============================================================================
+// Phase 2g: Arbitration System Messages
+// ============================================================================
+
+// GetArbitrationQueueRequest - request arbitration queue
+message GetArbitrationQueueRequest {
+  int32 limit = 1; // Maximum number of cases to return
+  string priority_filter = 2; // Filter by priority: low, normal, high, urgent
+  string status_filter = 3; // Filter by status: pending, assigned, in_review
+}
+
+// ArbitrationCaseInfo - information about an arbitration case
+message ArbitrationCaseInfo {
+  string case_id = 1;
+  string appeal_id = 2;
+  string review_id = 3;
+  string user_id = 4;
+  string escalation_reason = 5;
+  string priority = 6;
+  string created_at = 7;
+  string status = 8;
+  string assigned_to = 9;
+  string assigned_at = 10;
+  double original_review_score = 11;
+  double secondary_review_score = 12;
+  double score_discrepancy = 13;
+  string resolution = 14;
+  string final_decision = 15;
+  string resolved_at = 16;
+  string resolved_by = 17;
+  repeated string notes = 18;
+}
+
+// GetArbitrationQueueResponse - response with arbitration cases
+message GetArbitrationQueueResponse {
+  repeated ArbitrationCaseInfo cases = 1;
+  int32 total_count = 2;
+}
+
+// AssignArbitrationCaseRequest - assign a case to an arbitrator
+message AssignArbitrationCaseRequest {
+  string case_id = 1;
+  string arbitrator_id = 2;
+  string arbitrator_role = 3; // reviewer, senior, admin
+}
+
+// AssignArbitrationCaseResponse - response to case assignment
+message AssignArbitrationCaseResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// SubmitArbitrationDecisionRequest - submit an arbitration decision
+message SubmitArbitrationDecisionRequest {
+  string case_id = 1;
+  string decision = 2; // approved, rejected, partially_approved, escalated
+  string explanation = 3;
+  string arbitrator_id = 4;
+  string arbitrator_role = 5;
+  string feedback_for_model = 6;
+}
+
+// SubmitArbitrationDecisionResponse - response to decision submission
+message SubmitArbitrationDecisionResponse {
+  bool success = 1;
+  string decision_id = 2;
+  string message = 3;
+}
+
+// GetArbitrationQueueStatsRequest - request queue statistics
+message GetArbitrationQueueStatsRequest {
+  // No parameters needed for now
+}
+
+// ArbitrationQueueStatsInfo - queue statistics
+message ArbitrationQueueStatsInfo {
+  int32 total_pending = 1;
+  int32 total_assigned = 2;
+  int32 total_in_review = 3;
+  int32 total_resolved_today = 4;
+  double avg_resolution_time_hours = 5;
+  map<string, int32> by_priority = 6;
+  map<string, int32> by_reason = 7;
+}
+
+// GetArbitrationQueueStatsResponse - response with queue statistics
+message GetArbitrationQueueStatsResponse {
+  ArbitrationQueueStatsInfo stats = 1;
 }
 
 message CitationBlock {

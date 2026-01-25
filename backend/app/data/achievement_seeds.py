@@ -452,6 +452,176 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "title", "value": "weekend_warrior", "display": "周末战士"}
         ]
     },
+
+    # ========== 冲刺成就系列 ==========
+    {
+        "id": "sprint_first",
+        "name": "初出茅庐",
+        "description": "完成第一个冲刺计划",
+        "icon_url": "/icons/achievements/sprint_first.png",
+        "type": "sprint",
+        "rarity": "common",
+        "trigger_code": "SPRINTS_TOTAL",
+        "trigger_config": {"count": 1},
+        "category": "sprint",
+        "sort_order": 50,
+        "reward_config": [
+            {"type": "photon", "quantity": 50},
+            {"type": "title", "value": "sprint_first", "display": "初出茅庐"}
+        ]
+    },
+    {
+        "id": "sprint_5",
+        "name": "冲刺能手",
+        "description": "完成5个冲刺计划",
+        "icon_url": "/icons/achievements/sprint_5.png",
+        "type": "sprint",
+        "rarity": "common",
+        "trigger_code": "SPRINTS_TOTAL",
+        "trigger_config": {"count": 5},
+        "prerequisites": ["sprint_first"],
+        "category": "sprint",
+        "sort_order": 51,
+        "reward_config": [
+            {"type": "photon", "quantity": 100}
+        ]
+    },
+    {
+        "id": "sprint_10",
+        "name": "冲刺大师",
+        "description": "完成10个冲刺计划",
+        "icon_url": "/icons/achievements/sprint_10.png",
+        "type": "sprint",
+        "rarity": "rare",
+        "trigger_code": "SPRINTS_TOTAL",
+        "trigger_config": {"count": 10},
+        "prerequisites": ["sprint_5"],
+        "category": "sprint",
+        "sort_order": 52,
+        "visual_effect_type": "gravity_wave",
+        "visual_config": {
+            "color": "#FFD700",
+            "amplitude": 15,
+            "frequency": 1.5
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 200},
+            {"type": "title", "value": "sprint_master", "display": "冲刺大师"}
+        ]
+    },
+    {
+        "id": "sprint_perfect_1",
+        "name": "完美首秀",
+        "description": "以100%完成率完成第一个冲刺",
+        "icon_url": "/icons/achievements/sprint_perfect_1.png",
+        "type": "sprint",
+        "rarity": "rare",
+        "trigger_code": "SPRINT_PERFECT",
+        "trigger_config": {"count": 1},
+        "category": "sprint",
+        "sort_order": 53,
+        "visual_effect_type": "supernova",
+        "visual_config": {
+            "particle_count": 50,
+            "expansion_speed": 1.5
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 150},
+            {"type": "title", "value": "perfect_debut", "display": "完美首秀"}
+        ]
+    },
+    {
+        "id": "sprint_perfect_5",
+        "name": "完美主义",
+        "description": "以100%完成率完成5个冲刺",
+        "icon_url": "/icons/achievements/sprint_perfect_5.png",
+        "type": "sprint",
+        "rarity": "epic",
+        "trigger_code": "SPRINT_PERFECT",
+        "trigger_config": {"count": 5},
+        "prerequisites": ["sprint_perfect_1"],
+        "category": "sprint",
+        "sort_order": 54,
+        "visual_effect_type": "nebula_transform",
+        "visual_config": {
+            "skin_id": "perfect_nebula",
+            "colors": ["#FFD700", "#FFA500", "#FF8C00"]
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 500},
+            {"type": "title", "value": "perfectionist", "display": "完美主义者"},
+            {"type": "freeze_charge", "quantity": 1}
+        ]
+    },
+    {
+        "id": "sprint_streak_3",
+        "name": "三连胜",
+        "description": "连续完成3个冲刺计划",
+        "icon_url": "/icons/achievements/sprint_streak_3.png",
+        "type": "sprint",
+        "rarity": "rare",
+        "trigger_code": "SPRINTS_STREAK",
+        "trigger_config": {"streak": 3},
+        "category": "sprint",
+        "sort_order": 55,
+        "visual_effect_type": "gravity_wave",
+        "visual_config": {
+            "color": "#00BFFF",
+            "amplitude": 20,
+            "frequency": 2.0
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 200},
+            {"type": "title", "value": "triple_winner", "display": "三连胜"}
+        ]
+    },
+    {
+        "id": "sprint_streak_10",
+        "name": "冲刺传奇",
+        "description": "连续完成10个冲刺计划",
+        "icon_url": "/icons/achievements/sprint_streak_10.png",
+        "type": "sprint",
+        "rarity": "legendary",
+        "trigger_code": "SPRINTS_STREAK",
+        "trigger_config": {"streak": 10},
+        "prerequisites": ["sprint_streak_3"],
+        "category": "sprint",
+        "sort_order": 56,
+        "visual_effect_type": "black_hole",
+        "visual_config": {
+            "target_node_id": "sprint_core",
+            "event_horizon_color": "#000000",
+            "accretion_disk_colors": ["#FF4500", "#FFD700", "#FFFFFF"],
+            "glow_intensity": 3.0
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 2000},
+            {"type": "title", "value": "sprint_legend", "display": "冲刺传奇"},
+            {"type": "freeze_charge", "quantity": 3},
+            {"type": "galaxy_skin", "skin_id": "sprint_legend_galaxy"}
+        ]
+    },
+    {
+        "id": "sprint_ahead",
+        "name": "超前完成",
+        "description": "提前完成冲刺计划（在目标日期前达到100%进度）",
+        "icon_url": "/icons/achievements/sprint_ahead.png",
+        "type": "sprint",
+        "rarity": "epic",
+        "trigger_code": "SPRINT_AHEAD",
+        "trigger_config": {"count": 1},
+        "category": "sprint",
+        "sort_order": 57,
+        "visual_effect_type": "supernova",
+        "visual_config": {
+            "particle_count": 100,
+            "expansion_speed": 2.5
+        },
+        "reward_config": [
+            {"type": "photon", "quantity": 300},
+            {"type": "title", "value": "ahead_runner", "display": "领跑者"}
+        ]
+    },
 ]
 
 # 初始星系皮肤数据

@@ -71,6 +71,7 @@ const _$AchievementTypeEnumMap = {
   AchievementType.contract: 'contract',
   AchievementType.studyTime: 'study_time',
   AchievementType.nodeExplore: 'node_explore',
+  AchievementType.sprint: 'sprint',
 };
 
 const _$AchievementRarityEnumMap = {

@@ -41,6 +41,7 @@ class ChatRequest extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? fileIds,
     $core.bool? includeReferences,
     $core.Iterable<$core.String>? activeTools,
+    $core.String? chatMode,
   }) {
     final result = create();
     if (userId != null) result.userId = userId;
@@ -55,6 +56,7 @@ class ChatRequest extends $pb.GeneratedMessage {
     if (fileIds != null) result.fileIds.addAll(fileIds);
     if (includeReferences != null) result.includeReferences = includeReferences;
     if (activeTools != null) result.activeTools.addAll(activeTools);
+    if (chatMode != null) result.chatMode = chatMode;
     return result;
   }
 
@@ -95,6 +97,7 @@ class ChatRequest extends $pb.GeneratedMessage {
     ..pPS(10, _omitFieldNames ? '' : 'fileIds')
     ..aOB(11, _omitFieldNames ? '' : 'includeReferences')
     ..pPS(12, _omitFieldNames ? '' : 'activeTools')
+    ..aOS(13, _omitFieldNames ? '' : 'chatMode')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -235,6 +238,17 @@ class ChatRequest extends $pb.GeneratedMessage {
   /// Optional: List of tools currently active/available for this request
   @$pb.TagNumber(12)
   $pb.PbList<$core.String> get activeTools => $_getList(11);
+
+  /// Chat mode for AI collaboration strategy.
+  /// Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis"
+  @$pb.TagNumber(13)
+  $core.String get chatMode => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set chatMode($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasChatMode() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearChatMode() => $_clearField(13);
 }
 
 /// UserProfile defines key user attributes for personalization.
@@ -1668,6 +1682,2547 @@ class PlanReviewResponse extends $pb.GeneratedMessage {
   $core.bool hasUpdatedPlanId() => $_has(3);
   @$pb.TagNumber(4)
   void clearUpdatedPlanId() => $_clearField(4);
+}
+
+class ContentReviewFeedbackRequest extends $pb.GeneratedMessage {
+  factory ContentReviewFeedbackRequest({
+    $core.String? userId,
+    $core.String? reviewId,
+    $core.String? responseId,
+    ContentReviewFeedbackType? feedbackType,
+    $core.int? rating,
+    $core.String? comment,
+    $core.Iterable<$core.String>? issuesReported,
+    $core.String? sessionId,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? meta,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (responseId != null) result.responseId = responseId;
+    if (feedbackType != null) result.feedbackType = feedbackType;
+    if (rating != null) result.rating = rating;
+    if (comment != null) result.comment = comment;
+    if (issuesReported != null) result.issuesReported.addAll(issuesReported);
+    if (sessionId != null) result.sessionId = sessionId;
+    if (meta != null) result.meta.addEntries(meta);
+    return result;
+  }
+
+  ContentReviewFeedbackRequest._();
+
+  factory ContentReviewFeedbackRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ContentReviewFeedbackRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContentReviewFeedbackRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(3, _omitFieldNames ? '' : 'responseId')
+    ..aE<ContentReviewFeedbackType>(4, _omitFieldNames ? '' : 'feedbackType',
+        enumValues: ContentReviewFeedbackType.values)
+    ..aI(5, _omitFieldNames ? '' : 'rating')
+    ..aOS(6, _omitFieldNames ? '' : 'comment')
+    ..pPS(7, _omitFieldNames ? '' : 'issuesReported')
+    ..aOS(8, _omitFieldNames ? '' : 'sessionId')
+    ..m<$core.String, $core.String>(9, _omitFieldNames ? '' : 'meta',
+        entryClassName: 'ContentReviewFeedbackRequest.MetaEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('agent.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContentReviewFeedbackRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContentReviewFeedbackRequest copyWith(
+          void Function(ContentReviewFeedbackRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ContentReviewFeedbackRequest))
+          as ContentReviewFeedbackRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ContentReviewFeedbackRequest create() =>
+      ContentReviewFeedbackRequest._();
+  @$core.override
+  ContentReviewFeedbackRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ContentReviewFeedbackRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ContentReviewFeedbackRequest>(create);
+  static ContentReviewFeedbackRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reviewId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reviewId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReviewId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReviewId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get responseId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set responseId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasResponseId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearResponseId() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  ContentReviewFeedbackType get feedbackType => $_getN(3);
+  @$pb.TagNumber(4)
+  set feedbackType(ContentReviewFeedbackType value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasFeedbackType() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearFeedbackType() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get rating => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set rating($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRating() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRating() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get comment => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set comment($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasComment() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearComment() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<$core.String> get issuesReported => $_getList(6);
+
+  @$pb.TagNumber(8)
+  $core.String get sessionId => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set sessionId($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasSessionId() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearSessionId() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $pb.PbMap<$core.String, $core.String> get meta => $_getMap(8);
+}
+
+class ContentReviewFeedbackResponse extends $pb.GeneratedMessage {
+  factory ContentReviewFeedbackResponse({
+    $core.bool? success,
+    $core.String? message,
+    $core.String? feedbackId,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (message != null) result.message = message;
+    if (feedbackId != null) result.feedbackId = feedbackId;
+    return result;
+  }
+
+  ContentReviewFeedbackResponse._();
+
+  factory ContentReviewFeedbackResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ContentReviewFeedbackResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContentReviewFeedbackResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..aOS(3, _omitFieldNames ? '' : 'feedbackId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContentReviewFeedbackResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContentReviewFeedbackResponse copyWith(
+          void Function(ContentReviewFeedbackResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ContentReviewFeedbackResponse))
+          as ContentReviewFeedbackResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ContentReviewFeedbackResponse create() =>
+      ContentReviewFeedbackResponse._();
+  @$core.override
+  ContentReviewFeedbackResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ContentReviewFeedbackResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ContentReviewFeedbackResponse>(create);
+  static ContentReviewFeedbackResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get feedbackId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set feedbackId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFeedbackId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFeedbackId() => $_clearField(3);
+}
+
+/// User overrides review decision
+class ReviewOverrideRequest extends $pb.GeneratedMessage {
+  factory ReviewOverrideRequest({
+    $core.String? userId,
+    $core.String? reviewId,
+    $core.String? originalDecision,
+    $core.String? newDecision,
+    $core.String? reason,
+    $core.String? sessionId,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? meta,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (originalDecision != null) result.originalDecision = originalDecision;
+    if (newDecision != null) result.newDecision = newDecision;
+    if (reason != null) result.reason = reason;
+    if (sessionId != null) result.sessionId = sessionId;
+    if (meta != null) result.meta.addEntries(meta);
+    return result;
+  }
+
+  ReviewOverrideRequest._();
+
+  factory ReviewOverrideRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewOverrideRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewOverrideRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(3, _omitFieldNames ? '' : 'originalDecision')
+    ..aOS(4, _omitFieldNames ? '' : 'newDecision')
+    ..aOS(5, _omitFieldNames ? '' : 'reason')
+    ..aOS(6, _omitFieldNames ? '' : 'sessionId')
+    ..m<$core.String, $core.String>(7, _omitFieldNames ? '' : 'meta',
+        entryClassName: 'ReviewOverrideRequest.MetaEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('agent.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewOverrideRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewOverrideRequest copyWith(
+          void Function(ReviewOverrideRequest) updates) =>
+      super.copyWith((message) => updates(message as ReviewOverrideRequest))
+          as ReviewOverrideRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewOverrideRequest create() => ReviewOverrideRequest._();
+  @$core.override
+  ReviewOverrideRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewOverrideRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewOverrideRequest>(create);
+  static ReviewOverrideRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reviewId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reviewId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReviewId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReviewId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get originalDecision => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set originalDecision($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOriginalDecision() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOriginalDecision() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get newDecision => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set newDecision($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasNewDecision() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearNewDecision() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get reason => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set reason($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasReason() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearReason() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get sessionId => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set sessionId($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSessionId() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSessionId() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbMap<$core.String, $core.String> get meta => $_getMap(6);
+}
+
+class ReviewOverrideResponse extends $pb.GeneratedMessage {
+  factory ReviewOverrideResponse({
+    $core.bool? success,
+    $core.String? message,
+    $core.String? overrideId,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (message != null) result.message = message;
+    if (overrideId != null) result.overrideId = overrideId;
+    return result;
+  }
+
+  ReviewOverrideResponse._();
+
+  factory ReviewOverrideResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewOverrideResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewOverrideResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..aOS(3, _omitFieldNames ? '' : 'overrideId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewOverrideResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewOverrideResponse copyWith(
+          void Function(ReviewOverrideResponse) updates) =>
+      super.copyWith((message) => updates(message as ReviewOverrideResponse))
+          as ReviewOverrideResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewOverrideResponse create() => ReviewOverrideResponse._();
+  @$core.override
+  ReviewOverrideResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewOverrideResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewOverrideResponse>(create);
+  static ReviewOverrideResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get overrideId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set overrideId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOverrideId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOverrideId() => $_clearField(3);
+}
+
+/// User appeals against a review
+class ReviewAppealRequest extends $pb.GeneratedMessage {
+  factory ReviewAppealRequest({
+    $core.String? userId,
+    $core.String? reviewId,
+    $core.String? appealReason,
+    $core.Iterable<$core.String>? issuesWithReview,
+    $core.String? sessionId,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? meta,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (appealReason != null) result.appealReason = appealReason;
+    if (issuesWithReview != null)
+      result.issuesWithReview.addAll(issuesWithReview);
+    if (sessionId != null) result.sessionId = sessionId;
+    if (meta != null) result.meta.addEntries(meta);
+    return result;
+  }
+
+  ReviewAppealRequest._();
+
+  factory ReviewAppealRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewAppealRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewAppealRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(3, _omitFieldNames ? '' : 'appealReason')
+    ..pPS(4, _omitFieldNames ? '' : 'issuesWithReview')
+    ..aOS(5, _omitFieldNames ? '' : 'sessionId')
+    ..m<$core.String, $core.String>(6, _omitFieldNames ? '' : 'meta',
+        entryClassName: 'ReviewAppealRequest.MetaEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('agent.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewAppealRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewAppealRequest copyWith(void Function(ReviewAppealRequest) updates) =>
+      super.copyWith((message) => updates(message as ReviewAppealRequest))
+          as ReviewAppealRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewAppealRequest create() => ReviewAppealRequest._();
+  @$core.override
+  ReviewAppealRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewAppealRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewAppealRequest>(create);
+  static ReviewAppealRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reviewId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reviewId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReviewId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReviewId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get appealReason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set appealReason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAppealReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAppealReason() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<$core.String> get issuesWithReview => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $core.String get sessionId => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set sessionId($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSessionId() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSessionId() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $pb.PbMap<$core.String, $core.String> get meta => $_getMap(5);
+}
+
+class ReviewAppealResponse extends $pb.GeneratedMessage {
+  factory ReviewAppealResponse({
+    $core.bool? success,
+    $core.String? appealId,
+    $core.String? status,
+    $core.String? message,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (appealId != null) result.appealId = appealId;
+    if (status != null) result.status = status;
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  ReviewAppealResponse._();
+
+  factory ReviewAppealResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewAppealResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewAppealResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'appealId')
+    ..aOS(3, _omitFieldNames ? '' : 'status')
+    ..aOS(4, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewAppealResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewAppealResponse copyWith(void Function(ReviewAppealResponse) updates) =>
+      super.copyWith((message) => updates(message as ReviewAppealResponse))
+          as ReviewAppealResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewAppealResponse create() => ReviewAppealResponse._();
+  @$core.override
+  ReviewAppealResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewAppealResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewAppealResponse>(create);
+  static ReviewAppealResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get appealId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set appealId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAppealId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAppealId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get status => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set status($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStatus() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStatus() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get message => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set message($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMessage() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMessage() => $_clearField(4);
+}
+
+/// Get appeal status
+class AppealStatusRequest extends $pb.GeneratedMessage {
+  factory AppealStatusRequest({
+    $core.String? userId,
+    $core.String? appealId,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (appealId != null) result.appealId = appealId;
+    return result;
+  }
+
+  AppealStatusRequest._();
+
+  factory AppealStatusRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory AppealStatusRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AppealStatusRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'appealId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AppealStatusRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AppealStatusRequest copyWith(void Function(AppealStatusRequest) updates) =>
+      super.copyWith((message) => updates(message as AppealStatusRequest))
+          as AppealStatusRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static AppealStatusRequest create() => AppealStatusRequest._();
+  @$core.override
+  AppealStatusRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static AppealStatusRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AppealStatusRequest>(create);
+  static AppealStatusRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get appealId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set appealId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAppealId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAppealId() => $_clearField(2);
+}
+
+class AppealStatusResponse extends $pb.GeneratedMessage {
+  factory AppealStatusResponse({
+    $core.String? appealId,
+    $core.String? reviewId,
+    $core.String? status,
+    $core.String? submittedAt,
+    $core.String? appealReason,
+    $core.String? resolution,
+    $core.String? resolvedBy,
+    $core.String? resolvedAt,
+    $core.String? secondaryDecision,
+    $core.double? secondaryScore,
+  }) {
+    final result = create();
+    if (appealId != null) result.appealId = appealId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (status != null) result.status = status;
+    if (submittedAt != null) result.submittedAt = submittedAt;
+    if (appealReason != null) result.appealReason = appealReason;
+    if (resolution != null) result.resolution = resolution;
+    if (resolvedBy != null) result.resolvedBy = resolvedBy;
+    if (resolvedAt != null) result.resolvedAt = resolvedAt;
+    if (secondaryDecision != null) result.secondaryDecision = secondaryDecision;
+    if (secondaryScore != null) result.secondaryScore = secondaryScore;
+    return result;
+  }
+
+  AppealStatusResponse._();
+
+  factory AppealStatusResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory AppealStatusResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AppealStatusResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'appealId')
+    ..aOS(2, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(3, _omitFieldNames ? '' : 'status')
+    ..aOS(4, _omitFieldNames ? '' : 'submittedAt')
+    ..aOS(5, _omitFieldNames ? '' : 'appealReason')
+    ..aOS(6, _omitFieldNames ? '' : 'resolution')
+    ..aOS(7, _omitFieldNames ? '' : 'resolvedBy')
+    ..aOS(8, _omitFieldNames ? '' : 'resolvedAt')
+    ..aOS(9, _omitFieldNames ? '' : 'secondaryDecision')
+    ..aD(10, _omitFieldNames ? '' : 'secondaryScore')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AppealStatusResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AppealStatusResponse copyWith(void Function(AppealStatusResponse) updates) =>
+      super.copyWith((message) => updates(message as AppealStatusResponse))
+          as AppealStatusResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static AppealStatusResponse create() => AppealStatusResponse._();
+  @$core.override
+  AppealStatusResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static AppealStatusResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AppealStatusResponse>(create);
+  static AppealStatusResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get appealId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set appealId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAppealId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAppealId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reviewId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reviewId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReviewId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReviewId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get status => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set status($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStatus() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStatus() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get submittedAt => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set submittedAt($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSubmittedAt() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSubmittedAt() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get appealReason => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set appealReason($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAppealReason() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAppealReason() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get resolution => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set resolution($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasResolution() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearResolution() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get resolvedBy => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set resolvedBy($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasResolvedBy() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearResolvedBy() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get resolvedAt => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set resolvedAt($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasResolvedAt() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearResolvedAt() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get secondaryDecision => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set secondaryDecision($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasSecondaryDecision() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearSecondaryDecision() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.double get secondaryScore => $_getN(9);
+  @$pb.TagNumber(10)
+  set secondaryScore($core.double value) => $_setDouble(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasSecondaryScore() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearSecondaryScore() => $_clearField(10);
+}
+
+/// ReviewFeedbackRequest - submit feedback on a review
+class ReviewFeedbackRequest extends $pb.GeneratedMessage {
+  factory ReviewFeedbackRequest({
+    $core.String? userId,
+    $core.String? reviewId,
+    $core.String? feedbackType,
+    $core.int? rating,
+    $core.bool? wasHelpful,
+    $core.bool? wasAccurate,
+    $core.Iterable<$core.String>? inaccuratePoints,
+    $core.String? specificityLevel,
+    $core.String? comments,
+    $core.Iterable<$core.String>? tags,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (feedbackType != null) result.feedbackType = feedbackType;
+    if (rating != null) result.rating = rating;
+    if (wasHelpful != null) result.wasHelpful = wasHelpful;
+    if (wasAccurate != null) result.wasAccurate = wasAccurate;
+    if (inaccuratePoints != null)
+      result.inaccuratePoints.addAll(inaccuratePoints);
+    if (specificityLevel != null) result.specificityLevel = specificityLevel;
+    if (comments != null) result.comments = comments;
+    if (tags != null) result.tags.addAll(tags);
+    return result;
+  }
+
+  ReviewFeedbackRequest._();
+
+  factory ReviewFeedbackRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewFeedbackRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewFeedbackRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(3, _omitFieldNames ? '' : 'feedbackType')
+    ..aI(4, _omitFieldNames ? '' : 'rating')
+    ..aOB(5, _omitFieldNames ? '' : 'wasHelpful')
+    ..aOB(6, _omitFieldNames ? '' : 'wasAccurate')
+    ..pPS(7, _omitFieldNames ? '' : 'inaccuratePoints')
+    ..aOS(8, _omitFieldNames ? '' : 'specificityLevel')
+    ..aOS(9, _omitFieldNames ? '' : 'comments')
+    ..pPS(10, _omitFieldNames ? '' : 'tags')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewFeedbackRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewFeedbackRequest copyWith(
+          void Function(ReviewFeedbackRequest) updates) =>
+      super.copyWith((message) => updates(message as ReviewFeedbackRequest))
+          as ReviewFeedbackRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewFeedbackRequest create() => ReviewFeedbackRequest._();
+  @$core.override
+  ReviewFeedbackRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewFeedbackRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewFeedbackRequest>(create);
+  static ReviewFeedbackRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reviewId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reviewId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReviewId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReviewId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get feedbackType => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set feedbackType($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFeedbackType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFeedbackType() => $_clearField(3);
+
+  /// Rating feedback (1-5)
+  @$pb.TagNumber(4)
+  $core.int get rating => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set rating($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRating() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRating() => $_clearField(4);
+
+  /// Quality feedback
+  @$pb.TagNumber(5)
+  $core.bool get wasHelpful => $_getBF(4);
+  @$pb.TagNumber(5)
+  set wasHelpful($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasWasHelpful() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearWasHelpful() => $_clearField(5);
+
+  /// Accuracy feedback
+  @$pb.TagNumber(6)
+  $core.bool get wasAccurate => $_getBF(5);
+  @$pb.TagNumber(6)
+  set wasAccurate($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasWasAccurate() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearWasAccurate() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<$core.String> get inaccuratePoints => $_getList(6);
+
+  /// Specificity feedback: too_vague, appropriate, too_detailed
+  @$pb.TagNumber(8)
+  $core.String get specificityLevel => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set specificityLevel($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasSpecificityLevel() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearSpecificityLevel() => $_clearField(8);
+
+  /// Free-form comments
+  @$pb.TagNumber(9)
+  $core.String get comments => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set comments($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasComments() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearComments() => $_clearField(9);
+
+  /// Tags
+  @$pb.TagNumber(10)
+  $pb.PbList<$core.String> get tags => $_getList(9);
+}
+
+/// ReviewFeedbackResponse - response to feedback submission
+class ReviewFeedbackResponse extends $pb.GeneratedMessage {
+  factory ReviewFeedbackResponse({
+    $core.bool? success,
+    $core.String? feedbackId,
+    $core.String? message,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (feedbackId != null) result.feedbackId = feedbackId;
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  ReviewFeedbackResponse._();
+
+  factory ReviewFeedbackResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ReviewFeedbackResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewFeedbackResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'feedbackId')
+    ..aOS(3, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewFeedbackResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewFeedbackResponse copyWith(
+          void Function(ReviewFeedbackResponse) updates) =>
+      super.copyWith((message) => updates(message as ReviewFeedbackResponse))
+          as ReviewFeedbackResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ReviewFeedbackResponse create() => ReviewFeedbackResponse._();
+  @$core.override
+  ReviewFeedbackResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ReviewFeedbackResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewFeedbackResponse>(create);
+  static ReviewFeedbackResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get feedbackId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set feedbackId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFeedbackId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFeedbackId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get message => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set message($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMessage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMessage() => $_clearField(3);
+}
+
+/// RegenerationRequest - request content regeneration
+class RegenerationRequest extends $pb.GeneratedMessage {
+  factory RegenerationRequest({
+    $core.String? userId,
+    $core.String? originalContentId,
+    $core.String? reviewId,
+    $core.String? regenerationType,
+    $core.Iterable<$core.String>? improvementHints,
+    $core.Iterable<$core.String>? focusAreas,
+    $core.String? customInstructions,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (originalContentId != null) result.originalContentId = originalContentId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (regenerationType != null) result.regenerationType = regenerationType;
+    if (improvementHints != null)
+      result.improvementHints.addAll(improvementHints);
+    if (focusAreas != null) result.focusAreas.addAll(focusAreas);
+    if (customInstructions != null)
+      result.customInstructions = customInstructions;
+    return result;
+  }
+
+  RegenerationRequest._();
+
+  factory RegenerationRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory RegenerationRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RegenerationRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aOS(2, _omitFieldNames ? '' : 'originalContentId')
+    ..aOS(3, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(4, _omitFieldNames ? '' : 'regenerationType')
+    ..pPS(5, _omitFieldNames ? '' : 'improvementHints')
+    ..pPS(6, _omitFieldNames ? '' : 'focusAreas')
+    ..aOS(7, _omitFieldNames ? '' : 'customInstructions')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RegenerationRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RegenerationRequest copyWith(void Function(RegenerationRequest) updates) =>
+      super.copyWith((message) => updates(message as RegenerationRequest))
+          as RegenerationRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static RegenerationRequest create() => RegenerationRequest._();
+  @$core.override
+  RegenerationRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static RegenerationRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RegenerationRequest>(create);
+  static RegenerationRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get originalContentId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set originalContentId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOriginalContentId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOriginalContentId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reviewId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reviewId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReviewId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReviewId() => $_clearField(3);
+
+  /// Regeneration type: improve_quality, fix_issues, change_style, add_details, simplify, custom
+  @$pb.TagNumber(4)
+  $core.String get regenerationType => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set regenerationType($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRegenerationType() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRegenerationType() => $_clearField(4);
+
+  /// Improvement hints
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get improvementHints => $_getList(4);
+
+  /// Focus areas
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get focusAreas => $_getList(5);
+
+  /// Custom instructions
+  @$pb.TagNumber(7)
+  $core.String get customInstructions => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set customInstructions($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCustomInstructions() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCustomInstructions() => $_clearField(7);
+}
+
+/// RegenerationResponse - response to regeneration request
+class RegenerationResponse extends $pb.GeneratedMessage {
+  factory RegenerationResponse({
+    $core.bool? success,
+    $core.String? requestId,
+    $core.String? newContent,
+    $core.String? newContentId,
+    $core.String? improvementSummary,
+    $core.Iterable<$core.String>? changesMade,
+    $core.double? scoreImprovement,
+    $core.int? generationTimeMs,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (requestId != null) result.requestId = requestId;
+    if (newContent != null) result.newContent = newContent;
+    if (newContentId != null) result.newContentId = newContentId;
+    if (improvementSummary != null)
+      result.improvementSummary = improvementSummary;
+    if (changesMade != null) result.changesMade.addAll(changesMade);
+    if (scoreImprovement != null) result.scoreImprovement = scoreImprovement;
+    if (generationTimeMs != null) result.generationTimeMs = generationTimeMs;
+    return result;
+  }
+
+  RegenerationResponse._();
+
+  factory RegenerationResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory RegenerationResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RegenerationResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'requestId')
+    ..aOS(3, _omitFieldNames ? '' : 'newContent')
+    ..aOS(4, _omitFieldNames ? '' : 'newContentId')
+    ..aOS(5, _omitFieldNames ? '' : 'improvementSummary')
+    ..pPS(6, _omitFieldNames ? '' : 'changesMade')
+    ..aD(7, _omitFieldNames ? '' : 'scoreImprovement')
+    ..aI(8, _omitFieldNames ? '' : 'generationTimeMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RegenerationResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RegenerationResponse copyWith(void Function(RegenerationResponse) updates) =>
+      super.copyWith((message) => updates(message as RegenerationResponse))
+          as RegenerationResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static RegenerationResponse create() => RegenerationResponse._();
+  @$core.override
+  RegenerationResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static RegenerationResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RegenerationResponse>(create);
+  static RegenerationResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get requestId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set requestId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRequestId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRequestId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get newContent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set newContent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNewContent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNewContent() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get newContentId => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set newContentId($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasNewContentId() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearNewContentId() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get improvementSummary => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set improvementSummary($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasImprovementSummary() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearImprovementSummary() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get changesMade => $_getList(5);
+
+  @$pb.TagNumber(7)
+  $core.double get scoreImprovement => $_getN(6);
+  @$pb.TagNumber(7)
+  set scoreImprovement($core.double value) => $_setDouble(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasScoreImprovement() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearScoreImprovement() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.int get generationTimeMs => $_getIZ(7);
+  @$pb.TagNumber(8)
+  set generationTimeMs($core.int value) => $_setSignedInt32(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasGenerationTimeMs() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearGenerationTimeMs() => $_clearField(8);
+}
+
+/// FeedbackStatisticsRequest - request feedback statistics
+class FeedbackStatisticsRequest extends $pb.GeneratedMessage {
+  factory FeedbackStatisticsRequest({
+    $core.String? userId,
+    $core.int? periodDays,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    if (periodDays != null) result.periodDays = periodDays;
+    return result;
+  }
+
+  FeedbackStatisticsRequest._();
+
+  factory FeedbackStatisticsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FeedbackStatisticsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FeedbackStatisticsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..aI(2, _omitFieldNames ? '' : 'periodDays')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FeedbackStatisticsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FeedbackStatisticsRequest copyWith(
+          void Function(FeedbackStatisticsRequest) updates) =>
+      super.copyWith((message) => updates(message as FeedbackStatisticsRequest))
+          as FeedbackStatisticsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FeedbackStatisticsRequest create() => FeedbackStatisticsRequest._();
+  @$core.override
+  FeedbackStatisticsRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FeedbackStatisticsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FeedbackStatisticsRequest>(create);
+  static FeedbackStatisticsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get periodDays => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set periodDays($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPeriodDays() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPeriodDays() => $_clearField(2);
+}
+
+/// FeedbackStatisticsResponse - feedback statistics
+class FeedbackStatisticsResponse extends $pb.GeneratedMessage {
+  factory FeedbackStatisticsResponse({
+    $core.int? totalFeedbacks,
+    $core.double? avgRating,
+    $core.double? helpfulRate,
+    $core.double? accuracyRate,
+    $core.int? regenerationRequests,
+    $core.int? successfulRegenerations,
+    $core.int? periodDays,
+  }) {
+    final result = create();
+    if (totalFeedbacks != null) result.totalFeedbacks = totalFeedbacks;
+    if (avgRating != null) result.avgRating = avgRating;
+    if (helpfulRate != null) result.helpfulRate = helpfulRate;
+    if (accuracyRate != null) result.accuracyRate = accuracyRate;
+    if (regenerationRequests != null)
+      result.regenerationRequests = regenerationRequests;
+    if (successfulRegenerations != null)
+      result.successfulRegenerations = successfulRegenerations;
+    if (periodDays != null) result.periodDays = periodDays;
+    return result;
+  }
+
+  FeedbackStatisticsResponse._();
+
+  factory FeedbackStatisticsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FeedbackStatisticsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FeedbackStatisticsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'totalFeedbacks')
+    ..aD(2, _omitFieldNames ? '' : 'avgRating')
+    ..aD(3, _omitFieldNames ? '' : 'helpfulRate')
+    ..aD(4, _omitFieldNames ? '' : 'accuracyRate')
+    ..aI(5, _omitFieldNames ? '' : 'regenerationRequests')
+    ..aI(6, _omitFieldNames ? '' : 'successfulRegenerations')
+    ..aI(7, _omitFieldNames ? '' : 'periodDays')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FeedbackStatisticsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FeedbackStatisticsResponse copyWith(
+          void Function(FeedbackStatisticsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as FeedbackStatisticsResponse))
+          as FeedbackStatisticsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FeedbackStatisticsResponse create() => FeedbackStatisticsResponse._();
+  @$core.override
+  FeedbackStatisticsResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FeedbackStatisticsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FeedbackStatisticsResponse>(create);
+  static FeedbackStatisticsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get totalFeedbacks => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set totalFeedbacks($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTotalFeedbacks() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTotalFeedbacks() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.double get avgRating => $_getN(1);
+  @$pb.TagNumber(2)
+  set avgRating($core.double value) => $_setDouble(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAvgRating() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAvgRating() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get helpfulRate => $_getN(2);
+  @$pb.TagNumber(3)
+  set helpfulRate($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHelpfulRate() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHelpfulRate() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get accuracyRate => $_getN(3);
+  @$pb.TagNumber(4)
+  set accuracyRate($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAccuracyRate() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAccuracyRate() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get regenerationRequests => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set regenerationRequests($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRegenerationRequests() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRegenerationRequests() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get successfulRegenerations => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set successfulRegenerations($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSuccessfulRegenerations() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSuccessfulRegenerations() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.int get periodDays => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set periodDays($core.int value) => $_setSignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasPeriodDays() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearPeriodDays() => $_clearField(7);
+}
+
+/// GetArbitrationQueueRequest - request arbitration queue
+class GetArbitrationQueueRequest extends $pb.GeneratedMessage {
+  factory GetArbitrationQueueRequest({
+    $core.int? limit,
+    $core.String? priorityFilter,
+    $core.String? statusFilter,
+  }) {
+    final result = create();
+    if (limit != null) result.limit = limit;
+    if (priorityFilter != null) result.priorityFilter = priorityFilter;
+    if (statusFilter != null) result.statusFilter = statusFilter;
+    return result;
+  }
+
+  GetArbitrationQueueRequest._();
+
+  factory GetArbitrationQueueRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory GetArbitrationQueueRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetArbitrationQueueRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'limit')
+    ..aOS(2, _omitFieldNames ? '' : 'priorityFilter')
+    ..aOS(3, _omitFieldNames ? '' : 'statusFilter')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueRequest copyWith(
+          void Function(GetArbitrationQueueRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetArbitrationQueueRequest))
+          as GetArbitrationQueueRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueRequest create() => GetArbitrationQueueRequest._();
+  @$core.override
+  GetArbitrationQueueRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetArbitrationQueueRequest>(create);
+  static GetArbitrationQueueRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get limit => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set limit($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLimit() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLimit() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get priorityFilter => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set priorityFilter($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPriorityFilter() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPriorityFilter() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get statusFilter => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set statusFilter($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStatusFilter() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStatusFilter() => $_clearField(3);
+}
+
+/// ArbitrationCaseInfo - information about an arbitration case
+class ArbitrationCaseInfo extends $pb.GeneratedMessage {
+  factory ArbitrationCaseInfo({
+    $core.String? caseId,
+    $core.String? appealId,
+    $core.String? reviewId,
+    $core.String? userId,
+    $core.String? escalationReason,
+    $core.String? priority,
+    $core.String? createdAt,
+    $core.String? status,
+    $core.String? assignedTo,
+    $core.String? assignedAt,
+    $core.double? originalReviewScore,
+    $core.double? secondaryReviewScore,
+    $core.double? scoreDiscrepancy,
+    $core.String? resolution,
+    $core.String? finalDecision,
+    $core.String? resolvedAt,
+    $core.String? resolvedBy,
+    $core.Iterable<$core.String>? notes,
+  }) {
+    final result = create();
+    if (caseId != null) result.caseId = caseId;
+    if (appealId != null) result.appealId = appealId;
+    if (reviewId != null) result.reviewId = reviewId;
+    if (userId != null) result.userId = userId;
+    if (escalationReason != null) result.escalationReason = escalationReason;
+    if (priority != null) result.priority = priority;
+    if (createdAt != null) result.createdAt = createdAt;
+    if (status != null) result.status = status;
+    if (assignedTo != null) result.assignedTo = assignedTo;
+    if (assignedAt != null) result.assignedAt = assignedAt;
+    if (originalReviewScore != null)
+      result.originalReviewScore = originalReviewScore;
+    if (secondaryReviewScore != null)
+      result.secondaryReviewScore = secondaryReviewScore;
+    if (scoreDiscrepancy != null) result.scoreDiscrepancy = scoreDiscrepancy;
+    if (resolution != null) result.resolution = resolution;
+    if (finalDecision != null) result.finalDecision = finalDecision;
+    if (resolvedAt != null) result.resolvedAt = resolvedAt;
+    if (resolvedBy != null) result.resolvedBy = resolvedBy;
+    if (notes != null) result.notes.addAll(notes);
+    return result;
+  }
+
+  ArbitrationCaseInfo._();
+
+  factory ArbitrationCaseInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ArbitrationCaseInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArbitrationCaseInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'caseId')
+    ..aOS(2, _omitFieldNames ? '' : 'appealId')
+    ..aOS(3, _omitFieldNames ? '' : 'reviewId')
+    ..aOS(4, _omitFieldNames ? '' : 'userId')
+    ..aOS(5, _omitFieldNames ? '' : 'escalationReason')
+    ..aOS(6, _omitFieldNames ? '' : 'priority')
+    ..aOS(7, _omitFieldNames ? '' : 'createdAt')
+    ..aOS(8, _omitFieldNames ? '' : 'status')
+    ..aOS(9, _omitFieldNames ? '' : 'assignedTo')
+    ..aOS(10, _omitFieldNames ? '' : 'assignedAt')
+    ..aD(11, _omitFieldNames ? '' : 'originalReviewScore')
+    ..aD(12, _omitFieldNames ? '' : 'secondaryReviewScore')
+    ..aD(13, _omitFieldNames ? '' : 'scoreDiscrepancy')
+    ..aOS(14, _omitFieldNames ? '' : 'resolution')
+    ..aOS(15, _omitFieldNames ? '' : 'finalDecision')
+    ..aOS(16, _omitFieldNames ? '' : 'resolvedAt')
+    ..aOS(17, _omitFieldNames ? '' : 'resolvedBy')
+    ..pPS(18, _omitFieldNames ? '' : 'notes')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArbitrationCaseInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArbitrationCaseInfo copyWith(void Function(ArbitrationCaseInfo) updates) =>
+      super.copyWith((message) => updates(message as ArbitrationCaseInfo))
+          as ArbitrationCaseInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ArbitrationCaseInfo create() => ArbitrationCaseInfo._();
+  @$core.override
+  ArbitrationCaseInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ArbitrationCaseInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArbitrationCaseInfo>(create);
+  static ArbitrationCaseInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get caseId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set caseId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCaseId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCaseId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get appealId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set appealId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAppealId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAppealId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reviewId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reviewId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReviewId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReviewId() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get userId => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set userId($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUserId() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUserId() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get escalationReason => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set escalationReason($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasEscalationReason() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearEscalationReason() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get priority => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set priority($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPriority() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPriority() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get createdAt => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set createdAt($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCreatedAt() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCreatedAt() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get status => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set status($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasStatus() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearStatus() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get assignedTo => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set assignedTo($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasAssignedTo() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearAssignedTo() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get assignedAt => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set assignedAt($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasAssignedAt() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearAssignedAt() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.double get originalReviewScore => $_getN(10);
+  @$pb.TagNumber(11)
+  set originalReviewScore($core.double value) => $_setDouble(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasOriginalReviewScore() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearOriginalReviewScore() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.double get secondaryReviewScore => $_getN(11);
+  @$pb.TagNumber(12)
+  set secondaryReviewScore($core.double value) => $_setDouble(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasSecondaryReviewScore() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearSecondaryReviewScore() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.double get scoreDiscrepancy => $_getN(12);
+  @$pb.TagNumber(13)
+  set scoreDiscrepancy($core.double value) => $_setDouble(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasScoreDiscrepancy() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearScoreDiscrepancy() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $core.String get resolution => $_getSZ(13);
+  @$pb.TagNumber(14)
+  set resolution($core.String value) => $_setString(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasResolution() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearResolution() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.String get finalDecision => $_getSZ(14);
+  @$pb.TagNumber(15)
+  set finalDecision($core.String value) => $_setString(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasFinalDecision() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearFinalDecision() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $core.String get resolvedAt => $_getSZ(15);
+  @$pb.TagNumber(16)
+  set resolvedAt($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasResolvedAt() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearResolvedAt() => $_clearField(16);
+
+  @$pb.TagNumber(17)
+  $core.String get resolvedBy => $_getSZ(16);
+  @$pb.TagNumber(17)
+  set resolvedBy($core.String value) => $_setString(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasResolvedBy() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearResolvedBy() => $_clearField(17);
+
+  @$pb.TagNumber(18)
+  $pb.PbList<$core.String> get notes => $_getList(17);
+}
+
+/// GetArbitrationQueueResponse - response with arbitration cases
+class GetArbitrationQueueResponse extends $pb.GeneratedMessage {
+  factory GetArbitrationQueueResponse({
+    $core.Iterable<ArbitrationCaseInfo>? cases,
+    $core.int? totalCount,
+  }) {
+    final result = create();
+    if (cases != null) result.cases.addAll(cases);
+    if (totalCount != null) result.totalCount = totalCount;
+    return result;
+  }
+
+  GetArbitrationQueueResponse._();
+
+  factory GetArbitrationQueueResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory GetArbitrationQueueResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetArbitrationQueueResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..pPM<ArbitrationCaseInfo>(1, _omitFieldNames ? '' : 'cases',
+        subBuilder: ArbitrationCaseInfo.create)
+    ..aI(2, _omitFieldNames ? '' : 'totalCount')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueResponse copyWith(
+          void Function(GetArbitrationQueueResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetArbitrationQueueResponse))
+          as GetArbitrationQueueResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueResponse create() =>
+      GetArbitrationQueueResponse._();
+  @$core.override
+  GetArbitrationQueueResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetArbitrationQueueResponse>(create);
+  static GetArbitrationQueueResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<ArbitrationCaseInfo> get cases => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.int get totalCount => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set totalCount($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTotalCount() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTotalCount() => $_clearField(2);
+}
+
+/// AssignArbitrationCaseRequest - assign a case to an arbitrator
+class AssignArbitrationCaseRequest extends $pb.GeneratedMessage {
+  factory AssignArbitrationCaseRequest({
+    $core.String? caseId,
+    $core.String? arbitratorId,
+    $core.String? arbitratorRole,
+  }) {
+    final result = create();
+    if (caseId != null) result.caseId = caseId;
+    if (arbitratorId != null) result.arbitratorId = arbitratorId;
+    if (arbitratorRole != null) result.arbitratorRole = arbitratorRole;
+    return result;
+  }
+
+  AssignArbitrationCaseRequest._();
+
+  factory AssignArbitrationCaseRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory AssignArbitrationCaseRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AssignArbitrationCaseRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'caseId')
+    ..aOS(2, _omitFieldNames ? '' : 'arbitratorId')
+    ..aOS(3, _omitFieldNames ? '' : 'arbitratorRole')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AssignArbitrationCaseRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AssignArbitrationCaseRequest copyWith(
+          void Function(AssignArbitrationCaseRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as AssignArbitrationCaseRequest))
+          as AssignArbitrationCaseRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static AssignArbitrationCaseRequest create() =>
+      AssignArbitrationCaseRequest._();
+  @$core.override
+  AssignArbitrationCaseRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static AssignArbitrationCaseRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AssignArbitrationCaseRequest>(create);
+  static AssignArbitrationCaseRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get caseId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set caseId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCaseId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCaseId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get arbitratorId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set arbitratorId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasArbitratorId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearArbitratorId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get arbitratorRole => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set arbitratorRole($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasArbitratorRole() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearArbitratorRole() => $_clearField(3);
+}
+
+/// AssignArbitrationCaseResponse - response to case assignment
+class AssignArbitrationCaseResponse extends $pb.GeneratedMessage {
+  factory AssignArbitrationCaseResponse({
+    $core.bool? success,
+    $core.String? message,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  AssignArbitrationCaseResponse._();
+
+  factory AssignArbitrationCaseResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory AssignArbitrationCaseResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AssignArbitrationCaseResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AssignArbitrationCaseResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AssignArbitrationCaseResponse copyWith(
+          void Function(AssignArbitrationCaseResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as AssignArbitrationCaseResponse))
+          as AssignArbitrationCaseResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static AssignArbitrationCaseResponse create() =>
+      AssignArbitrationCaseResponse._();
+  @$core.override
+  AssignArbitrationCaseResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static AssignArbitrationCaseResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AssignArbitrationCaseResponse>(create);
+  static AssignArbitrationCaseResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+}
+
+/// SubmitArbitrationDecisionRequest - submit an arbitration decision
+class SubmitArbitrationDecisionRequest extends $pb.GeneratedMessage {
+  factory SubmitArbitrationDecisionRequest({
+    $core.String? caseId,
+    $core.String? decision,
+    $core.String? explanation,
+    $core.String? arbitratorId,
+    $core.String? arbitratorRole,
+    $core.String? feedbackForModel,
+  }) {
+    final result = create();
+    if (caseId != null) result.caseId = caseId;
+    if (decision != null) result.decision = decision;
+    if (explanation != null) result.explanation = explanation;
+    if (arbitratorId != null) result.arbitratorId = arbitratorId;
+    if (arbitratorRole != null) result.arbitratorRole = arbitratorRole;
+    if (feedbackForModel != null) result.feedbackForModel = feedbackForModel;
+    return result;
+  }
+
+  SubmitArbitrationDecisionRequest._();
+
+  factory SubmitArbitrationDecisionRequest.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SubmitArbitrationDecisionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SubmitArbitrationDecisionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'caseId')
+    ..aOS(2, _omitFieldNames ? '' : 'decision')
+    ..aOS(3, _omitFieldNames ? '' : 'explanation')
+    ..aOS(4, _omitFieldNames ? '' : 'arbitratorId')
+    ..aOS(5, _omitFieldNames ? '' : 'arbitratorRole')
+    ..aOS(6, _omitFieldNames ? '' : 'feedbackForModel')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitArbitrationDecisionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitArbitrationDecisionRequest copyWith(
+          void Function(SubmitArbitrationDecisionRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as SubmitArbitrationDecisionRequest))
+          as SubmitArbitrationDecisionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SubmitArbitrationDecisionRequest create() =>
+      SubmitArbitrationDecisionRequest._();
+  @$core.override
+  SubmitArbitrationDecisionRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SubmitArbitrationDecisionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SubmitArbitrationDecisionRequest>(
+          create);
+  static SubmitArbitrationDecisionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get caseId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set caseId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCaseId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCaseId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get decision => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set decision($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDecision() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDecision() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get explanation => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set explanation($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasExplanation() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearExplanation() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get arbitratorId => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set arbitratorId($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasArbitratorId() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearArbitratorId() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get arbitratorRole => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set arbitratorRole($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasArbitratorRole() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearArbitratorRole() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get feedbackForModel => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set feedbackForModel($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFeedbackForModel() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearFeedbackForModel() => $_clearField(6);
+}
+
+/// SubmitArbitrationDecisionResponse - response to decision submission
+class SubmitArbitrationDecisionResponse extends $pb.GeneratedMessage {
+  factory SubmitArbitrationDecisionResponse({
+    $core.bool? success,
+    $core.String? decisionId,
+    $core.String? message,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (decisionId != null) result.decisionId = decisionId;
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  SubmitArbitrationDecisionResponse._();
+
+  factory SubmitArbitrationDecisionResponse.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SubmitArbitrationDecisionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SubmitArbitrationDecisionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'decisionId')
+    ..aOS(3, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitArbitrationDecisionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitArbitrationDecisionResponse copyWith(
+          void Function(SubmitArbitrationDecisionResponse) updates) =>
+      super.copyWith((message) =>
+              updates(message as SubmitArbitrationDecisionResponse))
+          as SubmitArbitrationDecisionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SubmitArbitrationDecisionResponse create() =>
+      SubmitArbitrationDecisionResponse._();
+  @$core.override
+  SubmitArbitrationDecisionResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SubmitArbitrationDecisionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SubmitArbitrationDecisionResponse>(
+          create);
+  static SubmitArbitrationDecisionResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get decisionId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set decisionId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDecisionId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDecisionId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get message => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set message($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMessage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMessage() => $_clearField(3);
+}
+
+/// GetArbitrationQueueStatsRequest - request queue statistics
+class GetArbitrationQueueStatsRequest extends $pb.GeneratedMessage {
+  factory GetArbitrationQueueStatsRequest() => create();
+
+  GetArbitrationQueueStatsRequest._();
+
+  factory GetArbitrationQueueStatsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory GetArbitrationQueueStatsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetArbitrationQueueStatsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueStatsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueStatsRequest copyWith(
+          void Function(GetArbitrationQueueStatsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetArbitrationQueueStatsRequest))
+          as GetArbitrationQueueStatsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueStatsRequest create() =>
+      GetArbitrationQueueStatsRequest._();
+  @$core.override
+  GetArbitrationQueueStatsRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueStatsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetArbitrationQueueStatsRequest>(
+          create);
+  static GetArbitrationQueueStatsRequest? _defaultInstance;
+}
+
+/// ArbitrationQueueStatsInfo - queue statistics
+class ArbitrationQueueStatsInfo extends $pb.GeneratedMessage {
+  factory ArbitrationQueueStatsInfo({
+    $core.int? totalPending,
+    $core.int? totalAssigned,
+    $core.int? totalInReview,
+    $core.int? totalResolvedToday,
+    $core.double? avgResolutionTimeHours,
+    $core.Iterable<$core.MapEntry<$core.String, $core.int>>? byPriority,
+    $core.Iterable<$core.MapEntry<$core.String, $core.int>>? byReason,
+  }) {
+    final result = create();
+    if (totalPending != null) result.totalPending = totalPending;
+    if (totalAssigned != null) result.totalAssigned = totalAssigned;
+    if (totalInReview != null) result.totalInReview = totalInReview;
+    if (totalResolvedToday != null)
+      result.totalResolvedToday = totalResolvedToday;
+    if (avgResolutionTimeHours != null)
+      result.avgResolutionTimeHours = avgResolutionTimeHours;
+    if (byPriority != null) result.byPriority.addEntries(byPriority);
+    if (byReason != null) result.byReason.addEntries(byReason);
+    return result;
+  }
+
+  ArbitrationQueueStatsInfo._();
+
+  factory ArbitrationQueueStatsInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ArbitrationQueueStatsInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArbitrationQueueStatsInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'totalPending')
+    ..aI(2, _omitFieldNames ? '' : 'totalAssigned')
+    ..aI(3, _omitFieldNames ? '' : 'totalInReview')
+    ..aI(4, _omitFieldNames ? '' : 'totalResolvedToday')
+    ..aD(5, _omitFieldNames ? '' : 'avgResolutionTimeHours')
+    ..m<$core.String, $core.int>(6, _omitFieldNames ? '' : 'byPriority',
+        entryClassName: 'ArbitrationQueueStatsInfo.ByPriorityEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.O3,
+        packageName: const $pb.PackageName('agent.v1'))
+    ..m<$core.String, $core.int>(7, _omitFieldNames ? '' : 'byReason',
+        entryClassName: 'ArbitrationQueueStatsInfo.ByReasonEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.O3,
+        packageName: const $pb.PackageName('agent.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArbitrationQueueStatsInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArbitrationQueueStatsInfo copyWith(
+          void Function(ArbitrationQueueStatsInfo) updates) =>
+      super.copyWith((message) => updates(message as ArbitrationQueueStatsInfo))
+          as ArbitrationQueueStatsInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ArbitrationQueueStatsInfo create() => ArbitrationQueueStatsInfo._();
+  @$core.override
+  ArbitrationQueueStatsInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ArbitrationQueueStatsInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArbitrationQueueStatsInfo>(create);
+  static ArbitrationQueueStatsInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get totalPending => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set totalPending($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTotalPending() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTotalPending() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get totalAssigned => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set totalAssigned($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTotalAssigned() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTotalAssigned() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get totalInReview => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set totalInReview($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTotalInReview() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTotalInReview() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get totalResolvedToday => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set totalResolvedToday($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTotalResolvedToday() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTotalResolvedToday() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.double get avgResolutionTimeHours => $_getN(4);
+  @$pb.TagNumber(5)
+  set avgResolutionTimeHours($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAvgResolutionTimeHours() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAvgResolutionTimeHours() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $pb.PbMap<$core.String, $core.int> get byPriority => $_getMap(5);
+
+  @$pb.TagNumber(7)
+  $pb.PbMap<$core.String, $core.int> get byReason => $_getMap(6);
+}
+
+/// GetArbitrationQueueStatsResponse - response with queue statistics
+class GetArbitrationQueueStatsResponse extends $pb.GeneratedMessage {
+  factory GetArbitrationQueueStatsResponse({
+    ArbitrationQueueStatsInfo? stats,
+  }) {
+    final result = create();
+    if (stats != null) result.stats = stats;
+    return result;
+  }
+
+  GetArbitrationQueueStatsResponse._();
+
+  factory GetArbitrationQueueStatsResponse.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory GetArbitrationQueueStatsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetArbitrationQueueStatsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
+      createEmptyInstance: create)
+    ..aOM<ArbitrationQueueStatsInfo>(1, _omitFieldNames ? '' : 'stats',
+        subBuilder: ArbitrationQueueStatsInfo.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueStatsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetArbitrationQueueStatsResponse copyWith(
+          void Function(GetArbitrationQueueStatsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetArbitrationQueueStatsResponse))
+          as GetArbitrationQueueStatsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueStatsResponse create() =>
+      GetArbitrationQueueStatsResponse._();
+  @$core.override
+  GetArbitrationQueueStatsResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static GetArbitrationQueueStatsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetArbitrationQueueStatsResponse>(
+          create);
+  static GetArbitrationQueueStatsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  ArbitrationQueueStatsInfo get stats => $_getN(0);
+  @$pb.TagNumber(1)
+  set stats(ArbitrationQueueStatsInfo value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasStats() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearStats() => $_clearField(1);
+  @$pb.TagNumber(1)
+  ArbitrationQueueStatsInfo ensureStats() => $_ensure(0);
 }
 
 class CitationBlock extends $pb.GeneratedMessage {

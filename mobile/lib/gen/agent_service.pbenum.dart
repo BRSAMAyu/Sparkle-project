@@ -101,6 +101,35 @@ class PlanReviewDecision extends $pb.ProtobufEnum {
   const PlanReviewDecision._(super.value, super.name);
 }
 
+class ContentReviewFeedbackType extends $pb.ProtobufEnum {
+  static const ContentReviewFeedbackType SATISFIED =
+      ContentReviewFeedbackType._(0, _omitEnumNames ? '' : 'SATISFIED');
+  static const ContentReviewFeedbackType UNSATISFIED =
+      ContentReviewFeedbackType._(1, _omitEnumNames ? '' : 'UNSATISFIED');
+  static const ContentReviewFeedbackType MODIFIED =
+      ContentReviewFeedbackType._(2, _omitEnumNames ? '' : 'MODIFIED');
+  static const ContentReviewFeedbackType REPORTED_ERROR =
+      ContentReviewFeedbackType._(3, _omitEnumNames ? '' : 'REPORTED_ERROR');
+  static const ContentReviewFeedbackType SKIPPED =
+      ContentReviewFeedbackType._(4, _omitEnumNames ? '' : 'SKIPPED');
+
+  static const $core.List<ContentReviewFeedbackType> values =
+      <ContentReviewFeedbackType>[
+    SATISFIED,
+    UNSATISFIED,
+    MODIFIED,
+    REPORTED_ERROR,
+    SKIPPED,
+  ];
+
+  static final $core.List<ContentReviewFeedbackType?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 4);
+  static ContentReviewFeedbackType? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const ContentReviewFeedbackType._(super.value, super.name);
+}
+
 class FinishReason extends $pb.ProtobufEnum {
   static const FinishReason NULL =
       FinishReason._(0, _omitEnumNames ? '' : 'NULL');
