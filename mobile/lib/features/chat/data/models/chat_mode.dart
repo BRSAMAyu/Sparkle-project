@@ -18,7 +18,7 @@ abstract class ChatMode {
   /// Primary color associated with this mode
   final Color color;
 
-  const ChatMode({
+  ChatMode({
     required this.apiValue,
     required this.label,
     required this.icon,

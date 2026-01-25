@@ -14,6 +14,18 @@ Defines core data structures for:
 - PlanFeedback: Plan feedback entry (Phase 4)
 """
 from dataclasses import dataclass, field
+
+# ============ Phase 4: Plan Version Constants ============
+
+# Version conflict handling thresholds
+VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD = 0.7  # confidence >= this value triggers auto-replan
+VERSION_CONFLICT_HITL_THRESHOLD = 0.7  # confidence < this value requires user confirmation
+MAX_REPLAN_ATTEMPTS = 2  # Maximum replan attempts before giving up
+
+# Replan rate limiting
+REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
+REPLAN_MAX_PER_WINDOW = 3  # max replans per window
+
 from typing import Dict, Any, List, Optional, Literal, Set, TYPE_CHECKING
 from datetime import datetime
 import uuid

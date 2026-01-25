@@ -375,4 +375,8 @@ async def execute_multi_agent_workflow(
             yield response
 
     else:
-        raise ValueError(f"Unknown chat mode: {chat_mode}")
+        logger.warning(f"Unknown chat mode: {chat_mode}, falling back to standard")
+        async for response in adapter.execute_progressive_exploration(
+            message, user_id, session_id, context_data, stream_callback
+        ):
+            yield response

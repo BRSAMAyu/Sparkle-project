@@ -163,6 +163,8 @@ def create_planning_graph():
     planning_workflow.add_node("time_tutor", time_tutor_node)
     # Phase 3: Add aggregator node
     planning_workflow.add_node("aggregator", collaboration_aggregator_node)
+    # P0 Fix: Add reset_collaboration node for review feedback loop
+    planning_workflow.add_node("reset_collaboration", reset_collaboration_node)
 
     # NO ToolNode in planning graph!
     # We stop at tool_calls generation
@@ -170,16 +172,26 @@ def create_planning_graph():
     # Entry point
     planning_workflow.set_entry_point("router")
 
-    # Router -> Collaboration or Direct Agent (Phase 3 routing)
+    # Router -> Reset, Collaboration or Direct Agent (Phase 3 routing)
     planning_workflow.add_conditional_edges(
         "router",
         route_after_router_with_collaboration,
         {
+            "reset_collaboration": "reset_collaboration",
             "collaboration": "collaboration",
             "galaxy_guide": "galaxy_guide",
             "exam_oracle": "exam_oracle",
             "time_tutor": "time_tutor",
             END: END
+        }
+    )
+
+    # Reset -> Collaboration (after clearing review_feedback)
+    planning_workflow.add_conditional_edges(
+        "reset_collaboration",
+        route_after_reset,
+        {
+            "collaboration": "collaboration"
         }
     )
 
@@ -220,6 +232,22 @@ def create_planning_graph():
 
 # ============ Phase 3: Collaboration Routing Functions ============
 
+def reset_collaboration_node(state: SparkleState):
+    """
+    Reset collaboration state for replanning after review feedback.
+
+    This node is called when review_feedback indicates modify/reject.
+    It clears the feedback and resets collaboration index to trigger replanning.
+    """
+    return {
+        "collaboration_index": 0,
+        "review_feedback": None,  # Clear after processing to prevent infinite loop
+    }
+
+def route_after_reset(state: SparkleState) -> str:
+    """After reset, always route back to collaboration for replanning."""
+    return "collaboration"
+
 def route_after_router_with_collaboration(state: SparkleState):
     """Router 后的路由（支持协作模式） (Phase 3)"""
     target = state.get("next_step")
@@ -227,11 +255,10 @@ def route_after_router_with_collaboration(state: SparkleState):
     review_feedback = state.get("review_feedback")
 
     # Vision Item 8: Review Loop
-    # If there is review feedback (Modify/Reject), we force a re-collaboration/planning cycle
+    # If there is review feedback (Modify/Reject), route to reset node first
+    # State mutation must happen in a node, not in a routing function
     if review_feedback and review_feedback.get("decision") in ["modify", "reject"]:
-        # Reset collaboration index to restart or adjust plan
-        state["collaboration_index"] = 0
-        return "collaboration"
+        return "reset_collaboration"
 
     # If collaboration_mode not set yet, analyze to decide
     if not collaboration_mode:
@@ -240,11 +267,14 @@ def route_after_router_with_collaboration(state: SparkleState):
         collaboration_plan = _analyze_collaboration_needs(user_message)
         collaboration_mode = collaboration_plan["mode"]
         if collaboration_mode != "single":
-            state["collaboration_mode"] = collaboration_plan["mode"]
-            state["collaboration_agents"] = collaboration_plan["agents"]
-            state["collaboration_order"] = collaboration_plan["order"]
-            state["collaboration_index"] = 0
-            return "collaboration"
+            # Return state updates instead of mutating
+            return {
+                "collaboration_mode": collaboration_plan["mode"],
+                "collaboration_agents": collaboration_plan["agents"],
+                "collaboration_order": collaboration_plan["order"],
+                "collaboration_index": 0,
+                "next_step": "collaboration"
+            }
 
     if collaboration_mode and collaboration_mode != "single":
         return "collaboration"

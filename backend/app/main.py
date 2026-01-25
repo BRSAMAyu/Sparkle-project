@@ -27,6 +27,7 @@ from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
+from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
 from app.core.websocket import manager
 from starlette.middleware.base import BaseHTTPMiddleware

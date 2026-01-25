@@ -1,17 +1,50 @@
 from typing import TypedDict, Annotated, List, Optional, Dict, Any, Union
 import operator
+from enum import Enum
 from langchain_core.messages import BaseMessage
 
-class PlanContext(TypedDict):
+
+# P1 Fix #6: Add Enum types for status fields
+class PlanningStatus(str, Enum):
+    """Planning status values (Vision Item 5a/8: Judge Loop & Review)"""
+    GATHERING_INFO = "gathering_info"
+    DRAFTING = "drafting"
+    REVIEWING = "reviewing"
+    EXECUTING = "executing"
+    COMPLETED = "completed"
+
+
+class PlanStatus(str, Enum):
+    """Plan status values"""
+    DRAFTING = "drafting"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+
+
+class ReviewDecisionType(str, Enum):
+    """Review decision types"""
+    APPROVE = "approve"
+    REJECT = "reject"
+    MODIFY = "modify"
+
+
+class ReviewFeedbackSource(str, Enum):
+    """Review feedback source types"""
+    USER = "user"
+    REVIEWER_AGENT = "reviewer_agent"
+
+
+class PlanContext(TypedDict, total=False):
     """计划上下文 (用于多计划并行)"""
     plan_id: str
     plan_type: str  # "sprint", "routine", "long_term"
-    status: str     # "drafting", "active", "completed"
+    status: PlanStatus  # Now typed with Enum
 
-class ReviewFeedback(TypedDict):
+
+class ReviewFeedback(TypedDict, total=False):
     """审查反馈 (Reviewer Agent 或 用户)"""
-    source: str     # "user", "reviewer_agent"
-    decision: str   # "approve", "reject", "modify"
+    source: ReviewFeedbackSource  # Now typed with Enum
+    decision: ReviewDecisionType  # Now typed with Enum
     comments: str
     modified_plan: Optional[Dict[str, Any]]
 

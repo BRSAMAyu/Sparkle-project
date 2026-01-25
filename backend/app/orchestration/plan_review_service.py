@@ -6,6 +6,7 @@ Implements intelligent plan review with:
 - LLM-based deep review for complex plans
 - User confirmation workflow for high-risk plans
 """
+import asyncio
 import json
 import uuid
 from datetime import datetime
@@ -73,6 +74,7 @@ class PlanReviewResult:
     reviewed_at: str
     suggested_modifications: Optional[Dict[str, Any]] = None
     auto_approved: bool = False
+    user_facing_reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -84,6 +86,7 @@ class PlanReviewResult:
             "reviewed_at": self.reviewed_at,
             "suggested_modifications": self.suggested_modifications,
             "auto_approved": self.auto_approved,
+            "user_facing_reason": self.user_facing_reason,
         }
 
 
@@ -163,16 +166,23 @@ class PlanReviewService:
                 comments=[],
                 reviewed_at=reviewed_at,
                 auto_approved=True,
+                user_facing_reason=self._get_user_facing_reason(
+                    decision=ReviewDecision.APPROVED.value,
+                    auto_approved=True,
+                    auto_approve_reason=rule_result,
+                ),
             )
 
         # Step 2: LLM-based deep review
         logger.info(f"Plan {plan.plan_id} requires LLM review")
         llm_result = await self._llm_review(plan, user_message, user_context)
 
+        decision = llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+
         return PlanReviewResult(
             review_id=review_id,
             plan_id=plan.plan_id,
-            decision=llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value),
+            decision=decision,
             confidence=llm_result.get("confidence", 0.5),
             comments=[
                 ReviewComment(
@@ -187,6 +197,10 @@ class PlanReviewService:
             reviewed_at=reviewed_at,
             suggested_modifications=llm_result.get("suggested_modifications"),
             auto_approved=False,
+            user_facing_reason=self._get_user_facing_reason(
+                decision=decision,
+                auto_approved=False,
+            ),
         )
 
     async def _quick_rule_check(self, plan: ExecutablePlan) -> Optional[str]:
@@ -424,33 +438,80 @@ Please review this plan and provide your assessment."""
 
     def _get_review_description(self, review: PlanReviewResult) -> str:
         """Get user-friendly description of review"""
-        if review.decision == ReviewDecision.REJECTED.value:
-            return "Plan rejected. Please review the issues and try again."
-        elif review.decision == ReviewDecision.NEEDS_MODIFICATION.value:
-            return "Plan requires modifications before execution."
-        elif review.decision == ReviewDecision.REQUIRES_CONFIRMATION.value:
-            return "Please review and confirm this plan before execution."
-        return "Plan review complete."
+        if review.user_facing_reason:
+            return review.user_facing_reason
+        return self._get_user_facing_reason(
+            decision=review.decision,
+            auto_approved=review.auto_approved,
+        )
+
+    def _get_user_facing_reason(
+        self,
+        decision: str,
+        auto_approved: bool = False,
+        auto_approve_reason: Optional[str] = None,
+    ) -> str:
+        """
+        Get user-facing explanation for the review decision.
+
+        Args:
+            decision: The review decision
+            auto_approved: Whether the plan was auto-approved
+            auto_approve_reason: The reason for auto-approval (if applicable)
+
+        Returns:
+            User-facing explanation string
+        """
+        if decision == ReviewDecision.APPROVED.value:
+            if auto_approved:
+                reason = self._get_auto_approve_reason(auto_approve_reason)
+                return f"✓ 计划已自动批准：{reason}"
+            return "✓ 计划已通过审查：经LLM深度审查，计划安全且符合您的意图"
+        elif decision == ReviewDecision.REJECTED.value:
+            return "✗ 计划未通过：存在严重问题，请查看下方详细说明"
+        elif decision == ReviewDecision.NEEDS_MODIFICATION.value:
+            return "⚠ 计划需要修改：部分调整后即可执行"
+        elif decision == ReviewDecision.REQUIRES_CONFIRMATION.value:
+            return "🔍 请确认计划：需要您确认后再执行"
+        return "计划审查完成"
+
+    def _get_auto_approve_reason(self, reason_code: Optional[str]) -> str:
+        """
+        Get user-friendly explanation for auto-approval reason.
+
+        Args:
+            reason_code: The internal reason code for auto-approval
+
+        Returns:
+            User-facing explanation string
+        """
+        reason_map = {
+            "all_tools_are_read_only": "所有操作均为只读查询，无数据修改风险",
+            "high_confidence_simple_plan": "高置信度简单计划，执行路径清晰明确",
+        }
+        return reason_map.get(reason_code, "计划符合安全标准，已自动通过审查")
 
     async def handle_review_feedback(
         self,
         review_id: str,
         user_decision: str,
         user_id: str,
+        db_session: Any,  # P1 Fix #10: Now required for feedback writing
         user_comment: Optional[str] = None,
         modifications: Optional[Dict[str, Any]] = None,
-        db_session: Optional[Any] = None,  # Phase 4: for feedback writing
     ) -> Dict[str, Any]:
         """
         Handle user feedback on a plan review.
+
+        P1 Fix #10: db_session is now required for feedback writing.
 
         Args:
             review_id: Review ID
             user_decision: User's decision (approve, reject, modify)
             user_id: User ID
+            db_session: Database session for feedback writing (required)
             user_comment: Optional user comment
             modifications: Optional user-provided modifications
-            db_session: Database session for feedback writing (Phase 4)
 
         Returns:
             Status dictionary
@@ -478,8 +539,8 @@ Please review this plan and provide your assessment."""
 
                 feedback_service = get_plan_feedback_service(db_session, self.redis)
 
-                # Update the existing review feedback entry
-                await feedback_service.update_feedback_decision(
+                # Try to update the existing review feedback entry first
+                updated = await feedback_service.update_feedback_decision(
                     user_id=UUID(user_id),
                     plan_id=UUID(plan_id),
                     review_id=review_id,
@@ -487,16 +548,18 @@ Please review this plan and provide your assessment."""
                     user_comment=user_comment,
                 )
 
-                # Also add a new user_feedback entry
-                await feedback_service.append_user_feedback(
-                    user_id=UUID(user_id),
-                    plan_id=UUID(plan_id),
-                    content=user_comment or f"User decision: {user_decision}",
-                    decision=user_decision,
-                    priority="high" if user_decision == "reject" else "normal",
-                )
-
-                logger.info(f"User decision feedback written for plan {plan_id}")
+                if updated:
+                    logger.info(f"User decision feedback updated for plan {plan_id}")
+                else:
+                    # No existing review entry found, append a new user_feedback entry
+                    await feedback_service.append_user_feedback(
+                        user_id=UUID(user_id),
+                        plan_id=UUID(plan_id),
+                        content=user_comment or f"User decision: {user_decision}",
+                        decision=user_decision,
+                        priority="high" if user_decision == "reject" else "normal",
+                    )
+                    logger.info(f"User decision feedback appended (new entry) for plan {plan_id}")
             except Exception as e:
                 logger.warning(f"Failed to write user decision feedback: {e}")
 
@@ -528,17 +591,19 @@ Please review this plan and provide your assessment."""
         return None
 
     async def resume_plan_after_approval(
-        self, plan_id: str, user_id: str
+        self, plan_id: str, user_id: str, db_session: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
         Resume plan execution after user approval.
 
         This method is called when a user approves a plan review.
         It updates the plan state to indicate it should proceed with execution.
+        Also triggers automatic task generation for the approved plan.
 
         Args:
             plan_id: Plan ID to resume
             user_id: User who approved
+            db_session: Optional database session for task generation
 
         Returns:
             Status dictionary
@@ -562,11 +627,113 @@ Please review this plan and provide your assessment."""
             },
         )
 
+        # Trigger asynchronous task generation
+        asyncio.create_task(
+            self._generate_tasks_after_approval(
+                plan_id=plan_id,
+                user_id=user_id,
+                action_id=action_id
+            )
+        )
+
         return {
             "status": "success",
             "action_id": action_id,
-            "message": "Plan approved and queued for execution",
+            "message": "Plan approved and task generation initiated",
+            "task_generation_initiated": True,
         }
+
+    async def _generate_tasks_after_approval(
+        self, plan_id: str, user_id: str, action_id: str
+    ) -> None:
+        """
+        Background task: Generate tasks automatically after plan approval.
+
+        This method runs asynchronously after a plan is approved,
+        generating concrete tasks based on the plan details.
+
+        Args:
+            plan_id: The approved plan ID
+            user_id: User who owns the plan
+            action_id: The approval action ID for tracking
+        """
+        from uuid import UUID
+        from sqlalchemy import select
+        from app.database import get_db_session
+        from app.services.plan_service import PlanService
+        from app.models.plan import Plan, PlanType
+        from app.models.task import Task
+        from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+        from app.tools.schemas import GenerateTasksForPlanParams
+
+        try:
+            # Get a fresh database session
+            async with get_db_session() as db:
+                # Fetch plan details
+                plan = await PlanService.get_by_id(db, UUID(plan_id))
+                if not plan:
+                    logger.warning(f"Plan {plan_id} not found for task generation")
+                    return
+
+                # Check if tasks already exist for this plan
+                existing_tasks_result = await db.execute(
+                    select(Task).where(Task.plan_id == UUID(plan_id))
+                )
+                existing_tasks = existing_tasks_result.scalars().all()
+                if existing_tasks:
+                    logger.info(f"Plan {plan_id} already has {len(existing_tasks)} tasks, skipping generation")
+                    return
+
+                # Get the task generation tool
+                tool = dynamic_tool_registry.get_tool("generate_tasks_for_plan")
+                if not tool:
+                    logger.error("GenerateTasksForPlanTool not registered")
+                    return
+
+                # Infer difficulty from plan type
+                difficulty = "hard" if plan.type == PlanType.SPRINT else "medium"
+
+                # Calculate task count based on estimated hours
+                total_hours = plan.total_estimated_hours or 10
+                task_count = max(3, min(8, int(total_hours / 2)))
+
+                # Determine topic from plan subject or name
+                topic = plan.subject or plan.name or "General learning"
+
+                logger.info(
+                    f"Generating {task_count} tasks for plan {plan_id} "
+                    f"(difficulty={difficulty}, topic={topic})"
+                )
+
+                # Execute the tool
+                params = GenerateTasksForPlanParams(
+                    plan_id=plan_id,
+                    topic=topic,
+                    difficulty=difficulty,
+                    task_count=task_count
+                )
+
+                result = await tool.execute(
+                    params=params,
+                    user_id=user_id,
+                    db_session=db,
+                    tool_call_id=action_id
+                )
+
+                if result.success:
+                    task_count_created = result.data.get("task_count", 0)
+                    logger.info(
+                        f"Successfully generated {task_count_created} tasks "
+                        f"for plan {plan_id} (action_id={action_id})"
+                    )
+                else:
+                    logger.error(
+                        f"Task generation failed for plan {plan_id}: "
+                        f"{result.error_message}"
+                    )
+
+        except Exception as e:
+            logger.error(f"Error in _generate_tasks_after_approval: {e}", exc_info=True)
 
     async def notify_plan_rejected(
         self, plan_id: str, user_id: str, feedback: str
@@ -658,6 +825,22 @@ Please review this plan and provide your assessment."""
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )
+
+        # P1 Fix #9: Notify orchestrator via Redis pub/sub
+        if self.redis:
+            notification = {
+                "type": "replan_requested",
+                "original_plan_id": plan_id,
+                "new_plan_id": new_plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            try:
+                await self.redis.publish(f"user:{user_id}:replan", json.dumps(notification))
+                logger.info(f"Published replan notification for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to publish replan notification: {e}")
 
         return {
             "status": "success",

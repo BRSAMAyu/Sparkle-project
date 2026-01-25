@@ -50,7 +50,7 @@ class UserSimilarity(BaseModel):
     calculation_version = Column(Integer, default=1, nullable=False)  # 用于批量更新时标记版本
 
     # 元数据
-    metadata = Column(JSON, nullable=True)  # 额外的相似度信息
+    meta = Column(JSON, nullable=True)  # 额外的相似度信息
 
     # 关系
     user_1 = relationship("User", foreign_keys=[user_id_1])
@@ -94,7 +94,7 @@ class ItemSimilarity(BaseModel):
 
     # 额外信息
     subject_id = Column(GUID(), nullable=True)  # 所属学科（可选）
-    metadata = Column(JSON, nullable=True)
+    meta = Column(JSON, nullable=True)
 
     __table_args__ = (
         Index('idx_item_similarity_item1', 'item_id_1', 'item_type_1'),
@@ -129,7 +129,7 @@ class UserItemInteraction(BaseModel):
     # 上下文信息
     subject_id = Column(GUID(), nullable=True)
     session_id = Column(String(100), nullable=True)  # 学习会话ID
-    metadata = Column(JSON, nullable=True)
+    meta = Column(JSON, nullable=True)
 
     # 关系
     user = relationship("User", foreign_keys=[user_id])

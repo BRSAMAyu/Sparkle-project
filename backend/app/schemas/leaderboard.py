@@ -37,7 +37,7 @@ class LeaderboardEntry(BaseModel):
     username: str = Field(description="用户名")
     avatar_url: Optional[str] = Field(default=None, description="头像URL")
     score: float = Field(description="分数")
-    score_label: str = Field(description="分数标签（如"1234分"）")
+    score_label: str = Field(description='分数标签（如"1234分"）')
     is_me: bool = Field(default=False, description="是否为当前用户")
     change: Optional[int] = Field(default=None, description="排名变化（正数=上升，负数=下降）")
     stats: Dict[str, Any] = Field(default_factory=dict, description="额外统计信息")
@@ -81,7 +81,7 @@ class GroupLeaderboardResponse(BaseModel):
 
 class LeaderboardSummary(BaseModel):
     """排行榜摘要"""
-    global: Optional[LeaderboardResponse] = Field(default=None, description="全局榜")
+    global_ranking: Optional[LeaderboardResponse] = Field(default=None, description="全局榜")
     friends: Optional[LeaderboardResponse] = Field(default=None, description="好友榜")
     weekly: Optional[LeaderboardResponse] = Field(default=None, description="周榜")
     streak: Optional[LeaderboardResponse] = Field(default=None, description="连胜榜")

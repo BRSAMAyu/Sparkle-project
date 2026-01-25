@@ -25,7 +25,7 @@ class UserSimilarityScore(BaseModel):
     user_id: UUID = Field(description="相似用户ID")
     username: str = Field(description="用户名")
     avatar_url: Optional[str] = Field(default=None, description="头像URL")
-    similarity: float = Field(ge=0.0).le=1.0), description="相似度 0-1")
+    similarity: float = Field(..., ge=0.0, le=1.0, description="相似度 0-1")
     common_items: int = Field(description="共同学习物品数量")
     common_subjects: List[str] = Field(default_factory=list, description="共同学科")
     last_interaction: Optional[datetime] = Field(default=None, description="最后互动时间")
@@ -41,7 +41,7 @@ class CollaborativeRecommendation(BaseModel):
     similar_users: List[UUID] = Field(default_factory=list, description="相似用户ID列表")
     similar_usernames: List[str] = Field(default_factory=list, description="相似用户名")
     predicted_score: float = Field(description="预测兴趣分数 0-1")
-    confidence: float = Field(ge=0.0).le(1.0), description="推荐置信度")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="推荐置信度")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="额外元数据")
 
 
@@ -50,7 +50,7 @@ class ItemSimilarity(BaseModel):
     item_id: UUID = Field(description="物品ID")
     item_type: RecommendationItemType = Field(description="物品类型")
     title: str = Field(description="标题")
-    similarity: float = Field(ge=0.0).le(1.0), description="相似度 0-1")
+    similarity: float = Field(..., ge=0.0, le=1.0, description="相似度 0-1")
     common_learners: int = Field(description="共同学习人数")
 
 
@@ -60,7 +60,7 @@ class CollaborativeFilteringRequest(BaseModel):
     limit: int = Field(default=10, ge=1, le=50, description="推荐数量限制")
     item_type: Optional[RecommendationItemType] = Field(default=None, description="筛选物品类型")
     subject_id: Optional[UUID] = Field(default=None, description="筛选学科")
-    min_similarity: float = Field(default=0.3, ge=0.0).le=1.0), description="最小用户相似度阈值")
+    min_similarity: float = Field(default=0.3, ge=0.0, le=1.0, description="最小用户相似度阈值")
 
 
 class SimilarUsersRequest(BaseModel):
