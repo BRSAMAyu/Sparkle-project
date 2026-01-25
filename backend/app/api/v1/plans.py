@@ -345,7 +345,13 @@ async def archive_plan_state(
             days_ahead = (plan.target_date - today).days if completion_rate >= 1.0 else 0
 
         # Check if sprint meets completion threshold (80%+)
+        daily_first_reward = None
         if completion_rate >= 0.8:
+            # Check for daily first win reward
+            daily_first_reward = await engine.check_daily_first(
+                str(current_user.id), db
+            )
+
             # SPRINTS_TOTAL: Count all completed sprints (both 80%+ and 100%)
             # This triggers achievements like sprint_first, sprint_5, sprint_10
             await engine.process_event(
@@ -382,12 +388,18 @@ async def archive_plan_state(
     quota_service = PlanQuotaService(db, cache_service.redis)
     quota_status = await quota_service.get_quota_status(current_user.id)
 
-    return {
+    response = {
         "plan_id": str(plan_id),
         "status": state.status if state else PlanStateStatus.ARCHIVED.value,
         "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,
         "new_primary_plan_id": str(quota_status.primary_plan_id) if quota_status.primary_plan_id else None,
     }
+
+    # Include daily first reward if available
+    if daily_first_reward:
+        response["daily_first_reward"] = daily_first_reward
+
+    return response
 
 
 @router.post("/{plan_id}/restore", response_model=Dict[str, Any])

@@ -501,6 +501,8 @@ class AchievementCard extends StatelessWidget {
         return Icons.people;
       case AchievementType.contract:
         return Icons.description;
+      case AchievementType.sprint:
+        return Icons.directions_run;
     }
   }
 }

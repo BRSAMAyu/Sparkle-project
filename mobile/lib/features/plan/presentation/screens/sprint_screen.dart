@@ -205,11 +205,44 @@ class _SprintHeader extends StatelessWidget {
 
 /// Sprint Achievements Progress Widget
 /// Shows relevant sprint achievements and their progress
-class _SprintAchievementsProgress extends ConsumerWidget {
+class _SprintAchievementsProgress extends ConsumerStatefulWidget {
   const _SprintAchievementsProgress();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SprintAchievementsProgress> createState() =>
+      _SprintAchievementsProgressState();
+}
+
+class _SprintAchievementsProgressState
+    extends ConsumerState<_SprintAchievementsProgress> {
+  List<AchievementWithProgress> _closeToUnlock = [];
+  bool _isLoadingClose = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCloseToUnlock();
+  }
+
+  Future<void> _loadCloseToUnlock() async {
+    if (_isLoadingClose) return;
+    setState(() => _isLoadingClose = true);
+    try {
+      final close = await ref
+          .read(achievementProvider.notifier)
+          .getCloseToUnlockAchievements(category: 'sprint');
+      if (mounted) {
+        setState(() => _closeToUnlock = close);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingClose = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final achievementState = ref.watch(achievementProvider);
 
     // Filter sprint achievements
@@ -217,7 +250,7 @@ class _SprintAchievementsProgress extends ConsumerWidget {
         .where((a) => a.achievement.type == AchievementType.sprint)
         .toList();
 
-    if (sprintAchievements.isEmpty) {
+    if (sprintAchievements.isEmpty && _closeToUnlock.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -229,46 +262,182 @@ class _SprintAchievementsProgress extends ConsumerWidget {
       return b.progressPercentage.compareTo(a.progressPercentage);
     });
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(DS.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        // P0功能: 成就临界提示横幅
+        if (_closeToUnlock.isNotEmpty)
+          _CloseToUnlockBanner(
+            achievements: _closeToUnlock,
+            onRefresh: _loadCloseToUnlock,
+          ),
+        // Sprint Achievements Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+          child: Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(DS.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.military_tech,
-                        size: DS.iconSizeSm,
-                        color: DS.brandPrimary,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.military_tech,
+                            size: DS.iconSizeSm,
+                            color: DS.brandPrimary,
+                          ),
+                          const SizedBox(width: DS.sm),
+                          Text(
+                            'Sprint Achievements',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: DS.sm),
-                      Text(
-                        'Sprint Achievements',
-                        style: Theme.of(context).textTheme.titleSmall,
+                      TextButton(
+                        onPressed: () => context.push('/achievements?type=sprint'),
+                        child: const Text('View All'),
                       ),
                     ],
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/achievements?type=sprint'),
-                    child: const Text('View All'),
-                  ),
+                  const SizedBox(height: DS.sm),
+                  ...sprintAchievements.take(3).map((achievement) =>
+                      _SprintAchievementTile(achievement: achievement)),
                 ],
               ),
-              const SizedBox(height: DS.sm),
-              ...sprintAchievements.take(3).map((achievement) =>
-                  _SprintAchievementTile(achievement: achievement)),
-            ],
+            ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// P0功能: 成就临界提示横幅
+/// 显示接近解锁的成就（80%以上进度）
+class _CloseToUnlockBanner extends StatelessWidget {
+  const _CloseToUnlockBanner({
+    required this.achievements,
+    this.onRefresh,
+  });
+
+  final List<AchievementWithProgress> achievements;
+  final VoidCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final closest = achievements.first;
+    final progressTarget = closest.userProgress?.progressTarget ?? 1;
+    final progressValue = closest.userProgress?.progressValue ?? 0;
+    final remaining = progressTarget - progressValue;
+    final progress = closest.progressPercentage / 100.0;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(DS.lg, 0, DS.lg, DS.sm),
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            DS.brandPrimary.withValues(alpha: 0.1),
+            DS.brandPrimary.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: DS.brandPrimary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _getRarityColor(closest.achievement.rarity)
+                  .withValues(alpha: 0.2),
+              border: Border.all(
+                color: _getRarityColor(closest.achievement.rarity),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.flag_outlined,
+              size: DS.iconSizeSm,
+              color: _getRarityColor(closest.achievement.rarity),
+            ),
+          ),
+          const SizedBox(width: DS.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '即将解锁！',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.brandPrimary,
+                      ),
+                ),
+                Text(
+                  closest.achievement.name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: DS.fontWeightMedium,
+                      ),
+                ),
+                const SizedBox(height: DS.xs),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(DS.borderRadiusSM),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: DS.neutral100,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _getRarityColor(closest.achievement.rarity),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '再$remaining',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral500,
+                    ),
+              ),
+              Text(
+                '${closest.progressPercentage}%',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: _getRarityColor(closest.achievement.rarity),
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  Color _getRarityColor(AchievementRarity rarity) {
+    switch (rarity) {
+      case AchievementRarity.common:
+        return DS.neutral400;
+      case AchievementRarity.rare:
+        return const Color(0xFFFFD700);
+      case AchievementRarity.epic:
+        return const Color(0xFF9B59B6);
+      case AchievementRarity.legendary:
+        return const Color(0xFFFF6B6B);
+    }
   }
 }
 

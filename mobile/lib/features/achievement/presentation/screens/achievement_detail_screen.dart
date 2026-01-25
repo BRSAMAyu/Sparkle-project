@@ -714,6 +714,8 @@ class _AchievementDetailScreenState
         return Icons.people;
       case AchievementType.contract:
         return Icons.description;
+      case AchievementType.sprint:
+        return Icons.directions_run;
     }
   }
 
@@ -737,6 +739,8 @@ class _AchievementDetailScreenState
         return '社交';
       case AchievementType.contract:
         return '契约';
+      case AchievementType.sprint:
+        return '冲刺';
     }
   }
 

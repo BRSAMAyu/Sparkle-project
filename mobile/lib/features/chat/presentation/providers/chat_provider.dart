@@ -1146,8 +1146,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final review = state.pendingContentReview;
     if (review == null) return;
 
-    // TODO: Implement regeneration logic
-    // For now, just clear the pending review
     state = state.copyWith(
       clearPendingContentReview: true,
       lastActionStatus: 'rejected',
@@ -1157,6 +1155,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    requestRegeneration(
+      originalContentId: 'content_from_review_${review.reviewId}',
+      reviewId: review.reviewId,
+      regenerationType: 'fix_issues',
+    ).then((result) {
+      if (result == null || result['success'] != true) {
+        debugPrint('❌ Regeneration request failed for ${review.reviewId}');
       }
     });
 

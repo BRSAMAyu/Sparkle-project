@@ -97,6 +97,8 @@ async def _record_review_to_history(
     target_id: str,
     target_type: str,
     review_duration_ms: int = 0,
+    content_snapshot: Optional[str] = None,
+    user_query: Optional[str] = None,
 ) -> None:
     """记录审查到历史"""
     history_service = _get_review_history_service(state)
@@ -119,6 +121,8 @@ async def _record_review_to_history(
             reviewer_model=review_result.reviewer_model,
             review_duration_ms=review_duration_ms,
             requires_reflection=review_result.requires_reflection,
+            content_snapshot=content_snapshot,
+            user_query=user_query,
         )
     except Exception as e:
         logger.warning(f"[ReviewNode] Failed to record review history: {e}")
@@ -404,6 +408,8 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         target_id=target_id,
         target_type="llm_response",
         review_duration_ms=review_duration,
+        content_snapshot=llm_response,
+        user_query=user_query,
     )
 
     # Phase 2d: Record model performance and check for fallback

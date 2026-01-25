@@ -6,7 +6,7 @@ import json
 import time
 import uuid
 from datetime import datetime, timedelta
-from typing import AsyncIterator, Callable
+from typing import AsyncIterator, Callable, Optional
 
 import grpc
 from loguru import logger
@@ -31,6 +31,41 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self.orchestrator = orchestrator
         self.db_session_factory = db_session_factory
         logger.info("AgentServiceImpl initialized with injected dependencies")
+
+    async def _require_admin(
+        self,
+        context: grpc.aio.ServicerContext,
+        metadata: dict[str, str],
+    ) -> Optional[str]:
+        user_id = metadata.get("user-id")
+        if not user_id:
+            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            context.set_details("user_id is required")
+            return None
+
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details("user_id must be a valid UUID")
+            return None
+
+        try:
+            async with self.db_session_factory() as db_session:
+                from app.services.user_service import UserService
+
+                user_service = UserService(db_session)
+                user = await user_service.get_user_by_id(user_uuid)
+                if not user or not user.is_superuser:
+                    context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+                    context.set_details("Admin access required")
+                    return None
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return None
+
+        return user_id
 
     async def StreamChat(
         self,
@@ -628,6 +663,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     comment=request.comment if request.comment else None,
                     issues_reported=list(request.issues_reported) if request.issues_reported else None,
                 )
+                await db_session.commit()
 
                 # Trigger learning analysis (async, non-blocking)
                 try:
@@ -726,6 +762,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     new_decision=request.new_decision,
                     reason=request.reason or "",
                 )
+                await db_session.commit()
 
                 return agent_service_pb2.ReviewOverrideResponse(
                     success=True,
@@ -811,6 +848,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 )
 
                 appeal = await appeal_service.submit_appeal(appeal_request)
+                await db_session.commit()
 
                 return agent_service_pb2.ReviewAppealResponse(
                     success=True,
@@ -958,6 +996,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     comments=request.comments,
                     tags=list(request.tags) if request.tags else None,
                 )
+                await db_session.commit()
 
                 return agent_service_pb2.ReviewFeedbackResponse(
                     success=True,
@@ -1055,6 +1094,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 result = await regen_service.process_regeneration(
                     regen_request.request_id
                 )
+                await db_session.commit()
 
                 return agent_service_pb2.RegenerationResponse(
                     success=result.success,
@@ -1151,6 +1191,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             priority_filter = request.priority_filter if request.priority_filter else None
             status_filter = request.status_filter if request.status_filter else None
 
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.GetArbitrationQueueResponse()
+
             logger.info(
                 f"GetArbitrationQueue - limit={limit}, "
                 f"priority={priority_filter}, status={status_filter}"
@@ -1229,6 +1274,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Claims a case for review by an admin.
         """
         try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.AssignArbitrationCaseResponse(
+                    success=False,
+                    message="Admin access required",
+                )
+
             if not request.case_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("case_id is required")
@@ -1275,6 +1328,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     arbitrator_id=request.arbitrator_id,
                     arbitrator_role=role,
                 )
+                await db_session.commit()
 
                 return agent_service_pb2.AssignArbitrationCaseResponse(
                     success=True,
@@ -1309,6 +1363,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Finalizes the arbitration with a decision.
         """
         try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=False,
+                    message="Admin access required",
+                )
+
             if not request.case_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("case_id is required")
@@ -1383,6 +1445,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     arbitrator_role=role,
                     feedback_for_model=request.feedback_for_model,
                 )
+                await db_session.commit()
 
                 return agent_service_pb2.SubmitArbitrationDecisionResponse(
                     success=True,
@@ -1419,6 +1482,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             logger.info("GetArbitrationQueueStats")
+
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.GetArbitrationQueueStatsResponse()
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import get_arbitration_service

@@ -14,13 +14,17 @@ Feedback-Driven Generation Service - Phase 2f
 import uuid
 from typing import Dict, Any, List, Optional, AsyncIterator
 from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from loguru import logger
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.services.review_history_service import get_review_history_service
+from app.services.llm_service import get_llm_service_for_task
+from app.core.agent_profiles import TaskType
+from app.models.review_system import ReviewFeedback as ReviewFeedbackModel
 
 
 # ============================================
@@ -168,6 +172,7 @@ class FeedbackDrivenGenerationService:
     def __init__(self, db_session: AsyncSession):
         self._db = db_session
         self._history_service = get_review_history_service(db_session)
+        self._llm = get_llm_service_for_task(TaskType.STANDARD_RESPONSE)
 
         # 内存缓存（生产环境应使用Redis）
         self._feedbacks: Dict[str, ReviewFeedback] = {}
@@ -245,8 +250,14 @@ class FeedbackDrivenGenerationService:
             review_id=review_id,
             user_id=user_id,
             feedback_type=feedback_type.value,
+            feedback_id=feedback.feedback_id,
             rating=rating,
             comment=comments,
+            was_helpful=was_helpful,
+            was_accurate=was_accurate,
+            inaccurate_points=inaccurate_points,
+            specificity_level=specificity_level,
+            tags=tags,
         )
 
         logger.info(f"[FeedbackService] Feedback created: {feedback.feedback_id}")
@@ -367,11 +378,28 @@ class FeedbackDrivenGenerationService:
             # 构建重新生成指令
             regen_prompt = self._build_regeneration_prompt(request)
 
-            # 调用 LLM 重新生成
-            # TODO: 实际调用 LLM 服务
-            # 暂时返回模拟结果
+            original_content = await self._resolve_original_content(request)
+            regen_prompt = self._build_regeneration_prompt(request)
 
-            new_content = f"[Regenerated content based on: {request.regeneration_type.value}]"
+            system_prompt = (
+                "你是一个严谨的内容优化助手。"
+                "根据用户反馈和改进要求，对原始内容进行高质量重写。"
+                "只输出优化后的内容，不要额外解释。"
+            )
+            user_prompt = (
+                "原始内容:\n"
+                f"{original_content}\n\n"
+                "改进要求:\n"
+                f"{regen_prompt}"
+            )
+
+            new_content = await self._llm.chat(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+            )
             new_content_id = f"content_{uuid.uuid4().hex[:12]}"
 
             # 更新请求状态
@@ -389,7 +417,7 @@ class FeedbackDrivenGenerationService:
                 new_content_id=new_content_id,
                 improvement_summary=request.improvement_summary,
                 changes_made=self._summarize_changes(request),
-                score_improvement=0.1,  # 模拟分数提升
+                score_improvement=0.0,
                 generation_time_ms=elapsed_ms,
             )
 
@@ -452,27 +480,29 @@ class FeedbackDrivenGenerationService:
         )
 
         # 流式生成（模拟）
-        # TODO: 替换为实际的流式 LLM 调用
+        system_prompt = (
+            "你是一个严谨的内容优化助手。"
+            "根据用户反馈和改进要求，对原始内容进行高质量重写。"
+            "只输出优化后的内容，不要额外解释。"
+        )
+        regen_prompt = self._build_regeneration_prompt(request)
+        user_prompt = (
+            "原始内容:\n"
+            f"{content}\n\n"
+            "改进要求:\n"
+            f"{regen_prompt}"
+        )
 
-        yield "[开始重新生成内容...]\n\n"
+        improved_content = await self._llm.chat(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+        )
 
-        if feedback.was_accurate == False:
-            yield "根据您的反馈，我对以下不准确的点进行了修正：\n"
-            for point in feedback.inaccurate_points:
-                yield f"- {point}\n"
-            yield "\n"
-
-        if feedback.specificity_level == "too_vague":
-            yield "我添加了更多细节来使内容更加具体：\n\n"
-        elif feedback.specificity_level == "too_detailed":
-            yield "我简化了内容，使其更加易于理解：\n\n"
-
-        # 模拟生成改进后的内容
-        improved_content = self._generate_improved_content(content, feedback)
         for chunk in improved_content.split():
             yield chunk + " "
-
-        yield "\n\n[重新生成完成]"
 
         # 更新请求状态
         request.status = RegenerationStatus.COMPLETED
@@ -556,12 +586,12 @@ class FeedbackDrivenGenerationService:
         cutoff_str = cutoff.isoformat()
 
         # 筛选时间范围内的反馈
-        feedbacks = [
-            f for f in self._feedbacks.values()
-            if f.timestamp >= cutoff_str
-        ]
+        result = await self._db.execute(
+            select(ReviewFeedbackModel).where(ReviewFeedbackModel.created_at >= cutoff)
+        )
+        feedback_models = result.scalars().all()
 
-        if not feedbacks:
+        if not feedback_models:
             return {
                 "total_feedbacks": 0,
                 "avg_rating": 0.0,
@@ -572,9 +602,9 @@ class FeedbackDrivenGenerationService:
             }
 
         # 计算统计
-        ratings = [f.rating for f in feedbacks if f.rating is not None]
-        helpful = [f.was_helpful for f in feedbacks if f.was_helpful is not None]
-        accurate = [f.was_accurate for f in feedbacks if f.was_accurate is not None]
+        ratings = [f.rating for f in feedback_models if f.rating is not None]
+        helpful = [f.was_helpful for f in feedback_models if f.was_helpful is not None]
+        accurate = [f.was_accurate for f in feedback_models if f.was_accurate is not None]
 
         avg_rating = sum(ratings) / len(ratings) if ratings else 0.0
         helpful_rate = sum(1 for h in helpful if h) / len(helpful) if helpful else 0.0
@@ -587,7 +617,7 @@ class FeedbackDrivenGenerationService:
         ]
 
         return {
-            "total_feedbacks": len(feedbacks),
+            "total_feedbacks": len(feedback_models),
             "avg_rating": avg_rating,
             "helpful_rate": helpful_rate,
             "accuracy_rate": accuracy_rate,
@@ -681,33 +711,12 @@ class FeedbackDrivenGenerationService:
 
         return hints
 
-    def _generate_improved_content(
-        self,
-        original_content: str,
-        feedback: ReviewFeedback,
-    ) -> str:
-        """
-        生成改进后的内容
-
-        注意: 这是一个模拟实现
-        实际应该调用 LLM 服务
-        """
-        # 这里应该调用 LLM 进行实际生成
-        # 暂时返回模拟内容
-
-        improvements = []
-
-        if feedback.was_accurate == False:
-            improvements.append("(已修正准确性问题)")
-
-        if feedback.specificity_level == "too_vague":
-            improvements.append("(已添加更多细节)")
-        elif feedback.specificity_level == "too_detailed":
-            improvements.append("(已简化内容)")
-
-        improvement_note = " ".join(improvements) if improvements else "(已优化)"
-
-        return f"{improvement_note} {original_content}"
+    async def _resolve_original_content(self, request: RegenerationRequest) -> str:
+        if request.review_id:
+            review = await self._history_service.get_review_by_id(request.review_id)
+            if review and review.content_snapshot:
+                return review.content_snapshot
+        return request.original_content_id
 
 
 # ============================================
