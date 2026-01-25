@@ -287,11 +287,11 @@ mixin _$StatisticsDataSeries {
   /// Display name for this series
   String get name => throw _privateConstructorUsedError;
 
-  /// Color code for this series (hex or named)
-  String? get color => throw _privateConstructorUsedError;
-
   /// The data points in chronological order
   List<StatisticsDataPoint> get points => throw _privateConstructorUsedError;
+
+  /// Color code for this series (hex or named)
+  String? get color => throw _privateConstructorUsedError;
 
   /// Unit label for values (e.g., "分钟", "次", "分")
   String? get unit => throw _privateConstructorUsedError;
@@ -323,8 +323,8 @@ abstract class $StatisticsDataSeriesCopyWith<$Res> {
   $Res call(
       {String id,
       String name,
-      String? color,
       List<StatisticsDataPoint> points,
+      String? color,
       String? unit,
       double? maxValue,
       double? minValue,
@@ -348,8 +348,8 @@ class _$StatisticsDataSeriesCopyWithImpl<$Res,
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? color = freezed,
     Object? points = null,
+    Object? color = freezed,
     Object? unit = freezed,
     Object? maxValue = freezed,
     Object? minValue = freezed,
@@ -365,14 +365,14 @@ class _$StatisticsDataSeriesCopyWithImpl<$Res,
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      color: freezed == color
-          ? _value.color
-          : color // ignore: cast_nullable_to_non_nullable
-              as String?,
       points: null == points
           ? _value.points
           : points // ignore: cast_nullable_to_non_nullable
               as List<StatisticsDataPoint>,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
       unit: freezed == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
@@ -408,8 +408,8 @@ abstract class _$$StatisticsDataSeriesImplCopyWith<$Res>
   $Res call(
       {String id,
       String name,
-      String? color,
       List<StatisticsDataPoint> points,
+      String? color,
       String? unit,
       double? maxValue,
       double? minValue,
@@ -430,8 +430,8 @@ class __$$StatisticsDataSeriesImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? color = freezed,
     Object? points = null,
+    Object? color = freezed,
     Object? unit = freezed,
     Object? maxValue = freezed,
     Object? minValue = freezed,
@@ -447,14 +447,14 @@ class __$$StatisticsDataSeriesImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      color: freezed == color
-          ? _value.color
-          : color // ignore: cast_nullable_to_non_nullable
-              as String?,
       points: null == points
           ? _value._points
           : points // ignore: cast_nullable_to_non_nullable
               as List<StatisticsDataPoint>,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
       unit: freezed == unit
           ? _value.unit
           : unit // ignore: cast_nullable_to_non_nullable
@@ -485,8 +485,8 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
   const _$StatisticsDataSeriesImpl(
       {required this.id,
       required this.name,
-      this.color,
       required final List<StatisticsDataPoint> points,
+      this.color,
       this.unit,
       this.maxValue,
       this.minValue,
@@ -506,10 +506,6 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
   @override
   final String name;
 
-  /// Color code for this series (hex or named)
-  @override
-  final String? color;
-
   /// The data points in chronological order
   final List<StatisticsDataPoint> _points;
 
@@ -520,6 +516,10 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_points);
   }
+
+  /// Color code for this series (hex or named)
+  @override
+  final String? color;
 
   /// Unit label for values (e.g., "分钟", "次", "分")
   @override
@@ -543,7 +543,7 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
 
   @override
   String toString() {
-    return 'StatisticsDataSeries(id: $id, name: $name, color: $color, points: $points, unit: $unit, maxValue: $maxValue, minValue: $minValue, averageValue: $averageValue, totalValue: $totalValue)';
+    return 'StatisticsDataSeries(id: $id, name: $name, points: $points, color: $color, unit: $unit, maxValue: $maxValue, minValue: $minValue, averageValue: $averageValue, totalValue: $totalValue)';
   }
 
   @override
@@ -553,8 +553,8 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
             other is _$StatisticsDataSeriesImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.color, color) || other.color == color) &&
             const DeepCollectionEquality().equals(other._points, _points) &&
+            (identical(other.color, color) || other.color == color) &&
             (identical(other.unit, unit) || other.unit == unit) &&
             (identical(other.maxValue, maxValue) ||
                 other.maxValue == maxValue) &&
@@ -572,8 +572,8 @@ class _$StatisticsDataSeriesImpl extends _StatisticsDataSeries {
       runtimeType,
       id,
       name,
-      color,
       const DeepCollectionEquality().hash(_points),
+      color,
       unit,
       maxValue,
       minValue,
@@ -600,8 +600,8 @@ abstract class _StatisticsDataSeries extends StatisticsDataSeries {
   const factory _StatisticsDataSeries(
       {required final String id,
       required final String name,
-      final String? color,
       required final List<StatisticsDataPoint> points,
+      final String? color,
       final String? unit,
       final double? maxValue,
       final double? minValue,
@@ -622,12 +622,12 @@ abstract class _StatisticsDataSeries extends StatisticsDataSeries {
   String get name;
   @override
 
-  /// Color code for this series (hex or named)
-  String? get color;
-  @override
-
   /// The data points in chronological order
   List<StatisticsDataPoint> get points;
+  @override
+
+  /// Color code for this series (hex or named)
+  String? get color;
   @override
 
   /// Unit label for values (e.g., "分钟", "次", "分")

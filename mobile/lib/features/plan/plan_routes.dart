@@ -7,6 +7,7 @@ import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.da
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_edit_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_history_screen.dart';
+import 'package:sparkle/features/plan/presentation/screens/sprint_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -34,6 +35,7 @@ class PlanRoutes {
   static const String planEdit = '/plans/:id/edit';
   static const String planHistory = '/plans/history';
   static const String sprint = '/sprint';
+  static const String sprintHistory = '/sprint/history';
   static const String growth = '/growth';
 
   static List<RouteBase> get routes => [
@@ -107,6 +109,16 @@ class PlanRoutes {
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const SprintScreen(),
+        ),
+      ),
+    // Sprint history (detail page, full-screen)
+    GoRoute(
+        path: sprintHistory,
+        name: 'sprintHistory',
+        parentNavigatorKey: navigatorKey,
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const SprintHistoryScreen(),
         ),
       ),
     // Growth screen (detail page, full-screen)

@@ -41,6 +41,8 @@ TASK_AWARENESS_SECTION = """
 3. modify_plan_task - 修改任务属性（难度、时间、优先级）
 4. create_task - 创建新任务
 5. update_task_status - 更新任务状态
+6. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
+7. dismiss_milestone_proposal - 忽略里程碑提案
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。

@@ -5,7 +5,10 @@ import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/features/task/task.dart';
 
 /// Task board view mode
-enum TaskViewMode { schedule, priority, plan }
+enum TaskViewMode { schedule, priority, plan, sprint }
+
+/// Sprint task filter options
+enum SprintTaskFilter { all, todo, inProgress, done }
 
 /// Task board state
 class TaskBoardState {
@@ -13,21 +16,25 @@ class TaskBoardState {
     this.currentView = TaskViewMode.schedule,
     this.expandedTaskIds = const {},
     this.selectedPlanId,
+    this.sprintFilter = SprintTaskFilter.all,
   });
 
   final TaskViewMode currentView;
   final Set<String> expandedTaskIds;
   final String? selectedPlanId;
+  final SprintTaskFilter sprintFilter;
 
   TaskBoardState copyWith({
     TaskViewMode? currentView,
     Set<String>? expandedTaskIds,
     String? selectedPlanId,
+    SprintTaskFilter? sprintFilter,
   }) =>
       TaskBoardState(
         currentView: currentView ?? this.currentView,
         expandedTaskIds: expandedTaskIds ?? this.expandedTaskIds,
         selectedPlanId: selectedPlanId ?? this.selectedPlanId,
+        sprintFilter: sprintFilter ?? this.sprintFilter,
       );
 }
 
@@ -42,9 +49,9 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
 
   void _initializeDefaultView() {
     final dashboardState = _ref.read(dashboardProvider);
-    // If sprint is active, default to plan view
+    // If sprint is active, default to sprint view
     final defaultView = dashboardState.sprint != null
-        ? TaskViewMode.plan
+        ? TaskViewMode.sprint
         : TaskViewMode.schedule;
     state = TaskBoardState(currentView: defaultView);
   }
@@ -89,6 +96,10 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
 
   void collapseAll() {
     state = state.copyWith(expandedTaskIds: {});
+  }
+
+  void setSprintFilter(SprintTaskFilter filter) {
+    state = state.copyWith(sprintFilter: filter);
   }
 }
 
@@ -213,4 +224,75 @@ final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
   }
 
   return groups;
+});
+
+/// Sprint view tasks provider - 只显示当前活跃冲刺的任务
+final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
+  final dashboardState = ref.watch(dashboardProvider);
+  final taskState = ref.watch(taskListProvider);
+  final boardState = ref.watch(taskBoardProvider);
+
+  // 没有活跃冲刺时返回空列表
+  if (dashboardState.sprint == null) return [];
+
+  final sprintPlanId = dashboardState.sprint!.id;
+
+  // 筛选属于当前冲刺的任务
+  var tasks = taskState.tasks
+      .where((t) => t.planId == sprintPlanId)
+      .toList();
+
+  // 根据过滤器进一步筛选
+  switch (boardState.sprintFilter) {
+    case SprintTaskFilter.todo:
+      tasks = tasks.where((t) => t.status == TaskStatus.pending).toList();
+      break;
+    case SprintTaskFilter.inProgress:
+      tasks = tasks.where((t) => t.status == TaskStatus.inProgress).toList();
+      break;
+    case SprintTaskFilter.done:
+      tasks = tasks.where((t) => t.status == TaskStatus.completed).toList();
+      break;
+    case SprintTaskFilter.all:
+    default:
+      // 默认只显示未完成和未放弃的任务
+      tasks = tasks
+          .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+          .toList();
+      break;
+  }
+
+  // 按优先级排序
+  tasks.sort((a, b) => b.priority.compareTo(a.priority));
+  return tasks;
+});
+
+/// Sprint task counts provider - 用于显示过滤器的任务数量
+final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
+  final dashboardState = ref.watch(dashboardProvider);
+  final taskState = ref.watch(taskListProvider);
+
+  if (dashboardState.sprint == null) {
+    return SprintTaskFilter.values.asMap().map((_, _) => 0);
+  }
+
+  final sprintPlanId = dashboardState.sprint!.id;
+  final sprintTasks = taskState.tasks
+      .where((t) => t.planId == sprintPlanId)
+      .toList();
+
+  return {
+    SprintTaskFilter.all: sprintTasks
+        .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+        .length,
+    SprintTaskFilter.todo: sprintTasks
+        .where((t) => t.status == TaskStatus.pending)
+        .length,
+    SprintTaskFilter.inProgress: sprintTasks
+        .where((t) => t.status == TaskStatus.inProgress)
+        .length,
+    SprintTaskFilter.done: sprintTasks
+        .where((t) => t.status == TaskStatus.completed)
+        .length,
+  };
 });

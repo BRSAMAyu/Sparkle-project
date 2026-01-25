@@ -148,12 +148,12 @@ StreakStats _$StreakStatsFromJson(Map<String, dynamic> json) => StreakStats(
       currentStreak: (json['current_streak'] as num).toInt(),
       maxStreak: (json['max_streak'] as num).toInt(),
       longestStreak: (json['longest_streak'] as num).toInt(),
-      lastActivityDate: json['last_activity_date'] == null
-          ? null
-          : DateTime.parse(json['last_activity_date'] as String),
       freezeCharges: (json['freeze_charges'] as num).toInt(),
       maxFreezeCharges: (json['max_freeze_charges'] as num).toInt(),
       totalCheckinDays: (json['total_checkin_days'] as num).toInt(),
+      lastActivityDate: json['last_activity_date'] == null
+          ? null
+          : DateTime.parse(json['last_activity_date'] as String),
       longestStreakStart: json['longest_streak_start'] == null
           ? null
           : DateTime.parse(json['longest_streak_start'] as String),
