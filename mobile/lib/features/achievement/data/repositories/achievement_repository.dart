@@ -348,6 +348,39 @@ class AchievementRepository {
     }
   }
 
+  /// Get achievements close to unlocking (80%+ progress)
+  /// 获取接近解锁的成就（80%以上进度）
+  Future<List<AchievementWithProgress>> getCloseToUnlockAchievements({
+    String? category,
+    double threshold = 0.8,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      // Return demo close-to-unlock achievements
+      return _getDemoCloseToUnlockAchievements();
+    }
+
+    try {
+      final queryParams = <String, dynamic>{
+        'threshold': threshold,
+        if (category != null) 'category': category,
+      };
+
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementsCloseToUnlock,
+        queryParameters: queryParams,
+      );
+
+      final payload = _unwrapResponseMap(response.data, action: 'getCloseToUnlockAchievements');
+      final dataList = payload['data'] as List<dynamic>?;
+
+      return dataList?.map((json) => AchievementWithProgress.fromJson(
+        json as Map<String, dynamic>,
+      ),).toList() ?? [];
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getCloseToUnlockAchievements');
+    }
+  }
+
   // ========== Demo Data ==========
 
   AchievementListResponse _getDemoAchievements() => AchievementListResponse(
@@ -527,6 +560,55 @@ class AchievementRepository {
         titleDisplay: '周常战士',
         unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
         isEquipped: false,
+      ),
+    ];
+
+  List<AchievementWithProgress> _getDemoCloseToUnlockAchievements() => [
+      AchievementWithProgress(
+        achievement: AchievementModel(
+          id: 'streak_30',
+          name: '月度冠军',
+          description: '连续学习30天',
+          iconUrl: '/icons/streak_30.png',
+          type: AchievementType.streak,
+          rarity: AchievementRarity.rare,
+          category: 'streak',
+          triggerCode: 'STREAK_DAYS',
+          triggerConfig: {'days': 30},
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        isUnlocked: false,
+        progressPercentage: 90,
+        userProgress: UserAchievementProgress(
+          achievementId: 'streak_30',
+          progress: 0.9,
+          progressValue: 27,
+          progressTarget: 30,
+        ),
+      ),
+      AchievementWithProgress(
+        achievement: AchievementModel(
+          id: 'nodes_100',
+          name: '星图探索者',
+          description: '解锁100个知识点',
+          iconUrl: '/icons/nodes_100.png',
+          type: AchievementType.nodeExplore,
+          rarity: AchievementRarity.rare,
+          category: 'exploration',
+          triggerCode: 'NODES_UNLOCKED',
+          triggerConfig: {'count': 100},
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        isUnlocked: false,
+        progressPercentage: 85,
+        userProgress: UserAchievementProgress(
+          achievementId: 'nodes_100',
+          progress: 0.85,
+          progressValue: 85,
+          progressTarget: 100,
+        ),
       ),
     ];
 }

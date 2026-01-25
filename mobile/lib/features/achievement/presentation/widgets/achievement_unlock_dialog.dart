@@ -15,6 +15,8 @@ class AchievementUnlockDialog extends StatefulWidget {
     super.key,
     this.onShare,
     this.onClose,
+    this.comboCount,
+    this.milestoneInfo,
   });
 
   /// 接受AchievementUnlockEvent (来自achievement_model.dart)
@@ -22,12 +24,20 @@ class AchievementUnlockDialog extends StatefulWidget {
   final VoidCallback? onShare;
   final VoidCallback? onClose;
 
+  /// 成就连击数量 (P1功能)
+  final int? comboCount;
+
+  /// 里程碑信息 (P1功能)
+  final MilestoneInfo? milestoneInfo;
+
   /// 从WebSocket事件创建弹窗
   static Future<void> showFromWsEvent(
     BuildContext context,
     chat.AchievementUnlockEvent wsEvent, {
     VoidCallback? onShare,
     bool barrierDismissible = true,
+    int? comboCount,
+    MilestoneInfo? milestoneInfo,
   }) {
     final event = wsEvent.toUnlockModel();
     return show(
@@ -44,6 +54,8 @@ class AchievementUnlockDialog extends StatefulWidget {
       ),
       onShare: onShare,
       barrierDismissible: barrierDismissible,
+      comboCount: comboCount,
+      milestoneInfo: milestoneInfo,
     );
   }
 
@@ -56,6 +68,8 @@ class AchievementUnlockDialog extends StatefulWidget {
     AchievementUnlockEvent event, {
     VoidCallback? onShare,
     bool barrierDismissible = true,
+    int? comboCount,
+    MilestoneInfo? milestoneInfo,
   }) => showGeneralDialog(
       context: context,
       barrierDismissible: barrierDismissible,
@@ -66,6 +80,8 @@ class AchievementUnlockDialog extends StatefulWidget {
         return AchievementUnlockDialog(
           event: event,
           onShare: onShare,
+          comboCount: comboCount,
+          milestoneInfo: milestoneInfo,
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -210,6 +226,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           if (rarity != AchievementRarity.common)
             _buildBackgroundEffects(),
 
+          // 连击横幅 (P1功能 - 成就连击反馈)
+          if (widget.comboCount != null && widget.comboCount! > 1)
+            _buildComboBanner(),
+
           // 主内容
           _buildContent(),
 
@@ -331,6 +351,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 ],
               ),
             ),
+
+          // 里程碑信息 (P1功能 - 进度里程碑庆祝)
+          if (widget.milestoneInfo != null)
+            _buildMilestoneSection(widget.milestoneInfo!),
 
           const SizedBox(height: DS.spacing20),
 
@@ -627,6 +651,161 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       return '${time.month}月${time.day}日 ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
     }
   }
+
+  /// P1功能: 成就连击横幅
+  Widget _buildComboBanner() {
+    final comboCount = widget.comboCount!;
+    final colors = _getRarityColors();
+
+    return Positioned(
+      top: -20,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value.clamp(0.8, 1.2),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing20,
+                vertical: DS.spacing10,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFF6B6B),
+                    const Color(0xFFFFD93D),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.5),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.local_fire_department,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Text(
+                    '$comboCount连击！',
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Text(
+                    _getComboText(comboCount),
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// P1功能: 里程碑信息区域
+  Widget _buildMilestoneSection(MilestoneInfo milestone) {
+    final colors = _getRarityColors();
+
+    return Container(
+      margin: const EdgeInsets.only(top: DS.spacing12),
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.2),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: colors.primary.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.flag,
+                size: DS.iconSizeSm,
+                color: colors.primary,
+              ),
+              const SizedBox(width: DS.spacing4),
+              Text(
+                '里程碑达成！',
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightBold,
+                  color: colors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            milestone.description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: colors.text.withValues(alpha: 0.8),
+            ),
+          ),
+          if (milestone.reward != null) ...[
+            const SizedBox(height: DS.spacing8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.3),
+                borderRadius: DS.borderRadius8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.card_giftcard,
+                    size: 14,
+                    color: Colors.amber,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Text(
+                    milestone.reward!,
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightBold,
+                      color: Colors.amber,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getComboText(int count) {
+    if (count >= 10) return '超神！';
+    if (count >= 5) return '太棒了！';
+    if (count >= 3) return '继续！';
+    return '不错！';
+  }
 }
 
 /// 成就解锁转场动画
@@ -834,4 +1013,50 @@ class _RainbowExplosionPainter extends CustomPainter {
   @override
   bool shouldRepaint(_RainbowExplosionPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+/// P1功能: 里程碑信息类
+class MilestoneInfo {
+  MilestoneInfo({
+    required this.milestoneType,
+    required this.description,
+    this.reward,
+    this.progressPercentage,
+  });
+
+  final String milestoneType; // '25%', '50%', '75%', '100%'
+  final String description;
+  final String? reward;
+  final double? progressPercentage;
+
+  factory MilestoneInfo.fromProgress(double oldProgress, double newProgress) {
+    final oldMilestone = (oldProgress * 100).toInt() ~/ 25;
+    final newMilestone = (newProgress * 100).toInt() ~/ 25;
+
+    if (newMilestone > oldMilestone && newMilestone <= 4) {
+      final percentage = newMilestone * 25;
+      return MilestoneInfo(
+        milestoneType: '${percentage}%',
+        description: '达成${percentage}%进度！',
+        reward: _getMilestoneReward(percentage),
+        progressPercentage: newProgress,
+      );
+    }
+    throw ArgumentError('No milestone crossed');
+  }
+
+  static String? _getMilestoneReward(int percentage) {
+    switch (percentage) {
+      case 25:
+        return '+10 光子';
+      case 50:
+        return '+25 光子';
+      case 75:
+        return '+50 光子';
+      case 100:
+        return '+100 光子';
+      default:
+        return null;
+    }
+  }
 }

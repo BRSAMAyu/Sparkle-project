@@ -15,7 +15,7 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from app.config import settings, to_sync_database_url
+from app.config import settings
 from app.db.session import Base
 from app.db.url import to_sync_database_url
 

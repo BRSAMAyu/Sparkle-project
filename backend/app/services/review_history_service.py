@@ -12,18 +12,22 @@ Review History Service - Phase 2c
 """
 
 import json
+import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from loguru import logger
 
-from sqlalchemy import select, and_, or_, func, case
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import Base
-from app.db.models import User, Conversation
-from app.core.exceptions import NotFoundError
+from app.models.review_system import (
+    ReviewHistory as ReviewHistoryModel,
+    ReviewFeedback as ReviewFeedbackModel,
+    ReviewOverride as ReviewOverrideModel,
+    ReviewAppeal as ReviewAppealModel,
+)
 
 
 # ============================================
@@ -71,6 +75,10 @@ class ReviewHistoryEntry:
     reviewer_model: str = ""
     review_duration_ms: int = 0
     requires_reflection: bool = False
+
+    # 原始内容快照
+    user_query: Optional[str] = None
+    content_snapshot: Optional[str] = None
 
 
 @dataclass
@@ -208,10 +216,98 @@ class ReviewHistoryService:
 
     def __init__(self, db_session: AsyncSession):
         self._db = db_session
-        self._memory_cache: Dict[str, ReviewHistoryEntry] = {}
-        self._feedback_cache: List[FeedbackEntry] = []
-        self._override_cache: List[OverrideEntry] = []
-        self._appeal_cache: List[AppealEntry] = []
+
+    @staticmethod
+    def _parse_uuid(value: Optional[str]) -> Optional[uuid.UUID]:
+        if not value:
+            return None
+        try:
+            return uuid.UUID(str(value))
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _format_dt(value: Optional[datetime]) -> Optional[str]:
+        return value.isoformat() if value else None
+
+    def _to_review_entry(self, model: ReviewHistoryModel) -> ReviewHistoryEntry:
+        return ReviewHistoryEntry(
+            review_id=model.review_id,
+            target_id=model.target_id,
+            target_type=model.target_type,
+            user_id=str(model.user_id) if model.user_id else "",
+            session_id=model.session_id or "",
+            timestamp=self._format_dt(model.created_at) or "",
+            decision=model.decision,
+            overall_score=model.overall_score or 0.0,
+            metrics=model.metrics or [],
+            issues_count=model.issues_count or 0,
+            critical_count=model.critical_count or 0,
+            warning_count=model.warning_count or 0,
+            reflection_round=model.reflection_round or 0,
+            reflection_outcome=model.reflection_outcome,
+            score_delta=model.score_delta or 0.0,
+            user_feedback=model.user_feedback,
+            user_satisfied=model.user_satisfied,
+            feedback_timestamp=self._format_dt(model.feedback_timestamp),
+            reviewer_model=model.reviewer_model or "",
+            review_duration_ms=model.review_duration_ms or 0,
+            requires_reflection=bool(model.requires_reflection),
+            user_query=model.user_query,
+            content_snapshot=model.content_snapshot,
+        )
+
+    def _to_feedback_entry(self, model: ReviewFeedbackModel) -> FeedbackEntry:
+        try:
+            feedback_type = FeedbackType(model.feedback_type)
+        except ValueError:
+            feedback_type = FeedbackType.SKIPPED
+        return FeedbackEntry(
+            feedback_id=model.feedback_id,
+            review_id=model.review_id,
+            user_id=str(model.user_id) if model.user_id else "",
+            feedback_type=feedback_type,
+            timestamp=self._format_dt(model.created_at) or "",
+            rating=model.rating,
+            comment=model.comment,
+            issues_reported=model.issues_reported or [],
+            original_score=model.original_score or 0.0,
+            original_decision=model.original_decision or "",
+            was_reflected=bool(model.was_reflected),
+        )
+
+    def _to_override_entry(self, model: ReviewOverrideModel) -> OverrideEntry:
+        return OverrideEntry(
+            override_id=model.override_id,
+            review_id=model.review_id,
+            user_id=str(model.user_id) if model.user_id else "",
+            timestamp=self._format_dt(model.created_at) or "",
+            original_decision=model.original_decision,
+            new_decision=model.new_decision,
+            override_type=OverrideDecision(model.override_type),
+            reason=model.reason or "",
+            was_correct=model.was_correct,
+            admin_reviewed=bool(model.admin_reviewed),
+        )
+
+    def _to_appeal_entry(self, model: ReviewAppealModel) -> AppealEntry:
+        status = AppealStatus(model.status) if model.status else AppealStatus.PENDING
+        return AppealEntry(
+            appeal_id=model.appeal_id,
+            review_id=model.review_id,
+            user_id=str(model.user_id) if model.user_id else "",
+            timestamp=self._format_dt(model.created_at) or "",
+            appeal_reason=model.appeal_reason,
+            issues_with_review=model.issues_with_review or [],
+            status=status,
+            assigned_to=model.assigned_to,
+            secondary_review_id=model.secondary_review_id,
+            secondary_decision=model.secondary_decision,
+            secondary_score=model.secondary_score,
+            resolution=model.resolution,
+            resolved_by=model.resolved_by,
+            resolved_at=self._format_dt(model.resolved_at),
+        )
 
     # ============================================
     # 记录保存
@@ -233,6 +329,8 @@ class ReviewHistoryService:
         reviewer_model: str = "",
         review_duration_ms: int = 0,
         requires_reflection: bool = False,
+        content_snapshot: Optional[str] = None,
+        user_query: Optional[str] = None,
         **kwargs
     ) -> ReviewHistoryEntry:
         """
@@ -257,13 +355,12 @@ class ReviewHistoryService:
         Returns:
             ReviewHistoryEntry: 保存的历史条目
         """
-        entry = ReviewHistoryEntry(
+        model = ReviewHistoryModel(
             review_id=review_id,
             target_id=target_id,
             target_type=target_type,
-            user_id=user_id,
-            session_id=session_id,
-            timestamp=datetime.utcnow().isoformat(),
+            user_id=self._parse_uuid(user_id),
+            session_id=session_id or None,
             decision=decision,
             overall_score=overall_score,
             metrics=metrics,
@@ -273,13 +370,13 @@ class ReviewHistoryService:
             reviewer_model=reviewer_model,
             review_duration_ms=review_duration_ms,
             requires_reflection=requires_reflection,
+            content_snapshot=content_snapshot,
+            user_query=user_query,
         )
 
-        # 保存到内存缓存
-        self._memory_cache[review_id] = entry
-
-        # TODO: 持久化到数据库
-        # await self._persist_to_db(entry)
+        self._db.add(model)
+        await self._db.flush()
+        entry = self._to_review_entry(model)
 
         logger.info(
             f"[ReviewHistory] Recorded review {review_id}: "
@@ -304,25 +401,37 @@ class ReviewHistoryService:
             outcome: 反思结果
             score_delta: 分数变化
         """
-        if review_id in self._memory_cache:
-            entry = self._memory_cache[review_id]
-            entry.reflection_round = reflection_round
-            entry.reflection_outcome = outcome
-            entry.score_delta = score_delta
+        result = await self._db.execute(
+            select(ReviewHistoryModel).where(ReviewHistoryModel.review_id == review_id)
+        )
+        model = result.scalar_one_or_none()
+        if not model:
+            return
 
-            logger.info(
-                f"[ReviewHistory] Updated reflection for {review_id}: "
-                f"{outcome}, delta={score_delta:+.2f}"
-            )
+        model.reflection_round = reflection_round
+        model.reflection_outcome = outcome
+        model.score_delta = score_delta
+        await self._db.flush()
+
+        logger.info(
+            f"[ReviewHistory] Updated reflection for {review_id}: "
+            f"{outcome}, delta={score_delta:+.2f}"
+        )
 
     async def record_user_feedback(
         self,
         review_id: str,
         user_id: str,
         feedback_type: FeedbackType,
+        feedback_id: Optional[str] = None,
         rating: Optional[int] = None,
         comment: Optional[str] = None,
         issues_reported: Optional[List[str]] = None,
+        was_helpful: Optional[bool] = None,
+        was_accurate: Optional[bool] = None,
+        inaccurate_points: Optional[List[str]] = None,
+        specificity_level: Optional[str] = None,
+        tags: Optional[List[str]] = None,
     ) -> FeedbackEntry:
         """
         记录用户反馈
@@ -338,34 +447,42 @@ class ReviewHistoryService:
         Returns:
             FeedbackEntry: 保存的反馈条目
         """
-        import uuid
-
         # 获取原审查记录
-        original_review = self._memory_cache.get(review_id)
+        review_result = await self._db.execute(
+            select(ReviewHistoryModel).where(ReviewHistoryModel.review_id == review_id)
+        )
+        original_review = review_result.scalar_one_or_none()
         if original_review:
-            original_review.user_feedback = feedback_type.value
-            original_review.user_satisfied = (feedback_type == FeedbackType.SATISFIED)
-            original_review.feedback_timestamp = datetime.utcnow().isoformat()
+            feedback_val = feedback_type.value if isinstance(feedback_type, FeedbackType) else str(feedback_type)
+            original_review.user_feedback = feedback_val
+            original_review.user_satisfied = (feedback_val == "satisfied")
+            original_review.feedback_timestamp = datetime.utcnow()
 
-        feedback = FeedbackEntry(
-            feedback_id=f"fb_{uuid.uuid4().hex[:12]}",
+        feedback_model = ReviewFeedbackModel(
+            feedback_id=feedback_id or f"fb_{uuid.uuid4().hex[:12]}",
             review_id=review_id,
-            user_id=user_id,
-            feedback_type=feedback_type,
-            timestamp=datetime.utcnow().isoformat(),
+            user_id=self._parse_uuid(user_id),
+            feedback_type=feedback_type.value if isinstance(feedback_type, FeedbackType) else str(feedback_type),
             rating=rating,
             comment=comment,
             issues_reported=issues_reported or [],
             original_score=original_review.overall_score if original_review else 0.0,
             original_decision=original_review.decision if original_review else "",
-            was_reflected=(original_review.reflection_round > 0) if original_review else False,
+            was_reflected=bool(original_review.reflection_round) if original_review else False,
+            was_helpful=was_helpful,
+            was_accurate=was_accurate,
+            inaccurate_points=inaccurate_points or [],
+            specificity_level=specificity_level,
+            tags=tags or [],
         )
 
-        self._feedback_cache.append(feedback)
+        self._db.add(feedback_model)
+        await self._db.flush()
+        feedback = self._to_feedback_entry(feedback_model)
 
         logger.info(
             f"[ReviewHistory] Recorded feedback {feedback.feedback_id}: "
-            f"{feedback_type.value} for review {review_id}"
+            f"{feedback_val} for review {review_id}"
         )
 
         return feedback
@@ -395,24 +512,30 @@ class ReviewHistoryService:
         Returns:
             审查历史列表
         """
-        results = list(self._memory_cache.values())
-
-        # 应用筛选
+        query = select(ReviewHistoryModel)
         if user_id:
-            results = [r for r in results if r.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewHistoryModel.user_id == user_uuid)
         if session_id:
-            results = [r for r in results if r.session_id == session_id]
+            query = query.where(ReviewHistoryModel.session_id == session_id)
         if target_type:
-            results = [r for r in results if r.target_type == target_type]
+            query = query.where(ReviewHistoryModel.target_type == target_type)
 
-        # 排序（最新在前）
-        results.sort(key=lambda x: x.timestamp, reverse=True)
-
-        return results[offset:offset + limit]
+        query = query.order_by(ReviewHistoryModel.created_at.desc()).offset(offset).limit(limit)
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        return [self._to_review_entry(model) for model in models]
 
     async def get_review_by_id(self, review_id: str) -> Optional[ReviewHistoryEntry]:
         """根据ID获取审查记录"""
-        return self._memory_cache.get(review_id)
+        result = await self._db.execute(
+            select(ReviewHistoryModel).where(ReviewHistoryModel.review_id == review_id)
+        )
+        model = result.scalar_one_or_none()
+        if not model:
+            return None
+        return self._to_review_entry(model)
 
     async def get_feedback_history(
         self,
@@ -421,15 +544,19 @@ class ReviewHistoryService:
         limit: int = 100,
     ) -> List[FeedbackEntry]:
         """获取反馈历史"""
-        results = self._feedback_cache
-
+        valid_types = [ft.value for ft in FeedbackType]
+        query = select(ReviewFeedbackModel).where(ReviewFeedbackModel.feedback_type.in_(valid_types))
         if user_id:
-            results = [f for f in results if f.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewFeedbackModel.user_id == user_uuid)
         if review_id:
-            results = [f for f in results if f.review_id == review_id]
+            query = query.where(ReviewFeedbackModel.review_id == review_id)
 
-        results.sort(key=lambda x: x.timestamp, reverse=True)
-        return results[:limit]
+        query = query.order_by(ReviewFeedbackModel.created_at.desc()).limit(limit)
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        return [self._to_feedback_entry(model) for model in models]
 
     # ============================================
     # 聚合统计
@@ -465,14 +592,21 @@ class ReviewHistoryService:
             else:  # monthly
                 start_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
 
-        # 筛选时间范围内的记录
-        reviews = list(self._memory_cache.values())
-        reviews = [
-            r for r in reviews
-            if start_date <= r.timestamp <= end_date
-        ]
+        start_dt = datetime.fromisoformat(start_date)
+        end_dt = datetime.fromisoformat(end_date)
+
+        query = select(ReviewHistoryModel).where(
+            ReviewHistoryModel.created_at >= start_dt,
+            ReviewHistoryModel.created_at <= end_dt,
+        )
         if user_id:
-            reviews = [r for r in reviews if r.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewHistoryModel.user_id == user_uuid)
+
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        reviews = [self._to_review_entry(model) for model in models]
 
         # 计算统计
         total = len(reviews)
@@ -493,12 +627,18 @@ class ReviewHistoryService:
             avg_score_improvement = sum(r.score_delta for r in reflected) / len(reflected)
 
         # 用户反馈统计
-        feedbacks = [
-            f for f in self._feedback_cache
-            if start_date <= f.timestamp <= end_date
-        ]
+        feedback_query = select(ReviewFeedbackModel).where(
+            ReviewFeedbackModel.created_at >= start_dt,
+            ReviewFeedbackModel.created_at <= end_dt,
+        )
         if user_id:
-            feedbacks = [f for f in feedbacks if f.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                feedback_query = feedback_query.where(ReviewFeedbackModel.user_id == user_uuid)
+
+        feedback_result = await self._db.execute(feedback_query)
+        feedback_models = feedback_result.scalars().all()
+        feedbacks = [self._to_feedback_entry(model) for model in feedback_models]
 
         satisfaction_rate = 0.0
         if feedbacks:
@@ -554,14 +694,18 @@ class ReviewHistoryService:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
 
-        # 获取时间范围内的记录
-        reviews = list(self._memory_cache.values())
-        reviews = [
-            r for r in reviews
-            if start_date <= datetime.fromisoformat(r.timestamp) <= end_date
-        ]
+        query = select(ReviewHistoryModel).where(
+            ReviewHistoryModel.created_at >= start_date,
+            ReviewHistoryModel.created_at <= end_date,
+        )
         if user_id:
-            reviews = [r for r in reviews if r.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewHistoryModel.user_id == user_uuid)
+
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        reviews = [self._to_review_entry(model) for model in models]
 
         # 提取指定指标的数据
         data_points = []
@@ -625,11 +769,16 @@ class ReviewHistoryService:
         Returns:
             序列化的数据
         """
+        review_result = await self._db.execute(select(ReviewHistoryModel))
+        feedback_result = await self._db.execute(select(ReviewFeedbackModel))
+        reviews = [self._to_review_entry(model) for model in review_result.scalars().all()]
+        feedbacks = [self._to_feedback_entry(model) for model in feedback_result.scalars().all()]
+
         learning_data = {
-            "reviews": [asdict(r) for r in self._memory_cache.values()],
-            "feedbacks": [asdict(f) for f in self._feedback_cache],
+            "reviews": [asdict(r) for r in reviews],
+            "feedbacks": [asdict(f) for f in feedbacks],
             "export_timestamp": datetime.utcnow().isoformat(),
-            "total_count": len(self._memory_cache),
+            "total_count": len(reviews),
         }
 
         if format == "json":
@@ -657,7 +806,9 @@ class ReviewHistoryService:
         """
         misclassified = []
 
-        for entry in self._memory_cache.values():
+        review_result = await self._db.execute(select(ReviewHistoryModel))
+        for model in review_result.scalars().all():
+            entry = self._to_review_entry(model)
             # 检查是否有用户反馈
             if entry.user_feedback == FeedbackType.SATISFIED.value and not entry.user_satisfied:
                 # 审查未通过但用户满意 -> 可能误判
@@ -700,8 +851,6 @@ class ReviewHistoryService:
         Returns:
             OverrideEntry: 保存的覆盖条目
         """
-        import uuid
-
         # 确定覆盖类型
         if original_decision == "failed" and new_decision == "passed":
             override_type = OverrideDecision.ACCEPT_DESPITE_FAILURE
@@ -710,25 +859,30 @@ class ReviewHistoryService:
         else:
             override_type = OverrideDecision.MODIFY_DECISION
 
-        override = OverrideEntry(
+        override_model = ReviewOverrideModel(
             override_id=f"ovr_{uuid.uuid4().hex[:12]}",
             review_id=review_id,
-            user_id=user_id,
-            timestamp=datetime.utcnow().isoformat(),
+            user_id=self._parse_uuid(user_id),
             original_decision=original_decision,
             new_decision=new_decision,
-            override_type=override_type,
+            override_type=override_type.value,
             reason=reason,
         )
 
-        self._override_cache.append(override)
+        self._db.add(override_model)
 
         # 更新原审查记录
-        if review_id in self._memory_cache:
-            entry = self._memory_cache[review_id]
-            entry.user_feedback = f"override:{new_decision}"
-            entry.user_satisfied = (new_decision == "passed")
-            entry.feedback_timestamp = datetime.utcnow().isoformat()
+        review_result = await self._db.execute(
+            select(ReviewHistoryModel).where(ReviewHistoryModel.review_id == review_id)
+        )
+        entry_model = review_result.scalar_one_or_none()
+        if entry_model:
+            entry_model.user_feedback = f"override:{new_decision}"
+            entry_model.user_satisfied = (new_decision == "passed")
+            entry_model.feedback_timestamp = datetime.utcnow()
+
+        await self._db.flush()
+        override = self._to_override_entry(override_model)
 
         logger.info(
             f"[ReviewHistory] Recorded override {override.override_id}: "
@@ -758,19 +912,18 @@ class ReviewHistoryService:
         Returns:
             AppealEntry: 保存的申诉条目
         """
-        import uuid
-
-        appeal = AppealEntry(
+        appeal_model = ReviewAppealModel(
             appeal_id=f"apl_{uuid.uuid4().hex[:12]}",
             review_id=review_id,
-            user_id=user_id,
-            timestamp=datetime.utcnow().isoformat(),
+            user_id=self._parse_uuid(user_id),
             appeal_reason=appeal_reason,
             issues_with_review=issues_with_review or [],
-            status=AppealStatus.PENDING,
+            status=AppealStatus.PENDING.value,
         )
 
-        self._appeal_cache.append(appeal)
+        self._db.add(appeal_model)
+        await self._db.flush()
+        appeal = self._to_appeal_entry(appeal_model)
 
         logger.info(
             f"[ReviewHistory] Recorded appeal {appeal.appeal_id}: "
@@ -794,21 +947,20 @@ class ReviewHistoryService:
         Returns:
             申诉条目列表
         """
+        query = select(ReviewAppealModel)
         if status is None:
-            # 默认返回待处理的申诉
-            results = [
-                a for a in self._appeal_cache
-                if a.status in [AppealStatus.PENDING, AppealStatus.IN_REVIEW]
-            ]
+            query = query.where(
+                ReviewAppealModel.status.in_(
+                    [AppealStatus.PENDING.value, AppealStatus.IN_REVIEW.value]
+                )
+            )
         else:
-            results = [
-                a for a in self._appeal_cache
-                if a.status == status
-            ]
+            query = query.where(ReviewAppealModel.status == status.value)
 
-        # 按时间排序（最早的在前，FIFO）
-        results.sort(key=lambda x: x.timestamp)
-        return results[:limit]
+        query = query.order_by(ReviewAppealModel.created_at.asc()).limit(limit)
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        return [self._to_appeal_entry(model) for model in models]
 
     async def update_appeal_status(
         self,
@@ -835,34 +987,42 @@ class ReviewHistoryService:
         Returns:
             更新后的申诉条目
         """
-        for appeal in self._appeal_cache:
-            if appeal.appeal_id == appeal_id:
-                appeal.status = status
-                if resolution:
-                    appeal.resolution = resolution
-                if resolved_by:
-                    appeal.resolved_by = resolved_by
-                    appeal.resolved_at = datetime.utcnow().isoformat()
-                if secondary_review_id:
-                    appeal.secondary_review_id = secondary_review_id
-                if secondary_decision:
-                    appeal.secondary_decision = secondary_decision
-                if secondary_score is not None:
-                    appeal.secondary_score = secondary_score
+        result = await self._db.execute(
+            select(ReviewAppealModel).where(ReviewAppealModel.appeal_id == appeal_id)
+        )
+        model = result.scalar_one_or_none()
+        if not model:
+            return None
 
-                logger.info(
-                    f"[ReviewHistory] Updated appeal {appeal_id}: status={status.value}"
-                )
-                return appeal
+        model.status = status.value
+        if resolution:
+            model.resolution = resolution
+        if resolved_by:
+            model.resolved_by = resolved_by
+            model.resolved_at = datetime.utcnow()
+        if secondary_review_id:
+            model.secondary_review_id = secondary_review_id
+        if secondary_decision:
+            model.secondary_decision = secondary_decision
+        if secondary_score is not None:
+            model.secondary_score = secondary_score
 
-        return None
+        await self._db.flush()
+
+        logger.info(
+            f"[ReviewHistory] Updated appeal {appeal_id}: status={status.value}"
+        )
+        return self._to_appeal_entry(model)
 
     async def get_appeal_by_id(self, appeal_id: str) -> Optional[AppealEntry]:
         """根据ID获取申诉"""
-        for appeal in self._appeal_cache:
-            if appeal.appeal_id == appeal_id:
-                return appeal
-        return None
+        result = await self._db.execute(
+            select(ReviewAppealModel).where(ReviewAppealModel.appeal_id == appeal_id)
+        )
+        model = result.scalar_one_or_none()
+        if not model:
+            return None
+        return self._to_appeal_entry(model)
 
     async def get_override_history(
         self,
@@ -871,15 +1031,18 @@ class ReviewHistoryService:
         limit: int = 100,
     ) -> List[OverrideEntry]:
         """获取覆盖历史"""
-        results = self._override_cache
-
+        query = select(ReviewOverrideModel)
         if user_id:
-            results = [o for o in results if o.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewOverrideModel.user_id == user_uuid)
         if review_id:
-            results = [o for o in results if o.review_id == review_id]
+            query = query.where(ReviewOverrideModel.review_id == review_id)
 
-        results = sorted(results, key=lambda x: x.timestamp, reverse=True)
-        return results[:limit]
+        query = query.order_by(ReviewOverrideModel.created_at.desc()).limit(limit)
+        result = await self._db.execute(query)
+        models = result.scalars().all()
+        return [self._to_override_entry(model) for model in models]
 
     async def get_override_patterns(
         self,
@@ -901,13 +1064,16 @@ class ReviewHistoryService:
         cutoff = datetime.utcnow() - timedelta(days=days)
         cutoff_str = cutoff.isoformat()
 
-        overrides = [
-            o for o in self._override_cache
-            if o.timestamp >= cutoff_str
-        ]
-
+        query = select(ReviewOverrideModel).where(
+            ReviewOverrideModel.created_at >= cutoff
+        )
         if user_id:
-            overrides = [o for o in overrides if o.user_id == user_id]
+            user_uuid = self._parse_uuid(user_id)
+            if user_uuid:
+                query = query.where(ReviewOverrideModel.user_id == user_uuid)
+
+        result = await self._db.execute(query)
+        overrides = [self._to_override_entry(model) for model in result.scalars().all()]
 
         if not overrides:
             return {

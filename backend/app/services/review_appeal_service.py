@@ -14,17 +14,21 @@ Review Appeal Service - Phase 2e
 import uuid
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from loguru import logger
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.services.review_history_service import (
     get_review_history_service,
     AppealStatus,
     AppealEntry,
 )
+from app.services.llm_service import get_llm_service_for_task
+from app.core.agent_profiles import TaskType
+from app.models.chat import ChatMessage
 
 
 # ============================================
@@ -223,31 +227,35 @@ class AppealReviewService:
         使用不同的模型重新审查内容
         """
         try:
-            from app.agents.reviewer_agent import get_reviewer_agent
+            from app.agents.reviewer_agent import ReviewerAgent
 
-            reviewer = get_reviewer_agent()
+            content, user_query = await self._get_review_content(original_review)
+            if not content:
+                raise ValueError("Original content not available for secondary review")
 
-            # TODO: 从原审查记录获取被审查的内容
-            # 这里需要从存储中获取原始内容
-            # 暂时返回模拟结果
+            reviewer_llm = get_llm_service_for_task(TaskType.REVIEW)
+            if model:
+                reviewer_llm.chat_model = model
+                reviewer_llm.reason_model = model
 
-            # 模拟二次审查结果
-            review_id = f"sec_{uuid.uuid4().hex[:12]}"
-
-            # 实际实现时，应该：
-            # 1. 获取原始被审查内容
-            # 2. 使用不同模型重新审查
-            # 3. 返回真实审查结果
-
-            secondary_score = original_review.overall_score + 0.1  # 模拟略高分数
-            secondary_decision = "passed" if secondary_score >= 0.7 else "failed"
+            reviewer = ReviewerAgent(reviewer_llm=reviewer_llm)
+            review_result = await reviewer.review_llm_response(
+                user_query=user_query or "",
+                llm_response=content,
+                context={
+                    "appeal_id": appeal.appeal_id,
+                    "review_id": appeal.review_id,
+                    "user_id": appeal.user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            )
 
             return {
-                "review_id": review_id,
-                "model": model,
-                "score": secondary_score,
-                "decision": secondary_decision,
-                "issues": [],
+                "review_id": review_result.review_id,
+                "model": reviewer.reviewer_model,
+                "score": review_result.overall_score,
+                "decision": review_result.decision,
+                "issues": [i.to_dict() for i in review_result.issues],
                 "executed_at": datetime.utcnow().isoformat(),
             }
 
@@ -260,6 +268,37 @@ class AppealReviewService:
                 "decision": None,
                 "error": str(e),
             }
+
+    async def _get_review_content(self, original_review) -> tuple[Optional[str], Optional[str]]:
+        if getattr(original_review, "content_snapshot", None):
+            return original_review.content_snapshot, getattr(original_review, "user_query", None)
+
+        if original_review.target_type != "llm_response":
+            return None, getattr(original_review, "user_query", None)
+
+        target_id = original_review.target_id
+        if not target_id:
+            return None, getattr(original_review, "user_query", None)
+
+        try:
+            message_uuid = uuid.UUID(str(target_id))
+            result = await self._db.execute(
+                select(ChatMessage).where(ChatMessage.id == message_uuid)
+            )
+            msg = result.scalar_one_or_none()
+            if msg:
+                return msg.content, getattr(original_review, "user_query", None)
+        except ValueError:
+            pass
+
+        result = await self._db.execute(
+            select(ChatMessage).where(ChatMessage.message_id == str(target_id))
+        )
+        msg = result.scalar_one_or_none()
+        if msg:
+            return msg.content, getattr(original_review, "user_query", None)
+
+        return None, getattr(original_review, "user_query", None)
 
     async def _make_appeal_decision(
         self,
