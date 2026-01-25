@@ -49,4 +49,4 @@ class ChatModeNotifier extends StateNotifier<ChatMode> {
 ///
 /// Remembers the last multi-agent mode the user selected.
 final lastMultiAgentModeProvider =
-    StateProvider<ChatMode?>((ref) => deepAnalysis);
+    StateProvider<ChatMode?>((ref) => null);

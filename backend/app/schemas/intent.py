@@ -26,7 +26,7 @@ class IntentType(str, Enum):
 class SubIntent(BaseModel):
     """子意图"""
     type: IntentType = Field(description="意图类型")
-    confidence: float = Field.ge=0.0).le=1.0), description="置信度 0-1")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="置信度 0-1")
     content: str = Field(description="意图内容")
     entities: Dict[str, Any] = Field(default_factory=dict, description="提取的实体")
     agent_role: Optional[str] = Field(default=None, description="推荐的Agent角色")

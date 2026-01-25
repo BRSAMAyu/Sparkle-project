@@ -25,10 +25,27 @@ async def time_tutor_node(state: SparkleState):
     负责任务管理、日程规划
     """
     messages = state["messages"]
+    
+    # 1. Handle Collaboration Context
     collaboration_context = state.get("collaboration_context")
     if collaboration_context:
+        # Create a shallow copy to avoid modifying the global list in place if not intended
+        # (Though usually state update appends, here we are preparing prompt)
         messages = list(messages)
-        messages.append(HumanMessage(content=collaboration_context))
+        messages.append(HumanMessage(content=f"[System] Collaboration Context: {collaboration_context}"))
+
+    # 2. Handle Review Feedback (Vision Item 8)
+    review_feedback = state.get("review_feedback")
+    if review_feedback:
+        messages = list(messages) if not collaboration_context else messages
+        decision = review_feedback.get("decision", "modify")
+        comments = review_feedback.get("comments", "No comments")
+        feedback_prompt = (
+            f"[System] ALERT: The user has {decision} the previous plan.\n"
+            f"Feedback: {comments}\n"
+            f"Instruction: You MUST revise the plan/tasks to address this feedback explicitly."
+        )
+        messages.append(HumanMessage(content=feedback_prompt))
     
     # 使用高性价比模型 (GPT-4o-mini)
     llm = LLMFactory.get_llm("time_tutor")

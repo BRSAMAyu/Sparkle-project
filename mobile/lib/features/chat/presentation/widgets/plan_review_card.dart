@@ -52,6 +52,7 @@ class PlanReviewResult {
     this.suggestedModifications,
     this.autoApproved = false,
     this.actionId,
+    this.userFacingReason,
   });
 
   final String reviewId;
@@ -63,6 +64,7 @@ class PlanReviewResult {
   final Map<String, dynamic>? suggestedModifications;
   final bool autoApproved;
   final String? actionId; // For feedback
+  final String? userFacingReason; // User-facing explanation of the decision
 
   static ReviewDecision _parseDecision(String value) {
     switch (value) {
@@ -93,6 +95,7 @@ class PlanReviewResult {
             json['suggested_modifications'] as Map<String, dynamic>?,
         autoApproved: json['auto_approved'] as bool? ?? false,
         actionId: json['action_id'] as String?,
+        userFacingReason: json['user_facing_reason'] as String?,
       );
 }
 
@@ -382,6 +385,43 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                             _buildDecisionBadge(decision),
                           ],
                         ),
+
+                        // User-facing reason
+                        if (widget.review.userFacingReason != null) ...[
+                          const SizedBox(height: DS.spacing12),
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.08),
+                              borderRadius: DS.borderRadius8,
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: DS.iconSizeSm,
+                                  color: color,
+                                ),
+                                const SizedBox(width: DS.spacing8),
+                                Expanded(
+                                  child: Text(
+                                    widget.review.userFacingReason!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: DS.neutral800,
+                                          height: 1.4,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
 
                         // Comments section
                         if (widget.review.comments.isNotEmpty) ...[

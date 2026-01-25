@@ -269,12 +269,12 @@ class PlanFeedbackService:
                 break
 
         if updated:
-            # 保存更新 (use service to bump version and cache)
+            # 保存更新 (use service to update without bumping version - user confirmation is not a plan change)
             state = await self._plan_state_service.replace_feedback_log(
                 user_id=user_id,
                 plan_id=plan_id,
                 feedback_log=state.feedback_log,
-                bump_version=True,
+                bump_version=False,  # User decision doesn't change plan content
             )
 
             logger.info(

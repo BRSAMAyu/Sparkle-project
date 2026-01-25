@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/features/task/task.dart';
 
@@ -188,6 +189,10 @@ final priorityTasksProvider = Provider<List<TaskModel>>((ref) {
 /// Plan view grouped tasks provider
 final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
   final taskState = ref.watch(taskListProvider);
+
+  // 监听计划名称映射，以便在计划变更时触发刷新
+  ref.watch(planNameMapProvider);
+
   final tasks = taskState.tasks
       .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
       .toList();

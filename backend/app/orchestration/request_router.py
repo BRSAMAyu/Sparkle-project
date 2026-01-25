@@ -48,9 +48,9 @@ class RequestRouter:
 
     # 多步骤模式关键词 - Phase 2
     MULTI_STEP_INDICATORS = {
-        "然后", "然后", "接着", "之后",
+        "然后", "接着", "之后",
         "and then", "after that", "next", "followed by",
-        "第一步", "第一步", "首先", "first"
+        "第一步", "首先", "first"
     }
 
     # Vision: Translation Keywords (5c)

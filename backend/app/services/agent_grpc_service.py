@@ -451,14 +451,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 f"plan={plan_id}, decision={user_decision}, trace={trace_id}"
             )
 
-            # Process the review feedback
-            result = await plan_review_service.handle_review_feedback(
-                review_id=request.review_id,
-                user_decision=user_decision,
-                user_id=user_id,
-                user_comment=request.user_comment or None,
-                modifications=dict(request.meta) if request.meta else None,
-            )
+            # P1 Fix #10: Process the review feedback with db_session
+            async with self.db_session_factory() as db_session:
+                result = await plan_review_service.handle_review_feedback(
+                    review_id=request.review_id,
+                    user_decision=user_decision,
+                    user_id=user_id,
+                    db_session=db_session,  # Now required
+                    user_comment=request.user_comment or None,
+                    modifications=dict(request.meta) if request.meta else None,
+                )
 
             if result.get("status") != "success":
                 context.set_code(grpc.StatusCode.INTERNAL)
@@ -492,12 +494,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
 
             if proto_decision == agent_service_pb2.APPROVE:
-                # Resume plan execution after approval
-                await plan_review_service.resume_plan_after_approval(
-                    plan_id=plan_id,
-                    user_id=user_id,
-                )
-                logger.info(f"Plan {plan_id} resumed after approval by {user_id}")
+                # Resume plan execution after approval with db_session for task generation
+                async with self.db_session_factory() as db:
+                    result = await plan_review_service.resume_plan_after_approval(
+                        plan_id=plan_id,
+                        user_id=user_id,
+                        db_session=db,
+                    )
+                logger.info(f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}")
 
             elif proto_decision == agent_service_pb2.REJECT:
                 # Handle rejection - notify and stop
