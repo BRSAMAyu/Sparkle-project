@@ -33,6 +33,9 @@ from app.agents.graph.nodes.review_nodes import (
     route_after_execution_review,
 )
 
+# P1 & P2: Tool Fallback and Enhanced Features
+from app.agents.tool_fallback import ToolExecutionFallback
+
 # ==========================================
 # Nodes
 # ==========================================
@@ -166,19 +169,38 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
-    
+
     # Extract intent instruction from plan_metadata (Vision Item 4b)
+    # P1 Improvement: Enhanced intent instructions with stronger constraints
     plan_metadata = state.context_data.get("plan_metadata", {})
     route_reason = plan_metadata.get("route_reason", "")
     intent_instruction = None
-    
+
     if "Intent: translation" in route_reason:
-        intent_instruction = "User wants TRANSLATION. Please translate the input text accurately."
+        intent_instruction = """
+IMPORTANT: User wants TRANSLATION.
+You MUST use the 'translate' tool to translate the user's text.
+DO NOT provide translation yourself - always use the tool.
+"""
     elif "Intent: prism" in route_reason:
-        intent_instruction = "User wants BEHAVIOR ANALYSIS (Prism/Cognitive Prism). Please use the 'get_user_behavior_patterns' tool to retrieve their behavior patterns and provide insights about their study habits."
+        intent_instruction = """
+IMPORTANT: User wants BEHAVIOR ANALYSIS (Cognitive Prism).
+You MUST use the 'get_user_behavior_patterns' tool to retrieve their behavior patterns.
+After getting the results, provide insights about their study habits based on the data.
+DO NOT make up or assume patterns - always use the tool first.
+The tool will return:
+- cognitive patterns: thinking and learning patterns
+- emotional patterns: emotional responses during study
+- execution patterns: task execution habits
+"""
     elif "Intent: sprint" in route_reason:
-        intent_instruction = "User wants to enter SPRINT/FOCUS MODE. Please use the 'suggest_focus_session' tool to start a session."
-    
+        intent_instruction = """
+IMPORTANT: User wants to enter FOCUS/SPRINT MODE.
+You MUST use the 'suggest_focus_session' tool to recommend a focus session.
+Include duration and task suggestions based on the user's current context.
+Ask about their available time and current tasks if needed.
+"""
+
     system_prompt = build_system_prompt(
         user_context,
         conversation_history=conversation_context,
@@ -309,8 +331,9 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
         # Execute tool calls from the plan
         start_time = time.time()
+        total_tools = len(executable_plan.tool_calls)
 
-        for tool_call_spec in executable_plan.tool_calls:
+        for idx, tool_call_spec in enumerate(executable_plan.tool_calls):
             tool_args = tool_call_spec.params
             if isinstance(tool_args, str):
                 try:
@@ -326,7 +349,9 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 db_session=db_session,
                 executor=executor,
                 state=state,
-                compensation_call=tool_call_spec.compensation_call
+                compensation_call=tool_call_spec.compensation_call,
+                tool_index=idx,
+                total_tools=total_tools,
             )
 
         # Write feedback for LangGraph plan
@@ -420,8 +445,9 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             return state
 
     start_time = time.time()
+    total_tools = len(tool_calls)
 
-    for tc in tool_calls:
+    for idx, tc in enumerate(tool_calls):
         # Parse arguments if needed (ToolExecutor expects dict)
         args = tc.full_arguments
         if isinstance(args, str):
@@ -438,7 +464,9 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             user_id=user_id,
             db_session=db_session,
             executor=executor,
-            state=state
+            state=state,
+            tool_index=idx,
+            total_tools=total_tools,
         )
 
     # Write feedback for Phase 1 LLM tool_calls
@@ -957,30 +985,109 @@ async def _execute_single_tool(
     db_session,
     executor,
     state: WorkflowState,
-    compensation_call: Optional[Dict[str, Any]] = None
+    compensation_call: Optional[Dict[str, Any]] = None,
+    tool_index: int = 0,
+    total_tools: int = 1,
 ) -> None:
     """Execute a single tool call and stream results.
 
     Used by tool_execution_node for both LLM tool_calls and LangGraph executable_plan.
+
+    P2 Improvement: Added progress feedback with tool index and total count.
+    P1 Improvement: Added fallback handling when tool execution fails.
     """
+    redis_client = state.context_data.get("redis_client")
+
+    # P2: Tool execution start notification with progress
     if stream_callback:
+        progress_msg = f"正在执行 ({tool_index + 1}/{total_tools}): {tool_name}..."
         await stream_callback(agent_service_pb2.ChatResponse(
             status_update=agent_service_pb2.AgentStatus(
                 state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                details=f"Executing {tool_name}...",
+                details=progress_msg,
                 active_agent=agent_service_pb2.ORCHESTRATOR
             )
         ))
 
-    result = await executor.execute_tool_call(
-        tool_name=tool_name,
-        arguments=tool_args,
-        user_id=user_id,
-        db_session=db_session,
-        compensation_call=compensation_call
-    )
+    try:
+        result = await executor.execute_tool_call(
+            tool_name=tool_name,
+            arguments=tool_args,
+            user_id=user_id,
+            db_session=db_session,
+            compensation_call=compensation_call
+        )
 
+        # Check if tool execution failed
+        if not result.success:
+            logger.warning(f"Tool '{tool_name}' execution failed: {result.error_message}")
+
+            # P1: Attempt fallback handling
+            fallback_message = await ToolExecutionFallback.handle_tool_failure(
+                tool_name=tool_name,
+                error_message=result.error_message or "Unknown error",
+                user_id=user_id,
+                db_session=db_session,
+                redis_client=redis_client,
+                stream_callback=stream_callback,
+            )
+
+            # Stream fallback result
+            if stream_callback and fallback_message:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n{fallback_message}"
+                ))
+
+            # Create fallback result
+            from app.tools.base import ToolResult
+            result = ToolResult(
+                success=True,  # Fallback successful
+                tool_name=tool_name,
+                data={"message": fallback_message, "fallback": True},
+                error_message=None,
+                suggestion="如需完整功能，请稍后再试"
+            )
+
+    except Exception as e:
+        logger.error(f"Tool '{tool_name}' execution exception: {e}")
+
+        # P1: Handle unexpected exceptions with fallback
+        fallback_message = await ToolExecutionFallback.handle_tool_failure(
+            tool_name=tool_name,
+            error_message=str(e),
+            user_id=user_id,
+            db_session=db_session,
+            redis_client=redis_client,
+            stream_callback=stream_callback,
+        )
+
+        # Stream fallback result
+        if stream_callback and fallback_message:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=f"\n\n{fallback_message}"
+            ))
+
+        # Create fallback result
+        from app.tools.base import ToolResult
+        result = ToolResult(
+            success=True,  # Fallback successful
+            tool_name=tool_name,
+            data={"message": fallback_message, "fallback": True},
+            error_message=None,
+            suggestion="如需完整功能，请稍后再试"
+        )
+
+    # P2: Tool execution result status
     if stream_callback:
+        status_msg = f"{tool_name}: {'执行成功' if result.success else '执行失败'}"
+        await stream_callback(agent_service_pb2.ChatResponse(
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.IDLE,
+                details=status_msg,
+                active_agent=agent_service_pb2.ORCHESTRATOR
+            )
+        ))
+
         data_struct = struct_pb2.Struct()
         if result.data:
             data_struct.update(result.data)
@@ -1005,7 +1112,8 @@ async def _execute_single_tool(
     result_json = json.dumps({
         "success": result.success,
         "result": result.data,
-        "error": result.error_message
+        "error": result.error_message,
+        "fallback": result.data.get("fallback", False) if result.data else False
     })
     state.append_message("tool", result_json, name=tool_name)
 

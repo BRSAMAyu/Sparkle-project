@@ -10,6 +10,13 @@ typedef StateToJson<T> = Map<String, dynamic> Function(T state);
 /// Signature for converting JSON to state
 typedef StateFromJson<T> = T? Function(Map<String, dynamic> json);
 
+/// Signature for listening to state changes
+///
+/// **Important**: State changes are detected using the `==` operator.
+/// Ensure your state class properly overrides `==` and `hashCode` for
+/// accurate change detection.
+typedef StateChangeListener<T> = void Function(T oldState, T newState);
+
 /// A StateNotifier that automatically persists and restores its state.
 ///
 /// Features:
@@ -17,6 +24,11 @@ typedef StateFromJson<T> = T? Function(Map<String, dynamic> json);
 /// - Auto-saves state on change (with debouncing)
 /// - Fallback to default state if loading fails
 /// - Optional selective persistence (persist only specific fields)
+/// - State change listeners for behavior analytics
+///
+/// **State Equality**: Your state class MUST override `==` and `hashCode`
+/// for accurate change detection. Without this, listeners may not fire
+/// when content changes, or may fire unexpectedly.
 ///
 /// Usage:
 /// ```dart
@@ -78,6 +90,7 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
   late final ViewStorageService _storage;
   Timer? _saveTimer;
   bool _isLoaded = false;
+  final List<StateChangeListener<T>> _listeners = [];
 
   /// Load state from storage
   Future<void> _loadState() async {
@@ -149,15 +162,61 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
 
   @override
   set state(T value) {
+    final oldState = state;
     super.state = value;
     if (_isLoaded) {
       _scheduleSave();
     }
+    // Notify listeners (skip initial load)
+    if (_isLoaded && oldState != value) {
+      for (int i = 0; i < _listeners.length; i++) {
+        try {
+          _listeners[i](oldState, value);
+        } catch (e, stackTrace) {
+          debugPrint('[$namespace.$key] StateListener #$i error: $e\n'
+              '  oldState: $oldState\n  newState: $value\n'
+              '  stackTrace: $stackTrace');
+        }
+      }
+    }
   }
+
+  /// Add a state change listener.
+  ///
+  /// Returns `true` if the listener was added, `false` if it was already
+  /// registered (duplicate listeners are prevented).
+  bool addStateListener(StateChangeListener<T> listener) {
+    if (_listeners.contains(listener)) {
+      debugPrint('[$namespace.$key] Duplicate listener ignored');
+      return false;
+    }
+    _listeners.add(listener);
+    return true;
+  }
+
+  /// Remove a state change listener.
+  ///
+  /// Returns `true` if the listener was found and removed, `false` otherwise.
+  bool removeStateListener(StateChangeListener<T> listener) {
+    return _listeners.remove(listener);
+  }
+
+  /// Clear all listeners.
+  ///
+  /// Returns the number of listeners that were removed.
+  int clearStateListeners() {
+    final count = _listeners.length;
+    _listeners.clear();
+    return count;
+  }
+
+  /// Get the current number of registered listeners.
+  int get listenerCount => _listeners.length;
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _listeners.clear();
     super.dispose();
   }
 }
@@ -216,6 +275,7 @@ class PersistentNotifier<T> extends StateNotifier<T> {
   late final ViewStorageService _storage;
   Timer? _saveTimer;
   bool _isLoaded = false;
+  final List<StateChangeListener<T>> _listeners = [];
 
   /// Load value from storage
   Future<void> _loadState() async {
@@ -285,15 +345,61 @@ class PersistentNotifier<T> extends StateNotifier<T> {
 
   @override
   set state(T value) {
+    final oldState = state;
     super.state = value;
     if (_isLoaded) {
       _scheduleSave();
     }
+    // Notify listeners (skip initial load)
+    if (_isLoaded && oldState != value) {
+      for (int i = 0; i < _listeners.length; i++) {
+        try {
+          _listeners[i](oldState, value);
+        } catch (e, stackTrace) {
+          debugPrint('[$namespace.$key] StateListener #$i error: $e\n'
+              '  oldState: $oldState\n  newState: $value\n'
+              '  stackTrace: $stackTrace');
+        }
+      }
+    }
   }
+
+  /// Add a state change listener.
+  ///
+  /// Returns `true` if the listener was added, `false` if it was already
+  /// registered (duplicate listeners are prevented).
+  bool addStateListener(StateChangeListener<T> listener) {
+    if (_listeners.contains(listener)) {
+      debugPrint('[$namespace.$key] Duplicate listener ignored');
+      return false;
+    }
+    _listeners.add(listener);
+    return true;
+  }
+
+  /// Remove a state change listener.
+  ///
+  /// Returns `true` if the listener was found and removed, `false` otherwise.
+  bool removeStateListener(StateChangeListener<T> listener) {
+    return _listeners.remove(listener);
+  }
+
+  /// Clear all listeners.
+  ///
+  /// Returns the number of listeners that were removed.
+  int clearStateListeners() {
+    final count = _listeners.length;
+    _listeners.clear();
+    return count;
+  }
+
+  /// Get the current number of registered listeners.
+  int get listenerCount => _listeners.length;
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _listeners.clear();
     super.dispose();
   }
 }
@@ -435,6 +541,7 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
   late final ViewStorageService _storage;
   Timer? _saveTimer;
   bool _isLoaded = false;
+  final List<StateChangeListener<Set<String>>> _listeners = [];
 
   /// Load set from storage
   Future<void> _loadState() async {
@@ -515,15 +622,61 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
 
   @override
   set state(Set<String> value) {
+    final oldState = state;
     super.state = value;
     if (_isLoaded) {
       _scheduleSave();
     }
+    // Notify listeners (skip initial load)
+    if (_isLoaded && oldState != value) {
+      for (int i = 0; i < _listeners.length; i++) {
+        try {
+          _listeners[i](oldState, value);
+        } catch (e, stackTrace) {
+          debugPrint('[$namespace.$key] StateListener #$i error: $e\n'
+              '  oldState: $oldState\n  newState: $value\n'
+              '  stackTrace: $stackTrace');
+        }
+      }
+    }
   }
+
+  /// Add a state change listener.
+  ///
+  /// Returns `true` if the listener was added, `false` if it was already
+  /// registered (duplicate listeners are prevented).
+  bool addStateListener(StateChangeListener<Set<String>> listener) {
+    if (_listeners.contains(listener)) {
+      debugPrint('[$namespace.$key] Duplicate listener ignored');
+      return false;
+    }
+    _listeners.add(listener);
+    return true;
+  }
+
+  /// Remove a state change listener.
+  ///
+  /// Returns `true` if the listener was found and removed, `false` otherwise.
+  bool removeStateListener(StateChangeListener<Set<String>> listener) {
+    return _listeners.remove(listener);
+  }
+
+  /// Clear all listeners.
+  ///
+  /// Returns the number of listeners that were removed.
+  int clearStateListeners() {
+    final count = _listeners.length;
+    _listeners.clear();
+    return count;
+  }
+
+  /// Get the current number of registered listeners.
+  int get listenerCount => _listeners.length;
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _listeners.clear();
     super.dispose();
   }
 }

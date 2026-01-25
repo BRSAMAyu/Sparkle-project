@@ -238,3 +238,95 @@ class MilestoneProposalEvent extends ChatStreamEvent {
   });
   final Map<String, dynamic> proposalData;
 }
+
+/// ============================================
+/// Phase 2b: Content Review Event
+/// ============================================
+
+/// Content Review Widget Event - 显示内容审查结果
+/// 用于展示ReviewResult的审查反馈（非Plan专用）
+class ContentReviewWidgetEvent extends ChatStreamEvent {
+  ContentReviewWidgetEvent({
+    required this.reviewData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  /// 审查结果数据
+  final Map<String, dynamic> reviewData;
+
+  /// 审查ID
+  String get reviewId => reviewData['review_id'] as String? ?? '';
+
+  /// 审查决策: passed/failed/needs_refinement
+  String get decision => reviewData['decision'] as String? ?? 'needs_refinement';
+
+  /// 总体评分 0-1
+  double get overallScore => (reviewData['overall_score'] as num?)?.toDouble() ?? 0.0;
+
+  /// 是否通过审查
+  bool get passed => decision == 'passed' && overallScore >= 0.7;
+
+  /// 指标列表
+  List<Map<String, dynamic>> get metrics {
+    final metricsList = reviewData['metrics'] as List<dynamic>?;
+    return metricsList
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+  }
+
+  /// 问题列表
+  List<Map<String, dynamic>> get issues {
+    final issuesList = reviewData['issues'] as List<dynamic>?;
+    return issuesList
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+  }
+
+  /// 严重问题数量
+  int get criticalCount => reviewData['critical_count'] as int? ?? 0;
+
+  /// 警告问题数量
+  int get warningCount => reviewData['warning_count'] as int? ?? 0;
+
+  /// 改进建议
+  List<String> get suggestions {
+    final suggestionsList = reviewData['suggestions'] as List<dynamic>?;
+    return suggestionsList?.map((e) => e.toString()).toList() ?? [];
+  }
+
+  /// 是否需要反思修正
+  bool get requiresReflection => reviewData['requires_reflection'] as bool? ?? false;
+}
+
+/// Content Reflection Result Event - 反思修正完成事件
+class ContentReflectionResultEvent extends ChatStreamEvent {
+  ContentReflectionResultEvent({
+    required this.reflectionData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> reflectionData;
+
+  /// 反思ID
+  String get reflectionId => reflectionData['reflection_id'] as String? ?? '';
+
+  /// 反思结果: fixed/improved/no_change/degraded/failed
+  String get outcome => reflectionData['outcome'] as String? ?? 'unknown';
+
+  /// 分数变化
+  double get scoreDelta => (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
+
+  /// 执行轮数
+  int get rounds => reflectionData['rounds'] as int? ?? 0;
+
+  /// 修正后的内容
+  String? get fixedContent => reflectionData['fixed_content'] as String?;
+}

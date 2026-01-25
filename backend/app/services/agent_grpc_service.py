@@ -546,3 +546,132 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 success=False,
                 message="Internal error processing review",
             )
+
+    async def SubmitContentReviewFeedback(
+        self,
+        request: agent_service_pb2.ContentReviewFeedbackRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ContentReviewFeedbackResponse:
+        """
+        Submit user feedback for a content review (Phase 2c).
+
+        Records user feedback on content reviews and stores it for learning.
+        """
+        import uuid
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            user_id = request.user_id or metadata.get("user-id")
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            trace_id = metadata.get("x-trace-id", str(uuid.uuid4()))
+
+            # Map proto enum to FeedbackType
+            feedback_type_map = {
+                agent_service_pb2.SATISFIED: "satisfied",
+                agent_service_pb2.UNSATISFIED: "unsatisfied",
+                agent_service_pb2.MODIFIED: "modified",
+                agent_service_pb2.REPORTED_ERROR: "reported_error",
+                agent_service_pb2.SKIPPED: "skipped",
+            }
+
+            proto_feedback_type = request.feedback_type
+            if proto_feedback_type not in feedback_type_map:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details(f"Invalid feedback_type: {proto_feedback_type}")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="Invalid feedback_type value",
+                )
+
+            feedback_type_str = feedback_type_map[proto_feedback_type]
+            logger.info(
+                f"SubmitContentReviewFeedback - user={user_id}, review={request.review_id}, "
+                f"feedback_type={feedback_type_str}, trace={trace_id}"
+            )
+
+            # Import review history service (Phase 2c)
+            try:
+                from app.services.review_history_service import get_review_history_service, FeedbackType
+            except ImportError:
+                logger.warning("[AgentService] Review history service not available")
+                # Return success even if service is unavailable (don't block user)
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=True,
+                    message="Feedback received (history unavailable)",
+                    feedback_id=f"fb_{uuid.uuid4().hex[:12]}",
+                )
+
+            # Record feedback to history
+            async with self.db_session_factory() as db_session:
+                history_service = get_review_history_service(db_session)
+                feedback_entry = await history_service.record_user_feedback(
+                    review_id=request.review_id,
+                    user_id=user_id,
+                    feedback_type=FeedbackType(feedback_type_str),
+                    rating=request.rating if request.rating > 0 else None,
+                    comment=request.comment if request.comment else None,
+                    issues_reported=list(request.issues_reported) if request.issues_reported else None,
+                )
+
+                # Trigger learning analysis (async, non-blocking)
+                try:
+                    from app.services.feedback_learning_service import get_feedback_learning_service
+                    learning_service = get_feedback_learning_service(history_service)
+
+                    # Run learning analysis in background
+                    async def run_learning():
+                        try:
+                            report = await learning_service.analyze_and_learn(days=7)
+                            logger.info(
+                                f"[ContentReviewFeedback] Learning analysis complete: "
+                                f"misclassification_rate={report.misclassification_rate:.2%}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}")
+
+                    # Don't await - run in background
+                    asyncio.create_task(run_learning())
+                except ImportError:
+                    logger.debug("[ContentReviewFeedback] Learning service not available")
+                except Exception as e:
+                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}")
+
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=True,
+                message="Feedback recorded successfully",
+                feedback_id=feedback_entry.feedback_id,
+            )
+
+        except grpc.aio.AioRpcError as e:
+            logger.error(f"SubmitContentReviewFeedback gRPC error: {e.code()}: {e.details()}")
+            context.set_code(e.code())
+            context.set_details(e.details())
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=False,
+                message=str(e.details()),
+            )
+        except Exception as e:
+            logger.error(f"SubmitContentReviewFeedback error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=False,
+                message="Internal error processing feedback",
+            )
+
