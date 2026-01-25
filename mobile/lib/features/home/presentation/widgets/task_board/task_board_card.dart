@@ -6,6 +6,7 @@ import 'package:sparkle/features/home/presentation/providers/task_board_provider
 import 'package:sparkle/features/home/presentation/widgets/task_board/plan_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/priority_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/schedule_view.dart';
+import 'package:sparkle/features/home/presentation/widgets/task_board/sprint_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_view_switcher.dart';
 
 /// Task board card - Main container with view switcher and content
@@ -71,6 +72,7 @@ class TaskBoardCard extends ConsumerWidget {
         TaskViewMode.schedule => const ScheduleView(),
         TaskViewMode.priority => const PriorityView(),
         TaskViewMode.plan => const PlanView(),
+        TaskViewMode.sprint => const SprintView(),
       },
     );
 
@@ -138,7 +140,7 @@ class TaskBoardCard extends ConsumerWidget {
               icon: Icons.warning_rounded,
               title: '逾期任务',
               description: '红色高亮显示已逾期的任务',
-              color: DS.error,
+              color: DS.semanticError,
             ),
           ],
         ),
@@ -171,6 +173,22 @@ class TaskBoardCard extends ConsumerWidget {
               icon: Icons.add_circle_outline_rounded,
               title: '创建方案',
               description: '将任务组织到学习方案中',
+            ),
+          ],
+        ),
+      TaskViewMode.sprint => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PanelItem(
+              icon: Icons.flash_on_rounded,
+              title: '冲刺专注模式',
+              description: '只显示当前冲刺的任务',
+            ),
+            const SizedBox(height: DS.spacing12),
+            _PanelItem(
+              icon: Icons.timer_rounded,
+              title: '冲刺计时',
+              description: '关注剩余天数和进度',
             ),
           ],
         ),

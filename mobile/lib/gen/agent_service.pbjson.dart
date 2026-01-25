@@ -70,6 +70,24 @@ final $typed_data.Uint8List planReviewDecisionDescriptor = $convert.base64Decode
     'QQABILCgdBUFBST1ZFEAESCgoGUkVKRUNUEAISCgoGTU9ESUZZEAMSDwoLQUNLTk9XTEVER0UQ'
     'BA==');
 
+@$core.Deprecated('Use contentReviewFeedbackTypeDescriptor instead')
+const ContentReviewFeedbackType$json = {
+  '1': 'ContentReviewFeedbackType',
+  '2': [
+    {'1': 'SATISFIED', '2': 0},
+    {'1': 'UNSATISFIED', '2': 1},
+    {'1': 'MODIFIED', '2': 2},
+    {'1': 'REPORTED_ERROR', '2': 3},
+    {'1': 'SKIPPED', '2': 4},
+  ],
+};
+
+/// Descriptor for `ContentReviewFeedbackType`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List contentReviewFeedbackTypeDescriptor =
+    $convert.base64Decode(
+        'ChlDb250ZW50UmV2aWV3RmVlZGJhY2tUeXBlEg0KCVNBVElTRklFRBAAEg8KC1VOU0FUSVNGSU'
+        'VEEAESDAoITU9ESUZJRUQQAhISCg5SRVBPUlRFRF9FUlJPUhADEgsKB1NLSVBQRUQQBA==');
+
 @$core.Deprecated('Use finishReasonDescriptor instead')
 const FinishReason$json = {
   '1': 'FinishReason',
@@ -187,6 +205,7 @@ const ChatRequest$json = {
       '10': 'includeReferences'
     },
     {'1': 'active_tools', '3': 12, '4': 3, '5': 9, '10': 'activeTools'},
+    {'1': 'chat_mode', '3': 13, '4': 1, '5': 9, '10': 'chatMode'},
   ],
   '8': [
     {'1': 'input'},
@@ -204,7 +223,7 @@ final $typed_data.Uint8List chatRequestDescriptor = $convert.base64Decode(
     'GAggASgLMhQuYWdlbnQudjEuQ2hhdENvbmZpZ1IGY29uZmlnEh0KCnJlcXVlc3RfaWQYCSABKA'
     'lSCXJlcXVlc3RJZBIZCghmaWxlX2lkcxgKIAMoCVIHZmlsZUlkcxItChJpbmNsdWRlX3JlZmVy'
     'ZW5jZXMYCyABKAhSEWluY2x1ZGVSZWZlcmVuY2VzEiEKDGFjdGl2ZV90b29scxgMIAMoCVILYW'
-    'N0aXZlVG9vbHNCBwoFaW5wdXQ=');
+    'N0aXZlVG9vbHMSGwoJY2hhdF9tb2RlGA0gASgJUghjaGF0TW9kZUIHCgVpbnB1dA==');
 
 @$core.Deprecated('Use userProfileDescriptor instead')
 const UserProfile$json = {
@@ -634,6 +653,727 @@ final $typed_data.Uint8List planReviewResponseDescriptor = $convert.base64Decode
     'ChJQbGFuUmV2aWV3UmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3VjY2VzcxIYCgdtZXNzYW'
     'dlGAIgASgJUgdtZXNzYWdlEhsKCXJldmlld19pZBgDIAEoCVIIcmV2aWV3SWQSJgoPdXBkYXRl'
     'ZF9wbGFuX2lkGAQgASgJUg11cGRhdGVkUGxhbklk');
+
+@$core.Deprecated('Use contentReviewFeedbackRequestDescriptor instead')
+const ContentReviewFeedbackRequest$json = {
+  '1': 'ContentReviewFeedbackRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'response_id', '3': 3, '4': 1, '5': 9, '10': 'responseId'},
+    {
+      '1': 'feedback_type',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.ContentReviewFeedbackType',
+      '10': 'feedbackType'
+    },
+    {'1': 'rating', '3': 5, '4': 1, '5': 5, '10': 'rating'},
+    {'1': 'comment', '3': 6, '4': 1, '5': 9, '10': 'comment'},
+    {'1': 'issues_reported', '3': 7, '4': 3, '5': 9, '10': 'issuesReported'},
+    {'1': 'session_id', '3': 8, '4': 1, '5': 9, '10': 'sessionId'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ContentReviewFeedbackRequest.MetaEntry',
+      '10': 'meta'
+    },
+  ],
+  '3': [ContentReviewFeedbackRequest_MetaEntry$json],
+};
+
+@$core.Deprecated('Use contentReviewFeedbackRequestDescriptor instead')
+const ContentReviewFeedbackRequest_MetaEntry$json = {
+  '1': 'MetaEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `ContentReviewFeedbackRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List contentReviewFeedbackRequestDescriptor = $convert.base64Decode(
+    'ChxDb250ZW50UmV2aWV3RmVlZGJhY2tSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZB'
+    'IbCglyZXZpZXdfaWQYAiABKAlSCHJldmlld0lkEh8KC3Jlc3BvbnNlX2lkGAMgASgJUgpyZXNw'
+    'b25zZUlkEkgKDWZlZWRiYWNrX3R5cGUYBCABKA4yIy5hZ2VudC52MS5Db250ZW50UmV2aWV3Rm'
+    'VlZGJhY2tUeXBlUgxmZWVkYmFja1R5cGUSFgoGcmF0aW5nGAUgASgFUgZyYXRpbmcSGAoHY29t'
+    'bWVudBgGIAEoCVIHY29tbWVudBInCg9pc3N1ZXNfcmVwb3J0ZWQYByADKAlSDmlzc3Vlc1JlcG'
+    '9ydGVkEh0KCnNlc3Npb25faWQYCCABKAlSCXNlc3Npb25JZBJECgRtZXRhGAkgAygLMjAuYWdl'
+    'bnQudjEuQ29udGVudFJldmlld0ZlZWRiYWNrUmVxdWVzdC5NZXRhRW50cnlSBG1ldGEaNwoJTW'
+    'V0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
+
+@$core.Deprecated('Use contentReviewFeedbackResponseDescriptor instead')
+const ContentReviewFeedbackResponse$json = {
+  '1': 'ContentReviewFeedbackResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'feedback_id', '3': 3, '4': 1, '5': 9, '10': 'feedbackId'},
+  ],
+};
+
+/// Descriptor for `ContentReviewFeedbackResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List contentReviewFeedbackResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1Db250ZW50UmV2aWV3RmVlZGJhY2tSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
+        'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USHwoLZmVlZGJhY2tfaWQYAyABKAlSCmZlZWRi'
+        'YWNrSWQ=');
+
+@$core.Deprecated('Use reviewOverrideRequestDescriptor instead')
+const ReviewOverrideRequest$json = {
+  '1': 'ReviewOverrideRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
+    {
+      '1': 'original_decision',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '10': 'originalDecision'
+    },
+    {'1': 'new_decision', '3': 4, '4': 1, '5': 9, '10': 'newDecision'},
+    {'1': 'reason', '3': 5, '4': 1, '5': 9, '10': 'reason'},
+    {'1': 'session_id', '3': 6, '4': 1, '5': 9, '10': 'sessionId'},
+    {
+      '1': 'meta',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ReviewOverrideRequest.MetaEntry',
+      '10': 'meta'
+    },
+  ],
+  '3': [ReviewOverrideRequest_MetaEntry$json],
+};
+
+@$core.Deprecated('Use reviewOverrideRequestDescriptor instead')
+const ReviewOverrideRequest_MetaEntry$json = {
+  '1': 'MetaEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `ReviewOverrideRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewOverrideRequestDescriptor = $convert.base64Decode(
+    'ChVSZXZpZXdPdmVycmlkZVJlcXVlc3QSFwoHdXNlcl9pZBgBIAEoCVIGdXNlcklkEhsKCXJldm'
+    'lld19pZBgCIAEoCVIIcmV2aWV3SWQSKwoRb3JpZ2luYWxfZGVjaXNpb24YAyABKAlSEG9yaWdp'
+    'bmFsRGVjaXNpb24SIQoMbmV3X2RlY2lzaW9uGAQgASgJUgtuZXdEZWNpc2lvbhIWCgZyZWFzb2'
+    '4YBSABKAlSBnJlYXNvbhIdCgpzZXNzaW9uX2lkGAYgASgJUglzZXNzaW9uSWQSPQoEbWV0YRgH'
+    'IAMoCzIpLmFnZW50LnYxLlJldmlld092ZXJyaWRlUmVxdWVzdC5NZXRhRW50cnlSBG1ldGEaNw'
+    'oJTWV0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
+
+@$core.Deprecated('Use reviewOverrideResponseDescriptor instead')
+const ReviewOverrideResponse$json = {
+  '1': 'ReviewOverrideResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'override_id', '3': 3, '4': 1, '5': 9, '10': 'overrideId'},
+  ],
+};
+
+/// Descriptor for `ReviewOverrideResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewOverrideResponseDescriptor = $convert.base64Decode(
+    'ChZSZXZpZXdPdmVycmlkZVJlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3MSGAoHbW'
+    'Vzc2FnZRgCIAEoCVIHbWVzc2FnZRIfCgtvdmVycmlkZV9pZBgDIAEoCVIKb3ZlcnJpZGVJZA==');
+
+@$core.Deprecated('Use reviewAppealRequestDescriptor instead')
+const ReviewAppealRequest$json = {
+  '1': 'ReviewAppealRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'appeal_reason', '3': 3, '4': 1, '5': 9, '10': 'appealReason'},
+    {
+      '1': 'issues_with_review',
+      '3': 4,
+      '4': 3,
+      '5': 9,
+      '10': 'issuesWithReview'
+    },
+    {'1': 'session_id', '3': 5, '4': 1, '5': 9, '10': 'sessionId'},
+    {
+      '1': 'meta',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ReviewAppealRequest.MetaEntry',
+      '10': 'meta'
+    },
+  ],
+  '3': [ReviewAppealRequest_MetaEntry$json],
+};
+
+@$core.Deprecated('Use reviewAppealRequestDescriptor instead')
+const ReviewAppealRequest_MetaEntry$json = {
+  '1': 'MetaEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `ReviewAppealRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewAppealRequestDescriptor = $convert.base64Decode(
+    'ChNSZXZpZXdBcHBlYWxSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIbCglyZXZpZX'
+    'dfaWQYAiABKAlSCHJldmlld0lkEiMKDWFwcGVhbF9yZWFzb24YAyABKAlSDGFwcGVhbFJlYXNv'
+    'bhIsChJpc3N1ZXNfd2l0aF9yZXZpZXcYBCADKAlSEGlzc3Vlc1dpdGhSZXZpZXcSHQoKc2Vzc2'
+    'lvbl9pZBgFIAEoCVIJc2Vzc2lvbklkEjsKBG1ldGEYBiADKAsyJy5hZ2VudC52MS5SZXZpZXdB'
+    'cHBlYWxSZXF1ZXN0Lk1ldGFFbnRyeVIEbWV0YRo3CglNZXRhRW50cnkSEAoDa2V5GAEgASgJUg'
+    'NrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4AQ==');
+
+@$core.Deprecated('Use reviewAppealResponseDescriptor instead')
+const ReviewAppealResponse$json = {
+  '1': 'ReviewAppealResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'appeal_id', '3': 2, '4': 1, '5': 9, '10': 'appealId'},
+    {'1': 'status', '3': 3, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'message', '3': 4, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `ReviewAppealResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewAppealResponseDescriptor = $convert.base64Decode(
+    'ChRSZXZpZXdBcHBlYWxSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNzEhsKCWFwcG'
+    'VhbF9pZBgCIAEoCVIIYXBwZWFsSWQSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSGAoHbWVzc2Fn'
+    'ZRgEIAEoCVIHbWVzc2FnZQ==');
+
+@$core.Deprecated('Use appealStatusRequestDescriptor instead')
+const AppealStatusRequest$json = {
+  '1': 'AppealStatusRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'appeal_id', '3': 2, '4': 1, '5': 9, '10': 'appealId'},
+  ],
+};
+
+/// Descriptor for `AppealStatusRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List appealStatusRequestDescriptor = $convert.base64Decode(
+    'ChNBcHBlYWxTdGF0dXNSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIbCglhcHBlYW'
+    'xfaWQYAiABKAlSCGFwcGVhbElk');
+
+@$core.Deprecated('Use appealStatusResponseDescriptor instead')
+const AppealStatusResponse$json = {
+  '1': 'AppealStatusResponse',
+  '2': [
+    {'1': 'appeal_id', '3': 1, '4': 1, '5': 9, '10': 'appealId'},
+    {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'status', '3': 3, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'submitted_at', '3': 4, '4': 1, '5': 9, '10': 'submittedAt'},
+    {'1': 'appeal_reason', '3': 5, '4': 1, '5': 9, '10': 'appealReason'},
+    {'1': 'resolution', '3': 6, '4': 1, '5': 9, '10': 'resolution'},
+    {'1': 'resolved_by', '3': 7, '4': 1, '5': 9, '10': 'resolvedBy'},
+    {'1': 'resolved_at', '3': 8, '4': 1, '5': 9, '10': 'resolvedAt'},
+    {
+      '1': 'secondary_decision',
+      '3': 9,
+      '4': 1,
+      '5': 9,
+      '10': 'secondaryDecision'
+    },
+    {'1': 'secondary_score', '3': 10, '4': 1, '5': 1, '10': 'secondaryScore'},
+  ],
+};
+
+/// Descriptor for `AppealStatusResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List appealStatusResponseDescriptor = $convert.base64Decode(
+    'ChRBcHBlYWxTdGF0dXNSZXNwb25zZRIbCglhcHBlYWxfaWQYASABKAlSCGFwcGVhbElkEhsKCX'
+    'Jldmlld19pZBgCIAEoCVIIcmV2aWV3SWQSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSIQoMc3Vi'
+    'bWl0dGVkX2F0GAQgASgJUgtzdWJtaXR0ZWRBdBIjCg1hcHBlYWxfcmVhc29uGAUgASgJUgxhcH'
+    'BlYWxSZWFzb24SHgoKcmVzb2x1dGlvbhgGIAEoCVIKcmVzb2x1dGlvbhIfCgtyZXNvbHZlZF9i'
+    'eRgHIAEoCVIKcmVzb2x2ZWRCeRIfCgtyZXNvbHZlZF9hdBgIIAEoCVIKcmVzb2x2ZWRBdBItCh'
+    'JzZWNvbmRhcnlfZGVjaXNpb24YCSABKAlSEXNlY29uZGFyeURlY2lzaW9uEicKD3NlY29uZGFy'
+    'eV9zY29yZRgKIAEoAVIOc2Vjb25kYXJ5U2NvcmU=');
+
+@$core.Deprecated('Use reviewFeedbackRequestDescriptor instead')
+const ReviewFeedbackRequest$json = {
+  '1': 'ReviewFeedbackRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'feedback_type', '3': 3, '4': 1, '5': 9, '10': 'feedbackType'},
+    {'1': 'rating', '3': 4, '4': 1, '5': 5, '10': 'rating'},
+    {'1': 'was_helpful', '3': 5, '4': 1, '5': 8, '10': 'wasHelpful'},
+    {'1': 'was_accurate', '3': 6, '4': 1, '5': 8, '10': 'wasAccurate'},
+    {
+      '1': 'inaccurate_points',
+      '3': 7,
+      '4': 3,
+      '5': 9,
+      '10': 'inaccuratePoints'
+    },
+    {
+      '1': 'specificity_level',
+      '3': 8,
+      '4': 1,
+      '5': 9,
+      '10': 'specificityLevel'
+    },
+    {'1': 'comments', '3': 9, '4': 1, '5': 9, '10': 'comments'},
+    {'1': 'tags', '3': 10, '4': 3, '5': 9, '10': 'tags'},
+  ],
+};
+
+/// Descriptor for `ReviewFeedbackRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewFeedbackRequestDescriptor = $convert.base64Decode(
+    'ChVSZXZpZXdGZWVkYmFja1JlcXVlc3QSFwoHdXNlcl9pZBgBIAEoCVIGdXNlcklkEhsKCXJldm'
+    'lld19pZBgCIAEoCVIIcmV2aWV3SWQSIwoNZmVlZGJhY2tfdHlwZRgDIAEoCVIMZmVlZGJhY2tU'
+    'eXBlEhYKBnJhdGluZxgEIAEoBVIGcmF0aW5nEh8KC3dhc19oZWxwZnVsGAUgASgIUgp3YXNIZW'
+    'xwZnVsEiEKDHdhc19hY2N1cmF0ZRgGIAEoCFILd2FzQWNjdXJhdGUSKwoRaW5hY2N1cmF0ZV9w'
+    'b2ludHMYByADKAlSEGluYWNjdXJhdGVQb2ludHMSKwoRc3BlY2lmaWNpdHlfbGV2ZWwYCCABKA'
+    'lSEHNwZWNpZmljaXR5TGV2ZWwSGgoIY29tbWVudHMYCSABKAlSCGNvbW1lbnRzEhIKBHRhZ3MY'
+    'CiADKAlSBHRhZ3M=');
+
+@$core.Deprecated('Use reviewFeedbackResponseDescriptor instead')
+const ReviewFeedbackResponse$json = {
+  '1': 'ReviewFeedbackResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'feedback_id', '3': 2, '4': 1, '5': 9, '10': 'feedbackId'},
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `ReviewFeedbackResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewFeedbackResponseDescriptor = $convert.base64Decode(
+    'ChZSZXZpZXdGZWVkYmFja1Jlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2Nlc3MSHwoLZm'
+    'VlZGJhY2tfaWQYAiABKAlSCmZlZWRiYWNrSWQSGAoHbWVzc2FnZRgDIAEoCVIHbWVzc2FnZQ==');
+
+@$core.Deprecated('Use regenerationRequestDescriptor instead')
+const RegenerationRequest$json = {
+  '1': 'RegenerationRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {
+      '1': 'original_content_id',
+      '3': 2,
+      '4': 1,
+      '5': 9,
+      '10': 'originalContentId'
+    },
+    {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
+    {
+      '1': 'regeneration_type',
+      '3': 4,
+      '4': 1,
+      '5': 9,
+      '10': 'regenerationType'
+    },
+    {
+      '1': 'improvement_hints',
+      '3': 5,
+      '4': 3,
+      '5': 9,
+      '10': 'improvementHints'
+    },
+    {'1': 'focus_areas', '3': 6, '4': 3, '5': 9, '10': 'focusAreas'},
+    {
+      '1': 'custom_instructions',
+      '3': 7,
+      '4': 1,
+      '5': 9,
+      '10': 'customInstructions'
+    },
+  ],
+};
+
+/// Descriptor for `RegenerationRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List regenerationRequestDescriptor = $convert.base64Decode(
+    'ChNSZWdlbmVyYXRpb25SZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIuChNvcmlnaW'
+    '5hbF9jb250ZW50X2lkGAIgASgJUhFvcmlnaW5hbENvbnRlbnRJZBIbCglyZXZpZXdfaWQYAyAB'
+    'KAlSCHJldmlld0lkEisKEXJlZ2VuZXJhdGlvbl90eXBlGAQgASgJUhByZWdlbmVyYXRpb25UeX'
+    'BlEisKEWltcHJvdmVtZW50X2hpbnRzGAUgAygJUhBpbXByb3ZlbWVudEhpbnRzEh8KC2ZvY3Vz'
+    'X2FyZWFzGAYgAygJUgpmb2N1c0FyZWFzEi8KE2N1c3RvbV9pbnN0cnVjdGlvbnMYByABKAlSEm'
+    'N1c3RvbUluc3RydWN0aW9ucw==');
+
+@$core.Deprecated('Use regenerationResponseDescriptor instead')
+const RegenerationResponse$json = {
+  '1': 'RegenerationResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'request_id', '3': 2, '4': 1, '5': 9, '10': 'requestId'},
+    {'1': 'new_content', '3': 3, '4': 1, '5': 9, '10': 'newContent'},
+    {'1': 'new_content_id', '3': 4, '4': 1, '5': 9, '10': 'newContentId'},
+    {
+      '1': 'improvement_summary',
+      '3': 5,
+      '4': 1,
+      '5': 9,
+      '10': 'improvementSummary'
+    },
+    {'1': 'changes_made', '3': 6, '4': 3, '5': 9, '10': 'changesMade'},
+    {
+      '1': 'score_improvement',
+      '3': 7,
+      '4': 1,
+      '5': 1,
+      '10': 'scoreImprovement'
+    },
+    {
+      '1': 'generation_time_ms',
+      '3': 8,
+      '4': 1,
+      '5': 5,
+      '10': 'generationTimeMs'
+    },
+  ],
+};
+
+/// Descriptor for `RegenerationResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List regenerationResponseDescriptor = $convert.base64Decode(
+    'ChRSZWdlbmVyYXRpb25SZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZXNzEh0KCnJlcX'
+    'Vlc3RfaWQYAiABKAlSCXJlcXVlc3RJZBIfCgtuZXdfY29udGVudBgDIAEoCVIKbmV3Q29udGVu'
+    'dBIkCg5uZXdfY29udGVudF9pZBgEIAEoCVIMbmV3Q29udGVudElkEi8KE2ltcHJvdmVtZW50X3'
+    'N1bW1hcnkYBSABKAlSEmltcHJvdmVtZW50U3VtbWFyeRIhCgxjaGFuZ2VzX21hZGUYBiADKAlS'
+    'C2NoYW5nZXNNYWRlEisKEXNjb3JlX2ltcHJvdmVtZW50GAcgASgBUhBzY29yZUltcHJvdmVtZW'
+    '50EiwKEmdlbmVyYXRpb25fdGltZV9tcxgIIAEoBVIQZ2VuZXJhdGlvblRpbWVNcw==');
+
+@$core.Deprecated('Use feedbackStatisticsRequestDescriptor instead')
+const FeedbackStatisticsRequest$json = {
+  '1': 'FeedbackStatisticsRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'period_days', '3': 2, '4': 1, '5': 5, '10': 'periodDays'},
+  ],
+};
+
+/// Descriptor for `FeedbackStatisticsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List feedbackStatisticsRequestDescriptor =
+    $convert.base64Decode(
+        'ChlGZWVkYmFja1N0YXRpc3RpY3NSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIfCg'
+        'twZXJpb2RfZGF5cxgCIAEoBVIKcGVyaW9kRGF5cw==');
+
+@$core.Deprecated('Use feedbackStatisticsResponseDescriptor instead')
+const FeedbackStatisticsResponse$json = {
+  '1': 'FeedbackStatisticsResponse',
+  '2': [
+    {'1': 'total_feedbacks', '3': 1, '4': 1, '5': 5, '10': 'totalFeedbacks'},
+    {'1': 'avg_rating', '3': 2, '4': 1, '5': 1, '10': 'avgRating'},
+    {'1': 'helpful_rate', '3': 3, '4': 1, '5': 1, '10': 'helpfulRate'},
+    {'1': 'accuracy_rate', '3': 4, '4': 1, '5': 1, '10': 'accuracyRate'},
+    {
+      '1': 'regeneration_requests',
+      '3': 5,
+      '4': 1,
+      '5': 5,
+      '10': 'regenerationRequests'
+    },
+    {
+      '1': 'successful_regenerations',
+      '3': 6,
+      '4': 1,
+      '5': 5,
+      '10': 'successfulRegenerations'
+    },
+    {'1': 'period_days', '3': 7, '4': 1, '5': 5, '10': 'periodDays'},
+  ],
+};
+
+/// Descriptor for `FeedbackStatisticsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List feedbackStatisticsResponseDescriptor = $convert.base64Decode(
+    'ChpGZWVkYmFja1N0YXRpc3RpY3NSZXNwb25zZRInCg90b3RhbF9mZWVkYmFja3MYASABKAVSDn'
+    'RvdGFsRmVlZGJhY2tzEh0KCmF2Z19yYXRpbmcYAiABKAFSCWF2Z1JhdGluZxIhCgxoZWxwZnVs'
+    'X3JhdGUYAyABKAFSC2hlbHBmdWxSYXRlEiMKDWFjY3VyYWN5X3JhdGUYBCABKAFSDGFjY3VyYW'
+    'N5UmF0ZRIzChVyZWdlbmVyYXRpb25fcmVxdWVzdHMYBSABKAVSFHJlZ2VuZXJhdGlvblJlcXVl'
+    'c3RzEjkKGHN1Y2Nlc3NmdWxfcmVnZW5lcmF0aW9ucxgGIAEoBVIXc3VjY2Vzc2Z1bFJlZ2VuZX'
+    'JhdGlvbnMSHwoLcGVyaW9kX2RheXMYByABKAVSCnBlcmlvZERheXM=');
+
+@$core.Deprecated('Use getArbitrationQueueRequestDescriptor instead')
+const GetArbitrationQueueRequest$json = {
+  '1': 'GetArbitrationQueueRequest',
+  '2': [
+    {'1': 'limit', '3': 1, '4': 1, '5': 5, '10': 'limit'},
+    {'1': 'priority_filter', '3': 2, '4': 1, '5': 9, '10': 'priorityFilter'},
+    {'1': 'status_filter', '3': 3, '4': 1, '5': 9, '10': 'statusFilter'},
+  ],
+};
+
+/// Descriptor for `GetArbitrationQueueRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getArbitrationQueueRequestDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRBcmJpdHJhdGlvblF1ZXVlUmVxdWVzdBIUCgVsaW1pdBgBIAEoBVIFbGltaXQSJwoPcH'
+        'Jpb3JpdHlfZmlsdGVyGAIgASgJUg5wcmlvcml0eUZpbHRlchIjCg1zdGF0dXNfZmlsdGVyGAMg'
+        'ASgJUgxzdGF0dXNGaWx0ZXI=');
+
+@$core.Deprecated('Use arbitrationCaseInfoDescriptor instead')
+const ArbitrationCaseInfo$json = {
+  '1': 'ArbitrationCaseInfo',
+  '2': [
+    {'1': 'case_id', '3': 1, '4': 1, '5': 9, '10': 'caseId'},
+    {'1': 'appeal_id', '3': 2, '4': 1, '5': 9, '10': 'appealId'},
+    {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'user_id', '3': 4, '4': 1, '5': 9, '10': 'userId'},
+    {
+      '1': 'escalation_reason',
+      '3': 5,
+      '4': 1,
+      '5': 9,
+      '10': 'escalationReason'
+    },
+    {'1': 'priority', '3': 6, '4': 1, '5': 9, '10': 'priority'},
+    {'1': 'created_at', '3': 7, '4': 1, '5': 9, '10': 'createdAt'},
+    {'1': 'status', '3': 8, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'assigned_to', '3': 9, '4': 1, '5': 9, '10': 'assignedTo'},
+    {'1': 'assigned_at', '3': 10, '4': 1, '5': 9, '10': 'assignedAt'},
+    {
+      '1': 'original_review_score',
+      '3': 11,
+      '4': 1,
+      '5': 1,
+      '10': 'originalReviewScore'
+    },
+    {
+      '1': 'secondary_review_score',
+      '3': 12,
+      '4': 1,
+      '5': 1,
+      '10': 'secondaryReviewScore'
+    },
+    {
+      '1': 'score_discrepancy',
+      '3': 13,
+      '4': 1,
+      '5': 1,
+      '10': 'scoreDiscrepancy'
+    },
+    {'1': 'resolution', '3': 14, '4': 1, '5': 9, '10': 'resolution'},
+    {'1': 'final_decision', '3': 15, '4': 1, '5': 9, '10': 'finalDecision'},
+    {'1': 'resolved_at', '3': 16, '4': 1, '5': 9, '10': 'resolvedAt'},
+    {'1': 'resolved_by', '3': 17, '4': 1, '5': 9, '10': 'resolvedBy'},
+    {'1': 'notes', '3': 18, '4': 3, '5': 9, '10': 'notes'},
+  ],
+};
+
+/// Descriptor for `ArbitrationCaseInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List arbitrationCaseInfoDescriptor = $convert.base64Decode(
+    'ChNBcmJpdHJhdGlvbkNhc2VJbmZvEhcKB2Nhc2VfaWQYASABKAlSBmNhc2VJZBIbCglhcHBlYW'
+    'xfaWQYAiABKAlSCGFwcGVhbElkEhsKCXJldmlld19pZBgDIAEoCVIIcmV2aWV3SWQSFwoHdXNl'
+    'cl9pZBgEIAEoCVIGdXNlcklkEisKEWVzY2FsYXRpb25fcmVhc29uGAUgASgJUhBlc2NhbGF0aW'
+    '9uUmVhc29uEhoKCHByaW9yaXR5GAYgASgJUghwcmlvcml0eRIdCgpjcmVhdGVkX2F0GAcgASgJ'
+    'UgljcmVhdGVkQXQSFgoGc3RhdHVzGAggASgJUgZzdGF0dXMSHwoLYXNzaWduZWRfdG8YCSABKA'
+    'lSCmFzc2lnbmVkVG8SHwoLYXNzaWduZWRfYXQYCiABKAlSCmFzc2lnbmVkQXQSMgoVb3JpZ2lu'
+    'YWxfcmV2aWV3X3Njb3JlGAsgASgBUhNvcmlnaW5hbFJldmlld1Njb3JlEjQKFnNlY29uZGFyeV'
+    '9yZXZpZXdfc2NvcmUYDCABKAFSFHNlY29uZGFyeVJldmlld1Njb3JlEisKEXNjb3JlX2Rpc2Ny'
+    'ZXBhbmN5GA0gASgBUhBzY29yZURpc2NyZXBhbmN5Eh4KCnJlc29sdXRpb24YDiABKAlSCnJlc2'
+    '9sdXRpb24SJQoOZmluYWxfZGVjaXNpb24YDyABKAlSDWZpbmFsRGVjaXNpb24SHwoLcmVzb2x2'
+    'ZWRfYXQYECABKAlSCnJlc29sdmVkQXQSHwoLcmVzb2x2ZWRfYnkYESABKAlSCnJlc29sdmVkQn'
+    'kSFAoFbm90ZXMYEiADKAlSBW5vdGVz');
+
+@$core.Deprecated('Use getArbitrationQueueResponseDescriptor instead')
+const GetArbitrationQueueResponse$json = {
+  '1': 'GetArbitrationQueueResponse',
+  '2': [
+    {
+      '1': 'cases',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationCaseInfo',
+      '10': 'cases'
+    },
+    {'1': 'total_count', '3': 2, '4': 1, '5': 5, '10': 'totalCount'},
+  ],
+};
+
+/// Descriptor for `GetArbitrationQueueResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getArbitrationQueueResponseDescriptor =
+    $convert.base64Decode(
+        'ChtHZXRBcmJpdHJhdGlvblF1ZXVlUmVzcG9uc2USMwoFY2FzZXMYASADKAsyHS5hZ2VudC52MS'
+        '5BcmJpdHJhdGlvbkNhc2VJbmZvUgVjYXNlcxIfCgt0b3RhbF9jb3VudBgCIAEoBVIKdG90YWxD'
+        'b3VudA==');
+
+@$core.Deprecated('Use assignArbitrationCaseRequestDescriptor instead')
+const AssignArbitrationCaseRequest$json = {
+  '1': 'AssignArbitrationCaseRequest',
+  '2': [
+    {'1': 'case_id', '3': 1, '4': 1, '5': 9, '10': 'caseId'},
+    {'1': 'arbitrator_id', '3': 2, '4': 1, '5': 9, '10': 'arbitratorId'},
+    {'1': 'arbitrator_role', '3': 3, '4': 1, '5': 9, '10': 'arbitratorRole'},
+  ],
+};
+
+/// Descriptor for `AssignArbitrationCaseRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List assignArbitrationCaseRequestDescriptor =
+    $convert.base64Decode(
+        'ChxBc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXF1ZXN0EhcKB2Nhc2VfaWQYASABKAlSBmNhc2VJZB'
+        'IjCg1hcmJpdHJhdG9yX2lkGAIgASgJUgxhcmJpdHJhdG9ySWQSJwoPYXJiaXRyYXRvcl9yb2xl'
+        'GAMgASgJUg5hcmJpdHJhdG9yUm9sZQ==');
+
+@$core.Deprecated('Use assignArbitrationCaseResponseDescriptor instead')
+const AssignArbitrationCaseResponse$json = {
+  '1': 'AssignArbitrationCaseResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `AssignArbitrationCaseResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List assignArbitrationCaseResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1Bc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
+        'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2U=');
+
+@$core.Deprecated('Use submitArbitrationDecisionRequestDescriptor instead')
+const SubmitArbitrationDecisionRequest$json = {
+  '1': 'SubmitArbitrationDecisionRequest',
+  '2': [
+    {'1': 'case_id', '3': 1, '4': 1, '5': 9, '10': 'caseId'},
+    {'1': 'decision', '3': 2, '4': 1, '5': 9, '10': 'decision'},
+    {'1': 'explanation', '3': 3, '4': 1, '5': 9, '10': 'explanation'},
+    {'1': 'arbitrator_id', '3': 4, '4': 1, '5': 9, '10': 'arbitratorId'},
+    {'1': 'arbitrator_role', '3': 5, '4': 1, '5': 9, '10': 'arbitratorRole'},
+    {
+      '1': 'feedback_for_model',
+      '3': 6,
+      '4': 1,
+      '5': 9,
+      '10': 'feedbackForModel'
+    },
+  ],
+};
+
+/// Descriptor for `SubmitArbitrationDecisionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List submitArbitrationDecisionRequestDescriptor = $convert.base64Decode(
+    'CiBTdWJtaXRBcmJpdHJhdGlvbkRlY2lzaW9uUmVxdWVzdBIXCgdjYXNlX2lkGAEgASgJUgZjYX'
+    'NlSWQSGgoIZGVjaXNpb24YAiABKAlSCGRlY2lzaW9uEiAKC2V4cGxhbmF0aW9uGAMgASgJUgtl'
+    'eHBsYW5hdGlvbhIjCg1hcmJpdHJhdG9yX2lkGAQgASgJUgxhcmJpdHJhdG9ySWQSJwoPYXJiaX'
+    'RyYXRvcl9yb2xlGAUgASgJUg5hcmJpdHJhdG9yUm9sZRIsChJmZWVkYmFja19mb3JfbW9kZWwY'
+    'BiABKAlSEGZlZWRiYWNrRm9yTW9kZWw=');
+
+@$core.Deprecated('Use submitArbitrationDecisionResponseDescriptor instead')
+const SubmitArbitrationDecisionResponse$json = {
+  '1': 'SubmitArbitrationDecisionResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'decision_id', '3': 2, '4': 1, '5': 9, '10': 'decisionId'},
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+  ],
+};
+
+/// Descriptor for `SubmitArbitrationDecisionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List submitArbitrationDecisionResponseDescriptor =
+    $convert.base64Decode(
+        'CiFTdWJtaXRBcmJpdHJhdGlvbkRlY2lzaW9uUmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3'
+        'VjY2VzcxIfCgtkZWNpc2lvbl9pZBgCIAEoCVIKZGVjaXNpb25JZBIYCgdtZXNzYWdlGAMgASgJ'
+        'UgdtZXNzYWdl');
+
+@$core.Deprecated('Use getArbitrationQueueStatsRequestDescriptor instead')
+const GetArbitrationQueueStatsRequest$json = {
+  '1': 'GetArbitrationQueueStatsRequest',
+};
+
+/// Descriptor for `GetArbitrationQueueStatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getArbitrationQueueStatsRequestDescriptor =
+    $convert.base64Decode('Ch9HZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXF1ZXN0');
+
+@$core.Deprecated('Use arbitrationQueueStatsInfoDescriptor instead')
+const ArbitrationQueueStatsInfo$json = {
+  '1': 'ArbitrationQueueStatsInfo',
+  '2': [
+    {'1': 'total_pending', '3': 1, '4': 1, '5': 5, '10': 'totalPending'},
+    {'1': 'total_assigned', '3': 2, '4': 1, '5': 5, '10': 'totalAssigned'},
+    {'1': 'total_in_review', '3': 3, '4': 1, '5': 5, '10': 'totalInReview'},
+    {
+      '1': 'total_resolved_today',
+      '3': 4,
+      '4': 1,
+      '5': 5,
+      '10': 'totalResolvedToday'
+    },
+    {
+      '1': 'avg_resolution_time_hours',
+      '3': 5,
+      '4': 1,
+      '5': 1,
+      '10': 'avgResolutionTimeHours'
+    },
+    {
+      '1': 'by_priority',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry',
+      '10': 'byPriority'
+    },
+    {
+      '1': 'by_reason',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry',
+      '10': 'byReason'
+    },
+  ],
+  '3': [
+    ArbitrationQueueStatsInfo_ByPriorityEntry$json,
+    ArbitrationQueueStatsInfo_ByReasonEntry$json
+  ],
+};
+
+@$core.Deprecated('Use arbitrationQueueStatsInfoDescriptor instead')
+const ArbitrationQueueStatsInfo_ByPriorityEntry$json = {
+  '1': 'ByPriorityEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 5, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+@$core.Deprecated('Use arbitrationQueueStatsInfoDescriptor instead')
+const ArbitrationQueueStatsInfo_ByReasonEntry$json = {
+  '1': 'ByReasonEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 5, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `ArbitrationQueueStatsInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List arbitrationQueueStatsInfoDescriptor = $convert.base64Decode(
+    'ChlBcmJpdHJhdGlvblF1ZXVlU3RhdHNJbmZvEiMKDXRvdGFsX3BlbmRpbmcYASABKAVSDHRvdG'
+    'FsUGVuZGluZxIlCg50b3RhbF9hc3NpZ25lZBgCIAEoBVINdG90YWxBc3NpZ25lZBImCg90b3Rh'
+    'bF9pbl9yZXZpZXcYAyABKAVSDXRvdGFsSW5SZXZpZXcSMAoUdG90YWxfcmVzb2x2ZWRfdG9kYX'
+    'kYBCABKAVSEnRvdGFsUmVzb2x2ZWRUb2RheRI5ChlhdmdfcmVzb2x1dGlvbl90aW1lX2hvdXJz'
+    'GAUgASgBUhZhdmdSZXNvbHV0aW9uVGltZUhvdXJzElQKC2J5X3ByaW9yaXR5GAYgAygLMjMuYW'
+    'dlbnQudjEuQXJiaXRyYXRpb25RdWV1ZVN0YXRzSW5mby5CeVByaW9yaXR5RW50cnlSCmJ5UHJp'
+    'b3JpdHkSTgoJYnlfcmVhc29uGAcgAygLMjEuYWdlbnQudjEuQXJiaXRyYXRpb25RdWV1ZVN0YX'
+    'RzSW5mby5CeVJlYXNvbkVudHJ5UghieVJlYXNvbho9Cg9CeVByaW9yaXR5RW50cnkSEAoDa2V5'
+    'GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAVSBXZhbHVlOgI4ARo7Cg1CeVJlYXNvbkVudHJ5Eh'
+    'AKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgFUgV2YWx1ZToCOAE=');
+
+@$core.Deprecated('Use getArbitrationQueueStatsResponseDescriptor instead')
+const GetArbitrationQueueStatsResponse$json = {
+  '1': 'GetArbitrationQueueStatsResponse',
+  '2': [
+    {
+      '1': 'stats',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo',
+      '10': 'stats'
+    },
+  ],
+};
+
+/// Descriptor for `GetArbitrationQueueStatsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getArbitrationQueueStatsResponseDescriptor =
+    $convert.base64Decode(
+        'CiBHZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXNwb25zZRI5CgVzdGF0cxgBIAEoCzIjLmFnZW'
+        '50LnYxLkFyYml0cmF0aW9uUXVldWVTdGF0c0luZm9SBXN0YXRz');
 
 @$core.Deprecated('Use citationBlockDescriptor instead')
 const CitationBlock$json = {

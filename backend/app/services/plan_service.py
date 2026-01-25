@@ -5,10 +5,11 @@ Handle plan business logic
 from typing import Optional, List
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
-from app.models.plan import Plan
+from app.models.plan import Plan, PlanPriority
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
 
@@ -26,8 +27,41 @@ class PlanService:
 
     @staticmethod
     async def create(
-        db: AsyncSession, obj_in: PlanCreate, user_id: UUID
+        db: AsyncSession,
+        obj_in: PlanCreate,
+        user_id: UUID,
+        skip_quota_check: bool = False,
+        redis_client=None
     ) -> Plan:
+        """
+        创建新计划
+
+        Args:
+            db: 数据库会话
+            obj_in: 计划创建数据
+            user_id: 用户ID
+            skip_quota_check: 是否跳过配额检查（仅用于测试/管理员）
+            redis_client: Redis客户端（用于配额服务）
+
+        Returns:
+            创建的计划对象
+
+        Raises:
+            QuotaExceededError: 配额超限
+        """
+        from app.services.plan_quota_service import PlanQuotaService
+
+        # 1. 配额检查
+        if not skip_quota_check:
+            quota_service = PlanQuotaService(db, redis_client)
+            await quota_service.check_and_raise(user_id, obj_in.type.value if obj_in.type else None)
+
+        # 2. 检查是否是第一个计划（自动设为主计划）
+        quota_service = PlanQuotaService(db, redis_client)
+        quota_status = await quota_service.get_quota_status(user_id)
+        is_first_plan = quota_status.used == 0
+
+        # 3. 创建计划
         db_obj = Plan(
             user_id=user_id,
             name=obj_in.name,
@@ -37,10 +71,19 @@ class PlanService:
             target_date=obj_in.target_date,
             daily_available_minutes=obj_in.daily_available_minutes,
             total_estimated_hours=obj_in.total_estimated_hours,
+            # 新增字段
+            priority=getattr(obj_in, 'priority', None) or PlanPriority.NORMAL,
+            is_primary=is_first_plan,  # 第一个计划自动设为主计划
         )
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        logger.info(
+            f"Plan created: {db_obj.id} for user {user_id}, "
+            f"is_primary={db_obj.is_primary}, priority={db_obj.priority}"
+        )
+
         return db_obj
 
     @staticmethod
@@ -111,3 +154,191 @@ class PlanService:
         await db.refresh(plan)
 
         return new_progress
+
+    @staticmethod
+    async def archive(
+        db: AsyncSession,
+        plan_id: UUID,
+        user_id: UUID,
+        redis_client=None
+    ) -> Optional[Plan]:
+        """
+        归档计划
+
+        归档后计划不再占用配额，但数据保留用于历史查询
+
+        Args:
+            db: 数据库会话
+            plan_id: 计划ID
+            user_id: 用户ID
+            redis_client: Redis客户端
+
+        Returns:
+            归档后的计划对象，如果计划不存在则返回None
+        """
+        from app.services.plan_quota_service import PlanQuotaService
+
+        plan = await PlanService.get_by_id(db, plan_id, user_id)
+        if not plan:
+            return None
+
+        was_primary = plan.is_primary
+
+        # 归档计划
+        plan.is_active = False
+        plan.is_primary = False
+        db.add(plan)
+        await db.commit()
+        await db.refresh(plan)
+
+        logger.info(f"Plan archived: {plan_id} for user {user_id}")
+
+        # 如果归档的是主计划，自动选择新的主计划
+        if was_primary:
+            quota_service = PlanQuotaService(db, redis_client)
+            new_primary_id = await quota_service.auto_set_primary_plan(user_id)
+            if new_primary_id:
+                logger.info(f"Auto-selected new primary plan: {new_primary_id}")
+
+        return plan
+
+    @staticmethod
+    async def restore(
+        db: AsyncSession,
+        plan_id: UUID,
+        user_id: UUID,
+        skip_quota_check: bool = False,
+        redis_client=None
+    ) -> Optional[Plan]:
+        """
+        恢复归档的计划
+
+        Args:
+            db: 数据库会话
+            plan_id: 计划ID
+            user_id: 用户ID
+            skip_quota_check: 是否跳过配额检查
+            redis_client: Redis客户端
+
+        Returns:
+            恢复后的计划对象
+
+        Raises:
+            QuotaExceededError: 配额超限
+        """
+        from app.services.plan_quota_service import PlanQuotaService
+
+        # 查找归档的计划
+        query = select(Plan).where(
+            and_(
+                Plan.id == plan_id,
+                Plan.user_id == user_id,
+                Plan.is_active == False
+            )
+        )
+        result = await db.execute(query)
+        plan = result.scalar_one_or_none()
+
+        if not plan:
+            return None
+
+        # 配额检查
+        if not skip_quota_check:
+            quota_service = PlanQuotaService(db, redis_client)
+            await quota_service.check_and_raise(user_id)
+
+        # 恢复计划
+        plan.is_active = True
+        db.add(plan)
+        await db.commit()
+        await db.refresh(plan)
+
+        logger.info(f"Plan restored: {plan_id} for user {user_id}")
+
+        # 确保有主计划
+        quota_service = PlanQuotaService(db, redis_client)
+        await quota_service.ensure_primary_exists(user_id)
+
+        return plan
+
+    @staticmethod
+    async def update_priority(
+        db: AsyncSession,
+        plan_id: UUID,
+        user_id: UUID,
+        priority: PlanPriority
+    ) -> Optional[Plan]:
+        """
+        更新计划优先级
+
+        Args:
+            db: 数据库会话
+            plan_id: 计划ID
+            user_id: 用户ID
+            priority: 新优先级
+
+        Returns:
+            更新后的计划对象
+        """
+        plan = await PlanService.get_by_id(db, plan_id, user_id)
+        if not plan:
+            return None
+
+        plan.priority = priority
+        db.add(plan)
+        await db.commit()
+        await db.refresh(plan)
+
+        logger.info(f"Plan priority updated: {plan_id} -> {priority}")
+        return plan
+
+    @staticmethod
+    async def get_primary(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> Optional[Plan]:
+        """
+        获取用户的主计划
+
+        Args:
+            db: 数据库会话
+            user_id: 用户ID
+
+        Returns:
+            主计划对象
+        """
+        query = select(Plan).where(
+            and_(
+                Plan.user_id == user_id,
+                Plan.is_active == True,
+                Plan.is_primary == True
+            )
+        )
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_archived(
+        db: AsyncSession,
+        user_id: UUID,
+        limit: int = 20
+    ) -> List[Plan]:
+        """
+        获取归档的计划列表
+
+        Args:
+            db: 数据库会话
+            user_id: 用户ID
+            limit: 返回数量限制
+
+        Returns:
+            归档计划列表
+        """
+        query = (
+            select(Plan)
+            .where(and_(Plan.user_id == user_id, Plan.is_active == False))
+            .order_by(desc(Plan.updated_at))
+            .limit(limit)
+        )
+        result = await db.execute(query)
+        return list(result.scalars().all())

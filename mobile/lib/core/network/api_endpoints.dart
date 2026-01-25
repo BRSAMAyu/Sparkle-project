@@ -232,6 +232,7 @@ class ApiEndpoints {
 
   // Achievement Events (internal)
   static const String achievementEventsProcess = '/achievements/events/process';
+  static const String achievementsCloseToUnlock = '/achievements/close-to-unlock';
 
   // Multi-Intent
   static const String multiIntentParse = '/multi-intent/parse';

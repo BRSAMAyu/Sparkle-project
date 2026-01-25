@@ -138,7 +138,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         type=ModelTaskType(task_data.get("type", "learning")),
                         estimated_minutes=task_data.get("estimated_minutes", 25),
                         priority=task_data.get("priority", 2),
-                        plan_id=plan_id_uuid
+                        plan_id=plan_uuid
                     )
 
                     task = await TaskService.create(
@@ -156,7 +156,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         "description": task.description
                     })
 
-                    logger.debug(f"Created task: {task.id} for plan {plan_id_uuid}")
+                    logger.debug(f"Created task: {task.id} for plan {plan_uuid}")
 
                 except Exception as e:
                     logger.warning(f"Failed to create task: {e}, continuing...")
@@ -170,7 +170,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     suggestion="请检查计划信息并重试"
                 )
 
-            logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_id_uuid}")
+            logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_uuid}")
 
             # 第四步: 返回卡片化结果
             return ToolResult(

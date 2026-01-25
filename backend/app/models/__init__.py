@@ -91,6 +91,14 @@ from app.models.achievement import (
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.next_action_selection import NextActionSelection
+from app.models.review_system import (
+    ReviewHistory,
+    ReviewFeedback,
+    ReviewOverride,
+    ReviewAppeal,
+    ArbitrationCase,
+    ArbitrationDecision,
+)
 
 __all__ = [
     "BaseModel",
@@ -219,4 +227,11 @@ __all__ = [
     "TaskFeedbackCategory",
     # Next Action Selection
     "NextActionSelection",
+    # Review System
+    "ReviewHistory",
+    "ReviewFeedback",
+    "ReviewOverride",
+    "ReviewAppeal",
+    "ArbitrationCase",
+    "ArbitrationDecision",
 ]

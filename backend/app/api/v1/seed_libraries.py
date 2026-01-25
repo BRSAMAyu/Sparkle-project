@@ -86,7 +86,7 @@ async def list_libraries(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: str = Query("created_at", description="排序字段"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
     current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -259,7 +259,7 @@ async def get_items(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: str = Query("order_index", description="排序字段"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$", description="排序方向"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$", description="排序方向"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

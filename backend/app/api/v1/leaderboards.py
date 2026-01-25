@@ -6,7 +6,7 @@ Leaderboards API
 """
 from typing import Dict, Any, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
@@ -216,7 +216,7 @@ async def list_leaderboard_types():
 
 @router.get("/top-three/{type}", response_model=Dict[str, Any])
 async def get_top_three(
-    type: LeaderboardType = Query(..., description="排行榜类型"),
+    type: LeaderboardType = Path(..., description="排行榜类型"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):

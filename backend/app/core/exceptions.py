@@ -129,3 +129,46 @@ class DeadlockError(DatabaseError):
     ):
         super().__init__(message=message, detail=detail)
         self.status_code = 503  # Service Unavailable, should retry
+
+
+# ============ 计划配额相关异常 ============
+
+
+class QuotaExceededError(SparkleException):
+    """配额超限异常"""
+
+    def __init__(
+        self,
+        message: str = "已达计划数量上限",
+        detail: Optional[Any] = None,
+        current_count: int = 0,
+        max_quota: int = 0,
+    ):
+        super().__init__(message=message, status_code=403, detail=detail)
+        self.current_count = current_count
+        self.max_quota = max_quota
+
+
+class VersionConflictError(SparkleException):
+    """版本冲突异常 - 乐观锁检测到并发修改"""
+
+    def __init__(
+        self,
+        message: str = "数据版本冲突，请刷新后重试",
+        detail: Optional[Any] = None,
+        current_version: int = 0,
+        expected_version: int = 0,
+    ):
+        super().__init__(message=message, status_code=409, detail=detail)
+        self.current_version = current_version
+        self.expected_version = expected_version
+        self.can_retry = True  # 表示可以重试
+
+
+class PlanStateNotFoundError(NotFoundError):
+    """计划状态不存在异常"""
+
+    def __init__(
+        self, message: str = "计划状态不存在", detail: Optional[Any] = None
+    ):
+        super().__init__(message=message, detail=detail)

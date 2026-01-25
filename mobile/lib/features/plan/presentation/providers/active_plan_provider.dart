@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
 /// Active Plan Provider
@@ -13,8 +14,15 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 /// ref.read(activePlanProvider.notifier).selectPlan('plan_id');
 /// ref.read(activePlanProvider.notifier).clearSelection();
 /// ```
-class ActivePlanNotifier extends StateNotifier<String?> {
-  ActivePlanNotifier(this._ref) : super(null);
+class ActivePlanNotifier extends PersistentNotifier<String?> {
+  ActivePlanNotifier(this._ref)
+      : super(
+          namespace: 'active_plan',
+          key: 'selected_id',
+          defaultValue: null,
+          serializer: (s) => s,
+          deserializer: (s) => (s == null || s.isEmpty) ? null : s,
+        );
 
   final Ref _ref;
 

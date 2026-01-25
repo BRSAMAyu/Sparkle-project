@@ -1,7 +1,15 @@
 export 'plan_routes.dart';
 export 'presentation/providers/plan_provider.dart';
+export 'presentation/providers/sprint_actions_provider.dart';
+export 'presentation/providers/sprint_history_provider.dart';
+export 'presentation/providers/sprint_statistics_provider.dart';
 export 'presentation/screens/growth_screen.dart';
 export 'presentation/screens/plan_create_screen.dart';
 export 'presentation/screens/plan_detail_screen.dart';
 export 'presentation/screens/plan_edit_screen.dart';
+export 'presentation/screens/sprint_history_screen.dart';
 export 'presentation/screens/sprint_screen.dart';
+export 'presentation/widgets/sprint_actions_dialog.dart';
+export 'presentation/widgets/sprint_history_detail.dart';
+export 'presentation/widgets/sprint_statistics_card.dart';
+export 'domain/entities/sprint_statistics.dart';

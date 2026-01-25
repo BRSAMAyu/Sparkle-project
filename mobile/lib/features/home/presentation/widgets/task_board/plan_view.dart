@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -60,7 +61,7 @@ class PlanView extends ConsumerWidget {
     );
 }
 
-class _PlanSection extends StatelessWidget {
+class _PlanSection extends ConsumerWidget {
   const _PlanSection({
     required this.planId,
     required this.tasks,
@@ -70,7 +71,13 @@ class _PlanSection extends StatelessWidget {
   final List<TaskModel> tasks;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 获取计划名称，优先显示名称而非ID
+    final planName = (planId != null && planId!.isNotEmpty)
+        ? ref.watch(planNameProvider(planId!))
+        : null;
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section header
@@ -85,9 +92,11 @@ class _PlanSection extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               Text(
-                planId ?? '未分类',
+                planName ?? planId ?? '未分类',
                 style: context.sparkleTypography.labelLarge.copyWith(
-                  color: planId != null ? DS.textPrimary : DS.textSecondary,
+                  color: (planName != null || planId != null)
+                      ? DS.textPrimary
+                      : DS.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -119,4 +128,5 @@ class _PlanSection extends StatelessWidget {
             )),
       ],
     );
+  }
 }

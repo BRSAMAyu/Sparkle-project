@@ -16,7 +16,7 @@ from app.services.user_service import UserService
 from app.services.focus_service import focus_service
 from app.models.task import Task, TaskStatus as ModelTaskStatus
 from app.models.plan import Plan
-from sqlalchemy import select, and_, desc, asc
+from sqlalchemy import select, and_, desc, asc, func
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.state_manager import SessionStateManager, FSMState
@@ -48,7 +48,13 @@ from opentelemetry import trace
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.request_router import RequestRouter
 from app.orchestration.grounding_validator import GroundingValidator
-from app.orchestration.schemas import ExecutablePlan, FeedbackPayload, StateSnapshot
+from app.orchestration.schemas import (
+    ExecutablePlan, FeedbackPayload, StateSnapshot,
+    VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
+    MAX_REPLAN_ATTEMPTS,
+    REPLAN_RATE_LIMIT_WINDOW,
+    REPLAN_MAX_PER_WINDOW,
+)
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 from app.orchestration.state_snapshot import StateSnapshotManager
 
@@ -223,7 +229,14 @@ class ChatOrchestrator:
         # Plan Review Service
         plan_review_service.set_redis(redis_client)
 
-        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview")
+        # Phase 3: Version Conflict Service (P1 enhancement)
+        from app.orchestration.version_conflict_service import VersionConflictService
+        self.version_conflict_service = VersionConflictService(
+            redis=redis_client,
+            planner=self.lang_graph_planner,
+        )
+
+        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview, VersionConflict")
 
         # Ensure tools are registered
         self._ensure_tools_registered()
@@ -426,6 +439,28 @@ class ChatOrchestrator:
             await self._save_context_versions(user_id, previous)
             logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
 
+    async def _check_replan_rate_limit(self, plan_id: Optional[uuid.UUID]) -> tuple[bool, int]:
+        """Check replan rate limit to prevent excessive replanning
+
+        Args:
+            plan_id: Plan ID to check rate limit for
+
+        Returns:
+            tuple[bool, int]: (is_allowed, current_count)
+        """
+        if not self.redis or not plan_id:
+            return True, 0
+
+        window_key = f"replan:rate:{plan_id}:{int(time.time()) // REPLAN_RATE_LIMIT_WINDOW}"
+
+        try:
+            current = await self.redis.incr(window_key)
+            await self.redis.expire(window_key, REPLAN_RATE_LIMIT_WINDOW)
+            return current <= REPLAN_MAX_PER_WINDOW, current
+        except Exception as e:
+            logger.warning(f"Failed to check replan rate limit: {e}")
+            return True, 0
+
     def _merge_user_contexts(self, local_context: Dict[str, Any], grpc_context: Dict[str, Any]) -> Dict[str, Any]:
         """
         P0: Merge user context from Go Gateway (gRPC) with local context (Python).
@@ -455,6 +490,46 @@ class ChatOrchestrator:
         logger.debug(f"Merged context keys: {list(merged.keys())}")
         return merged
 
+    async def _get_task_status_summary(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """Get summary of all tasks for user across all plans."""
+        try:
+            # Pending count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.PENDING
+                )
+            )
+            pending = result.scalar() or 0
+            
+            # In progress count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.IN_PROGRESS
+                )
+            )
+            in_progress = result.scalar() or 0
+            
+            # Overdue count (pending/in_progress and due_date < now)
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
+                    Task.due_date < datetime.utcnow()
+                )
+            )
+            overdue = result.scalar() or 0
+            
+            return {
+                "pending": pending,
+                "in_progress": in_progress,
+                "overdue": overdue
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get task status summary: {e}")
+            return {"pending": 0, "in_progress": 0, "overdue": 0}
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -467,6 +542,9 @@ class ChatOrchestrator:
             user_service = UserService(db_session, self.redis)
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
+
+            # P1: Task Status Summary
+            task_status_summary = await self._get_task_status_summary(user_id, db_session)
 
             llm_profile_data = None
             preference_version = 0
@@ -542,6 +620,7 @@ class ChatOrchestrator:
                     "focus_stats": cognitive_context.focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                     
                     # New field for full context injection
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
@@ -623,6 +702,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
             else:
                 # Fallback to basic context
@@ -636,6 +716,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
 
         except Exception as e:
@@ -851,6 +932,33 @@ class ChatOrchestrator:
                     except (ValueError, AttributeError):
                         pass
 
+                # P0: Auto-switch plan based on task context if no plan_id provided
+                plan_switched = False
+                if not plan_id and user_message and active_db:
+                    with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
+                        try:
+                            from app.services.plan_matching_service import PlanMatchingService
+                            plan_matching = PlanMatchingService(active_db)
+
+                            # Try to match the message to a plan
+                            matched_plan_id = await self.session_state.auto_switch_plan(
+                                session_id=session_id,
+                                user_id=uuid.UUID(user_id),
+                                task_context={
+                                    "content": user_message,
+                                    "type": grpc_context.get("task_type", "chat"),
+                                },
+                                db_session=active_db,
+                                plan_matching_service=plan_matching
+                            )
+
+                            if matched_plan_id:
+                                plan_id = matched_plan_id
+                                plan_switched = True
+                                logger.info(f"Auto-switched to plan {plan_id} based on message content")
+                        except Exception as e:
+                            logger.warning(f"Auto-switch plan failed: {e}")
+
                 overlay_versions = {}
                 if grpc_context:
                     versions = grpc_context.get("realtime_versions")
@@ -967,6 +1075,19 @@ class ChatOrchestrator:
                     )
                 ))
 
+                # Check and notify pending milestone proposals
+                await self._notify_pending_milestone_proposals(user_id, stream_callback)
+
+                # P0: Send plan switch notification if auto-switched
+                if plan_switched and plan_id:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        metadata={
+                            "plan_switched": "true",
+                            "switched_to_plan_id": str(plan_id),
+                        }
+                    ))
+                    logger.info(f"Sent plan switch notification to client: plan_id={plan_id}")
+
                 # Inject Dependencies
                 if active_db:
                     state.context_data["db_session"] = active_db
@@ -1003,6 +1124,7 @@ class ChatOrchestrator:
                     try:
                         # Execute multi-agent workflow and stream responses
                         async for response in execute_multi_agent_workflow(
+                            orchestrator=self,
                             chat_mode=chat_mode,
                             message=user_message,
                             user_id=user_id,
@@ -1126,7 +1248,7 @@ class ChatOrchestrator:
                                 conversation_history = conversation_context.get("messages", [])
 
                             # Phase 4: Pass plan_id for version tracking
-                            plan_id_for_planner = str(plan_id) if plan_id else None
+                            plan_id_str = str(plan_id) if plan_id else None
 
                             executable_plan = await self.lang_graph_planner.plan(
                                 message=user_message,
@@ -1134,7 +1256,7 @@ class ChatOrchestrator:
                                 user_id=user_id,
                                 session_id=session_id,
                                 conversation_history=conversation_history,
-                                plan_id=plan_id_for_planner,  # Phase 4
+                                plan_id=plan_id_str,  # Phase 4
                             )
 
                             # === Phase 3: Log planning observability ===
@@ -1172,6 +1294,30 @@ class ChatOrchestrator:
                                 )
 
                                 if executable_plan.fallback_strategy.get("on_version_conflict") == "replan":
+                                    # P1: Check replan rate limit
+                                    plan_uuid = uuid.UUID(plan_id_str) if plan_id_str else None
+                                    user_uuid = uuid.UUID(user_id)
+
+                                    if plan_uuid:
+                                        can_replan, limit_reason, attempt_count = await self.version_conflict_service.can_replan(
+                                            user_uuid, plan_uuid
+                                        )
+
+                                        if not can_replan:
+                                            logger.warning(f"Replan rate limited: {limit_reason}")
+                                            await stream_callback(agent_service_pb2.ChatResponse(
+                                                delta=f"\n\n⚠️ {limit_reason}. 请稍后重试。",
+                                                metadata={
+                                                    "replan_blocked": "true",
+                                                    "reason": limit_reason,
+                                                    "attempt_count": str(attempt_count),
+                                                }
+                                            ))
+                                            return
+
+                                        # Record replan attempt
+                                        await self.version_conflict_service.record_replan_attempt(user_uuid, plan_uuid)
+
                                     logger.info("Version conflict -> attempting replan with latest snapshot")
                                     replan_attempted = True
                                     snapshot = await self.snapshot_manager.create_snapshot(
@@ -1185,7 +1331,7 @@ class ChatOrchestrator:
                                         user_id=user_id,
                                         session_id=session_id,
                                         conversation_history=conversation_history,
-                                        plan_id=plan_id_for_planner,  # Phase 4
+                                        plan_id=plan_id_str,  # Phase 4
                                     )
                                     current_versions = await self._load_context_versions(user_id)
                                     version_check = await self.snapshot_manager.compare_versions(
@@ -1297,37 +1443,97 @@ class ChatOrchestrator:
                                 plan_state_service = PlanStateService(active_db, self.redis)
                                 feedback_service = get_plan_feedback_service(active_db, self.redis)
 
-                                current_state = await plan_state_service.get_plan_state(
-                                    uuid.UUID(user_id), uuid.UUID(plan_id)
-                                )
+                                # Check rate limit first
+                                rate_allowed, rate_count = await self._check_replan_rate_limit(plan_id)
+                                if not rate_allowed:
+                                    await stream_callback(agent_service_pb2.ChatResponse(
+                                        delta=f"\n\n⚠️ 计划重规划过于频繁，请稍后再试。"
+                                    ))
+                                    return
 
-                                if current_state and current_state.version != executable_plan.plan_version:
-                                    # 版本冲突
+                                # Retry loop for version conflict handling
+                                version_conflict_logged = False
+                                for replan_attempt in range(MAX_REPLAN_ATTEMPTS):
+                                    current_state = await plan_state_service.get_plan_state(
+                                        uuid.UUID(user_id), uuid.UUID(plan_id)
+                                    )
+
+                                    if not current_state or current_state.version == executable_plan.plan_version:
+                                        # No conflict or no state, exit loop successfully
+                                        break
+
+                                    # Version conflict detected
                                     logger.warning(
-                                        f"Plan version conflict: {executable_plan.plan_version} -> {current_state.version}"
+                                        f"Plan version conflict (attempt {replan_attempt + 1}/{MAX_REPLAN_ATTEMPTS}): "
+                                        f"planned v{executable_plan.plan_version} -> current v{current_state.version}"
                                     )
 
-                                    # 记录到 PlanScope.feedback_log
-                                    await feedback_service.append_user_feedback(
-                                        user_id=uuid.UUID(user_id),
-                                        plan_id=uuid.UUID(plan_id),
-                                        content=(
-                                            f"Plan version conflict detected: "
-                                            f"planned v{executable_plan.plan_version}, "
-                                            f"current v{current_state.version}"
-                                        ),
-                                        decision="supplement",
-                                        priority="high"
-                                    )
+                                    # Log conflict feedback only once
+                                    if not version_conflict_logged:
+                                        await feedback_service.append_user_feedback(
+                                            user_id=uuid.UUID(user_id),
+                                            plan_id=uuid.UUID(plan_id),
+                                            content=(
+                                                f"Plan version conflict detected: "
+                                                f"planned v{executable_plan.plan_version}, "
+                                                f"current v{current_state.version}"
+                                            ),
+                                            decision="supplement",
+                                            priority="high"
+                                        )
+                                        version_conflict_logged = True
 
-                                    # 根据 confidence 决定策略
-                                    if executable_plan.confidence >= 0.7:
-                                        # 高置信度: 自动 replan
+                                    # Check if we've exhausted retries
+                                    if replan_attempt >= MAX_REPLAN_ATTEMPTS - 1:
+                                        # Max retries reached, require HITL
+                                        tool_calls_payload = [
+                                            {"id": tc.id, "name": tc.name, "params": tc.params}
+                                            for tc in executable_plan.tool_calls
+                                        ]
+                                        action_id = await pending_actions_store.save(
+                                            tool_name="__plan_version_conflict__",
+                                            arguments={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "tool_calls": tool_calls_payload,
+                                            },
+                                            user_id=str(user_id),
+                                            description=(
+                                                f"计划版本持续变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
+                                                f"是否继续执行？"
+                                            ),
+                                            preview_data={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "confidence": executable_plan.confidence,
+                                                "tool_calls": tool_calls_payload,
+                                            }
+                                        )
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict_max_retries").inc()
                                         await stream_callback(agent_service_pb2.ChatResponse(
-                                            delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                            delta=(
+                                                f"\n\n⚠️ 检测到持续状态变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
+                                                f"需要确认后继续执行。\naction_id={action_id}"
+                                            ),
+                                            metadata={
+                                                "requires_hitl": "true",
+                                                "action_id": action_id,
+                                                "reason": "plan_version_conflict_max_retries",
+                                            }
                                         ))
+                                        return
 
-                                        # 创建新快照并重规划
+                                    # Handle conflict based on confidence
+                                    if executable_plan.confidence >= VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD:
+                                        # High confidence: auto replan
+                                        if replan_attempt == 0:
+                                            await stream_callback(agent_service_pb2.ChatResponse(
+                                                delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                            ))
+
+                                        # Create new snapshot and replan
                                         new_snapshot = await self.snapshot_manager.create_snapshot(
                                             user_id=user_id,
                                             session_id=session_id,
@@ -1344,13 +1550,11 @@ class ChatOrchestrator:
                                                 "old_version": executable_plan.plan_version,
                                                 "new_version": current_state.version,
                                             },
-                                            plan_id=plan_id,
+                                            plan_id=plan_id_str,
                                         )
-
-                                        # 更新 state 中的 plan
-                                        state.context_data["executable_plan"] = executable_plan
+                                        # Continue loop to verify new plan version
                                     else:
-                                        # 低置信度: HITL 确认
+                                        # Low confidence: require HITL confirmation (no retry)
                                         tool_calls_payload = [
                                             {"id": tc.id, "name": tc.name, "params": tc.params}
                                             for tc in executable_plan.tool_calls
@@ -1376,7 +1580,7 @@ class ChatOrchestrator:
                                                 "tool_calls": tool_calls_payload,
                                             }
                                         )
-                                        HITL_REQUESTED.labels(reason="plan_version_conflict").inc()
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict_low_confidence").inc()
                                         await stream_callback(agent_service_pb2.ChatResponse(
                                             delta=(
                                                 f"\n\n⚠️ 检测到状态变更，需要确认后继续执行。\n"
@@ -1389,6 +1593,10 @@ class ChatOrchestrator:
                                             }
                                         ))
                                         return
+
+                                # If we get here, version check passed (no conflict or resolved)
+                                if version_conflict_logged:
+                                    logger.info(f"Plan version conflict resolved for plan {plan_id}")
 
                             # 6. Plan Review (User Confirmation Loop)
                             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
@@ -1572,15 +1780,24 @@ class ChatOrchestrator:
                         if not isinstance(llm_profile_meta, dict):
                             llm_profile_meta = {}
 
+                    # Build metadata with plan switch notification
+                    response_metadata = {
+                        "response_id": response_id,
+                        "trace_id": trace_id,
+                        "preference_version": (user_context_payload or {}).get("preference_version", 0),
+                        "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+                    }
+
+                    # P0: Add plan switch notification to metadata
+                    if plan_switched and plan_id:
+                        response_metadata["plan_switched"] = True
+                        response_metadata["switched_to_plan_id"] = str(plan_id)
+                        logger.info(f"Plan switch notification added to response: plan_id={plan_id}")
+
                     final_response_data = {
                         "message": full_response,
                         "tool_results": [],
-                        "metadata": {
-                            "response_id": response_id,
-                            "trace_id": trace_id,
-                            "preference_version": (user_context_payload or {}).get("preference_version", 0),
-                            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
-                        },
+                        "metadata": response_metadata,
                     }
                     try:
                         from app.services.decision_record_service import DecisionRecordService
@@ -1690,3 +1907,50 @@ class ChatOrchestrator:
 
                     except Exception as e:
                         logger.error(f"Failed to record token usage: {e}")
+
+    async def _notify_pending_milestone_proposals(
+        self,
+        user_id: str,
+        stream_callback,
+    ) -> None:
+        """
+        Check and send pending milestone proposals to user.
+        Called at the start of StreamChat to notify users of pending proposals.
+        """
+        from app.core.pending_actions import pending_actions_store
+
+        try:
+            actions = await pending_actions_store.get_all_by_user(user_id)
+
+            # Find milestone proposals
+            milestone_proposals = [
+                a for a in actions
+                if a.get("tool_name") == "milestone_task_proposal"
+            ]
+
+            if not milestone_proposals:
+                return
+
+            logger.info(f"Found {len(milestone_proposals)} pending milestone proposal(s) for user {user_id}")
+
+            for proposal_action in milestone_proposals:
+                preview = proposal_action.get("preview_data", {})
+                if not preview:
+                    continue
+
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"🎉 恭喜达成里程碑！为你推荐 {preview.get('suggested_count', 0)} 个新任务",
+                    metadata={
+                        "widget_event": "milestone_proposal",
+                        "proposal_id": preview.get("proposal_id"),
+                        "action_id": proposal_action.get("action_id"),
+                        "plan_id": preview.get("plan_id"),
+                        "milestone_id": preview.get("milestone_id"),
+                        "task_count": preview.get("suggested_count", 0),
+                        "reasoning": preview.get("reasoning", ""),
+                        "tasks": json.dumps(preview.get("proposed_tasks", [])),
+                    }
+                ))
+
+        except Exception as e:
+            logger.warning(f"Failed to notify milestone proposals: {e}")

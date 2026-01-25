@@ -1,10 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/features/task/task.dart';
 
 /// Task board view mode
-enum TaskViewMode { schedule, priority, plan }
+enum TaskViewMode { schedule, priority, plan, sprint }
+
+/// Sprint task filter options
+enum SprintTaskFilter { all, todo, inProgress, done }
 
 /// Task board state
 class TaskBoardState {
@@ -12,27 +17,72 @@ class TaskBoardState {
     this.currentView = TaskViewMode.schedule,
     this.expandedTaskIds = const {},
     this.selectedPlanId,
+    this.sprintFilter = SprintTaskFilter.all,
   });
 
   final TaskViewMode currentView;
   final Set<String> expandedTaskIds;
   final String? selectedPlanId;
+  final SprintTaskFilter sprintFilter;
+
+  /// Serialize state to JSON for persistence
+  Map<String, dynamic> toJson() {
+    return {
+      'currentView': currentView.name,
+      'expandedTaskIds': expandedTaskIds.toList(),
+      'selectedPlanId': selectedPlanId,
+      'sprintFilter': sprintFilter.name,
+    };
+  }
+
+  /// Create state from JSON (for persistence)
+  static TaskBoardState? fromJson(Map<String, dynamic> json) {
+    try {
+      return TaskBoardState(
+        currentView: TaskViewMode.values.firstWhere(
+          (e) => e.name == json['currentView'],
+          orElse: () => TaskViewMode.schedule,
+        ),
+        expandedTaskIds: (json['expandedTaskIds'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toSet() ??
+            const {},
+        selectedPlanId: json['selectedPlanId'] as String?,
+        sprintFilter: SprintTaskFilter.values.firstWhere(
+          (e) => e.name == json['sprintFilter'],
+          orElse: () => SprintTaskFilter.all,
+        ),
+      );
+    } catch (e) {
+      return null;
+    }
+  }
 
   TaskBoardState copyWith({
     TaskViewMode? currentView,
     Set<String>? expandedTaskIds,
     String? selectedPlanId,
+    SprintTaskFilter? sprintFilter,
   }) =>
       TaskBoardState(
         currentView: currentView ?? this.currentView,
         expandedTaskIds: expandedTaskIds ?? this.expandedTaskIds,
         selectedPlanId: selectedPlanId ?? this.selectedPlanId,
+        sprintFilter: sprintFilter ?? this.sprintFilter,
       );
 }
 
-/// Task board notifier
-class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
-  TaskBoardNotifier(this._ref) : super(TaskBoardState()) {
+/// Task board notifier with persistence
+class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
+  TaskBoardNotifier(this._ref)
+      : super(
+          _ref,
+          namespace: 'task_board',
+          key: 'state',
+          defaultValue: TaskBoardState(),
+          toJson: (s) => s.toJson(),
+          fromJson: (j) => TaskBoardState.fromJson(j),
+        ) {
     // Initialize default view based on sprint status
     _initializeDefaultView();
   }
@@ -41,11 +91,14 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
 
   void _initializeDefaultView() {
     final dashboardState = _ref.read(dashboardProvider);
-    // If sprint is active, default to plan view
+    // If sprint is active, default to sprint view (only if currently on schedule)
     final defaultView = dashboardState.sprint != null
-        ? TaskViewMode.plan
+        ? TaskViewMode.sprint
         : TaskViewMode.schedule;
-    state = TaskBoardState(currentView: defaultView);
+    // Only update if state is still default (schedule view)
+    if (state.currentView == TaskViewMode.schedule && defaultView == TaskViewMode.sprint) {
+      state = state.copyWith(currentView: defaultView);
+    }
   }
 
   void switchView(TaskViewMode view) {
@@ -83,11 +136,15 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
   }
 
   void clearPlanSelection() {
-    state = state.copyWith();
+    state = state.copyWith(selectedPlanId: null);
   }
 
   void collapseAll() {
     state = state.copyWith(expandedTaskIds: {});
+  }
+
+  void setSprintFilter(SprintTaskFilter filter) {
+    state = state.copyWith(sprintFilter: filter);
   }
 }
 
@@ -188,6 +245,10 @@ final priorityTasksProvider = Provider<List<TaskModel>>((ref) {
 /// Plan view grouped tasks provider
 final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
   final taskState = ref.watch(taskListProvider);
+
+  // 监听计划名称映射，以便在计划变更时触发刷新
+  ref.watch(planNameMapProvider);
+
   final tasks = taskState.tasks
       .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
       .toList();
@@ -208,4 +269,73 @@ final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
   }
 
   return groups;
+});
+
+/// Sprint view tasks provider - 只显示当前活跃冲刺的任务
+final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
+  final dashboardState = ref.watch(dashboardProvider);
+  final taskState = ref.watch(taskListProvider);
+  final boardState = ref.watch(taskBoardProvider);
+
+  // 没有活跃冲刺时返回空列表
+  if (dashboardState.sprint == null) return [];
+
+  final sprintPlanId = dashboardState.sprint!.id;
+
+  // 筛选属于当前冲刺的任务
+  var tasks = taskState.tasks
+      .where((t) => t.planId == sprintPlanId)
+      .toList();
+
+  // 根据过滤器进一步筛选
+  switch (boardState.sprintFilter) {
+    case SprintTaskFilter.todo:
+      tasks = tasks.where((t) => t.status == TaskStatus.pending).toList();
+      break;
+    case SprintTaskFilter.inProgress:
+      tasks = tasks.where((t) => t.status == TaskStatus.inProgress).toList();
+      break;
+    case SprintTaskFilter.done:
+      tasks = tasks.where((t) => t.status == TaskStatus.completed).toList();
+      break;
+    case SprintTaskFilter.all:
+    default:
+      // 全部显示所有任务（包括已完成，排除已放弃）
+      tasks = tasks.where((t) => t.status != TaskStatus.abandoned).toList();
+      break;
+  }
+
+  // 按优先级排序
+  tasks.sort((a, b) => b.priority.compareTo(a.priority));
+  return tasks;
+});
+
+/// Sprint task counts provider - 用于显示过滤器的任务数量
+final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
+  final dashboardState = ref.watch(dashboardProvider);
+  final taskState = ref.watch(taskListProvider);
+
+  if (dashboardState.sprint == null) {
+    return {for (final filter in SprintTaskFilter.values) filter: 0};
+  }
+
+  final sprintPlanId = dashboardState.sprint!.id;
+  final sprintTasks = taskState.tasks
+      .where((t) => t.planId == sprintPlanId)
+      .toList();
+
+  return {
+    SprintTaskFilter.all: sprintTasks
+        .where((t) => t.status != TaskStatus.abandoned)
+        .length,
+    SprintTaskFilter.todo: sprintTasks
+        .where((t) => t.status == TaskStatus.pending)
+        .length,
+    SprintTaskFilter.inProgress: sprintTasks
+        .where((t) => t.status == TaskStatus.inProgress)
+        .length,
+    SprintTaskFilter.done: sprintTasks
+        .where((t) => t.status == TaskStatus.completed)
+        .length,
+  };
 });

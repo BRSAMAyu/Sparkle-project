@@ -101,7 +101,7 @@ class GetPlanStateTool(BaseTool):
                     error_message=f"未找到计划状态: plan_id={params.plan_id}",
                 )
 
-            # Build lightweight response
+            # Build lightweight response (format matches frontend PlanContextData)
             data = {
                 "plan_id": str(state.plan_id),
                 "status": state.status,
@@ -116,7 +116,12 @@ class GetPlanStateTool(BaseTool):
                     for m in (state.milestones or [])[-5:]  # Last 5 milestones
                 ],
                 "task_index": state.task_index or {},
+                "task_summary": {  # Frontend expects "task_summary" alias
+                    "total": (state.task_index or {}).get("total", 0),
+                    "completed": (state.task_index or {}).get("completed", 0),
+                },
                 "task_summaries": (state.task_summaries or [])[:10],
+                "recent_feedback": (state.feedback_log or [])[-5:],  # Last 5 feedback entries
                 "constraints": state.constraints or {},
             }
 
@@ -124,7 +129,7 @@ class GetPlanStateTool(BaseTool):
                 success=True,
                 tool_name=self.name,
                 data=data,
-                widget_type="plan_state",
+                widget_type="plan_context_summary",  # Match frontend widget type
                 widget_data=data,
             )
 

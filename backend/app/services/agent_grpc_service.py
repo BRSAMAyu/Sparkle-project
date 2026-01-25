@@ -6,7 +6,7 @@ import json
 import time
 import uuid
 from datetime import datetime, timedelta
-from typing import AsyncIterator, Callable
+from typing import AsyncIterator, Callable, Optional
 
 import grpc
 from loguru import logger
@@ -31,6 +31,41 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self.orchestrator = orchestrator
         self.db_session_factory = db_session_factory
         logger.info("AgentServiceImpl initialized with injected dependencies")
+
+    async def _require_admin(
+        self,
+        context: grpc.aio.ServicerContext,
+        metadata: dict[str, str],
+    ) -> Optional[str]:
+        user_id = metadata.get("user-id")
+        if not user_id:
+            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            context.set_details("user_id is required")
+            return None
+
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details("user_id must be a valid UUID")
+            return None
+
+        try:
+            async with self.db_session_factory() as db_session:
+                from app.services.user_service import UserService
+
+                user_service = UserService(db_session)
+                user = await user_service.get_user_by_id(user_uuid)
+                if not user or not user.is_superuser:
+                    context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+                    context.set_details("Admin access required")
+                    return None
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return None
+
+        return user_id
 
     async def StreamChat(
         self,
@@ -451,14 +486,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 f"plan={plan_id}, decision={user_decision}, trace={trace_id}"
             )
 
-            # Process the review feedback
-            result = await plan_review_service.handle_review_feedback(
-                review_id=request.review_id,
-                user_decision=user_decision,
-                user_id=user_id,
-                user_comment=request.user_comment or None,
-                modifications=dict(request.meta) if request.meta else None,
-            )
+            # P1 Fix #10: Process the review feedback with db_session
+            async with self.db_session_factory() as db_session:
+                result = await plan_review_service.handle_review_feedback(
+                    review_id=request.review_id,
+                    user_decision=user_decision,
+                    user_id=user_id,
+                    db_session=db_session,  # Now required
+                    user_comment=request.user_comment or None,
+                    modifications=dict(request.meta) if request.meta else None,
+                )
 
             if result.get("status") != "success":
                 context.set_code(grpc.StatusCode.INTERNAL)
@@ -492,12 +529,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
 
             if proto_decision == agent_service_pb2.APPROVE:
-                # Resume plan execution after approval
-                await plan_review_service.resume_plan_after_approval(
-                    plan_id=plan_id,
-                    user_id=user_id,
-                )
-                logger.info(f"Plan {plan_id} resumed after approval by {user_id}")
+                # Resume plan execution after approval with db_session for task generation
+                async with self.db_session_factory() as db:
+                    result = await plan_review_service.resume_plan_after_approval(
+                        plan_id=plan_id,
+                        user_id=user_id,
+                        db_session=db,
+                    )
+                logger.info(f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}")
 
             elif proto_decision == agent_service_pb2.REJECT:
                 # Handle rejection - notify and stop
@@ -542,3 +581,935 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 success=False,
                 message="Internal error processing review",
             )
+
+    async def SubmitContentReviewFeedback(
+        self,
+        request: agent_service_pb2.ContentReviewFeedbackRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ContentReviewFeedbackResponse:
+        """
+        Submit user feedback for a content review (Phase 2c).
+
+        Records user feedback on content reviews and stores it for learning.
+        """
+        import uuid
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            user_id = request.user_id or metadata.get("user-id")
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            trace_id = metadata.get("x-trace-id", str(uuid.uuid4()))
+
+            # Map proto enum to FeedbackType
+            feedback_type_map = {
+                agent_service_pb2.SATISFIED: "satisfied",
+                agent_service_pb2.UNSATISFIED: "unsatisfied",
+                agent_service_pb2.MODIFIED: "modified",
+                agent_service_pb2.REPORTED_ERROR: "reported_error",
+                agent_service_pb2.SKIPPED: "skipped",
+            }
+
+            proto_feedback_type = request.feedback_type
+            if proto_feedback_type not in feedback_type_map:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details(f"Invalid feedback_type: {proto_feedback_type}")
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=False,
+                    message="Invalid feedback_type value",
+                )
+
+            feedback_type_str = feedback_type_map[proto_feedback_type]
+            logger.info(
+                f"SubmitContentReviewFeedback - user={user_id}, review={request.review_id}, "
+                f"feedback_type={feedback_type_str}, trace={trace_id}"
+            )
+
+            # Import review history service (Phase 2c)
+            try:
+                from app.services.review_history_service import get_review_history_service, FeedbackType
+            except ImportError:
+                logger.warning("[AgentService] Review history service not available")
+                # Return success even if service is unavailable (don't block user)
+                return agent_service_pb2.ContentReviewFeedbackResponse(
+                    success=True,
+                    message="Feedback received (history unavailable)",
+                    feedback_id=f"fb_{uuid.uuid4().hex[:12]}",
+                )
+
+            # Record feedback to history
+            async with self.db_session_factory() as db_session:
+                history_service = get_review_history_service(db_session)
+                feedback_entry = await history_service.record_user_feedback(
+                    review_id=request.review_id,
+                    user_id=user_id,
+                    feedback_type=FeedbackType(feedback_type_str),
+                    rating=request.rating if request.rating > 0 else None,
+                    comment=request.comment if request.comment else None,
+                    issues_reported=list(request.issues_reported) if request.issues_reported else None,
+                )
+                await db_session.commit()
+
+                # Trigger learning analysis (async, non-blocking)
+                try:
+                    from app.services.feedback_learning_service import get_feedback_learning_service
+                    learning_service = get_feedback_learning_service(history_service)
+
+                    # Run learning analysis in background
+                    async def run_learning():
+                        try:
+                            report = await learning_service.analyze_and_learn(days=7)
+                            logger.info(
+                                f"[ContentReviewFeedback] Learning analysis complete: "
+                                f"misclassification_rate={report.misclassification_rate:.2%}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}")
+
+                    # Don't await - run in background
+                    asyncio.create_task(run_learning())
+                except ImportError:
+                    logger.debug("[ContentReviewFeedback] Learning service not available")
+                except Exception as e:
+                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}")
+
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=True,
+                message="Feedback recorded successfully",
+                feedback_id=feedback_entry.feedback_id,
+            )
+
+        except grpc.aio.AioRpcError as e:
+            logger.error(f"SubmitContentReviewFeedback gRPC error: {e.code()}: {e.details()}")
+            context.set_code(e.code())
+            context.set_details(e.details())
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=False,
+                message=str(e.details()),
+            )
+        except Exception as e:
+            logger.error(f"SubmitContentReviewFeedback error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ContentReviewFeedbackResponse(
+                success=False,
+                message="Internal error processing feedback",
+            )
+
+    # ========================================================================
+    # Phase 2e: Review Override & Appeal
+    # ========================================================================
+
+    async def SubmitReviewOverride(
+        self,
+        request: agent_service_pb2.ReviewOverrideRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ReviewOverrideResponse:
+        """
+        Submit user override of a review decision.
+
+        Allows user to override a review decision when they disagree with it.
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            user_id = request.user_id or metadata.get("user-id")
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.ReviewOverrideResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.ReviewOverrideResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            logger.info(
+                f"SubmitReviewOverride - user={user_id}, review={request.review_id}, "
+                f"original={request.original_decision} -> new={request.new_decision}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.review_history_service import get_review_history_service
+                history_service = get_review_history_service(db_session)
+
+                override = await history_service.record_user_override(
+                    review_id=request.review_id,
+                    user_id=user_id,
+                    original_decision=request.original_decision,
+                    new_decision=request.new_decision,
+                    reason=request.reason or "",
+                )
+                await db_session.commit()
+
+                return agent_service_pb2.ReviewOverrideResponse(
+                    success=True,
+                    message="Override recorded successfully",
+                    override_id=override.override_id,
+                )
+
+        except ValueError as e:
+            logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewOverrideResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewOverrideResponse(
+                success=False,
+                message="Internal error processing override",
+            )
+
+    async def SubmitReviewAppeal(
+        self,
+        request: agent_service_pb2.ReviewAppealRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ReviewAppealResponse:
+        """
+        Submit an appeal against a review decision.
+
+        Initiates a secondary review process when user disagrees with review.
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            user_id = request.user_id or metadata.get("user-id")
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.ReviewAppealResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.ReviewAppealResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            if not request.appeal_reason:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("appeal_reason is required")
+                return agent_service_pb2.ReviewAppealResponse(
+                    success=False,
+                    message="appeal_reason is required",
+                )
+
+            logger.info(
+                f"SubmitReviewAppeal - user={user_id}, review={request.review_id}, "
+                f"reason={request.appeal_reason[:50]}..."
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.review_appeal_service import (
+                    get_appeal_review_service,
+                    AppealRequest,
+                )
+
+                appeal_service = get_appeal_review_service(db_session)
+
+                appeal_request = AppealRequest(
+                    user_id=user_id,
+                    review_id=request.review_id,
+                    appeal_reason=request.appeal_reason,
+                    issues_with_review=list(request.issues_with_review)
+                    if request.issues_with_review else [],
+                )
+
+                appeal = await appeal_service.submit_appeal(appeal_request)
+                await db_session.commit()
+
+                return agent_service_pb2.ReviewAppealResponse(
+                    success=True,
+                    appeal_id=appeal.appeal_id,
+                    status=appeal.status.value,
+                    message="Appeal submitted successfully",
+                )
+
+        except ValueError as e:
+            logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewAppealResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewAppealResponse(
+                success=False,
+                message="Internal error processing appeal",
+            )
+
+    async def GetAppealStatus(
+        self,
+        request: agent_service_pb2.AppealStatusRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.AppealStatusResponse:
+        """
+        Get the status of an appeal.
+
+        Returns current status and resolution details if available.
+        """
+        try:
+            user_id = request.user_id
+
+            if not request.appeal_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("appeal_id is required")
+                return agent_service_pb2.AppealStatusResponse()
+
+            logger.info(f"GetAppealStatus - appeal={request.appeal_id}")
+
+            async with self.db_session_factory() as db_session:
+                from app.services.review_appeal_service import get_appeal_review_service
+
+                appeal_service = get_appeal_review_service(db_session)
+                status_data = await appeal_service.get_appeal_status(request.appeal_id)
+
+                if not status_data:
+                    context.set_code(grpc.StatusCode.NOT_FOUND)
+                    context.set_details("Appeal not found")
+                    return agent_service_pb2.AppealStatusResponse()
+
+                return agent_service_pb2.AppealStatusResponse(
+                    appeal_id=status_data.get("appeal_id", ""),
+                    review_id=status_data.get("review_id", ""),
+                    status=status_data.get("status", ""),
+                    submitted_at=status_data.get("submitted_at", ""),
+                    appeal_reason=status_data.get("appeal_reason", ""),
+                    resolution=status_data.get("resolution", ""),
+                    resolved_by=status_data.get("resolved_by", ""),
+                    resolved_at=status_data.get("resolved_at", ""),
+                    secondary_decision=status_data.get("secondary_decision", ""),
+                    secondary_score=status_data.get("secondary_score", 0.0),
+                )
+
+        except Exception as e:
+            logger.error(f"GetAppealStatus error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.AppealStatusResponse()
+
+    # ========================================================================
+    # Phase 2f: Review Feedback & Regeneration
+    # ========================================================================
+
+    async def SubmitReviewFeedback(
+        self,
+        request: agent_service_pb2.ReviewFeedbackRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ReviewFeedbackResponse:
+        """
+        Submit feedback on a review.
+
+        Allows users to rate and provide feedback on review quality.
+        """
+        try:
+            user_id = request.user_id
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.ReviewFeedbackResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.ReviewFeedbackResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            logger.info(
+                f"SubmitReviewFeedback - user={user_id}, review={request.review_id}, "
+                f"type={request.feedback_type}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.feedback_driven_generation import (
+                    get_feedback_driven_generation_service,
+                    FeedbackType,
+                )
+
+                feedback_service = get_feedback_driven_generation_service(db_session)
+
+                # Map feedback type string to enum
+                feedback_type_map = {
+                    "rating": FeedbackType.RATING,
+                    "quality": FeedbackType.QUALITY,
+                    "accuracy": FeedbackType.ACCURACY,
+                    "specificity": FeedbackType.SPECIFICITY,
+                }
+                feedback_type = feedback_type_map.get(
+                    request.feedback_type,
+                    FeedbackType.RATING,
+                )
+
+                feedback = await feedback_service.submit_review_feedback(
+                    review_id=request.review_id,
+                    user_id=user_id,
+                    feedback_type=feedback_type,
+                    rating=request.rating if request.rating > 0 else None,
+                    was_helpful=request.was_helpful,
+                    was_accurate=request.was_accurate,
+                    inaccurate_points=list(request.inaccurate_points)
+                    if request.inaccurate_points else None,
+                    specificity_level=request.specificity_level
+                    if request.specificity_level else None,
+                    comments=request.comments,
+                    tags=list(request.tags) if request.tags else None,
+                )
+                await db_session.commit()
+
+                return agent_service_pb2.ReviewFeedbackResponse(
+                    success=True,
+                    feedback_id=feedback.feedback_id,
+                    message="Feedback submitted successfully",
+                )
+
+        except ValueError as e:
+            logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewFeedbackResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ReviewFeedbackResponse(
+                success=False,
+                message="Internal error processing feedback",
+            )
+
+    async def RequestRegeneration(
+        self,
+        request: agent_service_pb2.RegenerationRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.RegenerationResponse:
+        """
+        Request content regeneration based on feedback.
+
+        Triggers AI to regenerate content with improvements.
+        """
+        try:
+            user_id = request.user_id
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.RegenerationResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.original_content_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("original_content_id is required")
+                return agent_service_pb2.RegenerationResponse(
+                    success=False,
+                    message="original_content_id is required",
+                )
+
+            logger.info(
+                f"RequestRegeneration - user={user_id}, content={request.original_content_id}, "
+                f"type={request.regeneration_type}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.feedback_driven_generation import (
+                    get_feedback_driven_generation_service,
+                    RegenerationType,
+                )
+
+                regen_service = get_feedback_driven_generation_service(db_session)
+
+                # Map regeneration type string to enum
+                regen_type_map = {
+                    "improve_quality": RegenerationType.IMPROVE_QUALITY,
+                    "fix_issues": RegenerationType.FIX_ISSUES,
+                    "change_style": RegenerationType.CHANGE_STYLE,
+                    "add_details": RegenerationType.ADD_DETAILS,
+                    "simplify": RegenerationType.SIMPLIFY,
+                    "custom": RegenerationType.CUSTOM,
+                }
+                regen_type = regen_type_map.get(
+                    request.regeneration_type,
+                    RegenerationType.IMPROVE_QUALITY,
+                )
+
+                # Create regeneration request
+                regen_request = await regen_service.request_regeneration(
+                    original_content_id=request.original_content_id,
+                    review_id=request.review_id,
+                    user_id=user_id,
+                    regeneration_type=regen_type,
+                    improvement_hints=list(request.improvement_hints)
+                    if request.improvement_hints else None,
+                    focus_areas=list(request.focus_areas)
+                    if request.focus_areas else None,
+                    custom_instructions=request.custom_instructions,
+                )
+
+                # Process the regeneration
+                result = await regen_service.process_regeneration(
+                    regen_request.request_id
+                )
+                await db_session.commit()
+
+                return agent_service_pb2.RegenerationResponse(
+                    success=result.success,
+                    request_id=result.request_id,
+                    new_content=result.new_content or "",
+                    new_content_id=result.new_content_id or "",
+                    improvement_summary=result.improvement_summary,
+                    changes_made=result.changes_made,
+                    score_improvement=result.score_improvement,
+                    generation_time_ms=result.generation_time_ms,
+                )
+
+        except ValueError as e:
+            logger.error(f"RequestRegeneration error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.RegenerationResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"RequestRegeneration error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.RegenerationResponse(
+                success=False,
+                message="Internal error processing regeneration",
+            )
+
+    async def GetFeedbackStatistics(
+        self,
+        request: agent_service_pb2.FeedbackStatisticsRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.FeedbackStatisticsResponse:
+        """
+        Get feedback statistics for a user.
+
+        Returns aggregated feedback data over a time period.
+        """
+        try:
+            user_id = request.user_id
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.FeedbackStatisticsResponse()
+
+            period_days = request.period_days if request.period_days > 0 else 30
+
+            logger.info(
+                f"GetFeedbackStatistics - user={user_id}, period={period_days} days"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.feedback_driven_generation import (
+                    get_feedback_driven_generation_service,
+                )
+
+                feedback_service = get_feedback_driven_generation_service(db_session)
+                stats = await feedback_service.get_feedback_statistics(days=period_days)
+
+                return agent_service_pb2.FeedbackStatisticsResponse(
+                    total_feedbacks=stats.get("total_feedbacks", 0),
+                    avg_rating=stats.get("avg_rating", 0.0),
+                    helpful_rate=stats.get("helpful_rate", 0.0),
+                    accuracy_rate=stats.get("accuracy_rate", 0.0),
+                    regeneration_requests=stats.get("regeneration_requests", 0),
+                    successful_regenerations=stats.get("successful_regenerations", 0),
+                    period_days=period_days,
+                )
+
+        except Exception as e:
+            logger.error(f"GetFeedbackStatistics error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.FeedbackStatisticsResponse()
+
+    # ========================================================================
+    # Phase 2g: Arbitration System
+    # ========================================================================
+
+    async def GetArbitrationQueue(
+        self,
+        request: agent_service_pb2.GetArbitrationQueueRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.GetArbitrationQueueResponse:
+        """
+        Get pending arbitration cases for admins.
+
+        Returns list of cases awaiting arbitration.
+        """
+        try:
+            limit = request.limit if request.limit > 0 else 50
+            priority_filter = request.priority_filter if request.priority_filter else None
+            status_filter = request.status_filter if request.status_filter else None
+
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.GetArbitrationQueueResponse()
+
+            logger.info(
+                f"GetArbitrationQueue - limit={limit}, "
+                f"priority={priority_filter}, status={status_filter}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.arbitration_service import (
+                    get_arbitration_service,
+                    ArbitrationPriority,
+                )
+
+                arbitration_service = get_arbitration_service(db_session)
+
+                # Map priority string to enum
+                priority_map = {
+                    "low": ArbitrationPriority.LOW,
+                    "normal": ArbitrationPriority.NORMAL,
+                    "high": ArbitrationPriority.HIGH,
+                    "urgent": ArbitrationPriority.URGENT,
+                }
+                priority = priority_map.get(priority_filter) if priority_filter else None
+
+                cases = await arbitration_service.get_pending_queue(
+                    limit=limit,
+                    priority=priority,
+                )
+
+                # Filter by status if specified
+                if status_filter:
+                    cases = [c for c in cases if c.status == status_filter]
+
+                # Convert to proto
+                proto_cases = []
+                for case in cases:
+                    proto_case = agent_service_pb2.ArbitrationCaseInfo(
+                        case_id=case.case_id,
+                        appeal_id=case.appeal_id,
+                        review_id=case.review_id,
+                        user_id=case.user_id,
+                        escalation_reason=case.escalation_reason.value,
+                        priority=case.priority.value,
+                        created_at=case.created_at,
+                        status=case.status,
+                        assigned_to=case.assigned_to or "",
+                        assigned_at=case.assigned_at or "",
+                        original_review_score=case.original_review_score,
+                        secondary_review_score=case.secondary_review_score or 0.0,
+                        score_discrepancy=case.score_discrepancy,
+                        resolution=case.resolution or "",
+                        final_decision=case.final_decision or "",
+                        resolved_at=case.resolved_at or "",
+                        resolved_by=case.resolved_by or "",
+                        notes=case.notes,
+                    )
+                    proto_cases.append(proto_case)
+
+                return agent_service_pb2.GetArbitrationQueueResponse(
+                    cases=proto_cases,
+                    total_count=len(cases),
+                )
+
+        except Exception as e:
+            logger.error(f"GetArbitrationQueue error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.GetArbitrationQueueResponse()
+
+    async def AssignArbitrationCase(
+        self,
+        request: agent_service_pb2.AssignArbitrationCaseRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.AssignArbitrationCaseResponse:
+        """
+        Assign an arbitration case to an arbitrator.
+
+        Claims a case for review by an admin.
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.AssignArbitrationCaseResponse(
+                    success=False,
+                    message="Admin access required",
+                )
+
+            if not request.case_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("case_id is required")
+                return agent_service_pb2.AssignArbitrationCaseResponse(
+                    success=False,
+                    message="case_id is required",
+                )
+
+            if not request.arbitrator_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("arbitrator_id is required")
+                return agent_service_pb2.AssignArbitrationCaseResponse(
+                    success=False,
+                    message="arbitrator_id is required",
+                )
+
+            logger.info(
+                f"AssignArbitrationCase - case={request.case_id}, "
+                f"arbitrator={request.arbitrator_id}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.arbitration_service import (
+                    get_arbitration_service,
+                    ArbitratorRole,
+                )
+
+                arbitration_service = get_arbitration_service(db_session)
+
+                # Map role string to enum
+                role_map = {
+                    "auto": ArbitratorRole.AUTO,
+                    "reviewer": ArbitratorRole.REVIEWER,
+                    "senior": ArbitratorRole.SENIOR,
+                    "admin": ArbitratorRole.ADMIN,
+                }
+                role = role_map.get(
+                    request.arbitrator_role,
+                    ArbitratorRole.REVIEWER,
+                )
+
+                case = await arbitration_service.assign_case(
+                    case_id=request.case_id,
+                    arbitrator_id=request.arbitrator_id,
+                    arbitrator_role=role,
+                )
+                await db_session.commit()
+
+                return agent_service_pb2.AssignArbitrationCaseResponse(
+                    success=True,
+                    message=f"Case {request.case_id} assigned to {request.arbitrator_id}",
+                )
+
+        except ValueError as e:
+            logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.AssignArbitrationCaseResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.AssignArbitrationCaseResponse(
+                success=False,
+                message="Internal error assigning case",
+            )
+
+    async def SubmitArbitrationDecision(
+        self,
+        request: agent_service_pb2.SubmitArbitrationDecisionRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.SubmitArbitrationDecisionResponse:
+        """
+        Submit an arbitrator's decision on a case.
+
+        Finalizes the arbitration with a decision.
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=False,
+                    message="Admin access required",
+                )
+
+            if not request.case_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("case_id is required")
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=False,
+                    message="case_id is required",
+                )
+
+            if not request.decision:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("decision is required")
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=False,
+                    message="decision is required",
+                )
+
+            if not request.arbitrator_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("arbitrator_id is required")
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=False,
+                    message="arbitrator_id is required",
+                )
+
+            logger.info(
+                f"SubmitArbitrationDecision - case={request.case_id}, "
+                f"decision={request.decision}"
+            )
+
+            async with self.db_session_factory() as db_session:
+                from app.services.arbitration_service import (
+                    get_arbitration_service,
+                    AppealDecision,
+                    ArbitratorRole,
+                )
+
+                arbitration_service = get_arbitration_service(db_session)
+
+                # Map decision string to enum
+                decision_map = {
+                    "approved": AppealDecision.APPROVED,
+                    "rejected": AppealDecision.REJECTED,
+                    "partially_approved": AppealDecision.PARTIALLY_APPROVED,
+                    "escalated": AppealDecision.ESCALATED,
+                }
+                decision = decision_map.get(request.decision)
+                if not decision:
+                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                    context.set_details(f"Invalid decision: {request.decision}")
+                    return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                        success=False,
+                        message=f"Invalid decision: {request.decision}",
+                    )
+
+                # Map role string to enum
+                role_map = {
+                    "auto": ArbitratorRole.AUTO,
+                    "reviewer": ArbitratorRole.REVIEWER,
+                    "senior": ArbitratorRole.SENIOR,
+                    "admin": ArbitratorRole.ADMIN,
+                }
+                role = role_map.get(
+                    request.arbitrator_role,
+                    ArbitratorRole.REVIEWER,
+                )
+
+                arb_decision = await arbitration_service.submit_decision(
+                    case_id=request.case_id,
+                    decision=decision,
+                    explanation=request.explanation,
+                    arbitrator_id=request.arbitrator_id,
+                    arbitrator_role=role,
+                    feedback_for_model=request.feedback_for_model,
+                )
+                await db_session.commit()
+
+                return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                    success=True,
+                    decision_id=arb_decision.case_id,  # Use case_id as decision_id
+                    message="Decision submitted successfully",
+                )
+
+        except ValueError as e:
+            logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                success=False,
+                message=str(e),
+            )
+        except Exception as e:
+            logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.SubmitArbitrationDecisionResponse(
+                success=False,
+                message="Internal error submitting decision",
+            )
+
+    async def GetArbitrationQueueStats(
+        self,
+        request: agent_service_pb2.GetArbitrationQueueStatsRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.GetArbitrationQueueStatsResponse:
+        """
+        Get arbitration queue statistics.
+
+        Returns statistics about pending cases and resolution metrics.
+        """
+        try:
+            logger.info("GetArbitrationQueueStats")
+
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            if not await self._require_admin(context, metadata):
+                return agent_service_pb2.GetArbitrationQueueStatsResponse()
+
+            async with self.db_session_factory() as db_session:
+                from app.services.arbitration_service import get_arbitration_service
+
+                arbitration_service = get_arbitration_service(db_session)
+                stats = await arbitration_service.get_queue_stats()
+
+                proto_stats = agent_service_pb2.ArbitrationQueueStatsInfo(
+                    total_pending=stats.total_pending,
+                    total_assigned=stats.total_assigned,
+                    total_in_review=stats.total_in_review,
+                    total_resolved_today=stats.total_resolved_today,
+                    avg_resolution_time_hours=stats.avg_resolution_time_hours,
+                    by_priority=stats.by_priority,
+                    by_reason=stats.by_reason,
+                )
+
+                return agent_service_pb2.GetArbitrationQueueStatsResponse(
+                    stats=proto_stats,
+                )
+
+        except Exception as e:
+            logger.error(f"GetArbitrationQueueStats error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.GetArbitrationQueueStatsResponse()

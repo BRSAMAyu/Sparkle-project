@@ -81,6 +81,9 @@ celery_app.conf.update(
         "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
         "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
         "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
+        # P1: Knowledge Galaxy auto-update tasks
+        "update_knowledge_galaxy": {"queue": "default"},
+        "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
     },
 
     # 监控
@@ -395,6 +398,270 @@ def generate_capsules_batch(
         raise self.retry(exc=exc, countdown=countdown)
 
 
+@celery_app.task(bind=True, max_retries=3, name="update_knowledge_galaxy")
+def update_knowledge_galaxy(
+    self,
+    user_id: str,
+    plan_id: str,
+    trigger_type: str = "plan_complete",
+    milestone_data: Optional[dict] = None,
+):
+    """
+    P1: 知识星图自动更新 (Celery 任务)
+
+    当计划完成或里程碑达成时触发，更新用户的知识星图：
+    - 创建新的知识节点
+    - 建立节点间关联
+    - 更新节点掌握度
+    - 生成新的 embeddings
+
+    Args:
+        user_id: 用户ID
+        plan_id: 计划ID
+        trigger_type: 触发类型 (plan_complete/milestone_reached/task_complete)
+        milestone_data: 里程碑数据 (可选)
+
+    Returns:
+        dict: 更新结果 {
+            "status": str,
+            "nodes_created": int,
+            "links_created": int,
+            "nodes_updated": int,
+        }
+    """
+    import asyncio
+    from uuid import UUID
+    from app.db.session import AsyncSessionLocal
+    from loguru import logger
+
+    async def _update_galaxy():
+        async with AsyncSessionLocal() as session:
+            try:
+                from app.services.knowledge_service import KnowledgeService
+                from app.services.plan_service import PlanService
+
+                knowledge_service = KnowledgeService(session)
+                plan_service = PlanService(session)
+
+                user_uuid = UUID(user_id)
+                plan_uuid = UUID(plan_id)
+
+                # Get plan details
+                plan = await plan_service.get(plan_uuid)
+                if not plan:
+                    logger.warning(f"Plan {plan_id} not found, skipping galaxy update")
+                    return {"status": "skipped", "reason": "plan_not_found"}
+
+                result = {
+                    "status": "success",
+                    "trigger_type": trigger_type,
+                    "nodes_created": 0,
+                    "links_created": 0,
+                    "nodes_updated": 0,
+                }
+
+                # Extract knowledge concepts from plan
+                concepts = await _extract_plan_concepts(plan, milestone_data)
+
+                # Create or update knowledge nodes
+                for concept in concepts:
+                    try:
+                        # Check if node exists
+                        existing_node = await knowledge_service.find_node_by_name(
+                            user_uuid, concept["name"]
+                        )
+
+                        if existing_node:
+                            # Update mastery level
+                            await knowledge_service.update_node_mastery(
+                                existing_node.id,
+                                mastery_delta=concept.get("mastery_delta", 0.1),
+                            )
+                            result["nodes_updated"] += 1
+                        else:
+                            # Create new node
+                            new_node = await knowledge_service.create_node(
+                                user_id=user_uuid,
+                                name=concept["name"],
+                                subject=plan.subject,
+                                description=concept.get("description", ""),
+                                tags=concept.get("tags", []),
+                            )
+                            result["nodes_created"] += 1
+
+                            # Schedule embedding generation
+                            celery_app.send_task(
+                                "generate_embedding",
+                                args=(str(new_node.id), f"{concept['name']} {concept.get('description', '')}"),
+                                kwargs={"user_id": user_id},
+                                queue="high_priority",
+                            )
+
+                    except Exception as e:
+                        logger.warning(f"Failed to process concept {concept['name']}: {e}")
+
+                # Create links between related concepts
+                if len(concepts) > 1:
+                    for i, concept in enumerate(concepts[:-1]):
+                        try:
+                            link_created = await knowledge_service.create_or_update_link(
+                                user_id=user_uuid,
+                                source_name=concept["name"],
+                                target_name=concepts[i + 1]["name"],
+                                relation_type="sequential",
+                                strength=0.5,
+                            )
+                            if link_created:
+                                result["links_created"] += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to create link: {e}")
+
+                # Link to plan's subject node
+                if plan.subject:
+                    try:
+                        for concept in concepts:
+                            await knowledge_service.create_or_update_link(
+                                user_id=user_uuid,
+                                source_name=plan.subject,
+                                target_name=concept["name"],
+                                relation_type="contains",
+                                strength=0.7,
+                            )
+                            result["links_created"] += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to create subject link: {e}")
+
+                await session.commit()
+
+                logger.info(
+                    f"✅ Celery: Galaxy updated for plan {plan_id}: "
+                    f"{result['nodes_created']} created, "
+                    f"{result['nodes_updated']} updated, "
+                    f"{result['links_created']} links"
+                )
+
+                return result
+
+            except Exception as e:
+                logger.error(f"❌ Celery: Failed to update galaxy for plan {plan_id}: {e}")
+                raise
+
+    async def _extract_plan_concepts(plan, milestone_data: Optional[dict]) -> List[dict]:
+        """Extract knowledge concepts from plan and milestone data"""
+        concepts = []
+
+        # Extract from plan name and description
+        if plan.name:
+            concepts.append({
+                "name": plan.name,
+                "description": plan.description or "",
+                "mastery_delta": 0.2 if milestone_data else 0.1,
+                "tags": [plan.subject] if plan.subject else [],
+            })
+
+        # Extract from milestone data if available
+        if milestone_data:
+            milestone_name = milestone_data.get("name", "")
+            if milestone_name:
+                concepts.append({
+                    "name": milestone_name,
+                    "description": milestone_data.get("description", ""),
+                    "mastery_delta": 0.15,
+                    "tags": milestone_data.get("tags", []),
+                })
+
+            # Extract learning outcomes
+            for outcome in milestone_data.get("learning_outcomes", []):
+                if isinstance(outcome, str):
+                    concepts.append({
+                        "name": outcome,
+                        "mastery_delta": 0.1,
+                    })
+                elif isinstance(outcome, dict):
+                    concepts.append({
+                        "name": outcome.get("name", ""),
+                        "description": outcome.get("description", ""),
+                        "mastery_delta": outcome.get("mastery_delta", 0.1),
+                    })
+
+        return [c for c in concepts if c.get("name")]
+
+    try:
+        return asyncio.run(_update_galaxy())
+    except Exception as exc:
+        logger.error(f"Galaxy update task failed: {exc}")
+        countdown = 30 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown)
+
+
+@celery_app.task(bind=True, max_retries=2, name="sync_plan_progress_to_galaxy")
+def sync_plan_progress_to_galaxy(self, user_id: str):
+    """
+    P1: 同步用户所有计划进度到知识星图 (定时任务)
+
+    用于批量同步，确保知识星图与计划状态一致
+
+    Args:
+        user_id: 用户ID
+
+    Returns:
+        dict: 同步结果统计
+    """
+    import asyncio
+    from uuid import UUID
+    from app.db.session import AsyncSessionLocal
+    from loguru import logger
+
+    async def _sync():
+        async with AsyncSessionLocal() as session:
+            try:
+                from app.services.plan_service import PlanService
+
+                plan_service = PlanService(session)
+                user_uuid = UUID(user_id)
+
+                # Get all active plans
+                plans = await plan_service.list_for_user(user_uuid, include_archived=False)
+
+                stats = {
+                    "total_plans": len(plans),
+                    "synced_plans": 0,
+                    "skipped_plans": 0,
+                }
+
+                for plan in plans:
+                    try:
+                        # Check if plan has milestones completed
+                        if hasattr(plan, "completed_milestones") and plan.completed_milestones:
+                            # Trigger galaxy update for each completed milestone
+                            for milestone in plan.completed_milestones:
+                                celery_app.send_task(
+                                    "update_knowledge_galaxy",
+                                    args=(user_id, str(plan.id), "milestone_reached"),
+                                    kwargs={"milestone_data": milestone},
+                                    queue="default",
+                                )
+                            stats["synced_plans"] += 1
+                        else:
+                            stats["skipped_plans"] += 1
+
+                    except Exception as e:
+                        logger.warning(f"Failed to sync plan {plan.id}: {e}")
+                        stats["skipped_plans"] += 1
+
+                logger.info(f"✅ Celery: Plan progress sync completed for user {user_id}: {stats}")
+                return stats
+
+            except Exception as e:
+                logger.error(f"❌ Celery: Failed to sync plan progress: {e}")
+                raise
+
+    try:
+        return asyncio.run(_sync())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
 @celery_app.task(bind=True, max_retries=2, name="generate_daily_capsules_for_all")
 def generate_daily_capsules_for_all(self):
     """
@@ -513,6 +780,11 @@ celery_app.conf.beat_schedule = {
         "args": (),
         "options": {"queue": "default"}
     },
+
+    # ========== P1: 知识星图自动更新 ==========
+
+    # 注意: update_knowledge_galaxy 任务由 PlanService 在计划完成/里程碑达成时触发
+    # 此处仅包含定期同步任务，不包含事件触发任务
 }
 
 

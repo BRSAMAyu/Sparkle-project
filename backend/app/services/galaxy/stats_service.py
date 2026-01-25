@@ -1,6 +1,7 @@
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime, timedelta
+from loguru import logger
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,6 +67,22 @@ class GalaxyStatsService:
         self.db.add(record)
 
         await self.db.commit()
+
+        # 5.5. 发布掌握度更新事件
+        try:
+            from app.core.event_bus import event_bus, NodeMasteryUpdatedEvent
+            await event_bus.publish(
+                "node_mastery_updated",
+                NodeMasteryUpdatedEvent(
+                    user_id=str(user_id),
+                    node_id=str(node_id),
+                    old_mastery=int(old_mastery),
+                    new_mastery=int(status.mastery_score),
+                    reason="task_complete"
+                ).to_dict()
+            )
+        except Exception as e:
+            logger.warning(f"Failed to publish mastery update event: {e}")
 
         # 6. 获取星域信息
         sector_code = 'VOID'
@@ -135,6 +152,43 @@ class GalaxyStatsService:
                 )
         except Exception as e:
             logger.warning(f"Achievement processing failed in spark_node: {e}")
+        # ============================================
+
+        # ========== WebSocket Streaming Integration ==========
+        try:
+            from app.services.galaxy.streaming_service import get_galaxy_streaming_service
+            streaming_service = get_galaxy_streaming_service()
+
+            if streaming_service:
+                # 如果有升级，发送升级通知
+                if spark_event.is_level_up:
+                    old_level = int(old_mastery // 10)
+                    new_level = int(status.mastery_score // 10)
+                    await streaming_service.broadcast_level_up(
+                        user_id=user_id,
+                        node_id=node_id,
+                        old_level=old_level,
+                        new_level=new_level
+                    )
+
+                # 如果是首次解锁，发送解锁通知
+                if is_first_unlock:
+                    await streaming_service.broadcast_node_unlocked(
+                        user_id=user_id,
+                        node_id=node_id,
+                        node_name=node.name
+                    )
+
+                # 发送掌握度更新
+                await streaming_service.broadcast_mastery_update(
+                    user_id=user_id,
+                    node_id=node_id,
+                    old_mastery=int(old_mastery),
+                    new_mastery=int(status.mastery_score),
+                    reason="task_complete"
+                )
+        except Exception as e:
+            logger.warning(f"WebSocket streaming failed in spark_node: {e}")
         # ============================================
 
         return SparkResult(

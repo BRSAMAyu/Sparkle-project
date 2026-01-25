@@ -48,11 +48,34 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
 
+        // Phase 2b: Check if this delta contains content review data
+        if (metadata != null && _isTrue(metadata['has_review_result'])) {
+          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          return ContentReviewWidgetEvent(
+            reviewData: reviewData ?? metadata,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;
           return PlanReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
+        // Phase 2b: Check if this delta contains reflection result
+        if (metadata != null && _isTrue(metadata['has_reflection_result'])) {
+          return ContentReflectionResultEvent(
+            reflectionData: metadata,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -357,6 +380,44 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             message: data['message'] as String?,
             widgetType: 'intervention',
             timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'milestone_proposal':
+        final proposalData = data['proposal'] as Map<String, dynamic>?;
+        if (proposalData != null) {
+          return MilestoneProposalEvent(
+            proposalData: proposalData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'achievement_unlock':
+        final achievementData = data['achievement_data'] as Map<String, dynamic>?;
+        if (achievementData != null) {
+          return AchievementUnlockEvent(
+            achievementData: achievementData,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,

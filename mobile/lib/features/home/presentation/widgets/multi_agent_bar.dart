@@ -82,7 +82,7 @@ class MultiAgentBar extends ConsumerWidget {
   ) {
     HapticFeedback.lightImpact();
     // Set the mode before navigating
-    ref.read(chatModeProvider.notifier).setMode(mode);
+    ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).state = mode;
     // Navigate to chat
     context.push('/chat');

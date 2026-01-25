@@ -26,101 +26,248 @@ from app.core.plan_context import merge_plan_context
 # 通用 Agent Prompt 模板
 # ============================================
 
+TASK_AWARENESS_SECTION = """
+## 任务感知指南
+
+当用户提到以下内容时，主动查询任务：
+- "我还有什么任务" / "今天学什么" → query_plan_tasks
+- "换个计划" / "别的计划" → query_all_tasks
+- "太难了" / "太简单" → query_plan_tasks + modify_plan_task
+- "完成了" / "做完了" → 检查是否达成里程碑
+
+可用任务工具：
+1. query_plan_tasks - 查询当前计划的任务
+2. query_all_tasks - 查询所有计划的任务（跨计划感知）
+3. modify_plan_task - 修改任务属性（难度、时间、优先级）
+4. create_task - 创建新任务
+5. update_task_status - 更新任务状态
+6. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
+7. dismiss_milestone_proposal - 忽略里程碑提案
+"""
+
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
+
+
 ## 当前用户上下文
+
 {user_context}
+
+
+
+{intent_section}
+
+
 
 {preference_instructions}
 
+
+
 {plan_context_section}
 
+
+
 ## 对话历史
+
 {conversation_history_section}
 
+
+
+{task_awareness_section}
+
+
+
 ## 核心原则
+
 1. 始终遵循用户的偏好设置，这是最重要的
+
 2. 根据 verbosity 目标调整回答长度
+
 3. 根据 exploration_level 决定是否扩展话题
+
 4. 保持角色一致性
+
 5. 提供准确、有帮助的回答
+
 6. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+
 """
 
 
+
+
+
 # ============================================
+
 # 主入口函数
+
 # ============================================
+
+
 
 def build_system_prompt(
+
     user_context: dict,
+
     conversation_history: dict = None,
+
     prompt_version: str = "v1",
+
     agent_role: AgentRole = AgentRole.GENERATION,
+
     plan_context: dict = None,
+
+    intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
+
 ) -> str:
+
     """
+
     构建完整的 System Prompt，深度集成用户偏好
 
+
+
     Args:
+
         user_context: 用户上下文（从UserService等获取）
+
         conversation_history: 对话历史（从ContextPruner获取）
+
         prompt_version: prompt版本（v1/v2）
+
         agent_role: Agent角色（用于获取角色专用prompt）
+
         plan_context: 计划上下文（从PlanContextBuilder获取）
 
+        intent_instruction: 显式意图指令（从RequestRouter获取）
+
+
+
     Returns:
+
         完整的系统prompt字符串
+
     """
+
     # Ensure user_context is never None
+
     if user_context is None:
+
         user_context = {}
+
     if conversation_history is None:
+
         conversation_history = {}
+
     if plan_context is None and isinstance(user_context, dict):
+
         plan_context = user_context.get("plan_context")
 
+
+
     if plan_context and isinstance(user_context, dict):
+
         user_context = merge_plan_context(user_context, plan_context)
 
+
+
     # 1. 首先检查 AgentProfile 是否有专用 prompt
+
     profile = agent_profile_registry.get_profile(agent_role)
+
     base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
 
+
+
     # 2. 格式化上下文
+
     formatted_user_context = format_user_context(user_context)
 
+
+
     llm_profile = user_context.get("llm_profile")
+
     if llm_profile is None:
+
         llm_profile = {}
+
     preference_instructions = llm_profile.get(
+
         "system_prompt_additions",
+
         _get_default_preference_instructions(user_context)
+
     )
+
+
 
     conversation_history_section = _format_conversation_history(conversation_history)
 
+
+
     # 2.5 格式化计划上下文
+
     plan_context_section = _format_plan_context(plan_context)
 
+    
+
+    # 2.6 格式化意图指令 (Vision Item 4b)
+
+    intent_section = ""
+
+    if intent_instruction:
+
+        intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
+
+
+
     # 3. 如果是通用模板，进行完整渲染
+
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
+
         prompt = base_prompt.format(
+
             user_context=formatted_user_context,
+
             conversation_history_section=conversation_history_section,
+
             preference_instructions=preference_instructions,
+
             plan_context_section=plan_context_section,
-        )
-    else:
-        # 角色专用模板，简单替换
-        prompt = base_prompt.format(
-            user_context=formatted_user_context,
-            query=user_context.get("current_query", ""),
+
+            intent_section=intent_section,
+
+            task_awareness_section=TASK_AWARENESS_SECTION,
+
         )
 
+    else:
+
+        # 角色专用模板，简单替换
+
+        # Note: specialized prompts might not support intent_section yet, so we append it if present
+
+        prompt = base_prompt.format(
+
+            user_context=formatted_user_context,
+
+            query=user_context.get("current_query", ""),
+
+        )
+
+        if intent_instruction:
+
+             prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
+
+
+
     # 4. 版本特定修饰
+
     if prompt_version == "v2":
-        prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n- 列表优先"
+
+        prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
+
+
 
     return prompt
 
@@ -274,6 +421,11 @@ def _format_plan_context(plan_context: dict = None) -> str:
     """
     格式化计划上下文
 
+    设计原则：
+    - 人类可读：将机器字段名转换为自然语言描述
+    - LLM 友好：添加显式引用指令，引导 LLM 在回复中引用这些信息
+    - 信息聚焦：优先展示用户最关心的信息（计划名、进度、偏好）
+
     Args:
         plan_context: 计划上下文字典（从PlanContextBuilder获取）
 
@@ -283,54 +435,90 @@ def _format_plan_context(plan_context: dict = None) -> str:
     if not plan_context or not isinstance(plan_context, dict):
         return ""
 
-    lines = ["## 当前计划上下文"]
+    # 【强调标题】让 LLM 注意到这部分的重要性
+    lines = ["## 用户学习计划（请在回复中适当引用以下信息）"]
 
-    # Plan ID and status
-    plan_id = plan_context.get("plan_id")
+    # 【计划标题】用户可识别的名称，而非 UUID
+    plan_title = plan_context.get("plan_title") or plan_context.get("title") or plan_context.get("name")
+    if plan_title:
+        lines.append(f"**计划名称**: {plan_title}")
+
+    # 状态（如果不是 active 可以提示）
     status = plan_context.get("status")
-    if plan_id:
-        lines.append(f"计划ID: {plan_id}")
-    if status:
-        lines.append(f"状态: {status}")
+    if status and status != "active":
+        lines.append(f"**状态**: {status}")
 
-    # Facts (core plan-level knowledge)
+    # 【优化格式】将机器字段名转换为可读描述
     facts = plan_context.get("facts", {})
-    if facts:
-        lines.append("\n### 计划事实")
-        for key, value in facts.items():
-            lines.append(f"- {key}: {value}")
+    if facts or plan_context.get("task_summary"):
+        lines.append("\n**我知道关于你**:")
 
-    # Task summary
+    # 难度偏好 - 同时显示数值和可读描述
+    if "difficulty_preference" in facts:
+        d = facts["difficulty_preference"]
+        if d > 0.7:
+            desc = "有挑战性的"
+        elif d < 0.3:
+            desc = "轻松入门的"
+        else:
+            desc = "适中难度的"
+        lines.append(f"- 你偏好{desc}学习内容 (难度偏好: {d})")
+
+    # 学习时长偏好
+    if "session_length_preference" in facts:
+        minutes = facts["session_length_preference"]
+        lines.append(f"- 单次学习约 {minutes} 分钟 (session_length_preference: {minutes})")
+
+    # 其他事实（用可读方式展示）
+    other_facts = {k: v for k, v in facts.items()
+                   if k not in ("difficulty_preference", "session_length_preference")}
+    for key, value in other_facts.items():
+        # 将下划线命名转换为空格分隔的描述
+        readable_key = key.replace("_", " ")
+        lines.append(f"- {readable_key}: {value}")
+
+    # 【任务进度】更直观的展示
     task_summary = plan_context.get("task_summary")
     if task_summary:
-        total = task_summary.get("total", 0)
         completed = task_summary.get("completed", 0)
+        total = task_summary.get("total", 0)
         rate = task_summary.get("avg_completion_rate")
-        rate_str = f" ({rate:.0%})" if rate is not None else ""
-        lines.append(f"\n### 任务进度: {completed}/{total}{rate_str}")
+        rate_str = f"，完成率 {rate:.0%}" if rate is not None else ""
+        lines.append(f"- 已完成 {completed}/{total} 个任务{rate_str}")
 
-        # By type breakdown
-        by_type = task_summary.get("by_type", {})
-        if by_type:
-            for task_type, stats in by_type.items():
-                t_total = stats.get("total", 0)
-                t_completed = stats.get("completed", 0)
-                lines.append(f"  - {task_type}: {t_completed}/{t_total}")
+    # 【最近任务】帮助 LLM 了解用户最近在做什么
+    task_summaries = plan_context.get("task_summaries") or plan_context.get("recent_tasks")
+    if task_summaries:
+        recent = task_summaries[:2] if len(task_summaries) > 2 else task_summaries
+        lines.append("\n**最近在做**:")
+        for t in recent:
+            if isinstance(t, dict):
+                title = t.get("title") or t.get("name") or t.get("description", "任务")
+                lines.append(f"- {title}")
 
-    # Milestones
+    # 【最近反馈】如果有的话
+    recent_feedback = plan_context.get("recent_feedback")
+    if recent_feedback:
+        lines.append("\n**最近的反馈**:")
+        for f in recent_feedback[:2]:
+            if isinstance(f, dict):
+                content = f.get("content") or f.get("message", "")
+                if content:
+                    lines.append(f"- {content}")
+
+    # 【里程碑】已完成的成就
     milestones = plan_context.get("milestones", [])
     if milestones:
-        lines.append("\n### 已达成里程碑")
-        for m in milestones:
-            title = m.get("title", "未知")
+        lines.append("\n**已达成里程碑**:")
+        for m in milestones[:3]:  # 只显示最近3个
+            title = m.get("title", "里程碑")
             lines.append(f"- {title}")
 
-    # Constraints
-    constraints = plan_context.get("constraints", {})
-    if constraints:
-        lines.append("\n### 运行时约束")
-        for key, value in constraints.items():
-            lines.append(f"- {key}: {value}")
+    # 【显式引用指令】引导 LLM 在回复中引用这些信息
+    lines.append("\n**回复要求**:")
+    lines.append("- 如果用户问题与计划相关，请用'根据你的计划...'或'你之前提到...'来引用")
+    lines.append("- 避免重复询问已知信息")
+    lines.append("- 优先使用上述偏好信息来调整回复风格和深度")
 
     return "\n".join(lines)
 

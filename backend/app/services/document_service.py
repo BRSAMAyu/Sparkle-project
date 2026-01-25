@@ -1,6 +1,6 @@
 import asyncio
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any
 from uuid import UUID
 from fastapi import HTTPException

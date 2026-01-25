@@ -103,12 +103,12 @@ _$FocusWeeklyStatsResponseImpl _$$FocusWeeklyStatsResponseImplFromJson(
       totalMinutes: (json['total_minutes'] as num).toInt(),
       sessionCount: (json['session_count'] as num).toInt(),
       avgDuration: (json['avg_duration'] as num).toInt(),
-      bestDay: json['best_day'] as String?,
       dailyBreakdown: Map<String, int>.from(json['daily_breakdown'] as Map),
       focusTypeDistribution:
           Map<String, int>.from(json['focus_type_distribution'] as Map),
       streakDays: (json['streak_days'] as num).toInt(),
       longestStreak: (json['longest_streak'] as num).toInt(),
+      bestDay: json['best_day'] as String?,
     );
 
 Map<String, dynamic> _$$FocusWeeklyStatsResponseImplToJson(
@@ -119,11 +119,11 @@ Map<String, dynamic> _$$FocusWeeklyStatsResponseImplToJson(
       'total_minutes': instance.totalMinutes,
       'session_count': instance.sessionCount,
       'avg_duration': instance.avgDuration,
-      'best_day': instance.bestDay,
       'daily_breakdown': instance.dailyBreakdown,
       'focus_type_distribution': instance.focusTypeDistribution,
       'streak_days': instance.streakDays,
       'longest_streak': instance.longestStreak,
+      'best_day': instance.bestDay,
     };
 
 _$FocusMonthlyStatsResponseImpl _$$FocusMonthlyStatsResponseImplFromJson(
@@ -134,13 +134,13 @@ _$FocusMonthlyStatsResponseImpl _$$FocusMonthlyStatsResponseImplFromJson(
       totalMinutes: (json['total_minutes'] as num).toInt(),
       sessionCount: (json['session_count'] as num).toInt(),
       avgDuration: (json['avg_duration'] as num).toInt(),
-      bestDay: json['best_day'] as String?,
       dailyBreakdown: Map<String, int>.from(json['daily_breakdown'] as Map),
       weeklyBreakdown: Map<String, int>.from(json['weekly_breakdown'] as Map),
       focusTypeDistribution:
           Map<String, int>.from(json['focus_type_distribution'] as Map),
       streakDays: (json['streak_days'] as num).toInt(),
       longestStreak: (json['longest_streak'] as num).toInt(),
+      bestDay: json['best_day'] as String?,
     );
 
 Map<String, dynamic> _$$FocusMonthlyStatsResponseImplToJson(
@@ -151,12 +151,12 @@ Map<String, dynamic> _$$FocusMonthlyStatsResponseImplToJson(
       'total_minutes': instance.totalMinutes,
       'session_count': instance.sessionCount,
       'avg_duration': instance.avgDuration,
-      'best_day': instance.bestDay,
       'daily_breakdown': instance.dailyBreakdown,
       'weekly_breakdown': instance.weeklyBreakdown,
       'focus_type_distribution': instance.focusTypeDistribution,
       'streak_days': instance.streakDays,
       'longest_streak': instance.longestStreak,
+      'best_day': instance.bestDay,
     };
 
 _$FocusSessionDetailImpl _$$FocusSessionDetailImplFromJson(
