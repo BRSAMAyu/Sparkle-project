@@ -26,101 +26,246 @@ from app.core.plan_context import merge_plan_context
 # 通用 Agent Prompt 模板
 # ============================================
 
+TASK_AWARENESS_SECTION = """
+## 任务感知指南
+
+当用户提到以下内容时，主动查询任务：
+- "我还有什么任务" / "今天学什么" → query_plan_tasks
+- "换个计划" / "别的计划" → query_all_tasks
+- "太难了" / "太简单" → query_plan_tasks + modify_plan_task
+- "完成了" / "做完了" → 检查是否达成里程碑
+
+可用任务工具：
+1. query_plan_tasks - 查询当前计划的任务
+2. query_all_tasks - 查询所有计划的任务（跨计划感知）
+3. modify_plan_task - 修改任务属性（难度、时间、优先级）
+4. create_task - 创建新任务
+5. update_task_status - 更新任务状态
+"""
+
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
+
+
 ## 当前用户上下文
+
 {user_context}
+
+
+
+{intent_section}
+
+
 
 {preference_instructions}
 
+
+
 {plan_context_section}
 
+
+
 ## 对话历史
+
 {conversation_history_section}
 
+
+
+{task_awareness_section}
+
+
+
 ## 核心原则
+
 1. 始终遵循用户的偏好设置，这是最重要的
+
 2. 根据 verbosity 目标调整回答长度
+
 3. 根据 exploration_level 决定是否扩展话题
+
 4. 保持角色一致性
+
 5. 提供准确、有帮助的回答
+
 6. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+
 """
 
 
+
+
+
 # ============================================
+
 # 主入口函数
+
 # ============================================
+
+
 
 def build_system_prompt(
+
     user_context: dict,
+
     conversation_history: dict = None,
+
     prompt_version: str = "v1",
+
     agent_role: AgentRole = AgentRole.GENERATION,
+
     plan_context: dict = None,
+
+    intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
+
 ) -> str:
+
     """
+
     构建完整的 System Prompt，深度集成用户偏好
 
+
+
     Args:
+
         user_context: 用户上下文（从UserService等获取）
+
         conversation_history: 对话历史（从ContextPruner获取）
+
         prompt_version: prompt版本（v1/v2）
+
         agent_role: Agent角色（用于获取角色专用prompt）
+
         plan_context: 计划上下文（从PlanContextBuilder获取）
 
+        intent_instruction: 显式意图指令（从RequestRouter获取）
+
+
+
     Returns:
+
         完整的系统prompt字符串
+
     """
+
     # Ensure user_context is never None
+
     if user_context is None:
+
         user_context = {}
+
     if conversation_history is None:
+
         conversation_history = {}
+
     if plan_context is None and isinstance(user_context, dict):
+
         plan_context = user_context.get("plan_context")
 
+
+
     if plan_context and isinstance(user_context, dict):
+
         user_context = merge_plan_context(user_context, plan_context)
 
+
+
     # 1. 首先检查 AgentProfile 是否有专用 prompt
+
     profile = agent_profile_registry.get_profile(agent_role)
+
     base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
 
+
+
     # 2. 格式化上下文
+
     formatted_user_context = format_user_context(user_context)
 
+
+
     llm_profile = user_context.get("llm_profile")
+
     if llm_profile is None:
+
         llm_profile = {}
+
     preference_instructions = llm_profile.get(
+
         "system_prompt_additions",
+
         _get_default_preference_instructions(user_context)
+
     )
+
+
 
     conversation_history_section = _format_conversation_history(conversation_history)
 
+
+
     # 2.5 格式化计划上下文
+
     plan_context_section = _format_plan_context(plan_context)
 
+    
+
+    # 2.6 格式化意图指令 (Vision Item 4b)
+
+    intent_section = ""
+
+    if intent_instruction:
+
+        intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
+
+
+
     # 3. 如果是通用模板，进行完整渲染
+
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
+
         prompt = base_prompt.format(
+
             user_context=formatted_user_context,
+
             conversation_history_section=conversation_history_section,
+
             preference_instructions=preference_instructions,
+
             plan_context_section=plan_context_section,
-        )
-    else:
-        # 角色专用模板，简单替换
-        prompt = base_prompt.format(
-            user_context=formatted_user_context,
-            query=user_context.get("current_query", ""),
+
+            intent_section=intent_section,
+
+            task_awareness_section=TASK_AWARENESS_SECTION,
+
         )
 
+    else:
+
+        # 角色专用模板，简单替换
+
+        # Note: specialized prompts might not support intent_section yet, so we append it if present
+
+        prompt = base_prompt.format(
+
+            user_context=formatted_user_context,
+
+            query=user_context.get("current_query", ""),
+
+        )
+
+        if intent_instruction:
+
+             prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
+
+
+
     # 4. 版本特定修饰
+
     if prompt_version == "v2":
-        prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n- 列表优先"
+
+        prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
+
+
 
     return prompt
 

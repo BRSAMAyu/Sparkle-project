@@ -226,3 +226,15 @@ class PlanReviewWidgetEvent extends ChatStreamEvent {
   });
   final Map<String, dynamic> reviewData;
 }
+
+/// Milestone Proposal Event
+class MilestoneProposalEvent extends ChatStreamEvent {
+  MilestoneProposalEvent({
+    required this.proposalData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+  final Map<String, dynamic> proposalData;
+}

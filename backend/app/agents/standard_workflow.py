@@ -156,12 +156,25 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
-
+    
+    # Extract intent instruction from plan_metadata (Vision Item 4b)
+    plan_metadata = state.context_data.get("plan_metadata", {})
+    route_reason = plan_metadata.get("route_reason", "")
+    intent_instruction = None
+    
+    if "Intent: translation" in route_reason:
+        intent_instruction = "User wants TRANSLATION. Please translate the input text accurately."
+    elif "Intent: prism" in route_reason:
+        intent_instruction = "User wants BEHAVIOR ANALYSIS (Prism). Please analyze their study habits or profile."
+    elif "Intent: sprint" in route_reason:
+        intent_instruction = "User wants to enter SPRINT/FOCUS MODE. Please use the 'suggest_focus_session' tool to start a session."
+    
     system_prompt = build_system_prompt(
         user_context,
         conversation_history=conversation_context,
         prompt_version=prompt_version,
         plan_context=plan_context,
+        intent_instruction=intent_instruction, # Vision Item 4b
     )
 
     knowledge_context = state.context_data.get("knowledge_context") or ""

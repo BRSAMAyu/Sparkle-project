@@ -16,6 +16,7 @@ from .focus_tools import SuggestFocusSessionTool, HunyuanTranslateTool
 from .web_search_tool import WebSearchProTool
 from .plan_state_tools import GetPlanStateTool, GetTaskSummaryTool, GetTaskDetailTool
 from .task_query_tool import QueryPlanTasksTool, ModifyPlanTaskTool
+from .cross_plan_task_tool import QueryAllTasksTool
 
 class ToolRegistry:
     """
@@ -61,6 +62,8 @@ class ToolRegistry:
             # P0-3: 任务查询与修改工具
             QueryPlanTasksTool(),
             ModifyPlanTaskTool(),
+            # 跨计划查询工具
+            QueryAllTasksTool(),
         ]
         for tool in tools:
             self._tools[tool.name] = tool

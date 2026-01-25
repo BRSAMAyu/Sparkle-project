@@ -446,6 +446,41 @@ class TestOnTaskCompleted:
             assert len(patch_arg["milestones"]) > 0
             assert patch_arg["milestones"][0]["id"] == "ms-first-10-tasks"
 
+    @pytest.mark.asyncio
+    async def test_returns_tuple_with_milestones(
+        self, service, mock_db, mock_redis, sample_plan_state
+    ):
+        """on_task_completed should return (state, new_milestones)."""
+        user_id = sample_plan_state.user_id
+        plan_id = sample_plan_state.plan_id
+        task_id = uuid4()
+        
+        sample_plan_state.task_index = {"total": 10, "completed": 9}
+        # This will trigger 10-tasks milestone
+        
+        with patch.object(
+            service, "get_or_create_plan_state", new_callable=AsyncMock
+        ) as mock_get, patch.object(
+            service, "upsert_plan_state", new_callable=AsyncMock
+        ) as mock_upsert:
+            mock_get.return_value = sample_plan_state
+            mock_upsert.return_value = sample_plan_state
+            
+            result = await service.on_task_completed(
+                user_id=user_id,
+                plan_id=plan_id,
+                task_id=task_id,
+                task_type="LEARNING"
+            )
+            
+            assert isinstance(result, tuple)
+            assert len(result) == 2
+            state, milestones = result
+            assert state == sample_plan_state
+            
+            milestone_ids = [m["id"] for m in milestones]
+            assert "ms-first-10-tasks" in milestone_ids
+
 
 class TestAppendFeedback:
     """Tests for append_feedback method."""

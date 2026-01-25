@@ -5,22 +5,25 @@ from typing import Dict, Any, List, Optional
 from uuid import UUID
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.models.plan import Plan, PlanType
+from app.models.plan import Plan, PlanType, PlanPriority
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import (
-    PlanCreate, PlanUpdate, PlanDetail, PlanProgress, PlanBase
+    PlanCreate, PlanUpdate, PlanDetail, PlanProgress, PlanBase,
+    PlanQuotaStatus, SetPrimaryPlanRequest, PlanPriorityUpdate
 )
 from app.services.plan_service import PlanService
+from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_state_service import PlanStateService
 from app.models.plan_state import PlanStateStatus
 from app.core.cache import cache_service
-from app.core.exceptions import NotFoundError, AuthorizationError
+from app.core.exceptions import NotFoundError, AuthorizationError, QuotaExceededError
 
 router = APIRouter()
 
@@ -84,6 +87,8 @@ async def list_plans(
             "progress": plan.progress,
             "mastery_level": plan.mastery_level,
             "is_active": plan.is_active,
+            "priority": plan.priority.value if plan.priority else "normal",
+            "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
             "task_count": task_count,
             "completed_task_count": completed_count,
             "created_at": plan.created_at,
@@ -107,12 +112,27 @@ async def create_plan(
 ):
     """
     Create a new plan
+
+    Checks quota before creation. Raises 403 if quota exceeded.
     """
-    plan = await PlanService.create(
-        db=db,
-        obj_in=plan_in,
-        user_id=current_user.id
-    )
+    try:
+        plan = await PlanService.create(
+            db=db,
+            obj_in=plan_in,
+            user_id=current_user.id,
+            skip_quota_check=False,
+            redis_client=cache_service.redis
+        )
+    except QuotaExceededError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": e.message,
+                "current_count": e.current_count,
+                "max_quota": e.max_quota,
+                "error_code": "QUOTA_EXCEEDED"
+            }
+        )
 
     # Get task counts
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
@@ -130,6 +150,8 @@ async def create_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "priority": plan.priority.value if plan.priority else "normal",
+        "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": 0,
@@ -179,6 +201,8 @@ async def get_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "priority": plan.priority.value if plan.priority else "normal",
+        "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": completed_count,
@@ -231,6 +255,8 @@ async def update_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "priority": plan.priority.value if plan.priority else "normal",
+        "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": completed_count,
@@ -273,11 +299,18 @@ async def archive_plan_state(
 ):
     """
     Archive plan (PlanState + Plan.is_active).
+
+    Archiving a plan:
+    - Frees up quota for new plans
+    - If archived plan was primary, auto-selects new primary
+    - Preserves plan data for history
     """
-    plan = await PlanService.get_by_id(
+    # Use PlanService.archive which handles primary plan selection
+    plan = await PlanService.archive(
         db=db,
         plan_id=plan_id,
-        user_id=current_user.id
+        user_id=current_user.id,
+        redis_client=cache_service.redis
     )
 
     if not plan:
@@ -286,11 +319,7 @@ async def archive_plan_state(
             detail=f"Plan {plan_id} not found"
         )
 
-    if plan.is_active:
-        plan.is_active = False
-        db.add(plan)
-        await db.commit()
-
+    # Also update PlanState
     state_service = PlanStateService(db, cache_service.redis)
     state = await state_service.upsert_plan_state(
         user_id=current_user.id,
@@ -302,10 +331,15 @@ async def archive_plan_state(
         bump_version=False,
     )
 
+    # Get new primary plan info
+    quota_service = PlanQuotaService(db, cache_service.redis)
+    quota_status = await quota_service.get_quota_status(current_user.id)
+
     return {
         "plan_id": str(plan_id),
         "status": state.status if state else PlanStateStatus.ARCHIVED.value,
         "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,
+        "new_primary_plan_id": str(quota_status.primary_plan_id) if quota_status.primary_plan_id else None,
     }
 
 
@@ -317,24 +351,38 @@ async def restore_plan_state(
 ):
     """
     Restore an archived plan to active.
+
+    Restoring a plan:
+    - Checks quota before restoring (raises 403 if exceeded)
+    - Ensures primary plan exists after restore
     """
-    plan = await PlanService.get_by_id(
-        db=db,
-        plan_id=plan_id,
-        user_id=current_user.id
-    )
+    try:
+        # Use PlanService.restore which handles quota check
+        plan = await PlanService.restore(
+            db=db,
+            plan_id=plan_id,
+            user_id=current_user.id,
+            skip_quota_check=False,
+            redis_client=cache_service.redis
+        )
+    except QuotaExceededError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": e.message,
+                "current_count": e.current_count,
+                "max_quota": e.max_quota,
+                "error_code": "QUOTA_EXCEEDED"
+            }
+        )
 
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Plan {plan_id} not found"
+            detail=f"Plan {plan_id} not found or is already active"
         )
 
-    if not plan.is_active:
-        plan.is_active = True
-        db.add(plan)
-        await db.commit()
-
+    # Also update PlanState
     state_service = PlanStateService(db, cache_service.redis)
     state = await state_service.upsert_plan_state(
         user_id=current_user.id,
@@ -349,7 +397,7 @@ async def restore_plan_state(
     return {
         "plan_id": str(plan_id),
         "status": state.status if state else PlanStateStatus.ACTIVE.value,
-        "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,
+        "archived_at": None,
     }
 
 
@@ -425,4 +473,185 @@ async def get_plans_summary(
         "active": active,
         "sprint_plans": sprint_plans,
         "growth_plans": growth_plans
+    }
+
+
+# ========== Quota Related Endpoints ==========
+
+@router.get("/quota/status", response_model=PlanQuotaStatus)
+async def get_quota_status(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get user's plan quota status
+
+    Returns:
+    - used: Number of active plans
+    - limit: Maximum allowed active plans
+    - remaining: Remaining quota (-1 if unlimited)
+    - is_unlimited: Whether user has unlimited quota
+    - primary_plan_id: Current primary plan ID
+    """
+    quota_service = PlanQuotaService(db, cache_service.redis)
+    status = await quota_service.get_quota_status(current_user.id)
+
+    return {
+        "used": status.used,
+        "limit": status.limit,
+        "remaining": status.remaining,
+        "is_unlimited": status.is_unlimited,
+        "primary_plan_id": status.primary_plan_id
+    }
+
+
+@router.get("/primary", response_model=Dict[str, Any])
+async def get_primary_plan(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get user's current primary plan
+    """
+    plan = await PlanService.get_primary(db, current_user.id)
+
+    if not plan:
+        return {"plan": None, "message": "No primary plan set"}
+
+    # Get task counts
+    task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
+    task_count = (await db.execute(task_query)).scalar() or 0
+
+    completed_query = select(func.count(Task.id)).where(
+        and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
+    )
+    completed_count = (await db.execute(completed_query)).scalar() or 0
+
+    return {
+        "plan": {
+            "id": plan.id,
+            "name": plan.name,
+            "type": plan.type.value,
+            "description": plan.description,
+            "subject": plan.subject,
+            "target_date": plan.target_date,
+            "progress": plan.progress,
+            "priority": plan.priority.value if plan.priority else "normal",
+            "is_primary": True,
+            "task_count": task_count,
+            "completed_task_count": completed_count,
+            "created_at": plan.created_at,
+        }
+    }
+
+
+@router.post("/primary", response_model=Dict[str, Any])
+async def set_primary_plan(
+    request: SetPrimaryPlanRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Set a plan as the primary plan
+
+    Only one plan can be primary at a time.
+    """
+    quota_service = PlanQuotaService(db, cache_service.redis)
+    success = await quota_service.set_primary_plan(current_user.id, request.plan_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {request.plan_id} not found or is not active"
+        )
+
+    logger.info(f"Primary plan set to {request.plan_id} for user {current_user.id}")
+
+    return {
+        "success": True,
+        "primary_plan_id": str(request.plan_id),
+        "message": "Primary plan updated successfully"
+    }
+
+
+@router.patch("/{plan_id}/priority", response_model=Dict[str, Any])
+async def update_plan_priority(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    request: PlanPriorityUpdate = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update plan priority
+
+    Priority affects automatic primary plan selection.
+    """
+    plan = await PlanService.update_priority(
+        db=db,
+        plan_id=plan_id,
+        user_id=current_user.id,
+        priority=request.priority
+    )
+
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found"
+        )
+
+    return {
+        "plan_id": str(plan.id),
+        "priority": plan.priority.value,
+        "message": "Priority updated successfully"
+    }
+
+
+@router.get("/archived", response_model=Dict[str, Any])
+async def list_archived_plans(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Page size"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List archived plans
+
+    Archived plans don't count towards quota but are preserved for history.
+    """
+    plans = await PlanService.list_archived(
+        db=db,
+        user_id=current_user.id,
+        limit=page_size
+    )
+
+    plans_data = []
+    for plan in plans:
+        task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
+        task_count = (await db.execute(task_query)).scalar() or 0
+
+        completed_query = select(func.count(Task.id)).where(
+            and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
+        )
+        completed_count = (await db.execute(completed_query)).scalar() or 0
+
+        plans_data.append({
+            "id": plan.id,
+            "name": plan.name,
+            "type": plan.type.value,
+            "description": plan.description,
+            "subject": plan.subject,
+            "target_date": plan.target_date,
+            "progress": plan.progress,
+            "priority": plan.priority.value if plan.priority else "normal",
+            "task_count": task_count,
+            "completed_task_count": completed_count,
+            "created_at": plan.created_at,
+            "updated_at": plan.updated_at,
+        })
+
+    return {
+        "data": plans_data,
+        "total": len(plans_data),
+        "page": page,
+        "page_size": page_size
     }
