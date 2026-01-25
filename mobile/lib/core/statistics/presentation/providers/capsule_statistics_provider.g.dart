@@ -26,7 +26,7 @@ final capsuleStatsRepositoryProvider =
 
 typedef CapsuleStatsRepositoryRef
     = AutoDisposeProviderRef<CapsuleStatsRepository>;
-String _$capsuleStatisticsHash() => r'024719b2b43b15a9882d6cce2b38d2a8fb5e9d8f';
+String _$capsuleStatisticsHash() => r'66ae944582895ad0de1acfefa7cddcd05bede9df';
 
 /// Provider for capsule statistics state
 ///

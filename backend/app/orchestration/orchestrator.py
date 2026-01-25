@@ -1075,6 +1075,9 @@ class ChatOrchestrator:
                     )
                 ))
 
+                # Check and notify pending milestone proposals
+                await self._notify_pending_milestone_proposals(user_id, stream_callback)
+
                 # P0: Send plan switch notification if auto-switched
                 if plan_switched and plan_id:
                     await stream_callback(agent_service_pb2.ChatResponse(
@@ -1904,3 +1907,50 @@ class ChatOrchestrator:
 
                     except Exception as e:
                         logger.error(f"Failed to record token usage: {e}")
+
+    async def _notify_pending_milestone_proposals(
+        self,
+        user_id: str,
+        stream_callback,
+    ) -> None:
+        """
+        Check and send pending milestone proposals to user.
+        Called at the start of StreamChat to notify users of pending proposals.
+        """
+        from app.core.pending_actions import pending_actions_store
+
+        try:
+            actions = await pending_actions_store.get_all_by_user(user_id)
+
+            # Find milestone proposals
+            milestone_proposals = [
+                a for a in actions
+                if a.get("tool_name") == "milestone_task_proposal"
+            ]
+
+            if not milestone_proposals:
+                return
+
+            logger.info(f"Found {len(milestone_proposals)} pending milestone proposal(s) for user {user_id}")
+
+            for proposal_action in milestone_proposals:
+                preview = proposal_action.get("preview_data", {})
+                if not preview:
+                    continue
+
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"🎉 恭喜达成里程碑！为你推荐 {preview.get('suggested_count', 0)} 个新任务",
+                    metadata={
+                        "widget_event": "milestone_proposal",
+                        "proposal_id": preview.get("proposal_id"),
+                        "action_id": proposal_action.get("action_id"),
+                        "plan_id": preview.get("plan_id"),
+                        "milestone_id": preview.get("milestone_id"),
+                        "task_count": preview.get("suggested_count", 0),
+                        "reasoning": preview.get("reasoning", ""),
+                        "tasks": json.dumps(preview.get("proposed_tasks", [])),
+                    }
+                ))
+
+        except Exception as e:
+            logger.warning(f"Failed to notify milestone proposals: {e}")

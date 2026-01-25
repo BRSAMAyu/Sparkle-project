@@ -444,12 +444,16 @@ class MockApiClient extends _i1.Mock implements _i12.ApiClient {
   _i4.Stream<_i12.SSEEvent> getStream(
     String? path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #getStream,
           [path],
-          {#queryParameters: queryParameters},
+          {
+            #queryParameters: queryParameters,
+            #headers: headers,
+          },
         ),
         returnValue: _i4.Stream<_i12.SSEEvent>.empty(),
       ) as _i4.Stream<_i12.SSEEvent>);

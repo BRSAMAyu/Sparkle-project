@@ -109,6 +109,18 @@ async def lifespan(app: FastAPI):
         task_consumer_task = asyncio.create_task(task_consumer.start())
         app.state.task_consumer_task = task_consumer_task
 
+    # Start Galaxy Services (Phase 4)
+    galaxy_streaming_task = None
+    if cache_service.redis:
+        from app.services.galaxy.streaming_service import init_galaxy_streaming_service
+        try:
+            galaxy_streaming_service = await init_galaxy_streaming_service(manager, event_bus)
+            # Store the service in app state for potential access
+            app.state.galaxy_streaming_service = galaxy_streaming_service
+            logger.info("GalaxyStreamingService initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize GalaxyStreamingService: {e}")
+
     async with AsyncSessionLocal() as db:
         try:
             # 0. 初始化数据库数据
@@ -169,6 +181,12 @@ async def lifespan(app: FastAPI):
         task_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await task_consumer_task
+
+    # Stop Galaxy Streaming Service
+    galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)
+    if galaxy_streaming_service:
+        galaxy_streaming_service.stop()
+        logger.info("GalaxyStreamingService stopped")
 
     # Close Cache
     await cache_service.close()

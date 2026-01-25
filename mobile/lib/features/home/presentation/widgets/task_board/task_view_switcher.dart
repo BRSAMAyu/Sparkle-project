@@ -86,11 +86,13 @@ class _ViewTab extends StatelessWidget {
       TaskViewMode.schedule => Icons.calendar_today_rounded,
       TaskViewMode.priority => Icons.flag_rounded,
       TaskViewMode.plan => Icons.view_week_rounded,
+      TaskViewMode.sprint => Icons.flash_on_rounded,
     };
 
   String _getLabel(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => '日程',
       TaskViewMode.priority => '重要性',
       TaskViewMode.plan => '方案',
+      TaskViewMode.sprint => '冲刺',
     };
 }

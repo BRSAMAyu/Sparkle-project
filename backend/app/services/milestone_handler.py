@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.llm_service import llm_service, get_llm_service_for_task
 from app.core.agent_profiles import TaskType
+from app.models.task import TaskType as ModelTaskType
 
 class ProposalDecision(str, Enum):
     GENERATE = "generate"
@@ -57,7 +58,7 @@ class MilestoneHandler:
         milestone: Dict[str, Any],
         pending_task_count: int,
         current_plan_context: Optional[Dict[str, Any]] = None,
-    ) -> Optional[TaskGenerationProposal]:
+    ) -> Optional[str]:
         """
         Handle a newly achieved milestone.
 
@@ -69,7 +70,7 @@ class MilestoneHandler:
             current_plan_context: Context for LLM generation (optional)
 
         Returns:
-            TaskGenerationProposal if generated, else None
+            action_id if proposal was stored, else None
         """
         milestone_id = milestone.get("id")
 
@@ -98,7 +99,12 @@ class MilestoneHandler:
             user_id, plan_id, milestone, current_plan_context
         )
 
-        return proposal
+        # 3. Store proposal to pending_actions
+        if proposal:
+            action_id = await self._store_proposal(proposal, user_id)
+            return action_id
+
+        return None
 
     async def _trigger_galaxy_update(
         self,
@@ -171,21 +177,21 @@ class MilestoneHandler:
         Use LLM to generate task proposal.
         """
         import uuid
-        
+
         # Prepare context for LLM
         plan_title = context.get("title", "Unknown Plan") if context else "Current Plan"
         milestone_title = milestone.get("title", milestone.get("id"))
-        
+
         system_prompt = f"""
-        You are an expert curriculum planner. 
+        You are an expert curriculum planner.
         The user has just achieved a milestone: "{milestone_title}" in their plan "{plan_title}".
-        
+
         Goal: Propose 3-5 follow-up tasks to maintain momentum.
         Focus on:
         1. Progressive difficulty (slightly harder than previous)
         2. Variety (mix of learning and practice)
         3. Clear, actionable titles
-        
+
         Return JSON format:
         {{
             "reasoning": "Brief explanation of why these tasks...",
@@ -200,21 +206,21 @@ class MilestoneHandler:
             ]
         }}
         """
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Please generate the next set of tasks."}
         ]
-        
+
         try:
             # Use TaskType.TASK_DECOMPOSITION which maps to study_planner
             llm = get_llm_service_for_task(TaskType.TASK_DECOMPOSITION)
             result = await llm.chat_json(messages)
-            
+
             tasks = result.get("tasks", [])
             if not tasks:
                 return None
-                
+
             proposal = TaskGenerationProposal(
                 proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
                 milestone_id=milestone.get("id"),
@@ -224,7 +230,169 @@ class MilestoneHandler:
                 proposed_tasks=tasks
             )
             return proposal
-            
+
         except Exception as e:
-            logger.error(f"Failed to generate milestone proposal: {e}")
-            return None
+            logger.warning(f"LLM generation failed: {e}, using rule-based fallback")
+            return await self._generate_rule_based(user_id, plan_id, milestone, context)
+
+    async def _generate_rule_based(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        milestone: Dict[str, Any],
+        context: Optional[Dict[str, Any]],
+    ) -> Optional[TaskGenerationProposal]:
+        """
+        Rule-based fallback for task generation when LLM fails.
+        """
+        import uuid
+
+        # Determine difficulty based on completed task count
+        completed = 0
+        if context and "task_index" in context:
+            completed = context.get("task_index", {}).get("completed", 0)
+
+        if completed < 15:
+            difficulty, task_difficulty = "easy", 2
+        elif completed < 35:
+            difficulty, task_difficulty = "medium", 3
+        else:
+            difficulty, task_difficulty = "hard", 4
+
+        # Get plan title for context
+        plan_title = "学习内容"
+        if context:
+            plan_title = context.get("title", context.get("name", "学习内容"))
+
+        # Template tasks
+        templates = [
+            {
+                "title": f"巩固练习 - {plan_title}",
+                "type": "training",
+                "estimated_minutes": 30,
+                "priority": 2,
+                "difficulty": task_difficulty,
+            },
+            {
+                "title": "知识点回顾",
+                "type": "reflection",
+                "estimated_minutes": 15,
+                "priority": 1,
+                "difficulty": 2,
+            },
+            {
+                "title": "拓展练习",
+                "type": "learning",
+                "estimated_minutes": 45,
+                "priority": 3,
+                "difficulty": min(5, task_difficulty + 1),
+            },
+        ]
+
+        return TaskGenerationProposal(
+            proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
+            milestone_id=milestone.get("id"),
+            plan_id=str(plan_id),
+            reasoning=f"基于已完成的 {completed} 个任务，为你推荐继续学习的内容",
+            suggested_count=len(templates),
+            proposed_tasks=templates,
+        )
+
+    async def _store_proposal(
+        self,
+        proposal: TaskGenerationProposal,
+        user_id: UUID,
+    ) -> str:
+        """
+        Store proposal to pending_actions for later user confirmation.
+        """
+        from app.core.pending_actions import pending_actions_store
+
+        action_id = await pending_actions_store.save(
+            tool_name="milestone_task_proposal",
+            arguments={
+                "proposal_id": proposal.proposal_id,
+                "plan_id": proposal.plan_id,
+                "milestone_id": proposal.milestone_id,
+            },
+            user_id=str(user_id),
+            description=f"🎉 里程碑达成！为你推荐 {proposal.suggested_count} 个新任务",
+            preview_data=proposal.to_dict(),
+        )
+        logger.info(f"Milestone proposal stored: {action_id}")
+        return action_id
+
+    async def confirm_proposal(
+        self,
+        proposal_id: str,
+        user_id: str,
+    ) -> Dict[str, Any]:
+        """
+        User confirms proposal - create actual tasks.
+        """
+        from app.core.pending_actions import pending_actions_store
+        from app.services.task_service import TaskService
+        from app.schemas.task import TaskCreate
+
+        # Get proposal from pending_actions
+        action = await pending_actions_store.get(proposal_id, user_id)
+        if not action:
+            return {"success": False, "error": "Proposal not found or expired"}
+
+        preview = action.get("preview_data", {})
+        proposed_tasks = preview.get("proposed_tasks", [])
+        plan_id_str = preview.get("plan_id")
+
+        created_tasks = []
+        try:
+            for task_data in proposed_tasks:
+                # Map task type string to enum
+                task_type_str = task_data.get("type", "learning")
+                try:
+                    task_type = ModelTaskType(task_type_str)
+                except ValueError:
+                    task_type = ModelTaskType.LEARNING
+
+                # Map priority string to int
+                priority_str = task_data.get("priority", "medium")
+                if isinstance(priority_str, str):
+                    priority_map = {"high": 3, "medium": 2, "low": 1}
+                    priority = priority_map.get(priority_str.lower(), 2)
+                else:
+                    priority = int(priority_str) if priority_str else 2
+
+                task_create = TaskCreate(
+                    title=task_data.get("title", "New Task"),
+                    type=task_type,
+                    plan_id=UUID(plan_id_str) if plan_id_str else None,
+                    estimated_minutes=task_data.get("estimated_minutes", 25),
+                    priority=priority,
+                    difficulty=task_data.get("difficulty", 2),
+                )
+
+                task = await TaskService.create(
+                    db=self.db,
+                    obj_in=task_create,
+                    user_id=UUID(user_id),
+                )
+                created_tasks.append({"id": str(task.id), "title": task.title})
+
+            # Clean up proposal
+            await pending_actions_store.delete(proposal_id, user_id)
+
+            logger.info(f"Created {len(created_tasks)} tasks from proposal {proposal_id}")
+
+            return {
+                "success": True,
+                "proposal_id": proposal_id,
+                "tasks_created": len(created_tasks),
+                "tasks": created_tasks,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create tasks from proposal: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "proposal_id": proposal_id,
+            }

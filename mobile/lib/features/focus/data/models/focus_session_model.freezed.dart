@@ -1080,8 +1080,6 @@ mixin _$FocusWeeklyStatsResponse {
   int get sessionCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'avg_duration')
   int get avgDuration => throw _privateConstructorUsedError;
-  @JsonKey(name: 'best_day')
-  String? get bestDay => throw _privateConstructorUsedError;
   @JsonKey(name: 'daily_breakdown')
   Map<String, int> get dailyBreakdown => throw _privateConstructorUsedError;
   @JsonKey(name: 'focus_type_distribution')
@@ -1091,6 +1089,8 @@ mixin _$FocusWeeklyStatsResponse {
   int get streakDays => throw _privateConstructorUsedError;
   @JsonKey(name: 'longest_streak')
   int get longestStreak => throw _privateConstructorUsedError;
+  @JsonKey(name: 'best_day')
+  String? get bestDay => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -1110,12 +1110,12 @@ abstract class $FocusWeeklyStatsResponseCopyWith<$Res> {
       @JsonKey(name: 'total_minutes') int totalMinutes,
       @JsonKey(name: 'session_count') int sessionCount,
       @JsonKey(name: 'avg_duration') int avgDuration,
-      @JsonKey(name: 'best_day') String? bestDay,
       @JsonKey(name: 'daily_breakdown') Map<String, int> dailyBreakdown,
       @JsonKey(name: 'focus_type_distribution')
       Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') int streakDays,
-      @JsonKey(name: 'longest_streak') int longestStreak});
+      @JsonKey(name: 'longest_streak') int longestStreak,
+      @JsonKey(name: 'best_day') String? bestDay});
 }
 
 /// @nodoc
@@ -1137,11 +1137,11 @@ class _$FocusWeeklyStatsResponseCopyWithImpl<$Res,
     Object? totalMinutes = null,
     Object? sessionCount = null,
     Object? avgDuration = null,
-    Object? bestDay = freezed,
     Object? dailyBreakdown = null,
     Object? focusTypeDistribution = null,
     Object? streakDays = null,
     Object? longestStreak = null,
+    Object? bestDay = freezed,
   }) {
     return _then(_value.copyWith(
       periodStart: null == periodStart
@@ -1164,10 +1164,6 @@ class _$FocusWeeklyStatsResponseCopyWithImpl<$Res,
           ? _value.avgDuration
           : avgDuration // ignore: cast_nullable_to_non_nullable
               as int,
-      bestDay: freezed == bestDay
-          ? _value.bestDay
-          : bestDay // ignore: cast_nullable_to_non_nullable
-              as String?,
       dailyBreakdown: null == dailyBreakdown
           ? _value.dailyBreakdown
           : dailyBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1184,6 +1180,10 @@ class _$FocusWeeklyStatsResponseCopyWithImpl<$Res,
           ? _value.longestStreak
           : longestStreak // ignore: cast_nullable_to_non_nullable
               as int,
+      bestDay: freezed == bestDay
+          ? _value.bestDay
+          : bestDay // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -1203,12 +1203,12 @@ abstract class _$$FocusWeeklyStatsResponseImplCopyWith<$Res>
       @JsonKey(name: 'total_minutes') int totalMinutes,
       @JsonKey(name: 'session_count') int sessionCount,
       @JsonKey(name: 'avg_duration') int avgDuration,
-      @JsonKey(name: 'best_day') String? bestDay,
       @JsonKey(name: 'daily_breakdown') Map<String, int> dailyBreakdown,
       @JsonKey(name: 'focus_type_distribution')
       Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') int streakDays,
-      @JsonKey(name: 'longest_streak') int longestStreak});
+      @JsonKey(name: 'longest_streak') int longestStreak,
+      @JsonKey(name: 'best_day') String? bestDay});
 }
 
 /// @nodoc
@@ -1229,11 +1229,11 @@ class __$$FocusWeeklyStatsResponseImplCopyWithImpl<$Res>
     Object? totalMinutes = null,
     Object? sessionCount = null,
     Object? avgDuration = null,
-    Object? bestDay = freezed,
     Object? dailyBreakdown = null,
     Object? focusTypeDistribution = null,
     Object? streakDays = null,
     Object? longestStreak = null,
+    Object? bestDay = freezed,
   }) {
     return _then(_$FocusWeeklyStatsResponseImpl(
       periodStart: null == periodStart
@@ -1256,10 +1256,6 @@ class __$$FocusWeeklyStatsResponseImplCopyWithImpl<$Res>
           ? _value.avgDuration
           : avgDuration // ignore: cast_nullable_to_non_nullable
               as int,
-      bestDay: freezed == bestDay
-          ? _value.bestDay
-          : bestDay // ignore: cast_nullable_to_non_nullable
-              as String?,
       dailyBreakdown: null == dailyBreakdown
           ? _value._dailyBreakdown
           : dailyBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1276,6 +1272,10 @@ class __$$FocusWeeklyStatsResponseImplCopyWithImpl<$Res>
           ? _value.longestStreak
           : longestStreak // ignore: cast_nullable_to_non_nullable
               as int,
+      bestDay: freezed == bestDay
+          ? _value.bestDay
+          : bestDay // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -1289,13 +1289,13 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
       @JsonKey(name: 'total_minutes') required this.totalMinutes,
       @JsonKey(name: 'session_count') required this.sessionCount,
       @JsonKey(name: 'avg_duration') required this.avgDuration,
-      @JsonKey(name: 'best_day') this.bestDay,
       @JsonKey(name: 'daily_breakdown')
       required final Map<String, int> dailyBreakdown,
       @JsonKey(name: 'focus_type_distribution')
       required final Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') required this.streakDays,
-      @JsonKey(name: 'longest_streak') required this.longestStreak})
+      @JsonKey(name: 'longest_streak') required this.longestStreak,
+      @JsonKey(name: 'best_day') this.bestDay})
       : _dailyBreakdown = dailyBreakdown,
         _focusTypeDistribution = focusTypeDistribution;
 
@@ -1317,9 +1317,6 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
   @override
   @JsonKey(name: 'avg_duration')
   final int avgDuration;
-  @override
-  @JsonKey(name: 'best_day')
-  final String? bestDay;
   final Map<String, int> _dailyBreakdown;
   @override
   @JsonKey(name: 'daily_breakdown')
@@ -1345,10 +1342,13 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
   @override
   @JsonKey(name: 'longest_streak')
   final int longestStreak;
+  @override
+  @JsonKey(name: 'best_day')
+  final String? bestDay;
 
   @override
   String toString() {
-    return 'FocusWeeklyStatsResponse(periodStart: $periodStart, periodEnd: $periodEnd, totalMinutes: $totalMinutes, sessionCount: $sessionCount, avgDuration: $avgDuration, bestDay: $bestDay, dailyBreakdown: $dailyBreakdown, focusTypeDistribution: $focusTypeDistribution, streakDays: $streakDays, longestStreak: $longestStreak)';
+    return 'FocusWeeklyStatsResponse(periodStart: $periodStart, periodEnd: $periodEnd, totalMinutes: $totalMinutes, sessionCount: $sessionCount, avgDuration: $avgDuration, dailyBreakdown: $dailyBreakdown, focusTypeDistribution: $focusTypeDistribution, streakDays: $streakDays, longestStreak: $longestStreak, bestDay: $bestDay)';
   }
 
   @override
@@ -1366,7 +1366,6 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
                 other.sessionCount == sessionCount) &&
             (identical(other.avgDuration, avgDuration) ||
                 other.avgDuration == avgDuration) &&
-            (identical(other.bestDay, bestDay) || other.bestDay == bestDay) &&
             const DeepCollectionEquality()
                 .equals(other._dailyBreakdown, _dailyBreakdown) &&
             const DeepCollectionEquality()
@@ -1374,7 +1373,8 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
             (identical(other.streakDays, streakDays) ||
                 other.streakDays == streakDays) &&
             (identical(other.longestStreak, longestStreak) ||
-                other.longestStreak == longestStreak));
+                other.longestStreak == longestStreak) &&
+            (identical(other.bestDay, bestDay) || other.bestDay == bestDay));
   }
 
   @JsonKey(ignore: true)
@@ -1386,11 +1386,11 @@ class _$FocusWeeklyStatsResponseImpl implements _FocusWeeklyStatsResponse {
       totalMinutes,
       sessionCount,
       avgDuration,
-      bestDay,
       const DeepCollectionEquality().hash(_dailyBreakdown),
       const DeepCollectionEquality().hash(_focusTypeDistribution),
       streakDays,
-      longestStreak);
+      longestStreak,
+      bestDay);
 
   @JsonKey(ignore: true)
   @override
@@ -1414,13 +1414,13 @@ abstract class _FocusWeeklyStatsResponse implements FocusWeeklyStatsResponse {
           @JsonKey(name: 'total_minutes') required final int totalMinutes,
           @JsonKey(name: 'session_count') required final int sessionCount,
           @JsonKey(name: 'avg_duration') required final int avgDuration,
-          @JsonKey(name: 'best_day') final String? bestDay,
           @JsonKey(name: 'daily_breakdown')
           required final Map<String, int> dailyBreakdown,
           @JsonKey(name: 'focus_type_distribution')
           required final Map<String, int> focusTypeDistribution,
           @JsonKey(name: 'streak_days') required final int streakDays,
-          @JsonKey(name: 'longest_streak') required final int longestStreak}) =
+          @JsonKey(name: 'longest_streak') required final int longestStreak,
+          @JsonKey(name: 'best_day') final String? bestDay}) =
       _$FocusWeeklyStatsResponseImpl;
 
   factory _FocusWeeklyStatsResponse.fromJson(Map<String, dynamic> json) =
@@ -1442,9 +1442,6 @@ abstract class _FocusWeeklyStatsResponse implements FocusWeeklyStatsResponse {
   @JsonKey(name: 'avg_duration')
   int get avgDuration;
   @override
-  @JsonKey(name: 'best_day')
-  String? get bestDay;
-  @override
   @JsonKey(name: 'daily_breakdown')
   Map<String, int> get dailyBreakdown;
   @override
@@ -1456,6 +1453,9 @@ abstract class _FocusWeeklyStatsResponse implements FocusWeeklyStatsResponse {
   @override
   @JsonKey(name: 'longest_streak')
   int get longestStreak;
+  @override
+  @JsonKey(name: 'best_day')
+  String? get bestDay;
   @override
   @JsonKey(ignore: true)
   _$$FocusWeeklyStatsResponseImplCopyWith<_$FocusWeeklyStatsResponseImpl>
@@ -1479,8 +1479,6 @@ mixin _$FocusMonthlyStatsResponse {
   int get sessionCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'avg_duration')
   int get avgDuration => throw _privateConstructorUsedError;
-  @JsonKey(name: 'best_day')
-  String? get bestDay => throw _privateConstructorUsedError;
   @JsonKey(name: 'daily_breakdown')
   Map<String, int> get dailyBreakdown => throw _privateConstructorUsedError;
   @JsonKey(name: 'weekly_breakdown')
@@ -1492,6 +1490,8 @@ mixin _$FocusMonthlyStatsResponse {
   int get streakDays => throw _privateConstructorUsedError;
   @JsonKey(name: 'longest_streak')
   int get longestStreak => throw _privateConstructorUsedError;
+  @JsonKey(name: 'best_day')
+  String? get bestDay => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -1511,13 +1511,13 @@ abstract class $FocusMonthlyStatsResponseCopyWith<$Res> {
       @JsonKey(name: 'total_minutes') int totalMinutes,
       @JsonKey(name: 'session_count') int sessionCount,
       @JsonKey(name: 'avg_duration') int avgDuration,
-      @JsonKey(name: 'best_day') String? bestDay,
       @JsonKey(name: 'daily_breakdown') Map<String, int> dailyBreakdown,
       @JsonKey(name: 'weekly_breakdown') Map<String, int> weeklyBreakdown,
       @JsonKey(name: 'focus_type_distribution')
       Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') int streakDays,
-      @JsonKey(name: 'longest_streak') int longestStreak});
+      @JsonKey(name: 'longest_streak') int longestStreak,
+      @JsonKey(name: 'best_day') String? bestDay});
 }
 
 /// @nodoc
@@ -1539,12 +1539,12 @@ class _$FocusMonthlyStatsResponseCopyWithImpl<$Res,
     Object? totalMinutes = null,
     Object? sessionCount = null,
     Object? avgDuration = null,
-    Object? bestDay = freezed,
     Object? dailyBreakdown = null,
     Object? weeklyBreakdown = null,
     Object? focusTypeDistribution = null,
     Object? streakDays = null,
     Object? longestStreak = null,
+    Object? bestDay = freezed,
   }) {
     return _then(_value.copyWith(
       periodStart: null == periodStart
@@ -1567,10 +1567,6 @@ class _$FocusMonthlyStatsResponseCopyWithImpl<$Res,
           ? _value.avgDuration
           : avgDuration // ignore: cast_nullable_to_non_nullable
               as int,
-      bestDay: freezed == bestDay
-          ? _value.bestDay
-          : bestDay // ignore: cast_nullable_to_non_nullable
-              as String?,
       dailyBreakdown: null == dailyBreakdown
           ? _value.dailyBreakdown
           : dailyBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1591,6 +1587,10 @@ class _$FocusMonthlyStatsResponseCopyWithImpl<$Res,
           ? _value.longestStreak
           : longestStreak // ignore: cast_nullable_to_non_nullable
               as int,
+      bestDay: freezed == bestDay
+          ? _value.bestDay
+          : bestDay // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -1610,13 +1610,13 @@ abstract class _$$FocusMonthlyStatsResponseImplCopyWith<$Res>
       @JsonKey(name: 'total_minutes') int totalMinutes,
       @JsonKey(name: 'session_count') int sessionCount,
       @JsonKey(name: 'avg_duration') int avgDuration,
-      @JsonKey(name: 'best_day') String? bestDay,
       @JsonKey(name: 'daily_breakdown') Map<String, int> dailyBreakdown,
       @JsonKey(name: 'weekly_breakdown') Map<String, int> weeklyBreakdown,
       @JsonKey(name: 'focus_type_distribution')
       Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') int streakDays,
-      @JsonKey(name: 'longest_streak') int longestStreak});
+      @JsonKey(name: 'longest_streak') int longestStreak,
+      @JsonKey(name: 'best_day') String? bestDay});
 }
 
 /// @nodoc
@@ -1637,12 +1637,12 @@ class __$$FocusMonthlyStatsResponseImplCopyWithImpl<$Res>
     Object? totalMinutes = null,
     Object? sessionCount = null,
     Object? avgDuration = null,
-    Object? bestDay = freezed,
     Object? dailyBreakdown = null,
     Object? weeklyBreakdown = null,
     Object? focusTypeDistribution = null,
     Object? streakDays = null,
     Object? longestStreak = null,
+    Object? bestDay = freezed,
   }) {
     return _then(_$FocusMonthlyStatsResponseImpl(
       periodStart: null == periodStart
@@ -1665,10 +1665,6 @@ class __$$FocusMonthlyStatsResponseImplCopyWithImpl<$Res>
           ? _value.avgDuration
           : avgDuration // ignore: cast_nullable_to_non_nullable
               as int,
-      bestDay: freezed == bestDay
-          ? _value.bestDay
-          : bestDay // ignore: cast_nullable_to_non_nullable
-              as String?,
       dailyBreakdown: null == dailyBreakdown
           ? _value._dailyBreakdown
           : dailyBreakdown // ignore: cast_nullable_to_non_nullable
@@ -1689,6 +1685,10 @@ class __$$FocusMonthlyStatsResponseImplCopyWithImpl<$Res>
           ? _value.longestStreak
           : longestStreak // ignore: cast_nullable_to_non_nullable
               as int,
+      bestDay: freezed == bestDay
+          ? _value.bestDay
+          : bestDay // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -1702,7 +1702,6 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
       @JsonKey(name: 'total_minutes') required this.totalMinutes,
       @JsonKey(name: 'session_count') required this.sessionCount,
       @JsonKey(name: 'avg_duration') required this.avgDuration,
-      @JsonKey(name: 'best_day') this.bestDay,
       @JsonKey(name: 'daily_breakdown')
       required final Map<String, int> dailyBreakdown,
       @JsonKey(name: 'weekly_breakdown')
@@ -1710,7 +1709,8 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
       @JsonKey(name: 'focus_type_distribution')
       required final Map<String, int> focusTypeDistribution,
       @JsonKey(name: 'streak_days') required this.streakDays,
-      @JsonKey(name: 'longest_streak') required this.longestStreak})
+      @JsonKey(name: 'longest_streak') required this.longestStreak,
+      @JsonKey(name: 'best_day') this.bestDay})
       : _dailyBreakdown = dailyBreakdown,
         _weeklyBreakdown = weeklyBreakdown,
         _focusTypeDistribution = focusTypeDistribution;
@@ -1733,9 +1733,6 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
   @override
   @JsonKey(name: 'avg_duration')
   final int avgDuration;
-  @override
-  @JsonKey(name: 'best_day')
-  final String? bestDay;
   final Map<String, int> _dailyBreakdown;
   @override
   @JsonKey(name: 'daily_breakdown')
@@ -1770,10 +1767,13 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
   @override
   @JsonKey(name: 'longest_streak')
   final int longestStreak;
+  @override
+  @JsonKey(name: 'best_day')
+  final String? bestDay;
 
   @override
   String toString() {
-    return 'FocusMonthlyStatsResponse(periodStart: $periodStart, periodEnd: $periodEnd, totalMinutes: $totalMinutes, sessionCount: $sessionCount, avgDuration: $avgDuration, bestDay: $bestDay, dailyBreakdown: $dailyBreakdown, weeklyBreakdown: $weeklyBreakdown, focusTypeDistribution: $focusTypeDistribution, streakDays: $streakDays, longestStreak: $longestStreak)';
+    return 'FocusMonthlyStatsResponse(periodStart: $periodStart, periodEnd: $periodEnd, totalMinutes: $totalMinutes, sessionCount: $sessionCount, avgDuration: $avgDuration, dailyBreakdown: $dailyBreakdown, weeklyBreakdown: $weeklyBreakdown, focusTypeDistribution: $focusTypeDistribution, streakDays: $streakDays, longestStreak: $longestStreak, bestDay: $bestDay)';
   }
 
   @override
@@ -1791,7 +1791,6 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
                 other.sessionCount == sessionCount) &&
             (identical(other.avgDuration, avgDuration) ||
                 other.avgDuration == avgDuration) &&
-            (identical(other.bestDay, bestDay) || other.bestDay == bestDay) &&
             const DeepCollectionEquality()
                 .equals(other._dailyBreakdown, _dailyBreakdown) &&
             const DeepCollectionEquality()
@@ -1801,7 +1800,8 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
             (identical(other.streakDays, streakDays) ||
                 other.streakDays == streakDays) &&
             (identical(other.longestStreak, longestStreak) ||
-                other.longestStreak == longestStreak));
+                other.longestStreak == longestStreak) &&
+            (identical(other.bestDay, bestDay) || other.bestDay == bestDay));
   }
 
   @JsonKey(ignore: true)
@@ -1813,12 +1813,12 @@ class _$FocusMonthlyStatsResponseImpl implements _FocusMonthlyStatsResponse {
       totalMinutes,
       sessionCount,
       avgDuration,
-      bestDay,
       const DeepCollectionEquality().hash(_dailyBreakdown),
       const DeepCollectionEquality().hash(_weeklyBreakdown),
       const DeepCollectionEquality().hash(_focusTypeDistribution),
       streakDays,
-      longestStreak);
+      longestStreak,
+      bestDay);
 
   @JsonKey(ignore: true)
   @override
@@ -1842,7 +1842,6 @@ abstract class _FocusMonthlyStatsResponse implements FocusMonthlyStatsResponse {
           @JsonKey(name: 'total_minutes') required final int totalMinutes,
           @JsonKey(name: 'session_count') required final int sessionCount,
           @JsonKey(name: 'avg_duration') required final int avgDuration,
-          @JsonKey(name: 'best_day') final String? bestDay,
           @JsonKey(name: 'daily_breakdown')
           required final Map<String, int> dailyBreakdown,
           @JsonKey(name: 'weekly_breakdown')
@@ -1850,7 +1849,8 @@ abstract class _FocusMonthlyStatsResponse implements FocusMonthlyStatsResponse {
           @JsonKey(name: 'focus_type_distribution')
           required final Map<String, int> focusTypeDistribution,
           @JsonKey(name: 'streak_days') required final int streakDays,
-          @JsonKey(name: 'longest_streak') required final int longestStreak}) =
+          @JsonKey(name: 'longest_streak') required final int longestStreak,
+          @JsonKey(name: 'best_day') final String? bestDay}) =
       _$FocusMonthlyStatsResponseImpl;
 
   factory _FocusMonthlyStatsResponse.fromJson(Map<String, dynamic> json) =
@@ -1872,9 +1872,6 @@ abstract class _FocusMonthlyStatsResponse implements FocusMonthlyStatsResponse {
   @JsonKey(name: 'avg_duration')
   int get avgDuration;
   @override
-  @JsonKey(name: 'best_day')
-  String? get bestDay;
-  @override
   @JsonKey(name: 'daily_breakdown')
   Map<String, int> get dailyBreakdown;
   @override
@@ -1889,6 +1886,9 @@ abstract class _FocusMonthlyStatsResponse implements FocusMonthlyStatsResponse {
   @override
   @JsonKey(name: 'longest_streak')
   int get longestStreak;
+  @override
+  @JsonKey(name: 'best_day')
+  String? get bestDay;
   @override
   @JsonKey(ignore: true)
   _$$FocusMonthlyStatsResponseImplCopyWith<_$FocusMonthlyStatsResponseImpl>

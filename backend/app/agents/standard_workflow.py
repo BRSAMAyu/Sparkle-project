@@ -165,7 +165,7 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     if "Intent: translation" in route_reason:
         intent_instruction = "User wants TRANSLATION. Please translate the input text accurately."
     elif "Intent: prism" in route_reason:
-        intent_instruction = "User wants BEHAVIOR ANALYSIS (Prism). Please analyze their study habits or profile."
+        intent_instruction = "User wants BEHAVIOR ANALYSIS (Prism/Cognitive Prism). Please use the 'get_user_behavior_patterns' tool to retrieve their behavior patterns and provide insights about their study habits."
     elif "Intent: sprint" in route_reason:
         intent_instruction = "User wants to enter SPRINT/FOCUS MODE. Please use the 'suggest_focus_session' tool to start a session."
     

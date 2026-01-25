@@ -6,7 +6,7 @@ part of 'hybrid_statistics_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$hybridCacheConfigHash() => r'1315948530b8b8921486db90a19dd43b7a603cbc';
+String _$hybridCacheConfigHash() => r'c2173da8cb7e9586277b51a04d4c28fa69c42ecf';
 
 /// Provider for hybrid cache config
 ///
