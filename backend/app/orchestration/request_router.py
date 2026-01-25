@@ -4,8 +4,10 @@ Request Router - Phase 1 & Phase 2
 Rule-based router for deciding execution mode.
 Phase 1: All requests go to "direct" mode.
 Phase 2: Introduces "langgraph" and "hybrid" modes for complex intents.
+
+P2 Improvement: Added LLM-assisted intent classification for better accuracy.
 """
-from typing import Optional
+from typing import Optional, Tuple
 from loguru import logger
 
 from app.orchestration.schemas import RouteDecision
@@ -89,6 +91,8 @@ class RequestRouter:
         3. 特殊功能 (Translation/Prism/Sprint) → direct (Specific Tools)
         4. 其他 → direct
 
+        P2 Improvement: Uses confidence-scoring intent classification with LLM fallback.
+
         Args:
             message: 用户消息
             user_id: 用户ID
@@ -100,15 +104,20 @@ class RequestRouter:
         # 获取 context_version
         context_version = await self._get_context_version(user_id)
 
-        # 意图分析
-        intent = self._classify_intent(message)
+        # P2: 意图分析（带置信度评分）
+        intent, confidence = await self._classify_intent_with_confidence(message)
+
+        # P2: 如果置信度低，使用 LLM 辅助分类
+        if confidence < 0.65:
+            logger.info(f"Low confidence intent classification ({confidence:.2f}), using LLM assist")
+            intent = await self._classify_intent_llm_assisted(message)
+            confidence = 0.85  # LLM分类后置信度提升
 
         # 风险评估
         risk_level = self._assess_risk(message, intent)
 
         # Phase 2: 根据风险优先级决定执行模式
         execution_mode = "direct"
-        confidence = 0.7
         reason = f"Intent: {intent}, Phase 2 routing"
 
         # === 优先级1: 高风险操作 → direct (安全优先) ===
@@ -137,7 +146,6 @@ class RequestRouter:
         # === 优先级4: 默认 → direct ===
         else:
             execution_mode = "direct"
-            confidence = 0.7
             reason = f"Intent: {intent}, standard direct routing"
 
         return RouteDecision(
@@ -152,6 +160,8 @@ class RequestRouter:
         """简单意图分类
 
         基于关键词的规则分类
+
+        P2 Improvement: Added confidence scoring and LLM fallback for uncertain cases.
         """
         msg_lower = message.lower()
 
@@ -178,6 +188,97 @@ class RequestRouter:
             return "review"
 
         return "chat"
+
+    async def _classify_intent_with_confidence(self, message: str) -> Tuple[str, float]:
+        """意图分类（带置信度评分）
+
+        P2 Improvement: Returns intent with confidence score.
+        Low confidence triggers LLM-assisted classification.
+        """
+        msg_lower = message.lower()
+        scores = {}
+
+        # Translation
+        if any(k in msg_lower for k in self.TRANSLATION_KEYWORDS):
+            scores["translation"] = scores.get("translation", 0) + 0.8
+
+        # Prism
+        if any(k in msg_lower for k in self.PRISM_KEYWORDS):
+            scores["prism"] = scores.get("prism", 0) + 0.8
+
+        # Sprint
+        if any(k in msg_lower for k in self.SPRINT_KEYWORDS):
+            scores["sprint"] = scores.get("sprint", 0) + 0.8
+
+        # Standard intents
+        if any(k in msg_lower for k in ["创建", "create", "新建"]):
+            scores["create"] = scores.get("create", 0) + 0.7
+        if any(k in msg_lower for k in ["查询", "query", "获取"]):
+            scores["query"] = scores.get("query", 0) + 0.7
+        if any(k in msg_lower for k in ["更新", "update", "修改"]):
+            scores["update"] = scores.get("update", 0) + 0.7
+        if any(k in msg_lower for k in ["删除", "delete"]):
+            scores["delete"] = scores.get("delete", 0) + 0.8
+        if any(k in msg_lower for k in ["学习", "learn", "study"]):
+            scores["learn"] = scores.get("learn", 0) + 0.6
+        if any(k in msg_lower for k in ["复习", "review"]):
+            scores["review"] = scores.get("review", 0) + 0.6
+
+        if not scores:
+            return "chat", 0.5
+
+        # 返回得分最高的意图
+        max_intent = max(scores, key=scores.get)
+        confidence = scores[max_intent]
+
+        return max_intent, confidence
+
+    async def _classify_intent_llm_assisted(self, message: str) -> str:
+        """使用轻量级 LLM 进行意图分类（增强版）
+
+        P2 Improvement: LLM-assisted intent classification for ambiguous cases.
+        When keyword matching confidence is low, use LLM for better accuracy.
+        """
+        from app.services.llm_service import llm_service
+
+        prompt = f"""Classify the user intent into one of these categories:
+
+- translation: User wants to translate text or understand meaning
+- prism: User wants behavior analysis, study habits, cognitive profile
+- sprint: User wants to enter focus mode, sprint, cramming
+- create: User wants to create something (task, plan, etc.)
+- update: User wants to update or modify something
+- delete: User wants to delete something
+- query: User is asking for information
+- learn: User wants to learn something
+- review: User wants to review material
+- chat: General conversation
+
+User message: "{message}"
+
+Return only the category name (lowercase, no punctuation)."""
+
+        try:
+            # 使用较小的模型进行快速分类
+            response = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+            )
+            intent = response.strip().lower()
+
+            # 映射到标准意图
+            intent_mapping = {
+                "behavior analysis": "prism",
+                "cognitive prism": "prism",
+                "focus mode": "sprint",
+                "study habits": "prism",
+                "translate": "translation",
+                "translating": "translation",
+            }
+            return intent_mapping.get(intent, intent)
+        except Exception as e:
+            logger.warning(f"LLM intent classification failed: {e}, falling back to keyword matching")
+            return self._classify_intent(message)  # 降级到关键词匹配
 
     def _assess_risk(self, message: str, intent: str) -> str:
         """风险评估

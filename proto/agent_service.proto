@@ -29,6 +29,9 @@ service AgentService {
 
   // SubmitPlanReview submits user feedback for a plan review.
   rpc SubmitPlanReview(PlanReviewRequest) returns (PlanReviewResponse);
+
+  // SubmitContentReviewFeedback submits user feedback for a content review (Phase 2c).
+  rpc SubmitContentReviewFeedback(ContentReviewFeedbackRequest) returns (ContentReviewFeedbackResponse);
 }
 
 // ============================================================================
@@ -269,6 +272,36 @@ message PlanReviewResponse {
   string message = 2;
   string review_id = 3;
   string updated_plan_id = 4;  // Set if decision was MODIFY
+}
+
+// ============================================================================
+// Content Review Feedback (Phase 2c)
+// ============================================================================
+
+enum ContentReviewFeedbackType {
+  SATISFIED = 0;          // 用户满意，接受审查结果
+  UNSATISFIED = 1;        // 用户不满意，拒绝内容
+  MODIFIED = 2;           // 用户修改后接受
+  REPORTED_ERROR = 3;     // 用户报告错误
+  SKIPPED = 4;            // 用户跳过审查
+}
+
+message ContentReviewFeedbackRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string response_id = 3;           // 关联的响应ID
+  ContentReviewFeedbackType feedback_type = 4;
+  int32 rating = 5;                 // 可选：1-5评分
+  string comment = 6;               // 可选：用户评论
+  repeated string issues_reported = 7;  // 可选：用户报告的问题
+  string session_id = 8;
+  map<string, string> meta = 9;
+}
+
+message ContentReviewFeedbackResponse {
+  bool success = 1;
+  string message = 2;
+  string feedback_id = 3;
 }
 
 message CitationBlock {

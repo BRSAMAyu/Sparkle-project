@@ -8,6 +8,8 @@ Phase 1: 全流程审查系统
 
 Phase 2a: 使用ReflectionAgent进行完整的多轮反思修正
 
+Phase 2c: 集成审查历史和反馈学习
+
 作者: Claude Code (Opus 4.5)
 创建时间: 2026-01-25
 """
@@ -28,6 +30,22 @@ from app.agents.graph.state import (
 from app.agents.reviewer_agent import ReviewerAgent, get_reviewer_agent, ReviewResult
 from app.agents.reflection_agent import ReflectionAgent, get_reflection_agent
 
+# Phase 2c: 导入审查历史服务
+try:
+    from app.services.review_history_service import get_review_history_service
+    REVIEW_HISTORY_AVAILABLE = True
+except ImportError:
+    REVIEW_HISTORY_AVAILABLE = False
+    logger.warning("[ReviewNode] Review history service not available")
+
+# Phase 2d: 导入模型降级服务
+try:
+    from app.services.model_fallback_service import get_model_fallback_service, FallbackReason
+    FALLBACK_SERVICE_AVAILABLE = True
+except ImportError:
+    FALLBACK_SERVICE_AVAILABLE = False
+    logger.warning("[ReviewNode] Model fallback service not available")
+
 
 # ============================================
 # 全局ReviewerAgent实例
@@ -42,6 +60,187 @@ def _get_reviewer() -> ReviewerAgent:
     if _reviewer_agent is None:
         _reviewer_agent = get_reviewer_agent()
     return _reviewer_agent
+
+
+def _get_review_label(review_result: ReviewResult) -> str:
+    """获取审查结果的用户友好标签"""
+    if review_result.passed:
+        return "已通过"
+    if review_result.critical_issues:
+        return "未通过"
+    if review_result.requires_reflection:
+        return "需要优化"
+    return "需要审查"
+
+
+# ============================================
+# Phase 2c: Review History Integration
+# ============================================
+
+def _get_review_history_service(state: SparkleState):
+    """获取审查历史服务（如果可用）"""
+    if not REVIEW_HISTORY_AVAILABLE:
+        return None
+
+    try:
+        db_session = state.get("db_session")
+        if db_session:
+            return get_review_history_service(db_session)
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to get review history service: {e}")
+    return None
+
+
+async def _record_review_to_history(
+    state: SparkleState,
+    review_result: ReviewResult,
+    target_id: str,
+    target_type: str,
+    review_duration_ms: int = 0,
+) -> None:
+    """记录审查到历史"""
+    history_service = _get_review_history_service(state)
+    if not history_service:
+        return
+
+    try:
+        await history_service.record_review(
+            review_id=review_result.review_id,
+            target_id=target_id,
+            target_type=target_type,
+            user_id=state.get("user_id", ""),
+            session_id=state.get("session_id", ""),
+            decision=review_result.decision,
+            overall_score=review_result.overall_score,
+            metrics=[m.to_dict() for m in review_result.metrics],
+            issues_count=len(review_result.issues),
+            critical_count=len(review_result.critical_issues),
+            warning_count=len(review_result.warning_issues),
+            reviewer_model=review_result.reviewer_model,
+            review_duration_ms=review_duration_ms,
+            requires_reflection=review_result.requires_reflection,
+        )
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to record review history: {e}")
+
+
+# ============================================
+# Phase 2d: Model Fallback Integration
+# ============================================
+
+def _get_fallback_service(state: SparkleState):
+    """获取模型降级服务（如果可用）"""
+    if not FALLBACK_SERVICE_AVAILABLE:
+        return None
+
+    try:
+        db_session = state.get("db_session")
+        if db_session:
+            return get_model_fallback_service()
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to get fallback service: {e}")
+    return None
+
+
+async def _record_model_performance(
+    state: SparkleState,
+    model_name: str,
+    review_passed: bool,
+    review_score: float,
+    issues_count: int,
+    response_time_ms: int = 0,
+) -> None:
+    """记录模型性能到降级服务"""
+    fallback_service = _get_fallback_service(state)
+    if not fallback_service:
+        return
+
+    try:
+        fallback_service.record_performance(
+            model_name=model_name,
+            task_type="generation",
+            review_passed=review_passed,
+            review_score=review_score,
+            issues_count=issues_count,
+            response_time_ms=response_time_ms,
+        )
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to record model performance: {e}")
+
+
+async def _check_and_execute_fallback(
+    state: SparkleState,
+    current_model: str,
+    review_score: float,
+    review_passed: bool,
+) -> Optional[str]:
+    """
+    检查并执行模型降级
+
+    Returns:
+        如果发生降级，返回新的模型名称；否则返回None
+    """
+    fallback_service = _get_fallback_service(state)
+    if not fallback_service:
+        return None
+
+    try:
+        decision = fallback_service.should_fallback(
+            model_name=current_model,
+            task_type="generation",
+        )
+
+        if decision.should_fallback:
+            logger.warning(
+                f"[ReviewNode] Model fallback triggered: {current_model} -> {decision.suggested_model} "
+                f"(reason: {decision.reason.value}, {decision.description})"
+            )
+
+            # 检查是否已经在生成过程中
+            context_data = state.get("context_data", {})
+            if context_data.get("stream_callback"):
+                from app.gen.agent.v1 import agent_service_pb2
+                try:
+                    await context_data["stream_callback"](agent_service_pb2.ChatResponse(
+                        delta=f"\n\n[系统] 检测到质量问题，切换到更强大的模型重新生成..."
+                    ))
+                except Exception as e:
+                    logger.warning(f"[ReviewNode] Failed to send fallback notification: {e}")
+
+            return decision.suggested_model
+
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to check fallback: {e}")
+
+    return None
+
+
+def _get_fallback_model(state: SparkleState, current_model: str, retry_count: int) -> str:
+    """
+    获取降级后的模型
+
+    Args:
+        state: 当前状态
+        current_model: 当前模型
+        retry_count: 重试次数
+
+    Returns:
+        模型名称
+    """
+    fallback_service = _get_fallback_service(state)
+    if not fallback_service:
+        return current_model
+
+    try:
+        from app.core.agent_profiles import TaskType
+        return fallback_service.get_model_for_task(
+            task_type=TaskType.STANDARD_RESPONSE,
+            current_model=current_model,
+            retry_count=retry_count,
+        )
+    except Exception as e:
+        logger.warning(f"[ReviewNode] Failed to get fallback model: {e}")
+        return current_model
 
 
 # ============================================
@@ -174,6 +373,9 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
 
     logger.info(f"[ReviewNode] Reviewing response: {len(llm_response)} chars")
 
+    # 记录审查开始时间
+    review_start_time = time.time() * 1000
+
     # 4. 执行审查
     reviewer = _get_reviewer()
     review_result: ReviewResult = await reviewer.review_llm_response(
@@ -192,6 +394,68 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         f"decision={review_result.decision}, score={review_result.overall_score:.2f}, "
         f"issues={len(review_result.issues)}"
     )
+
+    # Phase 2c: Record review to history
+    target_id = response_id or getattr(last_assistant_msg, 'id', '')
+    review_duration = int(time.time() * 1000 - review_start_time) if 'review_start_time' in locals() else 0
+    await _record_review_to_history(
+        state=state,
+        review_result=review_result,
+        target_id=target_id,
+        target_type="llm_response",
+        review_duration_ms=review_duration,
+    )
+
+    # Phase 2d: Record model performance and check for fallback
+    # 获取生成模型（从context_data或使用默认值）
+    context_data = state.get("context_data", {})
+    generation_model = context_data.get("model_used", "unknown")
+    if generation_model == "unknown":
+        # 尝试从其他来源获取模型名称
+        generation_model = getattr(review_result, 'reviewer_model', 'unknown')
+
+    await _record_model_performance(
+        state=state,
+        model_name=generation_model,
+        review_passed=review_result.passed,
+        review_score=review_result.overall_score,
+        issues_count=len(review_result.issues),
+        response_time_ms=review_duration,
+    )
+
+    # 4.5. Phase 2b: Send review result to frontend via stream_callback
+    context_data = state.get("context_data", {})
+    stream_callback = context_data.get("stream_callback")
+    if stream_callback and not review_result.passed:
+        # Send review widget event to frontend
+        try:
+            from app.gen.agent.v1 import agent_service_pb2
+            review_metadata = {
+                "has_review_result": "true",
+                "review_id": review_result.review_id,
+                "decision": review_result.decision,
+                "overall_score": str(review_result.overall_score),
+                "critical_count": str(len(review_result.critical_issues)),
+                "warning_count": str(len(review_result.warning_issues)),
+                "requires_reflection": "true" if review_result.requires_reflection else "false",
+            }
+
+            # Format review message for display
+            review_delta = f"\n\n[内容审查: {_get_review_label(review_result)}]"
+            if review_result.critical_issues:
+                review_delta += f"\n发现 {len(review_result.critical_issues)} 个严重问题需要处理"
+
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=review_delta,
+                metadata={
+                    **review_metadata,
+                    "review_data": review_result.to_dict(),
+                }
+            ))
+
+            logger.info(f"[ReviewNode] Review result sent to frontend")
+        except Exception as e:
+            logger.warning(f"[ReviewNode] Failed to send review to frontend: {e}")
 
     # 5. 构建审查上下文
     review_context: ReviewContext = {
@@ -233,12 +497,37 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
             # 需要自我反思修正
             logger.info(f"[ReviewNode] Review FAILED, entering reflection")
             review_context["status"] = ReviewStatus.REFLECTING
+
+            # Phase 2d: 检查是否需要切换模型（连续反思失败）
+            fallback_model = await _check_and_execute_fallback(
+                state=state,
+                current_model=generation_model,
+                review_score=review_result.overall_score,
+                review_passed=False,
+            )
+            if fallback_model:
+                # 记录建议的模型切换
+                review_context["fallback_model"] = fallback_model
+
             next_step = "reflection"
         else:
             # 不需要反思，直接结束或需要用户批准
             if review_result.critical_issues:
                 logger.warning(f"[ReviewNode] Review FAILED with critical issues")
-                # 可以选择通知用户或记录问题
+
+                # Phase 2d: 严重问题，检查是否需要模型切换
+                fallback_model = await _check_and_execute_fallback(
+                    state=state,
+                    current_model=generation_model,
+                    review_score=review_result.overall_score,
+                    review_passed=False,
+                )
+                if fallback_model:
+                    # 将建议的模型存储在context中，供下次生成使用
+                    context_data = state.get("context_data", {})
+                    context_data["suggested_model"] = fallback_model
+                    review_context["fallback_model"] = fallback_model
+
                 next_step = "__end__"
             else:
                 # 警告级别问题，可以继续
@@ -369,6 +658,14 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
     # 重建ReviewResult对象
     review_result = ReviewResult.from_dict(review_result_dict)
 
+    # Phase 2d: 获取生成模型名称
+    context_data = state.get("context_data", {})
+    generation_model = (
+        context_data.get("model_used") or
+        review_context.get("reviewer_model") or
+        getattr(review_result, 'reviewer_model', 'unknown')
+    )
+
     logger.info(
         f"[ReviewNode] Starting ReflectionAgent: "
         f"initial_score={review_result.overall_score:.2f}, "
@@ -399,6 +696,19 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
             f"rounds={reflection_result.total_rounds}"
         )
 
+        # Phase 2c: Record reflection to history
+        history_service = _get_review_history_service(state)
+        if history_service:
+            try:
+                await history_service.record_reflection(
+                    review_id=review_result.review_id,
+                    reflection_round=reflection_result.total_rounds,
+                    outcome=reflection_result.final_outcome.value,
+                    score_delta=reflection_result.score_delta,
+                )
+            except Exception as e:
+                logger.warning(f"[ReviewNode] Failed to record reflection: {e}")
+
         # 构建更新后的审查上下文
         updated_review_context: ReviewContext = {
             **review_context,
@@ -419,13 +729,25 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
             # 反思成功
             updated_review_context["status"] = ReviewStatus.PASSED
 
-            # 通知用户
+            # 通知用户 - Phase 2b: 发送反思结果事件
             if stream_callback:
                 from app.gen.agent.v1 import agent_service_pb2
                 try:
                     rounds_info = f" ({reflection_result.total_rounds}轮)" if reflection_result.total_rounds > 1 else ""
+
+                    # 发送反思结果事件
                     await stream_callback(agent_service_pb2.ChatResponse(
-                        delta=f"\n\n[系统已基于审查意见优化回答{rounds_info}]"
+                        delta=f"\n\n[系统已基于审查意见优化回答{rounds_info}]",
+                        metadata={
+                            "has_reflection_result": "true",
+                            "reflection_id": reflection_result.reflection_id,
+                            "outcome": reflection_result.final_outcome.value,
+                            "score_delta": str(reflection_result.score_delta),
+                            "rounds": str(reflection_result.total_rounds),
+                            "initial_score": str(reflection_result.initial_score),
+                            "final_score": str(reflection_result.final_score),
+                            "success": "true" if reflection_result.success else "false",
+                        }
                     ))
                 except Exception as e:
                     logger.warning(f"[ReviewNode] Failed to send stream notification: {e}")
@@ -439,6 +761,18 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
         else:
             # 反思未成功
             updated_review_context["status"] = ReviewStatus.FAILED
+
+            # Phase 2d: 记录反思失败到降级服务
+            fallback_service = _get_fallback_service(state)
+            if fallback_service:
+                try:
+                    fallback_service.record_reflection_failure(
+                        model_name=generation_model,
+                        original_score=review_result.overall_score,
+                        rounds_attempted=reflection_result.total_rounds,
+                    )
+                except Exception as e:
+                    logger.warning(f"[ReviewNode] Failed to record reflection failure: {e}")
 
             if reflection_result.final_outcome.value == "improved":
                 # 有改善，可以继续下一轮

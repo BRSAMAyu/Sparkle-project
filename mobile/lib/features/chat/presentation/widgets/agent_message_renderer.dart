@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/cognitive/presentation/widgets/prism_behavior_card.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
@@ -103,6 +104,9 @@ class AgentMessageRenderer extends StatelessWidget {
       case 'plan_context_summary':
       case 'plan_state':  // Legacy alias for compatibility
         return PlanContextSummary(contextData: widget.data);
+
+      case 'prism_card':
+        return PrismBehaviorCard(data: widget.data);
 
       default:
         // 未知类型：显示 JSON

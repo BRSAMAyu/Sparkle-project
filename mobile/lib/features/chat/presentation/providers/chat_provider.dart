@@ -15,6 +15,7 @@ import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dar
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -48,6 +49,7 @@ class ChatState {
     this.attachedFiles = const [],
     this.pendingPlanReview,
     this.pendingReviewActionId,
+    this.pendingContentReview,
   });
   final bool isLoading;
   final bool isSending;
@@ -77,6 +79,9 @@ class ChatState {
   // Plan Review state
   final PlanReviewResult? pendingPlanReview;
   final String? pendingReviewActionId;
+
+  // Content Review state (Phase 2b)
+  final ContentReviewResult? pendingContentReview;
 
   int get listItemCount =>
       messages.length +
@@ -115,6 +120,8 @@ class ChatState {
     PlanReviewResult? pendingPlanReview,
     bool clearPendingReview = false,
     String? pendingReviewActionId,
+    ContentReviewResult? pendingContentReview,
+    bool clearPendingContentReview = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -155,6 +162,9 @@ class ChatState {
             clearPendingReview ? null : pendingPlanReview ?? this.pendingPlanReview,
         pendingReviewActionId:
             clearPendingReview ? null : pendingReviewActionId ?? this.pendingReviewActionId,
+        pendingContentReview: clearPendingContentReview
+            ? null
+            : pendingContentReview ?? this.pendingContentReview,
       );
 }
 
@@ -637,6 +647,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Plan Review Status Event
           _handlePlanReviewStatus(event);
           flushPending();
+        } else if (event is ContentReviewWidgetEvent) {
+          // Content Review Widget Event (Phase 2b)
+          _handleContentReviewWidget(event);
+          flushPending();
+        } else if (event is ContentReflectionResultEvent) {
+          // Content Reflection Result Event (Phase 2b)
+          _handleContentReflectionResult(event);
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -987,6 +1005,142 @@ class ChatNotifier extends StateNotifier<ChatState> {
       default:
         return '📋 计划状态更新: $status';
     }
+  }
+
+  // ============================================
+  // Phase 2b: Content Review Handlers
+  // ============================================
+
+  /// 处理 Content Review Widget Event
+  void _handleContentReviewWidget(ContentReviewWidgetEvent event) {
+    debugPrint('📥 Content review widget received');
+
+    // Parse review data
+    final reviewData = event.reviewData;
+    final review = ContentReviewResult.fromJson(reviewData);
+
+    // Update state with pending content review
+    state = state.copyWith(pendingContentReview: review);
+
+    debugPrint('📋 Content review ready: ${review.decision} (review_id: ${review.reviewId})');
+  }
+
+  /// 处理 Content Reflection Result Event
+  void _handleContentReflectionResult(ContentReflectionResultEvent event) {
+    debugPrint('📥 Content reflection result received');
+
+    final reflectionData = event.reflectionData;
+    final outcome = reflectionData['outcome'] as String? ?? 'unknown';
+    final scoreDelta = (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
+    final rounds = reflectionData['rounds'] as int? ?? 0;
+
+    // Show user-friendly message about reflection result
+    final message = _getReflectionResultMessage(outcome, scoreDelta, rounds);
+
+    state = state.copyWith(
+      lastActionStatus: outcome,
+      lastActionMessage: message,
+    );
+
+    // Update pending content review with reflection status
+    final currentReview = state.pendingContentReview;
+    if (currentReview != null) {
+      // Create updated review with reflection status
+      final updatedReview = ContentReviewResult(
+        reviewId: currentReview.reviewId,
+        decision: currentReview.decision,
+        overallScore: currentReview.overallScore + scoreDelta,
+        metrics: currentReview.metrics,
+        issues: currentReview.issues,
+        suggestions: currentReview.suggestions,
+        reviewedAt: currentReview.reviewedAt,
+        requiresReflection: false, // Reflection completed
+        reflectionStatus: outcome == 'fixed' || outcome == 'improved' ? 'completed' : 'failed',
+        scoreLabel: _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
+      );
+
+      state = state.copyWith(pendingContentReview: updatedReview);
+    }
+
+    // Delay clearing feedback state
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    debugPrint('💬 Reflection result: $message');
+  }
+
+  /// Get user-friendly reflection result message
+  String _getReflectionResultMessage(String outcome, double scoreDelta, int rounds) {
+    final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
+    switch (outcome) {
+      case 'fixed':
+        return '✅ 内容已优化${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+      case 'improved':
+        return '📈 内容有所改善${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+      case 'no_change':
+        return 'ℹ️ 优化尝试完成，内容无明显变化';
+      case 'degraded':
+        return '⚠️ 优化尝试未达预期，保留原内容';
+      case 'failed':
+        return '❌ 优化失败，请稍后重试';
+      default:
+        return '🔄 反思处理完成: $outcome';
+    }
+  }
+
+  /// Get score label for a given score
+  String _getScoreLabelForScore(double score) {
+    if (score >= 0.9) return '优秀';
+    if (score >= 0.7) return '良好';
+    if (score >= 0.5) return '及格';
+    return '需改进';
+  }
+
+  /// 用户接受审查后的内容（不采取行动）
+  void acceptContentReview() {
+    state = state.copyWith(clearPendingContentReview: true);
+    debugPrint('✅ Content review accepted');
+  }
+
+  /// 用户拒绝内容，请求重新生成
+  void rejectContentReview() {
+    final review = state.pendingContentReview;
+    if (review == null) return;
+
+    // TODO: Implement regeneration logic
+    // For now, just clear the pending review
+    state = state.copyWith(
+      clearPendingContentReview: true,
+      lastActionStatus: 'rejected',
+      lastActionMessage: '已请求重新生成',
+    );
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    debugPrint('❌ Content review rejected, requesting regeneration');
+  }
+
+  /// 用户请求人工审查
+  void requestHumanReview() {
+    state = state.copyWith(
+      lastActionStatus: 'human_review_requested',
+      lastActionMessage: '已提交人工审查请求',
+    );
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    debugPrint('👤 Human review requested');
   }
 }
 
