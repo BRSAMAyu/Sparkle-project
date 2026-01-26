@@ -848,6 +848,7 @@ Please review this plan and provide your assessment."""
                 action_id=action_id,
                 user_id=user_id,
                 original_plan_id=plan_id,
+                new_plan_id=new_plan_id,
                 feedback=feedback,
             )
         )
@@ -864,6 +865,7 @@ Please review this plan and provide your assessment."""
         action_id: str,
         user_id: str,
         original_plan_id: str,
+        new_plan_id: str,
         feedback: str,
     ) -> None:
         """
@@ -874,6 +876,7 @@ Please review this plan and provide your assessment."""
         from app.core.context_pack import ContextPackBuilder
         from app.orchestration.lang_graph_planner import LangGraphPlanner
         from app.orchestration.state_snapshot import StateSnapshotManager
+        from app.core.sse import sse_manager
         from app.orchestration.executor import ToolExecutor
 
         try:
@@ -937,6 +940,18 @@ Please review this plan and provide your assessment."""
                         f"plan={executable_plan.plan_id}, "
                         f"tools={len(executable_plan.tool_calls)}"
                     )
+                    await sse_manager.send_to_user(
+                        user_id,
+                        "plan_replan_completed",
+                        {
+                            "action_id": action_id,
+                            "original_plan_id": original_plan_id,
+                            "new_plan_id": new_plan_id,
+                            "generated_plan_id": executable_plan.plan_id,
+                            "auto_executed": True,
+                            "tool_count": len(executable_plan.tool_calls),
+                        },
+                    )
                 else:
                     review_action_id = await self.store_review_result(
                         review=review_result,
@@ -946,11 +961,37 @@ Please review this plan and provide your assessment."""
                         f"Replan review queued: action_id={review_action_id}, "
                         f"plan={executable_plan.plan_id}"
                     )
+                    await sse_manager.send_to_user(
+                        user_id,
+                        "plan_replan_review_required",
+                        {
+                            "action_id": action_id,
+                            "review_action_id": review_action_id,
+                            "review_id": review_result.review_id,
+                            "original_plan_id": original_plan_id,
+                            "new_plan_id": new_plan_id,
+                            "generated_plan_id": executable_plan.plan_id,
+                            "decision": review_result.decision,
+                        },
+                    )
 
                 await pending_actions_store.delete(action_id, user_id)
 
         except Exception as e:
             logger.error(f"Failed to auto execute replan action {action_id}: {e}", exc_info=True)
+            try:
+                await sse_manager.send_to_user(
+                    user_id,
+                    "plan_replan_failed",
+                    {
+                        "action_id": action_id,
+                        "original_plan_id": original_plan_id,
+                        "new_plan_id": new_plan_id,
+                        "error": str(e),
+                    },
+                )
+            except Exception as notify_error:
+                logger.warning(f"Failed to notify replan failure: {notify_error}")
 
 
 # Global singleton

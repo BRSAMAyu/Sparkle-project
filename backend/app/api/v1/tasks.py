@@ -222,18 +222,16 @@ async def start_task(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Start task
+    Start task (v2.2 修复 - 调用服务层)
+
+    调用 TaskService.start_task() 确保状态同步逻辑被执行
     """
-    task = await db.get(Task, task_id)
-    if not task or task.user_id != current_user.id:
-        raise NotFoundError(message="Task not found")
-        
-    task.status = TaskStatus.IN_PROGRESS
-    task.started_at = datetime.utcnow()
-    
-    await db.commit()
-    await db.refresh(task)
-    
+    task = await TaskService.start_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+
     return {"data": TaskDetail.model_validate(task)}
 
 @router.post("/{task_id}/abandon", response_model=Dict[str, Any])
@@ -244,18 +242,19 @@ async def abandon_task(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Abandon task
+    Abandon task (v2.2 修复 - 发布事件)
+
+    调用 TaskService.abandon_task() 确保:
+    - 状态同步
+    - 发布 task.abandoned 事件 (用于认知分析)
     """
-    task = await db.get(Task, task_id)
-    if not task or task.user_id != current_user.id:
-        raise NotFoundError(message="Task not found")
-        
-    task.status = TaskStatus.ABANDONED
-    task.user_note = request.reason # Store reason in user_note or separate field if available
-    
-    await db.commit()
-    await db.refresh(task)
-    
+    task = await TaskService.abandon_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id,
+        reason=request.reason
+    )
+
     return {"data": TaskDetail.model_validate(task)}
 
 @router.post("/{task_id}/complete", response_model=Dict[str, Any])
@@ -267,15 +266,23 @@ async def complete_task(
     x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key")
 ):
     """
-    完成任务 (v2.1 增强)
+    完成任务 (v2.2 增强 - 修复事件发布)
+
+    调用 TaskService.complete_task() 确保以下功能完整执行:
+    - 任务状态更新
+    - 计划进度更新 (PlanService.update_progress)
+    - 任务状态同步 (TaskStateSyncService)
+    - 发布 task.completed 事件 (触发 AdaptiveReplanner)
+    - Galaxy Spark 点亮
     """
-    result = await db.execute(
+    # 幂等性检查: 查询任务当前状态
+    existing_task = await db.execute(
         select(Task).where(
             Task.id == task_id,
             Task.user_id == current_user.id,
         )
     )
-    task = result.scalar_one_or_none()
+    task = existing_task.scalar_one_or_none()
 
     if not task:
         raise NotFoundError(message="Task not found")
@@ -290,43 +297,21 @@ async def complete_task(
             "retry_token": x_idempotency_key or "generated-token",
         }
 
-    task.status = TaskStatus.COMPLETED
-    task.completed_at = datetime.utcnow()
-    task.actual_minutes = request.actual_minutes
-    task.user_note = request.note
-    # request.completion_quality is used for stats, ignored in model for now if not in schema
+    # 🔥 关键修复: 调用 TaskService.complete_task() 而非直接操作数据库
+    # 这确保了 task.completed 事件被发布，从而触发 AdaptiveReplanner
+    actual_minutes = request.actual_minutes or task.estimated_minutes or 15
+    task = await TaskService.complete_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id,
+        actual_minutes=actual_minutes,
+        note=request.note
+    )
 
-    await db.commit()
-    await db.refresh(task)
-
-    plan_update_result = None
-    if task.plan_id:
-        from app.services.plan_service import PlanService
-        plan_update_result = await PlanService.update_progress(db, task.plan_id, task.user_id)
-
-    spark_result = None
-    if task.knowledge_node_id:
-        from app.services.galaxy_service import GalaxyService
-
-        galaxy_service = GalaxyService(db)
-        study_minutes = request.actual_minutes or task.estimated_minutes or 15
-
-        try:
-            spark_result = await galaxy_service.spark_node(
-                user_id=current_user.id,
-                node_id=task.knowledge_node_id,
-                study_minutes=study_minutes,
-                task_id=task.id,
-                trigger_expansion=True,
-            )
-            logger.info(
-                "Task {} completion triggered galaxy spark: node={}, new_mastery={}",
-                task_id,
-                task.knowledge_node_id,
-                spark_result.spark_event.new_mastery if spark_result and spark_result.spark_event else "N/A",
-            )
-        except Exception as e:
-            logger.error(f"Failed to spark node after task completion: {e}")
+    # 以下逻辑由 TaskService.complete() 已处理，无需重复:
+    # - plan_update (已包含在 TaskService.complete 中)
+    # - galaxy spark (已包含在 TaskService.complete 中)
+    # - task completion event (已发布)
 
     feedback = {}
     try:
@@ -334,17 +319,29 @@ async def complete_task(
     except Exception as e:
         logger.warning(f"Failed to generate feedback: {e}")
 
+    # 获取 galaxy update 信息 (TaskService.complete 中已执行 spark，这里查询结果)
     galaxy_update = None
-    if spark_result:
-        next_review_at = None
-        updated_status = spark_result.updated_status
-        if updated_status and getattr(updated_status, "next_review_at", None):
-            next_review_at = updated_status.next_review_at.isoformat()
-        galaxy_update = {
-            "node_id": str(task.knowledge_node_id),
-            "new_mastery": spark_result.spark_event.new_mastery if spark_result.spark_event else None,
-            "next_review_at": next_review_at,
-        }
+    if task.knowledge_node_id:
+        try:
+            from app.services.galaxy_service import GalaxyService
+            from app.models.knowledge import UserNodeStatus
+
+            galaxy_service = GalaxyService(db)
+            node_status = await db.execute(
+                select(UserNodeStatus).where(
+                    UserNodeStatus.user_id == current_user.id,
+                    UserNodeStatus.node_id == task.knowledge_node_id
+                )
+            )
+            status_obj = node_status.scalar_one_or_none()
+            if status_obj:
+                galaxy_update = {
+                    "node_id": str(task.knowledge_node_id),
+                    "new_mastery": status_obj.mastery_level,
+                    "next_review_at": status_obj.next_review_at.isoformat() if status_obj.next_review_at else None,
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get galaxy update: {e}")
 
     # Generate Next Steps
     next_actions = []
@@ -368,7 +365,7 @@ async def complete_task(
             user_id=str(current_user.id),
             event_type=AchievementEvent.TASK_COMPLETED,
             task_id=str(task.id),
-            actual_minutes=request.actual_minutes or task.estimated_minutes or 15,
+            actual_minutes=actual_minutes,
             estimated_minutes=task.estimated_minutes,
             difficulty=task.difficulty if hasattr(task, 'difficulty') else None,
         )
@@ -400,7 +397,7 @@ async def complete_task(
                 "streak_days": 7
             },
             "feedback": feedback.get("content"),
-            "plan_update": plan_update_result,
+            "plan_update": None,  # TaskService.complete 中已处理，无需重复返回
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
             "unlocked_achievements": unlocked_achievements,
         },
