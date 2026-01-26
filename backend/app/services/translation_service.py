@@ -131,8 +131,12 @@ class TranslationService:
 
         # 3. Translate each segment
         translated_segments = []
+        actual_provider = "llm"
+        actual_model = llm_service.chat_model
+        
         for segment in segments:
             try:
+                # _translate_segment will use Hunyuan if configured
                 result = await asyncio.wait_for(
                     self._translate_segment(
                         segment, source_lang, target_lang,
@@ -141,6 +145,11 @@ class TranslationService:
                     timeout=timeout
                 )
                 translated_segments.append(result)
+                
+                # Check if it used Hunyuan (heuristic: if key is set, we assume it's used or attempted)
+                if settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY:
+                    actual_provider = "hunyuan"
+                    actual_model = settings.HUNYUAN_TRANSLATE_MODEL
             except asyncio.TimeoutError:
                 logger.warning(f"Translation timeout for segment {segment.id}: {segment.text[:50]}...")
                 # Fallback: simple placeholder
@@ -162,8 +171,8 @@ class TranslationService:
         # 4. Store in cache
         result = TranslationResult(
             segments=translated_segments,
-            provider="llm",  # Or specific provider
-            model_id=llm_service.chat_model,
+            provider=actual_provider,
+            model_id=actual_model,
             cache_hit=False,
             latency_ms=int((time.time() - start_time) * 1000),
             recommendation=recommendation
