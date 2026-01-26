@@ -23,12 +23,12 @@ class PlanCreateScreen extends StatelessWidget {
               Icon(Icons.construction, size: 80, color: DS.brandPrimary),
               const SizedBox(height: DS.lg),
               Text(
-                '计划创建功能开发中',
+                '精彩功能即将登场',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: DS.sm),
               const Text(
-                '此功能正在开发中，即将推出',
+                '敬请期待~',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: DS.xl),

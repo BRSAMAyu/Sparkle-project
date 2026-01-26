@@ -173,11 +173,11 @@ class CustomErrorWidget extends StatelessWidget {
   String _getDefaultTitle() {
     switch (severity) {
       case ErrorSeverity.error:
-        return '出错了';
+        return '哎呀，出错了';
       case ErrorSeverity.warning:
-        return '警告';
+        return '温馨提示';
       case ErrorSeverity.info:
-        return '提示';
+        return '小提示';
     }
   }
 
@@ -359,8 +359,8 @@ class NetworkErrorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '网络连接失败',
-        message: '请检查您的网络连接后重试',
+        title: '网络好像断开啦',
+        message: '检查一下网络连接，再试试吧',
         icon: Icons.wifi_off_rounded,
         onRetry: onRetry,
       );
@@ -376,8 +376,8 @@ class NotFoundErrorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '页面不存在',
-        message: '抱歉，您访问的页面不存在或已被删除',
+        title: '迷路啦',
+        message: '这个页面好像不存在了，可能已经搬家了',
         icon: Icons.search_off_rounded,
         severity: ErrorSeverity.warning,
         actions: [
@@ -404,8 +404,8 @@ class ServerErrorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '服务器错误',
-        message: errorMessage ?? '服务器开小差了，请稍后重试',
+        title: '服务器正在打盹',
+        message: errorMessage ?? '服务器正在休息，请稍后再试吧',
         icon: Icons.cloud_off_rounded,
         onRetry: onRetry,
       );

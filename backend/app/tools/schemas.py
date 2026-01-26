@@ -182,3 +182,50 @@ class ModifyPlanTaskParams(BaseModel):
         None,
         description="执行指南内容 (Markdown)"
     )
+
+
+# ============ P0-4: 任务详情查询和跨计划查询参数 ============
+
+class GetTaskDetailsParams(BaseModel):
+    """获取任务完整详情的参数"""
+    task_id: str = Field(..., description="任务 ID (必填)")
+    include_guide: bool = Field(
+        default=True,
+        description="是否包含执行指南内容"
+    )
+    include_subtasks: bool = Field(
+        default=True,
+        description="是否包含子任务列表"
+    )
+    include_knowledge_context: bool = Field(
+        default=True,
+        description="是否包含关联的知识节点信息"
+    )
+    include_progress_history: bool = Field(
+        default=False,
+        description="是否包含任务执行历史（反馈记录等）"
+    )
+
+
+class QueryAllTasksParams(BaseModel):
+    """跨计划查询用户所有任务的参数"""
+    include_inactive_plans: bool = Field(
+        default=False,
+        description="是否包含非活跃计划的任务"
+    )
+    status_filter: TaskStatusFilter = Field(
+        default=TaskStatusFilter.PENDING,
+        description="任务状态筛选"
+    )
+    limit_per_plan: int = Field(
+        default=5,
+        description="每个计划返回的任务数量",
+        ge=1,
+        le=20
+    )
+    total_limit: int = Field(
+        default=30,
+        description="总返回数量限制",
+        ge=1,
+        le=100
+    )

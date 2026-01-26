@@ -12,8 +12,15 @@ from uuid import UUID
 from sqlalchemy import select, and_
 
 from .base import BaseTool, ToolCategory, ToolResult
-from .schemas import QueryPlanTasksParams, ModifyPlanTaskParams, TaskStatusFilter
+from .schemas import (
+    QueryPlanTasksParams,
+    ModifyPlanTaskParams,
+    TaskStatusFilter,
+    GetTaskDetailsParams,
+    QueryAllTasksParams,
+)
 from app.models.task import Task, TaskStatus as ModelTaskStatus, TaskType as ModelTaskType
+from app.models.plan import Plan, PlanStatus
 from app.services.task_service import TaskService
 from app.schemas.task import TaskUpdate
 
@@ -237,4 +244,376 @@ class ModifyPlanTaskTool(BaseTool):
                 tool_name=self.name,
                 error_message=str(e),
                 suggestion="修改失败，请稍后重试或检查参数",
+            )
+
+
+class GetTaskDetailsTool(BaseTool):
+    """获取任务完整详情 - 供LLM深入了解任务内容"""
+
+    name = "get_task_details"
+    description = """获取某个任务的完整详情，包括执行指南、子任务、关联知识节点等。
+    当需要了解任务具体内容、如何执行任务、或回答用户关于任务细节的问题时使用。
+    例如：
+    - "这个任务具体要做什么？"
+    - "任务的学习指南是什么？"
+    - "这个任务有哪些子任务？"
+    - "任务关联了哪些知识点？"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = GetTaskDetailsParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: GetTaskDetailsParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: Optional[str] = None,
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+            task_uuid = UUID(params.task_id)
+
+            # Fetch the task with relationships
+            task = await TaskService.get_by_id(db_session, task_uuid, user_uuid)
+            if not task:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message="任务不存在或无权访问",
+                    suggestion="请确认任务 ID 是否正确",
+                )
+
+            # Build comprehensive task details
+            details = {
+                "id": str(task.id),
+                "title": task.title,
+                "type": task.type.value,
+                "status": task.status.value,
+                "priority": task.priority,
+                "difficulty": task.difficulty,
+                "energy_cost": task.energy_cost,
+                "estimated_minutes": task.estimated_minutes,
+                "actual_minutes": task.actual_minutes,
+                "tags": task.tags or [],
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+                "started_at": task.started_at.isoformat() if task.started_at else None,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            }
+
+            # Include plan info if available
+            if task.plan_id:
+                details["plan_id"] = str(task.plan_id)
+                if task.plan:
+                    details["plan_title"] = task.plan.title
+
+            # Include guide content
+            if params.include_guide and task.guide_content:
+                details["guide_content"] = task.guide_content
+
+            # Include user notes
+            if task.user_note:
+                details["user_note"] = task.user_note
+
+            # Include subtasks
+            if params.include_subtasks:
+                subtasks = []
+                # Access subtasks relationship
+                subtask_query = select(Task.__table__).where(False)  # Placeholder
+                try:
+                    from app.models.task import SubTask
+                    subtask_result = await db_session.execute(
+                        select(SubTask)
+                        .where(SubTask.parent_task_id == task_uuid)
+                        .order_by(SubTask.order)
+                    )
+                    subtask_list = subtask_result.scalars().all()
+                    for st in subtask_list:
+                        subtasks.append({
+                            "id": str(st.id),
+                            "title": st.title,
+                            "description": st.description,
+                            "status": st.status.value,
+                            "order": st.order,
+                        })
+                except Exception:
+                    pass  # Subtasks not available
+
+                details["subtasks"] = subtasks
+                details["subtasks_total"] = task.subtasks_total
+                details["subtasks_completed"] = task.subtasks_completed
+
+            # Include knowledge context
+            if params.include_knowledge_context and task.knowledge_node_id:
+                details["knowledge_node_id"] = str(task.knowledge_node_id)
+                # Try to fetch knowledge node info
+                try:
+                    from app.models.knowledge_node import KnowledgeNode
+                    kn_result = await db_session.execute(
+                        select(KnowledgeNode).where(KnowledgeNode.id == task.knowledge_node_id)
+                    )
+                    kn = kn_result.scalar_one_or_none()
+                    if kn:
+                        details["knowledge_context"] = {
+                            "node_id": str(kn.id),
+                            "title": kn.title,
+                            "summary": kn.summary[:200] if kn.summary else None,
+                            "mastery_level": kn.mastery_level,
+                        }
+                except Exception:
+                    pass  # Knowledge node not available
+
+            # Include progress history (feedbacks)
+            if params.include_progress_history:
+                history = []
+                try:
+                    from app.models.task_feedback import TaskFeedback
+                    fb_result = await db_session.execute(
+                        select(TaskFeedback)
+                        .where(TaskFeedback.task_id == task_uuid)
+                        .order_by(TaskFeedback.created_at.desc())
+                        .limit(10)
+                    )
+                    fb_list = fb_result.scalars().all()
+                    for fb in fb_list:
+                        history.append({
+                            "id": str(fb.id),
+                            "category": fb.category,
+                            "feedback_text": fb.feedback_text,
+                            "completion_quality": fb.completion_quality,
+                            "created_at": fb.created_at.isoformat() if fb.created_at else None,
+                        })
+                except Exception:
+                    pass  # Feedbacks not available
+
+                details["progress_history"] = history
+
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data=details,
+                widget_type="task_detail",
+                widget_data=details,
+            )
+
+        except ValueError as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=f"无效的参数: {e}",
+                suggestion="请检查 task_id 是否为有效的 UUID 格式",
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="查询失败，请稍后重试",
+            )
+
+
+class QueryAllTasksTool(BaseTool):
+    """跨计划查询任务 - 帮助LLM了解用户全局任务情况"""
+
+    name = "query_all_tasks"
+    description = """跨计划查询用户所有任务，用于计划切换或全局任务感知。
+    当用户想了解所有任务情况、跨计划查看任务、或切换到其他计划时使用。
+    例如：
+    - "我还有哪些任务没完成？"
+    - "看看其他计划的任务"
+    - "我所有计划的待办任务"
+    - "帮我找找数学计划的任务"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = QueryAllTasksParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: QueryAllTasksParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: Optional[str] = None,
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+
+            # Build plan query
+            plan_query = select(Plan).where(
+                and_(
+                    Plan.user_id == user_uuid,
+                    Plan.deleted_at.is_(None),
+                )
+            )
+
+            # Filter by plan status if needed
+            if not params.include_inactive_plans:
+                plan_query = plan_query.where(
+                    Plan.status.in_([PlanStatus.ACTIVE, PlanStatus.IN_PROGRESS])
+                )
+
+            plan_query = plan_query.order_by(Plan.updated_at.desc())
+            plan_result = await db_session.execute(plan_query)
+            plans = plan_result.scalars().all()
+
+            if not plans:
+                return ToolResult(
+                    success=True,
+                    tool_name=self.name,
+                    data={"plan_count": 0, "task_count": 0},
+                    widget_type="task_overview",
+                    widget_data={
+                        "plans": [],
+                        "message": "暂无活跃计划",
+                    },
+                )
+
+            # Query tasks for each plan
+            plans_with_tasks = []
+            total_task_count = 0
+
+            for plan in plans:
+                if total_task_count >= params.total_limit:
+                    break
+
+                # Build task query for this plan
+                task_query = select(Task).where(
+                    and_(
+                        Task.user_id == user_uuid,
+                        Task.plan_id == plan.id,
+                        Task.deleted_at.is_(None),
+                    )
+                )
+
+                # Apply status filter
+                if params.status_filter != TaskStatusFilter.ALL:
+                    status_map = {
+                        TaskStatusFilter.PENDING: ModelTaskStatus.PENDING,
+                        TaskStatusFilter.IN_PROGRESS: ModelTaskStatus.IN_PROGRESS,
+                        TaskStatusFilter.COMPLETED: ModelTaskStatus.COMPLETED,
+                        TaskStatusFilter.ABANDONED: ModelTaskStatus.ABANDONED,
+                    }
+                    task_query = task_query.where(
+                        Task.status == status_map[params.status_filter]
+                    )
+
+                # Limit per plan
+                remaining = params.total_limit - total_task_count
+                limit = min(params.limit_per_plan, remaining)
+                task_query = task_query.order_by(
+                    Task.priority.desc(), Task.created_at.desc()
+                ).limit(limit)
+
+                task_result = await db_session.execute(task_query)
+                tasks = task_result.scalars().all()
+
+                if tasks:
+                    task_list = []
+                    for task in tasks:
+                        task_list.append({
+                            "id": str(task.id),
+                            "title": task.title,
+                            "type": task.type.value,
+                            "status": task.status.value,
+                            "priority": task.priority,
+                            "difficulty": task.difficulty,
+                            "estimated_minutes": task.estimated_minutes,
+                            "due_date": task.due_date.isoformat() if task.due_date else None,
+                        })
+
+                    plans_with_tasks.append({
+                        "plan_id": str(plan.id),
+                        "plan_title": plan.title,
+                        "plan_type": plan.type.value if plan.type else None,
+                        "plan_status": plan.status.value if plan.status else None,
+                        "task_count": len(task_list),
+                        "tasks": task_list,
+                    })
+
+                    total_task_count += len(task_list)
+
+            # Also query tasks without a plan (standalone tasks)
+            if total_task_count < params.total_limit:
+                standalone_query = select(Task).where(
+                    and_(
+                        Task.user_id == user_uuid,
+                        Task.plan_id.is_(None),
+                        Task.deleted_at.is_(None),
+                    )
+                )
+
+                if params.status_filter != TaskStatusFilter.ALL:
+                    status_map = {
+                        TaskStatusFilter.PENDING: ModelTaskStatus.PENDING,
+                        TaskStatusFilter.IN_PROGRESS: ModelTaskStatus.IN_PROGRESS,
+                        TaskStatusFilter.COMPLETED: ModelTaskStatus.COMPLETED,
+                        TaskStatusFilter.ABANDONED: ModelTaskStatus.ABANDONED,
+                    }
+                    standalone_query = standalone_query.where(
+                        Task.status == status_map[params.status_filter]
+                    )
+
+                remaining = params.total_limit - total_task_count
+                limit = min(params.limit_per_plan, remaining)
+                standalone_query = standalone_query.order_by(
+                    Task.priority.desc(), Task.created_at.desc()
+                ).limit(limit)
+
+                standalone_result = await db_session.execute(standalone_query)
+                standalone_tasks = standalone_result.scalars().all()
+
+                if standalone_tasks:
+                    task_list = []
+                    for task in standalone_tasks:
+                        task_list.append({
+                            "id": str(task.id),
+                            "title": task.title,
+                            "type": task.type.value,
+                            "status": task.status.value,
+                            "priority": task.priority,
+                            "difficulty": task.difficulty,
+                            "estimated_minutes": task.estimated_minutes,
+                            "due_date": task.due_date.isoformat() if task.due_date else None,
+                        })
+
+                    plans_with_tasks.append({
+                        "plan_id": None,
+                        "plan_title": "独立任务",
+                        "plan_type": None,
+                        "plan_status": None,
+                        "task_count": len(task_list),
+                        "tasks": task_list,
+                    })
+
+                    total_task_count += len(task_list)
+
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={
+                    "plan_count": len(plans_with_tasks),
+                    "task_count": total_task_count,
+                },
+                widget_type="task_overview",
+                widget_data={
+                    "plans": plans_with_tasks,
+                    "status_filter": params.status_filter.value,
+                    "total_tasks": total_task_count,
+                },
+            )
+
+        except ValueError as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=f"无效的参数: {e}",
+                suggestion="请检查参数格式",
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="查询失败，请稍后重试",
             )

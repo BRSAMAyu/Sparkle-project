@@ -1849,6 +1849,11 @@ class ChatOrchestrator:
                         "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
                     }
 
+                    # P0: Add sprint mode switch notification
+                    if route_decision and "sprint" in route_decision.reason.lower():
+                        response_metadata["switch_to_sprint"] = True
+                        logger.info("Sprint mode switch notification added to response")
+
                     # P0: Add plan switch notification to metadata
                     if plan_switched and plan_id:
                         response_metadata["plan_switched"] = True
