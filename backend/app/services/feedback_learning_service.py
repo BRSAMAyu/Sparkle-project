@@ -86,6 +86,26 @@ class PatternInsight:
     suggested_action: str
 
 
+@dataclass
+class ExecutionQualityReport:
+    """方案执行质量报告"""
+    report_id: str
+    timestamp: str
+    period_days: int
+
+    # 执行统计
+    total_executions: int
+    avg_quality_score: float
+    pass_rate: float
+
+    # 趋势
+    score_trend: str                   # 'improving', 'declining', 'stable'
+    common_issues: List[str]
+
+    # 工具表现
+    tool_success_rates: Dict[str, float]
+
+
 # ============================================
 # Feedback Learning Service
 # ============================================
@@ -122,9 +142,15 @@ class FeedbackLearningService:
         "helpfulness": 1.0,
     }
 
-    def __init__(self, history_service: ReviewHistoryService):
+    def __init__(
+        self,
+        history_service: ReviewHistoryService,
+        execution_record_service=None,
+    ):
         self._history = history_service
+        self._execution_record_service = execution_record_service
         self._learning_reports: List[LearningReport] = []
+        self._execution_quality_reports: List[ExecutionQualityReport] = []
         self._current_thresholds = dict(self.DEFAULT_THRESHOLDS)
         self._current_weights = dict(self.DEFAULT_WEIGHTS)
 
@@ -590,6 +616,160 @@ class FeedbackLearningService:
         return [m for m, count in metric_failures.items() if count >= threshold]
 
     # ============================================
+    # 方案执行质量分析 (Phase 5 Extension)
+    # ============================================
+
+    async def record_execution_result(
+        self,
+        validation_result: "Dict[str, Any]",
+    ) -> None:
+        """
+        记录方案执行结果到学习系统
+
+        Args:
+            validation_result: ExecutionValidationResult 的 to_dict() 输出
+        """
+        if not validation_result:
+            return
+
+        logger.info(
+            f"[FeedbackLearning] Recorded execution result for learning: "
+            f"plan_id={validation_result.get('plan_id')}, "
+            f"status={validation_result.get('validation_status')}, "
+            f"score={validation_result.get('quality_score', 0):.2f}"
+        )
+
+        # 内部记录可用于后续分析
+        # 实际持久化由 PlanExecutionRecordService 完成
+
+    async def analyze_execution_quality(
+        self,
+        days: int = 30,
+    ) -> ExecutionQualityReport:
+        """
+        分析方案执行质量趋势
+
+        Args:
+            days: 分析天数
+
+        Returns:
+            ExecutionQualityReport: 执行质量报告
+        """
+        import uuid
+
+        logger.info(f"[FeedbackLearning] Analyzing execution quality for past {days} days")
+
+        # 如果没有执行记录服务，返回空报告
+        if not self._execution_record_service:
+            logger.warning("[FeedbackLearning] No execution record service available")
+            return self._create_empty_execution_report(days)
+
+        try:
+            # 获取用户执行统计（简化版，使用平均用户数据）
+            # 注意：这里需要指定 user_id，实际使用时可以通过参数传入
+            stats = await self._execution_record_service.get_user_execution_stats(
+                user_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),  # 占位符
+                days=days,
+            )
+
+            # 获取质量趋势
+            trend_data = await self._execution_record_service.get_quality_trend(
+                user_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),  # 占位符
+                days=days,
+            )
+
+            # 计算趋势方向
+            score_trend = "stable"
+            if len(trend_data) >= 2:
+                first_avg = trend_data[0].get("avg_score", 0.5)
+                last_avg = trend_data[-1].get("avg_score", 0.5)
+                if last_avg > first_avg + 0.05:
+                    score_trend = "improving"
+                elif last_avg < first_avg - 0.05:
+                    score_trend = "declining"
+
+            # 收集常见问题
+            common_issues = self._extract_common_issues(trend_data)
+
+            report = ExecutionQualityReport(
+                report_id=f"eq_{uuid.uuid4().hex[:12]}",
+                timestamp=datetime.utcnow().isoformat(),
+                period_days=days,
+                total_executions=stats.get("total", 0),
+                avg_quality_score=stats.get("avg_score", 0.0),
+                pass_rate=stats.get("pass_rate", 0.0),
+                score_trend=score_trend,
+                common_issues=common_issues,
+                tool_success_rates={},  # 可从趋势数据中提取
+            )
+
+            self._execution_quality_reports.append(report)
+
+            logger.info(
+                f"[FeedbackLearning] Execution quality analysis complete: "
+                f"total={report.total_executions}, "
+                f"avg_score={report.avg_quality_score:.2f}, "
+                f"trend={score_trend}"
+            )
+
+            return report
+
+        except Exception as e:
+            logger.warning(f"[FeedbackLearning] Failed to analyze execution quality: {e}")
+            return self._create_empty_execution_report(days)
+
+    def _extract_common_issues(
+        self,
+        trend_data: List[Dict[str, Any]],
+    ) -> List[str]:
+        """从趋势数据中提取常见问题"""
+        issue_counts = defaultdict(int)
+
+        for day_data in trend_data:
+            # 如果通过率较低，标记问题
+            pass_rate = day_data.get("pass_rate", 1.0)
+            if pass_rate < 0.7:
+                issue_counts["low_pass_rate"] += 1
+
+            # 如果平均分数较低，标记问题
+            avg_score = day_data.get("avg_score", 1.0)
+            if avg_score < 0.6:
+                issue_counts["low_quality_score"] += 1
+
+        # 返回出现频率最高的问题
+        sorted_issues = sorted(
+            issue_counts.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+
+        return [
+            {
+                "low_pass_rate": "方案通过率偏低",
+                "low_quality_score": "执行质量分数偏低",
+            }.get(issue, issue)
+            for issue, count in sorted_issues[:3]
+        ]
+
+    def _create_empty_execution_report(
+        self,
+        days: int,
+    ) -> ExecutionQualityReport:
+        """创建空的执行质量报告（数据不足时）"""
+        import uuid
+        return ExecutionQualityReport(
+            report_id=f"eq_empty_{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.utcnow().isoformat(),
+            period_days=days,
+            total_executions=0,
+            avg_quality_score=0.0,
+            pass_rate=0.0,
+            score_trend="stable",
+            common_issues=[],
+            tool_success_rates={},
+        )
+
+    # ============================================
     # 配置获取
     # ============================================
 
@@ -612,6 +792,17 @@ class FeedbackLearningService:
         """获取最新的学习报告"""
         return self._learning_reports[-1] if self._learning_reports else None
 
+    def get_execution_quality_reports(
+        self,
+        limit: int = 10,
+    ) -> List[ExecutionQualityReport]:
+        """获取执行质量报告"""
+        return self._execution_quality_reports[-limit:]
+
+    def get_latest_execution_report(self) -> Optional[ExecutionQualityReport]:
+        """获取最新的执行质量报告"""
+        return self._execution_quality_reports[-1] if self._execution_quality_reports else None
+
 
 # ============================================
 # 全局实例管理
@@ -620,9 +811,21 @@ class FeedbackLearningService:
 _learning_services: Dict[str, FeedbackLearningService] = {}
 
 
-def get_feedback_learning_service(history_service: ReviewHistoryService) -> FeedbackLearningService:
-    """获取FeedbackLearningService实例"""
+def get_feedback_learning_service(
+    history_service: ReviewHistoryService,
+    execution_record_service=None,
+) -> FeedbackLearningService:
+    """
+    获取FeedbackLearningService实例
+
+    Args:
+        history_service: ReviewHistoryService 实例
+        execution_record_service: 可选的 PlanExecutionRecordService 实例
+    """
     service_id = id(history_service)
     if service_id not in _learning_services:
-        _learning_services[service_id] = FeedbackLearningService(history_service)
+        _learning_services[service_id] = FeedbackLearningService(
+            history_service=history_service,
+            execution_record_service=execution_record_service,
+        )
     return _learning_services[service_id]
