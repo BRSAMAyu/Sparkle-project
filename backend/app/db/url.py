@@ -18,7 +18,8 @@ def to_async_database_url(url: str) -> str:
     elif driver == "sqlite":
         driver = "sqlite+aiosqlite"
 
-    return str(parsed.set(drivername=driver))
+    # Ensure password is included (not masked)
+    return parsed.set(drivername=driver).render_as_string(hide_password=False)
 
 
 def to_sync_database_url(url: str) -> str:
@@ -34,4 +35,5 @@ def to_sync_database_url(url: str) -> str:
     elif driver == "sqlite+aiosqlite":
         driver = "sqlite"
 
-    return str(parsed.set(drivername=driver))
+    # Ensure password is included (not masked)
+    return parsed.set(drivername=driver).render_as_string(hide_password=False)

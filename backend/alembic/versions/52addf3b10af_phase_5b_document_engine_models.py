@@ -14,7 +14,7 @@ import app.models.base
 
 # revision identifiers, used by Alembic.
 revision: str = '52addf3b10af'
-down_revision: Union[str, None] = 'p16_add_nightly_review_feedback'
+down_revision: Union[str, None] = '2b9590b2b29d'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
