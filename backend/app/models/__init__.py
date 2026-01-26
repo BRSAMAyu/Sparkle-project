@@ -5,7 +5,7 @@ Models Package
 from app.models.base import BaseModel, GUID
 from app.models.user import User, PushPreference, UserDevice
 from app.models.task import Task, TaskType, TaskStatus
-from app.models.plan import Plan, PlanType
+from app.models.plan import Plan, PlanType, PlanStage
 from app.models.chat import ChatMessage, MessageRole
 from app.models.user import User
 from app.models.audit_log import SecurityAuditLog, DataAccessLog, ComplianceCheckLog, SystemConfigChangeLog
@@ -91,6 +91,7 @@ from app.models.achievement import (
 )
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink, TaskResourceType
 from app.models.next_action_selection import NextActionSelection
 from app.models.review_system import (
     ReviewHistory,
@@ -113,6 +114,7 @@ __all__ = [
     "TaskStatus",
     "Plan",
     "PlanType",
+    "PlanStage",
     "ChatMessage",
     "MessageRole",
     "ErrorRecord",
@@ -228,6 +230,9 @@ __all__ = [
     # Task Feedback
     "TaskFeedback",
     "TaskFeedbackCategory",
+    "TaskResourceLink",
+    "TaskKnowledgeLink",
+    "TaskResourceType",
     # Next Action Selection
     "NextActionSelection",
     # Review System

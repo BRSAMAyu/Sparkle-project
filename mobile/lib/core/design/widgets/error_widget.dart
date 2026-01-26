@@ -381,6 +381,9 @@ class NetworkErrorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
     return CustomErrorWidget.page(
       message: l10n.errorConnectionFailed,
       context: context,
@@ -401,6 +404,9 @@ class NotFoundErrorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
     return CustomErrorWidget.page(
       message: l10n.errorNotFound,
       context: context,
@@ -432,6 +438,9 @@ class ServerErrorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
     return CustomErrorWidget.page(
       message: errorMessage ?? l10n.errorServerIssue,
       context: context,

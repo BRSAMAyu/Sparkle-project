@@ -3,7 +3,7 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse, urlunparse, quote
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator, Field, AliasChoices
@@ -335,6 +335,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 52428800  # 50MB
 
+    # MDX Dictionary Configuration
+    MDX_DICTIONARY_ENABLED: bool = True
+    MDX_DICTIONARY_PATH: str = ""
+    MDD_RESOURCES_PATH: Optional[str] = None
+
     # Internal API
     INTERNAL_API_KEY: str = ""
     GATEWAY_INTERNAL_URL: str = ""
@@ -353,6 +358,9 @@ class Settings(BaseSettings):
 
     # Idempotency Store
     IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
+
+    # Translation Service
+    TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation
 
     # gRPC Server
     GRPC_PORT: int = 50051

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 计划创建屏幕 - 占位页面
@@ -11,6 +12,11 @@ class PlanCreateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(planType == 'growth' ? l10n.createGrowthPlan : l10n.createSprintPlan),

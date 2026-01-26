@@ -26,6 +26,14 @@ class PlanPriority(str, enum.Enum):
     LOW = "low"            # 低优先级
 
 
+class PlanStage(str, enum.Enum):
+    """计划阶段枚举"""
+    SPRINT = "sprint"
+    DAILY = "daily"
+    REVIEW = "review"
+    PAUSED = "paused"
+
+
 class Plan(BaseModel):
     """
     计划模型
@@ -57,6 +65,14 @@ class Plan(BaseModel):
     name = Column(String(255), nullable=False)
     type = Column(Enum(PlanType), nullable=False)
     description = Column(Text, nullable=True)
+
+    # 计划阶段
+    plan_stage = Column(
+        Enum(PlanStage),
+        nullable=False,
+        default=PlanStage.DAILY,
+        index=True
+    )
 
     # 时间相关
     target_date = Column(Date, nullable=True)  # 冲刺计划的目标日期
@@ -102,5 +118,6 @@ Index("idx_plans_type", Plan.type)
 Index("idx_plans_target_date", Plan.target_date)
 Index("idx_plans_priority", Plan.priority)
 Index("idx_plans_is_primary", Plan.is_primary)
+Index("idx_plans_stage", Plan.plan_stage)
 # 复合索引：用户活跃计划查询优化
 Index("idx_plans_user_active", Plan.user_id, Plan.is_active)

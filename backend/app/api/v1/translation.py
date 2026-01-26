@@ -1,14 +1,13 @@
 """
 翻译 API
-Translation API - 使用混元模型进行多语言翻译
+Translation API - 使用统一翻译工具进行多语言翻译
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user_id
-from app.tools.focus_tools import HunyuanTranslateTool
-from app.tools.schemas import TranslateParams
+from app.tools.translation_tool import TranslateTextTool, _normalize_language_code
 
 router = APIRouter()
 
@@ -37,7 +36,7 @@ async def translate_text(
     user_id: str = Depends(get_current_user_id),
 ):
     """
-    使用混元 MT 模型进行文本翻译
+    使用统一翻译工具进行文本翻译
 
     - **text**: 需要翻译的文本（最多5000字符）
     - **target_language**: 目标语言（如：中文、English、日本語）
@@ -49,13 +48,13 @@ async def translate_text(
     """
     try:
         # 创建翻译工具实例
-        tool = HunyuanTranslateTool()
+        tool = TranslateTextTool()
 
-        # 创建参数
-        params = TranslateParams(
+        # 创建参数（工具已支持自然语言，内部会自动映射）
+        params = tool.parameters_schema(
             text=request.text,
-            target_language=request.target_language,
-            source_language=request.source_language,
+            target_lang=request.target_language,
+            source_lang=request.source_language,
         )
 
         # 执行翻译（不需要 db_session，翻译工具不使用数据库）
@@ -68,10 +67,10 @@ async def translate_text(
         if result.success:
             return TranslateResponse(
                 success=True,
-                original_text=result.data.get("original_text", request.text),
-                translated_text=result.data.get("translated_text"),
-                source_language=result.data.get("source_language", request.source_language),
-                target_language=result.data.get("target_language", request.target_language),
+                original_text=result.data.get("source_text", request.text),
+                translated_text=result.data.get("translation"),
+                source_language=result.data.get("source_lang", request.source_language),
+                target_language=result.data.get("target_lang", request.target_language),
             )
         else:
             return TranslateResponse(

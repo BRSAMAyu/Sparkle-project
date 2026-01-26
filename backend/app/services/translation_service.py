@@ -230,7 +230,7 @@ class TranslationService:
         style: str,
         glossary_terms: List[Dict[str, str]]
     ) -> TranslatedSegment:
-        """Translate a single segment using LLM"""
+        """使用混元模型翻译，fallback 到通用 LLM"""
 
         # Build prompt with glossary
         glossary_text = ""
@@ -248,13 +248,31 @@ Text: {segment.text}
 
 Output ONLY the translation, no explanations."""
 
-        # Call LLM service
-        response = await llm_service.chat(
-            messages=[{"role": "user", "content": prompt}],
-            model=llm_service.chat_model  # Fast model
-        )
+        # 优先使用混元模型
+        try:
+            from openai import AsyncOpenAI
 
-        translation = response.strip()
+            if settings.HUNYUAN_API_KEY:
+                hunyuan_client = AsyncOpenAI(
+                    api_key=settings.HUNYUAN_API_KEY,
+                    base_url=settings.HUNYUAN_BASE_URL
+                )
+                response = await hunyuan_client.chat.completions.create(
+                    model=settings.HUNYUAN_TRANSLATE_MODEL,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3
+                )
+                translation = response.choices[0].message.content.strip()
+            else:
+                raise ValueError("Hunyuan API key not configured")
+        except Exception as e:
+            logger.warning(f"Hunyuan translation failed, using fallback: {e}")
+            # Fallback 到通用 LLM
+            response = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                model=llm_service.chat_model
+            )
+            translation = response.strip()
 
         # Extract terminology notes (simple heuristic)
         notes = []

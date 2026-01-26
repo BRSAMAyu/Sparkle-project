@@ -21,6 +21,7 @@ from .schemas import (
 )
 from app.models.task import Task, TaskStatus as ModelTaskStatus, TaskType as ModelTaskType
 from app.models.plan import Plan
+from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink, TaskResourceType
 from app.services.task_service import TaskService
 from app.schemas.task import TaskUpdate
 
@@ -347,7 +348,7 @@ class GetTaskDetailsTool(BaseTool):
                 details["knowledge_node_id"] = str(task.knowledge_node_id)
                 # Try to fetch knowledge node info
                 try:
-                    from app.models.knowledge_node import KnowledgeNode
+                    from app.models.galaxy import KnowledgeNode
                     kn_result = await db_session.execute(
                         select(KnowledgeNode).where(KnowledgeNode.id == task.knowledge_node_id)
                     )
@@ -355,12 +356,136 @@ class GetTaskDetailsTool(BaseTool):
                     if kn:
                         details["knowledge_context"] = {
                             "node_id": str(kn.id),
-                            "title": kn.title,
-                            "summary": kn.summary[:200] if kn.summary else None,
-                            "mastery_level": kn.mastery_level,
+                            "title": kn.name,
+                            "summary": kn.description[:200] if kn.description else None,
+                            "mastery_level": None,
                         }
                 except Exception:
                     pass  # Knowledge node not available
+
+            if params.include_knowledge_context:
+                related_nodes = []
+                try:
+                    from app.models.galaxy import KnowledgeNode
+                    link_result = await db_session.execute(
+                        select(TaskKnowledgeLink, KnowledgeNode)
+                        .join(KnowledgeNode, TaskKnowledgeLink.knowledge_node_id == KnowledgeNode.id)
+                        .where(TaskKnowledgeLink.task_id == task_uuid)
+                        .order_by(TaskKnowledgeLink.order_index.asc())
+                    )
+                    link_rows = link_result.all()
+                    for link, node in link_rows:
+                        related_nodes.append(
+                            {
+                                "node_id": str(node.id),
+                                "title": node.name,
+                                "summary": node.description[:200] if node.description else None,
+                                "relation_type": link.relation_type,
+                                "strength": link.strength,
+                                "is_primary": link.is_primary,
+                            }
+                        )
+                except Exception:
+                    related_nodes = []
+
+                if task.knowledge_node_id and all(
+                    n.get("node_id") != str(task.knowledge_node_id) for n in related_nodes
+                ):
+                    related_nodes.insert(
+                        0,
+                        {
+                            "node_id": str(task.knowledge_node_id),
+                            "title": details.get("knowledge_context", {}).get("title"),
+                            "summary": details.get("knowledge_context", {}).get("summary"),
+                            "relation_type": "primary",
+                            "strength": None,
+                            "is_primary": True,
+                        },
+                    )
+
+                details["related_knowledge_nodes"] = related_nodes
+
+            if params.include_learning_resources:
+                learning_resources = []
+                try:
+                    link_result = await db_session.execute(
+                        select(TaskResourceLink)
+                        .where(TaskResourceLink.task_id == task_uuid)
+                        .order_by(TaskResourceLink.order_index.asc())
+                    )
+                    links = link_result.scalars().all()
+
+                    seed_item_ids = [
+                        link.resource_id
+                        for link in links
+                        if link.resource_type == TaskResourceType.SEED_ITEM.value and link.resource_id
+                    ]
+                    seed_library_ids = [
+                        link.resource_id
+                        for link in links
+                        if link.resource_type == TaskResourceType.SEED_LIBRARY.value and link.resource_id
+                    ]
+
+                    seed_items_by_id = {}
+                    seed_libraries_by_id = {}
+
+                    if seed_item_ids:
+                        from app.models.seed_content import SeedItem
+                        seed_items = await db_session.execute(
+                            select(SeedItem).where(SeedItem.id.in_(seed_item_ids))
+                        )
+                        seed_items_by_id = {item.id: item for item in seed_items.scalars().all()}
+
+                    if seed_library_ids:
+                        from app.models.seed_content import SeedLibrary
+                        seed_libs = await db_session.execute(
+                            select(SeedLibrary).where(SeedLibrary.id.in_(seed_library_ids))
+                        )
+                        seed_libraries_by_id = {lib.id: lib for lib in seed_libs.scalars().all()}
+
+                    for link in links:
+                        resource = {
+                            "id": str(link.id),
+                            "resource_type": link.resource_type,
+                            "resource_id": str(link.resource_id) if link.resource_id else None,
+                            "title": link.title,
+                            "summary": link.summary,
+                            "url": link.url,
+                            "metadata": link.resource_metadata,
+                            "order_index": link.order_index,
+                            "is_primary": link.is_primary,
+                        }
+
+                        if link.resource_type == TaskResourceType.SEED_ITEM.value and link.resource_id:
+                            seed_item = seed_items_by_id.get(link.resource_id)
+                            if seed_item:
+                                summary = seed_item.content
+                                if summary and len(summary) > 300:
+                                    summary = summary[:300]
+                                resource.update(
+                                    {
+                                        "title": resource["title"] or seed_item.title,
+                                        "summary": resource["summary"] or summary,
+                                        "seed_item_type": seed_item.item_type,
+                                    }
+                                )
+                        elif link.resource_type == TaskResourceType.SEED_LIBRARY.value and link.resource_id:
+                            seed_lib = seed_libraries_by_id.get(link.resource_id)
+                            if seed_lib:
+                                resource.update(
+                                    {
+                                        "title": resource["title"] or seed_lib.name,
+                                        "summary": resource["summary"] or seed_lib.description,
+                                        "seed_library_category": seed_lib.category,
+                                        "seed_library_visibility": seed_lib.visibility,
+                                    }
+                                )
+
+                        learning_resources.append(resource)
+                except Exception:
+                    learning_resources = []
+
+                details["learning_resources"] = learning_resources
 
             # Include progress history (feedbacks)
             if params.include_progress_history:

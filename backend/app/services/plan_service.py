@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
-from app.models.plan import Plan, PlanPriority
+from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
 
@@ -66,6 +66,7 @@ class PlanService:
             user_id=user_id,
             name=obj_in.name,
             type=obj_in.type,
+            plan_stage=obj_in.plan_stage or PlanStage.DAILY,
             description=obj_in.description,
             subject=obj_in.subject,
             target_date=obj_in.target_date,

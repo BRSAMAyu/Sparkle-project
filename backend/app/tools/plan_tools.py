@@ -11,7 +11,7 @@ from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
-from app.models.plan import PlanType as ModelPlanType
+from app.models.plan import PlanType as ModelPlanType, PlanStage as ModelPlanStage
 from app.models.task import TaskType as ModelTaskType
 
 
@@ -33,10 +33,14 @@ class CreatePlanTool(BaseTool):
         try:
             user_uuid = UUID(user_id)
             plan_type = ModelPlanType(params.plan_type.value)
+            plan_stage = None
+            if params.plan_stage:
+                plan_stage = ModelPlanStage(params.plan_stage.value)
 
             plan_create = PlanCreate(
                 name=params.title,
                 type=plan_type,
+                plan_stage=plan_stage,
                 description=params.description,
                 subject=params.subject_id,
                 target_date=params.target_date.date() if params.target_date else None,
@@ -58,6 +62,7 @@ class CreatePlanTool(BaseTool):
                     "id": str(plan.id),
                     "title": plan.name,
                     "type": plan.type.value,
+                    "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
                     "description": plan.description,
                     "target_date": plan.target_date.isoformat() if plan.target_date else None,
                     "target_mastery": params.target_mastery,
