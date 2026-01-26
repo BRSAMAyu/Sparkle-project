@@ -201,24 +201,63 @@ class IntentTypeMetadata {
 }
 
 /// Result from intent execution
+///
+/// Matches backend IntentExecuteResponse structure:
+/// - success: bool
+/// - results: List<Dict>
+/// - errors: List[str] (not error_message)
+/// - total_time: float
 class IntentExecuteResult {
   const IntentExecuteResult({
     required this.success,
     this.results,
-    this.errorMessage,
+    this.errors,
+    this.totalTime,
   });
 
   factory IntentExecuteResult.fromJson(Map<String, dynamic> json) {
     return IntentExecuteResult(
       success: json['success'] as bool? ?? false,
       results: json['results'] as List<dynamic>?,
-      errorMessage: json['error_message'] as String?,
+      errors: (json['errors'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+      totalTime: (json['total_time'] as num?)?.toDouble(),
     );
   }
 
+  /// Whether execution was successful
   final bool success;
+
+  /// Individual intent execution results
   final List<dynamic>? results;
-  final String? errorMessage;
+
+  /// Error messages (may be multiple)
+  final List<String>? errors;
+
+  /// Total execution time in seconds
+  final double? totalTime;
+
+  /// Convenience getter for first error message
+  String? get errorMessage {
+    if (errors == null || errors!.isEmpty) return null;
+    return errors!.first;
+  }
+
+  /// All error messages joined by semicolon
+  String? get errorMessages {
+    if (errors == null || errors!.isEmpty) return null;
+    return errors!.join('; ');
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      if (results != null) 'results': results,
+      if (errors != null) 'errors': errors,
+      if (totalTime != null) 'total_time': totalTime,
+    };
+  }
 }
 
 /// Response from analyze-and-execute endpoint

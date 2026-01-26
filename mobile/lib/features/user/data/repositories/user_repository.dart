@@ -164,6 +164,31 @@ class UserRepository {
       },
     );
   }
+
+  Future<Map<String, dynamic>> fetchUserSettings() async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        "transparency_level": 0,
+        "system_update_level": 1,
+      };
+    }
+    final response = await _apiClient.get<Map<String, dynamic>>('/user/settings');
+    final payload = response.data;
+    if (payload == null) {
+      throw Exception('Failed to load user settings');
+    }
+    return payload;
+  }
+
+  Future<void> updateUserSettings(Map<String, dynamic> payload) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+    await _apiClient.post<Map<String, dynamic>>(
+      '/user/settings',
+      data: payload,
+    );
+  }
 }
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {

@@ -8,6 +8,11 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
+from sqlalchemy import select
+
+from app.core.cache import cache_service
+from app.models.task import Task
+from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.cognitive_service import CognitiveService
 from app.db.session import AsyncSessionLocal
 
@@ -89,6 +94,25 @@ class TaskEventConsumer:
                     )
                     logger.info(f"Created time estimation fragment for user {user_id}")
 
+                plan_id = event.get("plan_id")
+                if not plan_id or plan_id == "None":
+                    result = await db.execute(
+                        select(Task.plan_id).where(
+                            Task.id == task_id,
+                            Task.user_id == user_id,
+                        )
+                    )
+                    plan_id = result.scalar_one_or_none()
+
+                if plan_id:
+                    adaptive_replanner = AdaptiveReplanner(db, cache_service.redis)
+                    await adaptive_replanner.on_task_completed(
+                        user_id=user_id,
+                        plan_id=UUID(str(plan_id)),
+                        task_id=task_id,
+                        completion_rate=completion_rate,
+                    )
+
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")
 
@@ -126,4 +150,3 @@ class TaskEventConsumer:
     def stop(self):
         """停止消费者"""
         self._running = False
-

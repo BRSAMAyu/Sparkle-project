@@ -434,19 +434,40 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     setState(() => _isExecuting = true);
 
     try {
-      // TODO: Call actual execution API
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      final repository = ref.read(intentRepositoryProvider);
+      final response = await repository.analyzeAndExecute(
+        widget.message,
+        autoExecute: true, // 用户已确认，直接执行
+      );
 
       if (mounted) {
+        // 先关闭弹窗
         Navigator.of(context).pop(true);
-        widget.onConfirm();
+
+        final result = response.executionResult;
+        if (result?.success == true) {
+          // 执行成功，调用确认回调
+          widget.onConfirm();
+        } else {
+          // 执行失败，显示错误
+          final errorMsg = result?.errorMessages ?? '执行失败，请重试';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
-      setState(() => _isExecuting = false);
-
       if (mounted) {
+        // 错误时也关闭弹窗
+        Navigator.of(context).pop(false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('执行失败: $e')),
+          SnackBar(
+            content: Text('执行失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

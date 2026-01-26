@@ -20,6 +20,7 @@ from app.services.analytics.behavior_pattern_decay_service import BehaviorPatter
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 from loguru import logger
 
 
@@ -47,15 +48,52 @@ class MemoryJobsService:
         try:
             users = await self._get_active_users()
             totals = {"preferences": 0, "goals": 0, "episodic": 0}
+            missing_totals = {"preferences": 0, "goals": 0, "episodic": 0}
             service = EvidenceHealthService(self.db)
             for user in users:
-                counts = await service.run_health_check(user.id, limit=limit_per_type)
+                summary = await service.run_health_check(user.id, limit=limit_per_type)
+                checked = summary.get("checked", {})
+                missing = summary.get("missing", {})
+                checked_total = sum(checked.values())
+                missing_total = sum(missing.values())
+
                 for key in totals:
-                    totals[key] += counts.get(key, 0)
+                    totals[key] += checked.get(key, 0)
+                    missing_totals[key] += missing.get(key, 0)
+
+                if checked_total > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="memory_health_report",
+                            category="memory",
+                            title="记忆健康检查完成",
+                            description=f"已核对 {checked_total} 条记忆记录，整体状态已更新。",
+                            priority="low",
+                            metadata={
+                                "checked": checked,
+                                "missing": missing,
+                            },
+                        ),
+                    )
+                if missing_total > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="memory_evidence_missing",
+                            category="memory",
+                            title="发现需要补全的记忆证据",
+                            description=f"有 {missing_total} 条记忆证据暂时缺失，已记录并安排修复。",
+                            priority="low",
+                            metadata={
+                                "missing": missing,
+                            },
+                        ),
+                    )
 
             await self._update_missing_gauges()
             MEMORY_JOB_RUNS_TOTAL.labels(job="evidence_health", status="ok").inc()
-            summary = {"users": len(users), "counts": totals}
+            summary = {"users": len(users), "counts": totals, "missing": missing_totals}
             logger.info("Memory evidence health job completed users={users} counts={counts}", **summary)
             return self._record_status("evidence_health", "ok", summary)
         except Exception as exc:
@@ -67,21 +105,68 @@ class MemoryJobsService:
         logger.info("Memory decay job started user_id={user_id} window_days={window}", user_id=user_id, window=window_days)
         try:
             users = await self._get_active_users(user_id)
-            behavior_updated = 0
+            behavior_summary: Dict[UUID, Dict[str, int]] = {}
             if settings.ENABLE_BEHAVIOR_DECAY:
                 decay_service = BehaviorPatternDecayService(self.db)
                 for user in users:
-                    behavior_updated += await decay_service.apply_decay(user.id, window_days=window_days)
+                    behavior_summary[user.id] = await decay_service.apply_decay(
+                        user.id,
+                        window_days=window_days,
+                    )
 
-            episodic_updated = 0
+            episodic_summary: Dict[UUID, int] = {}
             if settings.ENABLE_MEMORY_DECAY:
-                episodic_updated = await self._apply_episodic_decay(users, window_days)
+                episodic_summary = await self._apply_episodic_decay(users, window_days)
+
+            for user in users:
+                behavior = behavior_summary.get(user.id, {})
+                behavior_updated = behavior.get("updated", 0)
+                behavior_archived = behavior.get("archived", 0)
+                behavior_decayed = max(0, behavior_updated - behavior_archived)
+                if behavior_decayed > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="behavior_pattern_decayed",
+                            category="cognitive",
+                            title="行为模式已做轻微调整",
+                            description=f"我们对 {behavior_decayed} 个行为模式做了轻微调整，让画像更贴近你。",
+                            priority="low",
+                            metadata={"count": behavior_decayed},
+                        ),
+                    )
+                if behavior_archived > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="behavior_pattern_archived",
+                            category="cognitive",
+                            title="行为模式已归档",
+                            description=f"已将 {behavior_archived} 个低置信度模式归档，减少不必要的干扰。",
+                            priority="medium",
+                            metadata={"count": behavior_archived},
+                        ),
+                    )
+                episodic_updated = episodic_summary.get(user.id, 0)
+                if episodic_updated > 0:
+                    await SystemUpdateService().enqueue(
+                        user.id,
+                        build_system_update(
+                            update_type="memory_decay_applied",
+                            category="memory",
+                            title="记忆重要性已自动调整",
+                            description=f"随时间推移，有 {episodic_updated} 条记忆的重要性已自动调整。",
+                            priority="low",
+                            metadata={"count": episodic_updated},
+                        ),
+                    )
 
             MEMORY_JOB_RUNS_TOTAL.labels(job="decay", status="ok").inc()
             summary = {
                 "users": len(users),
-                "behavior_patterns": behavior_updated,
-                "episodic": episodic_updated,
+                "behavior_patterns": sum(item.get("updated", 0) for item in behavior_summary.values()),
+                "behavior_archived": sum(item.get("archived", 0) for item in behavior_summary.values()),
+                "episodic": sum(episodic_summary.values()),
             }
             logger.info("Memory decay job completed {summary}", summary=summary)
             return self._record_status("decay", "ok", summary)
@@ -94,6 +179,7 @@ class MemoryJobsService:
         logger.info("Memory repair job started limit={limit}", limit=limit)
         try:
             repaired = 0
+            repaired_by_user: Dict[UUID, int] = {}
             service = EvidenceHealthService(self.db)
             for model, kind in (
                 (MemoryPreference, "preference"),
@@ -113,10 +199,25 @@ class MemoryJobsService:
                         if isinstance(item, EpisodicMemory):
                             item.evidence_snapshot = result["snapshot"]
                         repaired += 1
+                        repaired_by_user[item.user_id] = repaired_by_user.get(item.user_id, 0) + 1
                         REPAIR_SUCCESS_TOTAL.inc()
 
             await self.db.commit()
             await self._update_missing_gauges()
+            for user_id, count in repaired_by_user.items():
+                if count <= 0:
+                    continue
+                await SystemUpdateService().enqueue(
+                    user_id,
+                    build_system_update(
+                        update_type="memory_evidence_repaired",
+                        category="memory",
+                        title="记忆证据已修复",
+                        description=f"已修复 {count} 条记忆证据，系统稳定性已提升。",
+                        priority="low",
+                        metadata={"count": count},
+                    ),
+                )
             MEMORY_JOB_RUNS_TOTAL.labels(job="repair", status="ok").inc()
             summary = {"repaired": repaired}
             logger.info("Memory repair job completed repaired={repaired}", repaired=repaired)
@@ -178,31 +279,36 @@ class MemoryJobsService:
         )
         return list(result.scalars().all())
 
-    async def _apply_episodic_decay(self, users: list[User], window_days: int) -> int:
+    async def _apply_episodic_decay(self, users: list[User], window_days: int) -> Dict[UUID, int]:
         if not users:
-            return 0
+            return {}
         cutoff = datetime.utcnow() - timedelta(days=window_days)
         recent_guard = datetime.utcnow() - timedelta(hours=24)
-        user_ids = [user.id for user in users]
-        result = await self.db.execute(
-            select(EpisodicMemory).where(
-                EpisodicMemory.user_id.in_(user_ids),
-                EpisodicMemory.deleted_at.is_(None),
-                EpisodicMemory.retracted_at.is_(None),
-                EpisodicMemory.occurred_at <= cutoff,
-                EpisodicMemory.updated_at <= recent_guard,
-                EpisodicMemory.importance_score.isnot(None),
+        updated_by_user: Dict[UUID, int] = {}
+        updated_any = False
+        for user in users:
+            result = await self.db.execute(
+                select(EpisodicMemory).where(
+                    EpisodicMemory.user_id == user.id,
+                    EpisodicMemory.deleted_at.is_(None),
+                    EpisodicMemory.retracted_at.is_(None),
+                    EpisodicMemory.occurred_at <= cutoff,
+                    EpisodicMemory.updated_at <= recent_guard,
+                    EpisodicMemory.importance_score.isnot(None),
+                )
             )
-        )
-        records = result.scalars().all()
-        updated = 0
-        for record in records:
-            record.importance_score = max(0.0, float(record.importance_score or 0.0) * 0.98)
-            record.updated_at = datetime.utcnow()
-            updated += 1
-        if updated:
+            records = result.scalars().all()
+            updated = 0
+            for record in records:
+                record.importance_score = max(0.0, float(record.importance_score or 0.0) * 0.98)
+                record.updated_at = datetime.utcnow()
+                updated += 1
+            if updated > 0:
+                updated_by_user[user.id] = updated
+                updated_any = True
+        if updated_any:
             await self.db.commit()
-        return updated
+        return updated_by_user
 
     async def _update_missing_gauges(self) -> None:
         for model, kind in (

@@ -435,6 +435,46 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'transparency_step':
+        // 透明度步骤事件
+        final stepData = data['step_data'] as Map<String, dynamic>?;
+        if (stepData != null) {
+          return TransparencyStepEvent(
+            stepData: stepData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'transparency_complete':
+        // 透明度完整数据事件
+        final transData = data['transparency'] as Map<String, dynamic>?;
+        if (transData != null) {
+          return TransparencyCompleteEvent(
+            transparencyData: TransparencyData.fromJson(transData),
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {

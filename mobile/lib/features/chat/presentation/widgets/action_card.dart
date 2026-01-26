@@ -81,7 +81,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   width: 4,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: _getActionGradient(widget.action.type),
+                      gradient: _getActionGradientFor(widget.action),
                     ),
                   ),
                 ),
@@ -133,11 +133,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 padding: const EdgeInsets.all(DS.spacing8),
                                 decoration: BoxDecoration(
                                   gradient:
-                                      _getActionGradient(widget.action.type),
+                                      _getActionGradientFor(widget.action),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _getActionColor(widget.action.type)
+                                      color: _getActionColorFor(widget.action)
                                           .withValues(alpha: 0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
@@ -145,7 +145,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                   ],
                                 ),
                                 child: Icon(
-                                  _getActionIcon(widget.action.type),
+                                  _getActionIconFor(widget.action),
                                   color: DS.brandPrimaryConst,
                                   size: DS.iconSizeSm,
                                 ),
@@ -188,7 +188,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 onPressed: widget.onConfirm,
                                 size: CustomButtonSize.small,
                                 customGradient:
-                                    _getActionGradient(widget.action.type),
+                                    _getActionGradientFor(widget.action),
                               ),
                           ],
                         ),
@@ -204,6 +204,25 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     );
   }
 
+  String _resolveActionType(WidgetPayload action) {
+    if (action.type == 'system_update') {
+      return action.data['type']?.toString() ?? action.type;
+    }
+    return action.type;
+  }
+
+  LinearGradient _getActionGradientFor(WidgetPayload action) {
+    return _getActionGradient(_resolveActionType(action));
+  }
+
+  Color _getActionColorFor(WidgetPayload action) {
+    return _getActionColor(_resolveActionType(action));
+  }
+
+  IconData _getActionIconFor(WidgetPayload action) {
+    return _getActionIcon(_resolveActionType(action));
+  }
+
   LinearGradient _getActionGradient(String type) {
     switch (type) {
       case 'create_task':
@@ -214,6 +233,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'add_error':
         return DS.warningGradient;
+      case 'behavior_pattern_archived':
+        return DS.successGradient;
       case 'system_update':
         return DS.infoGradient;
       case 'nightly_review':
@@ -233,6 +254,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'add_error':
         return DS.warning;
+      case 'memory_health_report':
+      case 'memory_evidence_missing':
+      case 'memory_evidence_repaired':
+      case 'memory_decay_applied':
+      case 'behavior_pattern_decayed':
+        return DS.info;
+      case 'behavior_pattern_archived':
+        return DS.success;
       case 'system_update':
         return DS.info;
       case 'nightly_review':
@@ -252,6 +281,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.settings_rounded;
       case 'add_error':
         return Icons.error_outline_rounded;
+      case 'memory_health_report':
+        return Icons.health_and_safety_rounded;
+      case 'memory_evidence_missing':
+        return Icons.report_problem_rounded;
+      case 'memory_evidence_repaired':
+        return Icons.build_rounded;
+      case 'memory_decay_applied':
+        return Icons.trending_down_rounded;
+      case 'behavior_pattern_archived':
+        return Icons.archive_rounded;
+      case 'behavior_pattern_decayed':
+        return Icons.show_chart_rounded;
       case 'system_update':
         return Icons.auto_awesome_rounded;
       case 'nightly_review':
@@ -354,15 +395,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    _getActionColor(action.type).withValues(alpha: 0.1),
-                    _getActionColor(action.type).withValues(alpha: 0.05),
+                    _getActionColorFor(action).withValues(alpha: 0.1),
+                    _getActionColorFor(action).withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: DS.borderRadius12,
                 border: Border.all(
-                  color: _getActionColor(action.type).withValues(alpha: 0.2),
+                  color: _getActionColorFor(action).withValues(alpha: 0.2),
                 ),
               ),
               child: Text(

@@ -16,6 +16,8 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pi
 import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -348,13 +350,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       dailyTokens: chatState.dailyTokens,
                       dailyTokenLimit: chatState.dailyTokenLimit,
                       dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                      // Transparency data
+                      transparencyData: chatState.transparencyData,
+                      currentStepIndex: chatState.currentStepIndex,
                     ),
                   if (transparentMode) const SizedBox(height: DS.spacing12),
                   const PlanSelectorPill(),
                   // Chat Mode Selector Pill - allows selecting AI collaboration mode
                   const ChatModeSelectorPill(),
+                  // Intent prediction bar
+                  const IntentPredictionBar(showIdle: false),
                   ChatInput(
                     enabled: !chatState.isSending,
+                    onTextChanged: (text) {
+                      ref.read(intentPredictionProvider.notifier).onInputChanged(text);
+                    },
                     onFileUploaded: (StoredFile file) {
                       if (file.status != 'processed') {
                         ScaffoldMessenger.of(context).showSnackBar(
