@@ -59,6 +59,10 @@ from app.models.intervention_adaptive import (
 )
 from app.models.response_feedback import ResponseFeedback
 from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
+from app.models.memory_evolution import (
+    MemoryEvolution,
+    EvolutionPrediction,
+)
 from app.models.context_pack import ContextPackRun, ContextBudgetProfile, ContextPackFeedback
 from app.models.memory_rank_policy import MemoryRankPolicy
 from app.models.ltm_daily_snapshot import LtmDailySnapshot
@@ -74,6 +78,14 @@ from app.models.seed_content import (
     LibraryVisibility,
     ItemType,
     DifficultyLevel,
+)
+from app.models.experiment import (
+    ABExperiment,
+    ABExperimentVariant,
+    ABExperimentMetric,
+    ABExperimentAssignment,
+    ExperimentStatus,
+    MetricType,
 )
 from app.models.achievement import (
     Achievement,
@@ -194,6 +206,8 @@ __all__ = [
     "MemoryGoal",
     "EpisodicMemory",
     "MemoryCorrection",
+    "MemoryEvolution",
+    "EvolutionPrediction",
     "ContextPackRun",
     "ContextBudgetProfile",
     "ContextPackFeedback",
@@ -211,6 +225,13 @@ __all__ = [
     "LibraryVisibility",
     "ItemType",
     "DifficultyLevel",
+    # A/B Testing
+    "ABExperiment",
+    "ABExperimentVariant",
+    "ABExperimentMetric",
+    "ABExperimentAssignment",
+    "ExperimentStatus",
+    "MetricType",
     # Achievement System
     "Achievement",
     "UserAchievement",

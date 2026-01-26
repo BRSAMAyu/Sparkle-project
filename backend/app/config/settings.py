@@ -197,15 +197,17 @@ class Settings(BaseSettings):
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型
     ZHIPU_TEMPERATURE: float = 0.3
 
-    # SiliconFlow (for DeepSeek OCR)
+    # SiliconFlow API
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
 
-    # Hunyuan Translation (via SiliconFlow)
-    HUNYUAN_API_KEY: str = ""
+    # Translation Service (via SiliconFlow)
+    # Uses Hunyuan-MT-7B (Machine Translation model) for best translation quality
+    # Falls back to SILICONFLOW_API_KEY if HUNYUAN_API_KEY is not set
+    HUNYUAN_API_KEY: str = ""  # Optional: overrides SILICONFLOW_API_KEY for translation
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
-    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
+    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
@@ -324,6 +326,14 @@ class Settings(BaseSettings):
     REDIS_HYBRID_TIMEOUT_SECONDS: float = 2.0
     RERANK_TIMEOUT_SECONDS: float = 2.5
     ENABLE_REDIS_HYBRID_FALLBACK: bool = False
+
+    # Transparency System (透明模式)
+    TRANSPARENCY_MODE_ENABLED: bool = True  # Global transparency mode toggle
+    TRANSPARENCY_MODE_DEFAULT: bool = False  # Default user preference
+    TRANSPARENCY_SHOW_TOKEN_USAGE: bool = True  # Show token usage in transparency panel
+    TRANSPARENCY_SHOW_AGENT_SWITCHING: bool = True  # Show agent switching
+    TRANSPARENCY_SHOW_REASONING_STEPS: bool = True  # Show LLM reasoning steps
+    TRANSPARENCY_STEP_DEBOUNCE_MS: int = 100  # Minimum time between step updates
 
     # Plan Quota Settings (并行计划数限制)
     PLAN_QUOTA_DEFAULT: int = 3           # 免费用户默认3个活跃计划

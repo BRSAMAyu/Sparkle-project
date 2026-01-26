@@ -508,6 +508,41 @@ Please review this plan and provide your assessment."""
             f"User {user_decision} review {review_id} for plan {plan_id}"
         )
 
+        # Fix #3: 追踪拒绝次数，检测连续两次拒绝
+        if user_decision == "reject" and plan_id:
+            rejection_count = await self.track_rejection_count(plan_id, user_id)
+            logger.info(f"Plan {plan_id} rejection count: {rejection_count}")
+
+            # 两次拒绝，触发信息收集（回到对话澄清需求）
+            if rejection_count >= 2:
+                logger.warning(
+                    f"Plan {plan_id} rejected {rejection_count} times, "
+                    "triggering information collection"
+                )
+
+                # 清理拒绝计数
+                await self.reset_rejection_count(plan_id, user_id)
+
+                # 触发信息收集（通过Redis pub/sub通知orchestrator）
+                await self._trigger_information_collection(
+                    plan_id=plan_id,
+                    user_id=user_id,
+                    feedback=user_comment or "用户连续两次否定方案"
+                )
+
+                # 清理存储的action
+                await pending_actions_store.delete(review_id, user_id)
+
+                return {
+                    "status": "information_collection_triggered",
+                    "message": "方案被连续否定，需要重新了解您的需求",
+                    "rejection_count": rejection_count
+                }
+
+        # 用户接受方案，重置拒绝计数
+        if user_decision == "approve" and plan_id:
+            await self.reset_rejection_count(plan_id, user_id)
+
         # === Phase 4: 时机2: Write user decision to feedback_log ===
         if db_session and plan_id:
             try:
@@ -969,6 +1004,83 @@ Please review this plan and provide your assessment."""
                 )
             except Exception as notify_error:
                 logger.warning(f"Failed to notify replan failure: {notify_error}")
+
+    # Fix #3: 拒绝计数追踪和信息收集触发方法
+
+    async def track_rejection_count(
+        self,
+        plan_id: str,
+        user_id: str
+    ) -> int:
+        """
+        追踪用户连续拒绝方案的次数
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+
+        Returns:
+            当前连续拒绝次数
+        """
+        key = f"plan_rejection_count:{plan_id}:{user_id}"
+
+        try:
+            count = await self.redis.incr(key)
+            await self.redis.expire(key, 3600)  # 1小时过期
+            return count
+        except Exception as e:
+            logger.warning(f"Failed to track rejection count: {e}")
+            return 1
+
+    async def reset_rejection_count(
+        self,
+        plan_id: str,
+        user_id: str
+    ):
+        """
+        重置拒绝计数（用户接受方案或触发信息收集后调用）
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+        """
+        key = f"plan_rejection_count:{plan_id}:{user_id}"
+        try:
+            await self.redis.delete(key)
+            logger.info(f"Reset rejection count for plan {plan_id}")
+        except Exception as e:
+            logger.warning(f"Failed to reset rejection count: {e}")
+
+    async def _trigger_information_collection(
+        self,
+        plan_id: str,
+        user_id: str,
+        feedback: str
+    ):
+        """
+        触发信息收集（通过Redis pub/sub通知orchestrator）
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+            feedback: 用户反馈
+        """
+        if self.redis:
+            notification = {
+                "type": "information_collection_required",
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            try:
+                await self.redis.publish(
+                    f"user:{user_id}:info_collection",
+                    json.dumps(notification)
+                )
+                logger.info(f"Published information collection trigger for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to publish information collection trigger: {e}")
 
 
 # Global singleton

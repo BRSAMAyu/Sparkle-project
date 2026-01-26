@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from openai import AsyncOpenAI
 
 from app.config.settings import settings
 from app.services.llm_service import llm_service
@@ -136,20 +137,19 @@ class TranslationService:
         
         for segment in segments:
             try:
-                # _translate_segment will use Hunyuan if configured
-                result = await asyncio.wait_for(
+                # _translate_segment now returns a dict with provider info
+                tx_result = await asyncio.wait_for(
                     self._translate_segment(
                         segment, source_lang, target_lang,
                         domain, style, glossary_terms
                     ),
                     timeout=timeout
                 )
-                translated_segments.append(result)
+                translated_segments.append(tx_result["segment"])
                 
-                # Check if it used Hunyuan (heuristic: if key is set, we assume it's used or attempted)
-                if settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY:
-                    actual_provider = "hunyuan"
-                    actual_model = settings.HUNYUAN_TRANSLATE_MODEL
+                # Update provider info from the last successful segment
+                actual_provider = tx_result["provider"]
+                actual_model = tx_result["model"]
             except asyncio.TimeoutError:
                 logger.warning(f"Translation timeout for segment {segment.id}: {segment.text[:50]}...")
                 # Fallback: simple placeholder
@@ -260,8 +260,8 @@ class TranslationService:
         domain: str,
         style: str,
         glossary_terms: List[Dict[str, str]]
-    ) -> TranslatedSegment:
-        """使用混元模型翻译，fallback 到通用 LLM"""
+    ) -> Dict[str, Any]:
+        """使用混元模型翻译，fallback 到通用 LLM。返回翻译结果和使用的 provider 信息"""
 
         # Language name mapping for clearer prompts
         LANGUAGE_NAMES = {
@@ -293,17 +293,21 @@ Text: {segment.text}
 
 Output ONLY the translation, no explanations."""
 
-        # 优先使用混元模型
-        try:
-            from openai import AsyncOpenAI
+        used_provider = "llm"
+        used_model = llm_service.chat_model
 
-            # 优先使用 HUNYUAN_API_KEY，如果没有则使用 SILICONFLOW_API_KEY
+        # 优先使用混元模型 (通过 SiliconFlow 或直接调用)
+        try:
             api_key = settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY
+            # 如果使用的是 SILICONFLOW_API_KEY，确保 base_url 也是 siliconflow 的
+            base_url = settings.HUNYUAN_BASE_URL
+            if not settings.HUNYUAN_API_KEY and settings.SILICONFLOW_API_KEY:
+                base_url = settings.SILICONFLOW_BASE_URL
             
             if api_key:
                 hunyuan_client = AsyncOpenAI(
                     api_key=api_key,
-                    base_url=settings.HUNYUAN_BASE_URL
+                    base_url=base_url
                 )
                 response = await hunyuan_client.chat.completions.create(
                     model=settings.HUNYUAN_TRANSLATE_MODEL,
@@ -311,6 +315,8 @@ Output ONLY the translation, no explanations."""
                     temperature=0.3
                 )
                 translation = response.choices[0].message.content.strip()
+                used_provider = "hunyuan"
+                used_model = settings.HUNYUAN_TRANSLATE_MODEL
             else:
                 raise ValueError("Neither HUNYUAN_API_KEY nor SILICONFLOW_API_KEY is configured")
         except Exception as e:
@@ -321,6 +327,8 @@ Output ONLY the translation, no explanations."""
                 model=llm_service.chat_model
             )
             translation = response.strip()
+            used_provider = "llm"
+            used_model = llm_service.chat_model
 
         # Extract terminology notes (simple heuristic)
         notes = []
@@ -328,12 +336,16 @@ Output ONLY the translation, no explanations."""
             if term["source"].lower() in segment.text.lower():
                 notes.append(f"{term['source']} = {term['target']}")
 
-        return TranslatedSegment(
-            id=segment.id,
-            translation=translation,
-            notes=notes,
-            spans=[]  # TODO: Implement alignment extraction in Phase 2
-        )
+        return {
+            "segment": TranslatedSegment(
+                id=segment.id,
+                translation=translation,
+                notes=notes,
+                spans=[]
+            ),
+            "provider": used_provider,
+            "model": used_model
+        }
 
     def _generate_cache_key(
         self,
