@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
@@ -22,6 +23,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -52,6 +54,15 @@ class ChatState {
     this.pendingPlanReview,
     this.pendingReviewActionId,
     this.pendingContentReview,
+    this.lastPromptTokens,
+    this.lastCompletionTokens,
+    this.lastTotalTokens,
+    this.currentAgentName,
+    this.activeAgentType,
+    this.activeTools = const [],
+    this.dailyTokens,
+    this.dailyTokenLimit,
+    this.dailyCostMicroUsd,
   });
   final bool isLoading;
   final bool isSending;
@@ -87,6 +98,15 @@ class ChatState {
 
   // Content Review state (Phase 2b)
   final ContentReviewResult? pendingContentReview;
+  final int? lastPromptTokens;
+  final int? lastCompletionTokens;
+  final int? lastTotalTokens;
+  final String? currentAgentName;
+  final String? activeAgentType;
+  final List<String> activeTools;
+  final int? dailyTokens;
+  final int? dailyTokenLimit;
+  final int? dailyCostMicroUsd;
 
   int get listItemCount =>
       messages.length +
@@ -128,6 +148,15 @@ class ChatState {
     ContentReviewResult? pendingContentReview,
     bool clearPendingContentReview = false,
     AchievementUnlockEvent? pendingAchievementUnlock,
+    int? lastPromptTokens,
+    int? lastCompletionTokens,
+    int? lastTotalTokens,
+    String? currentAgentName,
+    String? activeAgentType,
+    List<String>? activeTools,
+    int? dailyTokens,
+    int? dailyTokenLimit,
+    int? dailyCostMicroUsd,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -173,6 +202,15 @@ class ChatState {
             : pendingContentReview ?? this.pendingContentReview,
         pendingAchievementUnlock:
             pendingAchievementUnlock ?? this.pendingAchievementUnlock,
+        lastPromptTokens: lastPromptTokens ?? this.lastPromptTokens,
+        lastCompletionTokens: lastCompletionTokens ?? this.lastCompletionTokens,
+        lastTotalTokens: lastTotalTokens ?? this.lastTotalTokens,
+        currentAgentName: currentAgentName ?? this.currentAgentName,
+        activeAgentType: activeAgentType ?? this.activeAgentType,
+        activeTools: activeTools ?? this.activeTools,
+        dailyTokens: dailyTokens ?? this.dailyTokens,
+        dailyTokenLimit: dailyTokenLimit ?? this.dailyTokenLimit,
+        dailyCostMicroUsd: dailyCostMicroUsd ?? this.dailyCostMicroUsd,
       );
 }
 
@@ -199,6 +237,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final _Debouncer _streamDebouncer =
       _Debouncer(const Duration(milliseconds: 50));
   bool _isDisposed = false;
+  static const String _dailyUsageDateKey = 'chat_daily_usage_date';
+  static const String _dailyUsageTokensKey = 'chat_daily_usage_tokens';
+  static const String _dailyUsageCostKey = 'chat_daily_usage_cost_micro_usd';
+  static const int _dailyTokenLimitDefault = 50000;
 
   // Plan review service (lazy initialized)
   PlanReviewGrpcService? _planReviewService;
@@ -328,6 +370,51 @@ class ChatNotifier extends StateNotifier<ChatState> {
     super.dispose();
   }
 
+  bool _shouldIncludeSystemUpdate(Map<String, dynamic> data) {
+    final level = _ref.read(systemUpdateLevelProvider);
+    if (level <= 0) {
+      return false;
+    }
+    if (level == 1) {
+      final priority = data['priority']?.toString().toLowerCase() ?? 'low';
+      return priority != 'low';
+    }
+    return true;
+  }
+
+  Future<void> _updateDailyUsage(UsageEvent event) async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _dateKey(DateTime.now());
+    final storedDate = prefs.getString(_dailyUsageDateKey);
+
+    int totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
+    int totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
+
+    if (storedDate != today) {
+      totalTokens = 0;
+      totalCost = 0;
+      await prefs.setString(_dailyUsageDateKey, today);
+    }
+
+    totalTokens += event.totalTokens;
+    if (event.costMicroUsd != null) {
+      totalCost += event.costMicroUsd!;
+      await prefs.setInt(_dailyUsageCostKey, totalCost);
+    }
+    await prefs.setInt(_dailyUsageTokensKey, totalTokens);
+
+    state = state.copyWith(
+      dailyTokens: totalTokens,
+      dailyTokenLimit: _dailyTokenLimitDefault,
+      dailyCostMicroUsd: totalCost,
+    );
+  }
+
+  String _dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   /// 加载历史对话
   Future<void> loadConversationHistory(String conversationId) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -455,6 +542,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: [...state.messages, userMessage],
       isSending: true,
       streamingContent: '',
+      activeTools: const [],
       clearError: true,
     );
 
@@ -579,6 +667,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           lastAiStatus = event.state;
           pendingAiStatus = event.state;
           pendingAiStatusDetails = event.details;
+          state = state.copyWith(
+            currentAgentName: event.currentAgentName,
+            activeAgentType: event.activeAgentType,
+          );
           flushPending();
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
@@ -605,6 +697,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           );
           return; // 提前退出
         } else if (event is WidgetEvent) {
+          if (event.widgetType == 'system_update' &&
+              !_shouldIncludeSystemUpdate(event.widgetData)) {
+            continue;
+          }
           accumulatedWidgets.add(
             WidgetPayload(
               type: event.widgetType,
@@ -616,11 +712,26 @@ class ChatNotifier extends StateNotifier<ChatState> {
           lastAiStatus = 'EXECUTING_TOOL';
           pendingAiStatus = 'EXECUTING_TOOL';
           pendingAiStatusDetails = '正在使用 ${event.toolName}...';
+          final nextTools = List<String>.from(state.activeTools);
+          if (!nextTools.contains(event.toolName)) {
+            nextTools.add(event.toolName);
+          }
+          state = state.copyWith(activeTools: nextTools);
           flushPending();
         } else if (event is ToolResultEvent) {
           final widgetType = event.result.widgetType;
           final widgetData = event.result.widgetData;
+          final toolName = event.result.toolName;
+          if (toolName.isNotEmpty) {
+            final nextTools = List<String>.from(state.activeTools)
+              ..removeWhere((tool) => tool == toolName);
+            state = state.copyWith(activeTools: nextTools);
+          }
           if (widgetType != null && widgetData != null) {
+            if (widgetType == 'system_update' &&
+                !_shouldIncludeSystemUpdate(widgetData)) {
+              continue;
+            }
             accumulatedWidgets.add(
               WidgetPayload(
                 type: widgetType,
@@ -629,8 +740,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
             );
           }
         } else if (event is UsageEvent) {
-          // Token 使用统计（可选显示）
-          // print('Usage: ${event.totalTokens} tokens');
+          state = state.copyWith(
+            lastPromptTokens: event.promptTokens,
+            lastCompletionTokens: event.completionTokens,
+            lastTotalTokens: event.totalTokens,
+          );
+          await _updateDailyUsage(event);
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization
           reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
@@ -674,6 +789,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // 流结束
           // finishReason: event.finishReason
           flushPending(immediate: true);
+          if (state.activeTools.isNotEmpty) {
+            state = state.copyWith(activeTools: []);
+          }
         }
       }
 

@@ -19,6 +19,7 @@ import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -50,6 +51,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnSplash = state.uri.path == '/';
       final isOnAuth =
           state.uri.path == '/login' || state.uri.path == '/register';
+      final isOnPersonaOnboarding =
+          state.uri.path == UserRoutes.personaOnboarding;
+      final onboardingCompleted = ref.read(onboardingCompletedProvider);
 
       // Still loading authentication state
       if (isLoading) {
@@ -66,6 +70,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Authenticated but trying to access auth pages or splash
       if (isAuthenticated && (isOnAuth || isOnSplash)) {
+        return '/home';
+      }
+
+      if (isAuthenticated && !onboardingCompleted && !isOnPersonaOnboarding) {
+        return UserRoutes.personaOnboarding;
+      }
+
+      if (isAuthenticated && onboardingCompleted && isOnPersonaOnboarding) {
         return '/home';
       }
 

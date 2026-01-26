@@ -7,9 +7,11 @@ from datetime import datetime
 import uuid
 
 from google.protobuf.json_format import MessageToDict
+from google.protobuf import struct_pb2
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.llm_service import llm_service
+from app.services.system_update_service import SystemUpdateService
 from app.services.knowledge_service import KnowledgeService
 from app.services.galaxy_service import GalaxyService
 from app.services.user_service import UserService
@@ -216,6 +218,25 @@ class ChatOrchestrator:
             redis_client=redis_client
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
+
+    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
+        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
+        responses: List[agent_service_pb2.ChatResponse] = []
+        for update in updates:
+            widget_struct = struct_pb2.Struct()
+            widget_struct.update(update)
+            responses.append(
+                agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name="system_update",
+                        success=True,
+                        widget_type="system_update",
+                        widget_data=widget_struct,
+                        tool_call_id="",
+                    )
+                )
+            )
+        return responses
         asyncio.create_task(self.langgraph_breaker.initialize())
 
         # Phase 3: Observability
@@ -1822,6 +1843,9 @@ class ChatOrchestrator:
                     
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.
+                    for update_resp in await self._emit_system_updates(user_id):
+                        yield update_resp
+
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id,
                         created_at=int(datetime.now().timestamp()),

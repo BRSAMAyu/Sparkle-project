@@ -52,6 +52,7 @@ from app.api.v1 import (
     leaderboards,
     monitoring,
     suggestions, # Vision Item 3
+    profile_transparency,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -96,6 +97,7 @@ api_router.include_router(achievements.router, prefix="/achievements", tags=["ac
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
+api_router.include_router(profile_transparency.router)
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:

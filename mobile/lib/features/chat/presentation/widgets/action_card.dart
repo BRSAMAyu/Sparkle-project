@@ -214,6 +214,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'add_error':
         return DS.warningGradient;
+      case 'system_update':
+        return DS.infoGradient;
       case 'nightly_review':
         return DS.cardGradientNeutral;
       default:
@@ -231,6 +233,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'add_error':
         return DS.warning;
+      case 'system_update':
+        return DS.info;
       case 'nightly_review':
         return DS.neutral700;
       default:
@@ -248,6 +252,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.settings_rounded;
       case 'add_error':
         return Icons.error_outline_rounded;
+      case 'system_update':
+        return Icons.auto_awesome_rounded;
       case 'nightly_review':
         return Icons.nightlight_round;
       default:
@@ -265,6 +271,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return 'AI建议：更新偏好';
       case 'add_error':
         return 'AI建议：记录错题';
+      case 'system_update':
+        return '系统更新';
       case 'nightly_review':
         return '夜间复盘';
       default:
@@ -289,6 +297,53 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
     if (action.type == 'nightly_review') {
       return _buildNightlyReviewContent(context, action);
+    }
+    if (action.type == 'system_update') {
+      final description = action.data['description']?.toString() ?? '';
+      final category = action.data['category']?.toString() ?? '';
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (action.data['title'] != null) ...[
+            Text(
+              action.data['title'] as String,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral900,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+          ],
+          if (description.isNotEmpty)
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.neutral700,
+                  ),
+            ),
+          if (category.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing10,
+                vertical: DS.spacing6,
+              ),
+              decoration: BoxDecoration(
+                color: DS.neutral100,
+                borderRadius: DS.borderRadius8,
+                border: Border.all(color: DS.neutral200),
+              ),
+              child: Text(
+                category,
+                style: TextStyle(
+                  color: DS.neutral600,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+            ),
+          ],
+        ],
+      );
     }
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

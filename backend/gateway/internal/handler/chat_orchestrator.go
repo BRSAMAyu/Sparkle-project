@@ -535,8 +535,10 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	case *agentv1.ChatResponse_StatusUpdate:
 		result["type"] = "status_update"
 		result["status"] = map[string]interface{}{
-			"state":   content.StatusUpdate.State.String(),
-			"details": sanitizer.Sanitize(content.StatusUpdate.Details),
+			"state":              content.StatusUpdate.State.String(),
+			"details":            sanitizer.Sanitize(content.StatusUpdate.Details),
+			"current_agent_name": sanitizer.Sanitize(content.StatusUpdate.CurrentAgentName),
+			"active_agent":        content.StatusUpdate.ActiveAgent.String(),
 		}
 	case *agentv1.ChatResponse_FullText:
 		result["type"] = "full_text"
@@ -554,6 +556,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			"prompt_tokens":     content.Usage.PromptTokens,
 			"completion_tokens": content.Usage.CompletionTokens,
 			"total_tokens":      content.Usage.TotalTokens,
+			"cost_micro_usd":    content.Usage.CostMicroUsd,
 		}
 	case *agentv1.ChatResponse_Citations:
 		result["type"] = "citations"

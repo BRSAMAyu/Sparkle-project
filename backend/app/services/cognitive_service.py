@@ -14,6 +14,7 @@ from app.services.embedding_service import embedding_service
 from app.services.analytics_service import AnalyticsService
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.config import settings
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 class CognitiveService:
     def __init__(self, db: AsyncSession):
@@ -25,6 +26,11 @@ class CognitiveService:
         if not content:
             return ""
         return f"{content[:15]}... [len={len(content)}]"
+
+    def _snippet(self, content: str, limit: int = 48) -> str:
+        if not content:
+            return ""
+        return content if len(content) <= limit else f"{content[:limit - 1]}…"
 
     async def create_fragment(
         self,
@@ -92,6 +98,20 @@ class CognitiveService:
         self.db.add(fragment)
         await self.db.commit()
         await self.db.refresh(fragment)
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="cognitive_fragment_created",
+                category="cognitive",
+                title=f"捕捉到新线索：{self._snippet(content)}",
+                description="认知碎片已加入分析队列",
+                priority="low",
+                metadata={
+                    "fragment_id": str(fragment.id),
+                    "source_type": source_type,
+                },
+            ),
+        )
 
         return fragment
 
@@ -244,6 +264,9 @@ class CognitiveService:
     async def _upsert_pattern(self, user_id: UUID, analysis: Dict, fragment_id: UUID):
         """Find existing pattern or create new one."""
         pattern_name = analysis.get("pattern_name", "Unknown Pattern")
+        new_confidence = analysis.get("confidence_score", 0)
+        was_created = False
+        previous_confidence = None
         
         # Simple string matching for now. Ideal: Vector search on pattern descriptions.
         stmt = select(BehaviorPattern).where(
@@ -254,10 +277,11 @@ class CognitiveService:
         pattern = result.scalar_one_or_none()
         
         if pattern:
+            previous_confidence = pattern.confidence_score
             # Update existing
             pattern.frequency += 1
             # Update confidence (simple moving average-ish or max)
-            pattern.confidence_score = max(pattern.confidence_score, analysis.get("confidence_score", 0))
+            pattern.confidence_score = max(pattern.confidence_score, new_confidence)
             if pattern.evidence_ids:
                 # evidence_ids is JSON list
                 try:
@@ -277,13 +301,29 @@ class CognitiveService:
                 pattern_type=analysis.get("pattern_type", "execution"),
                 description=analysis.get("description"),
                 solution_text=analysis.get("solution_text"),
-                confidence_score=analysis.get("confidence_score", 0),
+                confidence_score=new_confidence,
                 frequency=1,
                 evidence_ids=[str(fragment_id)]
             )
             self.db.add(pattern)
+            was_created = True
             
         await self.db.commit()
+        if was_created or (previous_confidence is not None and new_confidence > previous_confidence):
+            await SystemUpdateService().enqueue(
+                user_id,
+                build_system_update(
+                    update_type="behavior_pattern_updated",
+                    category="cognitive",
+                    title=f"发现模式：{pattern_name}",
+                    description="系统更新了你的行为模式画像",
+                    priority="medium",
+                    metadata={
+                        "pattern_id": str(pattern.id),
+                        "confidence": new_confidence,
+                    },
+                ),
+            )
 
     async def get_fragments(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[CognitiveFragment]:
         """Get list of fragments for a user."""
