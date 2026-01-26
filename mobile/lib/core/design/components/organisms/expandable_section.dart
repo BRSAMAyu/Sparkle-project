@@ -42,7 +42,7 @@ class _ExpandableSectionState extends State<ExpandableSection>
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
     // 智能展开逻辑
-    bool shouldExpand = widget.initiallyExpanded;
+    var shouldExpand = widget.initiallyExpanded;
     if (widget.smartExpand) {
       // 判断子组件是否有实际内容
       shouldExpand = _hasContent();
@@ -79,8 +79,7 @@ class _ExpandableSectionState extends State<ExpandableSection>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       decoration: BoxDecoration(
         color: widget.backgroundColor ?? DS.surfaceSecondary,
         borderRadius: DS.borderRadius8,
@@ -144,5 +143,4 @@ class _ExpandableSectionState extends State<ExpandableSection>
         ],
       ),
     );
-  }
 }

@@ -16,8 +16,7 @@ class TranslationSegmentData {
     required this.notes,
   });
 
-  factory TranslationSegmentData.fromJson(Map<String, dynamic> json) {
-    return TranslationSegmentData(
+  factory TranslationSegmentData.fromJson(Map<String, dynamic> json) => TranslationSegmentData(
       id: json['id'] as String,
       translation: json['translation'] as String,
       notes: (json['notes'] as List<dynamic>?)
@@ -25,7 +24,6 @@ class TranslationSegmentData {
               .toList() ??
           [],
     );
-  }
   final String id;
   final String translation;
   final List<String> notes;
@@ -36,17 +34,14 @@ class TranslationRecommendation {
 
   TranslationRecommendation({
     required this.shouldCreateCard,
-    this.reason,
-    required this.dailyQuotaRemaining,
+    required this.dailyQuotaRemaining, this.reason,
   });
 
-  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) {
-    return TranslationRecommendation(
+  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) => TranslationRecommendation(
       shouldCreateCard: json['should_create_card'] as bool? ?? false,
       reason: json['reason'] as String?,
       dailyQuotaRemaining: json['daily_quota_remaining'] as int? ?? 0,
     );
-  }
   final bool shouldCreateCard;
   final String? reason;
   final int dailyQuotaRemaining;
@@ -59,24 +54,22 @@ class TranslationResult {
     required this.success,
     required this.translation,
     required this.segments,
-    this.recommendation,
-    required this.meta,
+    required this.meta, this.recommendation,
   });
 
-  factory TranslationResult.fromJson(Map<String, dynamic> json) {
-    return TranslationResult(
-      success: json['success'] as bool,
-      translation: json['translation'] as String,
-      segments: (json['segments'] as List<dynamic>)
-          .map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  factory TranslationResult.fromJson(Map<String, dynamic> json) => TranslationResult(
+      success: json['success'] as bool? ?? false,
+      translation: json['translation'] as String? ?? '',
+      segments: (json['segments'] as List<dynamic>?)
+              ?.map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       recommendation: json['recommendation'] != null
           ? TranslationRecommendation.fromJson(
               json['recommendation'] as Map<String, dynamic>)
           : null,
-      meta: json['meta'] as Map<String, dynamic>,
+      meta: (json['meta'] as Map<String, dynamic>?) ?? {},
     );
-  }
   final bool success;
   final String translation;
   final List<TranslationSegmentData> segments;

@@ -7,8 +7,8 @@ import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -195,7 +195,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.psychology_alt_outlined,
-              title: '我的画像',
+              title: l10n.myPersona,
               gradient: DS.infoGradient,
               onTap: () {
                 Navigator.of(context).push(
@@ -209,7 +209,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.history_rounded,
-              title: '系统活动',
+              title: l10n.systemActivity,
               gradient: DS.secondaryGradient,
               onTap: () {
                 Navigator.of(context).push(
@@ -224,7 +224,7 @@ class ProfileScreen extends ConsumerWidget {
               _buildSettingsTile(
                 context,
                 icon: Icons.memory_rounded,
-                title: '记忆控制',
+                title: l10n.memoryControl,
                 gradient: DS.primaryGradient,
                 onTap: () {
                   Navigator.of(context).push(

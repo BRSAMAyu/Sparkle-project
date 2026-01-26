@@ -3,16 +3,18 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse, urlunparse, quote
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator, Field, AliasChoices
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(backend_dir)
-root_env_path = os.path.join(project_root, ".env")
+backend_dir = os.path.dirname(current_dir)  # backend/app
+project_root = os.path.dirname(backend_dir)  # backend
+repo_root = os.path.dirname(project_root)  # repo root
+repo_env_path = os.path.join(repo_root, ".env")
+service_env_path = os.path.join(project_root, ".env")
 backend_env_path = os.path.join(backend_dir, ".env")
 
 def _is_running_in_docker() -> bool:
@@ -91,7 +93,8 @@ def normalize_redis_url(raw_url: str) -> str:
 class Settings(BaseSettings):
     """Application settings"""
     model_config = SettingsConfigDict(
-        env_file=[backend_env_path, root_env_path],
+        # Load repo root .env first, then backend/.env, then backend/app/.env
+        env_file=[repo_env_path, service_env_path, backend_env_path],
         env_file_encoding='utf-8',
         case_sensitive=True,
         extra="ignore"
@@ -194,15 +197,17 @@ class Settings(BaseSettings):
     ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型
     ZHIPU_TEMPERATURE: float = 0.3
 
-    # SiliconFlow (for DeepSeek OCR)
+    # SiliconFlow API
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
 
-    # Hunyuan Translation (via SiliconFlow)
-    HUNYUAN_API_KEY: str = ""
+    # Translation Service (via SiliconFlow)
+    # Uses Hunyuan-MT-7B (Machine Translation model) for best translation quality
+    # Falls back to SILICONFLOW_API_KEY if HUNYUAN_API_KEY is not set
+    HUNYUAN_API_KEY: str = ""  # Optional: overrides SILICONFLOW_API_KEY for translation
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
-    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
+    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
@@ -322,6 +327,14 @@ class Settings(BaseSettings):
     RERANK_TIMEOUT_SECONDS: float = 2.5
     ENABLE_REDIS_HYBRID_FALLBACK: bool = False
 
+    # Transparency System (透明模式)
+    TRANSPARENCY_MODE_ENABLED: bool = True  # Global transparency mode toggle
+    TRANSPARENCY_MODE_DEFAULT: bool = False  # Default user preference
+    TRANSPARENCY_SHOW_TOKEN_USAGE: bool = True  # Show token usage in transparency panel
+    TRANSPARENCY_SHOW_AGENT_SWITCHING: bool = True  # Show agent switching
+    TRANSPARENCY_SHOW_REASONING_STEPS: bool = True  # Show LLM reasoning steps
+    TRANSPARENCY_STEP_DEBOUNCE_MS: int = 100  # Minimum time between step updates
+
     # Plan Quota Settings (并行计划数限制)
     PLAN_QUOTA_DEFAULT: int = 3           # 免费用户默认3个活跃计划
     PLAN_QUOTA_PREMIUM: int = 10          # 付费用户10个活跃计划
@@ -334,6 +347,11 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 52428800  # 50MB
+
+    # MDX Dictionary Configuration
+    MDX_DICTIONARY_ENABLED: bool = True
+    MDX_DICTIONARY_PATH: str = ""
+    MDD_RESOURCES_PATH: Optional[str] = None
 
     # Internal API
     INTERNAL_API_KEY: str = ""
@@ -353,6 +371,9 @@ class Settings(BaseSettings):
 
     # Idempotency Store
     IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
+
+    # Translation Service
+    TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation
 
     # gRPC Server
     GRPC_PORT: int = 50051

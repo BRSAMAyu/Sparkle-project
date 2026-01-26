@@ -70,7 +70,6 @@ class _PredictionChip extends StatelessWidget {
           border: Border.all(
             color: prediction.color?.withValues(alpha: 0.3) ??
                 DS.brandPrimary.withValues(alpha: 0.2),
-            width: 1,
           ),
         ),
         child: Row(

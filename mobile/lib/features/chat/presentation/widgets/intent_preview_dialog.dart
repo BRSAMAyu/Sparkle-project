@@ -36,7 +36,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -424,7 +424,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
-          _errorMessage = '意图分析失败: ${e.toString()}';
+          _errorMessage = '意图分析失败: ${e}';
         });
       }
     }
@@ -445,7 +445,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         Navigator.of(context).pop(true);
 
         final result = response.executionResult;
-        if (result?.success == true) {
+        if (result?.success ?? false) {
           // 执行成功，调用确认回调
           widget.onConfirm();
         } else {

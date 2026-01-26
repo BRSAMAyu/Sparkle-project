@@ -554,7 +554,7 @@ class _AchievementDetailScreenState
           ...rewards.map((reward) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _buildRewardItem(reward),
-            )),
+            ),),
         ],
       ),
     );
@@ -683,7 +683,7 @@ class _AchievementDetailScreenState
             color: DS.semanticError,
           ),
           const SizedBox(height: DS.spacing16),
-          Text(
+          const Text(
             '成就未找到',
             style: TextStyle(
               fontSize: DS.fontSizeLg,

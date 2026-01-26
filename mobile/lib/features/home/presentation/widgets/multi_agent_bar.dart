@@ -108,8 +108,7 @@ class _ModeChipState extends State<_ModeChip> {
   bool _isPressed = false;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
@@ -155,5 +154,4 @@ class _ModeChipState extends State<_ModeChip> {
         ),
       ),
     );
-  }
 }

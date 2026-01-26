@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 
 class ActionCard extends StatefulWidget {
   const ActionCard({
@@ -52,6 +54,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // focus_card 类型直接使用 FocusActionCard，支持自动启动
+    if (widget.action.type == 'focus_card') {
+      final actionType = widget.action.data['action']?.toString();
+      final shouldAutoStart = actionType == 'start';
+
+      // 自动启动番茄钟
+      if (shouldAutoStart) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleFocusCardAction(context, widget.action);
+        });
+      }
+
+      return FocusActionCard(data: widget.action.data);
+    }
+
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
@@ -211,17 +228,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return action.type;
   }
 
-  LinearGradient _getActionGradientFor(WidgetPayload action) {
-    return _getActionGradient(_resolveActionType(action));
-  }
+  LinearGradient _getActionGradientFor(WidgetPayload action) => _getActionGradient(_resolveActionType(action));
 
-  Color _getActionColorFor(WidgetPayload action) {
-    return _getActionColor(_resolveActionType(action));
-  }
+  Color _getActionColorFor(WidgetPayload action) => _getActionColor(_resolveActionType(action));
 
-  IconData _getActionIconFor(WidgetPayload action) {
-    return _getActionIcon(_resolveActionType(action));
-  }
+  IconData _getActionIconFor(WidgetPayload action) => _getActionIcon(_resolveActionType(action));
 
   LinearGradient _getActionGradient(String type) {
     switch (type) {
@@ -233,6 +244,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'add_error':
         return DS.warningGradient;
+      case 'focus_card':
+        return DS.secondaryGradient;
       case 'behavior_pattern_archived':
         return DS.successGradient;
       case 'system_update':
@@ -254,6 +267,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'add_error':
         return DS.warning;
+      case 'focus_card':
+        return DS.secondaryBase;
       case 'memory_health_report':
       case 'memory_evidence_missing':
       case 'memory_evidence_repaired':
@@ -281,6 +296,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.settings_rounded;
       case 'add_error':
         return Icons.error_outline_rounded;
+      case 'focus_card':
+        return Icons.timer_rounded;
       case 'memory_health_report':
         return Icons.health_and_safety_rounded;
       case 'memory_evidence_missing':
@@ -312,6 +329,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return 'AI建议：更新偏好';
       case 'add_error':
         return 'AI建议：记录错题';
+      case 'focus_card':
+        return 'AI建议：专注冲刺';
       case 'system_update':
         return '系统更新';
       case 'nightly_review':
@@ -531,6 +550,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
       ],
     );
+  }
+
+  void _handleFocusCardAction(BuildContext context, WidgetPayload action) {
+    final taskData = action.data['task'] as Map<String, dynamic>?;
+    final duration = (action.data['duration_minutes'] as int?) ?? 25;
+
+    // 构建任务 ID 或使用默认的快速专注 ID
+    final taskId = taskData?['id']?.toString() ?? 'focus_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 导航到正念模式（番茄钟）
+    context.push('/focus/mindfulness/$taskId');
   }
 
   IconData _getParamIcon(String key) {

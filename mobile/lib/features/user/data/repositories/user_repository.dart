@@ -51,20 +51,20 @@ class UserRepository {
   Future<Map<String, dynamic>> fetchTransparentProfile() async {
     if (DemoDataService.isDemoMode) {
       return {
-        "layer_1": {
-          "preferences": [],
-          "goals": [],
+        'layer_1': {
+          'preferences': [],
+          'goals': [],
         },
-        "layer_2": {
-          "persona": {
-            "tags": ["demo"],
-            "capabilities": {"mastery_avg": 0.5},
+        'layer_2': {
+          'persona': {
+            'tags': ['demo'],
+            'capabilities': {'mastery_avg': 0.5},
           },
-          "editable": false,
+          'editable': false,
         },
-        "layer_3": {
-          "patterns": [],
-          "fragments": [],
+        'layer_3': {
+          'patterns': [],
+          'fragments': [],
         },
       };
     }
@@ -168,8 +168,8 @@ class UserRepository {
   Future<Map<String, dynamic>> fetchUserSettings() async {
     if (DemoDataService.isDemoMode) {
       return {
-        "transparency_level": 0,
-        "system_update_level": 1,
+        'transparency_level': 0,
+        'system_update_level': 1,
       };
     }
     final response = await _apiClient.get<Map<String, dynamic>>('/user/settings');

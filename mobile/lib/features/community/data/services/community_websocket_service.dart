@@ -32,12 +32,10 @@ class CommunityEvent {
 
   CommunityEvent({required this.type, required this.data});
 
-  factory CommunityEvent.fromJson(Map<String, dynamic> json) {
-    return CommunityEvent(
+  factory CommunityEvent.fromJson(Map<String, dynamic> json) => CommunityEvent(
       type: json['type'] as String? ?? 'unknown',
       data: json,
     );
-  }
   final String type;
   final Map<String, dynamic> data;
 

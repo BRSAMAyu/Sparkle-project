@@ -10,11 +10,7 @@ class SprintHistoryItem {
     required this.id,
     required this.name,
     required this.startDate,
-    this.endDate,
-    required this.finalProgress,
-    required this.totalTasks,
-    required this.completedTasks,
-    required this.status,
+    required this.finalProgress, required this.totalTasks, required this.completedTasks, required this.status, this.endDate,
   });
 
   factory SprintHistoryItem.fromPlan(PlanModel plan, SprintStatus status) {
@@ -49,15 +45,15 @@ class SprintHistoryItem {
     return endDate!.difference(startDate).inDays;
   }
 
-  /// Get status display text
-  String get statusText {
+  /// Get status key for localization
+  String get statusKey {
     switch (status) {
       case SprintStatus.completed:
-        return '已完成';
+        return 'sprint_status_completed';
       case SprintStatus.abandoned:
-        return '已放弃';
+        return 'sprint_status_abandoned';
       case SprintStatus.extended:
-        return '已延长';
+        return 'sprint_status_extended';
     }
   }
 

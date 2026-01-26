@@ -5,7 +5,7 @@ from uuid import UUID
 from datetime import date
 
 from app.schemas.common import BaseSchema
-from app.models.plan import PlanType, PlanPriority
+from app.models.plan import PlanType, PlanPriority, PlanStage
 
 # ========== Request Schemas ==========
 
@@ -19,6 +19,7 @@ class PlanCreate(BaseModel):
     daily_available_minutes: int = Field(default=60, ge=1, description="Daily available minutes")
     total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
     priority: Optional[PlanPriority] = Field(default=PlanPriority.NORMAL, description="Plan priority")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
 
 class PlanUpdate(BaseModel):
     """Update plan"""
@@ -29,6 +30,7 @@ class PlanUpdate(BaseModel):
     total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
     is_active: Optional[bool] = Field(default=None, description="Is active")
     priority: Optional[PlanPriority] = Field(default=None, description="Plan priority")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
 
 class PlanActivate(BaseModel):
     """Activate plan"""
@@ -51,6 +53,7 @@ class PlanBase(BaseSchema):
     is_active: bool = Field(description="Is active")
     priority: PlanPriority = Field(description="Plan priority")
     is_primary: bool = Field(description="Is primary plan")
+    plan_stage: PlanStage = Field(description="Plan stage")
 
 class PlanDetail(PlanBase):
     """Plan detailed information"""

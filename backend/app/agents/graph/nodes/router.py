@@ -79,6 +79,8 @@ async def router_node(state: SparkleState):
     - human_assist: User explicitly asks for human help or system cannot handle.
 
     If query is ambiguous, default to 'study_buddy'.
+
+    Return JSON with keys: target_agent, reasoning, needs_clarification.
     """
 
     prompt = ChatPromptTemplate.from_messages([
@@ -87,7 +89,16 @@ async def router_node(state: SparkleState):
     ])
 
     # 执行推理
-    decision: RouteDecision = await structured_llm.ainvoke({"query": user_query})
+    chain = prompt | structured_llm
+    try:
+        decision: RouteDecision = await chain.ainvoke({"query": user_query})
+    except Exception as exc:
+        logger.warning(f"Router LLM failed, falling back to study_buddy: {exc}")
+        decision = RouteDecision(
+            target_agent="study_buddy",
+            reasoning="Fallback routing due to LLM parse failure.",
+            needs_clarification=False,
+        )
 
     # Build state updates
     state_updates = {
@@ -95,6 +106,24 @@ async def router_node(state: SparkleState):
         "active_agent": "router",
         "planning_status": planning_status,
     }
+
+    # Determine collaboration mode once per request to avoid routing errors
+    if not state.get("collaboration_mode"):
+        try:
+            from app.agents.graph.nodes.collaboration import _analyze_collaboration_needs
+            collaboration_plan = _analyze_collaboration_needs(user_query)
+            if collaboration_plan.get("mode") != "single":
+                state_updates.update({
+                    "collaboration_mode": collaboration_plan.get("mode"),
+                    "collaboration_agents": collaboration_plan.get("agents", []),
+                    "collaboration_order": collaboration_plan.get("order", []),
+                    "collaboration_index": 0,
+                    "next_step": "collaboration",
+                })
+            else:
+                state_updates["collaboration_mode"] = "single"
+        except Exception as exc:
+            logger.warning(f"Failed to analyze collaboration needs: {exc}")
 
     # Update current_plan if we have an executable plan with plan_id
     executable_plan = state.get("executable_plan")

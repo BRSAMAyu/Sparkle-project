@@ -221,15 +221,26 @@ class ContextPackBuilder:
         CONTEXT_PACK_BUILD.labels(intent=intent).inc()
         CONTEXT_PACK_INTENT.labels(intent=intent).inc()
 
-        # Build plan context if plan_id is provided
+        # Build enriched plan context with UserScope cognitive profile if plan_id is provided
         plan_context: Optional[Dict[str, Any]] = None
         if plan_id:
             try:
                 plan_builder = PlanContextBuilder(self.db, self.redis)
-                plan_context = await plan_builder.build(user_id, plan_id)
+                # Use build_enriched to include UserScope cognitive insights
+                plan_context = await plan_builder.build_enriched(
+                    user_id,
+                    plan_id,
+                    include_cognitive_profile=True,
+                    include_behavior_patterns=True,
+                )
             except Exception as e:
-                logger.warning(f"Failed to build plan context: {e}")
-                plan_context = None
+                logger.warning(f"Failed to build enriched plan context: {e}")
+                # Fallback to basic plan context
+                try:
+                    plan_context = await plan_builder.build(user_id, plan_id)
+                except Exception as e2:
+                    logger.warning(f"Failed to build basic plan context: {e2}")
+                    plan_context = None
 
         conflict_enabled = settings.ENABLE_MEMORY_CONFLICT_RESOLUTION and rollout_enabled
         resolver = MemoryConflictResolver() if conflict_enabled else None

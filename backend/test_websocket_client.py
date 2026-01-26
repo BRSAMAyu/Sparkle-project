@@ -31,6 +31,7 @@ def _create_jwt(user_id: str) -> str:
     payload = {
         "sub": user_id,
         "exp": int(time.time()) + 3600,
+        "type": "access",  # Required by validateJWT in gateway
     }
     return jose_jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 

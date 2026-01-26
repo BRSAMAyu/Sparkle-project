@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:uuid/uuid.dart';
 

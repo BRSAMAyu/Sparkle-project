@@ -35,7 +35,7 @@ class StatisticsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -48,26 +48,24 @@ class StatisticsEmptyState extends StatelessWidget {
       tween: Tween(begin: 0.0, end: 1.0),
       duration: StatisticsAnimationConfig.medium,
       curve: StatisticsAnimationConfig.easeOut,
-      builder: (context, value, child) {
-        return Opacity(
+      builder: (context, value, child) => Opacity(
           opacity: value,
           child: Transform.scale(
             scale: 0.8 + (0.2 * value),
             child: child,
           ),
-        );
-      },
+        ),
       child: Column(
         children: [
           _buildIcon(),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildMessage(),
           if (subtitle != null) ...[
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             _buildSubtitle(),
           ],
           if (actionLabel != null && onAction != null) ...[
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
             _buildActionButton(),
           ],
         ],
@@ -117,7 +115,7 @@ class StatisticsEmptyState extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: DS.brandPrimary,
         foregroundColor: DS.white,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.xl,
           vertical: DS.md,
         ),
@@ -147,8 +145,7 @@ class StatisticsEmptyState extends StatelessWidget {
 class StatisticsEmptyStateForType extends StatelessWidget {
 
   const StatisticsEmptyStateForType({
-    super.key,
-    required this.type,
+    required this.type, super.key,
     this.actionLabel,
     this.onAction,
     this.isLoading = false,
@@ -221,17 +218,15 @@ class StatisticsErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: StatisticsAnimationConfig.medium,
         curve: StatisticsAnimationConfig.easeOut,
-        builder: (context, value, child) {
-          return Opacity(
+        builder: (context, value, child) => Opacity(
             opacity: value,
             child: child,
-          );
-        },
+          ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -248,7 +243,7 @@ class StatisticsErrorState extends StatelessWidget {
                 color: DS.error,
               ),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             Text(
               message ?? '加载失败',
               style: DS.headlineStyle.copyWith(
@@ -258,7 +253,7 @@ class StatisticsErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              SizedBox(height: DS.xl),
+              const SizedBox(height: DS.xl),
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
@@ -266,7 +261,7 @@ class StatisticsErrorState extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: DS.brandPrimary,
                   side: BorderSide(color: DS.brandPrimary),
-                  padding: EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: DS.xl,
                     vertical: DS.md,
                   ),

@@ -269,23 +269,32 @@ class PlanReviewService:
         prompt = self._build_review_prompt(plan, user_message, user_context)
 
         try:
-            response = await llm_service.get_completion(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_review_system_prompt(),
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
+            # 使用 reason_json 方法获取 JSON 格式的推理结果
+            messages = [
+                {
+                    "role": "system",
+                    "content": self._get_review_system_prompt(),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ]
+            result = await llm_service.reason_json(
+                messages=messages,
                 temperature=0.2,
-                response_format={"type": "json_object"},
             )
 
-            # Parse LLM response
-            result = self._parse_review_response(response)
+            # reason_json 已返回解析后的对象，无需再解析
+            if not result or not isinstance(result, dict):
+                raise ValueError(f"Invalid LLM response type: {type(result)}")
+
+            # 验证 decision 字段
+            decision = result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+            valid_decisions = {d.value for d in ReviewDecision}
+            if decision not in valid_decisions:
+                result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
+
             return result
 
         except Exception as e:
@@ -368,38 +377,6 @@ Respond in JSON format:
 - Pending Tasks: {user_context.get('pending_tasks_count', 0)}
 
 Please review this plan and provide your assessment."""
-
-    def _parse_review_response(self, response: str) -> Dict[str, Any]:
-        """Parse LLM review response"""
-        try:
-            data = json.loads(response)
-
-            # Validate decision
-            decision = data.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
-            valid_decisions = {d.value for d in ReviewDecision}
-            if decision not in valid_decisions:
-                decision = ReviewDecision.REQUIRES_CONFIRMATION.value
-
-            return {
-                "decision": decision,
-                "confidence": float(data.get("confidence", 0.5)),
-                "comments": data.get("comments", []),
-                "suggested_modifications": data.get("suggested_modifications"),
-            }
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse review response: {e}")
-            return {
-                "decision": ReviewDecision.REQUIRES_CONFIRMATION.value,
-                "confidence": 0.0,
-                "comments": [
-                    {
-                        "category": ReviewCategory.QUALITY.value,
-                        "severity": SeverityLevel.WARNING.value,
-                        "message": "Review response could not be parsed. Manual review required.",
-                    }
-                ],
-            }
 
     async def store_review_result(
         self,
@@ -530,6 +507,41 @@ Please review this plan and provide your assessment."""
         logger.info(
             f"User {user_decision} review {review_id} for plan {plan_id}"
         )
+
+        # Fix #3: 追踪拒绝次数，检测连续两次拒绝
+        if user_decision == "reject" and plan_id:
+            rejection_count = await self.track_rejection_count(plan_id, user_id)
+            logger.info(f"Plan {plan_id} rejection count: {rejection_count}")
+
+            # 两次拒绝，触发信息收集（回到对话澄清需求）
+            if rejection_count >= 2:
+                logger.warning(
+                    f"Plan {plan_id} rejected {rejection_count} times, "
+                    "triggering information collection"
+                )
+
+                # 清理拒绝计数
+                await self.reset_rejection_count(plan_id, user_id)
+
+                # 触发信息收集（通过Redis pub/sub通知orchestrator）
+                await self._trigger_information_collection(
+                    plan_id=plan_id,
+                    user_id=user_id,
+                    feedback=user_comment or "用户连续两次否定方案"
+                )
+
+                # 清理存储的action
+                await pending_actions_store.delete(review_id, user_id)
+
+                return {
+                    "status": "information_collection_triggered",
+                    "message": "方案被连续否定，需要重新了解您的需求",
+                    "rejection_count": rejection_count
+                }
+
+        # 用户接受方案，重置拒绝计数
+        if user_decision == "approve" and plan_id:
+            await self.reset_rejection_count(plan_id, user_id)
 
         # === Phase 4: 时机2: Write user decision to feedback_log ===
         if db_session and plan_id:
@@ -848,6 +860,7 @@ Please review this plan and provide your assessment."""
                 action_id=action_id,
                 user_id=user_id,
                 original_plan_id=plan_id,
+                new_plan_id=new_plan_id,
                 feedback=feedback,
             )
         )
@@ -864,6 +877,7 @@ Please review this plan and provide your assessment."""
         action_id: str,
         user_id: str,
         original_plan_id: str,
+        new_plan_id: str,
         feedback: str,
     ) -> None:
         """
@@ -874,6 +888,7 @@ Please review this plan and provide your assessment."""
         from app.core.context_pack import ContextPackBuilder
         from app.orchestration.lang_graph_planner import LangGraphPlanner
         from app.orchestration.state_snapshot import StateSnapshotManager
+        from app.core.sse import sse_manager
         from app.orchestration.executor import ToolExecutor
 
         try:
@@ -937,6 +952,18 @@ Please review this plan and provide your assessment."""
                         f"plan={executable_plan.plan_id}, "
                         f"tools={len(executable_plan.tool_calls)}"
                     )
+                    await sse_manager.send_to_user(
+                        user_id,
+                        "plan_replan_completed",
+                        {
+                            "action_id": action_id,
+                            "original_plan_id": original_plan_id,
+                            "new_plan_id": new_plan_id,
+                            "generated_plan_id": executable_plan.plan_id,
+                            "auto_executed": True,
+                            "tool_count": len(executable_plan.tool_calls),
+                        },
+                    )
                 else:
                     review_action_id = await self.store_review_result(
                         review=review_result,
@@ -946,11 +973,114 @@ Please review this plan and provide your assessment."""
                         f"Replan review queued: action_id={review_action_id}, "
                         f"plan={executable_plan.plan_id}"
                     )
+                    await sse_manager.send_to_user(
+                        user_id,
+                        "plan_replan_review_required",
+                        {
+                            "action_id": action_id,
+                            "review_action_id": review_action_id,
+                            "review_id": review_result.review_id,
+                            "original_plan_id": original_plan_id,
+                            "new_plan_id": new_plan_id,
+                            "generated_plan_id": executable_plan.plan_id,
+                            "decision": review_result.decision,
+                        },
+                    )
 
                 await pending_actions_store.delete(action_id, user_id)
 
         except Exception as e:
             logger.error(f"Failed to auto execute replan action {action_id}: {e}", exc_info=True)
+            try:
+                await sse_manager.send_to_user(
+                    user_id,
+                    "plan_replan_failed",
+                    {
+                        "action_id": action_id,
+                        "original_plan_id": original_plan_id,
+                        "new_plan_id": new_plan_id,
+                        "error": str(e),
+                    },
+                )
+            except Exception as notify_error:
+                logger.warning(f"Failed to notify replan failure: {notify_error}")
+
+    # Fix #3: 拒绝计数追踪和信息收集触发方法
+
+    async def track_rejection_count(
+        self,
+        plan_id: str,
+        user_id: str
+    ) -> int:
+        """
+        追踪用户连续拒绝方案的次数
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+
+        Returns:
+            当前连续拒绝次数
+        """
+        key = f"plan_rejection_count:{plan_id}:{user_id}"
+
+        try:
+            count = await self.redis.incr(key)
+            await self.redis.expire(key, 3600)  # 1小时过期
+            return count
+        except Exception as e:
+            logger.warning(f"Failed to track rejection count: {e}")
+            return 1
+
+    async def reset_rejection_count(
+        self,
+        plan_id: str,
+        user_id: str
+    ):
+        """
+        重置拒绝计数（用户接受方案或触发信息收集后调用）
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+        """
+        key = f"plan_rejection_count:{plan_id}:{user_id}"
+        try:
+            await self.redis.delete(key)
+            logger.info(f"Reset rejection count for plan {plan_id}")
+        except Exception as e:
+            logger.warning(f"Failed to reset rejection count: {e}")
+
+    async def _trigger_information_collection(
+        self,
+        plan_id: str,
+        user_id: str,
+        feedback: str
+    ):
+        """
+        触发信息收集（通过Redis pub/sub通知orchestrator）
+
+        Args:
+            plan_id: 计划ID
+            user_id: 用户ID
+            feedback: 用户反馈
+        """
+        if self.redis:
+            notification = {
+                "type": "information_collection_required",
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            try:
+                await self.redis.publish(
+                    f"user:{user_id}:info_collection",
+                    json.dumps(notification)
+                )
+                logger.info(f"Published information collection trigger for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to publish information collection trigger: {e}")
 
 
 # Global singleton

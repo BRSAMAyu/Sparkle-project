@@ -87,14 +87,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             ...filtered.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: DS.spacing12),
                   child: _buildUpdateCard(item),
-                )),
+                ),),
         ],
       ),
     );
   }
 
-  Widget _buildSearchField() {
-    return TextField(
+  Widget _buildSearchField() => TextField(
       controller: _searchController,
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
@@ -114,15 +113,13 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
             const EdgeInsets.symmetric(horizontal: DS.spacing12, vertical: 12),
       ),
     );
-  }
 
   Widget _buildFilterRow({
     required String title,
     required List<String> options,
     required String selected,
     required ValueChanged<String> onSelected,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -152,7 +149,6 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         ),
       ],
     );
-  }
 
   Widget _buildUpdateCard(Map<String, dynamic> item) {
     final title = item['title']?.toString() ?? '系统更新';
@@ -276,8 +272,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     }
   }
 
-  Widget _pill(String text, Color bg, Color fg) {
-    return Container(
+  Widget _pill(String text, Color bg, Color fg) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -292,7 +287,6 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         style: TextStyle(color: fg, fontSize: DS.fontSizeSm),
       ),
     );
-  }
 
   String _formatTime(dynamic raw) {
     if (raw is int && raw > 0) {

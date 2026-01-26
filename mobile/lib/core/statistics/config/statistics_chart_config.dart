@@ -330,19 +330,15 @@ class StatisticsChartDataHelper {
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: StatisticsChartConfig.showVerticalGrid,
         horizontalInterval: maxY != null ? (maxY - minY) / 4 : null,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
             dashArray: StatisticsChartConfig.gridDashPattern,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -353,7 +349,7 @@ class StatisticsChartDataHelper {
               if (index >= 0 && index < xLabels.length) {
                 return Text(
                   xLabels[index],
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: StatisticsChartConfig.axisLabelSize,
                     color: StatisticsChartConfig.axisLabelColor,
                   ),
@@ -368,30 +364,26 @@ class StatisticsChartDataHelper {
             showTitles: true,
             reservedSize: 40,
             interval: maxY != null ? (maxY - minY) / 4 : null,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),
       lineTouchData: LineTouchData(
-        enabled: StatisticsChartConfig.touchEnabled,
         touchTooltipData: LineTouchTooltipData(
-          getTooltipItems: (touchedSpots) {
-            return touchedSpots.map((spot) {
+          getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
               return LineTooltipItem(
                 spot.y.toStringAsFixed(1),
                 TextStyle(
@@ -399,8 +391,7 @@ class StatisticsChartDataHelper {
                   fontSize: 12,
                 ),
               );
-            }).toList();
-          },
+            }).toList(),
         ),
       ),
     );
@@ -416,17 +407,13 @@ class StatisticsChartDataHelper {
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -437,7 +424,7 @@ class StatisticsChartDataHelper {
               if (index >= 0 && index < xLabels.length) {
                 return Text(
                   xLabels[index],
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: StatisticsChartConfig.axisLabelSize,
                     color: StatisticsChartConfig.axisLabelColor,
                   ),
@@ -451,22 +438,20 @@ class StatisticsChartDataHelper {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 40,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),

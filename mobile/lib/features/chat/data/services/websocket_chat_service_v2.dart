@@ -48,6 +48,16 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
 
+        // Check for sprint mode switch
+        if (metadata != null && _isTrue(metadata['switch_to_sprint'])) {
+          return SprintModeSwitchEvent(
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         // Phase 2b: Check if this delta contains content review data
         if (metadata != null && _isTrue(metadata['has_review_result'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;

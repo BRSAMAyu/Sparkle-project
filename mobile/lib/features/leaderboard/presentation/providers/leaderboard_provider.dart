@@ -41,21 +41,6 @@ enum LeaderboardPeriod {
 // ========== Leaderboard State ==========
 
 class LeaderboardEntry {
-
-  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
-    return LeaderboardEntry(
-      rank: json['rank'] as int,
-      userId: json['user_id'] as String,
-      username: json['username'] as String,
-      avatarUrl: json['avatar_url'] as String?,
-      score: (json['score'] as num).toDouble(),
-      scoreLabel: json['score_label'] as String,
-      isMe: json['is_me'] as bool? ?? false,
-      change: json['change'] as int?,
-      stats: json['stats'] as Map<String, dynamic>? ?? {},
-      badge: json['badge'] as String?,
-    );
-  }
   LeaderboardEntry({
     required this.rank,
     required this.userId,
@@ -68,6 +53,19 @@ class LeaderboardEntry {
     this.stats = const {},
     this.badge,
   });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) => LeaderboardEntry(
+      rank: json['rank'] as int,
+      userId: json['user_id'] as String,
+      username: json['username'] as String,
+      avatarUrl: json['avatar_url'] as String?,
+      score: (json['score'] as num).toDouble(),
+      scoreLabel: json['score_label'] as String,
+      isMe: json['is_me'] as bool? ?? false,
+      change: json['change'] as int?,
+      stats: json['stats'] as Map<String, dynamic>? ?? {},
+      badge: json['badge'] as String?,
+    );
 
   final int rank;
   final String userId;
@@ -95,9 +93,15 @@ class LeaderboardEntry {
 }
 
 class LeaderboardData {
+  LeaderboardData({
+    required this.type,
+    required this.title,
+    required this.entries,
+    required this.lastUpdated, required this.totalParticipants, required this.period, this.myRank,
+    this.myScore,
+  });
 
-  factory LeaderboardData.fromJson(Map<String, dynamic> json) {
-    return LeaderboardData(
+  factory LeaderboardData.fromJson(Map<String, dynamic> json) => LeaderboardData(
       type: LeaderboardType.fromString(json['type'] as String),
       title: json['title'] as String,
       entries: (json['entries'] as List<dynamic>)
@@ -109,14 +113,6 @@ class LeaderboardData {
       totalParticipants: json['total_participants'] as int,
       period: LeaderboardPeriod.fromString(json['period'] as String? ?? 'all_time'),
     );
-  }
-  LeaderboardData({
-    required this.type,
-    required this.title,
-    required this.entries,
-    required this.lastUpdated, required this.totalParticipants, required this.period, this.myRank,
-    this.myScore,
-  });
 
   final LeaderboardType type;
   final String title;
@@ -170,6 +166,17 @@ class LeaderboardState {
 }
 
 class MyRankState {
+  MyRankState({
+    this.rank,
+    this.score,
+    this.scoreLabel,
+    this.totalParticipants,
+    this.percentile,
+    this.changeFromLastPeriod,
+    this.nearbyUsers = const [],
+    this.isLoading = false,
+    this.error,
+  });
 
   MyRankState.loading()
       : rank = null,
@@ -192,17 +199,6 @@ class MyRankState {
         nearbyUsers = const [],
         isLoading = false,
         error = errorMessage;
-  MyRankState({
-    this.rank,
-    this.score,
-    this.scoreLabel,
-    this.totalParticipants,
-    this.percentile,
-    this.changeFromLastPeriod,
-    this.nearbyUsers = const [],
-    this.isLoading = false,
-    this.error,
-  });
 
   final int? rank;
   final double? score;

@@ -256,4 +256,19 @@ class ApiEndpoints {
   static const String leaderboardsTypes = '/leaderboards/types';
   static String leaderboardsTopThree(String type) => '/leaderboards/top-three/$type';
   static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
+
+  // Seed Libraries
+  static const String seedLibraries = '/seed-libraries';
+  static String seedLibrary(String id) => '/seed-libraries/$id';
+  static String seedLibraryItems(String id) => '/seed-libraries/$id/items';
+  static String seedLibraryItem(String libraryId, String itemId) =>
+      '/seed-libraries/$libraryId/items/$itemId';
+  static String seedLibrarySubscribe(String id) =>
+      '/seed-libraries/$id/subscribe';
+  static String seedLibraryUnsubscribe(String id) =>
+      '/seed-libraries/$id/unsubscribe';
+  static String seedLibrarySubscriptions = '/seed-libraries/my-subscriptions';
+  static String seedLibraryCrossQuery = '/seed-libraries/query';
+  static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
+  static String seedLibraryReplyTemplate = '/seed-libraries/query/reply-template';
 }

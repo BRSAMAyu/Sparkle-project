@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+import uuid
 from loguru import logger
 import random
 
@@ -60,7 +61,7 @@ class RouterNode:
         # 2. Apply Tool Preference Learning (if available)
         if user_id and db_session and hasattr(self, 'learner'):
             try:
-                pref_router = ToolPreferenceRouter(db_session, int(user_id), redis_client=None)
+                pref_router = ToolPreferenceRouter(db_session, uuid.UUID(str(user_id)), redis_client=None)
 
                 # 从历史记录更新学习器
                 await pref_router.update_learner_from_history()

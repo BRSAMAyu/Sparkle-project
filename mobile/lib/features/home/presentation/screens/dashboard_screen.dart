@@ -68,7 +68,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? '休息一下吧，效率会更高哦' : '保持专注，你正在状态！'}',
+                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? l10n.aiNudgeGentle : l10n.aiNudgeFocus}',
                       style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
@@ -77,7 +77,7 @@ class DashboardScreen extends ConsumerWidget {
               backgroundColor: theme.colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: '查看',
+                label: l10n.view,
                 textColor: theme.colorScheme.onPrimary,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -165,11 +165,11 @@ class DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
-          Positioned(
+          const Positioned(
             left: 16,
             right: 16,
             bottom: 138,
-            child: const MultiAgentBar(),
+            child: MultiAgentBar(),
           ),
 
           // Layer 4: Omni-Bar
@@ -366,7 +366,7 @@ class _StreakCard extends StatelessWidget {
                   color: DS.warning,
                   size: DS.iconSizeSm,
                 ),
-                SizedBox(width: DS.spacing6),
+                const SizedBox(width: DS.spacing6),
                 Text(
                   '连胜',
                   style: TextStyle(
@@ -374,7 +374,7 @@ class _StreakCard extends StatelessWidget {
                     color: DS.textSecondary,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Icon(
                   Icons.chevron_right,
                   size: DS.iconSizeSm,
@@ -382,8 +382,8 @@ class _StreakCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: DS.spacing12),
-            DashboardStreakIndicator(),
+            const SizedBox(height: DS.spacing12),
+            const DashboardStreakIndicator(),
           ],
         ),
       ),

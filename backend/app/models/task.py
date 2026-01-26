@@ -64,9 +64,6 @@ class Task(BaseModel):
     # 追溯信息
     tool_result_id = Column(String(50), nullable=True, index=True)
 
-    # 追溯信息
-    tool_result_id = Column(String(50), nullable=True, index=True)
-
     # 完成信息
     actual_minutes = Column(Integer, nullable=True)
     user_note = Column(Text, nullable=True)
@@ -116,6 +113,20 @@ class Task(BaseModel):
         back_populates="task",
         cascade="all, delete-orphan",
         lazy="dynamic"
+    )
+
+    resource_links = relationship(
+        "TaskResourceLink",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    knowledge_links = relationship(
+        "TaskKnowledgeLink",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
     )
 
     def __repr__(self):
@@ -203,4 +214,3 @@ def update_completed_on_subtask_status_change(mapper, connection, target):
                     .where(Task.id == target.parent_task_id)
                     .values(subtasks_completed=Task.subtasks_completed + delta)
                 )
-

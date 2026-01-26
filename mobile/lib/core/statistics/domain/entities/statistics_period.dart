@@ -71,7 +71,7 @@ extension StatisticsPeriodExt on StatisticsPeriod {
         return DateTime(now.year, now.month);
 
       case StatisticsPeriod.year:
-        return DateTime(now.year, 1);
+        return DateTime(now.year);
 
       case StatisticsPeriod.custom:
         return customStart ??

@@ -19,6 +19,15 @@ abstract class ChatStreamEvent {
   final Map<String, dynamic>? metadata;
 }
 
+class SprintModeSwitchEvent extends ChatStreamEvent {
+  SprintModeSwitchEvent({
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+}
+
 /// 文本事件
 class TextEvent extends ChatStreamEvent {
   TextEvent({
@@ -585,15 +594,6 @@ class TransparencyCompleteEvent extends ChatStreamEvent {
 
 /// 透明度数据模型
 class TransparencyData {
-  const TransparencyData({
-    required this.steps,
-    required this.totalDurationMs,
-    required this.requestId,
-  });
-
-  final List<TransparencyStep> steps;
-  final int totalDurationMs;
-  final String requestId;
 
   factory TransparencyData.fromJson(Map<String, dynamic> json) {
     return TransparencyData(
@@ -605,6 +605,15 @@ class TransparencyData {
       requestId: json['request_id'] as String? ?? '',
     );
   }
+  const TransparencyData({
+    required this.steps,
+    required this.totalDurationMs,
+    required this.requestId,
+  });
+
+  final List<TransparencyStep> steps;
+  final int totalDurationMs;
+  final String requestId;
 
   /// 格式化总耗时
   String get formattedTotalDuration {
@@ -617,6 +626,17 @@ class TransparencyData {
 
 /// 透明度步骤模型（数据定义）
 class TransparencyStep {
+
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
+    return TransparencyStep(
+      stepId: json['step_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      durationMs: json['duration_ms'] as int?,
+      result: json['result'] as Map<String, dynamic>?,
+      error: json['error'] as String?,
+    );
+  }
   const TransparencyStep({
     required this.stepId,
     required this.name,
@@ -632,17 +652,6 @@ class TransparencyStep {
   final int? durationMs;
   final Map<String, dynamic>? result;
   final String? error;
-
-  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
-    return TransparencyStep(
-      stepId: json['step_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      durationMs: json['duration_ms'] as int?,
-      result: json['result'] as Map<String, dynamic>?,
-      error: json['error'] as String?,
-    );
-  }
 
   /// 获取本地化状态标签
   String get statusLabel {

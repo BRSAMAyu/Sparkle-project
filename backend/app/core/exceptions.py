@@ -23,35 +23,35 @@ class SparkleException(Exception):
 class AuthenticationError(SparkleException):
     """认证失败异常"""
 
-    def __init__(self, message: str = "认证失败", detail: Optional[Any] = None):
+    def __init__(self, message: str = "登录信息已过期，请重新登录~", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=401, detail=detail)
 
 
 class AuthorizationError(SparkleException):
     """授权失败异常"""
 
-    def __init__(self, message: str = "权限不足", detail: Optional[Any] = None):
+    def __init__(self, message: str = "抱歉，您还没有权限访问这个功能", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=403, detail=detail)
 
 
 class NotFoundError(SparkleException):
     """资源不存在异常"""
 
-    def __init__(self, message: str = "资源不存在", detail: Optional[Any] = None):
+    def __init__(self, message: str = "没有找到相关内容", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=404, detail=detail)
 
 
 class ValidationError(SparkleException):
     """数据验证异常"""
 
-    def __init__(self, message: str = "数据验证失败", detail: Optional[Any] = None):
+    def __init__(self, message: str = "信息填写不完整，请检查后重试", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=422, detail=detail)
 
 
 class LLMServiceError(SparkleException):
     """LLM 服务异常"""
 
-    def __init__(self, message: str = "AI 服务调用失败", detail: Optional[Any] = None):
+    def __init__(self, message: str = "AI 服务暂时不可用，请稍后再试", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=500, detail=detail)
 
 
@@ -61,7 +61,7 @@ class LLMServiceError(SparkleException):
 class DatabaseError(SparkleException):
     """数据库基础异常"""
 
-    def __init__(self, message: str = "数据库操作失败", detail: Optional[Any] = None):
+    def __init__(self, message: str = "数据存储出现问题，请稍后再试", detail: Optional[Any] = None):
         super().__init__(message=message, status_code=500, detail=detail)
 
 
@@ -69,7 +69,7 @@ class DatabaseConnectionError(DatabaseError):
     """数据库连接异常"""
 
     def __init__(
-        self, message: str = "数据库连接失败", detail: Optional[Any] = None
+        self, message: str = "无法连接到数据库，请稍后再试", detail: Optional[Any] = None
     ):
         super().__init__(message=message, detail=detail)
 
@@ -87,7 +87,7 @@ class DuplicateKeyError(DatabaseError):
     """唯一键冲突异常"""
 
     def __init__(
-        self, message: str = "数据已存在", detail: Optional[Any] = None
+        self, message: str = "这个数据已经存在了", detail: Optional[Any] = None
     ):
         super().__init__(message=message, detail=detail)
         self.status_code = 409  # Conflict
@@ -125,7 +125,7 @@ class DeadlockError(DatabaseError):
     """死锁异常"""
 
     def __init__(
-        self, message: str = "数据库死锁，请重试", detail: Optional[Any] = None
+        self, message: str = "数据库繁忙，请稍后再试", detail: Optional[Any] = None
     ):
         super().__init__(message=message, detail=detail)
         self.status_code = 503  # Service Unavailable, should retry

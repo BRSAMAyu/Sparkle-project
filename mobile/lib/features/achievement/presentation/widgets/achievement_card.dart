@@ -524,7 +524,6 @@ class AchievementGridCard extends StatelessWidget {
   Widget build(BuildContext context) => AchievementCard(
       achievement: achievement,
       onTap: onTap,
-      style: AchievementCardStyle.standard,
       showProgress: showProgress,
     );
 }

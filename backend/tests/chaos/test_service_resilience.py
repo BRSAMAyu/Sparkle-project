@@ -8,6 +8,12 @@ from jose import jwt as jose_jwt
 from pathlib import Path
 from typing import Dict, Any
 
+# Only run when chaos environment is explicitly enabled
+pytestmark = pytest.mark.skipif(
+    not os.getenv("RUN_CHAOS_TESTS"),
+    reason="Chaos tests require a running gateway and explicit enablement."
+)
+
 # Configuration
 GATEWAY_URL = "http://localhost:8080"
 CHAOS_API_URL = f"{GATEWAY_URL}/admin/chaos"

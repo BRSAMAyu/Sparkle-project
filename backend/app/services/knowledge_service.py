@@ -3,6 +3,7 @@ Knowledge Retrieval Service (RAG)
 Wraps GalaxyService to provide context for the AI Agent
 """
 from dataclasses import dataclass
+import asyncio
 import time
 from typing import List, Optional
 from uuid import UUID
@@ -14,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.services.galaxy_service import GalaxyService
 from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
+from app.services.galaxy.rag_router import RagRouter
 from app.schemas.galaxy import SearchResultItem
 from app.models.galaxy import KnowledgeNode
 from app.core.metrics import RAG_RETRIEVAL_LATENCY

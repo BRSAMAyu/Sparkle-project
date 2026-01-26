@@ -169,7 +169,7 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
     }
     // Notify listeners (skip initial load)
     if (_isLoaded && oldState != value) {
-      for (int i = 0; i < _listeners.length; i++) {
+      for (var i = 0; i < _listeners.length; i++) {
         try {
           _listeners[i](oldState, value);
         } catch (e, stackTrace) {
@@ -197,9 +197,7 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
   /// Remove a state change listener.
   ///
   /// Returns `true` if the listener was found and removed, `false` otherwise.
-  bool removeStateListener(StateChangeListener<T> listener) {
-    return _listeners.remove(listener);
-  }
+  bool removeStateListener(StateChangeListener<T> listener) => _listeners.remove(listener);
 
   /// Clear all listeners.
   ///
@@ -352,7 +350,7 @@ class PersistentNotifier<T> extends StateNotifier<T> {
     }
     // Notify listeners (skip initial load)
     if (_isLoaded && oldState != value) {
-      for (int i = 0; i < _listeners.length; i++) {
+      for (var i = 0; i < _listeners.length; i++) {
         try {
           _listeners[i](oldState, value);
         } catch (e, stackTrace) {
@@ -380,9 +378,7 @@ class PersistentNotifier<T> extends StateNotifier<T> {
   /// Remove a state change listener.
   ///
   /// Returns `true` if the listener was found and removed, `false` otherwise.
-  bool removeStateListener(StateChangeListener<T> listener) {
-    return _listeners.remove(listener);
-  }
+  bool removeStateListener(StateChangeListener<T> listener) => _listeners.remove(listener);
 
   /// Clear all listeners.
   ///
@@ -416,8 +412,7 @@ PersistentProvider<T> makePersistentProvider<T>({
   required T? Function(String?) deserializer,
   Duration debounce = const Duration(milliseconds: 300),
   bool enabled = true,
-}) {
-  return StateNotifierProvider<PersistentNotifier<T>, T>((ref) {
+}) => StateNotifierProvider<PersistentNotifier<T>, T>((ref) {
     return PersistentNotifier<T>(
       namespace: namespace,
       key: key,
@@ -428,7 +423,6 @@ PersistentProvider<T> makePersistentProvider<T>({
       enabled: enabled,
     );
   });
-}
 
 // ==================== Specialized Notifiers ====================
 
@@ -442,7 +436,7 @@ class EnumPersistentNotifier<T extends Enum> extends PersistentNotifier<T> {
     super.debounce,
     super.enabled,
   }) : super(
-          serializer: (e) => e?.name,
+          serializer: (e) => e.name,
           deserializer: (s) => EnumSerializer.deserializeEnum(s, values),
         );
 
@@ -629,7 +623,7 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
     }
     // Notify listeners (skip initial load)
     if (_isLoaded && oldState != value) {
-      for (int i = 0; i < _listeners.length; i++) {
+      for (var i = 0; i < _listeners.length; i++) {
         try {
           _listeners[i](oldState, value);
         } catch (e, stackTrace) {
@@ -657,9 +651,7 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
   /// Remove a state change listener.
   ///
   /// Returns `true` if the listener was found and removed, `false` otherwise.
-  bool removeStateListener(StateChangeListener<Set<String>> listener) {
-    return _listeners.remove(listener);
-  }
+  bool removeStateListener(StateChangeListener<Set<String>> listener) => _listeners.remove(listener);
 
   /// Clear all listeners.
   ///

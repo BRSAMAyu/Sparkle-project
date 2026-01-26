@@ -46,7 +46,8 @@ async def test_behavior_pattern_decay_applies(db_session, monkeypatch):
     )
 
     await db_session.refresh(pattern)
-    assert updated == 1
+    assert updated["updated"] == 1
+    assert updated["archived"] == 1
     assert pattern.confidence_score == pytest.approx(0.3)
     assert pattern.is_archived is True
     assert pattern.last_decay_at is not None
@@ -90,5 +91,6 @@ async def test_behavior_pattern_decay_respects_recent_decay(db_session, monkeypa
     )
 
     await db_session.refresh(pattern)
-    assert updated == 0
+    assert updated["updated"] == 0
+    assert updated["archived"] == 0
     assert pattern.confidence_score == pytest.approx(0.6)

@@ -43,14 +43,14 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	if req.Provider != "apple" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported provider"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的身份提供商"})
 		return
 	}
 
 	// 1. Verify Apple Token
 	claims, err := h.appleAuthService.VerifyToken(req.Token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Apple verification failed: %v", err)})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Apple验证失败：%v", err)})
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
 			})
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
 				return
 			}
 		}
@@ -104,7 +104,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	// 3. Issue System Token
 	accessToken, err := h.createAccessToken(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to issue token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
 		return
 	}
 

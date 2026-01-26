@@ -88,7 +88,6 @@ class _StreakIndicatorCompact extends StatelessWidget {
           borderRadius: DS.borderRadius12,
           border: Border.all(
             color: _flameColor.withValues(alpha: 0.3),
-            width: 1,
           ),
         ),
         child: Row(
@@ -223,7 +222,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
+      child: const Icon(
         Icons.whatshot_rounded,
         color: Colors.white,
         size: DS.iconSizeLg,
@@ -393,7 +392,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
           ),
         ],
       ),
-      child: Icon(
+      child: const Icon(
         Icons.whatshot_rounded,
         color: Colors.white,
         size: DS.iconSize3xl,
@@ -696,7 +695,7 @@ class _CircularProgressPainter extends CustomPainter {
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
     
-    var startAngle = -math.pi / 2;
+    final startAngle = -math.pi / 2;
     var currentAngle = startAngle;
     
     while (currentAngle < startAngle + 2 * math.pi) {
@@ -746,7 +745,6 @@ class CardStreakIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
-      style: StreakIndicatorStyle.standard,
       onTap: onTap,
     );
 }

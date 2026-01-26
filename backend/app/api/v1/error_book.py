@@ -131,7 +131,7 @@ async def get_error(
     """获取错题详情（含 AI 分析和关联知识点）"""
     error = await service.get_error(error_id, UUID(user_id))
     if not error:
-        raise HTTPException(status_code=404, detail="错题不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
     
     # knowledge_links is populated by the service on the object
     return error
@@ -147,7 +147,7 @@ async def update_error(
     """更新错题信息"""
     error = await service.update_error(error_id, UUID(user_id), data)
     if not error:
-        raise HTTPException(status_code=404, detail="错题不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
     return error
 
 
@@ -160,7 +160,7 @@ async def delete_error(
     """删除错题（软删除）"""
     success = await service.delete_error(error_id, UUID(user_id))
     if not success:
-        raise HTTPException(status_code=404, detail="错题不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
 
 
 @router.post("/{error_id}/analyze", response_model=dict)
@@ -175,7 +175,7 @@ async def re_analyze_error(
     """
     error = await service.get_error(error_id, UUID(user_id))
     if not error:
-        raise HTTPException(status_code=404, detail="错题不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
     
     # 异步执行分析
     background_tasks.add_task(
@@ -184,7 +184,7 @@ async def re_analyze_error(
         UUID(user_id)
     )
     
-    return {"message": "分析任务已提交，请稍后刷新查看结果"}
+    return {"message": "分析任务已提交，请稍后刷新查看结果~"}
 
 
 @router.post("/{error_id}/review", response_model=ErrorRecordResponse)
@@ -213,7 +213,7 @@ async def get_error_semantic_summary(
 ):
     error = await service.get_error(error_id, UUID(user_id))
     if not error:
-        raise HTTPException(status_code=404, detail="错题不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
 
     semantic_service = SemanticMemoryService(db)
     strategies = await semantic_service.get_strategies_for_error(error_id, UUID(user_id))

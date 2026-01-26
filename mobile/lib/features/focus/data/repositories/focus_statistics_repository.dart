@@ -14,9 +14,7 @@ class FocusStatisticsRepository {
   // ==================== Save Operations ====================
 
   /// Save a focus session to local storage
-  Future<int> saveSession(FocusSessionRecord session) async => await _isar.writeTxn(() async {
-      return await _collection.put(session);
-    });
+  Future<int> saveSession(FocusSessionRecord session) async => _isar.writeTxn(() async => await _collection.put(session));
 
   /// Save multiple sessions at once
   Future<void> saveSessions(List<FocusSessionRecord> sessions) async {
@@ -31,7 +29,7 @@ class FocusStatisticsRepository {
   Future<List<FocusSessionRecord>> getSessionsByDateRange(
     DateTime start,
     DateTime end,
-  ) async => await _collection
+  ) async => _collection
         .where()
         .startTimeBetween(start, end)
         .sortByStartTimeDesc()
@@ -211,7 +209,7 @@ class FocusStatisticsRepository {
   Future<List<FocusSessionRecord>> getSessionHistory({
     int limit = 20,
     int offset = 0,
-  }) async => await _collection
+  }) async => _collection
         .where()
         .sortByStartTimeDesc()
         .offset(offset)
@@ -219,7 +217,7 @@ class FocusStatisticsRepository {
         .findAll();
 
   /// Get total session count
-  Future<int> getTotalSessionCount() async => await _collection.count();
+  Future<int> getTotalSessionCount() async => _collection.count();
 
   /// Get heatmap data for the last N days
   Future<Map<DateTime, double>> getHeatmapData({int days = 90}) async {
@@ -344,7 +342,7 @@ class FocusStatisticsRepository {
   // ==================== Sync Operations ====================
 
   /// Get all unsynced sessions
-  Future<List<FocusSessionRecord>> getUnsyncedSessions() async => await _collection
+  Future<List<FocusSessionRecord>> getUnsyncedSessions() async => _collection
         .where()
         .isSyncedEqualTo(false)
         .sortByCreatedAt()
@@ -419,9 +417,7 @@ class FocusStatisticsRepository {
   }
 
   /// Delete a session by local ID
-  Future<bool> deleteSession(int id) async => await _isar.writeTxn(() async {
-      return await _collection.delete(id);
-    });
+  Future<bool> deleteSession(int id) async => _isar.writeTxn(() async => await _collection.delete(id));
 
   /// Clear all local data (use with caution)
   Future<void> clearAll() async {

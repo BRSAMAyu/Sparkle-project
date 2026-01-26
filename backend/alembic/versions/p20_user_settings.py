@@ -34,7 +34,14 @@ def upgrade() -> None:
             sa.Column("system_update_level", sa.Integer(), nullable=False, server_default="1"),
         )
         op.create_index("idx_user_settings_user", "user_settings", ["user_id"], unique=True)
+        op.create_foreign_key(
+            "fk_user_settings_user_id",
+            "user_settings", "users",
+            ["user_id"], ["id"],
+            ondelete="CASCADE"
+        )
 
 
 def downgrade() -> None:
+    op.drop_constraint("fk_user_settings_user_id", "user_settings", type_="foreignkey")
     op.drop_table("user_settings")

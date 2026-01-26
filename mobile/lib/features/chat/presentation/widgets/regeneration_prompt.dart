@@ -209,8 +209,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
-    return InkWell(
+  Widget _buildHeader(ThemeData theme) => InkWell(
       onTap: widget.status == RegenerationStatus.idle
           ? () {
               setState(() {
@@ -258,10 +257,8 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
         ),
       ),
     );
-  }
 
-  Widget _buildProgressContent(ThemeData theme) {
-    return Padding(
+  Widget _buildProgressContent(ThemeData theme) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         children: [
@@ -300,7 +297,6 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
         ],
       ),
     );
-  }
 
   Widget _buildResultContent(ThemeData theme) {
     final result = widget.result!;
@@ -355,8 +351,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               ),
             ),
             const SizedBox(height: 4),
-            ...result.changesMade.map((change) {
-              return Padding(
+            ...result.changesMade.map((change) => Padding(
                 padding: const EdgeInsets.only(left: 8, top: 2),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,8 +367,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     ),
                   ],
                 ),
-              );
-            }),
+              )),
           ],
 
           // Score improvement
@@ -406,8 +400,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
     );
   }
 
-  Widget _buildFailedContent(ThemeData theme) {
-    return Padding(
+  Widget _buildFailedContent(ThemeData theme) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         children: [
@@ -443,10 +436,8 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
         ],
       ),
     );
-  }
 
-  Widget _buildOptionsContent(ThemeData theme) {
-    return Padding(
+  Widget _buildOptionsContent(ThemeData theme) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -549,7 +540,6 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
         ],
       ),
     );
-  }
 
   IconData _getStatusIcon() {
     switch (widget.status) {
@@ -559,7 +549,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
       case RegenerationStatus.inProgress:
         return Icons.hourglass_empty;
       case RegenerationStatus.completed:
-        return widget.result?.success == true
+        return widget.result?.success ?? false
             ? Icons.check_circle
             : Icons.error;
       case RegenerationStatus.failed:
@@ -575,7 +565,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
       case RegenerationStatus.inProgress:
         return theme.colorScheme.secondary;
       case RegenerationStatus.completed:
-        return widget.result?.success == true
+        return widget.result?.success ?? false
             ? Colors.green
             : theme.colorScheme.error;
       case RegenerationStatus.failed:
@@ -592,7 +582,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
       case RegenerationStatus.inProgress:
         return '正在重新生成';
       case RegenerationStatus.completed:
-        return widget.result?.success == true ? '重新生成完成' : '重新生成失败';
+        return widget.result?.success ?? false ? '重新生成完成' : '重新生成失败';
       case RegenerationStatus.failed:
         return '重新生成失败';
     }

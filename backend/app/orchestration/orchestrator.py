@@ -45,6 +45,7 @@ from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
 from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
+from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
 from opentelemetry import trace
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
@@ -68,6 +69,9 @@ from app.orchestration.circuit_breaker import (
 from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, CHAT_MODE_STANDARD
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
+
+# Phase 4: Sufficiency Checking
+from app.orchestration.sufficiency_checker import sufficiency_checker, SufficiencyStatus
 
 # Phase 5: Plan Execution Validation
 from app.orchestration.tool_result_extractor import ToolResultExtractor
@@ -204,7 +208,14 @@ class ChatOrchestrator:
         # Phase 1: Initialize new components
         self.request_router = RequestRouter(redis_client)
         self.grounding_validator = GroundingValidator(redis_client)
-        logger.info("ChatOrchestrator initialized with RequestRouter and GroundingValidator")
+
+        # Unified Intent Router (Fix #1): 统一功能入口路由
+        self.unified_router = UnifiedIntentRouter(
+            redis_client=redis_client,
+            llm_service=llm_service,
+            context_window_size=5
+        )
+        logger.info("ChatOrchestrator initialized with RequestRouter, GroundingValidator, and UnifiedIntentRouter")
 
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
         self.lang_graph_planner = LangGraphPlanner(redis_client)
@@ -223,25 +234,6 @@ class ChatOrchestrator:
             redis_client=redis_client
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
-
-    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
-        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
-        responses: List[agent_service_pb2.ChatResponse] = []
-        for update in updates:
-            widget_struct = struct_pb2.Struct()
-            widget_struct.update(update)
-            responses.append(
-                agent_service_pb2.ChatResponse(
-                    tool_result=agent_service_pb2.ToolResultPayload(
-                        tool_name="system_update",
-                        success=True,
-                        widget_type="system_update",
-                        widget_data=widget_struct,
-                        tool_call_id="",
-                    )
-                )
-            )
-        return responses
         asyncio.create_task(self.langgraph_breaker.initialize())
 
         # Phase 3: Observability
@@ -266,6 +258,25 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
+        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
+        responses: List[agent_service_pb2.ChatResponse] = []
+        for update in updates:
+            widget_struct = struct_pb2.Struct()
+            widget_struct.update(update)
+            responses.append(
+                agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name="system_update",
+                        success=True,
+                        widget_type="system_update",
+                        widget_data=widget_struct,
+                        tool_call_id="",
+                    )
+                )
+            )
+        return responses
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -671,7 +682,7 @@ class ChatOrchestrator:
 
                 return {
                     "user_context": user_context_data, # Legacy field
-                    "analytics_summary": cognitive_context.engagement_metrics,
+                    "analytics_summary": cognitive_context.engagement_metrics or {},
                     "preferences": cognitive_context.preferences,
                     "next_actions": cognitive_context.active_tasks,
                     "active_plans": active_plans,
@@ -936,7 +947,7 @@ class ChatOrchestrator:
                     request_id=request_id,
                     error=agent_service_pb2.Error(
                         code="CONFLICT",
-                        message="Another request is processing for this session",
+                        message="会话正在处理另一个请求，请稍候",
                         retryable=True
                     ),
                     finish_reason=agent_service_pb2.ERROR
@@ -1002,7 +1013,7 @@ class ChatOrchestrator:
                             plan_matching = PlanMatchingService(active_db)
 
                             # Try to match the message to a plan
-                            matched_plan_id = await self.session_state.auto_switch_plan(
+                            matched_plan_id = await self.state_manager.auto_switch_plan(
                                 session_id=session_id,
                                 user_id=uuid.UUID(user_id),
                                 task_context={
@@ -1050,7 +1061,7 @@ class ChatOrchestrator:
                             try:
                                 from app.core.plan_context import PlanContextBuilder
                                 plan_builder = PlanContextBuilder(active_db, self.redis)
-                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
                                 if plan_context:
                                     logger.info(f"Built plan_context for plan_id={plan_id}")
                                     # Include plan_context in user_context_payload
@@ -1111,6 +1122,71 @@ class ChatOrchestrator:
                 # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
+
+                # P4: Sufficiency Checking (skip for tool results)
+                if not request.HasField("tool_result"):
+                    with tracer.start_as_current_span("orchestrator.sufficiency_check"):
+                        try:
+                            # Predict intent from user message
+                            prediction = await shadow_prediction_service.predict_intent_only(
+                                user_message=user_message,
+                                active_plan_id=str(plan_id) if plan_id else None,
+                                user_id=user_id
+                            )
+
+                            # Extract basic entities from prediction
+                            extracted_entities = {
+                                "intent_type": prediction.get("intent_type", "unknown"),
+                                "suggested_tools": prediction.get("suggested_tools", []),
+                            }
+
+                            # Run sufficiency check
+                            check_result = await sufficiency_checker.check(
+                                intent=prediction.get("intent_type", "unknown"),
+                                extracted_entities=extracted_entities,
+                                conversation_context=conversation_context or [],
+                            )
+
+                            # If clarification needed, respond with questions
+                            if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
+                                logger.info(f"Sufficiency check requires clarification: {check_result.clarification_questions}")
+                                questions = "\n".join([f"- {q}" for q in check_result.clarification_questions])
+                                clarification_response = agent_service_pb2.ChatResponse(
+                                    delta=f"我需要更多信息来帮您：\n\n{questions}\n\n请提供以上信息，我将为您处理。",
+                                    metadata={
+                                        "requires_clarification": "true",
+                                        "missing_fields": ",".join(check_result.missing_fields),
+                                    }
+                                )
+                                await stream_callback(clarification_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                            # If confirmation needed, ask for confirmation
+                            if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                                logger.info(f"Sufficiency check requires confirmation: {check_result.confirmation_message}")
+                                confirmation_response = agent_service_pb2.ChatResponse(
+                                    delta=check_result.confirmation_message,
+                                    metadata={
+                                        "requires_confirmation": "true",
+                                    }
+                                )
+                                await stream_callback(confirmation_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                        except Exception as e:
+                            logger.warning(f"Sufficiency check failed, continuing: {e}")
                 
                 # Get tools
                 with tracer.start_as_current_span("orchestrator.get_tools"):
@@ -1250,7 +1326,47 @@ class ChatOrchestrator:
                         return
 
                 # === Phase 1 & Phase 2: Routing & Validation Setup ===
-                # 路由决策
+
+                # Fix #1: 统一路由决策（优先于request_router）
+                unified_routing_result = None
+                try:
+                    unified_routing_result = await self.unified_router.route(
+                        message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        payload=grpc_context,
+                        conversation_history=conversation_context.get("history", []) if conversation_context else []
+                    )
+                    logger.info(
+                        f"Unified routing: {unified_routing_result.primary_intent.value} "
+                        f"(confidence={unified_routing_result.confidence:.2f}, "
+                        f"layer={unified_routing_result.routing_layer})"
+                    )
+                except Exception as e:
+                    logger.warning(f"Unified routing failed: {e}, falling back to request_router")
+
+                # 检查特殊意图并标记到context_data（供后续工具调用使用）
+                if unified_routing_result:
+                    state.context_data["unified_intent"] = {
+                        "primary_intent": unified_routing_result.primary_intent.value,
+                        "confidence": unified_routing_result.confidence,
+                        "routing_layer": unified_routing_result.routing_layer,
+                        "execution_mode": unified_routing_result.execution_mode,
+                        "context_signals": unified_routing_result.context_signals
+                    }
+
+                    # 特殊意图标记（供工具调用时识别）
+                    if unified_routing_result.primary_intent == UnifiedIntentType.COGNITIVE_PRISM:
+                        state.context_data["special_intent"] = "cognitive_prism"
+                        logger.info("Special intent detected: COGNITIVE_PRISM (认知棱镜)")
+                    elif unified_routing_result.primary_intent == UnifiedIntentType.TRANSLATION:
+                        state.context_data["special_intent"] = "translation"
+                        logger.info("Special intent detected: TRANSLATION (翻译)")
+                    elif unified_routing_result.primary_intent == UnifiedIntentType.SPRINT_PLAN:
+                        state.context_data["special_intent"] = "sprint_plan"
+                        logger.info("Special intent detected: SPRINT_PLAN (冲刺计划)")
+
+                # 原有路由决策（保持兼容）
                 route_decision = await self.request_router.decide(
                     message=user_message,
                     user_id=user_id,
@@ -1275,6 +1391,35 @@ class ChatOrchestrator:
                 # === Phase 3: With Circuit Breaker, Observability, Shadow Mode ===
                 executable_plan = None
                 snapshot = None
+
+                # Fix #2: 信息收集检查（在LangGraph规划之前）
+                # 仅在识别为计划意图时触发信息收集
+                if unified_routing_result and unified_routing_result.primary_intent == UnifiedIntentType.PLAN:
+                    try:
+                        # 创建临时snapshot用于信息充足度检查
+                        temp_snapshot = await self.snapshot_manager.create_snapshot(
+                            user_id=user_id,
+                            session_id=session_id,
+                            db_session=active_db,
+                        )
+
+                        # 检查并收集信息
+                        info_collection_triggered = await self.check_and_collect_information(
+                            user_message=user_message,
+                            snapshot=temp_snapshot,
+                            user_id=user_id,
+                            session_id=session_id,
+                            stream_callback=stream_callback
+                        )
+
+                        # 如果触发了信息收集，继续正常流程（不中断）
+                        # 用户回复后会再次进入流程，此时信息会更充足
+                        if info_collection_triggered:
+                            logger.info(f"Information collection triggered, continuing with planning")
+
+                    except Exception as e:
+                        logger.warning(f"Information collection check failed: {e}")
+                        # 继续正常流程，不阻塞
 
                 if route_decision.execution_mode in ["langgraph", "hybrid"]:
                     logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
@@ -1849,6 +1994,11 @@ class ChatOrchestrator:
                         "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
                     }
 
+                    # P0: Add sprint mode switch notification
+                    if route_decision and "sprint" in route_decision.reason.lower():
+                        response_metadata["switch_to_sprint"] = True
+                        logger.info("Sprint mode switch notification added to response")
+
                     # P0: Add plan switch notification to metadata
                     if plan_switched and plan_id:
                         response_metadata["plan_switched"] = True
@@ -2065,3 +2215,305 @@ class ChatOrchestrator:
 
         except Exception as e:
             logger.warning(f"Failed to notify milestone proposals: {e}")
+
+    # Fix #2: 多轮对话信息收集方法
+
+    async def _is_information_sufficient(
+        self,
+        collected_info: Dict[str, Any],
+        snapshot
+    ) -> tuple[bool, List[str]]:
+        """
+        使用LLM判断当前收集的信息是否充足
+
+        Args:
+            collected_info: 已收集的信息
+            snapshot: StateSnapshot对象
+
+        Returns:
+            (is_sufficient, list_of_missing_aspects)
+        """
+        prompt = f"""你是一个信息充足度判断专家。请分析当前收集的用户信息是否足够制定学习计划。
+
+## 用户初始请求
+{collected_info.get("initial_request", "")}
+
+## 已收集的澄清信息
+{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
+
+## 当前用户上下文
+{snapshot.to_prompt_context() if snapshot else "无"}
+
+请判断：
+1. 信息是否充足（可以开始制定计划）
+2. 如果不充足，列出缺失的关键方面（最多3个）
+
+返回JSON格式：
+{{
+  "is_sufficient": true/false,
+  "missing_aspects": ["缺失方面1", "缺失方面2"],
+  "reasoning": "判断理由"
+}}
+"""
+
+        try:
+            result = await llm_service.chat_json(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
+
+            is_sufficient = result.get("is_sufficient", False)
+            missing_aspects = result.get("missing_aspects", [])
+
+            logger.info(
+                f"Information sufficiency check: sufficient={is_sufficient}, "
+                f"missing={len(missing_aspects)}"
+            )
+
+            return is_sufficient, missing_aspects
+
+        except Exception as e:
+            logger.error(f"LLM information sufficiency check failed: {e}")
+            # 降级：认为信息充足，避免阻塞流程
+            return True, []
+
+    async def _generate_clarifying_question(
+        self,
+        missing_aspects: List[str],
+        collected_info: Dict[str, Any]
+    ) -> str:
+        """
+        生成追问
+
+        Args:
+            missing_aspects: 缺失的信息方面
+            collected_info: 已收集的信息
+
+        Returns:
+            追问文本
+        """
+        prompt = f"""你是一个善于提问的学习助手。需要向用户询问缺失的信息以制定学习计划。
+
+## 缺失的信息方面
+{chr(10).join(f"- {aspect}" for aspect in missing_aspects)}
+
+## 当前已收集的信息
+{json.dumps(collected_info, ensure_ascii=False, indent=2)}
+
+请生成一个自然、友好的追问，帮助用户提供这些缺失信息。
+
+要求：
+1. 问题要自然、口语化
+2. 一次只问1-2个相关问题
+3. 体现出你对用户情况的理解
+
+返回追问内容（直接返回问题文本，不要JSON）。"""
+
+        try:
+            question = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7
+            )
+            return question.strip()
+        except Exception as e:
+            logger.error(f"Failed to generate clarifying question: {e}")
+            return "为了更好地为您制定计划，请提供更多关于您学习目标和时间安排的信息。"
+
+    async def _synthesize_collected_info(
+        self,
+        collected_info: Dict[str, Any]
+    ) -> str:
+        """
+        提炼收集的信息为总结
+
+        Args:
+            collected_info: 已收集的信息
+
+        Returns:
+            信息总结文本
+        """
+        prompt = f"""请将以下收集的用户信息提炼为简洁的学习计划需求总结。
+
+## 用户初始请求
+{collected_info.get("initial_request", "")}
+
+## 澄清信息
+{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
+
+请提炼为一段简洁的总结（不超过200字），包含：
+1. 学习目标
+2. 时间安排
+3. 其他关键约束或偏好
+
+直接返回总结文本，不要JSON。"""
+
+        try:
+            summary = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+            return summary.strip()
+        except Exception as e:
+            logger.error(f"Failed to synthesize collected info: {e}")
+            # 降级：返回初始请求
+            return collected_info.get("initial_request", "")
+
+    async def _update_state_with_collected_info(
+        self,
+        session_id: str,
+        collected_info: Dict[str, Any],
+        summary: str
+    ):
+        """
+        将收集的信息写入state
+
+        Args:
+            session_id: 会话ID
+            collected_info: 已收集的信息
+            summary: 信息总结
+        """
+        try:
+            # 通过state_manager更新session context
+            if self.state_manager:
+                await self.state_manager.update_session_context(
+                    session_id=session_id,
+                    context_updates={
+                        "collected_information": collected_info,
+                        "user_requirement_summary": summary,
+                        "information_collection_completed_at": datetime.utcnow().isoformat()
+                    }
+                )
+                logger.info(f"Updated state with collected information for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to update state with collected info: {e}")
+
+    async def _needs_information_collection(
+        self,
+        user_message: str,
+        snapshot
+    ) -> bool:
+        """
+        快速判断是否需要信息收集（基于规则+LLM）
+
+        Args:
+            user_message: 用户消息
+            snapshot: StateSnapshot对象
+
+        Returns:
+            是否需要信息收集
+        """
+        # 规则1: 消息长度过短（<20字）可能需要更多信息
+        if len(user_message.strip()) < 20:
+            return True
+
+        # 规则2: 包含模糊关键词
+        vague_keywords = [
+            "计划", "学习", "复习", "安排", "帮我",
+            "制定", "设计", "规划"
+        ]
+        if any(keyword in user_message for keyword in vague_keywords):
+            # 检查是否包含具体信息
+            has_specific_info = any([
+                "天" in user_message or "周" in user_message or "月" in user_message,  # 时间
+                "考试" in user_message or "目标" in user_message,  # 目标
+                "数学" in user_message or "英语" in user_message or "语文" in user_message,  # 科目
+            ])
+            if not has_specific_info:
+                return True
+
+        # 规则3: 使用LLM判断（仅对复杂消息）
+        if len(user_message) > 50:
+            try:
+                prompt = f"""判断用户消息是否足够具体以制定学习计划。
+
+用户消息："{user_message}"
+
+如果消息包含足够的学习目标、时间安排、科目等信息，返回 {{"specific": true}}
+如果消息过于模糊或笼统，需要更多信息，返回 {{"specific": false}}
+
+只返回JSON，不要其他内容。"""
+
+                result = await llm_service.chat_json(
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1
+                )
+                return not result.get("specific", False)
+            except Exception as e:
+                logger.warning(f"LLM specificity check failed: {e}")
+
+        return False
+
+    async def check_and_collect_information(
+        self,
+        user_message: str,
+        snapshot,
+        user_id: str,
+        session_id: str,
+        stream_callback
+    ) -> bool:
+        """
+        检查是否需要信息收集，如果需要则生成追问（简化版本）
+
+        注意：这是简化实现，在单次响应中检测并提示信息收集。
+        完整的多轮loop需要客户端配合或WebSocket长连接。
+
+        Args:
+            user_message: 用户消息
+            snapshot: StateSnapshot对象
+            user_id: 用户ID
+            session_id: 会话ID
+            stream_callback: 流式回调函数
+
+        Returns:
+            True表示需要信息收集且已发送追问，False表示信息充足
+        """
+        # 检查是否需要信息收集
+        needs_collection = await self._needs_information_collection(user_message, snapshot)
+
+        if not needs_collection:
+            return False
+
+        logger.info(f"Information collection triggered for session {session_id}")
+
+        # 构建初始收集信息结构
+        collected_info = {
+            "initial_request": user_message,
+            "clarifications": []
+        }
+
+        # 检查信息充足度
+        is_sufficient, missing_aspects = await self._is_information_sufficient(
+            collected_info, snapshot
+        )
+
+        if is_sufficient:
+            return False
+
+        # 生成追问
+        question = await self._generate_clarifying_question(
+            missing_aspects, collected_info
+        )
+
+        # 流式返回追问
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=f"\n\n{question}"
+        ))
+
+        # 保存状态到Redis，标记"需要收集信息"
+        try:
+            await self.redis.setex(
+                f"info_collection_needed:{session_id}",
+                300,  # 5分钟过期
+                json.dumps({
+                    "collected_info": collected_info,
+                    "missing_aspects": missing_aspects,
+                    "round": 1,
+                    "max_rounds": 3,
+                    "triggered_at": datetime.utcnow().isoformat()
+                })
+            )
+            logger.info(f"Set information collection flag for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to set info collection flag: {e}")
+
+        return True

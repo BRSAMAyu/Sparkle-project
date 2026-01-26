@@ -54,19 +54,13 @@ class ViewStorageService {
   }
 
   /// Build a namespaced key
-  String _buildKey(String namespace, String key) {
-    return '$_viewStatePrefix.$namespace.$key';
-  }
+  String _buildKey(String namespace, String key) => '$_viewStatePrefix.$namespace.$key';
 
   /// Build the version key for a namespace
-  String _buildVersionKey(String namespace) {
-    return '$_viewStatePrefix.$namespace$_versionKeySuffix';
-  }
+  String _buildVersionKey(String namespace) => '$_viewStatePrefix.$namespace$_versionKeySuffix';
 
   /// Get the current version for a namespace
-  int _getVersion(String namespace) {
-    return _prefs.getInt(_buildVersionKey(namespace)) ?? _defaultVersion;
-  }
+  int _getVersion(String namespace) => _prefs.getInt(_buildVersionKey(namespace)) ?? _defaultVersion;
 
   /// Set the version for a namespace
   Future<void> _setVersion(String namespace, int version) async {
@@ -76,9 +70,7 @@ class ViewStorageService {
   // ==================== Primitive Get/Set ====================
 
   /// Get a string value
-  String? getString(String namespace, String key) {
-    return _prefs.getString(_buildKey(namespace, key));
-  }
+  String? getString(String namespace, String key) => _prefs.getString(_buildKey(namespace, key));
 
   /// Set a string value (with optional debounce)
   Future<void> setString(
@@ -96,9 +88,7 @@ class ViewStorageService {
   }
 
   /// Get an int value
-  int? getInt(String namespace, String key) {
-    return _prefs.getInt(_buildKey(namespace, key));
-  }
+  int? getInt(String namespace, String key) => _prefs.getInt(_buildKey(namespace, key));
 
   /// Set an int value (with optional debounce)
   Future<void> setInt(
@@ -116,9 +106,7 @@ class ViewStorageService {
   }
 
   /// Get a double value
-  double? getDouble(String namespace, String key) {
-    return _prefs.getDouble(_buildKey(namespace, key));
-  }
+  double? getDouble(String namespace, String key) => _prefs.getDouble(_buildKey(namespace, key));
 
   /// Set a double value (with optional debounce)
   Future<void> setDouble(
@@ -136,9 +124,7 @@ class ViewStorageService {
   }
 
   /// Get a bool value
-  bool? getBool(String namespace, String key) {
-    return _prefs.getBool(_buildKey(namespace, key));
-  }
+  bool? getBool(String namespace, String key) => _prefs.getBool(_buildKey(namespace, key));
 
   /// Set a bool value (with optional debounce)
   Future<void> setBool(
@@ -373,7 +359,7 @@ class ViewStorageService {
 
     // Check if migration is needed
     if (currentVersion < _getLatestVersion(namespace)) {
-      return await _migrateData(namespace, data, currentVersion);
+      return _migrateData(namespace, data, currentVersion);
     }
 
     return data;
@@ -428,18 +414,14 @@ class ViewStorageService {
   // ==================== Diagnostics ====================
 
   /// Get all keys in a namespace (for debugging)
-  Set<String> getKeysInNamespace(String namespace) {
-    return _prefs.getKeys()
+  Set<String> getKeysInNamespace(String namespace) => _prefs.getKeys()
         .where((key) => key.startsWith('$_viewStatePrefix.$namespace.'))
         .toSet();
-  }
 
   /// Get all view state keys (for debugging)
-  Set<String> getAllViewStateKeys() {
-    return _prefs.getKeys()
+  Set<String> getAllViewStateKeys() => _prefs.getKeys()
         .where((key) => key.startsWith('$_viewStatePrefix'))
         .toSet();
-  }
 
   /// Clear all view state data (use with caution)
   Future<void> clearAll() async {
@@ -455,9 +437,7 @@ class ViewStorageService {
 /// Helper for enum serialization
 class EnumSerializer {
   /// Serialize an enum to its name
-  static String? serializeEnum<T extends Enum>(T? value) {
-    return value?.name;
-  }
+  static String? serializeEnum<T extends Enum>(T? value) => value?.name;
 
   /// Deserialize an enum from its name
   static T? deserializeEnum<T extends Enum>(

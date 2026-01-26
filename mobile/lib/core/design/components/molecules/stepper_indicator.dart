@@ -46,8 +46,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (int i = 0; i < widget.steps.length; i++) ...[
@@ -56,7 +55,6 @@ class _StepperIndicatorState extends State<StepperIndicator>
         ],
       ],
     );
-  }
 
   Widget _buildStepItem(TransparencyStep step, int index) {
     final isCurrent = index == widget.currentStepIndex;
@@ -84,8 +82,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
     if (isCurrent && step.status != 'failed') {
       iconWidget = AnimatedBuilder(
         animation: _pulseController,
-        builder: (context, child) {
-          return Transform.scale(
+        builder: (context, child) => Transform.scale(
             scale: 1.0 + (_pulseController.value * 0.15),
             child: Container(
               decoration: BoxDecoration(
@@ -100,8 +97,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
               ),
               child: child,
             ),
-          );
-        },
+          ),
         child: iconWidget,
       );
     }
@@ -111,15 +107,13 @@ class _StepperIndicatorState extends State<StepperIndicator>
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Opacity(
+      builder: (context, value, child) => Opacity(
           opacity: value,
           child: Transform.translate(
             offset: const Offset(0, 10) * (1 - value),
             child: child,
           ),
-        );
-      },
+        ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -193,8 +187,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
   }
 
   /// 当前步骤的进度条动画
-  Widget _buildPulsingBar() {
-    return AnimatedBuilder(
+  Widget _buildPulsingBar() => AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
         return Container(
@@ -216,11 +209,9 @@ class _StepperIndicatorState extends State<StepperIndicator>
         );
       },
     );
-  }
 
   /// 步骤结果详情（可展示如检索到的知识数量、生成的token数等）
-  Widget _buildStepResultDetails(Map<String, dynamic> result) {
-    return Container(
+  Widget _buildStepResultDetails(Map<String, dynamic> result) => Container(
       padding: const EdgeInsets.all(DS.spacing8),
       decoration: BoxDecoration(
         color: DS.neutral100,
@@ -255,7 +246,6 @@ class _StepperIndicatorState extends State<StepperIndicator>
         }).toList(),
       ),
     );
-  }
 
   Widget _buildConnector(int index) {
     final isCompleted = index < widget.currentStepIndex;

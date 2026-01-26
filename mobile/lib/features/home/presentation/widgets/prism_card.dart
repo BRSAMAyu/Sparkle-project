@@ -80,7 +80,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     gradient: RadialGradient(
                       colors: [
                         DS.prismPurple.withValues(
-                            alpha: _breathingAnimation.value * 0.5),
+                            alpha: _breathingAnimation.value * 0.5,),
                         Colors.transparent,
                       ],
                     ),
@@ -176,7 +176,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
           ],
         ),
       ),
-    ));
+    ),);
   }
 
   Widget _buildTag(BuildContext context, String text) => Container(

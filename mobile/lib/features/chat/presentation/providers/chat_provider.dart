@@ -25,6 +25,7 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -337,7 +338,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         // Update state with error message
         state = state.copyWith(
           lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败',
+          lastActionMessage: result.message ?? 'submit_failed',
         );
         debugPrint('❌ Plan review failed: ${result.message}');
         return false;
@@ -346,7 +347,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       debugPrint('❌ Plan review error: $e');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '网络错误，请重试',
+        lastActionMessage: 'network_error_retry',
       );
       return false;
     }
@@ -366,17 +367,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  /// Get user-friendly success message
-  String _getSuccessMessage(ReviewDecision decision) {
+  /// Get user-friendly success message key (to be localized by UI)
+  String _getSuccessMessageKey(ReviewDecision decision) {
     switch (decision) {
       case ReviewDecision.approved:
-        return '✅ 已批准';
+        return 'review_approved';
       case ReviewDecision.rejected:
-        return '❌ 已取消';
+        return 'review_rejected';
       case ReviewDecision.needsModification:
-        return '📝 已请求修改';
+        return 'review_modification_requested';
       case ReviewDecision.requiresConfirmation:
-        return '✅ 已确认';
+        return 'review_confirmed';
     }
   }
 
@@ -411,8 +412,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final today = _dateKey(DateTime.now());
     final storedDate = prefs.getString(_dailyUsageDateKey);
 
-    int totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
-    int totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
+    var totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
+    var totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
 
     if (storedDate != today) {
       totalTokens = 0;
@@ -822,6 +823,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             transparencyData: event.transparencyData,
           );
           flushPending();
+        } else if (event is SprintModeSwitchEvent) {
+          // Sprint Mode Switch Event
+          _handleSprintModeSwitch(event);
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -1085,11 +1090,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         state = state.copyWith(
-          pendingAchievementUnlock: null,
           clearActionFeedback: true,
         );
       }
     });
+  }
+
+  void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
+    debugPrint('🔄 Sprint mode switch event received');
+
+    // Switch to Sprint View
+    _ref.read(taskBoardProvider.notifier).switchView(TaskViewMode.sprint);
   }
 
   /// 处理 ActionCard 状态更新
@@ -1245,7 +1256,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
         issues: currentReview.issues,
         suggestions: currentReview.suggestions,
         reviewedAt: currentReview.reviewedAt,
-        requiresReflection: false, // Reflection completed
         reflectionStatus: outcome == 'fixed' || outcome == 'improved' ? 'completed' : 'failed',
         scoreLabel: _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
       );
@@ -1268,9 +1278,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
     switch (outcome) {
       case 'fixed':
-        return '✅ 内容已优化${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return '✅ 内容已优化$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
       case 'improved':
-        return '📈 内容有所改善${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return '📈 内容有所改善$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
       case 'no_change':
         return 'ℹ️ 优化尝试完成，内容无明显变化';
       case 'degraded':
@@ -1580,14 +1590,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required String reviewId,
     required int rating,
     String? comments,
-  }) async {
-    return submitReviewFeedback(
+  }) async => submitReviewFeedback(
       reviewId: reviewId,
       rating: rating,
       wasHelpful: rating >= 4,
       comments: comments,
     );
-  }
 
   /// 请求内容重新生成
   ///

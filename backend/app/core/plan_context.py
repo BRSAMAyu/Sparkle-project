@@ -9,16 +9,22 @@ Usage:
 
     builder = PlanContextBuilder(db, redis)
     plan_context = await builder.build(user_id, plan_id)
+
+    # With UserScope cognitive profile injection
+    enriched_context = await builder.build_enriched(user_id, plan_id)
 """
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from datetime import datetime, timedelta
 
 from loguru import logger
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.plan_state_service import PlanStateService
+from app.models.plan import Plan
 
 
 # Default budget for plan_context section (tokens)
@@ -88,6 +94,33 @@ class PlanContextBuilder:
             "version": state.version,
             "status": state.status,
         }
+
+        # Include plan metadata for prompt readability
+        try:
+            plan_result = await self.db.execute(
+                select(Plan).where(
+                    Plan.id == plan_id,
+                    Plan.user_id == user_id,
+                    Plan.deleted_at.is_(None),
+                )
+            )
+            plan = plan_result.scalar_one_or_none()
+            if plan:
+                context.update(
+                    {
+                        "plan_title": plan.name,
+                        "plan_type": plan.type.value if plan.type else None,
+                        "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
+                        "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                        "progress": plan.progress,
+                        "is_active": plan.is_active,
+                        "plan_description": plan.description,
+                    }
+                )
+                if plan.description:
+                    context["goal"] = plan.description
+        except Exception as e:
+            logger.warning(f"Failed to fetch plan metadata for plan_id={plan_id}: {e}")
 
         # Include facts (always included - core of plan context)
         if state.facts:
@@ -206,6 +239,184 @@ class PlanContextBuilder:
                 lines.append(f"- {key}: {value}")
 
         return "\n".join(lines)
+
+    async def build_enriched(
+        self,
+        user_id: UUID,
+        plan_id: Optional[UUID],
+        include_cognitive_profile: bool = True,
+        include_behavior_patterns: bool = True,
+        max_behavior_patterns: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Build plan context enriched with UserScope cognitive insights.
+
+        This implements the priority merge: PlanScope > UserScope
+        - Plan-level facts take precedence
+        - User cognitive patterns provide background context
+
+        Args:
+            user_id: Owner user ID
+            plan_id: Plan ID (None returns empty context)
+            include_cognitive_profile: Whether to include cognitive state snapshot
+            include_behavior_patterns: Whether to include behavior patterns
+            max_behavior_patterns: Maximum number of behavior patterns to include
+
+        Returns:
+            Enriched plan context with user_profile section
+        """
+        # Get base plan context
+        base_context = await self.build(user_id, plan_id, include_feedback_log=True)
+
+        if not include_cognitive_profile and not include_behavior_patterns:
+            return base_context
+
+        enriched = dict(base_context)
+        user_profile: Dict[str, Any] = {}
+
+        # Fetch cognitive state snapshot
+        if include_cognitive_profile:
+            try:
+                from app.models.user_state import UserStateSnapshot
+
+                # Get the most recent snapshot from the last 24 hours
+                cutoff = datetime.utcnow() - timedelta(hours=24)
+                result = await self.db.execute(
+                    select(UserStateSnapshot)
+                    .where(UserStateSnapshot.user_id == user_id)
+                    .where(UserStateSnapshot.snapshot_at >= cutoff)
+                    .order_by(desc(UserStateSnapshot.snapshot_at))
+                    .limit(1)
+                )
+                snapshot = result.scalar_one_or_none()
+
+                if snapshot:
+                    user_profile["cognitive_state"] = {
+                        "cognitive_load": snapshot.cognitive_load,
+                        "interruptibility": snapshot.interruptibility,
+                        "strain_index": snapshot.strain_index,
+                        "focus_mode": snapshot.focus_mode,
+                        "sprint_mode": snapshot.sprint_mode,
+                        "snapshot_time": snapshot.snapshot_at.isoformat() if snapshot.snapshot_at else None,
+                    }
+
+                    # Include time context if available
+                    if snapshot.time_context:
+                        user_profile["time_context"] = snapshot.time_context
+
+            except Exception as e:
+                logger.warning(f"Failed to fetch cognitive state: {e}")
+
+        # Fetch behavior patterns
+        if include_behavior_patterns:
+            try:
+                from app.models.cognitive import BehaviorPattern
+
+                # Get active (non-archived) behavior patterns with high confidence
+                result = await self.db.execute(
+                    select(BehaviorPattern)
+                    .where(BehaviorPattern.user_id == user_id)
+                    .where(BehaviorPattern.is_archived == False)
+                    .order_by(
+                        desc(BehaviorPattern.confidence_score),
+                        desc(BehaviorPattern.frequency)
+                    )
+                    .limit(max_behavior_patterns)
+                )
+                patterns = result.scalars().all()
+
+                if patterns:
+                    user_profile["behavior_patterns"] = [
+                        {
+                            "pattern_name": p.pattern_name,
+                            "pattern_type": p.pattern_type,
+                            "confidence": p.confidence_score,
+                            "frequency": p.frequency,
+                            "description": p.description[:150] if p.description else None,
+                            "solution_hint": p.solution_text[:100] if p.solution_text else None,
+                        }
+                        for p in patterns
+                    ]
+
+                    # Derive learning style from patterns
+                    user_profile["derived_insights"] = self._derive_insights_from_patterns(patterns)
+
+            except Exception as e:
+                logger.warning(f"Failed to fetch behavior patterns: {e}")
+
+        # Fetch user preferences from preferences center
+        try:
+            from app.services.personalization.preference_service import PreferenceService
+
+            pref_service = PreferenceService(self.db, self.redis)
+            prefs = await pref_service.get_preferences(user_id)
+
+            if prefs:
+                # Merge explicit and inferred preferences
+                explicit = prefs.explicit or {}
+                inferred = prefs.inferred or {}
+                user_profile["preferences_snapshot"] = {
+                    "learning_style": explicit.get("learning_style", "balanced"),
+                    "feedback_style": explicit.get("feedback_style", "balanced"),
+                    "focus_duration_preference": explicit.get("focus_duration_preference", 25),
+                    "ai_verbosity": explicit.get("ai_verbosity", "balanced"),
+                    # Include inferred insights if available
+                    "inferred_difficulty": inferred.get("difficulty_preference"),
+                    "inferred_session_length": inferred.get("session_length_preference"),
+                }
+        except Exception as e:
+            logger.debug(f"User preferences not available: {e}")
+
+        # Add user_profile to enriched context
+        if user_profile:
+            enriched["user_profile"] = user_profile
+
+        logger.debug(
+            f"Built enriched plan context: plan_id={plan_id}, "
+            f"has_cognitive_state={'cognitive_state' in user_profile}, "
+            f"behavior_patterns_count={len(user_profile.get('behavior_patterns', []))}"
+        )
+
+        return enriched
+
+    def _derive_insights_from_patterns(self, patterns: List) -> Dict[str, Any]:
+        """
+        Derive learning insights from behavior patterns.
+
+        Args:
+            patterns: List of BehaviorPattern objects
+
+        Returns:
+            Derived insights dict
+        """
+        insights: Dict[str, Any] = {}
+
+        pattern_types = [p.pattern_type for p in patterns]
+        pattern_names = [p.pattern_name.lower() for p in patterns]
+
+        # Detect planning issues
+        planning_patterns = [n for n in pattern_names if "plan" in n or "估" in n]
+        if planning_patterns:
+            insights["planning_tendency"] = "optimistic" if any("乐观" in n or "低估" in n for n in planning_patterns) else "conservative"
+
+        # Detect focus issues
+        focus_patterns = [n for n in pattern_names if "专注" in n or "分心" in n or "focus" in n]
+        if focus_patterns:
+            insights["focus_tendency"] = "easily_distracted" if any("分心" in n or "distract" in n for n in focus_patterns) else "focused"
+
+        # Detect emotional patterns
+        emotional_count = pattern_types.count("emotional")
+        cognitive_count = pattern_types.count("cognitive")
+        execution_count = pattern_types.count("execution")
+
+        if emotional_count > cognitive_count and emotional_count > execution_count:
+            insights["primary_challenge_area"] = "emotional"
+        elif cognitive_count > execution_count:
+            insights["primary_challenge_area"] = "cognitive"
+        elif execution_count > 0:
+            insights["primary_challenge_area"] = "execution"
+
+        return insights
 
 
 def merge_plan_context(

@@ -115,8 +115,7 @@ class _SprintHeader extends ConsumerWidget {
   final int taskCount;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.08),
@@ -256,7 +255,6 @@ class _SprintHeader extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Future<void> _handleMenuSelection(
     BuildContext context,
@@ -274,7 +272,6 @@ class _SprintHeader extends ConsumerWidget {
         if (confirmed) {
           await ref.read(sprintActionsProvider.notifier).completeSprint(planId);
         }
-        break;
       case 'extend':
         final days = await showExtendSprintDialog(
           context,
@@ -283,7 +280,6 @@ class _SprintHeader extends ConsumerWidget {
         if (days != null && days > 0) {
           await ref.read(sprintActionsProvider.notifier).extendSprint(planId, days);
         }
-        break;
       case 'abandon':
         final confirmed = await showConfirmAbandonDialog(
           context,
@@ -292,7 +288,6 @@ class _SprintHeader extends ConsumerWidget {
         if (confirmed) {
           await ref.read(sprintActionsProvider.notifier).abandonSprint(planId, '');
         }
-        break;
     }
   }
 }
@@ -336,7 +331,6 @@ class _SprintFilterChips extends ConsumerWidget {
                 color: isSelected
                     ? DS.brandPrimary
                     : DS.border,
-                width: 1,
               ),
             ),
             child: Row(

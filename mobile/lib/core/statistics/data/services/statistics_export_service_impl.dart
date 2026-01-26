@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
-import 'package:sparkle/core/statistics/domain/services/statistics_export_service.dart';
 
 /// Default implementation of the statistics export service
 ///

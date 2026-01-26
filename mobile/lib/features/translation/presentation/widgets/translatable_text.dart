@@ -240,8 +240,6 @@ In computer science, caching is a technique used to store frequently accessed da
 
 Caching improves performance by reducing the number of expensive operations, such as database queries or network requests. However, cache invalidation can be challenging, as stale data may persist in the cache even after the original data has been updated.
 ''',
-              sourceLang: 'en',
-              targetLang: 'zh-CN',
               domain: 'cs', // Computer science domain for terminology
               style: const TextStyle(
                 fontSize: 16,

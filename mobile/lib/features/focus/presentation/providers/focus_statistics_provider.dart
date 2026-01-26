@@ -380,7 +380,7 @@ class FocusStatistics extends _$FocusStatistics {
             taskId: s.taskId,
             taskTitle: s.taskTitle,
             whiteNoiseType: int.tryParse(s.whiteNoiseType ?? ''),
-          )).toList();
+          ),).toList();
         state = state.copyWith(sessionHistory: details);
       }
     } catch (e) {
@@ -492,9 +492,7 @@ FocusStatisticsRepository localStatisticsRepo(Ref ref) {
 ///
 /// Persists the user's selected statistics view period (today/week/month).
 final statsViewPeriodProvider =
-    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>((ref) {
-  return StatsViewPeriodNotifier();
-});
+    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>((ref) => StatsViewPeriodNotifier());
 
 /// Notifier for the stats view period
 class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {

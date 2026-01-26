@@ -117,7 +117,7 @@ class _ActiveSprintView extends ConsumerWidget {
         slivers: [
           SliverToBoxAdapter(child: _SprintHeader(plan: fullPlan)),
           // Sprint Achievements Progress Section
-          SliverToBoxAdapter(child: _SprintAchievementsProgress()),
+          const SliverToBoxAdapter(child: _SprintAchievementsProgress()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(DS.lg),
@@ -305,7 +305,7 @@ class _SprintAchievementsProgressState
                   ),
                   const SizedBox(height: DS.sm),
                   ...sprintAchievements.take(3).map((achievement) =>
-                      _SprintAchievementTile(achievement: achievement)),
+                      _SprintAchievementTile(achievement: achievement),),
                 ],
               ),
             ),
@@ -348,7 +348,6 @@ class _CloseToUnlockBanner extends StatelessWidget {
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: DS.brandPrimary.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Row(

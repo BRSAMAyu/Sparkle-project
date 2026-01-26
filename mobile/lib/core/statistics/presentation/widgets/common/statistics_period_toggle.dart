@@ -10,9 +10,7 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 class StatisticsPeriodToggle extends StatelessWidget {
 
   const StatisticsPeriodToggle({
-    super.key,
-    required this.selectedPeriod,
-    required this.onPeriodChanged,
+    required this.selectedPeriod, required this.onPeriodChanged, super.key,
     this.showCustomOption = false,
     this.isCompact = false,
   });
@@ -174,9 +172,7 @@ class _PeriodButtonState extends State<_PeriodButton>
 class StatisticsPeriodDropdown extends StatelessWidget {
 
   const StatisticsPeriodDropdown({
-    super.key,
-    required this.selectedPeriod,
-    required this.onPeriodChanged,
+    required this.selectedPeriod, required this.onPeriodChanged, super.key,
     this.showCustomOption = false,
   });
   final StatisticsPeriod selectedPeriod;
@@ -185,7 +181,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
+      padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
       decoration: BoxDecoration(
         color: DS.neutral100,
         borderRadius: BorderRadius.circular(DS.borderRadiusMD),
@@ -229,6 +225,6 @@ class StatisticsPeriodDropdown extends StatelessWidget {
     return periods.map((period) => DropdownMenuItem<StatisticsPeriod>(
         value: period,
         child: Text(period.label),
-      )).toList();
+      ),).toList();
   }
 }

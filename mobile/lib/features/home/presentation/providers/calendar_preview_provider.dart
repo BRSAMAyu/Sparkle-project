@@ -64,13 +64,9 @@ class CalendarPreviewNotifier extends StateNotifier<CalendarPreviewState> {
   }
 
   /// Check if two dates are the same day (ignoring time)
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 /// Provider for calendar preview panel state
 final calendarPreviewProvider =
-    StateNotifierProvider<CalendarPreviewNotifier, CalendarPreviewState>((ref) {
-  return CalendarPreviewNotifier();
-});
+    StateNotifierProvider<CalendarPreviewNotifier, CalendarPreviewState>((ref) => CalendarPreviewNotifier());

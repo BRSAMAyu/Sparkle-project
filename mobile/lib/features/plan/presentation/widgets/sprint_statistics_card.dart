@@ -29,7 +29,6 @@ class SprintStatisticsCard extends ConsumerWidget {
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: DS.border,
-          width: 1,
         ),
       ),
       child: Column(
@@ -79,7 +78,6 @@ class SprintStatisticsCard extends ConsumerWidget {
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: DS.border,
-          width: 1,
         ),
       ),
       child: Center(
@@ -264,8 +262,7 @@ class SprintStatisticsCard extends ConsumerWidget {
               alignment: BarChartAlignment.spaceAround,
               maxY: (maxValue + 1).toDouble(),
               minY: 0,
-              barGroups: recentProgress.asMap().entries.map((entry) {
-                return BarChartGroupData(
+              barGroups: recentProgress.asMap().entries.map((entry) => BarChartGroupData(
                   x: entry.key,
                   barRods: [
                     BarChartRodData(
@@ -278,9 +275,8 @@ class SprintStatisticsCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                );
-              }).toList(),
-              gridData: FlGridData(show: false),
+                )).toList(),
+              gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
@@ -303,13 +299,13 @@ class SprintStatisticsCard extends ConsumerWidget {
                   ),
                 ),
                 leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                  
                 ),
                 topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                  
                 ),
                 rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                  
                 ),
               ),
               borderData: FlBorderData(show: false),

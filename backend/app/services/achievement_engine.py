@@ -1088,7 +1088,7 @@ class AchievementEngine:
                     "progress_value": current_value,
                     "progress_target": target_value,
                     "remaining": target_value - current_value,
-                }
+                })
 
         # 按进度降序排序
         close_achievements.sort(key=lambda x: x["progress"], reverse=True)

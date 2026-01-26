@@ -44,16 +44,12 @@ class StatisticsState<T> {
   /// Data loaded state
   StatisticsState<T> withData(T newData, {StatisticsPeriod? newPeriod}) => StatisticsState<T>(
       data: newData,
-      isLoading: false,
-      hasError: false,
-      errorMessage: null,
       lastPeriod: newPeriod ?? lastPeriod,
     );
 
   /// Error state
   StatisticsState<T> withError(String newErrorMessage) => StatisticsState<T>(
       data: data,
-      isLoading: false,
       hasError: true,
       errorMessage: newErrorMessage,
       lastPeriod: lastPeriod,

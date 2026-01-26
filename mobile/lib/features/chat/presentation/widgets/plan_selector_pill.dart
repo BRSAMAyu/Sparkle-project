@@ -88,17 +88,14 @@ class PlanSelectorPill extends ConsumerWidget {
 
 class _UnselectedPill extends StatelessWidget {
   const _UnselectedPill({
-    super.key,
-    required this.isDark,
-    required this.onTap,
+    required this.isDark, required this.onTap, super.key,
   });
 
   final bool isDark;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: GestureDetector(
         onTap: onTap,
@@ -133,15 +130,11 @@ class _UnselectedPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _SelectedPill extends StatelessWidget {
   const _SelectedPill({
-    super.key,
-    required this.plan,
-    required this.isDark,
-    required this.onTap,
+    required this.plan, required this.isDark, required this.onTap, super.key,
   });
 
   final PlanModel plan;
@@ -266,7 +259,7 @@ class _PlanSelectorSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
@@ -324,7 +317,7 @@ class _PlanSelectorSheet extends StatelessWidget {
               ...activePlans.map((plan) => _PlanListTile(
                     plan: plan,
                     isDark: isDark,
-                  )),
+                  ),),
             const SizedBox(height: DS.spacing16),
           ],
         ),
@@ -530,8 +523,7 @@ class _EmptyState extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.all(DS.xl),
       child: Column(
         children: [
@@ -559,5 +551,4 @@ class _EmptyState extends StatelessWidget {
         ],
       ),
     );
-  }
 }

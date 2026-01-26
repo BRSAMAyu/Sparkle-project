@@ -234,6 +234,84 @@ class MemoryService:
             latest_by_key[record.pref_key] = record.pref_value
         return latest_by_key
 
+    async def get_preference_record(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+    ) -> Optional[MemoryPreference]:
+        result = await self.db.execute(
+            select(MemoryPreference).where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.id == preference_id,
+                MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.retracted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def find_preference(
+        self,
+        user_id: UUID,
+        pref_key: str,
+    ) -> Optional[MemoryPreference]:
+        result = await self.db.execute(
+            select(MemoryPreference)
+            .where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.pref_key == pref_key,
+                MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.retracted_at.is_(None),
+            )
+            .order_by(MemoryPreference.version.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_preference(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+        pref_key: Optional[str] = None,
+        pref_value: Optional[Dict[str, Any]] = None,
+        value: Optional[Dict[str, Any]] = None,
+        confidence: Optional[float] = None,
+        evidence_refs: Optional[Iterable[Any]] = None,
+    ) -> Optional[MemoryPreference]:
+        record = await self.get_preference_record(user_id, preference_id)
+        if record is None:
+            return None
+
+        resolved_key = pref_key or record.pref_key
+        resolved_value = pref_value if pref_value is not None else value
+        if resolved_value is None:
+            resolved_value = record.pref_value
+
+        refs = evidence_refs or record.evidence_refs or [
+            {"type": "user_state", "id": "batch_edit", "schema_version": "batch_edit.v1"}
+        ]
+
+        return await self.upsert_preference(
+            user_id=user_id,
+            pref_key=resolved_key,
+            pref_value=resolved_value,
+            evidence_refs=refs,
+            confidence=confidence if confidence is not None else record.confidence,
+            source_type="user_state",
+        )
+
+    async def delete_preference(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+        reason: Optional[str] = None,
+    ) -> bool:
+        return await self.retract_memory(
+            kind="preference",
+            memory_id=preference_id,
+            user_id=user_id,
+            reason=reason or "batch_delete",
+        )
+
     async def list_preference_records(self, user_id: UUID) -> List[MemoryPreference]:
         result = await self.db.execute(
             select(MemoryPreference)
@@ -260,6 +338,29 @@ class MemoryService:
             )
             .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
         )
+        return list(result.scalars().all())
+
+    async def list_goals(
+        self,
+        user_id: UUID,
+        status_filter: Optional[str] = None,
+        include_expired: bool = False,
+        limit: int = 20,
+    ) -> List[MemoryGoal]:
+        now = datetime.utcnow()
+        stmt = select(MemoryGoal).where(
+            MemoryGoal.user_id == user_id,
+            MemoryGoal.deleted_at.is_(None),
+            MemoryGoal.retracted_at.is_(None),
+        )
+        if status_filter:
+            stmt = stmt.where(MemoryGoal.status == status_filter)
+        if not include_expired:
+            stmt = stmt.where(
+                (MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
+            )
+        stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def list_recent_episodic(

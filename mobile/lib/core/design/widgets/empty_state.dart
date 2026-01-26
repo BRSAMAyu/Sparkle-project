@@ -136,7 +136,7 @@ class EmptyState extends StatelessWidget {
       case EmptyStateType.noResults:
         return '没有找到结果';
       case EmptyStateType.general:
-        return '暂无数据';
+        return '这里还没有内容';
     }
   }
 
@@ -153,7 +153,7 @@ class EmptyState extends StatelessWidget {
       case EmptyStateType.noResults:
         return '请尝试其他搜索关键词';
       case EmptyStateType.general:
-        return '这里还没有内容';
+        return '快去添加内容吧';
     }
   }
 

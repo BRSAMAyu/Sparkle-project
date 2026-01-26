@@ -31,7 +31,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!; // l10n should always be available in a build context
+    final l10n = AppLocalizations.of(context)!;
     final enterToSend = ref.watch(enterToSendProvider);
     final transparentMode = ref.watch(transparentModeProvider);
     final transparencyLevel = ref.watch(transparencyLevelProvider);
@@ -43,8 +43,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(l10n
-            .schedulePreferences,), // Using generic settings title from l10n or keeping consistent
+        title: Text(l10n.schedulePreferences),
         actions: [
           TextButton(
             onPressed: () {
@@ -65,7 +64,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             _buildSectionHeader(Icons.psychology, l10n.learningMode),
             const SizedBox(height: DS.spacing16),
             Text(
-              '拖动控制点，调整你的AI辅导风格',
+              l10n.dragToAdjust,
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
             const SizedBox(height: DS.spacing16),
@@ -82,10 +81,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing32),
 
             // ========== 胶囊生成区域 ==========
-            _buildSectionHeader(Icons.auto_awesome, '胶囊生成'),
+            _buildSectionHeader(Icons.auto_awesome, l10n.capsuleGeneration),
             const SizedBox(height: DS.spacing16),
             Text(
-              '调整偏好并生成专属好奇心胶囊',
+              l10n.adjustAndGenerate,
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
             const SizedBox(height: DS.spacing16),
@@ -116,7 +115,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               child: ElevatedButton.icon(
                 onPressed: _isGenerating
                     ? null
-                    : () => _requestCapsuleGeneration(context),
+                    : () => _requestCapsuleGeneration(context, l10n),
                 icon: _isGenerating
                     ? const SizedBox(
                         width: 16,
@@ -124,7 +123,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.auto_awesome),
-                label: Text(_isGenerating ? '生成中...' : '立即生成胶囊'),
+                label: Text(_isGenerating ? l10n.generating : l10n.generateNow),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DS.primaryBase,
                   foregroundColor: Colors.white,
@@ -139,7 +138,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
             const SizedBox(height: DS.spacing16),
             Text(
-              '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
+              l10n.selectTimeSlots,
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
             const SizedBox(height: DS.spacing16),
@@ -190,24 +189,24 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             _buildSectionHeader(Icons.notifications, l10n.notificationSettings),
             const SizedBox(height: DS.spacing16),
             SwitchListTile(
-              title: const Text('启用通知'),
+              title: Text(l10n.enableNotifications),
               value: _notificationsEnabled,
               onChanged: (v) => setState(() => _notificationsEnabled = v),
               activeThumbColor: DS.primaryBase,
             ),
             SwitchListTile(
-              title: const Text('智能碎片时间提醒'),
-              subtitle: const Text('在绿色时间段主动推送微任务'),
+              title: Text(l10n.smartReminders),
+              subtitle: Text(l10n.pushMicroTasks),
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: DS.primaryBase,
             ),
             const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.visibility, '透明模式'),
+            _buildSectionHeader(Icons.visibility, l10n.transparentMode),
             const SizedBox(height: DS.spacing16),
             SwitchListTile(
-              title: const Text('启用透明模式'),
-              subtitle: const Text('显示状态与资源消耗概览'),
+              title: Text(l10n.enableTransparentMode),
+              subtitle: Text(l10n.showStatusOverview),
               value: transparentMode,
               onChanged: (v) => ref
                   .read(transparencyLevelProvider.notifier)
@@ -218,8 +217,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               const SizedBox(height: DS.spacing8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('透明度级别'),
-                subtitle: const Text('基础/标准/高级'),
+                title: Text(l10n.transparencyLevel),
+                subtitle: Text('${l10n.basic}/${l10n.standard}/${l10n.advanced}'),
                 trailing: DropdownButton<int>(
                   value: transparencyLevel,
                   underline: const SizedBox.shrink(),
@@ -228,11 +227,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       ref.read(transparencyLevelProvider.notifier).setLevel(level);
                     }
                   },
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('关闭')),
-                    DropdownMenuItem(value: 1, child: Text('基础')),
-                    DropdownMenuItem(value: 2, child: Text('标准')),
-                    DropdownMenuItem(value: 3, child: Text('高级')),
+                  items: [
+                    DropdownMenuItem(value: 0, child: Text(l10n.cancel)), // Reuse "关闭/Cancel" as "Off"
+                    DropdownMenuItem(value: 1, child: Text(l10n.basic)),
+                    DropdownMenuItem(value: 2, child: Text(l10n.standard)),
+                    DropdownMenuItem(value: 3, child: Text(l10n.advanced)),
                   ],
                 ),
               ),
@@ -240,8 +239,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('系统反馈级别'),
-              subtitle: const Text('控制系统更新提示的详细程度'),
+              title: Text(l10n.systemFeedback),
+              subtitle: Text(l10n.controlUpdateDetails),
               trailing: DropdownButton<int>(
                 value: systemUpdateLevel,
                 underline: const SizedBox.shrink(),
@@ -250,21 +249,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     ref.read(systemUpdateLevelProvider.notifier).setLevel(level);
                   }
                 },
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('静默')),
-                  DropdownMenuItem(value: 1, child: Text('摘要')),
-                  DropdownMenuItem(value: 2, child: Text('详细')),
+                items: [
+                  DropdownMenuItem(value: 0, child: Text(l10n.silent)),
+                  DropdownMenuItem(value: 1, child: Text(l10n.summary)),
+                  DropdownMenuItem(value: 2, child: Text(l10n.detailed)),
                 ],
               ),
             ),
             const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.sync, '同步'),
+            _buildSectionHeader(Icons.sync, l10n.sync),
             const SizedBox(height: DS.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.sync),
-              title: const Text('同步中心'),
-              subtitle: const Text('查看离线队列状态与重试'),
+              title: Text(l10n.syncCenter),
+              subtitle: Text(l10n.viewOfflineQueue),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push<void>(
@@ -284,7 +283,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   );
                 },
                 child: Text(
-                  'Sparkle v2.1.0-stable\n© 2025 Sparkle Team',
+                  l10n.version,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10),
                 ),
@@ -297,7 +296,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  Future<void> _requestCapsuleGeneration(BuildContext context) async {
+  Future<void> _requestCapsuleGeneration(BuildContext context, AppLocalizations l10n) async {
     setState(() => _isGenerating = true);
 
     try {
@@ -320,10 +319,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         if (taskId != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('✨ 胶囊生成任务已创建'),
+              content: Text(l10n.capsuleTaskCreated),
               backgroundColor: DS.success,
               action: SnackBarAction(
-                label: '查看',
+                label: l10n.view,
                 textColor: Colors.white,
                 onPressed: () {
                   // TODO: 导航到任务状态页
@@ -334,7 +333,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('生成失败，请稍后重试'),
+              content: Text(l10n.generationFailed),
               backgroundColor: DS.error,
             ),
           );
@@ -344,7 +343,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('生成失败: $e'),
+            content: Text(l10n.generationFailedWithDetail.replaceAll('{error}', e.toString())),
             backgroundColor: DS.error,
           ),
         );

@@ -650,7 +650,7 @@ class ProductionChatOrchestrator:
                                 from app.core.plan_context import PlanContextBuilder
                                 plan_id = UUID(plan_id_str)
                                 plan_builder = PlanContextBuilder(active_db, self.redis)
-                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
                                 if plan_context:
                                     logger.info(f"Built plan_context for plan_id={plan_id}")
                             except (ValueError, AttributeError) as e:

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_history_detail.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Sprint history screen - displays list of archived/completed sprints
 class SprintHistoryScreen extends ConsumerWidget {
@@ -13,6 +14,7 @@ class SprintHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyState = ref.watch(sprintHistoryProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -20,7 +22,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('冲刺历史'),
+        title: Text(l10n.sprintHistory),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -30,22 +32,22 @@ class SprintHistoryScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(sprintHistoryProvider.notifier).refresh(),
-        child: _buildBody(context, historyState),
+        child: _buildBody(context, historyState, l10n),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, SprintHistoryState state) {
+  Widget _buildBody(BuildContext context, SprintHistoryState state, AppLocalizations l10n) {
     if (state.isLoading && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (state.error != null && state.items.isEmpty) {
-      return _buildErrorState(context, state.error!);
+      return _buildErrorState(context, state.error!, l10n);
     }
 
     if (state.items.isEmpty) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(context, l10n);
     }
 
     return ListView.separated(
@@ -59,7 +61,7 @@ class SprintHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) => Center(
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -70,7 +72,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '暂无冲刺历史',
+            l10n.noSprintHistory,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
@@ -79,7 +81,7 @@ class SprintHistoryScreen extends ConsumerWidget {
       ),
     );
 
-  Widget _buildErrorState(BuildContext context, String error) => Center(
+  Widget _buildErrorState(BuildContext context, String error, AppLocalizations l10n) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -90,7 +92,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '加载失败',
+            l10n.loadingFailed,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
@@ -113,8 +115,20 @@ class _SprintHistoryCard extends StatelessWidget {
 
   final SprintHistoryItem item;
 
+  String _getStatusText(AppLocalizations l10n) {
+    switch (item.status) {
+      case SprintStatus.completed:
+        return l10n.sprintCompleted;
+      case SprintStatus.abandoned:
+        return l10n.sprintAbandoned;
+      case SprintStatus.extended:
+        return l10n.sprintExtended;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return GestureDetector(
@@ -126,7 +140,6 @@ class _SprintHistoryCard extends StatelessWidget {
           borderRadius: DS.borderRadius12,
           border: Border.all(
             color: DS.border,
-            width: 1,
           ),
         ),
         child: Column(
@@ -145,7 +158,7 @@ class _SprintHistoryCard extends StatelessWidget {
                 ),
                 _StatusChip(
                   status: item.status,
-                  text: item.statusText,
+                  text: _getStatusText(l10n),
                 ),
               ],
             ),
@@ -161,7 +174,7 @@ class _SprintHistoryCard extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing4),
                 Text(
-                  '${dateFormat.format(item.startDate)} - ${item.endDate != null ? dateFormat.format(item.endDate!) : '进行中'}',
+                  '${dateFormat.format(item.startDate)} - ${item.endDate != null ? dateFormat.format(item.endDate!) : l10n.ongoing}',
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -178,7 +191,7 @@ class _SprintHistoryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '完成进度',
+                        l10n.completionProgress,
                         style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -220,7 +233,10 @@ class _SprintHistoryCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${item.completedTasks}/${item.totalTasks} 任务',
+                      l10n.tasksCompleted(
+                        item.completedTasks.toString(),
+                        item.totalTasks.toString(),
+                      ),
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
                         fontSize: 10,
@@ -271,15 +287,12 @@ class _StatusChip extends StatelessWidget {
       case SprintStatus.completed:
         color = DS.semanticSuccess;
         backgroundColor = DS.semanticSuccess.withValues(alpha: 0.1);
-        break;
       case SprintStatus.abandoned:
         color = DS.semanticError;
         backgroundColor = DS.semanticError.withValues(alpha: 0.1);
-        break;
       case SprintStatus.extended:
         color = DS.semanticWarning;
         backgroundColor = DS.semanticWarning.withValues(alpha: 0.1);
-        break;
     }
 
     return Container(
@@ -292,7 +305,6 @@ class _StatusChip extends StatelessWidget {
         borderRadius: DS.borderRadius8,
         border: Border.all(
           color: color.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Text(

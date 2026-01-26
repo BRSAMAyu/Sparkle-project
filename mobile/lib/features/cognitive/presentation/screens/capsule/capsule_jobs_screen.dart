@@ -71,7 +71,7 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.task_alt_outlined,
-              size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
+              size: 64, color: DS.brandPrimary.withValues(alpha: 0.3),),
           const SizedBox(height: DS.lg),
           Text(
             '还没有生成任务',
@@ -253,12 +253,12 @@ class _JobCard extends StatelessWidget {
               runSpacing: DS.spacing8,
               children: job.capsuleIds!.map((id) => RawChip(
                   label: Text('胶囊 $id'),
-                  avatar: Icon(Icons.check_circle_outline, size: 16),
+                  avatar: const Icon(Icons.check_circle_outline, size: 16),
                   backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
                   onPressed: () {
                     // TODO: 导航到胶囊详情
                   },
-                )).toList(),
+                ),).toList(),
             ),
           ],
 

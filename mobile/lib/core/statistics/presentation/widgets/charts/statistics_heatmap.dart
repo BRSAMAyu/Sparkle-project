@@ -32,9 +32,7 @@ class HeatmapData {
 class StatisticsHeatmap extends StatelessWidget {
 
   const StatisticsHeatmap({
-    super.key,
-    required this.data,
-    required this.columns,
+    required this.data, required this.columns, super.key,
     this.rows,
     this.xLabels,
     this.yLabels,
@@ -148,7 +146,7 @@ class StatisticsHeatmap extends StatelessWidget {
           padding: EdgeInsets.only(bottom: cellSpacing),
           child: Row(
             children: List.generate(columns, (x) {
-              final key = '${x}_${y}';
+              final key = '${x}_$y';
               final item = dataMap[key];
 
               return Padding(
@@ -157,7 +155,7 @@ class StatisticsHeatmap extends StatelessWidget {
               );
             }),
           ),
-        )),
+        ),),
     );
   }
 
@@ -224,7 +222,7 @@ class StatisticsHeatmap extends StatelessWidget {
     );
 
   Widget _buildLegendCell(Color color, String label) => Padding(
-      padding: EdgeInsets.only(bottom: DS.xs),
+      padding: const EdgeInsets.only(bottom: DS.xs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -238,7 +236,7 @@ class StatisticsHeatmap extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: DS.xs),
+          const SizedBox(width: DS.xs),
           Text(
             label,
             style: DS.captionStyle.copyWith(
@@ -305,12 +303,12 @@ class StatisticsHeatmap extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.grid_on_outlined,
             size: 48,
             color: StatisticsChartConfig.emptyStateColor,
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           Text(
             '暂无数据',
             style: DS.bodyStyle.copyWith(
@@ -326,9 +324,7 @@ class StatisticsHeatmap extends StatelessWidget {
 class StatisticsContributionHeatmap extends StatelessWidget {
 
   const StatisticsContributionHeatmap({
-    super.key,
-    required this.dailyData,
-    required this.startDate,
+    required this.dailyData, required this.startDate, super.key,
     this.endDate,
     this.cellSize,
     this.onTap,

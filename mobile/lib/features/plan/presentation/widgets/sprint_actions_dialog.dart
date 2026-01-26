@@ -12,8 +12,7 @@ Future<SprintActionType?> showSprintActionsDialog(
   BuildContext context, {
   required String planId,
   required String planName,
-}) {
-  return showModalBottomSheet<SprintActionType>(
+}) => showModalBottomSheet<SprintActionType>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (context) => _SprintActionsSheet(
@@ -21,7 +20,6 @@ Future<SprintActionType?> showSprintActionsDialog(
       planName: planName,
     ),
   );
-}
 
 /// Shows confirm complete dialog - returns true if confirmed
 Future<bool> showConfirmCompleteDialog(
@@ -32,19 +30,17 @@ Future<bool> showConfirmCompleteDialog(
     context: context,
     builder: (context) => _ConfirmCompleteDialog(planName: planName),
   );
-  return result == true;
+  return result ?? false;
 }
 
 /// Shows extend sprint dialog - returns selected days or null
 Future<int?> showExtendSprintDialog(
   BuildContext context, {
   required String planName,
-}) async {
-  return await showDialog<int>(
+}) async => await showDialog<int>(
     context: context,
     builder: (context) => _ExtendSprintDialog(planName: planName),
   );
-}
 
 /// Shows confirm abandon dialog - returns true if confirmed
 Future<bool> showConfirmAbandonDialog(
@@ -55,7 +51,7 @@ Future<bool> showConfirmAbandonDialog(
     context: context,
     builder: (context) => _ConfirmAbandonDialog(planName: planName),
   );
-  return result == true;
+  return result ?? false;
 }
 
 /// Sprint actions bottom sheet
@@ -103,10 +99,10 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       });
     }
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(DS.spacing20),
           topRight: Radius.circular(DS.spacing20),
         ),
@@ -204,7 +200,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       builder: (context) => _ConfirmCompleteDialog(planName: widget.planName),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       final success = await ref.read(sprintActionsProvider.notifier).completeSprint(widget.planId);
       if (success && mounted) {
         Navigator.of(context).pop();
@@ -234,7 +230,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
       builder: (context) => _ConfirmAbandonDialog(planName: widget.planName),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       final success = await ref
           .read(sprintActionsProvider.notifier)
           .abandonSprint(widget.planId, '');
@@ -261,8 +257,7 @@ class _ActionTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
+  Widget build(BuildContext context) => ListTile(
       leading: Container(
         padding: const EdgeInsets.all(DS.spacing8),
         decoration: BoxDecoration(
@@ -286,7 +281,6 @@ class _ActionTile extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
     );
-  }
 }
 
 class _ConfirmCompleteDialog extends StatelessWidget {
@@ -295,8 +289,7 @@ class _ConfirmCompleteDialog extends StatelessWidget {
   final String planName;
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('完成冲刺'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -335,7 +328,6 @@ class _ConfirmCompleteDialog extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ConfirmAbandonDialog extends StatelessWidget {
@@ -344,8 +336,7 @@ class _ConfirmAbandonDialog extends StatelessWidget {
   final String planName;
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('放弃冲刺'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -384,7 +375,6 @@ class _ConfirmAbandonDialog extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ExtendSprintDialog extends StatefulWidget {
@@ -401,8 +391,7 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
   final List<int> _dayOptions = [1, 3, 7, 14];
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('延长冲刺'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -472,5 +461,4 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
         ),
       ],
     );
-  }
 }

@@ -16,7 +16,7 @@ final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>(
 
 final transparencyLevelProvider =
     StateNotifierProvider<TransparencyLevelNotifier, int>(
-        (ref) => TransparencyLevelNotifier(ref),);
+        TransparencyLevelNotifier.new,);
 
 final transparentModeProvider = Provider<bool>(
   (ref) => ref.watch(transparencyLevelProvider) > 0,
@@ -28,7 +28,7 @@ final onboardingCompletedProvider =
 
 final systemUpdateLevelProvider =
     StateNotifierProvider<SystemUpdateLevelNotifier, int>(
-        (ref) => SystemUpdateLevelNotifier(ref),);
+        SystemUpdateLevelNotifier.new,);
 
 class EnterToSendNotifier extends StateNotifier<bool> {
   EnterToSendNotifier() : super(false) {
@@ -138,7 +138,7 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
     try {
       final repo = _ref.read(userRepositoryProvider);
       await repo.updateUserSettings({
-        if (level != null) "transparency_level": level,
+        if (level != null) 'transparency_level': level,
       });
     } catch (_) {
       // Silent fail
@@ -235,7 +235,7 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
     try {
       final repo = _ref.read(userRepositoryProvider);
       await repo.updateUserSettings({
-        if (level != null) "system_update_level": level,
+        if (level != null) 'system_update_level': level,
       });
     } catch (_) {
       // Silent fail

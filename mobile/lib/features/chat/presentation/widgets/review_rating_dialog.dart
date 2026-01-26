@@ -76,8 +76,7 @@ class ReviewRatingDialog extends StatefulWidget {
     required Future<bool> Function(ReviewFeedbackData feedback) onSubmit,
     int? initialRating,
     bool showDetailedFeedback = false,
-  }) {
-    return showModalBottomSheet<ReviewFeedbackData>(
+  }) => showModalBottomSheet<ReviewFeedbackData>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -88,7 +87,6 @@ class ReviewRatingDialog extends StatefulWidget {
         showDetailedFeedback: showDetailedFeedback,
       ),
     );
-  }
 
   @override
   State<ReviewRatingDialog> createState() => _ReviewRatingDialogState();
@@ -242,8 +240,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     );
   }
 
-  Widget _buildStarRating(ThemeData theme) {
-    return Row(
+  Widget _buildStarRating(ThemeData theme) => Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(5, (index) {
         final starValue = index + 1;
@@ -278,10 +275,8 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         );
       }),
     );
-  }
 
-  Widget _buildQuickFeedback(ThemeData theme) {
-    return Row(
+  Widget _buildQuickFeedback(ThemeData theme) => Row(
       children: [
         Expanded(
           child: _buildQuickButton(
@@ -315,7 +310,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
       ],
     );
-  }
 
   Widget _buildQuickButton({
     required ThemeData theme,
@@ -367,8 +361,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     );
   }
 
-  Widget _buildAccuracySection(ThemeData theme) {
-    return Column(
+  Widget _buildAccuracySection(ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -410,10 +403,8 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildSpecificitySection(ThemeData theme) {
-    return Column(
+  Widget _buildSpecificitySection(ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -446,7 +437,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
       ],
     );
-  }
 
   Widget _buildChoiceChip({
     required ThemeData theme,
@@ -505,8 +495,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     );
   }
 
-  Widget _buildInaccuratePointsSection(ThemeData theme) {
-    return Column(
+  Widget _buildInaccuratePointsSection(ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -561,7 +550,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ],
       ],
     );
-  }
 
   void _addInaccuratePoint(String point) {
     final trimmed = point.trim();
@@ -573,8 +561,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     }
   }
 
-  Widget _buildTagsSection(ThemeData theme) {
-    return Column(
+  Widget _buildTagsSection(ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -604,10 +591,8 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildCommentsSection(ThemeData theme) {
-    return Column(
+  Widget _buildCommentsSection(ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -627,7 +612,6 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
       ],
     );
-  }
 
   Widget _buildSubmitButton(ThemeData theme) {
     final hasValidFeedback = _rating != null || _wasHelpful != null;
