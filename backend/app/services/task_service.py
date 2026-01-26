@@ -208,7 +208,8 @@ class TaskService:
             actual_minutes=actual_minutes,
             difficulty=db_obj.difficulty or 1,
             completion_rate=completion_rate,
-            user_note=note
+            user_note=note,
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus.publish("task.completed", event.to_dict())
 
@@ -292,7 +293,8 @@ class TaskService:
             task_id=str(db_obj.id),
             reason=reason,
             estimated_minutes=db_obj.estimated_minutes,
-            time_spent=time_spent
+            time_spent=time_spent,
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus.publish("task.abandoned", event.to_dict())
 

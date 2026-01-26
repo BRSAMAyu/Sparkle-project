@@ -295,7 +295,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   const SizedBox(width: DS.sm),
                   _FilterChip(
                     label: '重要',
-                    count: state.statistics['highImportance'] ?? 0,
+                    count: state.statistics['highImportance'] as int? ?? 0,
                     isSelected: state.filter == VocabFilter.highImportance,
                     icon: Icons.star,
                     onTap: () => ref

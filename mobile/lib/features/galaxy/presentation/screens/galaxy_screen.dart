@@ -147,7 +147,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     
     // Relative Viewport (Center Relative -2500..2500) - For Provider Culling
     final relativeViewport = absoluteViewport.shift(
-        const Offset(-_canvasCenter, -_canvasCenter),
+        Offset(-_canvasCenter, -_canvasCenter),
     );
         
     ref.read(galaxyProvider.notifier).updateViewport(relativeViewport);
@@ -632,7 +632,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           _canvasCenter, _canvasCenter,),
                       viewport: absoluteViewport, // Use absolute for painter
                       center:
-                          const Offset(_canvasCenter, _canvasCenter),
+                          Offset(_canvasCenter, _canvasCenter),
                       selectedNodeIdHash: selectedHash,
                       highlightedNodeIdHashes: highlightedHashes,
                       highlightRevision: galaxyState.highlightRevision,

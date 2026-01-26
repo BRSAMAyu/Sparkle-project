@@ -122,8 +122,8 @@ async def run_memory_health(
     if not settings.ENABLE_EVIDENCE_HEALTH_JOB:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Evidence health job disabled")
     service = EvidenceHealthService(db)
-    counts = await service.run_health_check(user_id, limit=limit)
-    return {"status": "ok", "counts": counts}
+    summary = await service.run_health_check(user_id, limit=limit)
+    return {"status": "ok", "summary": summary}
 
 
 @router.post("/adjustments/run")

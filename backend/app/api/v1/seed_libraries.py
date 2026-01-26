@@ -230,7 +230,8 @@ async def add_item(
 ):
     """添加内容项"""
     try:
-        item = await service.add_item(db, library_id, item_data, current_user.id)
+        is_superuser = getattr(current_user, "is_superuser", False)
+        item = await service.add_item(db, library_id, item_data, current_user.id, is_superuser)
         if not item:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
         await db.commit()

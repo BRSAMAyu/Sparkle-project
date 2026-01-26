@@ -364,12 +364,12 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: DS.error, size: 20),
+                    Icon(Icons.error_outline, color: DS.error, size: 20),
                     const SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: DS.error, fontSize: 12),
+                        style: TextStyle(color: DS.error, fontSize: 12),
                       ),
                     ),
                     IconButton(

@@ -189,11 +189,13 @@ class ArbitrationQueueResult {
     required this.success,
     this.cases = const [],
     this.totalCount = 0,
+    this.message,
   });
 
   final bool success;
   final List<ArbitrationCaseInfo> cases;
   final int totalCount;
+  final String? message;
 }
 
 class AssignCaseResult {

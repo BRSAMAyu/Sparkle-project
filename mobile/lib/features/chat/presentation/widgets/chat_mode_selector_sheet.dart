@@ -41,8 +41,9 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing20,
+              padding: const EdgeInsets.only(
+                left: DS.spacing20,
+                right: DS.spacing20,
                 bottom: DS.spacing12,
               ),
               child: Row(

@@ -18,6 +18,7 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onCancelQuote,
     this.onFileUploaded,
     this.fileUploadGroupId,
+    this.onTextChanged,
   });
   final bool enabled;
   final String? hintText;
@@ -26,6 +27,7 @@ class ChatInput extends ConsumerStatefulWidget {
   final VoidCallback? onCancelQuote;
   final void Function(StoredFile file)? onFileUploaded;
   final String? fileUploadGroupId;
+  final void Function(String text)? onTextChanged;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -84,6 +86,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (_textNotEmpty.value != hasText) {
       _textNotEmpty.value = hasText;
     }
+    // Notify intent prediction
+    widget.onTextChanged?.call(_controller.text);
   }
 
   @override
@@ -97,6 +101,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void dispose() {
     _controller.removeListener(_handleTextChange);
+    widget.onTextChanged?.call(''); // Notify empty text
     _controller.dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();

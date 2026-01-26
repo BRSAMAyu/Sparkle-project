@@ -16,6 +16,7 @@ import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dar
 import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
+import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -63,6 +64,10 @@ class ChatState {
     this.dailyTokens,
     this.dailyTokenLimit,
     this.dailyCostMicroUsd,
+    // Transparency fields
+    this.transparencyData,
+    this.currentStepId,
+    this.currentStepIndex,
   });
   final bool isLoading;
   final bool isSending;
@@ -107,6 +112,11 @@ class ChatState {
   final int? dailyTokens;
   final int? dailyTokenLimit;
   final int? dailyCostMicroUsd;
+
+  // Transparency fields
+  final TransparencyData? transparencyData;
+  final String? currentStepId;
+  final int? currentStepIndex;
 
   int get listItemCount =>
       messages.length +
@@ -157,6 +167,11 @@ class ChatState {
     int? dailyTokens,
     int? dailyTokenLimit,
     int? dailyCostMicroUsd,
+    // Transparency fields
+    TransparencyData? transparencyData,
+    String? currentStepId,
+    int? currentStepIndex,
+    bool clearTransparency = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -211,6 +226,15 @@ class ChatState {
         dailyTokens: dailyTokens ?? this.dailyTokens,
         dailyTokenLimit: dailyTokenLimit ?? this.dailyTokenLimit,
         dailyCostMicroUsd: dailyCostMicroUsd ?? this.dailyCostMicroUsd,
+        transparencyData: clearTransparency
+            ? null
+            : transparencyData ?? this.transparencyData,
+        currentStepId: clearTransparency
+            ? null
+            : currentStepId ?? this.currentStepId,
+        currentStepIndex: clearTransparency
+            ? null
+            : currentStepIndex ?? this.currentStepIndex,
       );
 }
 
@@ -784,6 +808,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          flushPending();
+        } else if (event is TransparencyStepEvent) {
+          // Transparency Step Event
+          state = state.copyWith(
+            currentStepId: event.currentStep,
+            currentStepIndex: event.stepIndex,
+          );
+          flushPending();
+        } else if (event is TransparencyCompleteEvent) {
+          // Transparency Complete Event
+          state = state.copyWith(
+            transparencyData: event.transparencyData,
+          );
           flushPending();
         } else if (event is DoneEvent) {
           // 流结束

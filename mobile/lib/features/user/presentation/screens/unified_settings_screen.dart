@@ -34,6 +34,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final l10n = AppLocalizations.of(context)!; // l10n should always be available in a build context
     final enterToSend = ref.watch(enterToSendProvider);
     final transparentMode = ref.watch(transparentModeProvider);
+    final transparencyLevel = ref.watch(transparencyLevelProvider);
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
 
     return Scaffold(
@@ -208,10 +209,34 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               title: const Text('启用透明模式'),
               subtitle: const Text('显示状态与资源消耗概览'),
               value: transparentMode,
-              onChanged: (v) =>
-                  ref.read(transparentModeProvider.notifier).setEnabled(v),
+              onChanged: (v) => ref
+                  .read(transparencyLevelProvider.notifier)
+                  .setLevel(v ? 2 : 0),
               activeThumbColor: DS.primaryBase,
             ),
+            if (transparentMode) ...[
+              const SizedBox(height: DS.spacing8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('透明度级别'),
+                subtitle: const Text('基础/标准/高级'),
+                trailing: DropdownButton<int>(
+                  value: transparencyLevel,
+                  underline: const SizedBox.shrink(),
+                  onChanged: (level) {
+                    if (level != null) {
+                      ref.read(transparencyLevelProvider.notifier).setLevel(level);
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('关闭')),
+                    DropdownMenuItem(value: 1, child: Text('基础')),
+                    DropdownMenuItem(value: 2, child: Text('标准')),
+                    DropdownMenuItem(value: 3, child: Text('高级')),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: DS.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,

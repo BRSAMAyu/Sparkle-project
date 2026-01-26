@@ -69,6 +69,11 @@ from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, 
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
 
+# Phase 5: Plan Execution Validation
+from app.orchestration.tool_result_extractor import ToolResultExtractor
+from app.services.plan_execution_validator import PlanExecutionValidator
+from app.services.plan_execution_record_service import PlanExecutionRecordService
+
 # FSM States
 STATE_INIT = "INIT"
 STATE_THINKING = "THINKING"
@@ -551,6 +556,35 @@ class ChatOrchestrator:
             logger.warning(f"Failed to get task status summary: {e}")
             return {"pending": 0, "in_progress": 0, "overdue": 0}
 
+    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """获取认知模式摘要，注入 LLM 上下文
+
+        当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
+        """
+        try:
+            from app.services.cognitive_service import CognitiveService
+            from uuid import UUID
+
+            cognitive = CognitiveService(db_session)
+            patterns = await cognitive.get_user_patterns(UUID(user_id), min_confidence=0.6)
+
+            if patterns:
+                # 按类型分组
+                by_type = {"cognitive": [], "emotional": [], "execution": []}
+                for p in patterns:
+                    by_type.setdefault(p.pattern_type, []).append(p.pattern_name)
+
+                return {
+                    "has_cognitive_patterns": True,
+                    "pattern_count": len(patterns),
+                    "recent_patterns": [p.pattern_name for p in patterns[:3]],
+                    "patterns_by_type": {k: len(v) for k, v in by_type.items()}
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
+
+        return {"has_cognitive_patterns": False}
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -631,7 +665,10 @@ class ChatOrchestrator:
                     }
                     for plan in plans
                 ]
-                
+
+                # P0: 认知棱镜上下文注入
+                cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
+
                 return {
                     "user_context": user_context_data, # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics,
@@ -642,9 +679,12 @@ class ChatOrchestrator:
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
                     "task_status_summary": task_status_summary,
-                    
+
                     # New field for full context injection
-                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
+                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
+
+                    # 认知棱镜数据
+                    "cognitive_insights": cognitive_insights
                 }
             
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
@@ -1814,6 +1854,53 @@ class ChatOrchestrator:
                         response_metadata["plan_switched"] = True
                         response_metadata["switched_to_plan_id"] = str(plan_id)
                         logger.info(f"Plan switch notification added to response: plan_id={plan_id}")
+
+                    # === Phase 5: Plan Execution Validation ===
+                    # Validate plan execution results and persist to database
+                    if executable_plan and hasattr(executable_plan, 'plan_id') and active_db:
+                        try:
+                            with tracer.start_as_current_span("orchestrator.validate_execution"):
+                                # 1. Extract tool results from final_state.messages
+                                tool_extractor = ToolResultExtractor()
+                                tool_results = tool_extractor.extract_from_messages(
+                                    final_state.messages
+                                )
+
+                                # 2. Only validate if there were tool executions
+                                if tool_results or executable_plan.tool_calls:
+                                    # Create record service for persistence
+                                    record_service = PlanExecutionRecordService(active_db)
+
+                                    # Create validator with record service
+                                    execution_validator = PlanExecutionValidator(
+                                        record_service=record_service
+                                    )
+
+                                    # 3. Validate and persist
+                                    validation_result = await execution_validator.validate_and_record(
+                                        plan=executable_plan,
+                                        tool_results=tool_results,
+                                        user_id=uuid.UUID(user_id),
+                                    )
+
+                                    logger.info(
+                                        f"Plan execution validation: "
+                                        f"plan_id={validation_result.plan_id}, "
+                                        f"validation_status={validation_result.validation_status}, "
+                                        f"score={validation_result.quality_score:.2f}"
+                                    )
+
+                                    # 4. Add validation result to response metadata
+                                    response_metadata["execution_validation"] = {
+                                        "validation_status": validation_result.validation_status,
+                                        "quality_score": validation_result.quality_score,
+                                        "tools_total": validation_result.tool_summary.get("total", 0),
+                                        "tools_successful": validation_result.tool_summary.get("successful", 0),
+                                    }
+
+                        except Exception as e:
+                            logger.warning(f"Plan execution validation failed: {e}", exc_info=True)
+                            # Validation failure should not affect main flow
 
                     final_response_data = {
                         "message": full_response,

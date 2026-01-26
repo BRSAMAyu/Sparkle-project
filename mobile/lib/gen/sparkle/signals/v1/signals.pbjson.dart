@@ -1,15 +1,13 @@
-// This is a generated file - do not edit.
 //
-// Generated from sparkle/signals/v1/signals.proto.
-
-// @dart = 3.3
+//  Generated code. Do not modify.
+//  source: sparkle/signals/v1/signals.proto
+//
+// @dart = 2.12
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names
-// ignore_for_file: curly_braces_in_flow_control_structures
-// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
-// ignore_for_file: unused_import
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -24,14 +22,7 @@ const CandidateAction$json = {
     {'1': 'trigger', '3': 3, '4': 1, '5': 9, '10': 'trigger'},
     {'1': 'content_seed', '3': 4, '4': 1, '5': 9, '10': 'contentSeed'},
     {'1': 'priority', '3': 5, '4': 1, '5': 2, '10': 'priority'},
-    {
-      '1': 'metadata',
-      '3': 6,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.CandidateAction.MetadataEntry',
-      '10': 'metadata'
-    },
+    {'1': 'metadata', '3': 6, '4': 3, '5': 11, '6': '.sparkle.signals.v1.CandidateAction.MetadataEntry', '10': 'metadata'},
   ],
   '3': [CandidateAction_MetadataEntry$json],
 };
@@ -64,22 +55,8 @@ const NextActionsCandidateSet$json = {
     {'1': 'user_id', '3': 3, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'schema_version', '3': 4, '4': 1, '5': 9, '10': 'schemaVersion'},
     {'1': 'idempotency_key', '3': 5, '4': 1, '5': 9, '10': 'idempotencyKey'},
-    {
-      '1': 'candidates',
-      '3': 6,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.CandidateAction',
-      '10': 'candidates'
-    },
-    {
-      '1': 'metadata',
-      '3': 7,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.NextActionsCandidateSet.MetadataEntry',
-      '10': 'metadata'
-    },
+    {'1': 'candidates', '3': 6, '4': 3, '5': 11, '6': '.sparkle.signals.v1.CandidateAction', '10': 'candidates'},
+    {'1': 'metadata', '3': 7, '4': 3, '5': 11, '6': '.sparkle.signals.v1.NextActionsCandidateSet.MetadataEntry', '10': 'metadata'},
   ],
   '3': [NextActionsCandidateSet_MetadataEntry$json],
 };
@@ -111,38 +88,10 @@ const ContextEnvelope$json = {
   '2': [
     {'1': 'context_version', '3': 1, '4': 1, '5': 9, '10': 'contextVersion'},
     {'1': 'window', '3': 2, '4': 1, '5': 9, '10': 'window'},
-    {
-      '1': 'focus',
-      '3': 3,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.FocusMetrics',
-      '10': 'focus'
-    },
-    {
-      '1': 'comprehension',
-      '3': 4,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.ComprehensionMetrics',
-      '10': 'comprehension'
-    },
-    {
-      '1': 'time',
-      '3': 5,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.TimeContext',
-      '10': 'time'
-    },
-    {
-      '1': 'content',
-      '3': 6,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.ContentContext',
-      '10': 'content'
-    },
+    {'1': 'focus', '3': 3, '4': 1, '5': 11, '6': '.sparkle.signals.v1.FocusMetrics', '10': 'focus'},
+    {'1': 'comprehension', '3': 4, '4': 1, '5': 11, '6': '.sparkle.signals.v1.ComprehensionMetrics', '10': 'comprehension'},
+    {'1': 'time', '3': 5, '4': 1, '5': 11, '6': '.sparkle.signals.v1.TimeContext', '10': 'time'},
+    {'1': 'content', '3': 6, '4': 1, '5': 11, '6': '.sparkle.signals.v1.ContentContext', '10': 'content'},
     {'1': 'pii_scrubbed', '3': 7, '4': 1, '5': 8, '10': 'piiScrubbed'},
   ],
 };
@@ -178,27 +127,9 @@ final $typed_data.Uint8List focusMetricsDescriptor = $convert.base64Decode(
 const ComprehensionMetrics$json = {
   '1': 'ComprehensionMetrics',
   '2': [
-    {
-      '1': 'translation_requests',
-      '3': 1,
-      '4': 1,
-      '5': 5,
-      '10': 'translationRequests'
-    },
-    {
-      '1': 'translation_granularity',
-      '3': 2,
-      '4': 1,
-      '5': 9,
-      '10': 'translationGranularity'
-    },
-    {
-      '1': 'unknown_terms_saved',
-      '3': 3,
-      '4': 1,
-      '5': 5,
-      '10': 'unknownTermsSaved'
-    },
+    {'1': 'translation_requests', '3': 1, '4': 1, '5': 5, '10': 'translationRequests'},
+    {'1': 'translation_granularity', '3': 2, '4': 1, '5': 9, '10': 'translationGranularity'},
+    {'1': 'unknown_terms_saved', '3': 3, '4': 1, '5': 5, '10': 'unknownTermsSaved'},
   ],
 };
 
@@ -242,38 +173,10 @@ const FeatureExtractResult$json = {
   '1': 'FeatureExtractResult',
   '2': [
     {'1': 'version', '3': 1, '4': 1, '5': 9, '10': 'version'},
-    {
-      '1': 'rhythm',
-      '3': 2,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.LearningRhythm',
-      '10': 'rhythm'
-    },
-    {
-      '1': 'friction',
-      '3': 3,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.UnderstandingFriction',
-      '10': 'friction'
-    },
-    {
-      '1': 'energy',
-      '3': 4,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.EnergyState',
-      '10': 'energy'
-    },
-    {
-      '1': 'risk',
-      '3': 5,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.signals.v1.TaskRisk',
-      '10': 'risk'
-    },
+    {'1': 'rhythm', '3': 2, '4': 1, '5': 11, '6': '.sparkle.signals.v1.LearningRhythm', '10': 'rhythm'},
+    {'1': 'friction', '3': 3, '4': 1, '5': 11, '6': '.sparkle.signals.v1.UnderstandingFriction', '10': 'friction'},
+    {'1': 'energy', '3': 4, '4': 1, '5': 11, '6': '.sparkle.signals.v1.EnergyState', '10': 'energy'},
+    {'1': 'risk', '3': 5, '4': 1, '5': 11, '6': '.sparkle.signals.v1.TaskRisk', '10': 'risk'},
   ],
 };
 
@@ -290,20 +193,8 @@ final $typed_data.Uint8List featureExtractResultDescriptor = $convert.base64Deco
 const LearningRhythm$json = {
   '1': 'LearningRhythm',
   '2': [
-    {
-      '1': 'deviating_from_plan',
-      '3': 1,
-      '4': 1,
-      '5': 8,
-      '10': 'deviatingFromPlan'
-    },
-    {
-      '1': 'interruption_frequency',
-      '3': 2,
-      '4': 1,
-      '5': 5,
-      '10': 'interruptionFrequency'
-    },
+    {'1': 'deviating_from_plan', '3': 1, '4': 1, '5': 8, '10': 'deviatingFromPlan'},
+    {'1': 'interruption_frequency', '3': 2, '4': 1, '5': 5, '10': 'interruptionFrequency'},
   ],
 };
 
@@ -317,20 +208,8 @@ final $typed_data.Uint8List learningRhythmDescriptor = $convert.base64Decode(
 const UnderstandingFriction$json = {
   '1': 'UnderstandingFriction',
   '2': [
-    {
-      '1': 'translation_density',
-      '3': 1,
-      '4': 1,
-      '5': 5,
-      '10': 'translationDensity'
-    },
-    {
-      '1': 'escalating_granularity',
-      '3': 2,
-      '4': 1,
-      '5': 8,
-      '10': 'escalatingGranularity'
-    },
+    {'1': 'translation_density', '3': 1, '4': 1, '5': 5, '10': 'translationDensity'},
+    {'1': 'escalating_granularity', '3': 2, '4': 1, '5': 8, '10': 'escalatingGranularity'},
   ],
 };
 
@@ -344,20 +223,8 @@ final $typed_data.Uint8List understandingFrictionDescriptor = $convert.base64Dec
 const EnergyState$json = {
   '1': 'EnergyState',
   '2': [
-    {
-      '1': 'late_night_fatigue',
-      '3': 1,
-      '4': 1,
-      '5': 8,
-      '10': 'lateNightFatigue'
-    },
-    {
-      '1': 'short_session_trend',
-      '3': 2,
-      '4': 1,
-      '5': 8,
-      '10': 'shortSessionTrend'
-    },
+    {'1': 'late_night_fatigue', '3': 1, '4': 1, '5': 8, '10': 'lateNightFatigue'},
+    {'1': 'short_session_trend', '3': 2, '4': 1, '5': 8, '10': 'shortSessionTrend'},
   ],
 };
 
@@ -370,20 +237,8 @@ final $typed_data.Uint8List energyStateDescriptor = $convert.base64Decode(
 const TaskRisk$json = {
   '1': 'TaskRisk',
   '2': [
-    {
-      '1': 'consecutive_failures',
-      '3': 1,
-      '4': 1,
-      '5': 8,
-      '10': 'consecutiveFailures'
-    },
-    {
-      '1': 'procrastination_detected',
-      '3': 2,
-      '4': 1,
-      '5': 8,
-      '10': 'procrastinationDetected'
-    },
+    {'1': 'consecutive_failures', '3': 1, '4': 1, '5': 8, '10': 'consecutiveFailures'},
+    {'1': 'procrastination_detected', '3': 2, '4': 1, '5': 8, '10': 'procrastinationDetected'},
   ],
 };
 
@@ -398,14 +253,7 @@ const Signals$json = {
   '1': 'Signals',
   '2': [
     {'1': 'version', '3': 1, '4': 1, '5': 9, '10': 'version'},
-    {
-      '1': 'signals',
-      '3': 2,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.Signal',
-      '10': 'signals'
-    },
+    {'1': 'signals', '3': 2, '4': 3, '5': 11, '6': '.sparkle.signals.v1.Signal', '10': 'signals'},
   ],
 };
 
@@ -421,14 +269,7 @@ const Signal$json = {
     {'1': 'type', '3': 1, '4': 1, '5': 9, '10': 'type'},
     {'1': 'confidence', '3': 2, '4': 1, '5': 2, '10': 'confidence'},
     {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
-    {
-      '1': 'metadata',
-      '3': 4,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.Signal.MetadataEntry',
-      '10': 'metadata'
-    },
+    {'1': 'metadata', '3': 4, '4': 3, '5': 11, '6': '.sparkle.signals.v1.Signal.MetadataEntry', '10': 'metadata'},
   ],
   '3': [Signal_MetadataEntry$json],
 };
@@ -461,14 +302,7 @@ const CandidateActionV2$json = {
     {'1': 'confidence', '3': 5, '4': 1, '5': 2, '10': 'confidence'},
     {'1': 'timing_hint', '3': 6, '4': 1, '5': 9, '10': 'timingHint'},
     {'1': 'payload_seed', '3': 7, '4': 1, '5': 9, '10': 'payloadSeed'},
-    {
-      '1': 'metadata',
-      '3': 8,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.signals.v1.CandidateActionV2.MetadataEntry',
-      '10': 'metadata'
-    },
+    {'1': 'metadata', '3': 8, '4': 3, '5': 11, '6': '.sparkle.signals.v1.CandidateActionV2.MetadataEntry', '10': 'metadata'},
   ],
   '3': [CandidateActionV2_MetadataEntry$json],
 };
@@ -492,3 +326,4 @@ final $typed_data.Uint8List candidateActionV2Descriptor = $convert.base64Decode(
     'ZGF0YRgIIAMoCzIzLnNwYXJrbGUuc2lnbmFscy52MS5DYW5kaWRhdGVBY3Rpb25WMi5NZXRhZG'
     'F0YUVudHJ5UghtZXRhZGF0YRo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQK'
     'BXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
+

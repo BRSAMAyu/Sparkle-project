@@ -89,7 +89,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
       builder: (context, ref, child) {
         // Get subtasks from parent state (will be passed through parameters)
         // For now, this is a placeholder - in real use, we'd get state from a provider
-        return const SizedBox.sh();
+        return const SizedBox.shrink();
       },
     );
 

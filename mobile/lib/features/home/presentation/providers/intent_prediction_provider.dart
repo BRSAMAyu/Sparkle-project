@@ -255,17 +255,42 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
-    // Navigate to chat screen
+    // If already on chat screen, send message directly without navigation
+    if (_isCurrentRoute('/chat')) {
+      try {
+        await _ref.read(chatProvider.notifier).sendMessage(text);
+      } catch (e) {
+        debugPrint('Error sending chat message: $e');
+      }
+      return;
+    }
+
+    // Otherwise, navigate to chat screen first, then send message
     GoRouter.of(context).push('/chat');
 
     // Wait for navigation to complete, then send message
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
-    // Send the message through the chat provider
     try {
       await _ref.read(chatProvider.notifier).sendMessage(text);
     } catch (e) {
       debugPrint('Error sending chat message: $e');
+    }
+  }
+
+  /// Check if the current route matches the given path
+  bool _isCurrentRoute(String path) {
+    final context = navigatorKey.currentContext;
+    if (context == null) return false;
+    
+    try {
+      // Use routerDelegate.currentConfiguration to reliably get location from root context
+      // GoRouterState.of(context) can fail if context is not below a GoRoute
+      final location = GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+      return location == path || location.startsWith('$path/');
+    } catch (e) {
+      debugPrint('Error checking current route: $e');
+      return false;
     }
   }
 

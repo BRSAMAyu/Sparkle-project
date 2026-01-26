@@ -84,7 +84,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
       sourceLang: widget.sourceLang,
       targetLang: widget.targetLang,
       domain: widget.domain,
-      onSaveToKnowledge: () {
+      onSaved: () {
         Navigator.of(context).pop();
         if (widget.onSaveToKnowledge != null) {
           // Note: Translation result is not available in callback
