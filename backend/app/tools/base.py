@@ -15,8 +15,10 @@ class ToolResult(BaseModel):
     """工具执行结果的统一格式"""
     success: bool
     tool_name: str
-    data: Optional[Dict[str, Any]] = None      # 成功时返回的数据
+    tool_call_id: Optional[str] = None          # 工具调用ID，用于追踪
+    data: Optional[Dict[str, Any]] = None       # 成功时返回的数据
     error_message: Optional[str] = None         # 失败时的错误信息
+    error_type: Optional[str] = None            # 错误类型分类
     widget_type: Optional[str] = None           # 前端渲染组件类型
     widget_data: Optional[Dict[str, Any]] = None  # 组件渲染数据
     suggestion: Optional[str] = None            # LLM 可用于自我修正的建议

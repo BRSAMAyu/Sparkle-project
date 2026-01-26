@@ -100,6 +100,7 @@ from app.models.review_system import (
     ArbitrationCase,
     ArbitrationDecision,
 )
+from app.models.plan_execution_record import PlanExecutionRecord
 
 __all__ = [
     "BaseModel",
@@ -236,4 +237,6 @@ __all__ = [
     "ReviewAppeal",
     "ArbitrationCase",
     "ArbitrationDecision",
+    # Plan Execution
+    "PlanExecutionRecord",
 ]
