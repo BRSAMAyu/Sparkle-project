@@ -49,6 +49,8 @@ langchain-openai>=0.2.0
 langchain-text-splitters>=0.0.1
 langgraph>=0.2.0
 tiktoken>=0.5.2
+numpy>=1.26.0
+scipy>=1.11.0
 pypdf>=3.0.0
 pdfplumber>=0.10.0
 
@@ -85,7 +87,7 @@ celery>=5.3.6
 y-py>=0.6.0
 
 # Dictionary (MDX/MDD)
+# python-lzo>=1.15  # Commented out: fails to build in Docker, unused in codebase
 readmdict>=0.1.1
-python-lzo>=1.15
 beautifulsoup4>=4.12.0
 lxml>=5.0.0

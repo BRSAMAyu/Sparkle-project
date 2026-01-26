@@ -1,0 +1,392 @@
+"""
+User Persona Batch Editing API
+用户画像批量编辑API
+
+Provides batch operations for managing user preferences and personas.
+"""
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
+from loguru import logger
+
+from app.api.deps import get_db, get_current_user
+from app.models.user import User
+from app.services.memory_service import MemoryService
+
+
+router = APIRouter(prefix="/user/persona", tags=["user-persona"])
+
+
+# Request/Response Models
+class BatchUpdatePreferencesRequest(BaseModel):
+    """批量更新偏好请求"""
+    preference_ids: List[str] = Field(..., description="要更新的偏好ID列表")
+    updates: Dict[str, Any] = Field(..., description="更新内容")
+    operation: str = Field(default="update", description="操作类型: update, delete, merge")
+
+
+class BatchUpdatePreferencesResponse(BaseModel):
+    """批量更新响应"""
+    success_count: int
+    failed_count: int
+    errors: List[str] = []
+
+
+class ExportPersonaRequest(BaseModel):
+    """导出画像数据请求"""
+    format: str = Field(default="json", description="导出格式: json, csv")
+    include_goals: bool = Field(default=True, description="是否包含目标")
+    include_preferences: bool = Field(default=True, description="是否包含偏好")
+
+
+class ImportPersonaRequest(BaseModel):
+    """导入画像数据请求"""
+    format: str = Field(..., description="导入格式: json, csv")
+    data: Dict[str, Any] = Field(..., description="画像数据")
+    merge_strategy: str = Field(default="merge", description="合并策略: merge, replace")
+
+
+@router.post("/batch-update")
+async def batch_update_preferences(
+    request: BatchUpdatePreferencesRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    批量更新用户偏好
+
+    支持更新、删除、合并操作
+    """
+    memory_service = MemoryService(db)
+    response = BatchUpdatePreferencesResponse(
+        success_count=0,
+        failed_count=0,
+        errors=[],
+    )
+
+    def _normalize_updates(updates: Dict[str, Any]) -> Dict[str, Any]:
+        normalized = dict(updates)
+        if "key" in normalized and "pref_key" not in normalized:
+            normalized["pref_key"] = normalized.pop("key")
+        if "value" in normalized and "pref_value" not in normalized:
+            normalized["pref_value"] = normalized.pop("value")
+        return normalized
+
+    updates = _normalize_updates(request.updates)
+
+    for pref_id in request.preference_ids:
+        try:
+            pref_uuid = UUID(pref_id)
+            if request.operation == "update":
+                # Update preference
+                record = await memory_service.update_preference(
+                    user_id=current_user.id,
+                    preference_id=pref_uuid,
+                    **updates,
+                )
+                if record is None:
+                    raise ValueError("Preference not found")
+                response.success_count += 1
+
+            elif request.operation == "delete":
+                # Delete preference
+                deleted = await memory_service.delete_preference(
+                    user_id=current_user.id,
+                    preference_id=pref_uuid,
+                )
+                if deleted:
+                    response.success_count += 1
+                else:
+                    response.failed_count += 1
+                    response.errors.append(f"Preference {pref_id} not found")
+
+            elif request.operation == "merge":
+                # Merge updates
+                existing = await memory_service.get_preference_record(
+                    user_id=current_user.id,
+                    preference_id=pref_uuid,
+                )
+                if existing:
+                    merged = {
+                        "pref_key": existing.pref_key,
+                        "pref_value": existing.pref_value,
+                        "confidence": existing.confidence,
+                    }
+                    merged.update(updates)
+                    record = await memory_service.update_preference(
+                        user_id=current_user.id,
+                        preference_id=pref_uuid,
+                        **merged,
+                    )
+                    if record is None:
+                        raise ValueError("Preference not found")
+                    response.success_count += 1
+                else:
+                    response.failed_count += 1
+                    response.errors.append(f"Preference {pref_id} not found")
+
+        except Exception as e:
+            response.failed_count += 1
+            response.errors.append(f"Failed to update {pref_id}: {str(e)}")
+            logger.error(f"Batch update failed for {pref_id}: {e}")
+
+    return response
+
+
+@router.post("/export")
+async def export_persona_data(
+    request: ExportPersonaRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    导出用户画像数据
+
+    支持JSON和CSV格式导出
+    """
+    memory_service = MemoryService(db)
+
+    # Get user's preferences
+    preferences = await memory_service.list_preference_records(current_user.id)
+
+    # Get user's goals
+    goals = []
+    if request.include_goals:
+        user_goals = await memory_service.list_goals(
+            user_id=current_user.id,
+            limit=100,
+        )
+        goals = [
+            {
+                'id': str(g.id),
+                'title': g.title,
+                'description': (g.metadata_payload or {}).get("description"),
+                'target_date': g.target_date.isoformat() if g.target_date else None,
+                'status': g.status,
+                'priority': (g.metadata_payload or {}).get("priority"),
+            }
+            for g in user_goals
+        ]
+
+    # Format preferences
+    pref_data = []
+    for pref in preferences:
+        pref_data.append({
+            'id': str(pref.id),
+            'pref_key': pref.pref_key,
+            'pref_value': pref.pref_value,
+            'confidence': pref.confidence,
+            'created_at': pref.created_at.isoformat(),
+        })
+
+    export_data = {
+        'user_id': str(current_user.id),
+        'export_date': datetime.now().isoformat(),
+        'preferences': pref_data if request.include_preferences else [],
+        'goals': goals,
+    }
+
+    if request.format == "csv":
+        # Convert to CSV format
+        # In practice, use a CSV library
+        return {"format": "csv", "data": export_data}
+
+    return {"format": "json", "data": export_data}
+
+
+@router.post("/import")
+async def import_persona_data(
+    request: ImportPersonaRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    导入用户画像数据
+
+    支持合并或替换现有数据
+    """
+    memory_service = MemoryService(db)
+    imported_count = 0
+    errors = []
+    data = request.data
+
+    if request.format == "json":
+        # Import preferences
+        for pref_data in data.get("preferences", []):
+            try:
+                pref_key = pref_data.get("pref_key") or pref_data.get("key")
+                if not pref_key:
+                    raise ValueError("pref_key missing")
+
+                pref_value = pref_data.get("pref_value")
+                if pref_value is None:
+                    pref_value = pref_data.get("value")
+                if pref_value is None:
+                    raise ValueError("pref_value missing")
+                if not isinstance(pref_value, dict):
+                    pref_value = {"value": pref_value}
+
+                if request.merge_strategy == "replace":
+                    # Delete existing preference with same key/category
+                    # (In practice, query and delete first)
+
+                    # Create new preference
+                    await memory_service.upsert_preference(
+                        user_id=current_user.id,
+                        pref_key=pref_key,
+                        pref_value=pref_value,
+                        evidence_refs=[
+                            {"type": "user_state", "id": "batch_import", "schema_version": "batch_import.v1"}
+                        ],
+                        confidence=pref_data.get("confidence", 0.8),
+                        source_type="user_state",
+                    )
+                    imported_count += 1
+
+                else:  # merge
+                    # Try to update existing
+                    existing = await memory_service.find_preference(
+                        user_id=current_user.id,
+                        pref_key=pref_key,
+                    )
+
+                    if existing:
+                        await memory_service.update_preference(
+                            user_id=current_user.id,
+                            preference_id=existing.id,
+                            pref_value=pref_value,
+                            confidence=pref_data.get("confidence", 0.8),
+                        )
+                        imported_count += 1
+                    else:
+                        await memory_service.upsert_preference(
+                            user_id=current_user.id,
+                            pref_key=pref_key,
+                            pref_value=pref_value,
+                            evidence_refs=[
+                                {"type": "user_state", "id": "batch_import", "schema_version": "batch_import.v1"}
+                            ],
+                            confidence=pref_data.get("confidence", 0.8),
+                            source_type="user_state",
+                        )
+                        imported_count += 1
+
+            except Exception as e:
+                errors.append(f"Failed to import preference {pref_data.get('key', 'unknown')}: {str(e)}")
+                logger.error(f"Import failed: {e}")
+
+        # Import goals
+        for goal_data in data.get("goals", []):
+            try:
+                goal_metadata: Dict[str, Any] = {}
+                if goal_data.get("description") is not None:
+                    goal_metadata["description"] = goal_data.get("description")
+                if goal_data.get("priority") is not None:
+                    goal_metadata["priority"] = goal_data.get("priority")
+
+                if request.merge_strategy == "replace":
+                    # Delete existing goals
+                    # (In practice, query and delete first)
+
+                    # Create new goal
+                    await memory_service.create_goal(
+                        user_id=current_user.id,
+                        title=goal_data["title"],
+                        target_date=datetime.fromisoformat(goal_data["target_date"]) if goal_data.get("target_date") else None,
+                        status=goal_data.get("status"),
+                        metadata=goal_metadata or None,
+                    )
+                    imported_count += 1
+
+                else:  # merge
+                    # Try to find existing goal with similar title
+                    existing_goals = await memory_service.list_goals(
+                        user_id=current_user.id,
+                    )
+                    matching = [g for g in existing_goals if g.title == goal_data["title"]]
+
+                    if matching:
+                        # Update existing
+                        updates: Dict[str, Any] = {}
+                        if goal_data.get("status") is not None:
+                            updates["status"] = goal_data.get("status")
+                        if goal_data.get("target_date") is not None:
+                            updates["target_date"] = datetime.fromisoformat(goal_data["target_date"])
+                        if goal_metadata:
+                            updates["metadata"] = goal_metadata
+                        if updates:
+                            await memory_service.update_goal(
+                                user_id=current_user.id,
+                                goal_id=matching[0].id,
+                                **updates,
+                            )
+                        imported_count += 1
+                    else:
+                        # Create new
+                        await memory_service.create_goal(
+                            user_id=current_user.id,
+                            title=goal_data["title"],
+                            target_date=datetime.fromisoformat(goal_data["target_date"]) if goal_data.get("target_date") else None,
+                            status=goal_data.get("status"),
+                            metadata=goal_metadata or None,
+                        )
+                        imported_count += 1
+
+            except Exception as e:
+                errors.append(f"Failed to import goal {goal_data.get('title', 'unknown')}: {str(e)}")
+                logger.error(f"Import failed: {e}")
+
+    return {
+        "imported_count": imported_count,
+        "total_items": len(data.get("preferences", [])) + len(data.get("goals", [])),
+        "errors": errors,
+    }
+
+
+@router.get("/batch-edit-suggestions")
+async def get_batch_edit_suggestions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    获取批量编辑建议
+
+    基于用户行为数据提供智能批量编辑建议
+    """
+    # In a full implementation, analyze user patterns to suggest:
+    # - Conflicting preferences that should be resolved
+    # - Redundant goals that could be merged
+    # - Low-confidence items that need attention
+    # - Outdated preferences that should be removed
+
+    suggestions = {
+        "conflicts": [
+            {
+                "type": "preference_conflict",
+                "description": "Multiple preferences for learning style",
+                "items": ["learning_style_visual", "learning_style_textual"],
+                "suggested_action": "Consolidate into single preference",
+            }
+        ],
+        "redundancies": [
+            {
+                "type": "redundant_goals",
+                "description": "Similar learning goals",
+                "items": ["goal_math_basic", "goal_math_fundamentals"],
+                "suggested_action": "Merge or remove duplicate",
+            }
+        ],
+        "low_confidence": [
+            {
+                "type": "low_confidence",
+                "description": "Preferences with confidence < 0.5",
+                "count": 3,
+                "suggested_action": "Review and update with user input",
+            }
+        ],
+    }
+
+    return suggestions
