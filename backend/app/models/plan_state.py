@@ -5,7 +5,7 @@ Plan-level state storage for tracking plan execution context.
 See: docs/state/plan_state_spec.md for design details.
 """
 import enum
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Index
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Index, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -87,6 +87,11 @@ class PlanState(BaseModel):
     # P0-2: Rejection tracking for phase rollback
     consecutive_rejection_count = Column(Integer, nullable=False, default=0)
 
+    # Multi-plan coordination fields
+    is_focus = Column(Boolean, nullable=False, default=False, index=True)
+    last_focus_time = Column(DateTime, nullable=True, index=True)
+    parallel_priority = Column(Integer, nullable=False, default=0, index=True)
+
     # Status management
     status = Column(
         String(20),
@@ -117,6 +122,9 @@ class PlanState(BaseModel):
             "constraints": self.constraints or {},
             "version": self.version,
             "consecutive_rejection_count": self.consecutive_rejection_count or 0,
+            "is_focus": self.is_focus,
+            "last_focus_time": self.last_focus_time.isoformat() if self.last_focus_time else None,
+            "parallel_priority": self.parallel_priority,
             "status": self.status,
             "archived_at": self.archived_at.isoformat() if self.archived_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -155,6 +163,9 @@ class PlanState(BaseModel):
             constraints=data.get("constraints", {}),
             version=data.get("version", 1),
             consecutive_rejection_count=data.get("consecutive_rejection_count", 0),
+            is_focus=data.get("is_focus", False),
+            last_focus_time=parse_datetime(data.get("last_focus_time")),
+            parallel_priority=data.get("parallel_priority", 0),
             status=data.get("status", PlanStateStatus.ACTIVE.value),
             archived_at=parse_datetime(data.get("archived_at")),
             created_at=parse_datetime(data.get("created_at")),

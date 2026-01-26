@@ -46,12 +46,19 @@ class TranslateRequest(BaseModel):
 
     def get_normalized_params(self) -> Dict[str, Any]:
         """获取标准化后的参数"""
-        # 优先使用 source_lang/target_lang，否则使用 source_language/target_language
-        source = self.source_lang or self.source_language or "auto"
-        target = self.target_lang or self.target_language or "zh-CN"
+        # 如果 source_lang 是默认值 "auto" 且提供了 source_language，则使用 source_language
+        source = self.source_lang
+        if source == "auto" and self.source_language:
+            source = self.source_language
+            
+        # 如果 target_lang 是默认值 "zh-CN" 且提供了 target_language，则使用 target_language
+        target = self.target_lang
+        if target == "zh-CN" and self.target_language:
+            target = self.target_language
+            
         return {
-            "source_lang": source,
-            "target_lang": target,
+            "source_lang": source or "auto",
+            "target_lang": target or "zh-CN",
         }
 
 

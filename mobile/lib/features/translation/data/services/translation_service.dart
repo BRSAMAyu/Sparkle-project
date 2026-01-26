@@ -58,16 +58,17 @@ class TranslationResult {
   });
 
   factory TranslationResult.fromJson(Map<String, dynamic> json) => TranslationResult(
-      success: json['success'] as bool,
-      translation: json['translation'] as String,
-      segments: (json['segments'] as List<dynamic>)
-          .map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      success: json['success'] as bool? ?? false,
+      translation: json['translation'] as String? ?? '',
+      segments: (json['segments'] as List<dynamic>?)
+              ?.map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       recommendation: json['recommendation'] != null
           ? TranslationRecommendation.fromJson(
               json['recommendation'] as Map<String, dynamic>)
           : null,
-      meta: json['meta'] as Map<String, dynamic>,
+      meta: (json['meta'] as Map<String, dynamic>?) ?? {},
     );
   final bool success;
   final String translation;

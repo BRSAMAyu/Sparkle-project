@@ -80,7 +80,7 @@ class GroundingValidator:
         # === Phase 1 检查 ===
 
         # 1. Schema version check (support v1.0, v2.0, and v3.0)
-        if plan.schema_version not in ["1.0", "2.0", "3.0"]:
+        if plan.schema_version not in ["1.0", "2.0", "3.0", "4.0"]:
             return ValidationResult(
                 is_valid=False,
                 failure_reason=f"Unsupported schema version: {plan.schema_version}"
@@ -317,7 +317,7 @@ class GroundingValidator:
 
         # 3. Tool-specific checks
         for tool_call in plan.tool_calls:
-            if tool_call.name == "search_knowledge_graph":
+            if tool_call.name == "query_knowledge":
                 # Check vector service
                 try:
                     from app.services.knowledge_service import KnowledgeService

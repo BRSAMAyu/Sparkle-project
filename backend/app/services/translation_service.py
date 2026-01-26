@@ -73,7 +73,7 @@ class TranslationService:
         domain: str = "general",
         style: str = "natural",
         glossary_id: Optional[str] = None,
-        timeout: float = 5.0,
+        timeout: float = 15.0,
         # v2 Signals
         user_id: Optional[UUID] = None,
         fingerprint: Optional[str] = None,
@@ -89,7 +89,7 @@ class TranslationService:
             domain: Domain for terminology ("cs", "math", "business", "general")
             style: Translation style ("concise", "literal", "natural")
             glossary_id: Optional glossary for terminology consistency
-            timeout: Max time per segment (default: 5.0s)
+            timeout: Max time per segment (default: 15.0s)
             user_id: User ID for quota tracking
             fingerprint: Content hash for signal tracking
             db: Database session for quota check
@@ -288,9 +288,12 @@ Output ONLY the translation, no explanations."""
         try:
             from openai import AsyncOpenAI
 
-            if settings.HUNYUAN_API_KEY:
+            # 优先使用 HUNYUAN_API_KEY，如果没有则使用 SILICONFLOW_API_KEY
+            api_key = settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY
+            
+            if api_key:
                 hunyuan_client = AsyncOpenAI(
-                    api_key=settings.HUNYUAN_API_KEY,
+                    api_key=api_key,
                     base_url=settings.HUNYUAN_BASE_URL
                 )
                 response = await hunyuan_client.chat.completions.create(
@@ -300,7 +303,7 @@ Output ONLY the translation, no explanations."""
                 )
                 translation = response.choices[0].message.content.strip()
             else:
-                raise ValueError("Hunyuan API key not configured")
+                raise ValueError("Neither HUNYUAN_API_KEY nor SILICONFLOW_API_KEY is configured")
         except Exception as e:
             logger.warning(f"Hunyuan translation failed, using fallback: {e}")
             # Fallback 到通用 LLM

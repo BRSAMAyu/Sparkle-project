@@ -177,7 +177,7 @@ Query: {query}"""
         description="知识图谱专家",
         model_tier=ModelTier.STANDARD,
         temperature=0.5,
-        allowed_tools=["search_knowledge_graph", "get_prerequisites"],
+        allowed_tools=["query_knowledge", "create_knowledge_node", "link_nodes"],
         system_prompt_template="""你是星图向导，Sparkle AI的知识图谱专家。
 
 你的职责：
@@ -195,7 +195,7 @@ Query: {query}"""
         description="考试预测与分析",
         model_tier=ModelTier.REASONING,
         temperature=0.3,
-        allowed_tools=["analyze_past_papers", "predict_exam_focus"],
+        allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
         system_prompt_template="""你是考试预言家，Sparkle AI的考试分析专家。
 
 你的职责：
@@ -211,7 +211,13 @@ Query: {query}"""
         description="学习计划与时间管理",
         model_tier=ModelTier.STANDARD,
         temperature=0.6,
-        allowed_tools=["create_study_task", "suggest_pomodoro_schedule"],
+        allowed_tools=[
+            "create_plan",
+            "generate_tasks_for_plan",
+            "create_task",
+            "batch_create_tasks",
+            "suggest_focus_session",
+        ],
         system_prompt_template="""你是时间导师，Sparkle AI的学习计划专家。
 
 你的职责：
