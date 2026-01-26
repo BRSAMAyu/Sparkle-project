@@ -20,7 +20,7 @@ from .schemas import (
     QueryAllTasksParams,
 )
 from app.models.task import Task, TaskStatus as ModelTaskStatus, TaskType as ModelTaskType
-from app.models.plan import Plan, PlanStatus
+from app.models.plan import Plan
 from app.services.task_service import TaskService
 from app.schemas.task import TaskUpdate
 
@@ -306,7 +306,7 @@ class GetTaskDetailsTool(BaseTool):
             if task.plan_id:
                 details["plan_id"] = str(task.plan_id)
                 if task.plan:
-                    details["plan_title"] = task.plan.title
+                    details["plan_title"] = task.plan.name
 
             # Include guide content
             if params.include_guide and task.guide_content:
@@ -319,8 +319,6 @@ class GetTaskDetailsTool(BaseTool):
             # Include subtasks
             if params.include_subtasks:
                 subtasks = []
-                # Access subtasks relationship
-                subtask_query = select(Task.__table__).where(False)  # Placeholder
                 try:
                     from app.models.task import SubTask
                     subtask_result = await db_session.execute(
@@ -450,7 +448,7 @@ class QueryAllTasksTool(BaseTool):
             # Filter by plan status if needed
             if not params.include_inactive_plans:
                 plan_query = plan_query.where(
-                    Plan.status.in_([PlanStatus.ACTIVE, PlanStatus.IN_PROGRESS])
+                    Plan.is_active == True
                 )
 
             plan_query = plan_query.order_by(Plan.updated_at.desc())
@@ -524,9 +522,9 @@ class QueryAllTasksTool(BaseTool):
 
                     plans_with_tasks.append({
                         "plan_id": str(plan.id),
-                        "plan_title": plan.title,
+                        "plan_title": plan.name,
                         "plan_type": plan.type.value if plan.type else None,
-                        "plan_status": plan.status.value if plan.status else None,
+                        "plan_status": "active" if plan.is_active else "inactive",
                         "task_count": len(task_list),
                         "tasks": task_list,
                     })

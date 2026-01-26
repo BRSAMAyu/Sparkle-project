@@ -24,6 +24,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.plan_state_service import PlanStateService
+from app.models.plan import Plan
 
 
 # Default budget for plan_context section (tokens)
@@ -93,6 +94,32 @@ class PlanContextBuilder:
             "version": state.version,
             "status": state.status,
         }
+
+        # Include plan metadata for prompt readability
+        try:
+            plan_result = await self.db.execute(
+                select(Plan).where(
+                    Plan.id == plan_id,
+                    Plan.user_id == user_id,
+                    Plan.deleted_at.is_(None),
+                )
+            )
+            plan = plan_result.scalar_one_or_none()
+            if plan:
+                context.update(
+                    {
+                        "plan_title": plan.name,
+                        "plan_type": plan.type.value if plan.type else None,
+                        "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                        "progress": plan.progress,
+                        "is_active": plan.is_active,
+                        "plan_description": plan.description,
+                    }
+                )
+                if plan.description:
+                    context["goal"] = plan.description
+        except Exception as e:
+            logger.warning(f"Failed to fetch plan metadata for plan_id={plan_id}: {e}")
 
         # Include facts (always included - core of plan context)
         if state.facts:

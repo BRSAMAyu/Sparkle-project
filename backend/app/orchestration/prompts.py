@@ -452,6 +452,10 @@ def _format_plan_context(plan_context: dict = None) -> str:
     if plan_title:
         lines.append(f"**计划名称**: {plan_title}")
 
+    goal = plan_context.get("goal") or plan_context.get("plan_description")
+    if goal:
+        lines.append(f"**计划目标**: {goal}")
+
     # 状态（如果不是 active 可以提示）
     status = plan_context.get("status")
     if status and status != "active":

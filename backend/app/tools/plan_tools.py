@@ -9,7 +9,6 @@ from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
-from app.orchestration.graph_rag import GraphRAGRetriever
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.models.plan import PlanType as ModelPlanType
@@ -107,6 +106,7 @@ class GenerateTasksForPlanTool(BaseTool):
             # 第二步: 获取知识图谱上下文 (GraphRAG)
             knowledge_context = ""
             try:
+                from app.orchestration.graph_rag import GraphRAGRetriever
                 logger.info(f"Querying Knowledge Graph for context: {params.topic} ({params.difficulty})")
                 knowledge_service = KnowledgeService(db_session)
                 retriever = GraphRAGRetriever(knowledge_service)
@@ -148,7 +148,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     task_create = TaskCreate(
                         title=task_data["title"],
                         description=task_data.get("description"),
-                        type=ModelTaskType(task_data.get("type", "learning")),
+                        type=ModelTaskType(task_data.get("type", "learning").upper()),
                         estimated_minutes=task_data.get("estimated_minutes", 25),
                         priority=task_data.get("priority", 2),
                         plan_id=plan_uuid

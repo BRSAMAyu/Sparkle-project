@@ -48,9 +48,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       // Refresh dashboard to clear the sprint
       await _ref.read(dashboardProvider.notifier).refresh();
 
+      // Note: Success message should be localized by the UI component
       state = state.copyWith(
         isProcessing: false,
-        successMessage: '冲刺已完成并归档',
+        successMessage: 'sprint_completed',
       );
       return true;
     } catch (e) {
@@ -71,7 +72,7 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       final sprint = currentDashboard.sprint;
 
       if (sprint == null) {
-        throw Exception('没有活跃的冲刺');
+        throw Exception('no_active_sprint');
       }
 
       // Calculate new target date
@@ -86,9 +87,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       // Refresh dashboard
       await _ref.read(dashboardProvider.notifier).refresh();
 
+      // Note: Success message should be localized by the UI component
       state = state.copyWith(
         isProcessing: false,
-        successMessage: '冲刺已延长 $additionalDays 天',
+        successMessage: 'sprint_extended:$additionalDays',
       );
       return true;
     } catch (e) {
@@ -110,9 +112,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       // Refresh dashboard to clear the sprint
       await _ref.read(dashboardProvider.notifier).refresh();
 
+      // Note: Success message should be localized by the UI component
       state = state.copyWith(
         isProcessing: false,
-        successMessage: '冲刺已放弃',
+        successMessage: 'sprint_abandoned',
       );
       return true;
     } catch (e) {

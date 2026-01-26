@@ -15,8 +15,7 @@ from .plan_tools import CreatePlanTool
 from .focus_tools import SuggestFocusSessionTool, HunyuanTranslateTool
 from .web_search_tool import WebSearchProTool
 from .plan_state_tools import GetPlanStateTool, GetTaskSummaryTool, GetTaskDetailTool
-from .task_query_tool import QueryPlanTasksTool, ModifyPlanTaskTool
-from .cross_plan_task_tool import QueryAllTasksTool
+from .task_query_tool import QueryPlanTasksTool, ModifyPlanTaskTool, GetTaskDetailsTool, QueryAllTasksTool
 from .prism_tools import GetUserBehaviorPatternsTool
 from .milestone_tools import ConfirmMilestoneProposalTool, DismissMilestoneProposalTool
 
@@ -66,6 +65,7 @@ class ToolRegistry:
             # P0-3: 任务查询与修改工具
             QueryPlanTasksTool(),
             ModifyPlanTaskTool(),
+            GetTaskDetailsTool(),
             # 跨计划查询工具
             QueryAllTasksTool(),
             # 里程碑提案工具
