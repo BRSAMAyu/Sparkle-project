@@ -3,81 +3,141 @@ Milestone interaction tools for LLM.
 
 Allows the LLM to confirm or dismiss milestone task proposals.
 """
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
 
-from app.tools.base import BaseTool
+from app.tools.base import BaseTool, ToolCategory, ToolResult
 
+
+# ============ Parameter Schemas ============
+
+class ConfirmMilestoneProposalParams(BaseModel):
+    """确认里程碑提案的参数"""
+    proposal_id: str = Field(..., description="提案ID")
+
+
+class DismissMilestoneProposalParams(BaseModel):
+    """忽略里程碑提案的参数"""
+    proposal_id: str = Field(..., description="提案ID")
+
+
+# ============ Tool Implementations ============
 
 class ConfirmMilestoneProposalTool(BaseTool):
     """Confirm a milestone task proposal and create the tasks."""
     name = "confirm_milestone_proposal"
     description = "确认里程碑提案，创建推荐的任务。当用户表示同意、确认或接受里程碑推荐的任务时使用。"
-    category = "plan"
+    category = ToolCategory.PLAN
+    parameters_schema = ConfirmMilestoneProposalParams
+    requires_confirmation = False
 
     async def execute(
         self,
-        db: AsyncSession,
+        params: ConfirmMilestoneProposalParams,
         user_id: str,
-        proposal_id: str,
-        **kwargs
-    ) -> Dict[str, Any]:
+        db_session: Any,
+        tool_call_id: Optional[str] = None
+    ) -> ToolResult:
         """
         Confirm a milestone proposal and create the recommended tasks.
 
         Args:
-            db: Database session
+            params: Tool parameters containing proposal_id
             user_id: User ID
-            proposal_id: The proposal ID to confirm
+            db_session: Database session
+            tool_call_id: Tool call ID for tracking
 
         Returns:
-            Result with created task information
+            ToolResult with created task information
         """
-        from app.services.milestone_handler import MilestoneHandler
+        try:
+            from app.services.milestone_handler import MilestoneHandler
 
-        handler = MilestoneHandler(db)
-        result = await handler.confirm_proposal(proposal_id, user_id)
+            handler = MilestoneHandler(db_session)
+            result = await handler.confirm_proposal(params.proposal_id, user_id)
 
-        return self.format_result(
-            success=result.get("success", False),
-            tool_name=self.name,
-            data=result,
-            message=f"已创建 {result.get('tasks_created', 0)} 个任务" if result.get("success") else result.get("error", "确认失败"),
-        )
+            if result.get("success"):
+                tasks_created = result.get("tasks_created", 0)
+                return ToolResult(
+                    success=True,
+                    tool_name=self.name,
+                    data={
+                        "proposal_id": params.proposal_id,
+                        "tasks_created": tasks_created,
+                        "task_ids": result.get("task_ids", [])
+                    },
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": result.get("tasks", []),
+                        "message": f"已创建 {tasks_created} 个任务"
+                    }
+                )
+            else:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message=result.get("error", "确认失败"),
+                    suggestion="请确认提案ID是否正确或稍后重试"
+                )
+
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="确认提案时发生错误，请稍后重试"
+            )
 
 
 class DismissMilestoneProposalTool(BaseTool):
     """Dismiss a milestone task proposal."""
     name = "dismiss_milestone_proposal"
     description = "忽略里程碑提案。当用户表示拒绝、不需要或忽略里程碑推荐的任务时使用。"
-    category = "plan"
+    category = ToolCategory.PLAN
+    parameters_schema = DismissMilestoneProposalParams
+    requires_confirmation = False
 
     async def execute(
         self,
-        db: AsyncSession,
+        params: DismissMilestoneProposalParams,
         user_id: str,
-        proposal_id: str,
-        **kwargs
-    ) -> Dict[str, Any]:
+        db_session: Any,
+        tool_call_id: Optional[str] = None
+    ) -> ToolResult:
         """
         Dismiss a milestone proposal without creating tasks.
 
         Args:
-            db: Database session
+            params: Tool parameters containing proposal_id
             user_id: User ID
-            proposal_id: The proposal ID to dismiss
+            db_session: Database session
+            tool_call_id: Tool call ID for tracking
 
         Returns:
-            Result indicating the proposal was dismissed
+            ToolResult indicating the proposal was dismissed
         """
-        from app.core.pending_actions import pending_actions_store
+        try:
+            from app.core.pending_actions import pending_actions_store
 
-        success = await pending_actions_store.delete(proposal_id, user_id)
+            success = await pending_actions_store.delete(params.proposal_id, user_id)
 
-        return self.format_result(
-            success=success,
-            tool_name=self.name,
-            data={"action": "dismissed", "proposal_id": proposal_id},
-            message="提案已忽略" if success else "提案不存在或已过期",
-        )
+            return ToolResult(
+                success=success,
+                tool_name=self.name,
+                data={
+                    "action": "dismissed",
+                    "proposal_id": params.proposal_id
+                },
+                widget_data={
+                    "message": "提案已忽略" if success else "提案不存在或已过期"
+                }
+            )
+
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="忽略提案时发生错误，请稍后重试"
+            )

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 计划创建屏幕 - 占位页面
 class PlanCreateScreen extends StatelessWidget {
@@ -8,34 +9,39 @@ class PlanCreateScreen extends StatelessWidget {
   final String? planType;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text(planType == 'growth' ? '创建成长计划' : '创建冲刺计划'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(planType == 'growth' ? l10n.createGrowthPlan : l10n.createSprintPlan),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-              const SizedBox(height: DS.lg),
-              Text(
-                '精彩功能即将登场',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: DS.sm),
-              const Text(
-                '敬请期待~',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.xl),
-              SparkleButton.primary(
-                  label: '返回', onPressed: () => context.pop(),),
-            ],
-          ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.construction, size: 80, color: DS.brandPrimary),
+            const SizedBox(height: DS.lg),
+            Text(
+              l10n.featureComingSoon,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              l10n.stayTuned,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: DS.xl),
+            CustomButton.primary(
+              text: l10n.back,
+              onPressed: () => context.pop(),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

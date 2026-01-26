@@ -69,6 +69,9 @@ from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, 
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
 
+# Phase 4: Sufficiency Checking
+from app.orchestration.sufficiency_checker import sufficiency_checker, SufficiencyStatus
+
 # Phase 5: Plan Execution Validation
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.services.plan_execution_validator import PlanExecutionValidator
@@ -936,7 +939,7 @@ class ChatOrchestrator:
                     request_id=request_id,
                     error=agent_service_pb2.Error(
                         code="CONFLICT",
-                        message="Another request is processing for this session",
+                        message="会话正在处理另一个请求，请稍候",
                         retryable=True
                     ),
                     finish_reason=agent_service_pb2.ERROR
@@ -1050,7 +1053,7 @@ class ChatOrchestrator:
                             try:
                                 from app.core.plan_context import PlanContextBuilder
                                 plan_builder = PlanContextBuilder(active_db, self.redis)
-                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
                                 if plan_context:
                                     logger.info(f"Built plan_context for plan_id={plan_id}")
                                     # Include plan_context in user_context_payload
@@ -1111,6 +1114,71 @@ class ChatOrchestrator:
                 # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
+
+                # P4: Sufficiency Checking (skip for tool results)
+                if not request.HasField("tool_result"):
+                    with tracer.start_as_current_span("orchestrator.sufficiency_check"):
+                        try:
+                            # Predict intent from user message
+                            prediction = await shadow_prediction_service.predict_intent_only(
+                                user_message=user_message,
+                                active_plan_id=str(plan_id) if plan_id else None,
+                                user_id=user_id
+                            )
+
+                            # Extract basic entities from prediction
+                            extracted_entities = {
+                                "intent_type": prediction.get("intent_type", "unknown"),
+                                "suggested_tools": prediction.get("suggested_tools", []),
+                            }
+
+                            # Run sufficiency check
+                            check_result = await sufficiency_checker.check(
+                                intent=prediction.get("intent_type", "unknown"),
+                                extracted_entities=extracted_entities,
+                                conversation_context=conversation_context or [],
+                            )
+
+                            # If clarification needed, respond with questions
+                            if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
+                                logger.info(f"Sufficiency check requires clarification: {check_result.clarification_questions}")
+                                questions = "\n".join([f"- {q}" for q in check_result.clarification_questions])
+                                clarification_response = agent_service_pb2.ChatResponse(
+                                    delta=f"我需要更多信息来帮您：\n\n{questions}\n\n请提供以上信息，我将为您处理。",
+                                    metadata={
+                                        "requires_clarification": "true",
+                                        "missing_fields": ",".join(check_result.missing_fields),
+                                    }
+                                )
+                                await stream_callback(clarification_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                            # If confirmation needed, ask for confirmation
+                            if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                                logger.info(f"Sufficiency check requires confirmation: {check_result.confirmation_message}")
+                                confirmation_response = agent_service_pb2.ChatResponse(
+                                    delta=check_result.confirmation_message,
+                                    metadata={
+                                        "requires_confirmation": "true",
+                                    }
+                                )
+                                await stream_callback(confirmation_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                        except Exception as e:
+                            logger.warning(f"Sufficiency check failed, continuing: {e}")
                 
                 # Get tools
                 with tracer.start_as_current_span("orchestrator.get_tools"):

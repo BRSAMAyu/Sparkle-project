@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -40,13 +42,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final l10n = AppLocalizations.of(context);
 
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.error!),
+            content: Text(
+              ErrorMessages.getLocalizedMessage(
+                l10n,
+                next.errorCode ?? 'UNKNOWN',
+                next.error,
+              ),
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -72,7 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: DS.lg),
                 Text(
-                  'Welcome Back to Sparkle',
+                  l10n.appTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -81,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: DS.sm),
                 Text(
-                  'Ignite your learning potential.',
+                  l10n.welcomeSubtitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -90,13 +99,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Username field
                 TextFormField(
                   controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Username or Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: l10n.username,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                   validator: (value) => value!.isEmpty
-                      ? 'Please enter your username or email'
+                      ? l10n.pleaseEnterUsername
                       : null,
                 ),
                 const SizedBox(height: DS.lg),
@@ -106,7 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l10n.password,
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
@@ -120,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   validator: (value) =>
-                      value!.isEmpty ? 'Please enter your password' : null,
+                      value!.isEmpty ? l10n.pleaseEnterPassword : null,
                 ),
                 const SizedBox(height: DS.xl),
 
@@ -139,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: DS.brandPrimary,),
                         )
-                      : const Text('Login'),
+                      : Text(l10n.login),
                 ),
 
                 const SizedBox(height: DS.xl),
@@ -149,7 +158,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child:
-                          Text('OR', style: TextStyle(color: DS.brandPrimary)),
+                          Text(l10n.orText, style: TextStyle(color: DS.brandPrimary)),
                     ),
                     const Expanded(child: Divider()),
                   ],
@@ -163,7 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _SocialLoginButton(
                       icon: Icons
                           .g_mobiledata_rounded, // Use a generic icon or custom asset
-                      label: 'Google',
+                      label: l10n.google,
                       onTap: () {
                         // Mock Google Login
                         unawaited(
@@ -177,7 +186,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     _SocialLoginButton(
                       icon: Icons.apple_rounded,
-                      label: 'Apple',
+                      label: l10n.apple,
                       onTap: () {
                         // Mock Apple Login
                         unawaited(
@@ -192,7 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     _SocialLoginButton(
                       icon: Icons
                           .wechat_rounded, // Assuming Material Icons has WeChat or similar
-                      label: 'WeChat',
+                      label: l10n.wechat,
                       onTap: () {
                         // Mock WeChat Login
                         unawaited(
@@ -212,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Register Link
                 TextButton(
                   onPressed: () => context.go('/register'),
-                  child: const Text("Don't have an account? Register"),
+                  child: Text(l10n.noAccount),
                 ),
 
                 const SizedBox(height: DS.sm),
@@ -223,7 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ref.read(authProvider.notifier).loginAsGuest();
                   },
                   child: Text(
-                    'Continue as Guest',
+                    l10n.continueAsGuest,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.outline,
                     ),
