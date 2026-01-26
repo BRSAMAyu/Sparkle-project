@@ -338,7 +338,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         // Update state with error message
         state = state.copyWith(
           lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败',
+          lastActionMessage: result.message ?? 'submit_failed',
         );
         debugPrint('❌ Plan review failed: ${result.message}');
         return false;
@@ -347,7 +347,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       debugPrint('❌ Plan review error: $e');
       state = state.copyWith(
         lastActionStatus: 'error',
-        lastActionMessage: '网络错误，请重试',
+        lastActionMessage: 'network_error_retry',
       );
       return false;
     }
@@ -367,17 +367,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  /// Get user-friendly success message
-  String _getSuccessMessage(ReviewDecision decision) {
+  /// Get user-friendly success message key (to be localized by UI)
+  String _getSuccessMessageKey(ReviewDecision decision) {
     switch (decision) {
       case ReviewDecision.approved:
-        return '✅ 已批准';
+        return 'review_approved';
       case ReviewDecision.rejected:
-        return '❌ 已取消';
+        return 'review_rejected';
       case ReviewDecision.needsModification:
-        return '📝 已请求修改';
+        return 'review_modification_requested';
       case ReviewDecision.requiresConfirmation:
-        return '✅ 已确认';
+        return 'review_confirmed';
     }
   }
 

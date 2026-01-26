@@ -461,6 +461,10 @@ def _format_plan_context(plan_context: dict = None) -> str:
     if status and status != "active":
         lines.append(f"**状态**: {status}")
 
+    stage = plan_context.get("plan_stage")
+    if stage:
+        lines.append(f"**当前阶段**: {stage}")
+
     # 【优化格式】将机器字段名转换为可读描述
     facts = plan_context.get("facts", {})
     if facts or plan_context.get("task_summary"):

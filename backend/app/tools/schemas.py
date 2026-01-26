@@ -54,10 +54,18 @@ class PlanType(str, Enum):
     SPRINT = "sprint"    # 考试冲刺
     GROWTH = "growth"    # 长期成长
 
+
+class PlanStage(str, Enum):
+    SPRINT = "sprint"
+    DAILY = "daily"
+    REVIEW = "review"
+    PAUSED = "paused"
+
 class CreatePlanParams(BaseModel):
     """创建计划的参数"""
     title: str = Field(..., description="计划名称")
     plan_type: PlanType = Field(..., description="计划类型")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="计划阶段")
     subject_id: Optional[str] = Field(None, description="关联科目 ID")
     target_date: Optional[datetime] = Field(None, description="目标日期（冲刺计划必填）")
     target_mastery: Optional[float] = Field(None, description="目标掌握度 0-1", ge=0, le=1)
@@ -200,6 +208,10 @@ class GetTaskDetailsParams(BaseModel):
     include_knowledge_context: bool = Field(
         default=True,
         description="是否包含关联的知识节点信息"
+    )
+    include_learning_resources: bool = Field(
+        default=True,
+        description="是否包含关联学习资源/种子库信息"
     )
     include_progress_history: bool = Field(
         default=False,

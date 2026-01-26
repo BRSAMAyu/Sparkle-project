@@ -23,6 +23,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task, TaskStatus
+from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink
 from app.services.plan_state_service import PlanStateService
 from app.services.milestone_handler import MilestoneHandler
 
@@ -326,7 +327,7 @@ class TaskStateSyncService:
         if not task:
             return None
 
-        return {
+        detail = {
             "task_id": str(task.id),
             "plan_id": str(task.plan_id) if task.plan_id else None,
             "title": task.title,
@@ -346,3 +347,54 @@ class TaskStateSyncService:
             "created_at": task.created_at.isoformat() if task.created_at else None,
             "updated_at": task.updated_at.isoformat() if task.updated_at else None,
         }
+
+        try:
+            from app.models.galaxy import KnowledgeNode
+            link_result = await self.db.execute(
+                select(TaskKnowledgeLink, KnowledgeNode)
+                .join(KnowledgeNode, TaskKnowledgeLink.knowledge_node_id == KnowledgeNode.id)
+                .where(TaskKnowledgeLink.task_id == task_id)
+                .order_by(TaskKnowledgeLink.order_index.asc())
+            )
+            link_rows = link_result.all()
+            related_nodes = []
+            for link, node in link_rows:
+                related_nodes.append(
+                    {
+                        "node_id": str(node.id),
+                        "title": node.name,
+                        "summary": node.description[:200] if node.description else None,
+                        "relation_type": link.relation_type,
+                        "strength": link.strength,
+                        "is_primary": link.is_primary,
+                    }
+                )
+            detail["related_knowledge_nodes"] = related_nodes
+        except Exception:
+            detail["related_knowledge_nodes"] = []
+
+        try:
+            resource_result = await self.db.execute(
+                select(TaskResourceLink)
+                .where(TaskResourceLink.task_id == task_id)
+                .order_by(TaskResourceLink.order_index.asc())
+            )
+            resource_links = resource_result.scalars().all()
+            detail["learning_resources"] = [
+                {
+                    "id": str(link.id),
+                    "resource_type": link.resource_type,
+                    "resource_id": str(link.resource_id) if link.resource_id else None,
+                    "title": link.title,
+                    "summary": link.summary,
+                    "url": link.url,
+                    "metadata": link.resource_metadata,
+                    "order_index": link.order_index,
+                    "is_primary": link.is_primary,
+                }
+                for link in resource_links
+            ]
+        except Exception:
+            detail["learning_resources"] = []
+
+        return detail

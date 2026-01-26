@@ -68,7 +68,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? '休息一下吧，效率会更高哦' : '保持专注，你正在状态！'}',
+                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? l10n.aiNudgeGentle : l10n.aiNudgeFocus}',
                       style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
@@ -77,7 +77,7 @@ class DashboardScreen extends ConsumerWidget {
               backgroundColor: theme.colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: '查看',
+                label: l10n.view,
                 textColor: theme.colorScheme.onPrimary,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(

@@ -44,6 +44,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authProvider);
     final l10n = AppLocalizations.of(context);
 
+    if (l10n == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
@@ -52,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             content: Text(
               ErrorMessages.getLocalizedMessage(
                 l10n,
-                next.errorCode ?? 'UNKNOWN',
+                'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
                 next.error,
               ),
             ),

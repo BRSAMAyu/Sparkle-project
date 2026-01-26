@@ -110,6 +110,7 @@ class PlanContextBuilder:
                     {
                         "plan_title": plan.name,
                         "plan_type": plan.type.value if plan.type else None,
+                        "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
                         "target_date": plan.target_date.isoformat() if plan.target_date else None,
                         "progress": plan.progress,
                         "is_active": plan.is_active,
