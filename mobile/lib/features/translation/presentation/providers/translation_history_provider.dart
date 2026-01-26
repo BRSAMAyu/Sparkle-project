@@ -138,12 +138,10 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
 
   /// Delete all records
   Future<bool> deleteAll() async {
-    final success = await _repository.deleteAll();
-    if (success) {
-      await loadHistory();
-      await loadStatistics();
-    }
-    return success;
+    await _repository.deleteAll();
+    await loadHistory();
+    await loadStatistics();
+    return true;
   }
 
   /// Save a new translation

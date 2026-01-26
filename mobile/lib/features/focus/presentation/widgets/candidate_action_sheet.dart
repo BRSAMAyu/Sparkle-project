@@ -219,7 +219,7 @@ class _CandidateCard extends StatelessWidget {
           // Reason
           Text(
             candidate.reason,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: DS.neutral700,
               height: 1.4,

@@ -1,14 +1,13 @@
-// This is a generated file - do not edit.
 //
-// Generated from agent_service.proto.
-
-// @dart = 3.3
+//  Generated code. Do not modify.
+//  source: agent_service.proto
+//
+// @dart = 2.12
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names
-// ignore_for_file: curly_braces_in_flow_control_structures
-// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
 
 import 'dart:core' as $core;
 
@@ -16,43 +15,31 @@ import 'package:protobuf/protobuf.dart' as $pb;
 
 /// Feedback enums for response quality.
 class FeedbackType extends $pb.ProtobufEnum {
-  static const FeedbackType FEEDBACK_TYPE_UP =
-      FeedbackType._(0, _omitEnumNames ? '' : 'FEEDBACK_TYPE_UP');
-  static const FeedbackType FEEDBACK_TYPE_DOWN =
-      FeedbackType._(1, _omitEnumNames ? '' : 'FEEDBACK_TYPE_DOWN');
+  static const FeedbackType FEEDBACK_TYPE_UP = FeedbackType._(0, _omitEnumNames ? '' : 'FEEDBACK_TYPE_UP');
+  static const FeedbackType FEEDBACK_TYPE_DOWN = FeedbackType._(1, _omitEnumNames ? '' : 'FEEDBACK_TYPE_DOWN');
 
-  static const $core.List<FeedbackType> values = <FeedbackType>[
+  static const $core.List<FeedbackType> values = <FeedbackType> [
     FEEDBACK_TYPE_UP,
     FEEDBACK_TYPE_DOWN,
   ];
 
-  static final $core.List<FeedbackType?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 1);
-  static FeedbackType? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, FeedbackType> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static FeedbackType? valueOf($core.int value) => _byValue[value];
 
-  const FeedbackType._(super.value, super.name);
+  const FeedbackType._($core.int v, $core.String n) : super(v, n);
 }
 
 class FeedbackReason extends $pb.ProtobufEnum {
-  static const FeedbackReason FEEDBACK_REASON_UNSPECIFIED =
-      FeedbackReason._(0, _omitEnumNames ? '' : 'FEEDBACK_REASON_UNSPECIFIED');
-  static const FeedbackReason FEEDBACK_REASON_INACCURATE =
-      FeedbackReason._(1, _omitEnumNames ? '' : 'FEEDBACK_REASON_INACCURATE');
-  static const FeedbackReason FEEDBACK_REASON_INCOMPLETE =
-      FeedbackReason._(2, _omitEnumNames ? '' : 'FEEDBACK_REASON_INCOMPLETE');
-  static const FeedbackReason FEEDBACK_REASON_VERBOSE =
-      FeedbackReason._(3, _omitEnumNames ? '' : 'FEEDBACK_REASON_VERBOSE');
-  static const FeedbackReason FEEDBACK_REASON_FORMATTING =
-      FeedbackReason._(4, _omitEnumNames ? '' : 'FEEDBACK_REASON_FORMATTING');
-  static const FeedbackReason FEEDBACK_REASON_MISALIGNED =
-      FeedbackReason._(5, _omitEnumNames ? '' : 'FEEDBACK_REASON_MISALIGNED');
-  static const FeedbackReason FEEDBACK_REASON_TOO_HARD =
-      FeedbackReason._(6, _omitEnumNames ? '' : 'FEEDBACK_REASON_TOO_HARD');
-  static const FeedbackReason FEEDBACK_REASON_TOO_SIMPLE =
-      FeedbackReason._(7, _omitEnumNames ? '' : 'FEEDBACK_REASON_TOO_SIMPLE');
+  static const FeedbackReason FEEDBACK_REASON_UNSPECIFIED = FeedbackReason._(0, _omitEnumNames ? '' : 'FEEDBACK_REASON_UNSPECIFIED');
+  static const FeedbackReason FEEDBACK_REASON_INACCURATE = FeedbackReason._(1, _omitEnumNames ? '' : 'FEEDBACK_REASON_INACCURATE');
+  static const FeedbackReason FEEDBACK_REASON_INCOMPLETE = FeedbackReason._(2, _omitEnumNames ? '' : 'FEEDBACK_REASON_INCOMPLETE');
+  static const FeedbackReason FEEDBACK_REASON_VERBOSE = FeedbackReason._(3, _omitEnumNames ? '' : 'FEEDBACK_REASON_VERBOSE');
+  static const FeedbackReason FEEDBACK_REASON_FORMATTING = FeedbackReason._(4, _omitEnumNames ? '' : 'FEEDBACK_REASON_FORMATTING');
+  static const FeedbackReason FEEDBACK_REASON_MISALIGNED = FeedbackReason._(5, _omitEnumNames ? '' : 'FEEDBACK_REASON_MISALIGNED');
+  static const FeedbackReason FEEDBACK_REASON_TOO_HARD = FeedbackReason._(6, _omitEnumNames ? '' : 'FEEDBACK_REASON_TOO_HARD');
+  static const FeedbackReason FEEDBACK_REASON_TOO_SIMPLE = FeedbackReason._(7, _omitEnumNames ? '' : 'FEEDBACK_REASON_TOO_SIMPLE');
 
-  static const $core.List<FeedbackReason> values = <FeedbackReason>[
+  static const $core.List<FeedbackReason> values = <FeedbackReason> [
     FEEDBACK_REASON_UNSPECIFIED,
     FEEDBACK_REASON_INACCURATE,
     FEEDBACK_REASON_INCOMPLETE,
@@ -63,29 +50,21 @@ class FeedbackReason extends $pb.ProtobufEnum {
     FEEDBACK_REASON_TOO_SIMPLE,
   ];
 
-  static final $core.List<FeedbackReason?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 7);
-  static FeedbackReason? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, FeedbackReason> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static FeedbackReason? valueOf($core.int value) => _byValue[value];
 
-  const FeedbackReason._(super.value, super.name);
+  const FeedbackReason._($core.int v, $core.String n) : super(v, n);
 }
 
 /// User decision on a plan review
 class PlanReviewDecision extends $pb.ProtobufEnum {
-  static const PlanReviewDecision PLAN_REVIEW_DECISION_UNSPECIFIED =
-      PlanReviewDecision._(
-          0, _omitEnumNames ? '' : 'PLAN_REVIEW_DECISION_UNSPECIFIED');
-  static const PlanReviewDecision APPROVE =
-      PlanReviewDecision._(1, _omitEnumNames ? '' : 'APPROVE');
-  static const PlanReviewDecision REJECT =
-      PlanReviewDecision._(2, _omitEnumNames ? '' : 'REJECT');
-  static const PlanReviewDecision MODIFY =
-      PlanReviewDecision._(3, _omitEnumNames ? '' : 'MODIFY');
-  static const PlanReviewDecision ACKNOWLEDGE =
-      PlanReviewDecision._(4, _omitEnumNames ? '' : 'ACKNOWLEDGE');
+  static const PlanReviewDecision PLAN_REVIEW_DECISION_UNSPECIFIED = PlanReviewDecision._(0, _omitEnumNames ? '' : 'PLAN_REVIEW_DECISION_UNSPECIFIED');
+  static const PlanReviewDecision APPROVE = PlanReviewDecision._(1, _omitEnumNames ? '' : 'APPROVE');
+  static const PlanReviewDecision REJECT = PlanReviewDecision._(2, _omitEnumNames ? '' : 'REJECT');
+  static const PlanReviewDecision MODIFY = PlanReviewDecision._(3, _omitEnumNames ? '' : 'MODIFY');
+  static const PlanReviewDecision ACKNOWLEDGE = PlanReviewDecision._(4, _omitEnumNames ? '' : 'ACKNOWLEDGE');
 
-  static const $core.List<PlanReviewDecision> values = <PlanReviewDecision>[
+  static const $core.List<PlanReviewDecision> values = <PlanReviewDecision> [
     PLAN_REVIEW_DECISION_UNSPECIFIED,
     APPROVE,
     REJECT,
@@ -93,28 +72,20 @@ class PlanReviewDecision extends $pb.ProtobufEnum {
     ACKNOWLEDGE,
   ];
 
-  static final $core.List<PlanReviewDecision?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 4);
-  static PlanReviewDecision? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, PlanReviewDecision> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static PlanReviewDecision? valueOf($core.int value) => _byValue[value];
 
-  const PlanReviewDecision._(super.value, super.name);
+  const PlanReviewDecision._($core.int v, $core.String n) : super(v, n);
 }
 
 class ContentReviewFeedbackType extends $pb.ProtobufEnum {
-  static const ContentReviewFeedbackType SATISFIED =
-      ContentReviewFeedbackType._(0, _omitEnumNames ? '' : 'SATISFIED');
-  static const ContentReviewFeedbackType UNSATISFIED =
-      ContentReviewFeedbackType._(1, _omitEnumNames ? '' : 'UNSATISFIED');
-  static const ContentReviewFeedbackType MODIFIED =
-      ContentReviewFeedbackType._(2, _omitEnumNames ? '' : 'MODIFIED');
-  static const ContentReviewFeedbackType REPORTED_ERROR =
-      ContentReviewFeedbackType._(3, _omitEnumNames ? '' : 'REPORTED_ERROR');
-  static const ContentReviewFeedbackType SKIPPED =
-      ContentReviewFeedbackType._(4, _omitEnumNames ? '' : 'SKIPPED');
+  static const ContentReviewFeedbackType SATISFIED = ContentReviewFeedbackType._(0, _omitEnumNames ? '' : 'SATISFIED');
+  static const ContentReviewFeedbackType UNSATISFIED = ContentReviewFeedbackType._(1, _omitEnumNames ? '' : 'UNSATISFIED');
+  static const ContentReviewFeedbackType MODIFIED = ContentReviewFeedbackType._(2, _omitEnumNames ? '' : 'MODIFIED');
+  static const ContentReviewFeedbackType REPORTED_ERROR = ContentReviewFeedbackType._(3, _omitEnumNames ? '' : 'REPORTED_ERROR');
+  static const ContentReviewFeedbackType SKIPPED = ContentReviewFeedbackType._(4, _omitEnumNames ? '' : 'SKIPPED');
 
-  static const $core.List<ContentReviewFeedbackType> values =
-      <ContentReviewFeedbackType>[
+  static const $core.List<ContentReviewFeedbackType> values = <ContentReviewFeedbackType> [
     SATISFIED,
     UNSATISFIED,
     MODIFIED,
@@ -122,29 +93,21 @@ class ContentReviewFeedbackType extends $pb.ProtobufEnum {
     SKIPPED,
   ];
 
-  static final $core.List<ContentReviewFeedbackType?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 4);
-  static ContentReviewFeedbackType? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, ContentReviewFeedbackType> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static ContentReviewFeedbackType? valueOf($core.int value) => _byValue[value];
 
-  const ContentReviewFeedbackType._(super.value, super.name);
+  const ContentReviewFeedbackType._($core.int v, $core.String n) : super(v, n);
 }
 
 class FinishReason extends $pb.ProtobufEnum {
-  static const FinishReason NULL =
-      FinishReason._(0, _omitEnumNames ? '' : 'NULL');
-  static const FinishReason STOP =
-      FinishReason._(1, _omitEnumNames ? '' : 'STOP');
-  static const FinishReason LENGTH =
-      FinishReason._(2, _omitEnumNames ? '' : 'LENGTH');
-  static const FinishReason TOOL_CALLS =
-      FinishReason._(3, _omitEnumNames ? '' : 'TOOL_CALLS');
-  static const FinishReason CONTENT_FILTER =
-      FinishReason._(4, _omitEnumNames ? '' : 'CONTENT_FILTER');
-  static const FinishReason ERROR =
-      FinishReason._(5, _omitEnumNames ? '' : 'ERROR');
+  static const FinishReason NULL = FinishReason._(0, _omitEnumNames ? '' : 'NULL');
+  static const FinishReason STOP = FinishReason._(1, _omitEnumNames ? '' : 'STOP');
+  static const FinishReason LENGTH = FinishReason._(2, _omitEnumNames ? '' : 'LENGTH');
+  static const FinishReason TOOL_CALLS = FinishReason._(3, _omitEnumNames ? '' : 'TOOL_CALLS');
+  static const FinishReason CONTENT_FILTER = FinishReason._(4, _omitEnumNames ? '' : 'CONTENT_FILTER');
+  static const FinishReason ERROR = FinishReason._(5, _omitEnumNames ? '' : 'ERROR');
 
-  static const $core.List<FinishReason> values = <FinishReason>[
+  static const $core.List<FinishReason> values = <FinishReason> [
     NULL,
     STOP,
     LENGTH,
@@ -153,61 +116,46 @@ class FinishReason extends $pb.ProtobufEnum {
     ERROR,
   ];
 
-  static final $core.List<FinishReason?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 5);
-  static FinishReason? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, FinishReason> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static FinishReason? valueOf($core.int value) => _byValue[value];
 
-  const FinishReason._(super.value, super.name);
+  const FinishReason._($core.int v, $core.String n) : super(v, n);
 }
 
 class InterventionLevel extends $pb.ProtobufEnum {
-  static const InterventionLevel SILENT_MARKER =
-      InterventionLevel._(0, _omitEnumNames ? '' : 'SILENT_MARKER');
-  static const InterventionLevel TOAST =
-      InterventionLevel._(1, _omitEnumNames ? '' : 'TOAST');
-  static const InterventionLevel CARD =
-      InterventionLevel._(2, _omitEnumNames ? '' : 'CARD');
-  static const InterventionLevel FULL_SCREEN_MODAL =
-      InterventionLevel._(3, _omitEnumNames ? '' : 'FULL_SCREEN_MODAL');
+  static const InterventionLevel SILENT_MARKER = InterventionLevel._(0, _omitEnumNames ? '' : 'SILENT_MARKER');
+  static const InterventionLevel TOAST = InterventionLevel._(1, _omitEnumNames ? '' : 'TOAST');
+  static const InterventionLevel CARD = InterventionLevel._(2, _omitEnumNames ? '' : 'CARD');
+  static const InterventionLevel FULL_SCREEN_MODAL = InterventionLevel._(3, _omitEnumNames ? '' : 'FULL_SCREEN_MODAL');
 
-  static const $core.List<InterventionLevel> values = <InterventionLevel>[
+  static const $core.List<InterventionLevel> values = <InterventionLevel> [
     SILENT_MARKER,
     TOAST,
     CARD,
     FULL_SCREEN_MODAL,
   ];
 
-  static final $core.List<InterventionLevel?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 3);
-  static InterventionLevel? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, InterventionLevel> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static InterventionLevel? valueOf($core.int value) => _byValue[value];
 
-  const InterventionLevel._(super.value, super.name);
+  const InterventionLevel._($core.int v, $core.String n) : super(v, n);
 }
 
 /// AgentType defines the different types of specialized agents in the system.
 class AgentType extends $pb.ProtobufEnum {
-  static const AgentType AGENT_UNKNOWN =
-      AgentType._(0, _omitEnumNames ? '' : 'AGENT_UNKNOWN');
-  static const AgentType ORCHESTRATOR =
-      AgentType._(1, _omitEnumNames ? '' : 'ORCHESTRATOR');
-  static const AgentType KNOWLEDGE =
-      AgentType._(2, _omitEnumNames ? '' : 'KNOWLEDGE');
+  static const AgentType AGENT_UNKNOWN = AgentType._(0, _omitEnumNames ? '' : 'AGENT_UNKNOWN');
+  static const AgentType ORCHESTRATOR = AgentType._(1, _omitEnumNames ? '' : 'ORCHESTRATOR');
+  static const AgentType KNOWLEDGE = AgentType._(2, _omitEnumNames ? '' : 'KNOWLEDGE');
   static const AgentType MATH = AgentType._(3, _omitEnumNames ? '' : 'MATH');
   static const AgentType CODE = AgentType._(4, _omitEnumNames ? '' : 'CODE');
-  static const AgentType DATA_ANALYSIS =
-      AgentType._(5, _omitEnumNames ? '' : 'DATA_ANALYSIS');
-  static const AgentType TRANSLATION =
-      AgentType._(6, _omitEnumNames ? '' : 'TRANSLATION');
+  static const AgentType DATA_ANALYSIS = AgentType._(5, _omitEnumNames ? '' : 'DATA_ANALYSIS');
+  static const AgentType TRANSLATION = AgentType._(6, _omitEnumNames ? '' : 'TRANSLATION');
   static const AgentType IMAGE = AgentType._(7, _omitEnumNames ? '' : 'IMAGE');
   static const AgentType AUDIO = AgentType._(8, _omitEnumNames ? '' : 'AUDIO');
-  static const AgentType WRITING =
-      AgentType._(9, _omitEnumNames ? '' : 'WRITING');
-  static const AgentType REASONING =
-      AgentType._(10, _omitEnumNames ? '' : 'REASONING');
+  static const AgentType WRITING = AgentType._(9, _omitEnumNames ? '' : 'WRITING');
+  static const AgentType REASONING = AgentType._(10, _omitEnumNames ? '' : 'REASONING');
 
-  static const $core.List<AgentType> values = <AgentType>[
+  static const $core.List<AgentType> values = <AgentType> [
     AGENT_UNKNOWN,
     ORCHESTRATOR,
     KNOWLEDGE,
@@ -221,27 +169,20 @@ class AgentType extends $pb.ProtobufEnum {
     REASONING,
   ];
 
-  static final $core.List<AgentType?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 10);
-  static AgentType? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, AgentType> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static AgentType? valueOf($core.int value) => _byValue[value];
 
-  const AgentType._(super.value, super.name);
+  const AgentType._($core.int v, $core.String n) : super(v, n);
 }
 
 class AgentStatus_State extends $pb.ProtobufEnum {
-  static const AgentStatus_State UNKNOWN =
-      AgentStatus_State._(0, _omitEnumNames ? '' : 'UNKNOWN');
-  static const AgentStatus_State THINKING =
-      AgentStatus_State._(1, _omitEnumNames ? '' : 'THINKING');
-  static const AgentStatus_State SEARCHING =
-      AgentStatus_State._(2, _omitEnumNames ? '' : 'SEARCHING');
-  static const AgentStatus_State EXECUTING_TOOL =
-      AgentStatus_State._(3, _omitEnumNames ? '' : 'EXECUTING_TOOL');
-  static const AgentStatus_State GENERATING =
-      AgentStatus_State._(4, _omitEnumNames ? '' : 'GENERATING');
+  static const AgentStatus_State UNKNOWN = AgentStatus_State._(0, _omitEnumNames ? '' : 'UNKNOWN');
+  static const AgentStatus_State THINKING = AgentStatus_State._(1, _omitEnumNames ? '' : 'THINKING');
+  static const AgentStatus_State SEARCHING = AgentStatus_State._(2, _omitEnumNames ? '' : 'SEARCHING');
+  static const AgentStatus_State EXECUTING_TOOL = AgentStatus_State._(3, _omitEnumNames ? '' : 'EXECUTING_TOOL');
+  static const AgentStatus_State GENERATING = AgentStatus_State._(4, _omitEnumNames ? '' : 'GENERATING');
 
-  static const $core.List<AgentStatus_State> values = <AgentStatus_State>[
+  static const $core.List<AgentStatus_State> values = <AgentStatus_State> [
     UNKNOWN,
     THINKING,
     SEARCHING,
@@ -249,13 +190,11 @@ class AgentStatus_State extends $pb.ProtobufEnum {
     GENERATING,
   ];
 
-  static final $core.List<AgentStatus_State?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 4);
-  static AgentStatus_State? valueOf($core.int value) =>
-      value < 0 || value >= _byValue.length ? null : _byValue[value];
+  static final $core.Map<$core.int, AgentStatus_State> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static AgentStatus_State? valueOf($core.int value) => _byValue[value];
 
-  const AgentStatus_State._(super.value, super.name);
+  const AgentStatus_State._($core.int v, $core.String n) : super(v, n);
 }
 
-const $core.bool _omitEnumNames =
-    $core.bool.fromEnvironment('protobuf.omit_enum_names');
+
+const _omitEnumNames = $core.bool.fromEnvironment('protobuf.omit_enum_names');

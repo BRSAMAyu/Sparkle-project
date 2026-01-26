@@ -842,12 +842,115 @@ Please review this plan and provide your assessment."""
             except Exception as e:
                 logger.warning(f"Failed to publish replan notification: {e}")
 
+        # Auto-execute replanning in background to avoid queued actions
+        asyncio.create_task(
+            self._execute_replan_action(
+                action_id=action_id,
+                user_id=user_id,
+                original_plan_id=plan_id,
+                feedback=feedback,
+            )
+        )
+
         return {
             "status": "success",
             "action_id": action_id,
             "new_plan_id": new_plan_id,
-            "message": "Replanning request queued",
+            "message": "Replanning request accepted (auto execution started)",
         }
+
+    async def _execute_replan_action(
+        self,
+        action_id: str,
+        user_id: str,
+        original_plan_id: str,
+        feedback: str,
+    ) -> None:
+        """
+        Execute replanning asynchronously and either auto-run or queue review.
+        """
+        from uuid import UUID
+        from app.database import get_db_session
+        from app.core.context_pack import ContextPackBuilder
+        from app.orchestration.lang_graph_planner import LangGraphPlanner
+        from app.orchestration.state_snapshot import StateSnapshotManager
+        from app.orchestration.executor import ToolExecutor
+
+        try:
+            async with get_db_session() as db:
+                session_id = f"replan:{action_id}"
+                snapshot_manager = StateSnapshotManager(self.redis)
+                snapshot = await snapshot_manager.create_snapshot(
+                    user_id=user_id,
+                    session_id=session_id,
+                    db_session=db,
+                )
+
+                replan_message = (
+                    "用户请求修改当前计划。"
+                    f"原计划ID: {original_plan_id}。"
+                    f"反馈: {feedback}"
+                )
+
+                planner = LangGraphPlanner(self.redis)
+                executable_plan = await planner.plan(
+                    message=replan_message,
+                    snapshot=snapshot,
+                    user_id=user_id,
+                    session_id=session_id,
+                )
+
+                user_context = {}
+                try:
+                    context_builder = ContextPackBuilder(db, redis=self.redis)
+                    context_pack = await context_builder.build(
+                        user_id=UUID(user_id),
+                        intent="chat",
+                    )
+                    user_context = context_pack.to_prompt_context()
+                except Exception as e:
+                    logger.warning(f"Failed to build context pack for replan: {e}")
+
+                review_result = await self.review_plan(
+                    plan=executable_plan,
+                    user_message=replan_message,
+                    user_context=user_context,
+                )
+
+                if review_result.decision == ReviewDecision.APPROVED.value and review_result.auto_approved:
+                    executor = ToolExecutor()
+                    results = []
+                    for tool_call in executable_plan.tool_calls:
+                        result = await executor.execute_tool_call(
+                            tool_name=tool_call.name,
+                            arguments=tool_call.params or {},
+                            user_id=user_id,
+                            db_session=db,
+                            tool_call_id=tool_call.id,
+                            compensation_call=tool_call.compensation_call,
+                        )
+                        results.append(result)
+                        if not result.success:
+                            break
+                    logger.info(
+                        f"Auto-replan executed for user {user_id}, "
+                        f"plan={executable_plan.plan_id}, "
+                        f"tools={len(executable_plan.tool_calls)}"
+                    )
+                else:
+                    review_action_id = await self.store_review_result(
+                        review=review_result,
+                        user_id=user_id,
+                    )
+                    logger.info(
+                        f"Replan review queued: action_id={review_action_id}, "
+                        f"plan={executable_plan.plan_id}"
+                    )
+
+                await pending_actions_store.delete(action_id, user_id)
+
+        except Exception as e:
+            logger.error(f"Failed to auto execute replan action {action_id}: {e}", exc_info=True)
 
 
 # Global singleton

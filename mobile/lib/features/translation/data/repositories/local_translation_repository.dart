@@ -82,48 +82,25 @@ class LocalTranslationRepository {
 
     switch (sortOrder) {
       case TranslationSortOrder.newestFirst:
-        final tempRecords = await _buildFilterQuery(filter)
-            .sortByCreatedAt()
-            .offset(offset)
-            .limit(limit)
-            .findAll();
-        records = tempRecords.reversed.toList();
+        final tempRecords = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
+        records = tempRecords.cast<TranslationRecord>().reversed.toList();
       case TranslationSortOrder.oldestFirst:
-        records = await _buildFilterQuery(filter)
-            .sortByCreatedAt()
-            .offset(offset)
-            .limit(limit)
-            .findAll();
+        records = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
       case TranslationSortOrder.highestRating:
-        final tempRecords2 = await _buildFilterQuery(filter)
-            .sortByRating()
-            .thenByCreatedAt()
-            .offset(offset)
-            .limit(limit)
-            .findAll();
-        records = tempRecords2.reversed.toList();
+        final tempRecords3 = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        records = tempRecords3.cast<TranslationRecord>().reversed.toList();
       case TranslationSortOrder.lowestRating:
-        records = await _buildFilterQuery(filter)
-            .sortByRating()
-            .thenByCreatedAt()
-            .offset(offset)
-            .limit(limit)
-            .findAll();
+        records = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
       case TranslationSortOrder.mostViewed:
-        final tempRecords3 = await _buildFilterQuery(filter)
-            .sortByViewCount()
-            .thenByCreatedAt()
-            .offset(offset)
-            .limit(limit)
-            .findAll();
-        records = tempRecords3.reversed.toList();
+        final tempRecords5 = await _collection.where().sortByViewCount().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        records = tempRecords5.cast<TranslationRecord>().reversed.toList();
     }
 
     return records.map(_toHistoryItem).toList();
   }
 
   /// Build query based on filter - returns the collection filter builder
-  _buildFilterQuery(TranslationFilter filter) {
+  dynamic _buildFilterQuery(TranslationFilter filter) {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
 
@@ -195,7 +172,7 @@ class LocalTranslationRepository {
   Future<bool> delete(Id id) async => await _collection.delete(id);
 
   /// Delete all records
-  Future<bool> deleteAll() async => await _collection.clear();
+  Future<void> deleteAll() async => await _collection.clear();
 
   /// Delete favorites only
   Future<int> deleteFavorites() async {

@@ -373,6 +373,36 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
 
   @override
   Future<List<GalaxySearchResult>> searchNodes(String query) async => [];
+
+  @override
+  void setEvidenceHighlight(Set<String> ids, {String? focusId}) {
+    state = state.copyWith(
+      highlightedNodeIdHashes: ids.map((e) => e.hashCode).toSet(),
+    );
+  }
+
+  @override
+  void clearFocusBounds() {
+    state = state.copyWith(focusBounds: null);
+  }
+
+  @override
+  void clearFocusNode() {
+    state = state.copyWith(focusNodeId: null);
+  }
+
+  @override
+  void clearEvidenceHighlight() {
+    state = state.copyWith(
+      highlightedNodeIdHashes: const {},
+      highlightRevision: state.highlightRevision + 1,
+    );
+  }
+
+  @override
+  void setFocusNode(String nodeId) {
+    state = state.copyWith(focusNodeId: nodeId);
+  }
 }
 
 /// Generate mock nodes

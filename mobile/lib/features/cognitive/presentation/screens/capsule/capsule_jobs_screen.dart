@@ -251,7 +251,7 @@ class _JobCard extends StatelessWidget {
             Wrap(
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
-              children: job.capsuleIds!.map((id) => Chip(
+              children: job.capsuleIds!.map((id) => RawChip(
                   label: Text('胶囊 $id'),
                   avatar: Icon(Icons.check_circle_outline, size: 16),
                   backgroundColor: isDark ? DS.neutral700 : DS.neutral200,

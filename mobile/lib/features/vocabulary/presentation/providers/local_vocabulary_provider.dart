@@ -47,8 +47,8 @@ class LocalVocabularyState {
         allTags: allTags ?? this.allTags,
       );
 
-  int get dueCount => statistics['dueCount'] ?? 0;
-  int get totalCount => statistics['total'] ?? 0;
+  int get dueCount => statistics['dueCount'] as int? ?? 0;
+  int get totalCount => statistics['total'] as int? ?? 0;
 }
 
 /// Local vocabulary notifier
