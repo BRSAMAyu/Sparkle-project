@@ -77,6 +77,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{cognitive_prism_section}
+
+
+
 ## 核心原则
 
 1. 始终遵循用户的偏好设置，这是最重要的
@@ -220,6 +224,9 @@ def build_system_prompt(
         intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
 
 
+    # 2.7 格式化认知棱镜指令
+    cognitive_prism_section = _format_cognitive_prism_section(user_context)
+
 
     # 3. 如果是通用模板，进行完整渲染
 
@@ -238,6 +245,8 @@ def build_system_prompt(
             intent_section=intent_section,
 
             task_awareness_section=TASK_AWARENESS_SECTION,
+
+            cognitive_prism_section=cognitive_prism_section,
 
         )
 
@@ -599,3 +608,46 @@ def format_user_context(context: dict) -> str:
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
     return "\n".join(lines) if lines else "暂无上下文信息"
+
+
+def _format_cognitive_prism_section(user_context: dict) -> str:
+    """
+    格式化认知棱镜指令
+
+    当用户有已识别的行为模式时，添加系统提示词引导 LLM 主动展示认知棱镜。
+    """
+    cognitive_insights = user_context.get("cognitive_insights", {})
+
+    if not cognitive_insights.get("has_cognitive_patterns"):
+        return ""
+
+    pattern_count = cognitive_insights.get("pattern_count", 0)
+    recent_patterns = cognitive_insights.get("recent_patterns", [])
+    patterns_by_type = cognitive_insights.get("patterns_by_type", {})
+
+    # 构建认知模式描述
+    pattern_desc = []
+    for p_type, count in patterns_by_type.items():
+        if count > 0:
+            type_names = {
+                "cognitive": "认知",
+                "emotional": "情绪",
+                "execution": "执行"
+            }
+            pattern_desc.append(f"{type_names.get(p_type, p_type)}{count}个")
+
+    pattern_text = "、".join(pattern_desc) if pattern_desc else f"{pattern_count}个"
+
+    lines = ["## 认知棱镜 - 行为模式洞察"]
+    lines.append(f"用户已有 {pattern_count} 个行为模式分析结果（{pattern_text}）。")
+
+    if recent_patterns:
+        lines.append(f"最近识别的模式: {', '.join(recent_patterns)}")
+
+    lines.append("")
+    lines.append("当用户询问学习情况、效率、状态，或适合展示洞察时，主动调用")
+    lines.append("**get_user_behavior_patterns** 工具展示完整的行为模式分析。")
+    lines.append("")
+    lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
+
+    return "\n".join(lines)

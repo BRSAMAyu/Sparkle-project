@@ -63,6 +63,7 @@ from app.models.context_pack import ContextPackRun, ContextBudgetProfile, Contex
 from app.models.memory_rank_policy import MemoryRankPolicy
 from app.models.ltm_daily_snapshot import LtmDailySnapshot
 from app.models.user_memory_settings import UserMemorySettings
+from app.models.user_settings import UserSettings
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.decision_record import DecisionRecord
 from app.models.seed_content import (
@@ -196,6 +197,7 @@ __all__ = [
     "LtmDailySnapshot",
     "MemoryRankPolicy",
     "UserMemorySettings",
+    "UserSettings",
     "UserPreferencesCenter",
     "DecisionRecord",
     # Seed Content Library

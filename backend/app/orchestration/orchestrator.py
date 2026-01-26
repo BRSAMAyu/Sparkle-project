@@ -551,6 +551,35 @@ class ChatOrchestrator:
             logger.warning(f"Failed to get task status summary: {e}")
             return {"pending": 0, "in_progress": 0, "overdue": 0}
 
+    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """获取认知模式摘要，注入 LLM 上下文
+
+        当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
+        """
+        try:
+            from app.services.cognitive_service import CognitiveService
+            from uuid import UUID
+
+            cognitive = CognitiveService(db_session)
+            patterns = await cognitive.get_user_patterns(UUID(user_id), min_confidence=0.6)
+
+            if patterns:
+                # 按类型分组
+                by_type = {"cognitive": [], "emotional": [], "execution": []}
+                for p in patterns:
+                    by_type.setdefault(p.pattern_type, []).append(p.pattern_name)
+
+                return {
+                    "has_cognitive_patterns": True,
+                    "pattern_count": len(patterns),
+                    "recent_patterns": [p.pattern_name for p in patterns[:3]],
+                    "patterns_by_type": {k: len(v) for k, v in by_type.items()}
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
+
+        return {"has_cognitive_patterns": False}
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -631,7 +660,10 @@ class ChatOrchestrator:
                     }
                     for plan in plans
                 ]
-                
+
+                # P0: 认知棱镜上下文注入
+                cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
+
                 return {
                     "user_context": user_context_data, # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics,
@@ -642,9 +674,12 @@ class ChatOrchestrator:
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
                     "task_status_summary": task_status_summary,
-                    
+
                     # New field for full context injection
-                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
+                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
+
+                    # 认知棱镜数据
+                    "cognitive_insights": cognitive_insights
                 }
             
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)

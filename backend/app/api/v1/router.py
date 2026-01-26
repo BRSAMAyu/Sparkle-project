@@ -53,6 +53,7 @@ from app.api.v1 import (
     monitoring,
     suggestions, # Vision Item 3
     profile_transparency,
+    user_settings,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -98,6 +99,7 @@ api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["mu
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(profile_transparency.router)
+api_router.include_router(user_settings.router)
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:

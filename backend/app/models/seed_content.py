@@ -5,7 +5,8 @@ Seed Content Models
 import uuid
 from enum import Enum
 from typing import Optional, List, Any, Dict
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON
+from datetime import datetime
+from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship
@@ -280,11 +281,14 @@ class UserLibrarySubscription(BaseModel):
 
     # 时间戳
     subscribed_at = Column(
-        # Note: Using created_at for subscription time
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.utcnow(),
         doc="订阅时间"
     )
     last_used_at = Column(
-        # Nullable field for last usage tracking
+        DateTime,
+        nullable=True,
         doc="最后使用时间"
     )
 

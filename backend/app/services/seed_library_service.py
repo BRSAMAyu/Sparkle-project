@@ -126,31 +126,35 @@ class SeedLibraryService:
 
         # 可见性筛选
         if params.visibility:
-            if params.visibility == LibraryVisibilityEnum.PRIVATE:
+            if params.visibility == LibraryVisibility.PRIVATE:
                 # 私有库只显示自己的
                 if user_id:
-                    conditions.append(SeedLibrary.owner_id == user_id)
+                    conditions.append(
+                        and_(
+                            SeedLibrary.visibility == LibraryVisibility.PRIVATE,
+                            SeedLibrary.owner_id == user_id
+                        )
+                    )
                 else:
-                    # 未登录用户看不到私有库
-                    conditions.append(SeedLibrary.id == uuid.UUID(int=0))  # 无效条件
+                    # 未登录用户看不到私有库，返回空结果
+                    conditions.append(text("FALSE"))
             else:
                 conditions.append(SeedLibrary.visibility == params.visibility.value)
         else:
             # 默认显示公开库和官方库
-            conditions.append(
-                or_(
-                    SeedLibrary.visibility == LibraryVisibility.PUBLIC,
-                    SeedLibrary.visibility == LibraryVisibility.OFFICIAL,
-                )
-            )
+            public_conditions = [
+                SeedLibrary.visibility == LibraryVisibility.PUBLIC,
+                SeedLibrary.visibility == LibraryVisibility.OFFICIAL,
+            ]
             # 如果有用户，也显示自己的私有库
             if user_id:
-                conditions.append(
-                    or_(
-                        SeedLibrary.owner_id == user_id,
-                        SeedLibrary.visibility != LibraryVisibility.PRIVATE
+                public_conditions.append(
+                    and_(
+                        SeedLibrary.visibility == LibraryVisibility.PRIVATE,
+                        SeedLibrary.owner_id == user_id
                     )
                 )
+            conditions.append(or_(*public_conditions))
 
         # 语言筛选
         if params.language:
@@ -331,6 +335,7 @@ class SeedLibraryService:
         library_id: uuid.UUID,
         item_data: ItemCreate,
         user_id: uuid.UUID,
+        is_superuser: bool = False,
     ) -> Optional[SeedItem]:
         """
         添加内容项
@@ -340,6 +345,7 @@ class SeedLibraryService:
             library_id: 库ID
             item_data: 内容项数据
             user_id: 操作用户ID
+            is_superuser: 是否为管理员
 
         Returns:
             创建的内容项或 None
@@ -349,7 +355,7 @@ class SeedLibraryService:
             return None
 
         # 权限检查
-        if library.owner_id != user_id:
+        if library.owner_id != user_id and not is_superuser:
             raise PermissionError("No permission to add items to this library")
 
         item = SeedItem(

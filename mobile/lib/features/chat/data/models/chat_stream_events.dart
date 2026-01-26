@@ -542,3 +542,130 @@ class AchievementUnlockModel {
   final VisualEffectType? visualEffectType;
   final List<Map<String, dynamic>>? rewards;
 }
+
+// ============================================
+// Transparency Events
+// ============================================
+
+/// 透明度步骤事件
+class TransparencyStepEvent extends ChatStreamEvent {
+  TransparencyStepEvent({
+    required this.stepData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+  final Map<String, dynamic> stepData;
+
+  /// 当前步骤ID
+  String get currentStep => stepData['current_step'] as String? ?? '';
+
+  /// 步骤名称
+  String get stepName => stepData['step_name'] as String? ?? '';
+
+  /// 步骤索引
+  int get stepIndex => stepData['step_index'] as int? ?? 0;
+
+  /// 总步骤数
+  int get totalSteps => stepData['total_steps'] as int? ?? 0;
+}
+
+/// 透明度完整数据事件（流结束时）
+class TransparencyCompleteEvent extends ChatStreamEvent {
+  TransparencyCompleteEvent({
+    required this.transparencyData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+  final TransparencyData? transparencyData;
+}
+
+/// 透明度数据模型
+class TransparencyData {
+  const TransparencyData({
+    required this.steps,
+    required this.totalDurationMs,
+    required this.requestId,
+  });
+
+  final List<TransparencyStep> steps;
+  final int totalDurationMs;
+  final String requestId;
+
+  factory TransparencyData.fromJson(Map<String, dynamic> json) {
+    return TransparencyData(
+      steps: (json['steps'] as List<dynamic>?)
+              ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      totalDurationMs: json['total_duration_ms'] as int? ?? 0,
+      requestId: json['request_id'] as String? ?? '',
+    );
+  }
+
+  /// 格式化总耗时
+  String get formattedTotalDuration {
+    if (totalDurationMs < 1000) {
+      return '${totalDurationMs}ms';
+    }
+    return '${(totalDurationMs / 1000).toStringAsFixed(1)}s';
+  }
+}
+
+/// 透明度步骤模型（数据定义）
+class TransparencyStep {
+  const TransparencyStep({
+    required this.stepId,
+    required this.name,
+    required this.status,
+    this.durationMs,
+    this.result,
+    this.error,
+  });
+
+  final String stepId;
+  final String name;
+  final String status; // pending, in_progress, completed, failed
+  final int? durationMs;
+  final Map<String, dynamic>? result;
+  final String? error;
+
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
+    return TransparencyStep(
+      stepId: json['step_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      durationMs: json['duration_ms'] as int?,
+      result: json['result'] as Map<String, dynamic>?,
+      error: json['error'] as String?,
+    );
+  }
+
+  /// 获取本地化状态标签
+  String get statusLabel {
+    switch (status) {
+      case 'pending':
+        return '等待中';
+      case 'in_progress':
+        return '进行中';
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '失败';
+      default:
+        return status;
+    }
+  }
+
+  /// 格式化耗时
+  String? get formattedDuration {
+    if (durationMs == null) return null;
+    if (durationMs! < 1000) {
+      return '${durationMs}ms';
+    }
+    return '${(durationMs! / 1000).toStringAsFixed(1)}s';
+  }
+}
