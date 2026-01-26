@@ -108,9 +108,9 @@ class _TaskReminderSettingsScreenState
       body: ListView(
         children: [
           _buildEnableSwitch(config),
-          const Divider(color: DS.brandPrimary10),
+          Divider(color: DS.brandPrimary10),
           _buildReminderTimesSection(config),
-          const Divider(color: DS.brandPrimary10),
+          Divider(color: DS.brandPrimary10),
           _buildRefreshButton(),
           const SizedBox(height: 20),
           _buildInfoSection(),

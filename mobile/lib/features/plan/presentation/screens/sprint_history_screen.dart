@@ -98,7 +98,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             error,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.semanticError,
             ),
             textAlign: TextAlign.center,
@@ -162,7 +162,7 @@ class _SprintHistoryCard extends StatelessWidget {
                 const SizedBox(width: DS.spacing4),
                 Text(
                   '${dateFormat.format(item.startDate)} - ${item.endDate != null ? dateFormat.format(item.endDate!) : '进行中'}',
-                  style: context.sparkleTypography.bodySmall.copyWith(
+                  style: context.sparkleTypography.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),

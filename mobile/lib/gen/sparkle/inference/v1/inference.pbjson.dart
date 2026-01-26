@@ -1,15 +1,13 @@
-// This is a generated file - do not edit.
 //
-// Generated from sparkle/inference/v1/inference.proto.
-
-// @dart = 3.3
+//  Generated code. Do not modify.
+//  source: sparkle/inference/v1/inference.proto
+//
+// @dart = 2.12
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names
-// ignore_for_file: curly_braces_in_flow_control_structures
-// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
-// ignore_for_file: unused_import
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -138,13 +136,7 @@ final $typed_data.Uint8List toolDefinitionDescriptor = $convert.base64Decode(
 const Budgets$json = {
   '1': 'Budgets',
   '2': [
-    {
-      '1': 'max_output_tokens',
-      '3': 1,
-      '4': 1,
-      '5': 13,
-      '10': 'maxOutputTokens'
-    },
+    {'1': 'max_output_tokens', '3': 1, '4': 1, '5': 13, '10': 'maxOutputTokens'},
     {'1': 'max_input_tokens', '3': 2, '4': 1, '5': 13, '10': 'maxInputTokens'},
     {'1': 'max_cost_level', '3': 3, '4': 1, '5': 9, '10': 'maxCostLevel'},
   ],
@@ -163,75 +155,19 @@ const InferenceRequest$json = {
     {'1': 'request_id', '3': 1, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'trace_id', '3': 2, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'user_id', '3': 3, '4': 1, '5': 9, '10': 'userId'},
-    {
-      '1': 'task_type',
-      '3': 4,
-      '4': 1,
-      '5': 14,
-      '6': '.sparkle.inference.v1.TaskType',
-      '10': 'taskType'
-    },
-    {
-      '1': 'priority',
-      '3': 5,
-      '4': 1,
-      '5': 14,
-      '6': '.sparkle.inference.v1.Priority',
-      '10': 'priority'
-    },
+    {'1': 'task_type', '3': 4, '4': 1, '5': 14, '6': '.sparkle.inference.v1.TaskType', '10': 'taskType'},
+    {'1': 'priority', '3': 5, '4': 1, '5': 14, '6': '.sparkle.inference.v1.Priority', '10': 'priority'},
     {'1': 'schema_version', '3': 6, '4': 1, '5': 9, '10': 'schemaVersion'},
     {'1': 'output_schema', '3': 7, '4': 1, '5': 9, '10': 'outputSchema'},
     {'1': 'prompt_version', '3': 8, '4': 1, '5': 9, '10': 'promptVersion'},
     {'1': 'idempotency_key', '3': 9, '4': 1, '5': 9, '10': 'idempotencyKey'},
-    {
-      '1': 'budgets',
-      '3': 10,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.inference.v1.Budgets',
-      '10': 'budgets'
-    },
-    {
-      '1': 'messages',
-      '3': 11,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.Message',
-      '10': 'messages'
-    },
-    {
-      '1': 'tools',
-      '3': 12,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.ToolDefinition',
-      '10': 'tools'
-    },
-    {
-      '1': 'response_format',
-      '3': 13,
-      '4': 1,
-      '5': 14,
-      '6': '.sparkle.inference.v1.ResponseFormat',
-      '10': 'responseFormat'
-    },
-    {
-      '1': 'metadata',
-      '3': 14,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.InferenceRequest.MetadataEntry',
-      '10': 'metadata'
-    },
+    {'1': 'budgets', '3': 10, '4': 1, '5': 11, '6': '.sparkle.inference.v1.Budgets', '10': 'budgets'},
+    {'1': 'messages', '3': 11, '4': 3, '5': 11, '6': '.sparkle.inference.v1.Message', '10': 'messages'},
+    {'1': 'tools', '3': 12, '4': 3, '5': 11, '6': '.sparkle.inference.v1.ToolDefinition', '10': 'tools'},
+    {'1': 'response_format', '3': 13, '4': 1, '5': 14, '6': '.sparkle.inference.v1.ResponseFormat', '10': 'responseFormat'},
+    {'1': 'metadata', '3': 14, '4': 3, '5': 11, '6': '.sparkle.inference.v1.InferenceRequest.MetadataEntry', '10': 'metadata'},
     {'1': 'file_ids', '3': 15, '4': 3, '5': 9, '10': 'fileIds'},
-    {
-      '1': 'artifact_scope',
-      '3': 16,
-      '4': 1,
-      '5': 14,
-      '6': '.sparkle.inference.v1.ArtifactScope',
-      '10': 'artifactScope'
-    },
+    {'1': 'artifact_scope', '3': 16, '4': 1, '5': 14, '6': '.sparkle.inference.v1.ArtifactScope', '10': 'artifactScope'},
   ],
   '3': [InferenceRequest_MetadataEntry$json],
 };
@@ -275,23 +211,10 @@ const InferenceResponse$json = {
     {'1': 'provider', '3': 4, '4': 1, '5': 9, '10': 'provider'},
     {'1': 'model_id', '3': 5, '4': 1, '5': 9, '10': 'modelId'},
     {'1': 'content', '3': 6, '4': 1, '5': 9, '10': 'content'},
-    {
-      '1': 'error_reason',
-      '3': 7,
-      '4': 1,
-      '5': 14,
-      '6': '.sparkle.inference.v1.ErrorReason',
-      '10': 'errorReason'
-    },
+    {'1': 'error_reason', '3': 7, '4': 1, '5': 14, '6': '.sparkle.inference.v1.ErrorReason', '10': 'errorReason'},
     {'1': 'error_message', '3': 8, '4': 1, '5': 9, '10': 'errorMessage'},
     {'1': 'prompt_tokens', '3': 9, '4': 1, '5': 13, '10': 'promptTokens'},
-    {
-      '1': 'completion_tokens',
-      '3': 10,
-      '4': 1,
-      '5': 13,
-      '10': 'completionTokens'
-    },
+    {'1': 'completion_tokens', '3': 10, '4': 1, '5': 13, '10': 'completionTokens'},
   ],
 };
 
@@ -323,26 +246,13 @@ final $typed_data.Uint8List translationSegmentDescriptor = $convert.base64Decode
 const TranslationInput$json = {
   '1': 'TranslationInput',
   '2': [
-    {
-      '1': 'segments',
-      '3': 1,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.TranslationSegment',
-      '10': 'segments'
-    },
+    {'1': 'segments', '3': 1, '4': 3, '5': 11, '6': '.sparkle.inference.v1.TranslationSegment', '10': 'segments'},
     {'1': 'source_lang', '3': 2, '4': 1, '5': 9, '10': 'sourceLang'},
     {'1': 'target_lang', '3': 3, '4': 1, '5': 9, '10': 'targetLang'},
     {'1': 'domain', '3': 4, '4': 1, '5': 9, '10': 'domain'},
     {'1': 'style', '3': 5, '4': 1, '5': 9, '10': 'style'},
     {'1': 'glossary_id', '3': 6, '4': 1, '5': 9, '10': 'glossaryId'},
-    {
-      '1': 'segmenter_version',
-      '3': 7,
-      '4': 1,
-      '5': 9,
-      '10': 'segmenterVersion'
-    },
+    {'1': 'segmenter_version', '3': 7, '4': 1, '5': 9, '10': 'segmenterVersion'},
   ],
 };
 
@@ -381,14 +291,7 @@ const TranslatedSegment$json = {
     {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
     {'1': 'translation', '3': 2, '4': 1, '5': 9, '10': 'translation'},
     {'1': 'notes', '3': 3, '4': 3, '5': 9, '10': 'notes'},
-    {
-      '1': 'spans',
-      '3': 4,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.AlignmentSpan',
-      '10': 'spans'
-    },
+    {'1': 'spans', '3': 4, '4': 3, '5': 11, '6': '.sparkle.inference.v1.AlignmentSpan', '10': 'spans'},
   ],
 };
 
@@ -402,14 +305,7 @@ final $typed_data.Uint8List translatedSegmentDescriptor = $convert.base64Decode(
 const TranslationOutput$json = {
   '1': 'TranslationOutput',
   '2': [
-    {
-      '1': 'segments',
-      '3': 1,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.inference.v1.TranslatedSegment',
-      '10': 'segments'
-    },
+    {'1': 'segments', '3': 1, '4': 3, '5': 11, '6': '.sparkle.inference.v1.TranslatedSegment', '10': 'segments'},
     {'1': 'provider', '3': 2, '4': 1, '5': 9, '10': 'provider'},
     {'1': 'model_id', '3': 3, '4': 1, '5': 9, '10': 'modelId'},
     {'1': 'cache_hit', '3': 4, '4': 1, '5': 8, '10': 'cacheHit'},
@@ -423,3 +319,4 @@ final $typed_data.Uint8List translationOutputDescriptor = $convert.base64Decode(
     'NlLnYxLlRyYW5zbGF0ZWRTZWdtZW50UghzZWdtZW50cxIaCghwcm92aWRlchgCIAEoCVIIcHJv'
     'dmlkZXISGQoIbW9kZWxfaWQYAyABKAlSB21vZGVsSWQSGwoJY2FjaGVfaGl0GAQgASgIUghjYW'
     'NoZUhpdBIdCgpsYXRlbmN5X21zGAUgASgFUglsYXRlbmN5TXM=');
+

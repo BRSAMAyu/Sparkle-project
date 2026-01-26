@@ -1,15 +1,13 @@
-// This is a generated file - do not edit.
 //
-// Generated from websocket.proto.
-
-// @dart = 3.3
+//  Generated code. Do not modify.
+//  source: websocket.proto
+//
+// @dart = 2.12
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names
-// ignore_for_file: curly_braces_in_flow_control_structures
-// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
-// ignore_for_file: unused_import
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -42,14 +40,7 @@ const ChatMessage$json = {
     {'1': 'session_id', '3': 1, '4': 1, '5': 9, '10': 'sessionId'},
     {'1': 'user_id', '3': 2, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
-    {
-      '1': 'tool_calls',
-      '3': 4,
-      '4': 3,
-      '5': 11,
-      '6': '.agent.v1.ToolCall',
-      '10': 'toolCalls'
-    },
+    {'1': 'tool_calls', '3': 4, '4': 3, '5': 11, '6': '.agent.v1.ToolCall', '10': 'toolCalls'},
   ],
 };
 
@@ -84,22 +75,8 @@ const InterventionPushMessage$json = {
   '2': [
     {'1': 'intervention_id', '3': 1, '4': 1, '5': 9, '10': 'interventionId'},
     {'1': 'level', '3': 2, '4': 1, '5': 9, '10': 'level'},
-    {
-      '1': 'content',
-      '3': 3,
-      '4': 1,
-      '5': 11,
-      '6': '.sparkle.ws.InterventionContent',
-      '10': 'content'
-    },
-    {
-      '1': 'actions',
-      '3': 4,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.ws.InterventionAction',
-      '10': 'actions'
-    },
+    {'1': 'content', '3': 3, '4': 1, '5': 11, '6': '.sparkle.ws.InterventionContent', '10': 'content'},
+    {'1': 'actions', '3': 4, '4': 3, '5': 11, '6': '.sparkle.ws.InterventionAction', '10': 'actions'},
     {'1': 'expires_at', '3': 5, '4': 1, '5': 3, '10': 'expiresAt'},
   ],
 };
@@ -119,21 +96,8 @@ const InterventionContent$json = {
     {'1': 'rendered_message', '3': 1, '4': 1, '5': 9, '10': 'renderedMessage'},
     {'1': 'intent_type', '3': 2, '4': 1, '5': 9, '10': 'intentType'},
     {'1': 'template_id', '3': 3, '4': 1, '5': 9, '10': 'templateId'},
-    {
-      '1': 'scaffolding_level',
-      '3': 4,
-      '4': 1,
-      '5': 5,
-      '10': 'scaffoldingLevel'
-    },
-    {
-      '1': 'context_variables',
-      '3': 5,
-      '4': 3,
-      '5': 11,
-      '6': '.sparkle.ws.InterventionContent.ContextVariablesEntry',
-      '10': 'contextVariables'
-    },
+    {'1': 'scaffolding_level', '3': 4, '4': 1, '5': 5, '10': 'scaffoldingLevel'},
+    {'1': 'context_variables', '3': 5, '4': 3, '5': 11, '6': '.sparkle.ws.InterventionContent.ContextVariablesEntry', '10': 'contextVariables'},
   ],
   '3': [InterventionContent_ContextVariablesEntry$json],
 };
@@ -172,3 +136,4 @@ const InterventionAction$json = {
 final $typed_data.Uint8List interventionActionDescriptor = $convert.base64Decode(
     'ChJJbnRlcnZlbnRpb25BY3Rpb24SDgoCaWQYASABKAlSAmlkEhQKBWxhYmVsGAIgASgJUgVsYW'
     'JlbBISCgR0eXBlGAMgASgJUgR0eXBl');
+

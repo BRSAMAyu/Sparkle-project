@@ -126,7 +126,7 @@ class UserPersonaScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(DS.spacing12),
           child: Row(
             children: [
-              const Icon(Icons.assignment_turned_in_outlined,
+              Icon(Icons.assignment_turned_in_outlined,
                   color: DS.brandPrimaryConst),
               const SizedBox(width: DS.spacing12),
               Expanded(
@@ -148,7 +148,7 @@ class UserPersonaScreen extends ConsumerWidget {
                 },
                 child: Text(
                   completed ? '再次填写' : '开始',
-                  style: const TextStyle(color: DS.brandPrimaryConst),
+                  style: TextStyle(color: DS.brandPrimaryConst),
                 ),
               ),
             ],

@@ -140,7 +140,7 @@ class LocalVocabularyRepository {
     int offset = 0,
   }) async {
     final words = await _vocabWordCollection
-        .filter()
+        .where()
         .offset(offset)
         .limit(limit)
         .findAll();
@@ -173,51 +173,10 @@ class LocalVocabularyRepository {
   }
 
   /// Build filter query
-  Query<VocabWord> _buildFilterQuery(VocabFilter filter, String? tagFilter) {
-    final now = DateTime.now();
-
-    switch (filter) {
-      case VocabFilter.dueForReview:
-        return _vocabWordCollection
-            .filter()
-            .nextReviewAtLessThan(now)
-            .or()
-            .nextReviewAtIsNull()
-            .build();
-      case VocabFilter.highImportance:
-        return _vocabWordCollection
-            .filter()
-            .importanceGreaterThan(3)
-            .build();
-      case VocabFilter.mediumImportance:
-        return _vocabWordCollection
-            .filter()
-            .importanceEqualTo(3)
-            .build();
-      case VocabFilter.lowImportance:
-        return _vocabWordCollection
-            .filter()
-            .importanceLessThan(3)
-            .build();
-      case VocabFilter.byTag:
-        if (tagFilter == null) {
-          return _vocabWordCollection.filter().build();
-        }
-        return _vocabWordCollection
-            .filter()
-            .tagsElementContains(tagFilter)
-            .build();
-      case VocabFilter.all:
-      default:
-        if (tagFilter != null) {
-          return _vocabWordCollection
-              .filter()
-              .tagsElementContains(tagFilter)
-              .build();
-        }
-        return _vocabWordCollection.filter().build();
-    }
-  }
+  // TODO: Implement this method when needed
+  // Query<VocabWord> _buildFilterQuery(VocabFilter filter, String? tagFilter) {
+  //   throw UnimplementedError();
+  // }
 
   /// Update word importance
   Future<bool> updateImportance(Id id, int importance) async {

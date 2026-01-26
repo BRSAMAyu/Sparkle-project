@@ -1,15 +1,13 @@
-// This is a generated file - do not edit.
 //
-// Generated from galaxy_service.proto.
-
-// @dart = 3.3
+//  Generated code. Do not modify.
+//  source: galaxy_service.proto
+//
+// @dart = 2.12
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names
-// ignore_for_file: curly_braces_in_flow_control_structures
-// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
-// ignore_for_file: unused_import
+// ignore_for_file: constant_identifier_names, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_final_fields
+// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -43,11 +41,10 @@ const SyncCollaborativeGalaxyRequest$json = {
 };
 
 /// Descriptor for `SyncCollaborativeGalaxyRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List syncCollaborativeGalaxyRequestDescriptor =
-    $convert.base64Decode(
-        'Ch5TeW5jQ29sbGFib3JhdGl2ZUdhbGF4eVJlcXVlc3QSGwoJZ2FsYXh5X2lkGAEgASgJUghnYW'
-        'xheHlJZBIlCg5wYXJ0aWFsX3VwZGF0ZRgCIAEoDFINcGFydGlhbFVwZGF0ZRIXCgd1c2VyX2lk'
-        'GAMgASgJUgZ1c2VySWQ=');
+final $typed_data.Uint8List syncCollaborativeGalaxyRequestDescriptor = $convert.base64Decode(
+    'Ch5TeW5jQ29sbGFib3JhdGl2ZUdhbGF4eVJlcXVlc3QSGwoJZ2FsYXh5X2lkGAEgASgJUghnYW'
+    'xheHlJZBIlCg5wYXJ0aWFsX3VwZGF0ZRgCIAEoDFINcGFydGlhbFVwZGF0ZRIXCgd1c2VyX2lk'
+    'GAMgASgJUgZ1c2VySWQ=');
 
 @$core.Deprecated('Use syncCollaborativeGalaxyResponseDescriptor instead')
 const SyncCollaborativeGalaxyResponse$json = {
@@ -59,10 +56,9 @@ const SyncCollaborativeGalaxyResponse$json = {
 };
 
 /// Descriptor for `SyncCollaborativeGalaxyResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List syncCollaborativeGalaxyResponseDescriptor =
-    $convert.base64Decode(
-        'Ch9TeW5jQ29sbGFib3JhdGl2ZUdhbGF4eVJlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2'
-        'Nlc3MSIwoNc2VydmVyX3VwZGF0ZRgCIAEoDFIMc2VydmVyVXBkYXRl');
+final $typed_data.Uint8List syncCollaborativeGalaxyResponseDescriptor = $convert.base64Decode(
+    'Ch9TeW5jQ29sbGFib3JhdGl2ZUdhbGF4eVJlc3BvbnNlEhgKB3N1Y2Nlc3MYASABKAhSB3N1Y2'
+    'Nlc3MSIwoNc2VydmVyX3VwZGF0ZRgCIAEoDFIMc2VydmVyVXBkYXRl');
 
 @$core.Deprecated('Use updateNodeMasteryRequestDescriptor instead')
 const UpdateNodeMasteryRequest$json = {
@@ -71,14 +67,7 @@ const UpdateNodeMasteryRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'node_id', '3': 2, '4': 1, '5': 9, '10': 'nodeId'},
     {'1': 'mastery', '3': 3, '4': 1, '5': 5, '10': 'mastery'},
-    {
-      '1': 'version',
-      '3': 4,
-      '4': 1,
-      '5': 11,
-      '6': '.google.protobuf.Timestamp',
-      '10': 'version'
-    },
+    {'1': 'version', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'version'},
     {'1': 'reason', '3': 5, '4': 1, '5': 9, '10': 'reason'},
     {'1': 'request_id', '3': 6, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'revision', '3': 7, '4': 1, '5': 3, '10': 'revision'},
@@ -112,3 +101,4 @@ final $typed_data.Uint8List updateNodeMasteryResponseDescriptor = $convert.base6
     'oLb2xkX21hc3RlcnkYAiABKAVSCm9sZE1hc3RlcnkSHwoLbmV3X21hc3RlcnkYAyABKAVSCm5l'
     'd01hc3RlcnkSFgoGcmVhc29uGAQgASgJUgZyZWFzb24SHQoKcmVxdWVzdF9pZBgFIAEoCVIJcm'
     'VxdWVzdElkEikKEGN1cnJlbnRfcmV2aXNpb24YBiABKANSD2N1cnJlbnRSZXZpc2lvbg==');
+

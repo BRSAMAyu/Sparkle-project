@@ -34,7 +34,7 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   }
 
   @override
-  Stream<SSEEvent> getGalaxyEventsStream() => eventsStream;
+  Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) => eventsStream;
 
   @override
   Future<NetworkResult<void>> sparkNode(String id) async {
