@@ -33,6 +33,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!; // l10n should always be available in a build context
     final enterToSend = ref.watch(enterToSendProvider);
+    final transparentMode = ref.watch(transparentModeProvider);
+    final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -198,6 +200,37 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: DS.primaryBase,
+            ),
+            const SizedBox(height: DS.spacing32),
+            _buildSectionHeader(Icons.visibility, '透明模式'),
+            const SizedBox(height: DS.spacing16),
+            SwitchListTile(
+              title: const Text('启用透明模式'),
+              subtitle: const Text('显示状态与资源消耗概览'),
+              value: transparentMode,
+              onChanged: (v) =>
+                  ref.read(transparentModeProvider.notifier).setEnabled(v),
+              activeThumbColor: DS.primaryBase,
+            ),
+            const SizedBox(height: DS.spacing16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('系统反馈级别'),
+              subtitle: const Text('控制系统更新提示的详细程度'),
+              trailing: DropdownButton<int>(
+                value: systemUpdateLevel,
+                underline: const SizedBox.shrink(),
+                onChanged: (level) {
+                  if (level != null) {
+                    ref.read(systemUpdateLevelProvider.notifier).setLevel(level);
+                  }
+                },
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('静默')),
+                  DropdownMenuItem(value: 1, child: Text('摘要')),
+                  DropdownMenuItem(value: 2, child: Text('详细')),
+                ],
+              ),
             ),
             const SizedBox(height: DS.spacing32),
             _buildSectionHeader(Icons.sync, '同步'),

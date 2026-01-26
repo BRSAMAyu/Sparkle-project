@@ -98,6 +98,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           return StatusUpdateEvent(
             state: status['state'] as String? ?? 'UNKNOWN',
             details: status['details'] as String? ?? '',
+            currentAgentName: status['current_agent_name'] as String?,
+            activeAgentType: status['active_agent'] as String?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -241,6 +243,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             promptTokens: usage['prompt_tokens'] as int? ?? 0,
             completionTokens: usage['completion_tokens'] as int? ?? 0,
             totalTokens: usage['total_tokens'] as int? ?? 0,
+            costMicroUsd: usage['cost_micro_usd'] as int?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,

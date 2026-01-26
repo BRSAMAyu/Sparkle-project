@@ -13,9 +13,11 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -74,6 +76,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final transparentMode = ref.watch(transparentModeProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -332,6 +335,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                   // Plan Selector Pill - allows selecting plan for chat context
+                  if (transparentMode)
+                    TransparencyPanel(
+                      status: chatState.aiStatus,
+                      details: chatState.aiStatusDetails,
+                      promptTokens: chatState.lastPromptTokens,
+                      completionTokens: chatState.lastCompletionTokens,
+                      totalTokens: chatState.lastTotalTokens,
+                      currentAgentName: chatState.currentAgentName,
+                      activeAgentType: chatState.activeAgentType,
+                      activeTools: chatState.activeTools,
+                      dailyTokens: chatState.dailyTokens,
+                      dailyTokenLimit: chatState.dailyTokenLimit,
+                      dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                    ),
+                  if (transparentMode) const SizedBox(height: DS.spacing12),
                   const PlanSelectorPill(),
                   // Chat Mode Selector Pill - allows selecting AI collaboration mode
                   const ChatModeSelectorPill(),

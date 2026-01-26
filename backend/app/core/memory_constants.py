@@ -14,4 +14,5 @@ PREFERENCE_KEYS = {
     "coaching_style",
     "focus_mode",
     "sprint_mode",
+    "knowledge_level",
 }

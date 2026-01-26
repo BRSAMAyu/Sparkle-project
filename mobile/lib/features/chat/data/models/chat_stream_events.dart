@@ -99,6 +99,8 @@ class StatusUpdateEvent extends ChatStreamEvent {
   StatusUpdateEvent({
     required this.state,
     required this.details,
+    this.currentAgentName,
+    this.activeAgentType,
     super.responseId,
     super.traceId,
     super.workflowId,
@@ -106,6 +108,8 @@ class StatusUpdateEvent extends ChatStreamEvent {
   });
   final String state;
   final String details;
+  final String? currentAgentName;
+  final String? activeAgentType;
 }
 
 /// 完整文本事件
@@ -142,6 +146,7 @@ class UsageEvent extends ChatStreamEvent {
     required this.promptTokens,
     required this.completionTokens,
     required this.totalTokens,
+    this.costMicroUsd,
     super.responseId,
     super.traceId,
     super.workflowId,
@@ -150,6 +155,7 @@ class UsageEvent extends ChatStreamEvent {
   final int promptTokens;
   final int completionTokens;
   final int totalTokens;
+  final int? costMicroUsd;
 }
 
 /// 推理步骤事件（Chain of Thought Visualization）

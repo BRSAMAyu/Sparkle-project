@@ -22,6 +22,7 @@ Page<dynamic> _buildTransitionPage({
 
 class UserRoutes {
   static const String profile = '/profile';
+  static const String personaOnboarding = '/onboarding/persona';
 
   static List<RouteBase> get routes => [
     GoRoute(
@@ -30,6 +31,14 @@ class UserRoutes {
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const LearningModeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: personaOnboarding,
+        name: 'personaOnboarding',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const PersonaOnboardingScreen(),
         ),
       ),
       // Add more user routes as needed

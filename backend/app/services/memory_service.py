@@ -15,6 +15,7 @@ from app.services.evidence_scoring import compute_score
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.ltm_rollout_service import LtmRolloutService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 from loguru import logger
 
 
@@ -30,6 +31,15 @@ ALLOWED_EVIDENCE_TYPES = {
 
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
+SUMMARY_MAX_LEN = 48
+
+
+def _truncate_summary(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= SUMMARY_MAX_LEN:
+        return value
+    return f"{value[:SUMMARY_MAX_LEN - 1]}…"
 
 
 class MemoryService:
@@ -93,6 +103,20 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="preference", status="ok").inc()
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_preference_updated",
+                category="memory",
+                title=f"更新了偏好：{pref_key}",
+                description="已记录你的最新学习偏好",
+                priority="low",
+                metadata={
+                    "pref_key": pref_key,
+                    "version": record.version,
+                },
+            ),
+        )
         return record
 
     async def create_goal(
@@ -134,6 +158,20 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="goal", status="ok").inc()
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_goal_created",
+                category="goal",
+                title=f"记录了目标：{_truncate_summary(title)}",
+                description="学习目标已保存",
+                priority="medium",
+                metadata={
+                    "goal_id": str(record.id),
+                    "status": record.status,
+                },
+            ),
+        )
         return record
 
     async def update_goal(
@@ -288,6 +326,20 @@ class MemoryService:
         self.db.add(record)
         await self.db.commit()
         await self.db.refresh(record)
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_created",
+                category="memory",
+                title=f"记住了：{_truncate_summary(summary)}",
+                description="已写入长期记忆",
+                priority="low",
+                metadata={
+                    "memory_id": str(record.id),
+                    "source_type": source_type,
+                },
+            ),
+        )
         return record
 
     async def retract_memory(
@@ -323,6 +375,20 @@ class MemoryService:
 
         await self.db.commit()
         MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_retracted",
+                category="memory",
+                title="移除了记忆",
+                description="已按你的请求删除记录",
+                priority="medium",
+                metadata={
+                    "memory_type": kind,
+                    "memory_id": str(memory_id),
+                },
+            ),
+        )
         return True
 
     async def apply_correction(
@@ -391,6 +457,21 @@ class MemoryService:
             user_id=user_id,
             memory_id=record.id,
             action=action,
+        )
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_corrected",
+                category="memory",
+                title="收到纠错反馈",
+                description="系统会调整你的画像与记忆",
+                priority="medium",
+                metadata={
+                    "memory_type": kind,
+                    "memory_id": str(record.id),
+                    "action": action,
+                },
+            ),
         )
         return record
 
