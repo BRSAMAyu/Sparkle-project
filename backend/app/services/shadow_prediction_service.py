@@ -346,6 +346,118 @@ class ShadowPredictionService:
             "mode_accuracy": {}
         }
 
+    async def predict_intent_only(
+        self,
+        user_message: str,
+        active_plan_id: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Lightweight intent prediction for typing suggestions
+
+        This is a fast prediction method designed for real-time typing
+        suggestions. It does NOT record to Redis or affect statistics.
+
+        Args:
+            user_message: Partial or complete user message
+            active_plan_id: Currently active plan ID (for context)
+            user_id: User ID (for personalized predictions)
+
+        Returns:
+            Dict with:
+            - intent_type: Predicted intent type (task_management, knowledge_query, etc.)
+            - confidence: Confidence score 0-1
+            - suggested_actions: List of suggested actions
+            - suggested_tools: List of likely tools to be used
+            - execution_mode: Predicted mode (direct/langgraph)
+        """
+        msg_lower = user_message.lower()
+
+        # Determine intent type based on keywords
+        intent_type = "unknown"
+        confidence = 0.5
+        suggested_actions = []
+
+        # Task management intent
+        task_keywords = ["任务", "创建任务", "新建任务", "task", "todo", "待办", "完成"]
+        if any(kw in msg_lower for kw in task_keywords):
+            intent_type = "task_management"
+            confidence = 0.8
+            suggested_actions = ["create_task", "list_tasks", "update_task"]
+
+        # Knowledge query intent
+        knowledge_keywords = ["什么", "怎么", "如何", "为什么", "解释", "是什么", "what", "how", "explain", "概念", "原理"]
+        elif any(kw in msg_lower for kw in knowledge_keywords):
+            intent_type = "knowledge_query"
+            confidence = 0.75
+            suggested_actions = ["search_knowledge_graph", "explain_concept"]
+
+        # Time planning intent
+        planning_keywords = ["计划", "安排", "时间", "复习", "schedule", "plan", "学习计划", "制定"]
+        elif any(kw in msg_lower for kw in planning_keywords):
+            intent_type = "time_planning"
+            confidence = 0.8
+            suggested_actions = ["create_plan", "generate_tasks", "suggest_schedule"]
+
+        # Learning intent
+        learning_keywords = ["学习", "练习", "掌握", "learn", "practice", "study"]
+        elif any(kw in msg_lower for kw in learning_keywords):
+            intent_type = "learning"
+            confidence = 0.7
+            suggested_actions = ["start_learning_session", "get_learning_path"]
+
+        # Reflection intent
+        reflection_keywords = ["复习", "回顾", "总结", "review", "reflect", "summary"]
+        elif any(kw in msg_lower for kw in reflection_keywords):
+            intent_type = "reflection"
+            confidence = 0.75
+            suggested_actions = ["review_progress", "generate_summary"]
+
+        # Social intent
+        social_keywords = ["好友", "分享", "群组", "friend", "share", "group"]
+        elif any(kw in msg_lower for kw in social_keywords):
+            intent_type = "social"
+            confidence = 0.7
+            suggested_actions = ["share_progress", "invite_friend"]
+
+        # Tool call intent
+        tool_keywords = ["搜索", "查询", "分析", "预测", "search", "analyze", "predict"]
+        elif any(kw in msg_lower for kw in tool_keywords):
+            intent_type = "tool_call"
+            confidence = 0.65
+            suggested_actions = ["search_knowledge_graph", "analyze_past_papers"]
+
+        # Predict execution mode
+        mode, mode_confidence = await self._predict_mode(
+            msg_lower,
+            os.getenv("SHADOW_PREDICTION_MODE", "heuristic").lower()
+        )
+
+        # Predict likely tools
+        suggested_tools = []
+        tool_keywords_map = {
+            "search_knowledge_graph": ["搜索", "知识", "search", "knowledge", "概念"],
+            "analyze_past_papers": ["试卷", "真题", "past paper", "exam"],
+            "predict_exam_focus": ["预测", "重点", "focus", "考试"],
+            "create_task": ["任务", "task", "创建"],
+            "get_task_details": ["任务详情", "task details"],
+            "suggest_pomodoro_schedule": ["番茄", "pomodoro", "专注"],
+            "create_plan": ["计划", "plan", "制定"],
+        }
+
+        for tool, keywords in tool_keywords_map.items():
+            if any(kw in msg_lower for kw in keywords):
+                if tool not in suggested_tools:
+                    suggested_tools.append(tool)
+
+        return {
+            "intent_type": intent_type,
+            "confidence": confidence,
+            "suggested_actions": suggested_actions,
+            "suggested_tools": suggested_tools,
+            "execution_mode": mode,
+            "mode_confidence": mode_confidence,
+        }
+
 
 # Global instance
 shadow_prediction_service = ShadowPredictionService()

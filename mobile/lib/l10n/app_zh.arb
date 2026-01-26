@@ -67,5 +67,16 @@
   "logout": "退出登录",
   "confirmLogout": "确定要退出登录吗？",
   "cancel": "取消",
-  "confirm": "确定"
+  "confirm": "确定",
+
+  "errorConnectionFailed": "网络似乎有些不给力，请检查一下连接~",
+  "errorConnectionTimeout": "连接超时啦，请稍后再试",
+  "errorServerIssue": "服务器正在打盹，请稍后再试",
+  "errorRateLimit": "操作太频繁啦，休息一下再试吧~",
+  "errorAuthRequired": "请先登录后再使用这个功能哦",
+  "errorTokenExpired": "登录信息已过期，请重新登录~",
+  "errorNotFound": "没有找到相关内容，试试其他关键词？",
+  "errorEmptyState": "这里空空如也，快去添加内容吧",
+  "retry": "重试",
+  "back": "返回"
 }

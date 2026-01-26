@@ -19,6 +19,15 @@ abstract class ChatStreamEvent {
   final Map<String, dynamic>? metadata;
 }
 
+class SprintModeSwitchEvent extends ChatStreamEvent {
+  SprintModeSwitchEvent({
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+}
+
 /// 文本事件
 class TextEvent extends ChatStreamEvent {
   TextEvent({

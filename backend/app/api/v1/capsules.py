@@ -185,7 +185,7 @@ async def generate_capsule(
     """
     capsule = await curiosity_capsule_service.generate_daily_capsule(current_user.id, db)
     if not capsule:
-        raise HTTPException(status_code=400, detail="无法生成胶囊")
+        raise HTTPException(status_code=400, detail="生成知识胶囊失败，请稍后再试")
 
     is_fav = await capsule_favorite_service.is_favorited(current_user.id, capsule.id, db)
     return CapsuleDetailSchema(
@@ -290,7 +290,7 @@ async def share_capsule(
             return {"success": True, "message_id": str(result.id), "type": "friend"}
 
         else:
-            raise HTTPException(status_code=400, detail="必须指定 group_id 或 friend_id")
+            raise HTTPException(status_code=400, detail="请选择要分享给好友还是学习小组")
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -407,7 +407,7 @@ async def get_capsule_detail(
 
     capsule = await db.get(CuriosityCapsule, id)
     if not capsule or capsule.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="胶囊不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个知识胶囊")
 
     is_fav = await capsule_favorite_service.is_favorited(current_user.id, capsule.id, db)
 

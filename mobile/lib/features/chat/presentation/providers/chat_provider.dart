@@ -25,6 +25,7 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -822,6 +823,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             transparencyData: event.transparencyData,
           );
           flushPending();
+        } else if (event is SprintModeSwitchEvent) {
+          // Sprint Mode Switch Event
+          _handleSprintModeSwitch(event);
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -1090,6 +1095,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         );
       }
     });
+  }
+
+  void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
+    debugPrint('🔄 Sprint mode switch event received');
+
+    // Switch to Sprint View
+    _ref.read(taskBoardProvider.notifier).switchView(TaskViewMode.sprint);
   }
 
   /// 处理 ActionCard 状态更新

@@ -7,26 +7,26 @@ class ErrorMessages {
       // 连接相关错误
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
-        return '网络连接失败，请检查您的网络设置';
+        return '网络似乎有些不给力，请检查一下连接~';
 
       case 'CONNECTION_TIMEOUT':
-        return '连接超时，请稍后重试';
+        return '连接超时啦，请稍后再试';
 
       case 'MAX_RETRIES_EXCEEDED':
-        return '无法连接到服务器，请检查网络后重试';
+        return '服务器可能暂时打盹了，检查一下网络再试试吧';
 
       // 认证相关错误
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':
-        return '请先登录后再使用此功能';
+        return '请先登录后再使用这个功能哦';
 
       case 'TOKEN_EXPIRED':
-        return '登录已过期，请重新登录';
+        return '登录信息已过期，请重新登录~';
 
       // 服务端错误
       case 'SERVER_ERROR':
       case 'INTERNAL_ERROR':
-        return '服务器出现问题，请稍后再试';
+        return '服务器正在打盹，请稍后再试';
 
       case 'SERVICE_UNAVAILABLE':
         return '服务暂时不可用，请稍后再试';
@@ -34,10 +34,10 @@ class ErrorMessages {
       // 请求相关错误
       case 'INVALID_REQUEST':
       case 'BAD_REQUEST':
-        return '请求格式错误，请重试';
+        return '请求格式好像有问题，请重试';
 
       case 'RATE_LIMIT_EXCEEDED':
-        return '请求过于频繁，请稍后再试';
+        return '操作太频繁啦，休息一下再试吧~';
 
       // AI 相关错误
       case 'LLM_ERROR':
@@ -45,12 +45,12 @@ class ErrorMessages {
         return 'AI 服务暂时不可用，请稍后再试';
 
       case 'CONTEXT_LENGTH_EXCEEDED':
-        return '对话内容过长，请开始新的对话';
+        return '对话内容太长啦，开始新的对话吧';
 
       // 其他错误
       case 'UNKNOWN':
       default:
-        return technicalMessage ?? '发生未知错误，请稍后重试';
+        return technicalMessage ?? '遇到未预料的问题，我们正在处理~';
     }
   }
 
