@@ -5,7 +5,7 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, ARRAY
+from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, ARRAY, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
@@ -42,7 +42,7 @@ class CapsuleGenerationJob(BaseModel):
     curiosity_preference = Column(Float, nullable=False)  # 0.0-1.0
     requested_count = Column(Integer, nullable=False)  # 请求生成的胶囊数量
     actual_count = Column(Integer, nullable=True)  # 实际生成的胶囊数量
-    capsule_ids = Column(ARRAY(GUID()), nullable=True)  # 生成的胶囊ID列表
+    capsule_ids = Column(ARRAY(GUID()).with_variant(JSON(), "sqlite"), nullable=True)  # 生成的胶囊ID列表
     progress = Column(Float, nullable=False, default=0.0)  # 0.0-1.0 进度值
     error_message = Column(Text, nullable=True)  # 失败原因
     duration_ms = Column(Integer, nullable=True)  # 生成耗时（毫秒）

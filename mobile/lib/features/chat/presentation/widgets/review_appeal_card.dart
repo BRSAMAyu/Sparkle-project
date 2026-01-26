@@ -270,8 +270,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                     children: [
                       AnimatedBuilder(
                         animation: _pulseController,
-                        builder: (context, child) {
-                          return Container(
+                        builder: (context, child) => Container(
                             padding: const EdgeInsets.all(DS.spacing10),
                             decoration: BoxDecoration(
                               color: color.withValues(
@@ -286,8 +285,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                               color: color,
                               size: 20,
                             ),
-                          );
-                        },
+                          ),
                       ),
                       const SizedBox(width: DS.spacing12),
                       Expanded(
@@ -482,8 +480,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
     );
   }
 
-  Widget _buildAppealForm(BuildContext context) {
-    return Container(
+  Widget _buildAppealForm(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -684,7 +681,6 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
         ),
       ),
     );
-  }
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {

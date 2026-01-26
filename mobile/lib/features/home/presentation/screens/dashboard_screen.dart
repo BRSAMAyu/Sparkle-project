@@ -165,11 +165,11 @@ class DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
-          Positioned(
+          const Positioned(
             left: 16,
             right: 16,
             bottom: 138,
-            child: const MultiAgentBar(),
+            child: MultiAgentBar(),
           ),
 
           // Layer 4: Omni-Bar
@@ -366,7 +366,7 @@ class _StreakCard extends StatelessWidget {
                   color: DS.warning,
                   size: DS.iconSizeSm,
                 ),
-                SizedBox(width: DS.spacing6),
+                const SizedBox(width: DS.spacing6),
                 Text(
                   '连胜',
                   style: TextStyle(
@@ -374,7 +374,7 @@ class _StreakCard extends StatelessWidget {
                     color: DS.textSecondary,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Icon(
                   Icons.chevron_right,
                   size: DS.iconSizeSm,
@@ -382,8 +382,8 @@ class _StreakCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: DS.spacing12),
-            DashboardStreakIndicator(),
+            const SizedBox(height: DS.spacing12),
+            const DashboardStreakIndicator(),
           ],
         ),
       ),

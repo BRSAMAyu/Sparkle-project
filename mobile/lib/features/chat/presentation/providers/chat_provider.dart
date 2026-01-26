@@ -412,8 +412,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final today = _dateKey(DateTime.now());
     final storedDate = prefs.getString(_dailyUsageDateKey);
 
-    int totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
-    int totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
+    var totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
+    var totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
 
     if (storedDate != today) {
       totalTokens = 0;
@@ -1090,7 +1090,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         state = state.copyWith(
-          pendingAchievementUnlock: null,
           clearActionFeedback: true,
         );
       }
@@ -1257,7 +1256,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
         issues: currentReview.issues,
         suggestions: currentReview.suggestions,
         reviewedAt: currentReview.reviewedAt,
-        requiresReflection: false, // Reflection completed
         reflectionStatus: outcome == 'fixed' || outcome == 'improved' ? 'completed' : 'failed',
         scoreLabel: _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
       );
@@ -1280,9 +1278,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
     switch (outcome) {
       case 'fixed':
-        return '✅ 内容已优化${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return '✅ 内容已优化$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
       case 'improved':
-        return '📈 内容有所改善${roundsInfo}，分数提升 +${(scoreDelta * 100).toInt()}%';
+        return '📈 内容有所改善$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
       case 'no_change':
         return 'ℹ️ 优化尝试完成，内容无明显变化';
       case 'degraded':
@@ -1592,14 +1590,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required String reviewId,
     required int rating,
     String? comments,
-  }) async {
-    return submitReviewFeedback(
+  }) async => submitReviewFeedback(
       reviewId: reviewId,
       rating: rating,
       wasHelpful: rating >= 4,
       comments: comments,
     );
-  }
 
   /// 请求内容重新生成
   ///

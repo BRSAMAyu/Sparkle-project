@@ -22,6 +22,7 @@ from app.core.llm_client import llm_client
 from app.services.embedding_service import embedding_service
 from app.core.event_bus import event_bus, ErrorCreated
 from app.services.semantic_memory_service import SemanticMemoryService
+from app.services.ocr_service import ocr_service
 
 class ReviewSchedulerService:
     """
@@ -158,7 +159,7 @@ class ErrorBookService:
             if error.question_image_url and (not error.question_text or len(error.question_text) < 10):
                 # Trigger OCR
                 logger.info(f"Running OCR for error {error.id}")
-                ocr_text = await self._run_mock_ocr(error.question_image_url)
+                ocr_text = await self._run_ocr(error.question_image_url)
                 if ocr_text:
                     final_text = f"{final_text}\n[OCR]: {ocr_text}".strip()
                     # Optionally update the record's text or just keep it for analysis context
@@ -234,9 +235,14 @@ class ErrorBookService:
             logger.error(f"Async analysis failed for error {error_id}: {e}")
             await self.db.rollback()
 
-    async def _run_mock_ocr(self, image_url: str) -> str:
-        # TODO: Integrate real OCR service (e.g., GPT-4o Vision or Tesseract)
-        return "Simulated OCR Text: This is a placeholder for the text extracted from the image."
+    async def _run_ocr(self, image_url: str) -> str:
+        """使用DeepSeek OCR进行图片文字识别"""
+        try:
+            text = await ocr_service.ocr_for_math(image_url)
+            return text
+        except Exception as e:
+            logger.error(f"OCR failed for image {image_url}: {e}")
+            return ""
 
     async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> List[KnowledgeNode]:
         # Generate embedding

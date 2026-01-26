@@ -69,7 +69,7 @@ final sprintStatisticsProvider = Provider<SprintStatistics>((ref) {
 
 /// Calculate daily progress from tasks
 List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
-  final Map<String, List<DateTime>> completedByDate = {};
+  final completedByDate = <String, List<DateTime>>{};
 
   // Group completed tasks by completion date
   for (final task in tasks) {
@@ -99,7 +99,7 @@ List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
             t.completedAt != null &&
             t.completedAt!.year == date.year &&
             t.completedAt!.month == date.month &&
-            t.completedAt!.day == date.day)
+            t.completedAt!.day == date.day,)
         .fold<int>(0, (sum, t) => sum + (t.actualMinutes ?? 0));
 
     progress.add(DailyProgress(
@@ -108,7 +108,7 @@ List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
       focusMinutes: actualFocusMinutes > 0
           ? actualFocusMinutes
           : completedTasks.length * 30, // Fallback to estimate
-    ));
+    ),);
   }
 
   return progress;

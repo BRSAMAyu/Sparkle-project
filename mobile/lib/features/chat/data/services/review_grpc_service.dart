@@ -139,8 +139,7 @@ class ArbitrationCaseInfo {
     this.notes = const [],
   });
 
-  factory ArbitrationCaseInfo.fromProto(proto.ArbitrationCaseInfo info) {
-    return ArbitrationCaseInfo(
+  factory ArbitrationCaseInfo.fromProto(proto.ArbitrationCaseInfo info) => ArbitrationCaseInfo(
       caseId: info.caseId,
       appealId: info.appealId,
       reviewId: info.reviewId,
@@ -162,7 +161,6 @@ class ArbitrationCaseInfo {
       resolvedBy: info.resolvedBy.isNotEmpty ? info.resolvedBy : null,
       notes: info.notes.toList(),
     );
-  }
 
   final String caseId;
   final String appealId;
@@ -234,8 +232,7 @@ class ArbitrationQueueStatsResult {
 
   factory ArbitrationQueueStatsResult.fromProto(
     proto.ArbitrationQueueStatsInfo stats,
-  ) {
-    return ArbitrationQueueStatsResult(
+  ) => ArbitrationQueueStatsResult(
       success: true,
       totalPending: stats.totalPending,
       totalAssigned: stats.totalAssigned,
@@ -245,7 +242,6 @@ class ArbitrationQueueStatsResult {
       byPriority: stats.byPriority.map((k, v) => MapEntry(k, v)),
       byReason: stats.byReason.map((k, v) => MapEntry(k, v)),
     );
-  }
 
   final bool success;
   final int totalPending;
@@ -272,7 +268,6 @@ class ReviewGrpcService {
       port: ApiConstants.grpcPort,
       options: const ChannelOptions(
         credentials: ChannelCredentials.insecure(),
-        idleTimeout: Duration(minutes: 5),
       ),
     );
 
@@ -339,7 +334,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewOverrideResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -396,7 +391,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewAppealResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -565,7 +560,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewFeedbackResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -644,7 +639,7 @@ class ReviewGrpcService {
     } catch (e) {
       return RegenerationResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -691,12 +686,12 @@ class ReviewGrpcService {
         successfulRegenerations: response.successfulRegenerations,
         periodDays: response.periodDays,
       );
-    } on GrpcError catch (e) {
-      return FeedbackStatisticsResult(
+    } on GrpcError {
+      return const FeedbackStatisticsResult(
         success: false,
       );
     } catch (e) {
-      return FeedbackStatisticsResult(
+      return const FeedbackStatisticsResult(
         success: false,
       );
     }
@@ -745,7 +740,7 @@ class ReviewGrpcService {
       );
 
       final cases = response.cases
-          .map((info) => ArbitrationCaseInfo.fromProto(info))
+          .map(ArbitrationCaseInfo.fromProto)
           .toList();
 
       return ArbitrationQueueResult(
@@ -761,7 +756,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ArbitrationQueueResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -811,7 +806,7 @@ class ReviewGrpcService {
     } catch (e) {
       return AssignCaseResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -874,7 +869,7 @@ class ReviewGrpcService {
     } catch (e) {
       return SubmitDecisionResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }
@@ -904,12 +899,12 @@ class ReviewGrpcService {
       );
 
       return ArbitrationQueueStatsResult.fromProto(response.stats);
-    } on GrpcError catch (e) {
-      return ArbitrationQueueStatsResult(
+    } on GrpcError {
+      return const ArbitrationQueueStatsResult(
         success: false,
       );
     } catch (e) {
-      return ArbitrationQueueStatsResult(
+      return const ArbitrationQueueStatsResult(
         success: false,
       );
     }

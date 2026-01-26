@@ -91,7 +91,7 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '智能建议',
                       style: TextStyle(
                         fontWeight: DS.fontWeightBold,

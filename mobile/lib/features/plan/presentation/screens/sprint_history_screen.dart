@@ -140,7 +140,6 @@ class _SprintHistoryCard extends StatelessWidget {
           borderRadius: DS.borderRadius12,
           border: Border.all(
             color: DS.border,
-            width: 1,
           ),
         ),
         child: Column(
@@ -288,15 +287,12 @@ class _StatusChip extends StatelessWidget {
       case SprintStatus.completed:
         color = DS.semanticSuccess;
         backgroundColor = DS.semanticSuccess.withValues(alpha: 0.1);
-        break;
       case SprintStatus.abandoned:
         color = DS.semanticError;
         backgroundColor = DS.semanticError.withValues(alpha: 0.1);
-        break;
       case SprintStatus.extended:
         color = DS.semanticWarning;
         backgroundColor = DS.semanticWarning.withValues(alpha: 0.1);
-        break;
     }
 
     return Container(
@@ -309,7 +305,6 @@ class _StatusChip extends StatelessWidget {
         borderRadius: DS.borderRadius8,
         border: Border.all(
           color: color.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Text(

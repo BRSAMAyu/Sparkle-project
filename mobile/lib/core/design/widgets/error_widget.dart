@@ -198,9 +198,7 @@ class CustomErrorWidget extends StatelessWidget {
     }
   }
 
-  String _getRetryText() {
-    return l10n?.retry ?? '重试';
-  }
+  String _getRetryText() => l10n?.retry ?? '重试';
 
   Widget _buildErrorPage(BuildContext context) => Center(
         child: Padding(

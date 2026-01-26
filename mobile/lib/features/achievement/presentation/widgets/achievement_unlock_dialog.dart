@@ -76,21 +76,17 @@ class AchievementUnlockDialog extends StatefulWidget {
       barrierLabel: 'Achievement Unlock',
       barrierColor: Colors.black.withValues(alpha: 0.7),
       transitionDuration: const Duration(milliseconds: 600),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return AchievementUnlockDialog(
+      pageBuilder: (context, animation, secondaryAnimation) => AchievementUnlockDialog(
           event: event,
           onShare: onShare,
           comboCount: comboCount,
           milestoneInfo: milestoneInfo,
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return _AchievementUnlockTransition(
+        ),
+      transitionBuilder: (context, animation, secondaryAnimation, child) => _AchievementUnlockTransition(
           animation: animation,
           rarity: event.rarity,
           child: child,
-        );
-      },
+        ),
     );
 }
 
@@ -427,8 +423,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   ),
                   child: AnimatedBuilder(
                     animation: _glowAnimation,
-                    builder: (context, child) {
-                      return Container(
+                    builder: (context, child) => Container(
                         margin: EdgeInsets.all(4 * _glowAnimation.value),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -439,8 +434,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                           size: 50,
                           color: colors.icon,
                         ),
-                      );
-                    },
+                      ),
                   ),
                 ),
               );
@@ -467,8 +461,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
 
   Widget _buildGlowingRings() => AnimatedBuilder(
       animation: _glowAnimation,
-      builder: (context, child) {
-        return Container(
+      builder: (context, child) => Container(
           width: 360,
           height: 360,
           decoration: BoxDecoration(
@@ -478,14 +471,12 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               width: 2,
             ),
           ),
-        );
-      },
+        ),
     );
 
   Widget _buildPulsingWaves() => AnimatedBuilder(
       animation: _particleController,
-      builder: (context, child) {
-        return Container(
+      builder: (context, child) => Container(
           width: 400,
           height: 400,
           decoration: BoxDecoration(
@@ -497,8 +488,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               width: 3,
             ),
           ),
-        );
-      },
+        ),
     );
 
   Widget _buildRainbowExplosion() => AnimatedBuilder(
@@ -661,8 +651,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       top: -20,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
+        builder: (context, child) => Transform.scale(
             scale: _scaleAnimation.value.clamp(0.8, 1.2),
             child: Container(
               padding: const EdgeInsets.symmetric(
@@ -712,8 +701,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 ],
               ),
             ),
-          );
-        },
+          ),
       ),
     );
   }
@@ -730,7 +718,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: colors.primary.withValues(alpha: 0.5),
-          width: 1,
         ),
       ),
       child: Column(
@@ -1017,17 +1004,6 @@ class _RainbowExplosionPainter extends CustomPainter {
 
 /// P1功能: 里程碑信息类
 class MilestoneInfo {
-  MilestoneInfo({
-    required this.milestoneType,
-    required this.description,
-    this.reward,
-    this.progressPercentage,
-  });
-
-  final String milestoneType; // '25%', '50%', '75%', '100%'
-  final String description;
-  final String? reward;
-  final double? progressPercentage;
 
   factory MilestoneInfo.fromProgress(double oldProgress, double newProgress) {
     final oldMilestone = (oldProgress * 100).toInt() ~/ 25;
@@ -1044,6 +1020,17 @@ class MilestoneInfo {
     }
     throw ArgumentError('No milestone crossed');
   }
+  MilestoneInfo({
+    required this.milestoneType,
+    required this.description,
+    this.reward,
+    this.progressPercentage,
+  });
+
+  final String milestoneType; // '25%', '50%', '75%', '100%'
+  final String description;
+  final String? reward;
+  final double? progressPercentage;
 
   static String? _getMilestoneReward(int percentage) {
     switch (percentage) {

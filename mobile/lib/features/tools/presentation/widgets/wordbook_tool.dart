@@ -747,7 +747,7 @@ class _WordCard extends StatelessWidget {
                         Icons.star,
                         size: 16,
                         color: index < word.importance ? Colors.amber : DS.neutral300,
-                      )),
+                      ),),
                   ),
                 ),
                 const SizedBox(width: DS.sm),

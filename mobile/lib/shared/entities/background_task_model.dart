@@ -36,6 +36,22 @@ enum BackgroundTaskStatus {
 
 /// Background task model
 class BackgroundTaskModel extends BaseModel {
+  BackgroundTaskModel({
+    required this.id,
+    required this.userId,
+    required this.taskType,
+    required this.name,
+    required this.status,
+    required this.progress,
+    required this.createdAt, this.progressMessage,
+    this.resultData,
+    this.errorMessage,
+    this.relatedEntityId,
+    this.relatedEntityType,
+    this.externalTaskId,
+    this.updatedAt,
+    this.completedAt,
+  });
 
   factory BackgroundTaskModel.fromJson(Map<String, dynamic> json) =>
       BackgroundTaskModel(
@@ -59,22 +75,6 @@ class BackgroundTaskModel extends BaseModel {
             ? null
             : DateTime.parse(json['completed_at'] as String),
       );
-  BackgroundTaskModel({
-    required this.id,
-    required this.userId,
-    required this.taskType,
-    required this.name,
-    required this.status,
-    required this.progress,
-    required this.createdAt, this.progressMessage,
-    this.resultData,
-    this.errorMessage,
-    this.relatedEntityId,
-    this.relatedEntityType,
-    this.externalTaskId,
-    this.updatedAt,
-    this.completedAt,
-  });
 
   final String id;
   final String userId;

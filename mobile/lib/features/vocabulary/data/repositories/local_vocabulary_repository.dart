@@ -242,7 +242,7 @@ class LocalVocabularyRepository {
             .or()
             .definitionContains(lowerQuery, caseSensitive: false)
             .or()
-            .tagsElementContains(lowerQuery))
+            .tagsElementContains(lowerQuery),)
         .limit(50)
         .findAll();
 
@@ -284,7 +284,7 @@ class LocalVocabularyRepository {
   }
 
   /// Get review history for a word
-  Future<List<VocabReview>> getReviewHistory(Id wordId) async => await _vocabReviewCollection
+  Future<List<VocabReview>> getReviewHistory(Id wordId) async => _vocabReviewCollection
         .filter()
         .vocabWordIdEqualTo(wordId)
         .sortByReviewedAtDesc()

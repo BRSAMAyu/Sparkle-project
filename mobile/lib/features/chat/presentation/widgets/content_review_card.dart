@@ -341,8 +341,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     }
   }
 
-  String _getScoreLabel() {
-    return widget.review.scoreLabel ??
+  String _getScoreLabel() => widget.review.scoreLabel ??
         (widget.review.overallScore >= 0.9
             ? '优秀'
             : widget.review.overallScore >= 0.7
@@ -350,7 +349,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 : widget.review.overallScore >= 0.5
                     ? '及格'
                     : '需改进');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -448,8 +446,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     Color color,
     LinearGradient gradient,
-  ) {
-    return Container(
+  ) => Container(
       margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
@@ -489,14 +486,12 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       ),
     );
-  }
 
   Widget _buildHeader(
     BuildContext context,
     Color color,
     LinearGradient gradient,
-  ) {
-    return Row(
+  ) => Row(
       children: [
         Container(
           padding: const EdgeInsets.all(DS.spacing10),
@@ -585,7 +580,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ),
       ],
     );
-  }
 
   Widget _buildScoreBar(BuildContext context, Color color) {
     final score = widget.review.overallScore;
@@ -648,9 +642,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         Wrap(
           spacing: DS.spacing8,
           runSpacing: DS.spacing8,
-          children: metrics.take(5).map((metric) {
-            return _buildMetricChip(context, metric);
-          }).toList(),
+          children: metrics.take(5).map((metric) => _buildMetricChip(context, metric)).toList(),
         ),
       ],
     );
@@ -728,8 +720,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     String title,
     List<ReviewIssue> issues,
     Color color,
-  ) {
-    return Column(
+  ) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -753,7 +744,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ...issues.take(3).map((issue) => _buildIssueItem(context, issue, color)),
       ],
     );
-  }
 
   IconData _getSeverityIcon(String title) {
     switch (title) {
@@ -772,8 +762,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     ReviewIssue issue,
     Color color,
-  ) {
-    return Container(
+  ) => Container(
       padding: const EdgeInsets.all(DS.spacing10),
       margin: const EdgeInsets.only(bottom: DS.spacing4),
       decoration: BoxDecoration(
@@ -832,7 +821,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         ],
       ),
     );
-  }
 
   Widget _buildSuggestionsSection(BuildContext context) {
     final suggestions = widget.review.suggestions;
@@ -879,7 +867,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   ),
                 ],
               ),
-            )),
+            ),),
       ],
     );
   }
@@ -1042,8 +1030,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   /// Phase 2e: 更多操作菜单
-  Widget _buildMoreActionsMenu(BuildContext context, Color color) {
-    return PopupMenuButton<String>(
+  Widget _buildMoreActionsMenu(BuildContext context, Color color) => PopupMenuButton<String>(
       icon: Icon(
         Icons.more_horiz_rounded,
         color: DS.neutral500,
@@ -1092,7 +1079,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ),
       ],
     );
-  }
 
   void _handleMenuAction(BuildContext context, String action) {
     if (action == 'override') {
@@ -1148,7 +1134,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 hintText: '输入您的理由...',
                 filled: true,
                 fillColor: DS.neutral100,
-                border: OutlineInputBorder(
+                border: const OutlineInputBorder(
                   borderRadius: DS.borderRadius8,
                   borderSide: BorderSide.none,
                 ),
@@ -1283,7 +1269,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   hintText: '请描述审查结果存在的问题...',
                   filled: true,
                   fillColor: DS.neutral100,
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                     borderRadius: DS.borderRadius8,
                     borderSide: BorderSide.none,
                   ),

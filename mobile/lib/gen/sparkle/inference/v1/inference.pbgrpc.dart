@@ -15,31 +15,28 @@ import 'dart:core' as $core;
 import 'package:grpc/service_api.dart' as $grpc;
 import 'package:protobuf/protobuf.dart' as $pb;
 
-import 'inference.pb.dart' as $0;
+import 'package:sparkle/gen/sparkle/inference/v1/inference.pb.dart' as $0;
 
 export 'inference.pb.dart';
 
 @$pb.GrpcServiceName('sparkle.inference.v1.InferenceService')
 class InferenceServiceClient extends $grpc.Client {
-  static final _$runInference = $grpc.ClientMethod<$0.InferenceRequest, $0.InferenceResponse>(
-      '/sparkle.inference.v1.InferenceService/RunInference',
-      ($0.InferenceRequest value) => value.writeToBuffer(),
-      ($core.List<$core.int> value) => $0.InferenceResponse.fromBuffer(value));
 
   InferenceServiceClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
       $core.Iterable<$grpc.ClientInterceptor>? interceptors})
       : super(channel, options: options,
         interceptors: interceptors);
+  static final _$runInference = $grpc.ClientMethod<$0.InferenceRequest, $0.InferenceResponse>(
+      '/sparkle.inference.v1.InferenceService/RunInference',
+      ($0.InferenceRequest value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $0.InferenceResponse.fromBuffer(value),);
 
-  $grpc.ResponseFuture<$0.InferenceResponse> runInference($0.InferenceRequest request, {$grpc.CallOptions? options}) {
-    return $createUnaryCall(_$runInference, request, options: options);
-  }
+  $grpc.ResponseFuture<$0.InferenceResponse> runInference($0.InferenceRequest request, {$grpc.CallOptions? options}) => $createUnaryCall(_$runInference, request, options: options);
 }
 
 @$pb.GrpcServiceName('sparkle.inference.v1.InferenceService')
 abstract class InferenceServiceBase extends $grpc.Service {
-  $core.String get $name => 'sparkle.inference.v1.InferenceService';
 
   InferenceServiceBase() {
     $addMethod($grpc.ServiceMethod<$0.InferenceRequest, $0.InferenceResponse>(
@@ -50,10 +47,9 @@ abstract class InferenceServiceBase extends $grpc.Service {
         ($core.List<$core.int> value) => $0.InferenceRequest.fromBuffer(value),
         ($0.InferenceResponse value) => value.writeToBuffer()));
   }
+  $core.String get $name => 'sparkle.inference.v1.InferenceService';
 
-  $async.Future<$0.InferenceResponse> runInference_Pre($grpc.ServiceCall call, $async.Future<$0.InferenceRequest> request) async {
-    return runInference(call, await request);
-  }
+  $async.Future<$0.InferenceResponse> runInference_Pre($grpc.ServiceCall call, $async.Future<$0.InferenceRequest> request) async => runInference(call, await request);
 
   $async.Future<$0.InferenceResponse> runInference($grpc.ServiceCall call, $0.InferenceRequest request);
 }

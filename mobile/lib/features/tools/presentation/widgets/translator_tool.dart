@@ -523,7 +523,7 @@ class _LanguageDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DropdownButtonHideUnderline(
       child: DropdownButtonFormField<Language>(
-        value: value,
+        initialValue: value,
         items: items
             .map(
               (lang) => DropdownMenuItem(

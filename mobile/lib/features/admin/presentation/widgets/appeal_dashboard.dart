@@ -17,12 +17,10 @@ enum ArbitrationPriority {
   final String label;
   final Color color;
 
-  static ArbitrationPriority fromString(String value) {
-    return values.firstWhere(
+  static ArbitrationPriority fromString(String value) => values.firstWhere(
       (p) => p.value == value,
       orElse: () => normal,
     );
-  }
 }
 
 /// Escalation reason options
@@ -39,12 +37,10 @@ enum EscalationReason {
   final String value;
   final String label;
 
-  static EscalationReason fromString(String value) {
-    return values.firstWhere(
+  static EscalationReason fromString(String value) => values.firstWhere(
       (r) => r.value == value,
       orElse: () => lowConfidence,
     );
-  }
 }
 
 /// Appeal decision options
@@ -62,6 +58,39 @@ enum AppealDecision {
 
 /// Arbitration case data model
 class ArbitrationCase {
+
+  factory ArbitrationCase.fromJson(Map<String, dynamic> json) {
+    return ArbitrationCase(
+      caseId: json['case_id'] as String? ?? '',
+      appealId: json['appeal_id'] as String? ?? '',
+      reviewId: json['review_id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      escalationReason: EscalationReason.fromString(
+        json['escalation_reason'] as String? ?? 'low_confidence',
+      ),
+      priority: ArbitrationPriority.fromString(
+        json['priority'] as String? ?? 'normal',
+      ),
+      createdAt: json['created_at'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      assignedTo: json['assigned_to'] as String?,
+      assignedAt: json['assigned_at'] as String?,
+      originalReviewScore:
+          (json['original_review_score'] as num?)?.toDouble() ?? 0.0,
+      secondaryReviewScore: (json['secondary_review_score'] as num?)?.toDouble(),
+      scoreDiscrepancy:
+          (json['score_discrepancy'] as num?)?.toDouble() ?? 0.0,
+      resolution: json['resolution'] as String?,
+      finalDecision: json['final_decision'] as String?,
+      resolvedAt: json['resolved_at'] as String?,
+      resolvedBy: json['resolved_by'] as String?,
+      notes: (json['notes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      evidence: json['evidence'] as Map<String, dynamic>? ?? {},
+    );
+  }
   const ArbitrationCase({
     required this.caseId,
     required this.appealId,
@@ -104,39 +133,6 @@ class ArbitrationCase {
   final List<String> notes;
   final Map<String, dynamic> evidence;
 
-  factory ArbitrationCase.fromJson(Map<String, dynamic> json) {
-    return ArbitrationCase(
-      caseId: json['case_id'] as String? ?? '',
-      appealId: json['appeal_id'] as String? ?? '',
-      reviewId: json['review_id'] as String? ?? '',
-      userId: json['user_id'] as String? ?? '',
-      escalationReason: EscalationReason.fromString(
-        json['escalation_reason'] as String? ?? 'low_confidence',
-      ),
-      priority: ArbitrationPriority.fromString(
-        json['priority'] as String? ?? 'normal',
-      ),
-      createdAt: json['created_at'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      assignedTo: json['assigned_to'] as String?,
-      assignedAt: json['assigned_at'] as String?,
-      originalReviewScore:
-          (json['original_review_score'] as num?)?.toDouble() ?? 0.0,
-      secondaryReviewScore: (json['secondary_review_score'] as num?)?.toDouble(),
-      scoreDiscrepancy:
-          (json['score_discrepancy'] as num?)?.toDouble() ?? 0.0,
-      resolution: json['resolution'] as String?,
-      finalDecision: json['final_decision'] as String?,
-      resolvedAt: json['resolved_at'] as String?,
-      resolvedBy: json['resolved_by'] as String?,
-      notes: (json['notes'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-      evidence: json['evidence'] as Map<String, dynamic>? ?? {},
-    );
-  }
-
   bool get isPending => status == 'pending';
   bool get isAssigned => status == 'assigned';
   bool get isInReview => status == 'in_review';
@@ -145,23 +141,6 @@ class ArbitrationCase {
 
 /// Arbitration queue statistics
 class ArbitrationQueueStats {
-  const ArbitrationQueueStats({
-    required this.totalPending,
-    required this.totalAssigned,
-    required this.totalInReview,
-    required this.totalResolvedToday,
-    required this.avgResolutionTimeHours,
-    this.byPriority = const {},
-    this.byReason = const {},
-  });
-
-  final int totalPending;
-  final int totalAssigned;
-  final int totalInReview;
-  final int totalResolvedToday;
-  final double avgResolutionTimeHours;
-  final Map<String, int> byPriority;
-  final Map<String, int> byReason;
 
   factory ArbitrationQueueStats.fromJson(Map<String, dynamic> json) {
     return ArbitrationQueueStats(
@@ -179,6 +158,23 @@ class ArbitrationQueueStats {
           {},
     );
   }
+  const ArbitrationQueueStats({
+    required this.totalPending,
+    required this.totalAssigned,
+    required this.totalInReview,
+    required this.totalResolvedToday,
+    required this.avgResolutionTimeHours,
+    this.byPriority = const {},
+    this.byReason = const {},
+  });
+
+  final int totalPending;
+  final int totalAssigned;
+  final int totalInReview;
+  final int totalResolvedToday;
+  final double avgResolutionTimeHours;
+  final Map<String, int> byPriority;
+  final Map<String, int> byReason;
 }
 
 /// Appeal Dashboard - Admin interface for managing appeals
@@ -275,7 +271,6 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
       _reviewService ??= ReviewGrpcService();
 
       final result = await _reviewService!.getArbitrationQueue(
-        limit: 50,
         priorityFilter: _priorityFilter?.value,
         statusFilter: _statusFilter == 'pending'
             ? 'pending'
@@ -288,8 +283,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
 
       if (result.success && result.cases.isNotEmpty) {
         setState(() {
-          _cases = result.cases.map((info) {
-            return ArbitrationCase(
+          _cases = result.cases.map((info) => ArbitrationCase(
               caseId: info.caseId,
               appealId: info.appealId,
               reviewId: info.reviewId,
@@ -308,8 +302,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
               resolvedAt: info.resolvedAt,
               resolvedBy: info.resolvedBy,
               notes: info.notes,
-            );
-          }).toList();
+            )).toList();
         });
       } else {
         // Fallback to empty list when no cases available
@@ -425,8 +418,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     }
   }
 
-  List<ArbitrationCase> get _filteredCases {
-    return _cases.where((c) {
+  List<ArbitrationCase> get _filteredCases => _cases.where((c) {
       if (_priorityFilter != null && c.priority != _priorityFilter) {
         return false;
       }
@@ -437,7 +429,6 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
       if (_statusFilter == 'resolved' && !c.isResolved) return false;
       return true;
     }).toList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -631,8 +622,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     required String value,
     required Color color,
     required IconData icon,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -668,7 +658,6 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         ],
       ),
     );
-  }
 
   Widget _buildCasesList(ThemeData theme) {
     final cases = _filteredCases;
@@ -753,8 +742,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     );
   }
 
-  Widget _buildCaseCard(ThemeData theme, ArbitrationCase caseData) {
-    return Card(
+  Widget _buildCaseCard(ThemeData theme, ArbitrationCase caseData) => Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
         onTap: () {
@@ -849,7 +837,6 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         ),
       ),
     );
-  }
 
   Widget _buildStatusChip(ThemeData theme, ArbitrationCase caseData) {
     Color color;
@@ -1028,8 +1015,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...caseData.notes.map((note) {
-                    return Padding(
+                  ...caseData.notes.map((note) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         note,
@@ -1037,8 +1023,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    );
-                  }),
+                    )),
                   const SizedBox(height: 16),
                 ],
 
@@ -1051,8 +1036,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...AppealDecision.values.map((decision) {
-                    return Padding(
+                  ...AppealDecision.values.map((decision) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: FilledButton.tonal(
                         onPressed: () => _showDecisionDialog(
@@ -1071,8 +1055,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           ],
                         ),
                       ),
-                    );
-                  }),
+                    )),
                 ] else ...[
                   Text(
                     '已解决',
@@ -1141,8 +1124,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     required String label,
     required Color color,
     required IconData icon,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -1165,10 +1147,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         ],
       ),
     );
-  }
 
-  Widget _buildInfoRow(ThemeData theme, String label, String value) {
-    return Padding(
+  Widget _buildInfoRow(ThemeData theme, String label, String value) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1191,7 +1171,6 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         ],
       ),
     );
-  }
 
   IconData _getDecisionIcon(AppealDecision decision) {
     switch (decision) {
@@ -1209,8 +1188,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
   void _showPriorityMenu(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) {
-        return SafeArea(
+      builder: (context) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1254,8 +1232,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
               ),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -1264,8 +1241,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
 
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      builder: (context) => AlertDialog(
           title: Text(decision.label),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1293,8 +1269,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
               child: const Text('提交'),
             ),
           ],
-        );
-      },
+        ),
     );
   }
 

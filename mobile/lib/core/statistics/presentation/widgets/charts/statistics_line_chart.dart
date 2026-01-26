@@ -8,8 +8,7 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 class StatisticsLineChart extends StatelessWidget {
 
   const StatisticsLineChart({
-    super.key,
-    required this.dataPoints,
+    required this.dataPoints, super.key,
     this.lineColor,
     this.showPoints = true,
     this.fillArea = true,
@@ -117,7 +116,7 @@ class StatisticsLineChart extends StatelessWidget {
       gridData: FlGridData(
         drawVerticalLine: StatisticsChartConfig.showVerticalGrid,
         horizontalInterval: maxY != null ? (maxY! - minY) / 4 : null,
-        getDrawingHorizontalLine: (value) => FlLine(
+        getDrawingHorizontalLine: (value) => const FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
             dashArray: StatisticsChartConfig.gridDashPattern,
@@ -154,7 +153,7 @@ class StatisticsLineChart extends StatelessWidget {
             interval: maxY != null ? (maxY! - minY) / 4 : null,
             getTitlesWidget: (value, meta) => Text(
                 _formatYValue(value),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
@@ -179,7 +178,7 @@ class StatisticsLineChart extends StatelessWidget {
 
               return LineTooltipItem(
                 text,
-                TextStyle(
+                const TextStyle(
                   color: StatisticsChartConfig.tooltipTextColor,
                   fontSize: 12,
                   fontWeight: DS.fontWeightMedium,
@@ -197,12 +196,12 @@ class StatisticsLineChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.show_chart,
             size: 48,
             color: StatisticsChartConfig.emptyStateColor,
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           Text(
             '暂无数据',
             style: DS.bodyStyle.copyWith(
@@ -243,9 +242,7 @@ class StatisticsLineChart extends StatelessWidget {
 class StatisticsDualLineChart extends StatelessWidget {
 
   const StatisticsDualLineChart({
-    super.key,
-    required this.primaryData,
-    required this.secondaryData,
+    required this.primaryData, required this.secondaryData, super.key,
     this.primaryColor,
     this.secondaryColor,
     this.xLabels,
@@ -345,7 +342,7 @@ class StatisticsDualLineChart extends StatelessWidget {
       maxY: maxY,
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => FlLine(
+        getDrawingHorizontalLine: (value) => const FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
           ),
@@ -379,7 +376,7 @@ class StatisticsDualLineChart extends StatelessWidget {
             reservedSize: 40,
             getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
@@ -398,13 +395,13 @@ class StatisticsDualLineChart extends StatelessWidget {
   }
 
   Widget _buildLegend() => Padding(
-      padding: EdgeInsets.symmetric(horizontal: DS.lg),
+      padding: const EdgeInsets.symmetric(horizontal: DS.lg),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (primaryLabel != null) _buildLegendItem(primaryLabel!, primaryColor),
           if (secondaryLabel != null) ...[
-            SizedBox(width: DS.xl),
+            const SizedBox(width: DS.xl),
             _buildLegendItem(secondaryLabel!, secondaryColor),
           ],
         ],
@@ -424,7 +421,7 @@ class StatisticsDualLineChart extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: DS.xs),
+        const SizedBox(width: DS.xs),
         Text(
           label,
           style: StatisticsChartConfig.legendTextStyle,

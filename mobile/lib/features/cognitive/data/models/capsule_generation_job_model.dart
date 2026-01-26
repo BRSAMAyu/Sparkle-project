@@ -1,5 +1,4 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 
 part 'capsule_generation_job_model.g.dart';
 

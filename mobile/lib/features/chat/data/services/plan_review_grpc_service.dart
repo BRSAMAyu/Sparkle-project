@@ -57,8 +57,6 @@ class PlanReviewGrpcService {
       port: ApiConstants.grpcPort,
       options: const ChannelOptions(
         credentials: ChannelCredentials.insecure(),
-        // Add timeout and keep-alive settings
-        idleTimeout: Duration(minutes: 5),
       ),
     );
 
@@ -136,7 +134,7 @@ class PlanReviewGrpcService {
     } catch (e) {
       return PlanReviewSubmitResult(
         success: false,
-        message: 'Error: ${e.toString()}',
+        message: 'Error: ${e}',
       );
     }
   }

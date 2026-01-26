@@ -1,11 +1,11 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
-import 'package:sparkle/core/offline/local_database.dart';
 
 // The schemas are imported from local_database.g.dart via local_database.dart
 

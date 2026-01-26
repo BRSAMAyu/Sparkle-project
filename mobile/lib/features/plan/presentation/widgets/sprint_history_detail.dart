@@ -6,8 +6,7 @@ import 'package:sparkle/features/plan/presentation/providers/sprint_history_prov
 /// Sprint history detail bottom sheet
 class SprintHistoryDetailSheet extends StatelessWidget {
   const SprintHistoryDetailSheet({
-    super.key,
-    required this.item,
+    required this.item, super.key,
   });
 
   final SprintHistoryItem item;
@@ -20,7 +19,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
       height: MediaQuery.of(context).size.height * 0.7,
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(DS.spacing20),
           topRight: Radius.circular(DS.spacing20),
         ),
@@ -392,15 +391,12 @@ class _StatusIndicator extends StatelessWidget {
       case SprintStatus.completed:
         color = DS.semanticSuccess;
         icon = Icons.check_circle;
-        break;
       case SprintStatus.abandoned:
         color = DS.semanticError;
         icon = Icons.cancel;
-        break;
       case SprintStatus.extended:
         color = DS.semanticWarning;
         icon = Icons.arrow_forward;
-        break;
     }
 
     return Container(

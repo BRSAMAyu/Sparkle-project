@@ -222,7 +222,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ 未知错误: ${e}'),
+            content: Text('❌ 未知错误: $e'),
             duration: const Duration(seconds: 2),
           ),
         );

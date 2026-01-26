@@ -7,9 +7,7 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 class StatisticsMetricCard extends StatelessWidget {
 
   const StatisticsMetricCard({
-    super.key,
-    required this.title,
-    required this.value,
+    required this.title, required this.value, super.key,
     this.unit,
     this.changePercentage,
     this.icon,
@@ -43,7 +41,7 @@ class StatisticsMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: backgroundColor ?? DS.white,
         borderRadius: BorderRadius.circular(DS.borderRadiusLG),
@@ -57,7 +55,7 @@ class StatisticsMetricCard extends StatelessWidget {
               children: [
                 if (icon != null) _buildIcon(),
                 _buildTitle(),
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 _buildValue(),
                 if (changePercentage != null) _buildChange(),
               ],
@@ -65,7 +63,7 @@ class StatisticsMetricCard extends StatelessWidget {
     );
 
   Widget _buildIcon() => Container(
-      padding: EdgeInsets.all(DS.sm),
+      padding: const EdgeInsets.all(DS.sm),
       decoration: BoxDecoration(
         color: (valueColor ?? DS.brandPrimary).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(DS.borderRadiusMD),
@@ -152,7 +150,7 @@ class StatisticsMetricCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        SizedBox(height: DS.md),
+        const SizedBox(height: DS.md),
         Container(
           width: 60,
           height: 28,
@@ -169,8 +167,7 @@ class StatisticsMetricCard extends StatelessWidget {
 class StatisticsOverviewCards extends StatelessWidget {
 
   const StatisticsOverviewCards({
-    super.key,
-    required this.cards,
+    required this.cards, super.key,
     this.crossAxisCount = 2,
     this.spacing,
     this.padding,
@@ -200,9 +197,7 @@ class StatisticsOverviewCards extends StatelessWidget {
           childAspectRatio: 1.4,
         ),
         itemCount: cards.length,
-        itemBuilder: (context, index) {
-          return _buildCardWithAnimation(cards[index], index);
-        },
+        itemBuilder: (context, index) => _buildCardWithAnimation(cards[index], index),
       ),
     );
 
@@ -211,15 +206,13 @@ class StatisticsOverviewCards extends StatelessWidget {
       tween: Tween(begin: 0.0, end: 1.0),
       duration: StatisticsAnimationConfig.cardEntrance,
       curve: StatisticsAnimationConfig.cardCurve,
-      builder: (context, value, child) {
-        return Transform.translate(
+      builder: (context, value, child) => Transform.translate(
           offset: Offset(0, 20 * (1 - value)),
           child: Opacity(
             opacity: value,
             child: child,
           ),
-        );
-      },
+        ),
       child: StatisticsMetricCard(
         title: data.title,
         value: data.value,
@@ -257,8 +250,7 @@ class OverviewCardData {
     IconData? icon,
     Color? valueColor,
     bool isLoading = false,
-  }) {
-    return OverviewCardData(
+  }) => OverviewCardData(
       id: id,
       title: title,
       value: summary.total.toStringAsFixed(0),
@@ -268,17 +260,14 @@ class OverviewCardData {
       valueColor: valueColor,
       isLoading: isLoading,
     );
-  }
 
   /// Create a loading placeholder card
-  factory OverviewCardData.loading({required String id}) {
-    return OverviewCardData(
+  factory OverviewCardData.loading({required String id}) => OverviewCardData(
       id: id,
       title: '',
       value: '',
       isLoading: true,
     );
-  }
   /// Unique identifier
   final String id;
 
@@ -311,9 +300,7 @@ class OverviewCardData {
 class StatisticsMetricBar extends StatelessWidget {
 
   const StatisticsMetricBar({
-    super.key,
-    required this.label,
-    required this.value,
+    required this.label, required this.value, super.key,
     this.unit,
     this.changePercentage,
     this.valueColor,

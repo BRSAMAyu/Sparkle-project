@@ -210,7 +210,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   }
 
   /// Check if a word exists
-  Future<VocabWordItem?> getByWord(String word) async => await _repository.getByWord(word);
+  Future<VocabWordItem?> getByWord(String word) async => _repository.getByWord(word);
 
   /// Get a word by ID
   Future<VocabWordItem?> getById(Id id) async {

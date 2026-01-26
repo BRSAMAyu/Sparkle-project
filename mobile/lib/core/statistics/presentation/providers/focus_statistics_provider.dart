@@ -155,7 +155,7 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
                     date: DateTime.parse(e['date'] as String),
                     minutes: e['minutes'] as int,
                     sessions: e['sessions'] as int,
-                  ))
+                  ),)
               .toList() ??
           [],
     );
@@ -177,7 +177,7 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
                 'date': d.date.toIso8601String(),
                 'minutes': d.minutes,
                 'sessions': d.sessions,
-              })
+              },)
           .toList(),
     };
 

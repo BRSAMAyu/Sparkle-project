@@ -316,9 +316,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         children: [
           const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             '加载失败，请重试',
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 8),
           ElevatedButton(

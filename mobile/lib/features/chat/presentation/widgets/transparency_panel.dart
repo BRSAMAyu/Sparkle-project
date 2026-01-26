@@ -90,8 +90,7 @@ class TransparencyPanel extends StatelessWidget {
   }
 
   /// 标题栏（带渐变装饰条）
-  Widget _buildHeader() {
-    return Stack(
+  Widget _buildHeader() => Stack(
       children: [
         Positioned(
           left: 0,
@@ -132,7 +131,6 @@ class TransparencyPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 
   /// 状态徽标
   Widget _statusChip(String status) {
@@ -187,8 +185,7 @@ class TransparencyPanel extends StatelessWidget {
   }
 
   /// 紧凑信息行
-  Widget _buildCompactInfo() {
-    return Padding(
+  Widget _buildCompactInfo() => Padding(
       padding: const EdgeInsets.all(DS.spacing12),
       child: Column(
         children: [
@@ -220,10 +217,8 @@ class TransparencyPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _infoIcon(IconData icon, String label) {
-    return Row(
+  Widget _infoIcon(IconData icon, String label) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: DS.neutral500),
@@ -237,11 +232,9 @@ class TransparencyPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 
   /// 可展开详情区域（智能展开）
-  Widget _buildExpandableDetails() {
-    return Padding(
+  Widget _buildExpandableDetails() => Padding(
       padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing12),
       child: Column(
         children: [
@@ -318,7 +311,6 @@ class TransparencyPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
   /// 步骤时间线（使用 StepperIndicator 组件）
   Widget _buildStepTimeline() {
@@ -329,8 +321,7 @@ class TransparencyPanel extends StatelessWidget {
     );
   }
 
-  Widget _statRow(String label, String value) {
-    return Padding(
+  Widget _statRow(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -353,7 +344,6 @@ class TransparencyPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String? _formatCost(int? microUsd) {
     if (microUsd == null || microUsd <= 0) return null;

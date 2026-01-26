@@ -121,12 +121,13 @@ type ChatOrchestrator struct {
 	userContext   *service.UserContextService
 	taskCommand   *service.TaskCommandService
 	backendURL    string
+	signalHub     *service.SignalHub
 	httpClient    *http.Client
 	wsConnections map[string]*websocket.Conn
 	wsMutex       sync.RWMutex
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
@@ -140,6 +141,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		userContext:  uc,
 		taskCommand:  tc,
 		backendURL:   strings.TrimRight(backendURL, "/"),
+		signalHub:    signalHub,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -2175,6 +2177,9 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 		_ = existing.Close()
 	}
 	h.wsConnections[userID] = conn
+	if h.signalHub != nil {
+		h.signalHub.Register(userID, conn)
+	}
 
 	// Publish connection event to Redis for cross-instance synchronization
 	if h.chatHistory != nil {
@@ -2187,8 +2192,12 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 
 func (h *ChatOrchestrator) unregisterConnection(userID string) {
 	h.wsMutex.Lock()
-	defer h.wsMutex.Unlock()
+	conn := h.wsConnections[userID]
 	delete(h.wsConnections, userID)
+	h.wsMutex.Unlock()
+	if h.signalHub != nil && conn != nil {
+		h.signalHub.Unregister(userID, conn)
+	}
 
 	// Publish disconnection event to Redis for cross-instance synchronization
 	if h.chatHistory != nil {

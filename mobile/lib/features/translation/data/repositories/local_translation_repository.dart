@@ -132,7 +132,7 @@ class LocalTranslationRepository {
         .group((q) => q
             .originalTextContains(lowerQuery, caseSensitive: false)
             .or()
-            .translatedTextContains(lowerQuery, caseSensitive: false))
+            .translatedTextContains(lowerQuery, caseSensitive: false),)
         .sortByCreatedAt()
         .limit(50)
         .findAll();
@@ -169,10 +169,10 @@ class LocalTranslationRepository {
   }
 
   /// Delete a translation record
-  Future<bool> delete(Id id) async => await _collection.delete(id);
+  Future<bool> delete(Id id) async => _collection.delete(id);
 
   /// Delete all records
-  Future<void> deleteAll() async => await _collection.clear();
+  Future<void> deleteAll() async => _collection.clear();
 
   /// Delete favorites only
   Future<int> deleteFavorites() async {

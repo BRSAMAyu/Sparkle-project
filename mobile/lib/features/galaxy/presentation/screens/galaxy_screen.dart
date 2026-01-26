@@ -50,8 +50,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   // Canvas constants
   static const double _centralFlameSize = 60.0;
-  double _canvasCenter = 500.0; // Canvas center coordinate
-  double _canvasSize = 1000.0; // Canvas size
+  final double _canvasCenter = 500.0; // Canvas center coordinate
+  final double _canvasSize = 1000.0; // Canvas size
 
   // Track last scale to avoid unnecessary updates
   double _lastScale = 1.0;

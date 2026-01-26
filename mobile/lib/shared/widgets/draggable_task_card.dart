@@ -214,7 +214,7 @@ class CalendarDayDragTarget extends ConsumerWidget {
           onTaskDropped?.call(result.task, result.newDueDate);
         }
       },
-      builder: (context, candidateData, rejectedData) => Container(
+      builder: (context, candidateData, rejectedData) => DecoratedBox(
           decoration: isHovered
               ? BoxDecoration(
                   border: Border.all(

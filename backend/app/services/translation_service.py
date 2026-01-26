@@ -182,23 +182,45 @@ class TranslationService:
         return result
 
     async def _evaluate_signals(
-        self, 
-        user_id: UUID, 
-        fingerprint: Optional[str], 
+        self,
+        user_id: Optional[UUID | str],
+        fingerprint: Optional[str],
         db: AsyncSession
     ) -> Dict[str, Any]:
         """
         Evaluate user signals to generate recommendations.
-        
+
         Rules:
         1. Daily Quota: Max cards/day (configurable).
         2. Repetition: If fingerprint seen > 1 times in 1 hour -> Suggest card.
         """
         daily_limit = settings.TRANSLATION_DAILY_CARD_LIMIT
-        
+
+        # Convert user_id to UUID if it's a string
+        user_uuid = None
+        if user_id:
+            try:
+                if isinstance(user_id, str):
+                    user_uuid = UUID(user_id)
+                else:
+                    user_uuid = user_id
+            except ValueError:
+                logger.warning(f"Invalid user_id format: {user_id}")
+                return {
+                    "should_create_card": False,
+                    "reason": None,
+                    "daily_quota_remaining": daily_limit
+                }
+
         # 1. Check Quota (Fast DB query)
-        created_today = await vocabulary_service.get_today_creation_count(db, user_id)
-        quota_remaining = max(0, daily_limit - created_today)
+        quota_remaining = daily_limit
+        if user_uuid:
+            try:
+                created_today = await vocabulary_service.get_today_creation_count(db, user_uuid)
+                quota_remaining = max(0, daily_limit - created_today)
+            except Exception as e:
+                logger.warning(f"Failed to check quota: {e}")
+                quota_remaining = daily_limit  # Assume full quota on error
         
         should_create = False
         reason = None
@@ -232,6 +254,21 @@ class TranslationService:
     ) -> TranslatedSegment:
         """使用混元模型翻译，fallback 到通用 LLM"""
 
+        # Language name mapping for clearer prompts
+        LANGUAGE_NAMES = {
+            "zh-CN": "Chinese (Simplified)", "zh": "Chinese",
+            "en": "English",
+            "ja": "Japanese", "ko": "Korean",
+            "fr": "French", "de": "German",
+            "es": "Spanish", "ru": "Russian",
+            "ar": "Arabic", "pt": "Portuguese",
+            "it": "Italian", "nl": "Dutch",
+            "auto": "auto-detected language"
+        }
+
+        source_name = LANGUAGE_NAMES.get(source_lang, source_lang)
+        target_name = LANGUAGE_NAMES.get(target_lang, target_lang)
+
         # Build prompt with glossary
         glossary_text = ""
         if glossary_terms:
@@ -239,10 +276,9 @@ class TranslationService:
                 [f"- {t['source']}: {t['target']}" for t in glossary_terms[:10]]
             )
 
-        prompt = f"""Translate the following {source_lang} text to {target_lang}.
+        prompt = f"""Translate the following text from {source_name} to {target_name}.
 Domain: {domain}
-Style: {style}
-{glossary_text}
+Style: {style}{glossary_text}
 
 Text: {segment.text}
 

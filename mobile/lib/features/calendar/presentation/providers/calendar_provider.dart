@@ -191,9 +191,7 @@ final taskCalendarProvider =
 ///
 /// Persists the user's selected date in the calendar view.
 final selectedCalendarDateProvider =
-    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) {
-  return SelectedCalendarDateNotifier();
-});
+    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) => SelectedCalendarDateNotifier());
 
 /// Notifier for the selected calendar date
 class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {

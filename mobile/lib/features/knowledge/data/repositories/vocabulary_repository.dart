@@ -32,7 +32,7 @@ class VocabularyRepository {
       'importance': importance,
       if (partOfSpeech != null) 'part_of_speech': partOfSpeech,
       if (sourceTranslationId != null) 'source_translation_id': sourceTranslationId,
-    });
+    },);
   }
 
   /// 新增：添加生词到生词本（使用 Map 参数，向后兼容）

@@ -207,9 +207,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
       child: ListView.builder(
         padding: const EdgeInsets.all(DS.md),
         itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          return _buildTaskCard(tasks[index]);
-        },
+        itemBuilder: (context, index) => _buildTaskCard(tasks[index]),
       ),
     );
 
@@ -221,7 +219,6 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _getStatusColor(task.status).withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Column(

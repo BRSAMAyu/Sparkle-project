@@ -139,6 +139,7 @@ func main() {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	fileEventHub := service.NewFileEventHub()
+	signalHub := service.NewSignalHub()
 	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub, cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
@@ -426,11 +427,6 @@ func main() {
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
 	{
 		internal.POST("/interventions/push", interventionPushHandler.HandlePush)
-	}
-
-	// Internal Routes (Gateway <-> Backend)
-	internal := r.Group("/internal")
-	{
 		internal.POST("/signals/push", signalPushHandler.HandlePush)
 	}
 

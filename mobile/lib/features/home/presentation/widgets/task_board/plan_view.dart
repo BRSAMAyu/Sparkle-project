@@ -125,7 +125,7 @@ class _PlanSection extends ConsumerWidget {
         ...tasks.map((task) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: InteractiveTaskCard(task: task),
-            )),
+            ),),
       ],
     );
   }

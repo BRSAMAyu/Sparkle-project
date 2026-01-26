@@ -40,7 +40,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     // This prevents unnecessary reloads on every rebuild
     final currentMonthKey = DateTime(now.year, now.month);
     final hasCurrentMonthData = calendarState.taskSummaries.keys.any((date) =>
-        date.year == now.year && date.month == now.month);
+        date.year == now.year && date.month == now.month,);
     if (!hasCurrentMonthData) {
       ref.read(taskCalendarProvider.notifier).loadTasksForMonth(now);
     }
@@ -77,8 +77,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
+  Widget _buildHeader(BuildContext context) => Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Flexible(
@@ -99,10 +98,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildLegend(BuildContext context) {
-    return Wrap(
+  Widget _buildLegend(BuildContext context) => Wrap(
       alignment: WrapAlignment.end,
       spacing: 2,
       runSpacing: 2,
@@ -124,7 +121,6 @@ class CalendarHeatmapCard extends ConsumerWidget {
         ),
       ],
     );
-  }
 
   Widget _buildLegendItem(BuildContext context, int level) => Container(
         width: 8,
@@ -256,8 +252,7 @@ class _DayCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: hasTasks ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -289,7 +284,6 @@ class _DayCell extends StatelessWidget {
             : null,
       ),
     );
-  }
 
   Border? _buildBorder() {
     if (isSelected) {

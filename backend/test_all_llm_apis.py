@@ -381,22 +381,7 @@ class APIValidator:
 
         # 测试翻译
         async def test_translation():
-            from app.tools.focus_tools import HunyuanTranslateTool
-            from app.tools.schemas import TranslateParams
-            from app.models.user import User
-            from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-            import uuid
-
-            # 创建模拟会话
-            tool = HunyuanTranslateTool()
-            params = TranslateParams(
-                text="Hello, how are you?",
-                source_language="auto",
-                target_language="中文"
-            )
-
-            # 测试工具调用（需要模拟数据库会话）
-            # 这里我们简化测试，直接调用 API
+            # 直接调用 API 验证连通性与模型可用性
             from openai import AsyncOpenAI
 
             client = AsyncOpenAI(

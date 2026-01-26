@@ -6,6 +6,13 @@ import 'package:sparkle/core/design/design_system.dart';
 /// Defines the different AI collaboration modes available in the app.
 /// Each mode has a unique API value, display label, icon, and associated color.
 abstract class ChatMode {
+
+  ChatMode({
+    required this.apiValue,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
   /// API value sent to the backend
   final String apiValue;
 
@@ -18,20 +25,11 @@ abstract class ChatMode {
   /// Primary color associated with this mode
   final Color color;
 
-  ChatMode({
-    required this.apiValue,
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
-
   /// Get ChatMode from API value
-  static ChatMode fromApiValue(String value) {
-    return chatModeValues.firstWhere(
+  static ChatMode fromApiValue(String value) => chatModeValues.firstWhere(
       (mode) => mode.apiValue == value,
       orElse: () => ChatModeStandard(),
     );
-  }
 
   /// Check if this is a multi-agent mode (not standard)
   bool get isMultiAgent => apiValue != 'standard';

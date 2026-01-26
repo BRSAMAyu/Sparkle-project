@@ -9,6 +9,8 @@ part 'cached_statistics_model.g.dart';
 /// and faster loading. Supports TTL-based expiration.
 @collection
 class CachedStatisticsModel {
+  /// Unnamed constructor required by Isar
+  CachedStatisticsModel();
 
   /// Create from statistics entity
   factory CachedStatisticsModel.fromEntity(
@@ -37,8 +39,6 @@ class CachedStatisticsModel {
       ..isFullySynced = !entity.isFromCache
       ..metadata = metadata;
   }
-  /// Unnamed constructor required by Isar
-  CachedStatisticsModel();
 
   /// Auto-incrementing ID
   Id id = Isar.autoIncrement;

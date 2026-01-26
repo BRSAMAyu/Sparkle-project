@@ -49,7 +49,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   color: Colors.deepPurple.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Center(
+                child: const Center(
                   child: Icon(
                     Icons.bar_chart,
                     color: Colors.deepPurple,
