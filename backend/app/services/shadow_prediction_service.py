@@ -130,11 +130,11 @@ class ShadowPredictionService:
 
         # Predict tools
         tool_keywords = {
-            "search_knowledge_graph": ["搜索", "知识", "search", "knowledge"],
-            "analyze_past_papers": ["试卷", "真题", "past paper"],
-            "predict_exam_focus": ["预测", "重点", "focus"],
+            "query_knowledge": ["搜索", "知识", "search", "knowledge"],
+            "generate_tasks_for_plan": ["试卷", "真题", "past paper", "复习", "计划"],
+            "create_plan": ["计划", "plan"],
             "create_task": ["任务", "task"],
-            "suggest_pomodoro_schedule": ["番茄", "pomodoro", "schedule"]
+            "suggest_focus_session": ["番茄", "pomodoro", "schedule"]
         }
 
         for tool, keywords in tool_keywords.items():
@@ -394,7 +394,7 @@ class ShadowPredictionService:
         elif any(kw in msg_lower for kw in knowledge_keywords):
             intent_type = "knowledge_query"
             confidence = 0.75
-            suggested_actions = ["search_knowledge_graph", "explain_concept"]
+            suggested_actions = ["query_knowledge", "explain_concept"]
         elif any(kw in msg_lower for kw in planning_keywords):
             intent_type = "time_planning"
             confidence = 0.8
@@ -414,7 +414,7 @@ class ShadowPredictionService:
         elif any(kw in msg_lower for kw in tool_keywords):
             intent_type = "tool_call"
             confidence = 0.65
-            suggested_actions = ["search_knowledge_graph", "analyze_past_papers"]
+            suggested_actions = ["query_knowledge", "generate_tasks_for_plan"]
 
         # Predict execution mode
         mode, mode_confidence = await self._predict_mode(
@@ -425,12 +425,11 @@ class ShadowPredictionService:
         # Predict likely tools
         suggested_tools = []
         tool_keywords_map = {
-            "search_knowledge_graph": ["搜索", "知识", "search", "knowledge", "概念"],
-            "analyze_past_papers": ["试卷", "真题", "past paper", "exam"],
-            "predict_exam_focus": ["预测", "重点", "focus", "考试"],
+            "query_knowledge": ["搜索", "知识", "search", "knowledge", "概念"],
+            "generate_tasks_for_plan": ["试卷", "真题", "past paper", "exam", "复习"],
             "create_task": ["任务", "task", "创建"],
             "get_task_details": ["任务详情", "task details"],
-            "suggest_pomodoro_schedule": ["番茄", "pomodoro", "专注"],
+            "suggest_focus_session": ["番茄", "pomodoro", "专注"],
             "create_plan": ["计划", "plan", "制定"],
         }
 

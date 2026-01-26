@@ -251,6 +251,7 @@ class StateSnapshotManager:
             return len(result.scalars().all())
         except Exception as e:
             logger.warning(f"Failed to count pending tasks for user {user_id}: {e}")
+            await self._safe_rollback(db_session)
             return 0
 
     async def _get_user_quota(self, user_id: str, db_session) -> int:
@@ -282,6 +283,7 @@ class StateSnapshotManager:
             return 100  # Default quota
         except Exception as e:
             logger.warning(f"Failed to get user quota for {user_id}: {e}")
+            await self._safe_rollback(db_session)
             return 100
 
     async def _get_active_focus(self, user_id: str, db_session) -> Optional[str]:
@@ -295,17 +297,27 @@ class StateSnapshotManager:
             Active focus ID or None
         """
         try:
-            from sqlalchemy import select
-            from app.services.focus_service import focus_service
+            from sqlalchemy import select, desc
+            from app.models.focus import FocusSession
 
-            stats = await focus_service.get_current_focus(db_session, uuid.UUID(user_id))
-            if stats and hasattr(stats, 'id'):
-                return str(stats.id)
-
-            return None
+            result = await db_session.execute(
+                select(FocusSession)
+                .where(FocusSession.user_id == uuid.UUID(user_id))
+                .order_by(desc(FocusSession.start_time))
+                .limit(1)
+            )
+            session = result.scalars().first()
+            return str(session.id) if session else None
         except Exception as e:
             logger.warning(f"Failed to get active focus for user {user_id}: {e}")
+            await self._safe_rollback(db_session)
             return None
+
+    async def _safe_rollback(self, db_session) -> None:
+        try:
+            await db_session.rollback()
+        except Exception:
+            pass
 
     async def update_context_version(
         self,

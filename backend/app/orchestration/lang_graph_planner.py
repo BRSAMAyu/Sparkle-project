@@ -88,8 +88,10 @@ class LangGraphPlanner:
             "approval_context": None,
             "approval_result": None,
             "error": None,
+            "planning_mode": "langgraph",
             # Phase 2: Inject snapshot info
             "_snapshot": snapshot.to_dict() if snapshot else {},
+            "_planning_mode": True,
             # Phase 4: Pass plan_version and plan_id
             "_plan_version": plan_version,
             "_plan_id": plan_id,

@@ -147,7 +147,7 @@ class TranslateTextTool(BaseTool):
                 domain=params.domain,
                 style=params.style,
                 glossary_id=params.glossary_id,
-                timeout=5.0,  # 5 seconds per segment
+                timeout=15.0,  # 15 seconds per segment (increased from 5s)
                 user_id=user_id,  # v2: Pass user_id for signal evaluation
                 fingerprint=params.fingerprint,  # v2: Content fingerprint for signal tracking
                 db=db_session,  # v2: Pass db for quota tracking

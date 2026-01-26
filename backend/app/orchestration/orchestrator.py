@@ -674,7 +674,7 @@ class ChatOrchestrator:
 
                 return {
                     "user_context": user_context_data, # Legacy field
-                    "analytics_summary": cognitive_context.engagement_metrics,
+                    "analytics_summary": cognitive_context.engagement_metrics or {},
                     "preferences": cognitive_context.preferences,
                     "next_actions": cognitive_context.active_tasks,
                     "active_plans": active_plans,

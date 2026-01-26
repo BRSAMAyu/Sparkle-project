@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 import app.models.base
-from app.utils.migration_helpers import get_inspector, table_exists, index_exists
+from app.utils.migration_helpers import get_inspector, table_exists, index_exists, column_exists
 
 # revision identifiers, used by Alembic.
 revision: str = 'p17_learning_assets'
@@ -88,7 +88,7 @@ def upgrade() -> None:
         )
 
     # Create indexes for learning_assets
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_user_status"):
+    if column_exists(inspector, "learning_assets", "user_id") and column_exists(inspector, "learning_assets", "status") and not index_exists(inspector, "learning_assets", "idx_learning_assets_user_status"):
         op.create_index(
             'idx_learning_assets_user_status',
             'learning_assets',
@@ -96,7 +96,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_headword"):
+    if column_exists(inspector, "learning_assets", "headword") and not index_exists(inspector, "learning_assets", "idx_learning_assets_headword"):
         op.create_index(
             'idx_learning_assets_headword',
             'learning_assets',
@@ -104,7 +104,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_user_id"):
+    if column_exists(inspector, "learning_assets", "user_id") and not index_exists(inspector, "learning_assets", "idx_learning_assets_user_id"):
         op.create_index(
             'idx_learning_assets_user_id',
             'learning_assets',
@@ -112,7 +112,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_source_file"):
+    if column_exists(inspector, "learning_assets", "source_file_id") and not index_exists(inspector, "learning_assets", "idx_learning_assets_source_file"):
         op.create_index(
             'idx_learning_assets_source_file',
             'learning_assets',
@@ -120,7 +120,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_selection_fp"):
+    if column_exists(inspector, "learning_assets", "selection_fp") and not index_exists(inspector, "learning_assets", "idx_learning_assets_selection_fp"):
         op.create_index(
             'idx_learning_assets_selection_fp',
             'learning_assets',
@@ -128,7 +128,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "learning_assets", "idx_learning_assets_deleted_at"):
+    if column_exists(inspector, "learning_assets", "deleted_at") and not index_exists(inspector, "learning_assets", "idx_learning_assets_deleted_at"):
         op.create_index(
             'idx_learning_assets_deleted_at',
             'learning_assets',
@@ -137,18 +137,20 @@ def upgrade() -> None:
         )
 
     # Partial index for inbox expiry scan (PostgreSQL specific)
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_learning_assets_inbox_expires
-        ON learning_assets (inbox_expires_at)
-        WHERE status = 'INBOX'
-    """)
+    if column_exists(inspector, "learning_assets", "inbox_expires_at") and column_exists(inspector, "learning_assets", "status"):
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS idx_learning_assets_inbox_expires
+            ON learning_assets (inbox_expires_at)
+            WHERE status = 'INBOX'
+        """)
 
     # Partial index for review scheduling
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_learning_assets_review_due
-        ON learning_assets (user_id, review_due_at)
-        WHERE status = 'ACTIVE' AND review_due_at IS NOT NULL
-    """)
+    if column_exists(inspector, "learning_assets", "user_id") and column_exists(inspector, "learning_assets", "review_due_at") and column_exists(inspector, "learning_assets", "status"):
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS idx_learning_assets_review_due
+            ON learning_assets (user_id, review_due_at)
+            WHERE status = 'ACTIVE' AND review_due_at IS NOT NULL
+        """)
 
     # 2. Create asset_suggestion_logs table
     if not table_exists(inspector, "asset_suggestion_logs"):
@@ -189,7 +191,7 @@ def upgrade() -> None:
         )
 
     # Create indexes for asset_suggestion_logs
-    if not index_exists(inspector, "asset_suggestion_logs", "idx_suggestion_log_user_created"):
+    if column_exists(inspector, "asset_suggestion_logs", "user_id") and column_exists(inspector, "asset_suggestion_logs", "created_at") and not index_exists(inspector, "asset_suggestion_logs", "idx_suggestion_log_user_created"):
         op.create_index(
             'idx_suggestion_log_user_created',
             'asset_suggestion_logs',
@@ -197,7 +199,7 @@ def upgrade() -> None:
             unique=False
         )
 
-    if not index_exists(inspector, "asset_suggestion_logs", "idx_suggestion_log_policy"):
+    if column_exists(inspector, "asset_suggestion_logs", "policy_id") and not index_exists(inspector, "asset_suggestion_logs", "idx_suggestion_log_policy"):
         op.create_index(
             'idx_suggestion_log_policy',
             'asset_suggestion_logs',

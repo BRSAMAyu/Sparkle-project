@@ -1,30 +1,14 @@
-from typing import List, Dict, Any
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.llm_factory import LLMFactory
 
-# Import new tools
-from app.agents.tools.document_tools import ParseDocumentTool, ConceptExtractionTool
-from app.agents.tools.galaxy_tools import GalaxyUpdateTool
-from app.agents.tools.analysis_tools import ExamAnalysisTool
-from app.agents.tools.generator_tools import FlashcardGeneratorTool, QuestionGeneratorTool
-from app.agents.tools.scheduling_tools import StudyPlanCreatorTool
-
-# ... (Previous Mock Tools) ...
-
-
-@tool
-def analyze_past_papers(subject: str) -> str:
-    """Analyze past exam papers to surface common topics."""
-    return f"Past paper analysis placeholder for {subject}."
-
-
-@tool
-def predict_exam_focus(subject: str) -> str:
-    """Predict likely exam focus areas for a subject."""
-    return f"Exam focus prediction placeholder for {subject}."
+from app.agents.graph.nodes.registry_tools import (
+    query_knowledge,
+    create_plan,
+    generate_tasks_for_plan,
+    create_task,
+)
 
 # --- 2. 节点逻辑 (Node Logic) ---
 
@@ -38,22 +22,29 @@ async def exam_oracle_node(state: SparkleState):
     if collaboration_context:
         messages = list(messages)
         messages.append(HumanMessage(content=collaboration_context))
+
+    if state.get("planning_mode") or state.get("_planning_mode"):
+        messages = list(messages)
+        messages.insert(
+            0,
+            SystemMessage(
+                content=(
+                    "You are in planning-only mode. Use tool calls to create exam-focused plans "
+                    "and tasks (create_plan, generate_tasks_for_plan, create_task, query_knowledge). "
+                    "Do not provide a final narrative response."
+                )
+            ),
+        )
     
     # 使用强推理模型 (GPT-4o) 处理复杂分析
     llm = LLMFactory.get_llm("exam_oracle")
     
-    # 绑定工具
-    # Updated with Scheduling capabilities (The Execution Loop)
+    # 绑定工具 (aligned with dynamic tool registry)
     tools = [
-        analyze_past_papers, 
-        predict_exam_focus,
-        ParseDocumentTool(),
-        ConceptExtractionTool(),
-        GalaxyUpdateTool(),
-        ExamAnalysisTool(),
-        FlashcardGeneratorTool(),
-        QuestionGeneratorTool(),
-        StudyPlanCreatorTool()
+        query_knowledge,
+        create_plan,
+        generate_tasks_for_plan,
+        create_task,
     ]
     llm_with_tools = llm.bind_tools(tools)
     
