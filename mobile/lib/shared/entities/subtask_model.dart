@@ -17,6 +17,13 @@ enum SubTaskStatus {
 
 /// Subtask model
 class SubTaskModel extends BaseModel {
+  SubTaskModel({
+    required this.id,
+    required this.parentTaskId,
+    required this.title,
+    required this.order, required this.status, required this.createdAt, required this.updatedAt, this.description,
+    this.completedAt,
+  });
 
   factory SubTaskModel.fromJson(Map<String, dynamic> json) => SubTaskModel(
         id: json['id'] as String,
@@ -31,13 +38,6 @@ class SubTaskModel extends BaseModel {
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
       );
-  SubTaskModel({
-    required this.id,
-    required this.parentTaskId,
-    required this.title,
-    required this.order, required this.status, required this.createdAt, required this.updatedAt, this.description,
-    this.completedAt,
-  });
 
   final String id;
   final String parentTaskId;

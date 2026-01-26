@@ -26,14 +26,12 @@ class TaskBoardState {
   final SprintTaskFilter sprintFilter;
 
   /// Serialize state to JSON for persistence
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'currentView': currentView.name,
       'expandedTaskIds': expandedTaskIds.toList(),
       'selectedPlanId': selectedPlanId,
       'sprintFilter': sprintFilter.name,
     };
-  }
 
   /// Create state from JSON (for persistence)
   static TaskBoardState? fromJson(Map<String, dynamic> json) {
@@ -81,7 +79,7 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
           key: 'state',
           defaultValue: TaskBoardState(),
           toJson: (s) => s.toJson(),
-          fromJson: (j) => TaskBoardState.fromJson(j),
+          fromJson: TaskBoardState.fromJson,
         ) {
     // Initialize default view based on sprint status
     _initializeDefaultView();
@@ -136,7 +134,7 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
   }
 
   void clearPlanSelection() {
-    state = state.copyWith(selectedPlanId: null);
+    state = state.copyWith();
   }
 
   void collapseAll() {
@@ -291,18 +289,14 @@ final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
   switch (boardState.sprintFilter) {
     case SprintTaskFilter.todo:
       tasks = tasks.where((t) => t.status == TaskStatus.pending).toList();
-      break;
     case SprintTaskFilter.inProgress:
       tasks = tasks.where((t) => t.status == TaskStatus.inProgress).toList();
-      break;
     case SprintTaskFilter.done:
       tasks = tasks.where((t) => t.status == TaskStatus.completed).toList();
-      break;
     case SprintTaskFilter.all:
     default:
       // 全部显示所有任务（包括已完成，排除已放弃）
       tasks = tasks.where((t) => t.status != TaskStatus.abandoned).toList();
-      break;
   }
 
   // 按优先级排序

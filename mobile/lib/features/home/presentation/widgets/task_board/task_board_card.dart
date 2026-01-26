@@ -130,7 +130,7 @@ class TaskBoardCard extends ConsumerWidget {
       TaskViewMode.schedule => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _PanelItem(
+            const _PanelItem(
               icon: Icons.calendar_today_rounded,
               title: '按日期查看',
               description: '任务按到期日期分组显示',
@@ -144,7 +144,7 @@ class TaskBoardCard extends ConsumerWidget {
             ),
           ],
         ),
-      TaskViewMode.priority => Column(
+      TaskViewMode.priority => const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PanelItem(
@@ -152,7 +152,7 @@ class TaskBoardCard extends ConsumerWidget {
               title: '优先级排序',
               description: '高优先级任务显示在前面',
             ),
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _PanelItem(
               icon: Icons.tune_rounded,
               title: '自定义优先级',
@@ -160,7 +160,7 @@ class TaskBoardCard extends ConsumerWidget {
             ),
           ],
         ),
-      TaskViewMode.plan => Column(
+      TaskViewMode.plan => const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PanelItem(
@@ -168,7 +168,7 @@ class TaskBoardCard extends ConsumerWidget {
               title: '按方案分组',
               description: '任务按所属方案分组显示',
             ),
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _PanelItem(
               icon: Icons.add_circle_outline_rounded,
               title: '创建方案',
@@ -176,7 +176,7 @@ class TaskBoardCard extends ConsumerWidget {
             ),
           ],
         ),
-      TaskViewMode.sprint => Column(
+      TaskViewMode.sprint => const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PanelItem(
@@ -184,7 +184,7 @@ class TaskBoardCard extends ConsumerWidget {
               title: '冲刺专注模式',
               description: '只显示当前冲刺的任务',
             ),
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _PanelItem(
               icon: Icons.timer_rounded,
               title: '冲刺计时',

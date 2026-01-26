@@ -8,24 +8,15 @@ import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart'
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:uuid/uuid.dart';
-
-// Import task calendar provider
-import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart'
-    show
-        TaskCalendarNotifier,
-        TaskDaySummary,
-        taskCalendarProvider;
-
-// Import drag and drop components
-import 'package:sparkle/shared/widgets/draggable_task_card.dart'
-    show CalendarDayDragTarget;
-
 // Import task provider for updating tasks
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
     show taskListProvider;
 import 'package:sparkle/shared/entities/task_model.dart';
+// Import drag and drop components
+import 'package:sparkle/shared/widgets/draggable_task_card.dart'
+    show CalendarDayDragTarget;
+import 'package:table_calendar/table_calendar.dart';
+import 'package:uuid/uuid.dart';
 
 enum CalendarViewMode { month, twoWeeks, year }
 

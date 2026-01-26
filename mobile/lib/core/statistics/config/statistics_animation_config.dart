@@ -168,7 +168,7 @@ class StatisticsAnimationConfig {
         duration: listEntrance,
         curve: listCurve,
         delay: Duration(milliseconds: listStaggerDelay.inMilliseconds * index),
-        offsetBegin: Offset(0, listSlideOffset),
+        offsetBegin: const Offset(0, listSlideOffset),
       ),
     );
 }
@@ -268,5 +268,5 @@ class FlippedCurve extends Curve {
   double transform(double t) => 1 - curve.transform(1 - t);
 
   @override
-  String toString() => '${curve}.flipped';
+  String toString() => '$curve.flipped';
 }

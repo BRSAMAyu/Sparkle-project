@@ -66,8 +66,7 @@ class PlanContextSummary extends ConsumerWidget {
     );
   }
 
-  Widget _buildLoadingCard(bool isDark) {
-    return Container(
+  Widget _buildLoadingCard(bool isDark) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: isDark ? DS.neutral800 : DS.neutral100,
@@ -84,23 +83,9 @@ class PlanContextSummary extends ConsumerWidget {
         ),
       ),
     );
-  }
 }
 
 class PlanContextData {
-  const PlanContextData({
-    required this.facts,
-    required this.taskSummary,
-    required this.recentFeedback,
-    this.planId,
-    this.status,
-  });
-
-  final String? planId;
-  final String? status;
-  final Map<String, dynamic> facts;
-  final Map<String, dynamic> taskSummary;
-  final List<Map<String, dynamic>> recentFeedback;
 
   factory PlanContextData.fromJson(Map<String, dynamic> json) {
     final taskSummary =
@@ -118,6 +103,19 @@ class PlanContextData {
           <Map<String, dynamic>>[],
     );
   }
+  const PlanContextData({
+    required this.facts,
+    required this.taskSummary,
+    required this.recentFeedback,
+    this.planId,
+    this.status,
+  });
+
+  final String? planId;
+  final String? status;
+  final Map<String, dynamic> facts;
+  final Map<String, dynamic> taskSummary;
+  final List<Map<String, dynamic>> recentFeedback;
 }
 
 class _PlanContextSnapshotCard extends StatefulWidget {
@@ -389,7 +387,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           return '已归档';
       }
     }
-    if (isActive == true) {
+    if (isActive ?? false) {
       return '进行中';
     }
     if (isActive == false) {
@@ -411,7 +409,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           return DS.neutral500;
       }
     }
-    return isActive == true ? DS.success : DS.neutral500;
+    return isActive ?? false ? DS.success : DS.neutral500;
   }
 }
 
@@ -530,8 +528,7 @@ class _PlanContextCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(Color planColor) {
-    return Column(
+  Widget _buildProgressBar(Color planColor) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -565,7 +562,6 @@ class _PlanContextCard extends StatelessWidget {
         ),
       ],
     );
-  }
 
   Widget _buildMetadataRow(Color planColor) {
     String metadata;
@@ -647,7 +643,7 @@ class _PlanContextCard extends StatelessWidget {
                   ),
                 ],
               ),
-            )),
+            ),),
       ],
     );
   }
@@ -679,13 +675,9 @@ class _PlanContextCard extends StatelessWidget {
     }
   }
 
-  int _getCompletedTasks() {
-    return plan.tasks?.where((t) => t.status == TaskStatus.completed).length ?? 0;
-  }
+  int _getCompletedTasks() => plan.tasks?.where((t) => t.status == TaskStatus.completed).length ?? 0;
 
-  int _getTotalTasks() {
-    return plan.tasks?.length ?? 0;
-  }
+  int _getTotalTasks() => plan.tasks?.length ?? 0;
 
   List<TaskModel> _getNextTasks() {
     final tasks = plan.tasks ?? [];

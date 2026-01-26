@@ -228,7 +228,7 @@ class _PlanProgressTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(DS.lg),
       children: [
-        _SectionHeader(title: '完成率'),
+        const _SectionHeader(title: '完成率'),
         const SizedBox(height: DS.spacing12),
         SizedBox(
           height: 220,
@@ -259,7 +259,7 @@ class _PlanProgressTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: DS.spacing24),
-        _SectionHeader(title: '任务类型分布'),
+        const _SectionHeader(title: '任务类型分布'),
         const SizedBox(height: DS.spacing12),
         SizedBox(
           height: 220,
@@ -268,8 +268,8 @@ class _PlanProgressTab extends StatelessWidget {
               alignment: BarChartAlignment.spaceAround,
               maxY: (byType.values.isEmpty ? 1 : byType.values.reduce((a, b) => a > b ? a : b)) + 1,
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
@@ -298,7 +298,6 @@ class _PlanProgressTab extends StatelessWidget {
                 ),
               ),
               gridData: FlGridData(
-                show: true,
                 horizontalInterval: 1,
                 getDrawingHorizontalLine: (value) => FlLine(
                   color: DS.neutral200,
@@ -328,15 +327,15 @@ class _PlanProgressTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: DS.spacing24),
-        _SectionHeader(title: '每日完成趋势'),
+        const _SectionHeader(title: '每日完成趋势'),
         const SizedBox(height: DS.spacing12),
         SizedBox(
           height: 220,
           child: LineChart(
             LineChartData(
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
@@ -369,7 +368,6 @@ class _PlanProgressTab extends StatelessWidget {
                 ),
               ),
               gridData: FlGridData(
-                show: true,
                 horizontalInterval: 1,
                 getDrawingHorizontalLine: (value) => FlLine(
                   color: DS.neutral200,
@@ -386,7 +384,7 @@ class _PlanProgressTab extends StatelessWidget {
                   isCurved: true,
                   color: DS.secondaryBase,
                   barWidth: 3,
-                  dotData: FlDotData(show: true),
+                  dotData: const FlDotData(),
                   belowBarData: BarAreaData(
                     show: true,
                     color: DS.secondaryBase.withValues(alpha: 0.2),
@@ -482,7 +480,6 @@ class _DayBucket {
   _DayBucket({
     required this.label,
     required this.date,
-    this.count = 0,
   });
 
   final String label;

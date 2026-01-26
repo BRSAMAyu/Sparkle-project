@@ -269,23 +269,32 @@ class PlanReviewService:
         prompt = self._build_review_prompt(plan, user_message, user_context)
 
         try:
-            response = await llm_service.get_completion(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_review_system_prompt(),
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
+            # 使用 reason_json 方法获取 JSON 格式的推理结果
+            messages = [
+                {
+                    "role": "system",
+                    "content": self._get_review_system_prompt(),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ]
+            result = await llm_service.reason_json(
+                messages=messages,
                 temperature=0.2,
-                response_format={"type": "json_object"},
             )
 
-            # Parse LLM response
-            result = self._parse_review_response(response)
+            # reason_json 已返回解析后的对象，无需再解析
+            if not result or not isinstance(result, dict):
+                raise ValueError(f"Invalid LLM response type: {type(result)}")
+
+            # 验证 decision 字段
+            decision = result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+            valid_decisions = {d.value for d in ReviewDecision}
+            if decision not in valid_decisions:
+                result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
+
             return result
 
         except Exception as e:
@@ -368,38 +377,6 @@ Respond in JSON format:
 - Pending Tasks: {user_context.get('pending_tasks_count', 0)}
 
 Please review this plan and provide your assessment."""
-
-    def _parse_review_response(self, response: str) -> Dict[str, Any]:
-        """Parse LLM review response"""
-        try:
-            data = json.loads(response)
-
-            # Validate decision
-            decision = data.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
-            valid_decisions = {d.value for d in ReviewDecision}
-            if decision not in valid_decisions:
-                decision = ReviewDecision.REQUIRES_CONFIRMATION.value
-
-            return {
-                "decision": decision,
-                "confidence": float(data.get("confidence", 0.5)),
-                "comments": data.get("comments", []),
-                "suggested_modifications": data.get("suggested_modifications"),
-            }
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse review response: {e}")
-            return {
-                "decision": ReviewDecision.REQUIRES_CONFIRMATION.value,
-                "confidence": 0.0,
-                "comments": [
-                    {
-                        "category": ReviewCategory.QUALITY.value,
-                        "severity": SeverityLevel.WARNING.value,
-                        "message": "Review response could not be parsed. Manual review required.",
-                    }
-                ],
-            }
 
     async def store_review_result(
         self,

@@ -203,13 +203,11 @@ class GalaxyViewState {
   final AggregationLevel aggregationLevel;
 
   /// Serialize to JSON
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'currentScale': currentScale,
       'selectedNodeId': selectedNodeId,
       'aggregationLevel': aggregationLevel.name,
     };
-  }
 
   /// Deserialize from JSON
   static GalaxyViewState? fromJson(Map<String, dynamic> json) {
@@ -242,9 +240,7 @@ class GalaxyViewState {
 ///
 /// Persists the user's view state (scale, selected node, aggregation level).
 final galaxyViewStateProvider =
-    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>((ref) {
-  return GalaxyViewStateNotifier(ref);
-});
+    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>((ref) => GalaxyViewStateNotifier(ref));
 
 /// Notifier for the galaxy view state
 class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
@@ -254,7 +250,7 @@ class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
           key: 'view_state',
           defaultValue: const GalaxyViewState(),
           toJson: (s) => s.toJson(),
-          fromJson: (j) => GalaxyViewState.fromJson(j),
+          fromJson: GalaxyViewState.fromJson,
         );
 
   void updateScale(double scale) {

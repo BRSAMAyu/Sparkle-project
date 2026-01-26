@@ -44,7 +44,7 @@ class FocusStatsOverviewCards extends StatelessWidget {
             label: '连续天数',
             value: '$streakDays天',
             subtitle: longestStreak != null && longestStreak! > 0
-                ? '最长${longestStreak}天'
+                ? '最长$longestStreak天'
                 : null,
           ),
         ),

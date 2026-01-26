@@ -60,5 +60,5 @@ class ActivePlanNotifier extends PersistentNotifier<String?> {
 /// Returns the plan_id of the currently selected plan, or null if no plan is selected.
 final activePlanProvider =
     StateNotifierProvider<ActivePlanNotifier, String?>(
-  (ref) => ActivePlanNotifier(ref),
+  ActivePlanNotifier.new,
 );

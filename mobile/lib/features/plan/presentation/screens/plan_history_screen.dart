@@ -72,8 +72,7 @@ class _PlanHistorySection extends ConsumerWidget {
   final List<PlanModel> plans;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,5 +109,4 @@ class _PlanHistorySection extends ConsumerWidget {
         ],
       ),
     );
-  }
 }

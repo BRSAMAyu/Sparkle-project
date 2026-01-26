@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';

@@ -65,6 +65,10 @@ class TranslateTextParams(BaseModel):
         default=None,
         description="Glossary ID for terminology (e.g., 'cs_terms_v1')"
     )
+    fingerprint: Optional[str] = Field(
+        default=None,
+        description="Content fingerprint for signal tracking (v2)"
+    )
 
 
 class TranslateTextTool(BaseTool):
@@ -143,7 +147,10 @@ class TranslateTextTool(BaseTool):
                 domain=params.domain,
                 style=params.style,
                 glossary_id=params.glossary_id,
-                timeout=5.0  # 5 seconds per segment
+                timeout=5.0,  # 5 seconds per segment
+                user_id=user_id,  # v2: Pass user_id for signal evaluation
+                fingerprint=params.fingerprint,  # v2: Content fingerprint for signal tracking
+                db=db_session,  # v2: Pass db for quota tracking
             )
 
             # 3. Combine segments into full translation
@@ -162,7 +169,16 @@ class TranslateTextTool(BaseTool):
                 f"segments={len(result.segments)}"
             )
 
-            # 6. Return result with widget data for frontend
+            # 6. Build recommendation data for frontend
+            recommendation_data = None
+            if result.recommendation:
+                recommendation_data = {
+                    "should_create_card": result.recommendation.get("should_create_card", False),
+                    "reason": result.recommendation.get("reason"),
+                    "daily_quota_remaining": result.recommendation.get("daily_quota_remaining", 0),
+                }
+
+            # 7. Return result with widget data for frontend
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -183,7 +199,8 @@ class TranslateTextTool(BaseTool):
                     "provider": result.provider,
                     "model_id": result.model_id,
                     "cache_hit": result.cache_hit,
-                    "latency_ms": result.latency_ms
+                    "latency_ms": result.latency_ms,
+                    "recommendation": recommendation_data,  # v2: Signal evaluation results
                 },
                 widget_type="translation_result",
                 widget_data={

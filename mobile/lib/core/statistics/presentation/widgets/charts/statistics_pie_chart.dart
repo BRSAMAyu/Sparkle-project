@@ -29,8 +29,7 @@ class PieChartSection {
 class StatisticsPieChart extends StatelessWidget {
 
   const StatisticsPieChart({
-    super.key,
-    required this.sections,
+    required this.sections, super.key,
     this.radius,
     this.innerRadius,
     this.isDonut = true,
@@ -225,12 +224,12 @@ class StatisticsPieChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.pie_chart,
             size: 48,
             color: StatisticsChartConfig.emptyStateColor,
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           Text(
             '暂无数据',
             style: DS.bodyStyle.copyWith(
@@ -246,8 +245,7 @@ class StatisticsPieChart extends StatelessWidget {
 class StatisticsDonutChart extends StatelessWidget {
 
   const StatisticsDonutChart({
-    super.key,
-    required this.sections,
+    required this.sections, super.key,
     this.radius,
     this.centerText,
     this.centerValue,
@@ -276,11 +274,8 @@ class StatisticsDonutChart extends StatelessWidget {
   Widget build(BuildContext context) => StatisticsPieChart(
       sections: sections,
       radius: radius,
-      isDonut: true,
       centerWidget: centerWidget ??
           _buildDefaultCenterWidget(),
-      showLabels: true,
-      showLegend: true,
     );
 
   Widget _buildDefaultCenterWidget() => Column(
@@ -294,7 +289,7 @@ class StatisticsDonutChart extends StatelessWidget {
             ),
           ),
         if (centerValue != null) ...[
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -308,7 +303,7 @@ class StatisticsDonutChart extends StatelessWidget {
                 ),
               ),
               if (centerUnit != null) ...[
-                SizedBox(width: 2),
+                const SizedBox(width: 2),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(

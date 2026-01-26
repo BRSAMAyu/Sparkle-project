@@ -1,3 +1,4 @@
+export 'domain/entities/sprint_statistics.dart';
 export 'plan_routes.dart';
 export 'presentation/providers/plan_provider.dart';
 export 'presentation/providers/sprint_actions_provider.dart';
@@ -12,4 +13,3 @@ export 'presentation/screens/sprint_screen.dart';
 export 'presentation/widgets/sprint_actions_dialog.dart';
 export 'presentation/widgets/sprint_history_detail.dart';
 export 'presentation/widgets/sprint_statistics_card.dart';
-export 'domain/entities/sprint_statistics.dart';

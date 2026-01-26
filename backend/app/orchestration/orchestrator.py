@@ -226,25 +226,6 @@ class ChatOrchestrator:
             redis_client=redis_client
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
-
-    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
-        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
-        responses: List[agent_service_pb2.ChatResponse] = []
-        for update in updates:
-            widget_struct = struct_pb2.Struct()
-            widget_struct.update(update)
-            responses.append(
-                agent_service_pb2.ChatResponse(
-                    tool_result=agent_service_pb2.ToolResultPayload(
-                        tool_name="system_update",
-                        success=True,
-                        widget_type="system_update",
-                        widget_data=widget_struct,
-                        tool_call_id="",
-                    )
-                )
-            )
-        return responses
         asyncio.create_task(self.langgraph_breaker.initialize())
 
         # Phase 3: Observability
@@ -269,6 +250,25 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
+        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
+        responses: List[agent_service_pb2.ChatResponse] = []
+        for update in updates:
+            widget_struct = struct_pb2.Struct()
+            widget_struct.update(update)
+            responses.append(
+                agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name="system_update",
+                        success=True,
+                        widget_type="system_update",
+                        widget_data=widget_struct,
+                        tool_call_id="",
+                    )
+                )
+            )
+        return responses
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -1005,7 +1005,7 @@ class ChatOrchestrator:
                             plan_matching = PlanMatchingService(active_db)
 
                             # Try to match the message to a plan
-                            matched_plan_id = await self.session_state.auto_switch_plan(
+                            matched_plan_id = await self.state_manager.auto_switch_plan(
                                 session_id=session_id,
                                 user_id=uuid.UUID(user_id),
                                 task_context={

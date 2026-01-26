@@ -488,13 +488,11 @@ class _TranslationCard extends StatelessWidget {
                     onTap: onRatingTap,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (index) {
-                        return Icon(
+                      children: List.generate(5, (index) => Icon(
                           Icons.star,
                           size: 16,
                           color: index < item.rating ? Colors.amber : DS.neutral300,
-                        );
-                      }),
+                        )),
                     ),
                   ),
                   const SizedBox(width: DS.md),

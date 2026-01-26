@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 错误消息映射工具类

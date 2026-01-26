@@ -146,8 +146,6 @@ class _PersonaOnboardingScreenState
               const Text('回答详细程度'),
               Slider(
                 value: _depthPreference,
-                min: 0,
-                max: 1,
                 divisions: 10,
                 onChanged: (v) => setState(() => _depthPreference = v),
               ),
@@ -155,8 +153,6 @@ class _PersonaOnboardingScreenState
               const Text('好奇心扩展程度'),
               Slider(
                 value: _curiosityPreference,
-                min: 0,
-                max: 1,
                 divisions: 10,
                 onChanged: (v) => setState(() => _curiosityPreference = v),
               ),
@@ -199,15 +195,15 @@ class _PersonaOnboardingScreenState
     final repo = ref.read(userRepositoryProvider);
     try {
       await repo.submitOnboarding({
-        "learning_goal_type": _goalType,
-        "learning_goal": _goalController.text.trim().isEmpty
+        'learning_goal_type': _goalType,
+        'learning_goal': _goalController.text.trim().isEmpty
             ? null
             : _goalController.text.trim(),
-        "learning_style": _learningStyle,
-        "study_time_minutes": _studyMinutes.round(),
-        "knowledge_level": _knowledgeLevel,
-        "response_depth": _depthPreference,
-        "curiosity_preference": _curiosityPreference,
+        'learning_style': _learningStyle,
+        'study_time_minutes': _studyMinutes.round(),
+        'knowledge_level': _knowledgeLevel,
+        'response_depth': _depthPreference,
+        'curiosity_preference': _curiosityPreference,
       });
       await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
       ref.invalidate(transparentProfileProvider);

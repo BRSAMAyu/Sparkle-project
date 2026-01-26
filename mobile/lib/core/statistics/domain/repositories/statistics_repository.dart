@@ -107,8 +107,7 @@ class StatisticsSummary {
     required this.average,
     required this.maximum,
     required this.minimum,
-    this.changePercentage,
-    required this.trend,
+    required this.trend, this.changePercentage,
   });
 
   /// Create summary from a list of values
@@ -132,7 +131,7 @@ class StatisticsSummary {
     final minimum = values.reduce((a, b) => a < b ? a : b);
 
     double? changePercentage;
-    StatisticsTrend trend = StatisticsTrend.stable;
+    var trend = StatisticsTrend.stable;
 
     if (previousTotal != null && previousTotal > 0) {
       changePercentage = ((total - previousTotal) / previousTotal) * 100;

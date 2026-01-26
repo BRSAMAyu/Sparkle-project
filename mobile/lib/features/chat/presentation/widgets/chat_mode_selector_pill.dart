@@ -73,17 +73,14 @@ class ChatModeSelectorPill extends ConsumerWidget {
 
 class _UnselectedPill extends StatelessWidget {
   const _UnselectedPill({
-    super.key,
-    required this.isDark,
-    required this.onTap,
+    required this.isDark, required this.onTap, super.key,
   });
 
   final bool isDark;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: GestureDetector(
         onTap: onTap,
@@ -124,15 +121,11 @@ class _UnselectedPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _SelectedPill extends StatelessWidget {
   const _SelectedPill({
-    super.key,
-    required this.mode,
-    required this.isDark,
-    required this.onTap,
+    required this.mode, required this.isDark, required this.onTap, super.key,
   });
 
   final ChatMode mode;
@@ -140,8 +133,7 @@ class _SelectedPill extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: GestureDetector(
         onTap: onTap,
@@ -190,5 +182,4 @@ class _SelectedPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }

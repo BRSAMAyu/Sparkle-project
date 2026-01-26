@@ -7,12 +7,14 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy import (
     Column, String, Text, Integer, Float, Boolean,
-    ForeignKey, DateTime, Index, UniqueConstraint
+    ForeignKey, DateTime, Index, UniqueConstraint, JSON
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, HardDeleteBaseModel, GUID
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class AssetStatus(str, enum.Enum):
@@ -66,11 +68,11 @@ class LearningAsset(BaseModel):
     inbox_expires_at = Column(DateTime, nullable=True, index=True)  # Auto-archive after this time
 
     # === Snapshot (Immutable) ===
-    snapshot_json = Column(JSONB, nullable=False, default=dict)  # Original context snapshot
+    snapshot_json = Column(JSONBCompat, nullable=False, default=dict)  # Original context snapshot
     snapshot_schema_version = Column(Integer, default=1, nullable=False)  # For future migrations
 
     # === Provenance (Mutable for recalculation) ===
-    provenance_json = Column(JSONB, nullable=True, default=dict)  # Match info, source location
+    provenance_json = Column(JSONBCompat, nullable=True, default=dict)  # Match info, source location
     provenance_updated_at = Column(DateTime, nullable=True)
 
     # === Fingerprints for Deduplication & Tracing ===
@@ -157,7 +159,7 @@ class AssetSuggestionLog(HardDeleteBaseModel):
     trigger_event = Column(String(100), nullable=False)  # e.g., "translation_lookup"
 
     # === Evidence ===
-    evidence_json = Column(JSONB, nullable=False, default=dict)
+    evidence_json = Column(JSONBCompat, nullable=False, default=dict)
     # Example: {"fingerprint": "...", "lookup_count": 3, "time_window_seconds": 3600}
 
     # === Decision ===

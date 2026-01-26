@@ -10,11 +10,7 @@ class SprintHistoryItem {
     required this.id,
     required this.name,
     required this.startDate,
-    this.endDate,
-    required this.finalProgress,
-    required this.totalTasks,
-    required this.completedTasks,
-    required this.status,
+    required this.finalProgress, required this.totalTasks, required this.completedTasks, required this.status, this.endDate,
   });
 
   factory SprintHistoryItem.fromPlan(PlanModel plan, SprintStatus status) {

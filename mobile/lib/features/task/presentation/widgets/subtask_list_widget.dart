@@ -194,7 +194,6 @@ class SubtaskItemWidget extends StatelessWidget {
           color: subtask.isCompleted
               ? DS.semanticSuccess.withValues(alpha: 0.3)
               : DS.brandPrimary10,
-          width: 1,
         ),
       ),
       child: ListTile(
@@ -237,17 +236,16 @@ class SubtaskItemWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.drag_handle, color: DS.brandPrimary38, size: 20),
-            if (onDelete != null)
-              IconButton(
-                icon: Icon(Icons.close, color: DS.brandPrimary38, size: 18),
-                onPressed: onDelete,
-                tooltip: '删除',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 32,
-                ),
+            IconButton(
+              icon: Icon(Icons.close, color: DS.brandPrimary38, size: 18),
+              onPressed: onDelete,
+              tooltip: '删除',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 32,
               ),
+            ),
           ],
         ),
       ),

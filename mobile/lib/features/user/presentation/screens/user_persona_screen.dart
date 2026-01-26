@@ -76,7 +76,7 @@ class UserPersonaScreen extends ConsumerWidget {
                     label: item['value']?.toString() ?? '',
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_tag',
-                  ))
+                  ),)
               .toList(),
         ),
         _subSectionList(
@@ -89,7 +89,7 @@ class UserPersonaScreen extends ConsumerWidget {
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_capability',
                     fieldName: item['key']?.toString(),
-                  ))
+                  ),)
               .toList(),
         ),
         const SizedBox(height: DS.spacing24),
@@ -103,18 +103,17 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
         _subSectionList(
           '行为模式',
-          patterns.map((item) => _readonlyRow(item)).toList(),
+          patterns.map(_readonlyRow).toList(),
         ),
         _subSectionList(
           '认知碎片',
-          fragments.map((item) => _readonlyRow(item)).toList(),
+          fragments.map(_readonlyRow).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildOnboardingBanner(BuildContext context, bool completed) {
-    return Padding(
+  Widget _buildOnboardingBanner(BuildContext context, bool completed) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing16),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -156,7 +155,6 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -170,8 +168,7 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _subSection(String title, List<String> items) {
-    return Padding(
+  Widget _subSection(String title, List<String> items) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing16),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -212,10 +209,8 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _subSectionList(String title, List<Widget> items) {
-    return Padding(
+  Widget _subSectionList(String title, List<Widget> items) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing16),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -248,7 +243,6 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _preferenceRow(
     WidgetRef ref,
@@ -338,12 +332,10 @@ class UserPersonaScreen extends ConsumerWidget {
         label = '可编辑';
         bg = DS.primaryBase.withValues(alpha: 0.12);
         fg = DS.primaryBase;
-        break;
       case 'warn':
         label = '建议修正';
         bg = DS.warning.withValues(alpha: 0.12);
         fg = DS.warning;
-        break;
       default:
         label = '只读';
         bg = DS.neutral100;
@@ -463,7 +455,7 @@ class UserPersonaScreen extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('建议修正'),
+        title: const Text('建议修正'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -497,10 +489,10 @@ class UserPersonaScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               await repo.submitProfileCorrection({
-                "target_type": targetType,
-                "field_name": fieldName,
-                "suggested_value": controller.text.trim(),
-                "reason": reasonController.text.trim(),
+                'target_type': targetType,
+                'field_name': fieldName,
+                'suggested_value': controller.text.trim(),
+                'reason': reasonController.text.trim(),
               });
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -529,7 +521,7 @@ class UserPersonaScreen extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('编辑偏好'),
+        title: const Text('编辑偏好'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -596,7 +588,7 @@ class UserPersonaScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (result == true) {
+    if (result ?? false) {
       await repo.rollbackTransparentPreference(prefKey);
       ref.invalidate(transparentProfileProvider);
     }
@@ -611,7 +603,7 @@ class UserPersonaScreen extends ConsumerWidget {
   ) async {
     final controller = TextEditingController(text: title);
     final allowedStatuses = ['active', 'completed', 'paused'];
-    String nextStatus = allowedStatuses.contains(status) ? status : 'active';
+    var nextStatus = allowedStatuses.contains(status) ? status : 'active';
     final repo = ref.read(userRepositoryProvider);
     await showDialog<void>(
       context: context,
@@ -627,7 +619,7 @@ class UserPersonaScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.spacing12),
               DropdownButtonFormField<String>(
-                value: nextStatus,
+                initialValue: nextStatus,
                 decoration: const InputDecoration(labelText: '状态'),
                 items: const [
                   DropdownMenuItem(value: 'active', child: Text('进行中')),

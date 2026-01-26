@@ -130,7 +130,7 @@ class _TaskReminderSettingsScreenState
         ref.read(taskReminderConfigProvider.notifier).state =
             config.copyWith(enabled: value);
       },
-      activeColor: DS.primaryBase,
+      activeThumbColor: DS.primaryBase,
     );
 
   Widget _buildReminderTimesSection(TaskReminderConfig config) => Column(
@@ -147,8 +147,7 @@ class _TaskReminderSettingsScreenState
             ),
           ),
         ),
-        ...TaskReminderSettingsConfigExt.defaultReminders.map((minutes) {
-          return CheckboxListTile(
+        ...TaskReminderSettingsConfigExt.defaultReminders.map((minutes) => CheckboxListTile(
             title: Text(
               _formatReminderTime(minutes),
               style: TextStyle(color: DS.brandPrimary),
@@ -171,8 +170,7 @@ class _TaskReminderSettingsScreenState
                 : null,
             activeColor: DS.primaryBase,
             checkColor: DS.brandPrimary,
-          );
-        }),
+          )),
       ],
     );
 

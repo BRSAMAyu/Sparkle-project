@@ -117,7 +117,6 @@ class InteractiveTaskCard extends ConsumerWidget {
         border: Border(
           top: BorderSide(
             color: DS.border.withValues(alpha: 0.3),
-            width: 1,
           ),
         ),
       ),
@@ -157,7 +156,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                 side: BorderSide.none,
-              )).toList(),
+              ),).toList(),
             ),
           ],
           const SizedBox(height: DS.spacing12),

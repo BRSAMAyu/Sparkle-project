@@ -466,10 +466,10 @@ class TaskRepository {
   ) async {
     if (DemoDataService.isDemoMode) {
       // Demo mode: return mock response
-      return TaskFeedbackResponse(
+      return const TaskFeedbackResponse(
         success: true,
         message: '偏好已更新（演示模式）',
-        preferenceUpdates: const PreferenceUpdates(
+        preferenceUpdates: PreferenceUpdates(
           depthPreference: 0.02,
           difficultyPreference: -0.01,
         ),

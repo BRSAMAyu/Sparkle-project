@@ -314,7 +314,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
                             // Plan Context Summary (if task has a plan)
                             if (activeTask.planId != null)
-                              PlanContextSummary(planId: activeTask.planId!),
+                              PlanContextSummary(planId: activeTask.planId),
                             if (activeTask.planId != null)
                               const SizedBox(height: DS.spacing16),
 

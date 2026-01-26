@@ -13,6 +13,7 @@ from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
 from app.core.llm_router import llm_router, LLMSelection, select_model_for_agent
 from app.core.agent_profiles import AgentRole, TaskType
+from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -344,8 +345,13 @@ class LLMService:
             if key in user_content or user_content in key:
                 logger.info(f"⚡ [DEMO MODE] Fuzzy match for: {user_content} -> {key}")
                 return response
-
-        return None
+        logger.info("⚡ [DEMO MODE] No match found, returning generic response")
+        return (
+            "已收到你的请求。当前处于演示模式，我先给出一个可执行的通用建议：\n"
+            "1) 先列出目标与截止时间；2) 拆分为每日/每周可完成的小步骤；"
+            "3) 设定复盘节点并记录问题；4) 适当安排巩固与练习。\n"
+            "如果你愿意，可以提供更多上下文（目标、时间、基础），我会给出更细的计划。"
+        )
 
     async def chat(
         self,
@@ -415,8 +421,24 @@ class LLMService:
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
-            response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
-            return response
+            mock_response = self._check_demo_match(messages)
+            if mock_response:
+                span.set_attribute("llm.demo_mode", True)
+                await asyncio.sleep(1.0)
+                return mock_response
+
+            try:
+                await circuit_breaker_service.check("primary_llm")
+                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                await circuit_breaker_service.record_success("primary_llm")
+                return response
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Reason Error (Circuit Breaker recording): {e}")
+                raise e
 
     async def reason_json(
         self,
@@ -556,7 +578,7 @@ class LLMService:
 
                 # 添加 GLM 特有参数
                 if self._extra_body:
-                    request_params.update(self._extra_body)
+                    request_params["extra_body"] = self._extra_body
 
                 response = await self.provider.client.chat.completions.create(**request_params)
                 
@@ -621,7 +643,7 @@ class LLMService:
 
                 # 添加 GLM 特有参数
                 if self._extra_body:
-                    request_params.update(self._extra_body)
+                    request_params["extra_body"] = self._extra_body
 
                 response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
@@ -681,7 +703,7 @@ class LLMService:
 
                 # 添加 GLM 特有参数
                 if self._extra_body:
-                    request_params.update(self._extra_body)
+                    request_params["extra_body"] = self._extra_body
 
                 stream = await self.provider.client.chat.completions.create(**request_params)
 

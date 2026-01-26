@@ -20,8 +20,7 @@ class CompactTaskCard extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialStyler(
+  Widget build(BuildContext context, WidgetRef ref) => MaterialStyler(
       material: AppMaterials.ceramic,
       borderRadius: DS.borderRadius12,
       padding: EdgeInsets.zero,
@@ -73,7 +72,6 @@ class CompactTaskCard extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _buildPriorityIndicator(int priority) {
     Color color;
@@ -163,8 +161,7 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
+  Widget build(BuildContext context) => Material(
       color: color.withValues(alpha: 0.12),
       borderRadius: DS.borderRadius8,
       child: InkWell(
@@ -180,5 +177,4 @@ class _ActionButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

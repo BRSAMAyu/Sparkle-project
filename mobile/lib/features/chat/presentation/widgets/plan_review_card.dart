@@ -539,7 +539,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ...comments.take(3).map((comment) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing6),
               child: _buildCommentItem(comment, color),
-            )),
+            ),),
       ],
     );
 
@@ -791,7 +791,6 @@ class _FeedbackOption {
   const _FeedbackOption({
     required this.value,
     required this.label,
-    this.subtitle,
   });
 
   final String value;
@@ -812,7 +811,7 @@ extension on _PlanReviewCardState {
       _FeedbackOption(value: 'other', label: '其他（自定义）'),
     ];
     String? selected;
-    bool showError = false;
+    var showError = false;
 
     try {
       return await showModalBottomSheet<_RejectionFeedback>(
@@ -839,7 +838,7 @@ extension on _PlanReviewCardState {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(

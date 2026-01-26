@@ -316,7 +316,7 @@ class AchievementStatsPanel extends StatelessWidget {
           const SizedBox(width: DS.spacing4),
           Text(
             '隐藏: ${stats.hiddenFound}',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: DS.fontSizeXs,
               color: Colors.purple,
               fontWeight: DS.fontWeightMedium,
@@ -368,7 +368,7 @@ class RarityPieChart extends StatelessWidget {
   Widget _buildEmptyChart() => SizedBox(
       width: size,
       height: size,
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: DS.neutral200,

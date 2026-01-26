@@ -5,9 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/network/http_client_pinning.dart';
-
 import 'package:sparkle/core/network/api_interceptor.dart';
+import 'package:sparkle/core/network/http_client_pinning.dart';
 
 final apiClientProvider = Provider<ApiClient>(ApiClient.new);
 

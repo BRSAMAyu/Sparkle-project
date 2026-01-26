@@ -113,8 +113,7 @@ class TaskPreviewPanel extends ConsumerWidget {
     WidgetRef ref,
     DateTime selectedDate,
     AsyncValue<List<TaskModel>> tasksAsync,
-  ) {
-    return tasksAsync.when(
+  ) => tasksAsync.when(
       data: (tasks) {
         if (tasks.isEmpty) {
           return _buildEmptyState(context);
@@ -146,10 +145,8 @@ class TaskPreviewPanel extends ConsumerWidget {
       loading: () => _buildLoadingState(),
       error: (_, __) => _buildErrorState(context),
     );
-  }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
       child: Column(
         children: [
@@ -175,19 +172,15 @@ class TaskPreviewPanel extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildLoadingState() {
-    return const SizedBox(
+  Widget _buildLoadingState() => const SizedBox(
       height: 120,
       child: Center(
         child: CircularProgressIndicator(),
       ),
     );
-  }
 
-  Widget _buildErrorState(BuildContext context) {
-    return Container(
+  Widget _buildErrorState(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
       child: Text(
         '加载任务失败，请稍后重试',
@@ -197,10 +190,8 @@ class TaskPreviewPanel extends ConsumerWidget {
         textAlign: TextAlign.center,
       ),
     );
-  }
 
-  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) {
-    return InkWell(
+  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) => InkWell(
       onTap: () => context.push('/calendar?date=${date.toIso8601String()}'),
       borderRadius: DS.borderRadius8,
       child: Container(
@@ -228,7 +219,6 @@ class TaskPreviewPanel extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   String _getWeekdayName(DateTime date) {
     const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
@@ -242,8 +232,7 @@ class _CloseButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
+  Widget build(BuildContext context) => Material(
       color: DS.surfaceTertiary.withValues(alpha: 0.5),
       borderRadius: DS.borderRadiusFull,
       child: InkWell(
@@ -259,7 +248,6 @@ class _CloseButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// Animated task item for staggered fade-in effect
@@ -307,8 +295,7 @@ class _AnimatedTaskItemState extends State<_AnimatedTaskItem>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _animation,
       child: SlideTransition(
         position: Tween<Offset>(
@@ -318,5 +305,4 @@ class _AnimatedTaskItemState extends State<_AnimatedTaskItem>
         child: widget.child,
       ),
     );
-  }
 }

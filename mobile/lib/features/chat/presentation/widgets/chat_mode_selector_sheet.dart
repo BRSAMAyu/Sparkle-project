@@ -17,7 +17,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentMode = ref.watch(chatModeProvider);
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
@@ -77,7 +77,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                   mode: mode,
                   isSelected: currentMode == mode,
                   isDark: isDark,
-                )),
+                ),),
 
             const SizedBox(height: DS.spacing16),
           ],
@@ -99,8 +99,7 @@ class _ModeListTile extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
         Navigator.pop(context, mode);
@@ -175,5 +174,4 @@ class _ModeListTile extends StatelessWidget {
         ),
       ),
     );
-  }
 }

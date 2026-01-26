@@ -10,9 +10,11 @@ from pydantic import field_validator, model_validator, Field, AliasChoices
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(backend_dir)
-root_env_path = os.path.join(project_root, ".env")
+backend_dir = os.path.dirname(current_dir)  # backend/app
+project_root = os.path.dirname(backend_dir)  # backend
+repo_root = os.path.dirname(project_root)  # repo root
+repo_env_path = os.path.join(repo_root, ".env")
+service_env_path = os.path.join(project_root, ".env")
 backend_env_path = os.path.join(backend_dir, ".env")
 
 def _is_running_in_docker() -> bool:
@@ -91,7 +93,8 @@ def normalize_redis_url(raw_url: str) -> str:
 class Settings(BaseSettings):
     """Application settings"""
     model_config = SettingsConfigDict(
-        env_file=[backend_env_path, root_env_path],
+        # Load repo root .env first, then backend/.env, then backend/app/.env
+        env_file=[repo_env_path, service_env_path, backend_env_path],
         env_file_encoding='utf-8',
         case_sensitive=True,
         extra="ignore"
@@ -202,7 +205,7 @@ class Settings(BaseSettings):
     # Hunyuan Translation (via SiliconFlow)
     HUNYUAN_API_KEY: str = ""
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
-    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
+    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow

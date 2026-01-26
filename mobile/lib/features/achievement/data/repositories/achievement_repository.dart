@@ -528,7 +528,6 @@ class AchievementRepository {
           sortOrder: 1,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          isUnlocked: false,
         ),
         GalaxySkin(
           id: 'cyberpunk',
@@ -538,7 +537,6 @@ class AchievementRepository {
           sortOrder: 2,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          isUnlocked: false,
         ),
       ],
       equippedSkinId: 'default',
@@ -559,7 +557,6 @@ class AchievementRepository {
         titleName: '周常战士',
         titleDisplay: '周常战士',
         unlockedAt: DateTime.now().subtract(const Duration(days: 1)),
-        isEquipped: false,
       ),
     ];
 

@@ -83,7 +83,7 @@ def _get_review_history_service(state: SparkleState):
         return None
 
     try:
-        db_session = state.get("db_session")
+        db_session = _state_get(state, "db_session")
         if db_session:
             return get_review_history_service(db_session)
     except Exception as e:
@@ -110,8 +110,8 @@ async def _record_review_to_history(
             review_id=review_result.review_id,
             target_id=target_id,
             target_type=target_type,
-            user_id=state.get("user_id", ""),
-            session_id=state.get("session_id", ""),
+            user_id=_state_get(state, "user_id", ""),
+            session_id=_state_get(state, "session_id", ""),
             decision=review_result.decision,
             overall_score=review_result.overall_score,
             metrics=[m.to_dict() for m in review_result.metrics],
@@ -138,7 +138,7 @@ def _get_fallback_service(state: SparkleState):
         return None
 
     try:
-        db_session = state.get("db_session")
+        db_session = _state_get(state, "db_session")
         if db_session:
             return get_model_fallback_service()
     except Exception as e:
@@ -201,7 +201,7 @@ async def _check_and_execute_fallback(
             )
 
             # 检查是否已经在生成过程中
-            context_data = state.get("context_data", {})
+            context_data = _state_get(state, "context_data", {})
             if context_data.get("stream_callback"):
                 from app.gen.agent.v1 import agent_service_pb2
                 try:
@@ -262,6 +262,12 @@ REVIEW_CONFIG_DEFAULTS = {
 }
 
 
+def _state_get(state: SparkleState, key: str, default=None):
+    if isinstance(state, dict):
+        return state.get(key, default)
+    return getattr(state, key, default)
+
+
 def _should_skip_review(state: SparkleState) -> bool:
     """
     判断是否应该跳过审查
@@ -273,12 +279,12 @@ def _should_skip_review(state: SparkleState) -> bool:
         bool: True表示跳过审查
     """
     # 检查用户配置
-    enable_deep_review = state.get("enable_deep_review", True)
+    enable_deep_review = _state_get(state, "enable_deep_review", True)
     if not enable_deep_review:
         return True
 
     # 获取审查配置
-    review_config = state.get("review_config", {})
+    review_config = _state_get(state, "review_config", {})
     config = {**REVIEW_CONFIG_DEFAULTS, **review_config}
 
     if not config.get("enable_review", True):
@@ -286,7 +292,7 @@ def _should_skip_review(state: SparkleState) -> bool:
 
     # 检查是否是简单响应
     if config.get("skip_simple_responses"):
-        messages = state.get("messages", [])
+        messages = _state_get(state, "messages", [])
         if messages:
             last_message = messages[-1]
             content = last_message.content if hasattr(last_message, 'content') else str(last_message)
@@ -336,7 +342,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
     if _should_skip_review(state):
         logger.info("[ReviewNode] Skipping review (configuration or simple response)")
         return {
-            "next_step": state.get("next_step", "__end__"),
+            "next_step": _state_get(state, "next_step", "__end__"),
             "review_context": {
                 "status": ReviewStatus.SKIPPED,
                 "review_id": f"skipped_{int(time.time())}",
@@ -344,7 +350,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         }
 
     # 2. 获取最后生成的响应
-    messages = state.get("messages", [])
+    messages = _state_get(state, "messages", [])
     if not messages:
         logger.warning("[ReviewNode] No messages to review")
         return {"next_step": "__end__"}
@@ -386,8 +392,8 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         user_query=user_query,
         llm_response=llm_response,
         context={
-            "user_id": state.get("user_id"),
-            "session_id": state.get("session_id"),
+            "user_id": _state_get(state, "user_id"),
+            "session_id": _state_get(state, "session_id"),
             "conversation_history": messages[:last_assistant_idx],
             "timestamp": datetime.utcnow().isoformat()
         }
@@ -414,7 +420,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
 
     # Phase 2d: Record model performance and check for fallback
     # 获取生成模型（从context_data或使用默认值）
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     generation_model = context_data.get("model_used", "unknown")
     if generation_model == "unknown":
         # 尝试从其他来源获取模型名称
@@ -430,7 +436,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
     )
 
     # 4.5. Phase 2b: Send review result to frontend via stream_callback
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     stream_callback = context_data.get("stream_callback")
     if stream_callback and not review_result.passed:
         # Send review widget event to frontend
@@ -493,7 +499,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         # 审查通过
         logger.info(f"[ReviewNode] Review PASSED: score={review_result.overall_score:.2f}")
         # 如果有工具调用，去执行；否则结束
-        if state.get("context_data", {}).get("tool_calls"):
+        if _state_get(state, "context_data", {}).get("tool_calls"):
             next_step = "tool_execution"
         else:
             next_step = "__end__"
@@ -530,7 +536,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
                 )
                 if fallback_model:
                     # 将建议的模型存储在context中，供下次生成使用
-                    context_data = state.get("context_data", {})
+                    context_data = _state_get(state, "context_data", {})
                     context_data["suggested_model"] = fallback_model
                     review_context["fallback_model"] = fallback_model
 
@@ -538,7 +544,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
             else:
                 # 警告级别问题，可以继续
                 logger.info(f"[ReviewNode] Review passed with warnings")
-                next_step = "tool_execution" if state.get("context_data", {}).get("tool_calls") else "__end__"
+                next_step = "tool_execution" if _state_get(state, "context_data", {}).get("tool_calls") else "__end__"
 
     return {
         "next_step": next_step,
@@ -562,7 +568,7 @@ async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
     logger.info("[ReviewNode] execution_review_node invoked")
 
     # 获取工具执行结果
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     tool_results = context_data.get("tool_results", [])
 
     if not tool_results:
@@ -582,8 +588,8 @@ async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
             tool_name=tool_name,
             tool_result=result_data,
             context={
-                "user_id": state.get("user_id"),
-                "session_id": state.get("session_id"),
+                "user_id": _state_get(state, "user_id"),
+                "session_id": _state_get(state, "session_id"),
                 "timestamp": datetime.utcnow().isoformat()
             }
         )
@@ -626,7 +632,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
     logger.info("[ReviewNode] reflection_node invoked (Phase 2a: full ReflectionAgent)")
 
     # 获取当前审查上下文
-    review_context: Optional[ReviewContext] = state.get("review_context")
+    review_context: Optional[ReviewContext] = _state_get(state, "review_context")
     if not review_context:
         logger.warning("[ReviewNode] No review context, ending reflection")
         return {"next_step": "__end__"}
@@ -646,7 +652,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
 
     # 获取原始内容和用户查询
     original_content = review_context.get("original_content", "")
-    messages = state.get("messages", [])
+    messages = _state_get(state, "messages", [])
 
     # 找到用户查询
     user_query = ""
@@ -665,7 +671,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
     review_result = ReviewResult.from_dict(review_result_dict)
 
     # Phase 2d: 获取生成模型名称
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     generation_model = (
         context_data.get("model_used") or
         review_context.get("reviewer_model") or
@@ -689,8 +695,8 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
             original_content=original_content,
             review_result=review_result,
             context={
-                "user_id": state.get("user_id"),
-                "session_id": state.get("session_id"),
+                "user_id": _state_get(state, "user_id"),
+                "session_id": _state_get(state, "session_id"),
                 "messages": messages,
             }
         )
@@ -728,7 +734,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
         }
 
         # 决定下一步
-        context_data = state.get("context_data", {})
+        context_data = _state_get(state, "context_data", {})
         stream_callback = context_data.get("stream_callback")
 
         if reflection_result.success:
@@ -829,10 +835,10 @@ def route_after_generation_review(state: SparkleState) -> str:
     Returns:
         下一步节点名称
     """
-    next_step = state.get("next_step", "__end__")
+    next_step = _state_get(state, "next_step", "__end__")
 
     # 如果有工具调用需要执行
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     if context_data.get("tool_calls") and next_step != "reflection":
         return "tool_execution"
 
@@ -855,10 +861,10 @@ def route_after_reflection(state: SparkleState) -> str:
     Returns:
         下一步节点名称
     """
-    next_step = state.get("next_step", "__end__")
+    next_step = _state_get(state, "next_step", "__end__")
 
     # 如果反思成功且有工具调用
-    context_data = state.get("context_data", {})
+    context_data = _state_get(state, "context_data", {})
     if context_data.get("tool_calls") and context_data.get("reflection_completed"):
         return "tool_execution"
 
@@ -875,7 +881,7 @@ def route_after_execution_review(state: SparkleState) -> str:
     Returns:
         下一步节点名称
     """
-    next_step = state.get("next_step", "__end__")
+    next_step = _state_get(state, "next_step", "__end__")
 
     if next_step == "generation":
         return "generation"

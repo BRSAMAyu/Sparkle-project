@@ -4,9 +4,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 
 /// Intent Repository Provider
-final intentRepositoryProvider = Provider<IntentRepository>((ref) {
-  return IntentRepository(ref.read(apiClientProvider));
-});
+final intentRepositoryProvider = Provider<IntentRepository>((ref) => IntentRepository(ref.read(apiClientProvider)));
 
 /// Intent Repository
 ///

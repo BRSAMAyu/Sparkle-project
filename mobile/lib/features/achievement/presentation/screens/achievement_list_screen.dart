@@ -159,7 +159,7 @@ class _AchievementListScreenState
       ),
     );
 
-  Widget _buildViewToggle() => Container(
+  Widget _buildViewToggle() => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
         borderRadius: DS.borderRadius12,
@@ -653,7 +653,7 @@ class _AchievementFilterSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 '筛选成就',
                 style: TextStyle(
                   fontSize: DS.fontSizeLg,
@@ -683,7 +683,7 @@ class _AchievementFilterSheet extends StatelessWidget {
               onPressed: () => onApply(currentOptions),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: DS.borderRadius12,
                 ),
               ),

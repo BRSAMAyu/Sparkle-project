@@ -289,9 +289,7 @@ class StatisticsReportGenerator {
 class ReportPreviewWidget extends StatefulWidget {
 
   const ReportPreviewWidget({
-    super.key,
-    required this.statistics,
-    required this.sections,
+    required this.statistics, required this.sections, super.key,
     this.config = const ReportConfig(),
   });
   final StatisticsEntity statistics;
@@ -306,7 +304,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
   final bool _isGenerating = false;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -324,12 +322,10 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(DS.lg),
+                padding: const EdgeInsets.all(DS.lg),
                 child: Column(
                   children: [
-                    ...widget.sections.where((s) => s.enabled).map((section) {
-                      return _buildSectionCard(section);
-                    }),
+                    ...widget.sections.where((s) => s.enabled).map(_buildSectionCard),
                   ],
                 ),
               ),
@@ -341,7 +337,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
     );
 
   Widget _buildHeader() => Padding(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       child: Column(
         children: [
           Text(
@@ -352,7 +348,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             widget.statistics.period.label,
             style: TextStyle(
@@ -360,7 +356,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
               fontSize: 18,
             ),
           ),
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Text(
             StatisticsReportGenerator._formatDate(DateTime.now()),
             style: TextStyle(
@@ -373,8 +369,8 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
     );
 
   Widget _buildSectionCard(ReportSection section) => Container(
-      margin: EdgeInsets.only(bottom: DS.md),
-      padding: EdgeInsets.all(DS.lg),
+      margin: const EdgeInsets.only(bottom: DS.md),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: widget.config.primaryColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(DS.borderRadiusLG),
@@ -390,7 +386,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
               fontWeight: DS.fontWeightSemibold,
             ),
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           section.content,
         ],
       ),

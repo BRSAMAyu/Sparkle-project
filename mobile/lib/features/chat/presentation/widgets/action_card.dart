@@ -228,17 +228,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return action.type;
   }
 
-  LinearGradient _getActionGradientFor(WidgetPayload action) {
-    return _getActionGradient(_resolveActionType(action));
-  }
+  LinearGradient _getActionGradientFor(WidgetPayload action) => _getActionGradient(_resolveActionType(action));
 
-  Color _getActionColorFor(WidgetPayload action) {
-    return _getActionColor(_resolveActionType(action));
-  }
+  Color _getActionColorFor(WidgetPayload action) => _getActionColor(_resolveActionType(action));
 
-  IconData _getActionIconFor(WidgetPayload action) {
-    return _getActionIcon(_resolveActionType(action));
-  }
+  IconData _getActionIconFor(WidgetPayload action) => _getActionIcon(_resolveActionType(action));
 
   LinearGradient _getActionGradient(String type) {
     switch (type) {

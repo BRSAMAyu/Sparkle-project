@@ -18,8 +18,8 @@ import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/user.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {

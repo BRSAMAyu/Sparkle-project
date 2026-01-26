@@ -174,7 +174,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     required String originalText,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async => await _repository.findSimilar(
+  }) async => _repository.findSimilar(
       originalText: originalText,
       sourceLanguage: sourceLanguage,
       targetLanguage: targetLanguage,

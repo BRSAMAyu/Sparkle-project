@@ -156,21 +156,19 @@ class KnowledgeIntegrationService {
 
 /// Result of vocabulary node creation
 class VocabularyNodeResult {
-
-  factory VocabularyNodeResult.fromJson(Map<String, dynamic> json) {
-    return VocabularyNodeResult(
-      success: json['success'] as bool,
-      nodeId: json['node_id'] as String,
-      status: json['status'] as String,
-      message: json['message'] as String,
-    );
-  }
   const VocabularyNodeResult({
     required this.success,
     required this.nodeId,
     required this.status,
     required this.message,
   });
+
+  factory VocabularyNodeResult.fromJson(Map<String, dynamic> json) => VocabularyNodeResult(
+      success: json['success'] as bool,
+      nodeId: json['node_id'] as String,
+      status: json['status'] as String,
+      message: json['message'] as String,
+    );
 
   final bool success;
   final String nodeId;

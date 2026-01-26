@@ -4,12 +4,14 @@ PlanExecutionRecord - 方案执行记录模型
 记录方案执行后的验证结果，用于反馈学习和分析
 """
 from sqlalchemy import (
-    Column, String, Integer, Float, Boolean, Text, ForeignKey, Index
+    Column, String, Integer, Float, Boolean, Text, ForeignKey, Index, JSON
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class PlanExecutionRecord(BaseModel):
@@ -62,7 +64,7 @@ class PlanExecutionRecord(BaseModel):
     quality_score = Column(Float, default=0.0)  # 0-1
 
     # 成功标准检查结果
-    criteria_results = Column(JSONB, default=dict)
+    criteria_results = Column(JSONBCompat, default=dict)
 
     # 工具执行统计
     total_tools = Column(Integer, default=0)
@@ -70,7 +72,7 @@ class PlanExecutionRecord(BaseModel):
     failed_tools = Column(Integer, default=0)
 
     # 问题列表
-    issues = Column(JSONB, default=list)
+    issues = Column(JSONBCompat, default=list)
 
     # 用户反馈 (后续收集)
     user_satisfaction = Column(Integer, nullable=True)  # 1-5
