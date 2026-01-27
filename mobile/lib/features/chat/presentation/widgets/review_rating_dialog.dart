@@ -284,10 +284,10 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             icon: Icons.thumb_up_outlined,
             selectedIcon: Icons.thumb_up,
             label: '有帮助',
-            isSelected: _wasHelpful == true,
+            isSelected: _wasHelpful ?? false,
             onTap: () {
               setState(() {
-                _wasHelpful = _wasHelpful == true ? null : true;
+                _wasHelpful = _wasHelpful ?? false ? null : true;
               });
             },
           ),
@@ -376,10 +376,10 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 theme: theme,
                 label: '准确',
                 icon: Icons.check_circle_outline,
-                isSelected: _wasAccurate == true,
+                isSelected: _wasAccurate ?? false,
                 onTap: () {
                   setState(() {
-                    _wasAccurate = _wasAccurate == true ? null : true;
+                    _wasAccurate = _wasAccurate ?? false ? null : true;
                   });
                 },
               ),
@@ -413,8 +413,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
         ),
         const SizedBox(height: 8),
         Row(
-          children: SpecificityLevel.values.map((level) {
-            return Expanded(
+          children: SpecificityLevel.values.map((level) => Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
                   left: level == SpecificityLevel.values.first ? 0 : 4,
@@ -432,8 +431,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   },
                 ),
               ),
-            );
-          }).toList(),
+            )).toList(),
         ),
       ],
     );
@@ -532,8 +530,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: _inaccuratePoints.map((point) {
-              return Chip(
+            children: _inaccuratePoints.map((point) => Chip(
                 label: Text(
                   point,
                   style: theme.textTheme.bodySmall,
@@ -544,8 +541,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   });
                 },
                 deleteIcon: const Icon(Icons.close, size: 16),
-              );
-            }).toList(),
+              )).toList(),
           ),
         ],
       ],

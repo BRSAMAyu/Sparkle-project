@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/statistics/config/statistics_config.dart';
-import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Empty state widget for when no statistics data is available
 class StatisticsEmptyState extends StatelessWidget {

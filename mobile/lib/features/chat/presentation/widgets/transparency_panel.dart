@@ -263,7 +263,7 @@ class TransparencyPanel extends StatelessWidget {
                               ),
                             ],
                           ),
-                        ))
+                        ),)
                     .toList(),
               ),
             ),

@@ -144,6 +144,15 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
 /// Transparency preferences model
 class TransparencyPreferences {
+
+  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) {
+    return TransparencyPreferences(
+      enabled: json['enabled'] ?? false,
+      showTokenUsage: json['showTokenUsage'] ?? true,
+      showAgentSwitching: json['showAgentSwitching'] ?? true,
+      showReasoningSteps: json['showReasoningSteps'] ?? true,
+    );
+  }
   const TransparencyPreferences({
     required this.enabled,
     required this.showTokenUsage,
@@ -156,37 +165,24 @@ class TransparencyPreferences {
   final bool showAgentSwitching;
   final bool showReasoningSteps;
 
-  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) {
-    return TransparencyPreferences(
-      enabled: json['enabled'] ?? false,
-      showTokenUsage: json['showTokenUsage'] ?? true,
-      showAgentSwitching: json['showAgentSwitching'] ?? true,
-      showReasoningSteps: json['showReasoningSteps'] ?? true,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'enabled': enabled,
       'showTokenUsage': showTokenUsage,
       'showAgentSwitching': showAgentSwitching,
       'showReasoningSteps': showReasoningSteps,
     };
-  }
 
   TransparencyPreferences copyWith({
     bool? enabled,
     bool? showTokenUsage,
     bool? showAgentSwitching,
     bool? showReasoningSteps,
-  }) {
-    return TransparencyPreferences(
+  }) => TransparencyPreferences(
       enabled: enabled ?? this.enabled,
       showTokenUsage: showTokenUsage ?? this.showTokenUsage,
       showAgentSwitching: showAgentSwitching ?? this.showAgentSwitching,
       showReasoningSteps: showReasoningSteps ?? this.showReasoningSteps,
     );
-  }
 }
 
 /// Provider for transparency preferences
@@ -214,7 +210,7 @@ Future<TransparencyPreferences> transparencyPreferences(Ref ref) async {
 @riverpod
 class TransparencyPreferencesNotifier extends _$TransparencyPreferencesNotifier {
   Future<void> _updatePreferences(TransparencyPreferences prefs) async {
-    state = await AsyncValue.data(prefs);
+    state = AsyncValue.data(prefs);
 
     final service = ref.read(userPreferencesServiceProvider);
     await service.updatePreferences({

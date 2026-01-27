@@ -134,7 +134,7 @@ class PlanReviewGrpcService {
     } catch (e) {
       return PlanReviewSubmitResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }

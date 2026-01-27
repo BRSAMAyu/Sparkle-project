@@ -385,7 +385,6 @@ class _PlanProgressTab extends StatelessWidget {
                   isCurved: true,
                   color: DS.secondaryBase,
                   barWidth: 3,
-                  dotData: const FlDotData(),
                   belowBarData: BarAreaData(
                     show: true,
                     color: DS.secondaryBase.withValues(alpha: 0.2),
@@ -481,7 +480,6 @@ class _DayBucket {
   _DayBucket({
     required this.label,
     required this.date,
-    this.count = 0,
   });
 
   final String label;

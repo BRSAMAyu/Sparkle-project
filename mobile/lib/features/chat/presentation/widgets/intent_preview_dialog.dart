@@ -424,7 +424,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
-          _errorMessage = '意图分析失败: ${e}';
+          _errorMessage = '意图分析失败: $e';
         });
       }
     }

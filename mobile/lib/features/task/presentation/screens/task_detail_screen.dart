@@ -157,7 +157,7 @@ class _TaskDetailView extends ConsumerWidget {
                               label: Text(
                                   toBeginningOfSentenceCase(task.type.name) ??
                                       task.type.name,
-                                  style: TextStyle(fontSize: DS.fontSizeSm),),
+                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor:
                                   DS.brandPrimary.withValues(alpha: 0.8),
                               avatar: Icon(Icons.category,
@@ -167,7 +167,7 @@ class _TaskDetailView extends ConsumerWidget {
                               label: Text(
                                   toBeginningOfSentenceCase(task.status.name) ??
                                       task.status.name,
-                                  style: TextStyle(fontSize: DS.fontSizeSm),),
+                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor: _getStatusColor(task.status)
                                   .withValues(alpha: 0.2),
                               labelStyle: TextStyle(

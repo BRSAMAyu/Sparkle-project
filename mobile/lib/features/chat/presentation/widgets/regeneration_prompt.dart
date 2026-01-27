@@ -265,13 +265,11 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
           // Animated progress indicator
           AnimatedBuilder(
             animation: _progressAnimation,
-            builder: (context, child) {
-              return LinearProgressIndicator(
+            builder: (context, child) => LinearProgressIndicator(
                 value: null, // Indeterminate
                 backgroundColor:
                     theme.colorScheme.primary.withValues(alpha: 0.2),
-              );
-            },
+              ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -367,7 +365,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     ),
                   ],
                 ),
-              )),
+              ),),
           ],
 
           // Score improvement
@@ -427,7 +425,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _submitRegeneration(),
+                  onPressed: _submitRegeneration,
                   child: const Text('重试'),
                 ),
               ],

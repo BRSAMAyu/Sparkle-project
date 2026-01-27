@@ -10,19 +10,29 @@ enum LayoutType {
 
 /// 获取当前布局类型
 LayoutType getLayoutType(BuildContext context) {
-  final width = MediaQuery.of(context).size.width;
-  if (width >= DS.breakpointDesktop) return LayoutType.desktop;
-  if (width >= DS.breakpointTablet) return LayoutType.tablet;
-  return LayoutType.mobile;
+  // Compatibility shim: defer to the v2 responsive system so breakpoints and
+  // landscape behavior stay consistent across the app.
+  final category = ResponsiveSystem.getCategory(context);
+  switch (category) {
+    case DeviceCategory.tablet:
+      return LayoutType.tablet;
+    case DeviceCategory.desktop:
+    case DeviceCategory.tv:
+      return LayoutType.desktop;
+    case DeviceCategory.watch:
+    case DeviceCategory.phone:
+    case DeviceCategory.phablet:
+      return LayoutType.mobile;
+  }
 }
 
 /// 布局类型扩展
 extension LayoutTypeExtension on BuildContext {
   LayoutType get layoutType => getLayoutType(this);
 
-  bool get isMobile => layoutType == LayoutType.mobile;
-  bool get isTablet => layoutType == LayoutType.tablet;
-  bool get isDesktop => layoutType == LayoutType.desktop;
+  bool get isMobile => ResponsiveSystem.isMobile(this);
+  bool get isTablet => ResponsiveSystem.isTablet(this);
+  bool get isDesktop => ResponsiveSystem.isDesktop(this);
 }
 
 /// 响应式脚手架 - 自动切换导航布局

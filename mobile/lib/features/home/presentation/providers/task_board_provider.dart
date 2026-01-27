@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Task board view mode
 enum TaskViewMode { schedule, priority, plan, sprint }

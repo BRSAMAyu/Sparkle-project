@@ -492,7 +492,7 @@ class _TranslationCard extends StatelessWidget {
                           Icons.star,
                           size: 16,
                           color: index < item.rating ? Colors.amber : DS.neutral300,
-                        )),
+                        ),),
                     ),
                   ),
                   const SizedBox(width: DS.md),

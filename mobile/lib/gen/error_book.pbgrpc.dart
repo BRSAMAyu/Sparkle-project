@@ -24,9 +24,9 @@ class ErrorBookServiceClient extends $grpc.Client {
 
   ErrorBookServiceClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
-      $core.Iterable<$grpc.ClientInterceptor>? interceptors})
+      $core.Iterable<$grpc.ClientInterceptor>? interceptors,})
       : super(channel, options: options,
-        interceptors: interceptors);
+        interceptors: interceptors,);
   static final _$createError = $grpc.ClientMethod<$2.CreateErrorRequest, $2.ErrorRecord>(
       '/error_book.ErrorBookService/CreateError',
       ($2.CreateErrorRequest value) => value.writeToBuffer(),
@@ -93,63 +93,63 @@ abstract class ErrorBookServiceBase extends $grpc.Service {
         false,
         false,
         ($core.List<$core.int> value) => $2.CreateErrorRequest.fromBuffer(value),
-        ($2.ErrorRecord value) => value.writeToBuffer()));
+        ($2.ErrorRecord value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.ListErrorsRequest, $2.ListErrorsResponse>(
         'ListErrors',
         listErrors_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.ListErrorsRequest.fromBuffer(value),
-        ($2.ListErrorsResponse value) => value.writeToBuffer()));
+        ($2.ListErrorsResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.GetErrorRequest, $2.ErrorRecord>(
         'GetError',
         getError_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.GetErrorRequest.fromBuffer(value),
-        ($2.ErrorRecord value) => value.writeToBuffer()));
+        ($2.ErrorRecord value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.UpdateErrorRequest, $2.ErrorRecord>(
         'UpdateError',
         updateError_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.UpdateErrorRequest.fromBuffer(value),
-        ($2.ErrorRecord value) => value.writeToBuffer()));
+        ($2.ErrorRecord value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.DeleteErrorRequest, $2.DeleteErrorResponse>(
         'DeleteError',
         deleteError_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.DeleteErrorRequest.fromBuffer(value),
-        ($2.DeleteErrorResponse value) => value.writeToBuffer()));
+        ($2.DeleteErrorResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.AnalyzeErrorRequest, $2.AnalyzeErrorResponse>(
         'AnalyzeError',
         analyzeError_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.AnalyzeErrorRequest.fromBuffer(value),
-        ($2.AnalyzeErrorResponse value) => value.writeToBuffer()));
+        ($2.AnalyzeErrorResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.SubmitReviewRequest, $2.ErrorRecord>(
         'SubmitReview',
         submitReview_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.SubmitReviewRequest.fromBuffer(value),
-        ($2.ErrorRecord value) => value.writeToBuffer()));
+        ($2.ErrorRecord value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.GetReviewStatsRequest, $2.ReviewStatsResponse>(
         'GetReviewStats',
         getReviewStats_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.GetReviewStatsRequest.fromBuffer(value),
-        ($2.ReviewStatsResponse value) => value.writeToBuffer()));
+        ($2.ReviewStatsResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$2.GetTodayReviewsRequest, $2.ListErrorsResponse>(
         'GetTodayReviews',
         getTodayReviews_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $2.GetTodayReviewsRequest.fromBuffer(value),
-        ($2.ListErrorsResponse value) => value.writeToBuffer()));
+        ($2.ListErrorsResponse value) => value.writeToBuffer(),),);
   }
   $core.String get $name => 'error_book.ErrorBookService';
 

@@ -563,3 +563,19 @@ class ConnectionManager:
         return "您有一条新消息"
 
 manager = ConnectionManager()
+
+
+def get_ws_manager() -> ConnectionManager:
+    """
+    Get the global WebSocket ConnectionManager singleton instance.
+
+    This is a convenience function for accessing the connection manager
+    from services that need to send notifications via WebSocket.
+
+    Usage:
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+        await ws_manager.send_personal_message(message, user_id)
+    """
+    return manager

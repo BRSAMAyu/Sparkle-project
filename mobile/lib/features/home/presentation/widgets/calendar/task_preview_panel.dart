@@ -124,8 +124,7 @@ class TaskPreviewPanel extends ConsumerWidget {
 
         return Column(
           children: [
-            ...List.generate(displayTasks.length, (index) {
-              return Padding(
+            ...List.generate(displayTasks.length, (index) => Padding(
                 padding: index < displayTasks.length - 1
                     ? const EdgeInsets.only(bottom: DS.spacing8)
                     : EdgeInsets.zero,
@@ -133,8 +132,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                   index: index,
                   child: CompactTaskCard(task: displayTasks[index]),
                 ),
-              );
-            }),
+              )),
             if (hasMore) ...[
               const SizedBox(height: DS.spacing12),
               _buildViewAllLink(context, selectedDate, tasks.length),
@@ -142,7 +140,7 @@ class TaskPreviewPanel extends ConsumerWidget {
           ],
         );
       },
-      loading: () => _buildLoadingState(),
+      loading: _buildLoadingState,
       error: (_, __) => _buildErrorState(context),
     );
 

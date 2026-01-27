@@ -240,7 +240,7 @@ class GalaxyViewState {
 ///
 /// Persists the user's view state (scale, selected node, aggregation level).
 final galaxyViewStateProvider =
-    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>((ref) => GalaxyViewStateNotifier(ref));
+    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>(GalaxyViewStateNotifier.new);
 
 /// Notifier for the galaxy view state
 class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {

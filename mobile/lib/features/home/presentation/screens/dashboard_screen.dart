@@ -4,9 +4,10 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
-import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
 import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -16,19 +17,17 @@ import 'package:sparkle/features/home/presentation/widgets/expanded_toolbar_sect
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
-import 'package:sparkle/features/home/presentation/widgets/multi_agent_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/multi_agent_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
 import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/sprint_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 
 /// Dashboard screen - extracted from HomeScreen
 /// Displays the main project cockpit with bento grid layout

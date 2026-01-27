@@ -1,10 +1,8 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/statistics/config/statistics_config.dart';
-import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
-import 'package:sparkle/core/statistics/domain/services/statistics_export_service.dart';
 
 /// Configuration for PNG report generation
 class ReportConfig {

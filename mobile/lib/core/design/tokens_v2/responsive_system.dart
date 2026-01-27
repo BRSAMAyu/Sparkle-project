@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/breakpoints.dart';
 
 /// 高级响应式断点系统
 class ResponsiveSystem {
@@ -6,17 +7,34 @@ class ResponsiveSystem {
 
   /// 设备类别映射
   static DeviceCategory categorize(double width) {
+    // Backward-compatible helper that only considers width.
     if (width <= 240) return DeviceCategory.watch;
     if (width <= 480) return DeviceCategory.phone;
-    if (width <= 768) return DeviceCategory.phablet;
-    if (width <= 1024) return DeviceCategory.tablet;
-    if (width <= 1440) return DeviceCategory.desktop;
+    if (width <= LayoutBreakpoints.tablet) return DeviceCategory.phablet;
+    if (width < LayoutBreakpoints.desktop) return DeviceCategory.tablet;
+    if (width <= LayoutBreakpoints.wideDesktop) return DeviceCategory.desktop;
+    return DeviceCategory.tv;
+  }
+
+  /// 设备类别映射（基于尺寸，更稳健地处理横屏手机）
+  static DeviceCategory categorizeSize(Size size) {
+    final width = size.width;
+    final shortestSide = size.shortestSide;
+
+    if (width <= 240) return DeviceCategory.watch;
+    // Treat any device with a narrow shortest side as mobile, even in landscape.
+    if (shortestSide < LayoutBreakpoints.tablet) {
+      if (width <= 480) return DeviceCategory.phone;
+      return DeviceCategory.phablet;
+    }
+    if (width < LayoutBreakpoints.desktop) return DeviceCategory.tablet;
+    if (width <= LayoutBreakpoints.wideDesktop) return DeviceCategory.desktop;
     return DeviceCategory.tv;
   }
 
   /// 获取当前设备类别
   static DeviceCategory getCategory(BuildContext context) =>
-      categorize(MediaQuery.of(context).size.width);
+      categorizeSize(MediaQuery.of(context).size);
 
   /// 获取密度等级
   static Density getDensity(BuildContext context) {
@@ -86,10 +104,14 @@ class ResponsiveSystem {
     T? wide,
   }) {
     final width = MediaQuery.of(context).size.width;
+    final shortestSide = MediaQuery.of(context).size.shortestSide;
 
-    if (width >= 1440 && wide != null) return wide;
-    if (width >= 1024 && desktop != null) return desktop;
-    if (width >= 768 && tablet != null) return tablet;
+    // Keep landscape phones on mobile values.
+    if (shortestSide < LayoutBreakpoints.tablet) return mobile;
+
+    if (width >= LayoutBreakpoints.wideDesktop && wide != null) return wide;
+    if (width >= LayoutBreakpoints.desktop && desktop != null) return desktop;
+    if (width >= LayoutBreakpoints.tablet && tablet != null) return tablet;
     return mobile;
   }
 
@@ -103,29 +125,40 @@ class ResponsiveSystem {
 
   /// 生成响应式断点信息
   static BreakpointInfo getBreakpointInfo(BuildContext context) {
-    final screenWidth = width(context);
-    final category = getCategory(context);
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final shortestSide = size.shortestSide;
+    final category = categorizeSize(size);
     final density = getDensity(context);
 
     return BreakpointInfo(
       context: context,
       width: screenWidth,
+      shortestSide: shortestSide,
       category: category,
       density: density,
       isMobile: isMobile(context),
       isTablet: isTablet(context),
       isDesktop: isDesktop(context),
       orientation: orientation(context),
+      isLandscapeMobile: isLandscapeMobile(context),
     );
+  }
+
+  /// 是否为横屏手机（避免误用平板/桌面布局）
+  static bool isLandscapeMobile(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.width > size.height &&
+        size.shortestSide < LayoutBreakpoints.tablet;
   }
 }
 
 enum DeviceCategory {
   watch, // 0-240px
   phone, // 241-480px
-  phablet, // 481-768px
-  tablet, // 769-1024px
-  desktop, // 1025-1440px
+  phablet, // 481-767px (and landscape phones)
+  tablet, // 768-1199px
+  desktop, // 1200-1440px
   tv, // 1441px+
 }
 
@@ -148,15 +181,19 @@ class BreakpointInfo {
     required this.isTablet,
     required this.isDesktop,
     required this.orientation,
+    this.shortestSide = 0,
+    this.isLandscapeMobile = false,
   });
   final BuildContext context;
   final double width;
+  final double shortestSide;
   final DeviceCategory category;
   final Density density;
   final bool isMobile;
   final bool isTablet;
   final bool isDesktop;
   final Orientation orientation;
+  final bool isLandscapeMobile;
 
   bool get isPortrait => orientation == Orientation.portrait;
   bool get isLandscape => orientation == Orientation.landscape;

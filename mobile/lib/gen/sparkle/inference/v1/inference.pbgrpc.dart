@@ -24,9 +24,9 @@ class InferenceServiceClient extends $grpc.Client {
 
   InferenceServiceClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
-      $core.Iterable<$grpc.ClientInterceptor>? interceptors})
+      $core.Iterable<$grpc.ClientInterceptor>? interceptors,})
       : super(channel, options: options,
-        interceptors: interceptors);
+        interceptors: interceptors,);
   static final _$runInference = $grpc.ClientMethod<$0.InferenceRequest, $0.InferenceResponse>(
       '/sparkle.inference.v1.InferenceService/RunInference',
       ($0.InferenceRequest value) => value.writeToBuffer(),
@@ -45,7 +45,7 @@ abstract class InferenceServiceBase extends $grpc.Service {
         false,
         false,
         ($core.List<$core.int> value) => $0.InferenceRequest.fromBuffer(value),
-        ($0.InferenceResponse value) => value.writeToBuffer()));
+        ($0.InferenceResponse value) => value.writeToBuffer(),),);
   }
   $core.String get $name => 'sparkle.inference.v1.InferenceService';
 

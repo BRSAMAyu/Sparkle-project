@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/domain/entities/sprint_statistics.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Sprint statistics provider
 ///

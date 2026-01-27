@@ -156,7 +156,7 @@ class _TaskReminderSettingsScreenState
             onChanged: config.enabled
                 ? (value) {
                     final newReminders = List<int>.from(config.reminders);
-                    if (value == true) {
+                    if (value ?? false) {
                       if (!newReminders.contains(minutes)) {
                         newReminders.add(minutes);
                         newReminders.sort();
@@ -170,7 +170,7 @@ class _TaskReminderSettingsScreenState
                 : null,
             activeColor: DS.primaryBase,
             checkColor: DS.brandPrimary,
-          )),
+          ),),
       ],
     );
 

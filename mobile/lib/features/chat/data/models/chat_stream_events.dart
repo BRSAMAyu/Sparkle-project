@@ -597,9 +597,14 @@ class TransparencyCompleteEvent extends ChatStreamEvent {
 
 /// 透明度数据模型
 class TransparencyData {
+  const TransparencyData({
+    required this.steps,
+    required this.totalDurationMs,
+    required this.requestId,
+    this.totalTokens = 0,
+  });
 
-  factory TransparencyData.fromJson(Map<String, dynamic> json) {
-    return TransparencyData(
+  factory TransparencyData.fromJson(Map<String, dynamic> json) => TransparencyData(
       steps: (json['steps'] as List<dynamic>?)
               ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -608,13 +613,6 @@ class TransparencyData {
       requestId: json['requestId'] as String? ?? '',
       totalTokens: json['totalTokens'] as int? ?? 0,
     );
-  }
-  const TransparencyData({
-    required this.steps,
-    required this.totalDurationMs,
-    required this.requestId,
-    this.totalTokens = 0,
-  });
 
   final List<TransparencyStep> steps;
   final int totalDurationMs;
@@ -632,20 +630,6 @@ class TransparencyData {
 
 /// 透明度步骤模型（数据定义）
 class TransparencyStep {
-
-  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
-    return TransparencyStep(
-      stepId: json['stepId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      durationMs: json['durationMs'] as int?,
-      result: json['result'] as Map<String, dynamic>?,
-      error: json['error'] as String?,
-      agentType: json['agentType'] as String?,
-      stepType: json['type'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
-    );
-  }
   const TransparencyStep({
     required this.stepId,
     required this.name,
@@ -657,6 +641,18 @@ class TransparencyStep {
     this.stepType,
     this.metadata,
   });
+
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) => TransparencyStep(
+      stepId: json['stepId'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      durationMs: json['durationMs'] as int?,
+      result: json['result'] as Map<String, dynamic>?,
+      error: json['error'] as String?,
+      agentType: json['agentType'] as String?,
+      stepType: json['type'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
 
   final String stepId;
   final String name;
