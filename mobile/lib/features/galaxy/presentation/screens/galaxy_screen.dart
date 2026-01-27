@@ -48,10 +48,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
   final List<_ActiveSuccessAnimation> _activeSuccessAnimations = [];
 
-  // Canvas constants
+  // Canvas constants - use layout engine constants
   static const double _centralFlameSize = 60.0;
-  final double _canvasCenter = 500.0; // Canvas center coordinate
-  final double _canvasSize = 1000.0; // Canvas size
+  final double _canvasCenter = GalaxyLayoutEngine.canvasCenter; // Canvas center coordinate (2900)
+  final double _canvasSize = GalaxyLayoutEngine.canvasSize; // Canvas size (5800)
 
   // Track last scale to avoid unnecessary updates
   double _lastScale = 1.0;

@@ -8,12 +8,36 @@ Phase 2: Introduces "langgraph" and "hybrid" modes for complex intents.
 P2 Improvement: Added LLM-assisted intent classification for better accuracy.
 
 Phase 1.1 Improvement: Added intent caching and progressive classification.
+
+Phase 2.1-2.3 Improvement: Integrated BERT classifier, user profiling, and monitoring.
 """
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 from loguru import logger
 
 from app.orchestration.schemas import RouteDecision
 from app.orchestration.intent_cache import IntentCache
+
+# Phase 2: Optional advanced features
+try:
+    from app.orchestration.bert_intent_classifier import get_bert_classifier
+    BERT_AVAILABLE = True
+except ImportError:
+    BERT_AVAILABLE = False
+    logger.warning("BERT classifier not available")
+
+try:
+    from app.orchestration.user_intent_profiler import get_user_profiler, update_user_intent
+    PROFILER_AVAILABLE = True
+except ImportError:
+    PROFILER_AVAILABLE = False
+    logger.warning("User profiler not available")
+
+try:
+    from app.orchestration.intent_monitor import get_intent_monitor, record_classification, record_cache_result
+    MONITORING_AVAILABLE = True
+except ImportError:
+    MONITORING_AVAILABLE = False
+    logger.warning("Intent monitoring not available")
 
 
 class RequestRouter:
@@ -79,9 +103,45 @@ class RequestRouter:
         "专注", "focus", "集中", "concentrate", "集中注意力",  # P0 Fix: Added
     }
 
-    def __init__(self, redis_client=None):
+    def __init__(
+        self,
+        redis_client=None,
+        enable_bert: bool = False,
+        enable_profiling: bool = False,
+        enable_monitoring: bool = False
+    ):
+        """Initialize RequestRouter with Phase 2 features
+
+        Args:
+            redis_client: Redis client for caching and profiling
+            enable_bert: Enable BERT semantic classification
+            enable_profiling: Enable user intent profiling
+            enable_monitoring: Enable Prometheus monitoring
+        """
         self.redis = redis_client
         self.intent_cache = IntentCache(redis_client) if redis_client else None
+
+        # Phase 2.1: BERT classifier
+        self.enable_bert = enable_bert and BERT_AVAILABLE
+        if self.enable_bert:
+            self.bert_classifier = get_bert_classifier()
+            if self.bert_classifier:
+                logger.info("BERT classifier enabled")
+            else:
+                self.enable_bert = False
+                logger.warning("Failed to initialize BERT classifier")
+
+        # Phase 2.2: User intent profiler
+        self.enable_profiling = enable_profiling and PROFILER_AVAILABLE and redis_client
+        if self.enable_profiling:
+            self.user_profiler = get_user_profiler(redis_client)
+            logger.info("User intent profiling enabled")
+
+        # Phase 2.3: Monitoring
+        self.enable_monitoring = enable_monitoring and MONITORING_AVAILABLE
+        if self.enable_monitoring:
+            self.intent_monitor = get_intent_monitor(enabled=True)
+            logger.info("Intent monitoring enabled")
 
     def _preprocess_voice_input(self, message: str) -> str:
         """P0 Fix: 预处理语音转文字输入
@@ -123,6 +183,8 @@ class RequestRouter:
 
         P2 Improvement: Uses confidence-scoring intent classification with LLM fallback.
 
+        Phase 2.1-2.3: Integrated BERT, user profiling, and monitoring.
+
         Args:
             message: 用户消息
             user_id: 用户ID
@@ -131,35 +193,97 @@ class RequestRouter:
         Returns:
             RouteDecision: 路由决策
         """
+        import time
+        start_time = time.time()
+
         # 获取 context_version
         context_version = await self._get_context_version(user_id)
+
+        source = "unknown"
+        tier = "tier1"
 
         # Phase 1.1: Check cache first (sub-millisecond)
         if self.intent_cache:
             cached_result = await self.intent_cache.get_cached_intent(message)
             if cached_result:
                 intent, confidence = cached_result
+                source = "cache"
+                tier = "cache"
                 logger.info(f"Using cached intent: {intent} (conf={confidence:.2f})")
             else:
                 # Cache miss: classify and cache result
+                # Phase 1: Keyword-based classification
                 intent, confidence = await self._classify_intent_with_confidence(message)
+                source = "keyword"
+
+                # Phase 2.1: Apply BERT enhancement (if enabled)
+                if confidence < 0.75:  # Only use BERT for uncertain cases
+                    intent, confidence = await self._apply_bert_enhancement(
+                        message,
+                        {intent: confidence},  # Convert to dict for BERT
+                        user_id
+                    )
+                    if self.enable_bert:
+                        source = "bert"
+                        tier = "tier2"
+
+                # Phase 2.2: Apply user profiling (if enabled)
+                if self.enable_profiling and user_id:
+                    keyword_scores = {intent: confidence}
+                    adjusted_scores = await self._apply_user_profiling(keyword_scores, user_id)
+                    # Get best intent after profiling
+                    intent = max(adjusted_scores, key=adjusted_scores.get)
+                    confidence = adjusted_scores[intent]
 
                 # Use progressive classification for low confidence
                 if confidence < 0.65:
                     logger.info(f"Low confidence ({confidence:.2f}), using progressive classification")
                     intent, confidence = await self._progressive_classify(message, intent, confidence, user_id)
+                    source = "llm"  # Progressive uses LLM
+                    tier = "tier3"
 
                 # Cache the result
-                source = "llm" if confidence < 0.65 else "keyword"
                 await self.intent_cache.cache_intent(message, intent, confidence, source)
         else:
             # No cache: direct classification
             intent, confidence = await self._classify_intent_with_confidence(message)
+            source = "keyword"
+
+            # Phase 2.1: Apply BERT enhancement (if enabled)
+            if confidence < 0.75:
+                intent, confidence = await self._apply_bert_enhancement(
+                    message,
+                    {intent: confidence},
+                    user_id
+                )
+                if self.enable_bert:
+                    source = "bert"
+                    tier = "tier2"
+
+            # Phase 2.2: Apply user profiling (if enabled)
+            if self.enable_profiling and user_id:
+                keyword_scores = {intent: confidence}
+                adjusted_scores = await self._apply_user_profiling(keyword_scores, user_id)
+                intent = max(adjusted_scores, key=adjusted_scores.get)
+                confidence = adjusted_scores[intent]
 
             # Use progressive classification for low confidence
             if confidence < 0.65:
                 logger.info(f"Low confidence ({confidence:.2f}), using progressive classification")
                 intent, confidence = await self._progressive_classify(message, intent, confidence, user_id)
+                source = "llm"
+                tier = "tier3"
+
+        # Phase 2.3: Record monitoring metrics
+        elapsed_ms = (time.time() - start_time) * 1000
+        await self._record_classification_monitoring(
+            intent=intent,
+            confidence=confidence,
+            source=source,
+            tier=tier,
+            latency_ms=elapsed_ms,
+            user_id=user_id
+        )
 
         # 风险评估
         risk_level = self._assess_risk(message, intent)
@@ -195,6 +319,8 @@ class RequestRouter:
         else:
             execution_mode = "direct"
             reason = f"Intent: {intent}, standard direct routing"
+
+        logger.info(f"Route decision: {execution_mode} (intent={intent}, conf={confidence:.2f}, src={source}, lat={elapsed_ms:.1f}ms)")
 
         return RouteDecision(
             execution_mode=execution_mode,
@@ -305,6 +431,127 @@ class RequestRouter:
         confidence = scores[max_intent]
 
         return max_intent, confidence
+
+    async def _apply_bert_enhancement(
+        self,
+        message: str,
+        keyword_scores: Dict[str, float],
+        user_id: str = None
+    ) -> Tuple[str, float]:
+        """Apply BERT semantic enhancement to keyword scores
+
+        Phase 2.1: Combines fast keyword matching with accurate BERT classification.
+
+        Args:
+            message: User message
+            keyword_scores: Scores from _classify_intent_with_confidence
+            user_id: User ID (optional)
+
+        Returns:
+            (intent, confidence) with BERT enhancement applied
+        """
+        if not self.enable_bert or not self.bert_classifier:
+            # No BERT: return keyword-only result
+            max_intent = max(keyword_scores, key=keyword_scores.get)
+            return max_intent, keyword_scores[max_intent]
+
+        try:
+            # Use BERT to adjust scores
+            intent, confidence = self.bert_classifier.adjust_scores_with_bert(
+                keyword_scores,
+                message,
+                bert_weight=0.4  # 40% BERT, 60% keyword
+            )
+
+            logger.info(f"BERT-enhanced classification: {intent} (conf={confidence:.2f})")
+            return intent, confidence
+
+        except Exception as e:
+            logger.warning(f"BERT enhancement failed: {e}, using keyword-only")
+            max_intent = max(keyword_scores, key=keyword_scores.get)
+            return max_intent, keyword_scores[max_intent]
+
+    async def _apply_user_profiling(
+        self,
+        scores: Dict[str, float],
+        user_id: str
+    ) -> Dict[str, float]:
+        """Apply user intent profiling to boost personalized intents
+
+        Phase 2.2: Boosts frequently used intents by up to 30%.
+
+        Args:
+            scores: Current intent scores
+            user_id: User ID
+
+        Returns:
+            Adjusted intent scores
+        """
+        if not self.enable_profiling or not self.user_profiler:
+            return scores
+
+        try:
+            # Get user profile
+            profile = await self.user_profiler.get_user_profile(user_id)
+
+            # Adjust scores based on user patterns
+            adjusted = self.user_profiler.adjust_intent_scores(
+                scores,
+                profile,
+                max_boost=0.3  # Up to 30% boost
+            )
+
+            logger.debug(f"Applied user profiling for {user_id}")
+            return adjusted
+
+        except Exception as e:
+            logger.warning(f"User profiling failed: {e}")
+            return scores
+
+    async def _record_classification_monitoring(
+        self,
+        intent: str,
+        confidence: float,
+        source: str,
+        tier: str = "tier1",
+        latency_ms: float = 0,
+        user_id: str = None
+    ):
+        """Record classification metrics for monitoring
+
+        Phase 2.3: Tracks classification performance metrics.
+
+        Args:
+            intent: Predicted intent
+            confidence: Confidence score
+            source: Classification source (keyword, bert, llm, cache)
+            tier: Classification tier
+            latency_ms: Latency in milliseconds
+            user_id: User ID
+        """
+        if not self.enable_monitoring or not self.intent_monitor:
+            return
+
+        try:
+            self.intent_monitor.record_classification(
+                intent=intent,
+                confidence=confidence,
+                source=source,
+                tier=tier,
+                latency_ms=latency_ms,
+                user_id=user_id
+            )
+
+            # Update user profile if profiling is enabled
+            if self.enable_profiling and user_id:
+                await self.user_profiler.update_profile(
+                    user_id,
+                    intent,
+                    metadata={"confidence": confidence, "source": source}
+                )
+
+        except Exception as e:
+            logger.warning(f"Monitoring recording failed: {e}")
 
     async def _get_user_intent_patterns(self, user_id: str) -> dict:
         """获取用户常用意图模式
