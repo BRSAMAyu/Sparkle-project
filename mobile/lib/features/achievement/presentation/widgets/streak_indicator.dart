@@ -555,8 +555,8 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         widget.onTap?.call();
       },
       child: SizedBox(
-        width: 120,
-        height: 120,
+        width: 100,
+        height: 100,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -565,8 +565,8 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
               AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) => Container(
-                  width: 120,
-                  height: 120,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
@@ -583,7 +583,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
             AnimatedBuilder(
               animation: _progressAnimation,
               builder: (context, child) => CustomPaint(
-                size: const Size(120, 120),
+                size: const Size(100, 100),
                 painter: _CircularProgressPainter(
                   progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
                   color: displayColor,
@@ -598,13 +598,13 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                 Icon(
                   Icons.whatshot_rounded,
                   color: displayColor,
-                  size: DS.iconSizeLg,
+                  size: 20,
                 ),
-                const SizedBox(height: DS.spacing4),
+                const SizedBox(height: 2),
                 Text(
                   isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
                   style: TextStyle(
-                    fontSize: isZeroStreak ? DS.fontSizeLg : DS.fontSize2xl,
+                    fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
                     fontWeight: DS.fontWeightBold,
                     color: displayColor,
                   ),
@@ -612,7 +612,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                 Text(
                   isZeroStreak ? '挑战' : '天',
                   style: TextStyle(
-                    fontSize: DS.fontSizeXs,
+                    fontSize: 10,
                     color: DS.textSecondary,
                   ),
                 ),

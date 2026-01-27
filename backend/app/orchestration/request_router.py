@@ -6,11 +6,14 @@ Phase 1: All requests go to "direct" mode.
 Phase 2: Introduces "langgraph" and "hybrid" modes for complex intents.
 
 P2 Improvement: Added LLM-assisted intent classification for better accuracy.
+
+Phase 1.1 Improvement: Added intent caching and progressive classification.
 """
 from typing import Optional, Tuple
 from loguru import logger
 
 from app.orchestration.schemas import RouteDecision
+from app.orchestration.intent_cache import IntentCache
 
 
 class RequestRouter:
@@ -78,6 +81,7 @@ class RequestRouter:
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
+        self.intent_cache = IntentCache(redis_client) if redis_client else None
 
     def _preprocess_voice_input(self, message: str) -> str:
         """P0 Fix: 预处理语音转文字输入
@@ -130,14 +134,32 @@ class RequestRouter:
         # 获取 context_version
         context_version = await self._get_context_version(user_id)
 
-        # P2: 意图分析（带置信度评分）
-        intent, confidence = await self._classify_intent_with_confidence(message)
+        # Phase 1.1: Check cache first (sub-millisecond)
+        if self.intent_cache:
+            cached_result = await self.intent_cache.get_cached_intent(message)
+            if cached_result:
+                intent, confidence = cached_result
+                logger.info(f"Using cached intent: {intent} (conf={confidence:.2f})")
+            else:
+                # Cache miss: classify and cache result
+                intent, confidence = await self._classify_intent_with_confidence(message)
 
-        # P2: 如果置信度低，使用 LLM 辅助分类
-        if confidence < 0.65:
-            logger.info(f"Low confidence intent classification ({confidence:.2f}), using LLM assist")
-            intent = await self._classify_intent_llm_assisted(message)
-            confidence = 0.85  # LLM分类后置信度提升
+                # Use progressive classification for low confidence
+                if confidence < 0.65:
+                    logger.info(f"Low confidence ({confidence:.2f}), using progressive classification")
+                    intent, confidence = await self._progressive_classify(message, intent, confidence)
+
+                # Cache the result
+                source = "llm" if confidence < 0.65 else "keyword"
+                await self.intent_cache.cache_intent(message, intent, confidence, source)
+        else:
+            # No cache: direct classification
+            intent, confidence = await self._classify_intent_with_confidence(message)
+
+            # Use progressive classification for low confidence
+            if confidence < 0.65:
+                logger.info(f"Low confidence ({confidence:.2f}), using progressive classification")
+                intent, confidence = await self._progressive_classify(message, intent, confidence)
 
         # 风险评估
         risk_level = self._assess_risk(message, intent)
