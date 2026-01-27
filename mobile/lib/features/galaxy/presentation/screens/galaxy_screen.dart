@@ -214,7 +214,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     // Get current scale for dynamic hit radius
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    final hitRadius = 30 / scale; // Larger hit area when zoomed out
+    final effectiveScale = scale.clamp(0.3, 2.0);
+    final hitRadius = 30 / effectiveScale; // Stable hit area across zooms
 
     // Find the tapped node
     // Check visible nodes first for optimization
@@ -254,7 +255,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final canvasCenter = galaxyState.canvasCenter;
     final canvasTap = _screenToCanvas(details.localPosition);
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    final hitRadius = 30 / scale;
+    final effectiveScale = scale.clamp(0.3, 2.0);
+    final hitRadius = 30 / effectiveScale;
 
     final searchNodes = galaxyState.visibleNodes.isNotEmpty
         ? galaxyState.visibleNodes
@@ -522,6 +524,50 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
   }
 
+  void _resetToInitialView() {
+    final size = MediaQuery.of(context).size;
+    if (size.width <= 0 || size.height <= 0) return;
+
+    const targetScale = 0.25;
+    final tx = size.width / 2 - _canvasCenter * targetScale;
+    final ty = size.height / 2 - _canvasCenter * targetScale;
+
+    final targetMatrix = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(targetScale);
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _transientControllers.add(controller);
+
+    final animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: targetMatrix,
+    ).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeInOutCubic),
+    );
+
+    animation.addListener(() {
+      _transformationController.value = animation.value;
+    });
+
+    controller.forward().whenComplete(() {
+      if (_isDisposing) return;
+      if (_transientControllers.remove(controller)) {
+        controller.dispose();
+      }
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已回到全局视图'),
+        duration: Duration(milliseconds: 900),
+      ),
+    );
+  }
+
   void _showSearchDialog() {
     showDialog<void>(
       context: context,
@@ -539,6 +585,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final safePadding = MediaQuery.of(context).padding;
     final screenSize = MediaQuery.of(context).size;
     final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
+    final hasTightHeight = screenSize.height < 680;
 
     final overlayInset = ResponsiveSystem.resolve(
       context: context,
@@ -569,7 +616,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       desktop: 160.0,
       wide: 180.0,
     );
-    final nodePreviewBottomInset = bottomInset +
+    var nodePreviewBottomInset = bottomInset +
         ResponsiveSystem.resolve(
           context: context,
           mobile: 64.0,
@@ -577,6 +624,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           desktop: 80.0,
           wide: 96.0,
         );
+    if (hasTightHeight) {
+      nodePreviewBottomInset = nodePreviewBottomInset
+          .clamp(bottomInset + 40, bottomInset + 200);
+    }
     final zoomControlsBottom = isLandscapeMobile
         ? bottomInset + 56
         : bottomInset + minimapSize / 2;
@@ -1030,6 +1081,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               ),
             ),
 
+          if (!_isEntering)
+            Positioned(
+              bottom: bottomInset + 56,
+              right: overlayInset,
+              child: FloatingActionButton.small(
+                heroTag: 'reset_view',
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
+                foregroundColor: DS.brandPrimary,
+                elevation: 3,
+                child: const Icon(Icons.public),
+                onPressed: _resetToInitialView,
+                tooltip: '回到全局视图',
+              ),
+            ),
+
           if (galaxyState.isLoading &&
               galaxyState.nodes.isEmpty &&
               !_isEntering &&
@@ -1081,8 +1149,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           onClose: () =>
                               ref.read(galaxyProvider.notifier).deselectNode(),
                           onTap: () => context.push('/galaxy/node/${node.id}'),
-                          bottomInset:
-                              isLandscapeMobile ? bottomInset + 56 : nodePreviewBottomInset,
+                          bottomInset: isLandscapeMobile
+                              ? bottomInset + 56
+                              : nodePreviewBottomInset,
                         ),
                       );
                     },
