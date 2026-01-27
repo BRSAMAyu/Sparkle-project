@@ -356,8 +356,8 @@ class _AchievementListScreenState
       return SliverPadding(
         padding: const EdgeInsets.all(DS.spacing16),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: context.isMobile ? 2 : 3,
             mainAxisSpacing: DS.spacing12,
             crossAxisSpacing: DS.spacing12,
           ),

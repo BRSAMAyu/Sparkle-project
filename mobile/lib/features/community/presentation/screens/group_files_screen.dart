@@ -156,9 +156,8 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                   if (_gridView) {
                     return GridView.builder(
                       padding: const EdgeInsets.all(DS.lg),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: context.isMobile ? 2 : 3,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                         childAspectRatio: 1.2,

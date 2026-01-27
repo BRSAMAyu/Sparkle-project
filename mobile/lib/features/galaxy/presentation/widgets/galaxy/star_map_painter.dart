@@ -132,10 +132,10 @@ class StarMapPainter extends CustomPainter {
   // L2: 0.4-0.6 - All nodes + parent-child edges + standard labels (imp>=3)
   // L3: 0.6-0.8 - All edges + more labels (imp>=2) + glow
   // L4: >=0.8 - Full detail + all labels (imp>=1)
-  static const double _lod0Limit = 0.2;  // L0/L1 boundary
-  static const double _lod1Limit = 0.4;  // L1/L2 boundary
-  static const double _lod2Limit = 0.6;  // L2/L3 boundary
-  static const double _lod3Limit = 0.8;  // L3/L4 boundary
+  static const double _lod0Limit = GalaxyLodThresholds.universeMax;
+  static const double _lod1Limit = GalaxyLodThresholds.galaxyMax;
+  static const double _lod2Limit = GalaxyLodThresholds.clusterMax;
+  static const double _lod3Limit = GalaxyLodThresholds.nebulaMax;
 
   static final SmartCache<int, List<ProcessedNode>> _nodeCache =
       SmartCache(maxSize: 10);

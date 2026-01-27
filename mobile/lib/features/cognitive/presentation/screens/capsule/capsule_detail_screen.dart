@@ -67,15 +67,17 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           ) ?? const SizedBox.shrink(),
         ],
       ),
-      body: detailState.when(
-        data: (capsule) {
-          if (capsule == null) {
-            return const Center(child: Text('胶囊不存在'));
-          }
-          return _buildContent(capsule);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('加载失败: $err')),
+      body: ContentConstraint(
+        child: detailState.when(
+          data: (capsule) {
+            if (capsule == null) {
+              return const Center(child: Text('胶囊不存在'));
+            }
+            return _buildContent(capsule);
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('加载失败: $err')),
+        ),
       ),
     );
   }
@@ -84,7 +86,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
