@@ -109,10 +109,13 @@ async def list_libraries(
     user_id = current_user.id if current_user else None
     libraries, total = await service.list_libraries(db, params, user_id)
 
-    # 获取统计信息
+    # 批量获取统计信息（避免 N+1 查询）
+    lib_ids = [lib.id for lib in libraries]
+    stats_map = await service.batch_get_library_stats(db, lib_ids)
+
     data = []
     for lib in libraries:
-        stats = await service.get_library_stats(db, lib.id)
+        stats = stats_map.get(lib.id, {"item_count": 0, "subscriber_count": 0})
         lib_info = LibraryInfo.model_validate(lib)
         lib_info.item_count = stats["item_count"]
         lib_info.subscriber_count = stats["subscriber_count"]

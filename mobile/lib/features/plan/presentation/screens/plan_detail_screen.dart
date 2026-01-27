@@ -59,6 +59,7 @@ class PlanDetailScreen extends ConsumerWidget {
           ),
           loading: () => const Center(child: LoadingIndicator()),
           error: (err, _) => CustomErrorWidget.page(
+            context: context,
             message: '计划加载失败：$err',
             onRetry: () => ref.refresh(planDetailProvider(planId)),
           ),
@@ -480,6 +481,7 @@ class _DayBucket {
   _DayBucket({
     required this.label,
     required this.date,
+    this.count = 0,
   });
 
   final String label;

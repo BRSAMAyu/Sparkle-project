@@ -321,7 +321,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         // Update state with success message
         state = state.copyWith(
           lastActionStatus: 'submitted',
-          lastActionMessage: result.message ?? _getSuccessMessage(decision),
+          lastActionMessage: result.message ?? _getSuccessMessageKey(decision),
           clearPendingReview: true,
         );
 

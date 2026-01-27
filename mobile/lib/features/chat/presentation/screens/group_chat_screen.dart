@@ -217,6 +217,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               loading: () => const Center(child: LoadingIndicator()),
               error: (e, s) => Center(
                 child: CustomErrorWidget.page(
+                  context: context,
                   message: e.toString(),
                   onRetry: () => ref
                       .read(groupChatProvider(widget.groupId).notifier)

@@ -114,6 +114,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
               loading: () => const Center(child: LoadingIndicator()),
               error: (e, s) => Center(
                 child: CustomErrorWidget.page(
+                  context: context,
                   message: e.toString(),
                   onRetry: () => ref
                       .read(privateChatProvider(widget.friendId).notifier)

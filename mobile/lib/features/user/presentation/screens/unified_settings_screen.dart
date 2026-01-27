@@ -343,7 +343,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.generationFailedWithDetail.replaceAll('{error}', e.toString())),
+            content: Text(l10n.generationFailedWithDetail(e.toString())),
             backgroundColor: DS.error,
           ),
         );

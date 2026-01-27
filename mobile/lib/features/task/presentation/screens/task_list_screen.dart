@@ -168,6 +168,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
     if (state.error != null) {
       return CustomErrorWidget.page(
+        context: context,
         message: state.error!,
         onRetry: () => ref.read(taskListProvider.notifier).refreshTasks(),
       );

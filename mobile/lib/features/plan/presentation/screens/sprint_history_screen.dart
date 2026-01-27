@@ -14,7 +14,7 @@ class SprintHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyState = ref.watch(sprintHistoryProvider);
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -122,13 +122,14 @@ class _SprintHistoryCard extends StatelessWidget {
       case SprintStatus.abandoned:
         return l10n.sprintAbandoned;
       case SprintStatus.extended:
-        return l10n.sprintExtended;
+        // For extended sprints, use durationDays as the extended days
+        return l10n.sprintExtended(item.durationDays);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return GestureDetector(

@@ -76,6 +76,7 @@ class GroupListScreen extends ConsumerWidget {
         loading: () => const _GroupListLoading(),
         error: (error, stackTrace) => Center(
           child: CustomErrorWidget.page(
+            context: context,
             message: error.toString(),
             onRetry: () {
               ref.read(myGroupsProvider.notifier).refresh();

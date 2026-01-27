@@ -92,6 +92,7 @@ class GroupTasksScreen extends ConsumerWidget {
         loading: () => const Center(child: LoadingIndicator()),
         error: (e, s) => Center(
             child: CustomErrorWidget.page(
+                context: context,
                 message: e.toString(),
                 onRetry: () =>
                     ref.read(groupTasksProvider(groupId).notifier).refresh(),),),

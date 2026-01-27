@@ -1194,32 +1194,64 @@ class SeedLibraryService:
         Returns:
             统计信息字典
         """
-        # 内容项数量
-        item_count_result = await db.execute(
-            select(func.count()).select_from(SeedItem).where(
+        stats_map = await self.batch_get_library_stats(db, [library_id])
+        return stats_map.get(library_id, {"item_count": 0, "subscriber_count": 0})
+
+    async def batch_get_library_stats(
+        self,
+        db: AsyncSession,
+        library_ids: List[uuid.UUID],
+    ) -> Dict[uuid.UUID, Dict[str, Any]]:
+        """
+        批量获取多个库的统计信息（避免 N+1 查询）
+
+        Args:
+            db: 数据库会话
+            library_ids: 库ID列表
+
+        Returns:
+            {library_id: {"item_count": n, "subscriber_count": m}, ...}
+        """
+        if not library_ids:
+            return {}
+
+        # 批量查询内容项数量
+        item_counts_stmt = (
+            select(SeedItem.library_id, func.count())
+            .where(
                 and_(
-                    SeedItem.library_id == library_id,
+                    SeedItem.library_id.in_(library_ids),
                     SeedItem.deleted_at.is_(None)
                 )
             )
+            .group_by(SeedItem.library_id)
         )
-        item_count = item_count_result.scalar() or 0
+        item_counts_result = await db.execute(item_counts_stmt)
+        item_counts = {row[0]: row[1] for row in item_counts_result.all()}
 
-        # 订阅者数量
-        subscriber_count_result = await db.execute(
-            select(func.count()).select_from(UserLibrarySubscription).where(
+        # 批量查询订阅者数量
+        subscriber_counts_stmt = (
+            select(UserLibrarySubscription.library_id, func.count())
+            .where(
                 and_(
-                    UserLibrarySubscription.library_id == library_id,
+                    UserLibrarySubscription.library_id.in_(library_ids),
                     UserLibrarySubscription.deleted_at.is_(None)
                 )
             )
+            .group_by(UserLibrarySubscription.library_id)
         )
-        subscriber_count = subscriber_count_result.scalar() or 0
+        subscriber_counts_result = await db.execute(subscriber_counts_stmt)
+        subscriber_counts = {row[0]: row[1] for row in subscriber_counts_result.all()}
 
-        return {
-            "item_count": item_count,
-            "subscriber_count": subscriber_count,
-        }
+        # 构建结果映射
+        stats_map: Dict[uuid.UUID, Dict[str, Any]] = {}
+        for lib_id in library_ids:
+            stats_map[lib_id] = {
+                "item_count": item_counts.get(lib_id, 0),
+                "subscriber_count": subscriber_counts.get(lib_id, 0),
+            }
+
+        return stats_map
 
     # ============ Embedding 管理 ============
 
