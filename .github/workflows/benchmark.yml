@@ -1,0 +1,324 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+  PYTHON_VERSION: '3.11'
+  FLUTTER_VERSION: '3.16.0'
+
+jobs:
+  # Go Gateway Benchmarks
+  go-benchmarks:
+    name: Go Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: |
+          cd backend/gateway
+          go mod download
+
+      - name: Run benchmarks
+        run: |
+          cd backend/gateway
+          go test -bench=. -benchmem -benchtime=1s \
+            ./internal/agent/... \
+            ./internal/db/... \
+            ./internal/service/... \
+            | tee benchmark_results.txt
+
+      - name: Parse benchmark results
+        run: |
+          cd backend/gateway
+          # Extract benchmark summary
+          grep "^Benchmark" benchmark_results.txt || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-benchmark-results
+          path: backend/gateway/benchmark_results.txt
+          retention-days: 30
+
+      - name: Compare with baseline (if on main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Baseline comparison not yet implemented"
+          # TODO: Implement benchstat comparison
+
+  # Python Engine Benchmarks
+  python-benchmarks:
+    name: Python Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: sparkle
+          POSTGRES_DB: sparkle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -e .
+          pip install pytest pytest-benchmark pytest-asyncio
+
+      - name: Run benchmarks
+        env:
+          DATABASE_URL: postgresql://sparkle:sparkle@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests/benchmark/ \
+            --benchmark-only \
+            --benchmark-sort=name \
+            --benchmark-json=benchmark_results.json \
+            --benchmark-columns=min,max,mean,median,ops/sec \
+            | tee benchmark_output.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-benchmark-results
+          path: |
+            backend/benchmark_results.json
+            backend/benchmark_output.txt
+          retention-days: 30
+
+      - name: Generate benchmark report
+        run: |
+          cd backend
+          python -c "
+          import json
+          with open('benchmark_results.json', 'r') as f:
+              data = json.load(f)
+          print('Benchmark Summary:')
+          print(f'Total benchmarks: {len(data[\"benchmarks\"])}')
+          for b in data['benchmarks'][:10]:
+              print(f'{b[\"name\"]}: {b[\"stats\"][\"median\"] * 1000:.2f}ms')
+          "
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('backend/benchmark_results.json', 'utf8'));
+            const summary = `## Python Benchmark Results\n\nTotal benchmarks: ${results.benchmarks.length}\n\nSee artifacts for full results.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # Flutter Mobile Benchmarks
+  flutter-benchmarks:
+    name: Flutter Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          flutter pub get
+
+      - name: Run performance tests
+        run: |
+          cd mobile
+          flutter test test/performance/ \
+            --reporter=expanded \
+            | tee benchmark_results.txt
+
+      - name: Run golden tests
+        run: |
+          cd mobile
+          flutter test test/goldens/ \
+            || true  # Don't fail on golden changes
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-benchmark-results
+          path: |
+            mobile/benchmark_results.txt
+            mobile/test/goldens/failures/
+          retention-days: 30
+
+  # Load Tests (Lightweight)
+  load-tests:
+    name: Load Tests (Lightweight)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: sparkle
+          POSTGRES_DB: sparkle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Start services
+        run: |
+          cd backend
+          make dev-all &
+          sleep 30  # Wait for services to start
+
+      - name: Run load tests
+        run: |
+          cd backend
+          locust -f tests/load/locustfile.py \
+            --headless \
+            --users 50 \
+            --spawn-rate 5 \
+            --run-time 30s \
+            --host http://localhost:8080 \
+            --csv load_test_results
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results
+          path: |
+            backend/load_test_results_*
+          retention-days: 30
+
+  # Performance Regression Report
+  regression-report:
+    name: Performance Regression Report
+    runs-on: ubuntu-latest
+    needs: [go-benchmarks, python-benchmarks, flutter-benchmarks]
+    if: always()
+
+    steps:
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: results/
+
+      - name: Generate summary report
+        run: |
+          echo "# Performance Benchmark Summary" > summary.md
+          echo "" >> summary.md
+          echo "## Go Benchmarks" >> summary.md
+          cat results/go-benchmark-results/benchmark_results.txt >> summary.md || echo "No results" >> summary.md
+          echo "" >> summary.md
+          echo "## Python Benchmarks" >> summary.md
+          cat results/python-benchmark-results/benchmark_output.txt >> summary.md || echo "No results" >> summary.md
+          echo "" >> summary.md
+          echo "## Flutter Benchmarks" >> summary.md
+          cat results/flutter-benchmark-results/benchmark_results.txt >> summary.md || echo "No results" >> summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary
+          path: summary.md
+          retention-days: 90
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary.substring(0, 65000)  # Limit comment size
+            });

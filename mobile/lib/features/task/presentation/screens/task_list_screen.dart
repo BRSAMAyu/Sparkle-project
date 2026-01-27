@@ -122,13 +122,15 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(taskListProvider.notifier).refreshTasks(),
-        child: Column(
-          children: [
-            if (!_isSearching) const _FilterChips(),
-            Expanded(
-              child: _buildTaskList(context, taskListState, tasks, ref),
-            ),
-          ],
+        child: ContentConstraint(
+          child: Column(
+            children: [
+              if (!_isSearching) const _FilterChips(),
+              Expanded(
+                child: _buildTaskList(context, taskListState, tasks, ref),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -240,6 +242,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 }
 
 class _FilterChips extends ConsumerWidget {
+  const _FilterChips();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFilter = ref.watch(taskFilterProvider);

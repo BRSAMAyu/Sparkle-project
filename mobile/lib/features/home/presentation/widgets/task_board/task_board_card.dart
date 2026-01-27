@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/plan_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/priority_view.dart';
@@ -16,8 +15,7 @@ class TaskBoardCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final boardState = ref.watch(taskBoardProvider);
-    final layoutType = getLayoutType(context);
-    final isDualColumn = layoutType == LayoutType.tablet || layoutType == LayoutType.desktop;
+    final isDualColumn = context.isTablet || context.isDesktop;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),

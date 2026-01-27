@@ -31,16 +31,18 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           children: [
             _buildHeader(context, user),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-              child: Column(
-                children: [
-                  const SizedBox(height: DS.spacing24),
-                  const StatisticsCard(),
-                  const SizedBox(height: DS.spacing24),
-                  _buildSettingsSection(context, ref, l10n),
-                  const SizedBox(height: 100), // Bottom padding
-                ],
+            ContentConstraint(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: DS.spacing24),
+                    const StatisticsCard(),
+                    const SizedBox(height: DS.spacing24),
+                    _buildSettingsSection(context, ref, l10n),
+                    const SizedBox(height: 100), // Bottom padding
+                  ],
+                ),
               ),
             ),
           ],

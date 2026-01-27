@@ -57,6 +57,7 @@ from app.api.v1 import (
     profile_transparency,
     user_settings,
     user_persona_batch,
+    notification_center,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -106,6 +107,7 @@ api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["le
 api_router.include_router(profile_transparency.router)
 api_router.include_router(user_settings.router)
 api_router.include_router(user_persona_batch.router)
+api_router.include_router(notification_center.router)
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:

@@ -212,10 +212,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.spacing24),
-        child: Column(
-          children: [
+      body: ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.spacing24),
+          child: Column(
+            children: [
             // Avatar Section
             Center(
               child: GestureDetector(
@@ -381,7 +382,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

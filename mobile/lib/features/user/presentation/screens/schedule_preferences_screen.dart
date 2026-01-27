@@ -111,11 +111,12 @@ class _SchedulePreferencesScreenState
             ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Text(
                 'Set your fragmented time slots to receive proactive task suggestions.',
                 style: TextStyle(color: DS.brandPrimary),
@@ -132,7 +133,8 @@ class _SchedulePreferencesScreenState
                 _lunchStartController,
                 _lunchEndController,
               ),
-            ],
+              ],
+            ),
           ),
         ),
       );

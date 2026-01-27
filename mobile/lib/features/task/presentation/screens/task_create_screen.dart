@@ -210,11 +210,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         appBar: AppBar(
           title: const Text('新建任务'),
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(DS.lg),
-            children: [
+        body: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(DS.lg),
+              children: [
               // Title
               TextFormField(
                 controller: _titleController,
@@ -540,7 +541,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       );

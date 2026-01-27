@@ -153,158 +153,160 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: chatState.when(
-              data: (messages) {
-                final mergedMessages = _mergeMessages(messages, agentState);
-                final showAgentStatus =
-                    agentState.isSending && agentState.streamingContent.isEmpty;
+      body: ContentConstraint(
+        child: Column(
+          children: [
+            Expanded(
+              child: chatState.when(
+                data: (messages) {
+                  final mergedMessages = _mergeMessages(messages, agentState);
+                  final showAgentStatus =
+                      agentState.isSending && agentState.streamingContent.isEmpty;
 
-                if (mergedMessages.isEmpty) {
-                  return const Center(child: Text('No messages yet. Say hi!'));
-                }
-                return ListView.builder(
-                  reverse: true,
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  itemCount: mergedMessages.length + (showAgentStatus ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (showAgentStatus && index == 0) {
-                      return const Padding(
-                        padding: EdgeInsets.only(bottom: DS.spacing16),
-                        child: AiStatusIndicator(
-                          status: 'THINKING',
-                          details: 'AI助手正在整理思路...',
-                        ),
+                  if (mergedMessages.isEmpty) {
+                    return const Center(child: Text('No messages yet. Say hi!'));
+                  }
+                  return ListView.builder(
+                    reverse: true,
+                    padding: const EdgeInsets.all(DS.spacing16),
+                    itemCount: mergedMessages.length + (showAgentStatus ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (showAgentStatus && index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: DS.spacing16),
+                          child: AiStatusIndicator(
+                            status: 'THINKING',
+                            details: 'AI助手正在整理思路...',
+                          ),
+                        );
+                      }
+
+                      final messageIndex = showAgentStatus ? index - 1 : index;
+                      final message = mergedMessages[messageIndex];
+                      return GroupChatBubble(
+                        message: message,
+                        groupId: widget.groupId,
+                        onQuote: isCommunityAgentMessage(message)
+                            ? null
+                            : (msg) => setState(() {
+                                  _quotedMessage = msg;
+                                  ref
+                                      .read(groupChatProvider(widget.groupId)
+                                          .notifier,)
+                                      .setQuote(msg);
+                                }),
+                        onRevoke: isCommunityAgentMessage(message)
+                            ? null
+                            : (msg) => ref
+                                .read(groupChatProvider(widget.groupId).notifier)
+                                .revokeMessage(msg.id),
+                        onEdit: isCommunityAgentMessage(message)
+                            ? null
+                            : (msg, content) => ref
+                                .read(groupChatProvider(widget.groupId).notifier)
+                                .editMessage(msg.id, content),
+                        onReaction: isCommunityAgentMessage(message)
+                            ? null
+                            : (msg, emoji) => ref
+                                .read(groupChatProvider(widget.groupId).notifier)
+                                .toggleReaction(msg.id, emoji),
+                        onThread: _openThread,
                       );
-                    }
-
-                    final messageIndex = showAgentStatus ? index - 1 : index;
-                    final message = mergedMessages[messageIndex];
-                    return GroupChatBubble(
-                      message: message,
-                      groupId: widget.groupId,
-                      onQuote: isCommunityAgentMessage(message)
-                          ? null
-                          : (msg) => setState(() {
-                                _quotedMessage = msg;
-                                ref
-                                    .read(groupChatProvider(widget.groupId)
-                                        .notifier,)
-                                    .setQuote(msg);
-                              }),
-                      onRevoke: isCommunityAgentMessage(message)
-                          ? null
-                          : (msg) => ref
-                              .read(groupChatProvider(widget.groupId).notifier)
-                              .revokeMessage(msg.id),
-                      onEdit: isCommunityAgentMessage(message)
-                          ? null
-                          : (msg, content) => ref
-                              .read(groupChatProvider(widget.groupId).notifier)
-                              .editMessage(msg.id, content),
-                      onReaction: isCommunityAgentMessage(message)
-                          ? null
-                          : (msg, emoji) => ref
-                              .read(groupChatProvider(widget.groupId).notifier)
-                              .toggleReaction(msg.id, emoji),
-                      onThread: _openThread,
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: LoadingIndicator()),
-              error: (e, s) => Center(
-                child: CustomErrorWidget.page(
-                  context: context,
-                  message: e.toString(),
-                  onRetry: () => ref
-                      .read(groupChatProvider(widget.groupId).notifier)
-                      .refresh(),
+                    },
+                  );
+                },
+                loading: () => const Center(child: LoadingIndicator()),
+                error: (e, s) => Center(
+                  child: CustomErrorWidget.page(
+                    context: context,
+                    message: e.toString(),
+                    onRetry: () => ref
+                        .read(groupChatProvider(widget.groupId).notifier)
+                        .refresh(),
+                  ),
                 ),
               ),
             ),
-          ),
-          if (agentState.error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing16, vertical: DS.spacing8,),
-              child: Text(
-                agentState.error!,
-                style: TextStyle(color: DS.error, fontSize: DS.fontSizeSm),
+            if (agentState.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing16, vertical: DS.spacing8,),
+                child: Text(
+                  agentState.error!,
+                  style: TextStyle(color: DS.error, fontSize: DS.fontSizeSm),
+                ),
               ),
+            _buildAgentToolbar(
+              context,
+              agentState: agentState,
+              groupInfo: groupInfoState.valueOrNull,
+              messages: chatState.valueOrNull ?? const [],
             ),
-          _buildAgentToolbar(
-            context,
-            agentState: agentState,
-            groupInfo: groupInfoState.valueOrNull,
-            messages: chatState.valueOrNull ?? const [],
-          ),
-          ChatInput(
-            enabled: !_agentMode || !agentState.isSending,
-            hintText: _agentMode ? '向AI提问（仅你可见）' : '输入消息...',
-            fileUploadGroupId: widget.groupId,
-            onFileUploaded: (file) async {
-              try {
-                final repo = ref.read(fileRepositoryProvider);
-                await repo.shareToGroup(
-                  widget.groupId,
-                  file.id,
-                );
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('文件已分享至群聊')),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('分享失败: $e')),
-                );
-              }
-            },
-            quotedMessage: !_agentMode && _quotedMessage != null
-                ? PrivateMessageInfo(
-                    id: _quotedMessage!.id,
-                    sender: _quotedMessage!.sender ??
-                        UserBrief(id: '', username: 'Unknown'),
-                    receiver: UserBrief(id: '', username: ''),
-                    messageType: _quotedMessage!.messageType,
-                    content: _quotedMessage!.content,
-                    createdAt: _quotedMessage!.createdAt,
-                    updatedAt: _quotedMessage!.updatedAt,
-                    isRevoked: _quotedMessage!.isRevoked,
-                    isRead: false,
-                  )
-                : null,
-            onCancelQuote: () => setState(() {
-              _quotedMessage = null;
-              ref
-                  .read(groupChatProvider(widget.groupId).notifier)
-                  .setQuote(null);
-            }),
-            onSend: (text, {replyToId}) {
-              if (_agentMode) {
-                _sendAgentPrompt(
-                  prompt: text,
-                  agentState: agentState,
-                  groupInfo: groupInfoState.valueOrNull,
-                  messages: chatState.valueOrNull ?? const [],
-                );
-                return;
-              }
+            ChatInput(
+              enabled: !_agentMode || !agentState.isSending,
+              hintText: _agentMode ? '向AI提问（仅你可见）' : '输入消息...',
+              fileUploadGroupId: widget.groupId,
+              onFileUploaded: (file) async {
+                try {
+                  final repo = ref.read(fileRepositoryProvider);
+                  await repo.shareToGroup(
+                    widget.groupId,
+                    file.id,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('文件已分享至群聊')),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('分享失败: $e')),
+                  );
+                }
+              },
+              quotedMessage: !_agentMode && _quotedMessage != null
+                  ? PrivateMessageInfo(
+                      id: _quotedMessage!.id,
+                      sender: _quotedMessage!.sender ??
+                          UserBrief(id: '', username: 'Unknown'),
+                      receiver: UserBrief(id: '', username: ''),
+                      messageType: _quotedMessage!.messageType,
+                      content: _quotedMessage!.content,
+                      createdAt: _quotedMessage!.createdAt,
+                      updatedAt: _quotedMessage!.updatedAt,
+                      isRevoked: _quotedMessage!.isRevoked,
+                      isRead: false,
+                    )
+                  : null,
+              onCancelQuote: () => setState(() {
+                _quotedMessage = null;
+                ref
+                    .read(groupChatProvider(widget.groupId).notifier)
+                    .setQuote(null);
+              }),
+              onSend: (text, {replyToId}) {
+                if (_agentMode) {
+                  _sendAgentPrompt(
+                    prompt: text,
+                    agentState: agentState,
+                    groupInfo: groupInfoState.valueOrNull,
+                    messages: chatState.valueOrNull ?? const [],
+                  );
+                  return;
+                }
 
-              final actualReplyId = _quotedMessage?.id ?? replyToId;
-              setState(() => _quotedMessage = null);
-              unawaited(
-                ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(
-                      content: text,
-                      replyToId: actualReplyId,
-                    ),
-              );
-            },
-          ),
-        ],
+                final actualReplyId = _quotedMessage?.id ?? replyToId;
+                setState(() => _quotedMessage = null);
+                unawaited(
+                  ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(
+                        content: text,
+                        replyToId: actualReplyId,
+                      ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

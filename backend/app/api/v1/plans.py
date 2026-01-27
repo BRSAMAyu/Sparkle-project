@@ -291,6 +291,26 @@ async def delete_plan(
     db.add(plan)
     await db.commit()
 
+    # Get task count for notification
+    task_result = await db.execute(
+        select(func.count(Task.id)).where(Task.plan_id == plan_id)
+    )
+    task_count_freed = task_result.scalar() or 0
+
+    # Send state change notification
+    try:
+        await state_notification_service.notify_plan_deleted(
+            user_id=str(current_user.id),
+            plan_name=plan.name,
+            plan_id=plan_id,
+            task_count_freed=task_count_freed,
+            memory_count_removed=0,  # Memory cleanup not implemented yet
+            intervention_level="toast"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send plan_deleted notification: {e}")
+        # Don't fail the request if notification fails
+
 
 @router.post("/{plan_id}/archive", response_model=Dict[str, Any])
 async def archive_plan_state(
@@ -389,6 +409,39 @@ async def archive_plan_state(
     quota_service = PlanQuotaService(db, cache_service.redis)
     quota_status = await quota_service.get_quota_status(current_user.id)
 
+    # Get task and memory counts for notification
+    task_count_freed = 0
+    memory_count_removed = 0
+
+    # Count tasks associated with this plan
+    task_result = await db.execute(
+        select(func.count(Task.id)).where(Task.plan_id == plan_id)
+    )
+    task_count_freed = task_result.scalar() or 0
+
+    # Get new primary plan name for notification
+    new_primary_plan_name = None
+    if quota_status.primary_plan_id:
+        new_primary_result = await db.execute(
+            select(Plan.name).where(Plan.id == quota_status.primary_plan_id)
+        )
+        new_primary_plan_name = new_primary_result.scalar()
+
+    # Send state change notification
+    try:
+        await state_notification_service.notify_plan_archived(
+            user_id=str(current_user.id),
+            plan_name=plan.name,
+            plan_id=plan_id,
+            task_count_freed=task_count_freed,
+            memory_count_removed=memory_count_removed,
+            new_primary_plan=new_primary_plan_name,
+            intervention_level="toast" if plan.progress < 0.8 else "card"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send plan_archived notification: {e}")
+        # Don't fail the request if notification fails
+
     response = {
         "plan_id": str(plan_id),
         "status": state.status if state else PlanStateStatus.ARCHIVED.value,
@@ -453,6 +506,18 @@ async def restore_plan_state(
         },
         bump_version=False,
     )
+
+    # Send state change notification
+    try:
+        await state_notification_service.notify_plan_restored(
+            user_id=str(current_user.id),
+            plan_name=plan.name,
+            plan_id=plan_id,
+            intervention_level="toast"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send plan_restored notification: {e}")
+        # Don't fail the request if notification fails
 
     return {
         "plan_id": str(plan_id),

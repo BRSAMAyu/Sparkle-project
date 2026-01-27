@@ -1,0 +1,262 @@
+{
+  "users": [
+    {
+      "id": "user-001",
+      "username": "test_user_1",
+      "email": "test1@example.com",
+      "preferences": {
+        "language": "zh-CN",
+        "theme": "light",
+        "daily_target_hours": 2
+      }
+    },
+    {
+      "id": "user-002",
+      "username": "test_user_2",
+      "email": "test2@example.com",
+      "preferences": {
+        "language": "en-US",
+        "theme": "dark",
+        "daily_target_hours": 4
+      }
+    }
+  ],
+  "plans": [
+    {
+      "id": "plan-001",
+      "user_id": "user-001",
+      "name": "Python基础学习计划",
+      "type": "sprint",
+      "subject": "编程",
+      "description": "7天Python基础学习",
+      "target_date": "2026-02-04",
+      "estimated_total_minutes": 420,
+      "goals": [
+        "掌握Python基础语法",
+        "能编写简单程序"
+      ]
+    },
+    {
+      "id": "plan-002",
+      "user_id": "user-001",
+      "name": "数学复习计划",
+      "type": "marathon",
+      "subject": "数学",
+      "description": "30天数学系统性复习",
+      "target_date": "2026-02-27",
+      "estimated_total_minutes": 1800,
+      "goals": [
+        "复习代数",
+        "复习几何",
+        "复习微积分"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-001",
+      "plan_id": "plan-001",
+      "user_id": "user-001",
+      "title": "学习Python变量",
+      "type": "learning",
+      "description": "学习Python变量的定义和使用",
+      "estimated_minutes": 30,
+      "difficulty": 2,
+      "status": "pending",
+      "order": 0,
+      "priority": "high"
+    },
+    {
+      "id": "task-002",
+      "plan_id": "plan-001",
+      "user_id": "user-001",
+      "title": "练习Python变量",
+      "type": "training",
+      "description": "完成变量相关的练习题",
+      "estimated_minutes": 30,
+      "difficulty": 3,
+      "status": "pending",
+      "order": 1,
+      "priority": "medium"
+    },
+    {
+      "id": "task-003",
+      "plan_id": "plan-001",
+      "user_id": "user-001",
+      "title": "学习Python数据类型",
+      "type": "learning",
+      "description": "学习Python的基本数据类型",
+      "estimated_minutes": 45,
+      "difficulty": 3,
+      "status": "pending",
+      "order": 2,
+      "priority": "high"
+    },
+    {
+      "id": "task-004",
+      "plan_id": "plan-001",
+      "user_id": "user-001",
+      "title": "编写Hello World程序",
+      "type": "training",
+      "description": "编写第一个Python程序",
+      "estimated_minutes": 15,
+      "difficulty": 1,
+      "status": "pending",
+      "order": 3,
+      "priority": "medium"
+    },
+    {
+      "id": "task-005",
+      "plan_id": "plan-001",
+      "user_id": "user-001",
+      "title": "学习Python控制流",
+      "type": "learning",
+      "description": "学习if/else和循环语句",
+      "estimated_minutes": 60,
+      "difficulty": 4,
+      "status": "pending",
+      "order": 4,
+      "priority": "high"
+    }
+  ],
+  "knowledge_nodes": [
+    {
+      "id": "node-001",
+      "user_id": "user-001",
+      "title": "Python",
+      "node_type": "subject",
+      "description": "Python编程语言",
+      "metadata": {
+        "difficulty": 1,
+        "mastery_level": 0.3,
+        "importance": 1.0
+      }
+    },
+    {
+      "id": "node-002",
+      "user_id": "user-001",
+      "title": "变量",
+      "node_type": "concept",
+      "description": "变量的概念和使用",
+      "metadata": {
+        "difficulty": 1,
+        "mastery_level": 0.6,
+        "importance": 0.9
+      }
+    },
+    {
+      "id": "node-003",
+      "user_id": "user-001",
+      "title": "数据类型",
+      "node_type": "concept",
+      "description": "Python数据类型",
+      "metadata": {
+        "difficulty": 2,
+        "mastery_level": 0.4,
+        "importance": 0.95
+      }
+    },
+    {
+      "id": "node-004",
+      "user_id": "user-001",
+      "title": "字符串",
+      "node_type": "concept",
+      "description": "字符串类型和操作",
+      "metadata": {
+        "difficulty": 2,
+        "mastery_level": 0.5,
+        "importance": 0.85
+      }
+    },
+    {
+      "id": "node-005",
+      "user_id": "user-001",
+      "title": "列表",
+      "node_type": "concept",
+      "description": "列表数据结构",
+      "metadata": {
+        "difficulty": 3,
+        "mastery_level": 0.3,
+        "importance": 0.9
+      }
+    }
+  ],
+  "knowledge_relationships": [
+    {
+      "id": "rel-001",
+      "user_id": "user-001",
+      "source_node_id": "node-002",
+      "target_node_id": "node-001",
+      "relationship_type": "part_of",
+      "strength": 1.0
+    },
+    {
+      "id": "rel-002",
+      "user_id": "user-001",
+      "source_node_id": "node-003",
+      "target_node_id": "node-001",
+      "relationship_type": "part_of",
+      "strength": 1.0
+    },
+    {
+      "id": "rel-003",
+      "user_id": "user-001",
+      "source_node_id": "node-004",
+      "target_node_id": "node-003",
+      "relationship_type": "is_a",
+      "strength": 0.95
+    },
+    {
+      "id": "rel-004",
+      "user_id": "user-001",
+      "source_node_id": "node-005",
+      "target_node_id": "node-003",
+      "relationship_type": "is_a",
+      "strength": 0.9
+    }
+  ],
+  "chat_sessions": [
+    {
+      "id": "session-001",
+      "user_id": "user-001",
+      "title": "Python学习咨询",
+      "is_active": true,
+      "created_at": "2026-01-28T10:00:00Z"
+    }
+  ],
+  "chat_messages": [
+    {
+      "id": "msg-001",
+      "session_id": "session-001",
+      "user_id": "user-001",
+      "role": "user",
+      "content": "你好,我想学习Python",
+      "timestamp": "2026-01-28T10:01:00Z"
+    },
+    {
+      "id": "msg-002",
+      "session_id": "session-001",
+      "user_id": "user-001",
+      "role": "assistant",
+      "content": "你好!我很乐意帮你学习Python。让我为你制定一个学习计划。",
+      "timestamp": "2026-01-28T10:01:05Z"
+    }
+  ],
+  "sync_queue_items": [
+    {
+      "id": "sync-001",
+      "user_id": "user-001",
+      "operation": "complete_task",
+      "entity_type": "task",
+      "entity_id": "task-001",
+      "data": {
+        "actual_minutes": 35,
+        "completed_at": "2026-01-28T11:00:00Z"
+      },
+      "status": "pending",
+      "priority": 1,
+      "created_at": "2026-01-28T11:00:00Z",
+      "device_id": "device-A"
+    }
+  ]
+}

@@ -56,9 +56,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.spacing16),
-        child: Column(
+      body: ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionHeader(Icons.psychology, l10n.learningMode),
@@ -292,6 +293,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing32),
           ],
         ),
+      ),
       ),
     );
   }

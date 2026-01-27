@@ -296,13 +296,12 @@ class AdaptiveLayout extends StatelessWidget {
   final Widget? wide;
 
   @override
-  Widget build(BuildContext context) => ResponsiveBuilder(
-        builder: (context, info) {
-          if (info.width >= 1440 && wide != null) return wide!;
-          if (info.width >= 1024 && desktop != null) return desktop!;
-          if (info.width >= 768 && tablet != null) return tablet!;
-          return mobile;
-        },
+  Widget build(BuildContext context) => ResponsiveSystem.resolve(
+        context: context,
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
       );
 }
 
@@ -380,11 +379,10 @@ class ContentConstraintSystem {
     switch (info.category) {
       case DeviceCategory.watch:
       case DeviceCategory.phone:
-        return double.infinity;
       case DeviceCategory.phablet:
-        return 600.0;
+        return double.infinity;
       case DeviceCategory.tablet:
-        return 840.0;
+        return 720.0;
       case DeviceCategory.desktop:
         return 1200.0;
       case DeviceCategory.tv:

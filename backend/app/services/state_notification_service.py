@@ -9,7 +9,7 @@ Sends detailed notifications for major state changes:
 Integrates with WebSocket to deliver real-time notifications to clients.
 """
 from typing import Optional, Dict, Any, List
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from loguru import logger
 
@@ -49,7 +49,7 @@ class StateNotificationService:
             new_primary_plan: Name of new primary plan (if applicable)
             intervention_level: toast | card | modal
         """
-        change_id = str(UUID.uuid4())
+        change_id = str(uuid4())
 
         event_data = {
             "change_type": "plan_archived",
@@ -105,7 +105,7 @@ class StateNotificationService:
             plan_id: Plan UUID
             intervention_level: toast | card | modal
         """
-        change_id = str(UUID.uuid4())
+        change_id = str(uuid4())
 
         event_data = {
             "change_type": "plan_restored",
@@ -148,7 +148,7 @@ class StateNotificationService:
             memory_count_removed: Number of memory nodes removed
             intervention_level: toast | card | modal
         """
-        change_id = str(UUID.uuid4())
+        change_id = str(uuid4())
 
         event_data = {
             "change_type": "plan_deleted",
@@ -203,7 +203,7 @@ class StateNotificationService:
             impact_description: Description of the impact (optional)
             intervention_level: toast | card | modal
         """
-        change_id = str(UUID.uuid4())
+        change_id = str(uuid4())
 
         # Map field names to user-friendly labels
         field_labels = {
@@ -264,7 +264,7 @@ class StateNotificationService:
             space_freed_mb: Amount of space freed in MB
             intervention_level: toast | card | modal
         """
-        change_id = str(UUID.uuid4())
+        change_id = str(uuid4())
 
         event_data = {
             "change_type": "memory_cleanup",

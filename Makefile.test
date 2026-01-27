@@ -1,0 +1,204 @@
+# E2E Test Makefile
+# ==============
+
+.PHONY: test-e2e test-e2e-python test-e2e-go test-e2e-flutter test-e2e-all clean-test-coverage
+
+# Colors
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m
+
+# =============================================================================
+# Python E2E Tests
+# =============================================================================
+
+test-e2e-python:
+	@echo "$(GREEN)Running Python E2E Tests...$(NC)"
+	cd backend && \
+	SPARKLE_INTEGRATION=true \
+	TEST_DATABASE_URL=postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test \
+	pytest tests_e2e/ -v \
+		--tb=short \
+		--cov=app \
+		--cov-report=html \
+		--cov-report=term-missing \
+		--maxfail=5
+	@echo "$(GREEN)✓ Python E2E Tests Complete$(NC)"
+
+test-e2e-python-quick:
+	@echo "$(YELLOW)Running quick Python E2E tests (without LLM)...$(NC)"
+	cd backend && \
+	SPARKLE_INTEGRATION=true \
+	pytest tests_e2e/test_chat_e2e.py -v -k "not slow"
+	@echo "$(GREEN)✓ Quick Python E2E Tests Complete$(NC)"
+
+# =============================================================================
+# Go Integration Tests
+# =============================================================================
+
+test-e2e-go:
+	@echo "$(GREEN)Running Go Integration Tests...$(NC)"
+	cd backend/gateway && \
+	go test ./internal/handler/... -v -tags=integration -timeout=5m
+	@echo "$(GREEN)✓ Go Integration Tests Complete$(NC)"
+
+test-e2e-go-coverage:
+	@echo "$(GREEN)Running Go Integration Tests with Coverage...$(NC)"
+	cd backend/gateway && \
+	go test ./internal/handler/... -v -tags=integration -coverprofile=coverage.out -timeout=5m && \
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "$(GREEN)✓ Go Integration Tests with Coverage Complete$(NC)"
+
+# =============================================================================
+# Flutter Integration Tests
+# =============================================================================
+
+test-e2e-flutter:
+	@echo "$(GREEN)Running Flutter Integration Tests...$(NC)"
+	cd mobile && \
+	flutter test integration_test/ \
+		--dart-define=SPARKLE_INTEGRATION=true \
+		--timeout=5m
+	@echo "$(GREEN)✓ Flutter Integration Tests Complete$(NC)"
+
+test-e2e-flutter-driver:
+	@echo "$(GREEN)Running Flutter Driver Tests...$(NC)"
+	cd mobile && \
+	flutter drive --target=test_driver/app.dart
+	@echo "$(GREEN)✓ Flutter Driver Tests Complete$(NC)"
+
+# =============================================================================
+# All E2E Tests
+# =============================================================================
+
+test-e2e-all: test-e2e-python test-e2e-go test-e2e-flutter
+	@echo "$(GREEN)========================================$(NC)"
+	@echo "$(GREEN)✓ ALL E2E TESTS PASSED$(NC)"
+	@echo "$(GREEN)========================================$(NC)"
+
+test-e2e-all-parallel:
+	@echo "$(GREEN)Running all E2E tests in parallel...$(NC)"
+	@make -j3 test-e2e-python test-e2e-go test-e2e-flutter
+	@echo "$(GREEN)✓ ALL E2E TESTS PASSED (Parallel)$(NC)"
+
+# =============================================================================
+# Test Reports
+# =============================================================================
+
+test-e2e-report:
+	@echo "$(GREEN)Generating E2E test report...$(NC)"
+	@echo "# E2E Test Report" > test_reports/e2e_report.md
+	@echo "" >> test_reports/e2e_report.md
+	@echo "## Test Run: $$(date)" >> test_reports/e2e_report.md
+	@echo "" >> test_reports/e2e_report.md
+	@echo "### Python Tests" >> test_reports/e2e_report.md
+	@cd backend && pytest tests_e2e/ --collect-only -q >> ../test_reports/e2e_report.md
+	@echo "" >> test_reports/e2e_report.md
+	@echo "### Go Tests" >> test_reports/e2e_report.md
+	@cd backend/gateway && go test ./internal/handler/... -list . >> ../../test_reports/e2e_report.md 2>&1
+	@echo "" >> test_reports/e2e_report.md
+	@echo "### Flutter Tests" >> test_reports/e2e_report.md
+	@cd mobile && flutter test integration_test/ --dry-run >> ../test_reports/e2e_report.md 2>&1
+	@echo "$(GREEN)✓ Test report generated: test_reports/e2e_report.md$(NC)"
+
+# =============================================================================
+# Test Environment Setup
+# =============================================================================
+
+test-env-setup:
+	@echo "$(GREEN)Setting up E2E test environment...$(NC)"
+	# Create test database
+	@docker exec -i postgres psql -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;" || true
+	@docker exec -i postgres psql -U sparkle -c "CREATE DATABASE sparkle_test;"
+	# Run migrations
+	@cd backend && alembic upgrade head -- sqlalchemy.url=postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test
+	@echo "$(GREEN)✓ Test environment ready$(NC)"
+
+test-env-teardown:
+	@echo "$(YELLOW)Tearing down E2E test environment...$(NC)"
+	@docker exec -i postgres psql -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;" || true
+	@echo "$(GREEN)✓ Test environment cleaned$(NC)"
+
+# =============================================================================
+# CI/CD Helpers
+# =============================================================================
+
+test-e2e-ci:
+	@echo "$(GREEN)Running E2E tests in CI environment...$(NC)"
+	@make test-env-setup
+	@make test-e2e-all
+	@make test-env-teardown
+	@echo "$(GREEN)✓ CI E2E Tests Complete$(NC)"
+
+# =============================================================================
+# Coverage Reports
+# =============================================================================
+
+test-e2e-coverage-report:
+	@echo "$(GREEN)Generating combined coverage report...$(NC)"
+	@mkdir -p test_reports/coverage
+	# Python coverage
+	@cd backend && pytest tests_e2e/ --cov=app --cov-report=xml --cov-report=html
+	@mv backend/htmlcov test_reports/coverage/python_htmlcov
+	@mv backend/coverage.xml test_reports/coverage/python_coverage.xml
+	# Go coverage
+	@cd backend/gateway && go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out -o ../../test_reports/coverage/go_coverage.html
+	@echo "$(GREEN)✓ Coverage reports in test_reports/coverage/$(NC)"
+
+# =============================================================================
+# Utilities
+# =============================================================================
+
+clean-test-coverage:
+	@echo "$(YELLOW)Cleaning test coverage files...$(NC)"
+	@find . -type f -name ".coverage" -delete
+	@find . -type f -name "coverage.out" -delete
+	@find . -type f -name "coverage.html" -delete
+	@find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	@rm -rf test_reports/coverage
+	@echo "$(GREEN)✓ Coverage files cleaned$(NC)"
+
+watch-e2e-tests:
+	@echo "$(GREEN)Watching for changes and running E2E tests...$(NC)"
+	@which fswatch > /dev/null || (echo "$(RED)Install fswatch first$(NC)" && exit 1)
+	@fswatch -o tests_e2e/ backend/ | xargs -n1 -I{} make test-e2e-python-quick
+
+# =============================================================================
+# Smoke Tests (Quick validation)
+# =============================================================================
+
+test-smoke:
+	@echo "$(GREEN)Running smoke tests...$(NC)"
+	@cd backend && pytest tests_e2e/test_chat_e2e.py::test_e2e_simple_chat_message_flow -v
+	@cd backend/gateway && go test -v -tags=integration -run TestE2E_CompleteChatFlow ./internal/handler/
+	@echo "$(GREEN)✓ Smoke tests passed$(NC)"
+
+# =============================================================================
+# Performance Tests
+# =============================================================================
+
+test-performance:
+	@echo "$(GREEN)Running performance tests...$(NC)"
+	@cd backend && pytest tests_e2e/ -v -k "performance or slow" --durations=10
+	@echo "$(GREEN)✓ Performance tests complete$(NC)"
+
+# =============================================================================
+# Help
+# =============================================================================
+
+help-test:
+	@echo "$(GREEN)E2E Test Commands:$(NC)"
+	@echo "  make test-e2e-python          - Run Python E2E tests"
+	@echo "  make test-e2e-go              - Run Go integration tests"
+	@echo "  make test-e2e-flutter         - Run Flutter integration tests"
+	@echo "  make test-e2e-all             - Run all E2E tests"
+	@echo "  make test-e2e-all-parallel    - Run all tests in parallel"
+	@echo "  make test-e2e-ci              - Run tests in CI environment"
+	@echo "  make test-e2e-report          - Generate test report"
+	@echo "  make test-e2e-coverage-report - Generate coverage reports"
+	@echo "  make test-env-setup           - Setup test environment"
+	@echo "  make test-env-teardown        - Teardown test environment"
+	@echo "  make test-smoke               - Run quick smoke tests"
+	@echo "  make test-performance         - Run performance tests"

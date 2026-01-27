@@ -8,6 +8,7 @@ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/home/data/repositories/omnibar_repository.dart';
+import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -29,7 +30,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
   final FocusNode _focusNode = FocusNode();
   final AudioRecordingService _recordingService = AudioRecordingService();
   bool _isLoading = false;
-  IntentType? _intentType;
+  EnhancedIntentType? _intentType;
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -50,7 +51,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   void _onTextChanged() {
     final text = _controller.text;
-    final newIntent = IntentClassifier.classify(text);
+    final result = IntentClassifier.classify(text);
+    final newIntent = result?.type;
 
     // Notify intent prediction provider
     ref.read(intentPredictionProvider.notifier).onInputChanged(text);
@@ -117,12 +119,22 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   Color _getIntentColor() {
     switch (_intentType) {
-      case IntentType.task:
+      case EnhancedIntentType.chat:
+        return const Color(0xFF42A5F5).withValues(alpha: 0.2);
+      case EnhancedIntentType.task:
         return DS.successAccent;
-      case IntentType.capsule:
+      case EnhancedIntentType.capsule:
         return DS.capsuleAccent;
-      case IntentType.chat:
-        return DS.brandPrimaryAccent;
+      case EnhancedIntentType.translation:
+        return const Color(0xFF26C6DA).withValues(alpha: 0.2);
+      case EnhancedIntentType.prism:
+        return const Color(0xFF7E57C2).withValues(alpha: 0.2);
+      case EnhancedIntentType.sprint:
+        return const Color(0xFFFFA726).withValues(alpha: 0.2);
+      case EnhancedIntentType.learn:
+        return const Color(0xFFEC407A).withValues(alpha: 0.2);
+      case EnhancedIntentType.review:
+        return const Color(0xFF5C6BC0).withValues(alpha: 0.2);
       default:
         return DS.textSecondary.withValues(alpha: 0.15);
     }
@@ -228,7 +240,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                       icon: Icon(
                         _isListening
                             ? Icons.stop_circle_outlined
-                        : (_intentType == IntentType.chat
+                        : (_intentType == EnhancedIntentType.chat
                             ? Icons.auto_awesome
                             : Icons.arrow_upward_rounded),
                         color: _isListening

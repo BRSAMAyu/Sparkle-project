@@ -55,21 +55,23 @@ class GroupListScreen extends ConsumerWidget {
               ),
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.read(myGroupsProvider.notifier).refresh(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(DS.spacing16),
-              itemCount: groups.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: DS.spacing12),
-              itemBuilder: (context, index) {
-                final group = groups[index];
-                return _AnimatedGroupTile(
-                  group: group,
-                  index: index,
-                );
-              },
+          return ContentConstraint(
+            child: RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(myGroupsProvider.notifier).refresh(),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(DS.spacing16),
+                itemCount: groups.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: DS.spacing12),
+                itemBuilder: (context, index) {
+                  final group = groups[index];
+                  return _AnimatedGroupTile(
+                    group: group,
+                    index: index,
+                  );
+                },
+              ),
             ),
           );
         },

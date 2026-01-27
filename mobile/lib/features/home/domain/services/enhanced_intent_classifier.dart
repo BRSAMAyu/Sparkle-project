@@ -39,12 +39,15 @@ class EnhancedIntentClassifier {
     // === 优先级1: 特殊模式（高置信度关键词）===
 
     // Translation (翻译)
-    if (_containsAny(lower, ['翻译', 'translate', '翻译成', '怎么说', 'in english', 'in chinese'])) {
+    if (_containsAny(lower, ['翻译', 'translate', '翻译成', '怎么说', 'in english', 'in chinese', '是什么意思'])) {
       final score = _calculateScore(lower, {
         '翻译': 1.0,
         'translate': 1.0,
+        '翻译成': 0.95,
         '是什么意思': 0.9,
         '怎么说': 0.85,
+        'in english': 0.85,
+        'in chinese': 0.85,
       });
       if (score > maxScore) {
         maxScore = score;
@@ -69,13 +72,14 @@ class EnhancedIntentClassifier {
     }
 
     // Sprint/Focus Mode (冲刺/专注)
-    if (_containsAny(lower, ['冲刺', 'sprint', '专注模式', 'focus mode', '突击', '进入冲刺', '开始专注'])) {
+    if (_containsAny(lower, ['冲刺', 'sprint', '专注模式', 'focus mode', '突击', '进入冲刺', '开始专注', '专注'])) {
       final score = _calculateScore(lower, {
         '冲刺': 1.0,
         'sprint': 1.0,
         '专注模式': 0.95,
         'focus mode': 0.95,
         '突击': 0.9,
+        '专注': 0.88,
       });
       if (score > maxScore) {
         maxScore = score;
@@ -101,8 +105,8 @@ class EnhancedIntentClassifier {
 
     // Learn (学习)
     if (_containsAny(lower, ['学习', 'learn', 'study', '学一下', '了解一下'])) {
-      // 排除与其他意图的组合
-      if (!lower.contains('复习') && !lower.contains('翻译')) {
+      // 排除与其他意图的组合，但允许与"专注"共存（优先级已经在sprint中处理）
+      if (!lower.contains('复习') && !lower.contains('翻译') && !lower.contains('冲刺') && !lower.contains('专注模式')) {
         final score = _calculateScore(lower, {
           '学习': 0.9,
           'learn': 0.9,
@@ -119,15 +123,17 @@ class EnhancedIntentClassifier {
     // === 优先级3: 任务管理 ===
 
     // Task/创建
-    if (_containsAny(lower, ['任务', 'task', '提醒', 'remind', '创建', 'create', '新建', '做', 'todo'])) {
+    if (_containsAny(lower, ['任务', 'task', '提醒', 'remind', '创建', 'create', '新建', '做', 'todo', '创建一个'])) {
       // 排除干扰词
       if (!lower.contains('冲刺') && !lower.contains('翻译')) {
         final score = _calculateScore(lower, {
           '创建任务': 1.0,
           '新建任务': 1.0,
           '提醒我': 1.0,
+          '创建一个提醒': 1.0,
           '任务': 0.85,
           'todo': 0.85,
+          '创建一个': 0.8,
           '做': 0.5,  // 降低单独"做"的权重
         });
         if (score > maxScore) {
@@ -163,7 +169,7 @@ class EnhancedIntentClassifier {
     // Long text tends to be chat
     if (text.length > 15 && maxScore < 0.5) {
       bestType = EnhancedIntentType.chat;
-      maxScore = 0.4;
+      maxScore = 0.5; // Set to 0.5 to meet the minimum threshold
     }
 
     // Return result only if confidence is high enough

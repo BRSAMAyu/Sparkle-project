@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
 import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
@@ -47,11 +46,14 @@ class DashboardScreen extends ConsumerWidget {
     final bottomSpacing = hasPredictions ? 210.0 : 130.0;
 
     // Max width for floating components on larger screens
-    final layoutType = getLayoutType(context);
-    final floatingMaxWidth = switch (layoutType) {
-      LayoutType.desktop => DS.contentMaxWidthDesktop,
-      LayoutType.tablet => DS.contentMaxWidthTablet,
-      LayoutType.mobile => double.infinity,
+    final category = ResponsiveSystem.getCategory(context);
+    final floatingMaxWidth = switch (category) {
+      DeviceCategory.tablet => DS.contentMaxWidthTablet,
+      DeviceCategory.desktop => DS.contentMaxWidthDesktop,
+      DeviceCategory.tv => DS.contentMaxWidthDesktop,
+      DeviceCategory.watch => double.infinity,
+      DeviceCategory.phone => double.infinity,
+      DeviceCategory.phablet => double.infinity,
     };
 
     // Listen for Edge AI Nudges
@@ -121,11 +123,9 @@ class DashboardScreen extends ConsumerWidget {
                   const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
                   // Bento Grid
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverToBoxAdapter(
-                      child: _buildBentoGrid(context, dashboardState),
-                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                  SliverToBoxAdapter(
+                    child: _buildBentoGrid(context, dashboardState),
                   ),
 
                   // Task Board Card (Full width below grid)
@@ -164,11 +164,19 @@ class DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
-          const Positioned(
-            left: 16,
-            right: 16,
+          Positioned(
+            left: 0,
+            right: 0,
             bottom: 138,
-            child: MultiAgentBar(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: floatingMaxWidth),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+                  child: MultiAgentBar(),
+                ),
+              ),
+            ),
           ),
 
           // Layer 4: Omni-Bar
@@ -275,22 +283,27 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop
-    final layoutType = getLayoutType(context);
+    final category = ResponsiveSystem.getCategory(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Responsive column count based on screen size
-    final crossAxisCount = switch (layoutType) {
-      LayoutType.desktop => 3,
-      LayoutType.tablet => 2,
-      LayoutType.mobile => screenWidth < 390 ? 1 : 2, // 1列 for iPhone SE, 2列 for larger phones
+    final crossAxisCount = switch (category) {
+      DeviceCategory.desktop => 3,
+      DeviceCategory.tv => 3,
+      DeviceCategory.tablet => 2,
+      DeviceCategory.watch => screenWidth < 390 ? 1 : 2,
+      DeviceCategory.phone => screenWidth < 390 ? 1 : 2,
+      DeviceCategory.phablet => screenWidth < 390 ? 1 : 2,
     };
 
     return ContentConstraint(
-      child: StaggeredGrid.count(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        children: [
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: StaggeredGrid.count(
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: DS.spacing12,
+          crossAxisSpacing: DS.spacing12,
+          children: [
           // Card A: Focus Core (2x1.5)
           StaggeredGridTile.count(
             crossAxisCellCount: 2,
@@ -333,7 +346,8 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisCellCount: 1,
             child: LongTermPlanCard(),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
