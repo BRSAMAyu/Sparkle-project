@@ -595,8 +595,24 @@ class AchievementEngine:
                     await self.db.flush()
 
                 case "photon":
-                    # 光子积分（暂时只记录，不实际发放）
-                    logger.info(f"Grant {reward.get('quantity', 0)} photons to user {user_id}")
+                    # 光子积分 - 实际发放
+                    try:
+                        from app.services.photon_service import PhotonService, PhotonTransactionType
+
+                        photon_service = PhotonService(self.db)
+                        quantity = reward.get("quantity", 0)
+
+                        await photon_service.grant_photons(
+                            user_id=user_id,
+                            amount=quantity,
+                            source=f"achievement:{achievement.id}",
+                            transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+                            metadata={"achievement_name": achievement.name}
+                        )
+
+                        logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
 
     async def _unlock_title(self, user_id: str, title_id: str, display: str, achievement_id: str):
         """解锁称号"""
@@ -644,9 +660,36 @@ class AchievementEngine:
 
     async def _notify_unlocks(self, user_id: str, unlocked: List[Dict]):
         """发送成就解锁通知"""
-        # TODO: 实现通知发送
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+
         for unlock in unlocked:
             logger.info(f"Achievement unlocked for user {user_id}: {unlock['name']}")
+
+            # 通过 WebSocket 发送成就解锁事件
+            message = {
+                "type": "achievement_unlock",
+                "achievement_data": {
+                    "achievement_id": unlock["achievement_id"],
+                    "name": unlock["name"],
+                    "rarity": unlock["rarity"].value if hasattr(unlock["rarity"], "value") else unlock["rarity"],
+                    "visual_effect": unlock.get("visual_effect"),
+                    "visual_effect_type": unlock.get("visual_effect_type"),
+                    "rewards": unlock.get("rewards"),
+                    "is_first": unlock.get("is_first", False),
+                    "unlocked_at": unlock["unlocked_at"].isoformat() if isinstance(unlock["unlocked_at"], datetime) else unlock["unlocked_at"],
+                    # 添加连击信息
+                    "combo_info": unlock.get("combo_info")
+                }
+            }
+
+            # 使用 WebSocket 发送
+            try:
+                await ws_manager.send_personal_message(message, user_id)
+                logger.debug(f"Sent achievement unlock notification to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send achievement unlock notification: {e}")
 
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
@@ -910,6 +953,11 @@ class AchievementEngine:
         # 连胜统计
         stats = await self._get_or_create_streak_stats(user_id)
 
+        # 获取用户光子余额
+        from app.services.photon_service import PhotonService
+        photon_service = PhotonService(self.db)
+        total_photons = await photon_service.get_balance(user_id)
+
         from app.schemas.achievement import AchievementStatsResponse
         return AchievementStatsResponse(
             total_achievements=len(all_achievements),
@@ -921,7 +969,7 @@ class AchievementEngine:
             legendary_count=rarity_count[AchievementRarity.LEGENDARY],
             hidden_found=hidden_count,
             current_streak=stats.current_streak,
-            total_photons=0  # TODO: 计算从成就获得的光子总数
+            total_photons=total_photons
         ).model_dump()
 
     # ========== Enhancement Methods: Combo, Milestone, Daily First ==========
@@ -998,9 +1046,24 @@ class AchievementEngine:
 
     async def _notify_milestones(self, user_id: str, milestones: List[Dict[str, Any]]):
         """发送里程碑通知"""
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+
         for milestone in milestones:
             logger.info(f"Milestone for user {user_id}: {milestone['message']}")
-            # TODO: 通过WebSocket发送里程碑通知到前端
+
+            # 通过 WebSocket 发送里程碑事件
+            message = {
+                "type": "achievement_milestone",
+                "data": milestone
+            }
+
+            try:
+                await ws_manager.send_personal_message(message, user_id)
+                logger.debug(f"Sent achievement milestone notification to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send milestone notification: {e}")
 
     async def check_daily_first(
         self,
@@ -1174,13 +1237,49 @@ class ContractService:
 
     async def _grant_rewards(self, contract: SparkContract):
         """发放契约奖励"""
-        # TODO: 实际发放光子积分
-        logger.info(f"Contract rewards granted: {contract.photon_stake * contract.reward_multiplier}")
+        try:
+            from app.services.photon_service import PhotonService, PhotonTransactionType
+
+            photon_service = PhotonService(self.db)
+            reward_amount = contract.photon_stake * contract.reward_multiplier
+
+            await photon_service.grant_photons(
+                user_id=contract.user_id,
+                amount=reward_amount,
+                source=f"contract:{contract.id}",
+                transaction_type=PhotonTransactionType.GRANT_CONTRACT,
+                metadata={
+                    "contract_id": contract.id,
+                    "stake": contract.photon_stake,
+                    "multiplier": contract.reward_multiplier
+                }
+            )
+
+            logger.info(f"Contract rewards granted: {reward_amount} photons to user {contract.user_id}")
+        except Exception as e:
+            logger.error(f"Failed to grant contract rewards for {contract.id}: {e}")
 
     async def _deduct_photons(self, contract: SparkContract):
         """扣除光子积分"""
-        # TODO: 实际扣除光子积分
-        logger.info(f"Contract photons deducted: {contract.photon_stake}")
+        try:
+            from app.services.photon_service import PhotonService, PhotonTransactionType
+
+            photon_service = PhotonService(self.db)
+
+            await photon_service.deduct_photons(
+                user_id=contract.user_id,
+                amount=contract.photon_stake,
+                reason=f"Contract failed: {contract.id}",
+                transaction_type=PhotonTransactionType.DEDUCT_CONTRACT,
+                metadata={
+                    "contract_id": contract.id,
+                    "failure_reason": contract.failure_reason
+                }
+            )
+
+            logger.info(f"Contract photons deducted: {contract.photon_stake} from user {contract.user_id}")
+        except Exception as e:
+            logger.error(f"Failed to deduct photons for failed contract {contract.id}: {e}")
 
     async def update_daily_progress(self, user_id: str, study_minutes: int):
         """更新每日契约进度"""

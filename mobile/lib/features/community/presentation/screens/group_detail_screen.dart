@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/widgets/bonfire_widget.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
@@ -43,9 +44,10 @@ class GroupDetailScreen extends ConsumerWidget {
     final isSprint = group.isSprint;
     final theme = Theme.of(context);
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
+    return ContentConstraint(
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
         SliverAppBar(
           expandedHeight: 200.0,
           pinned: true,
@@ -235,7 +237,15 @@ class GroupDetailScreen extends ConsumerWidget {
                           text: 'Members',
                           icon: Icons.people_outline,
                           onPressed: () {
-                            // TODO: Members list
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => GroupMembersScreen(
+                                  groupId: groupId,
+                                  groupName: group.name,
+                                  myRole: group.myRole,
+                                ),
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -273,6 +283,7 @@ class GroupDetailScreen extends ConsumerWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

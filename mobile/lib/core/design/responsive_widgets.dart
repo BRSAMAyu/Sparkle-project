@@ -1,35 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
+import 'package:sparkle/core/design/tokens_v2/spacing_token.dart';
 
-/// 布局类型枚举
-enum LayoutType {
-  mobile, // 手机：< 768px
-  tablet, // 平板：768px - 1024px
-  desktop, // 桌面：>= 1024px
-}
-
-/// 获取当前布局类型
-LayoutType getLayoutType(BuildContext context) {
-  final width = MediaQuery.of(context).size.width;
-  if (width >= DS.breakpointDesktop) return LayoutType.desktop;
-  if (width >= DS.breakpointTablet) return LayoutType.tablet;
-  return LayoutType.mobile;
-}
-
-/// 布局类型扩展
-extension LayoutTypeExtension on BuildContext {
-  LayoutType get layoutType => getLayoutType(this);
-
-  bool get isMobile => layoutType == LayoutType.mobile;
-  bool get isTablet => layoutType == LayoutType.tablet;
-  bool get isDesktop => layoutType == LayoutType.desktop;
-}
-
-/// 响应式脚手架 - 自动切换导航布局
+/// Responsive scaffold that adapts navigation patterns across device categories.
 ///
-/// - 移动端：底部导航栏
-/// - 平板：左侧NavigationRail
-/// - 桌面：展开式NavigationDrawer（侧边栏）
+/// - Mobile: bottom navigation bar
+/// - Tablet: NavigationRail
+/// - Desktop/TV: NavigationDrawer
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({
     required this.body,
@@ -51,19 +28,22 @@ class ResponsiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layoutType = getLayoutType(context);
+    final category = ResponsiveSystem.getCategory(context);
 
-    switch (layoutType) {
-      case LayoutType.desktop:
+    switch (category) {
+      case DeviceCategory.desktop:
+      case DeviceCategory.tv:
         return _buildDesktopLayout(context);
-      case LayoutType.tablet:
+      case DeviceCategory.tablet:
         return _buildTabletLayout(context);
-      case LayoutType.mobile:
+      case DeviceCategory.watch:
+      case DeviceCategory.phone:
+      case DeviceCategory.phablet:
         return _buildMobileLayout(context);
     }
   }
 
-  /// 移动端布局：底部导航栏
+  /// Mobile layout: bottom navigation bar
   Widget _buildMobileLayout(BuildContext context) => Scaffold(
         appBar: appBar,
         body: body,
@@ -75,7 +55,7 @@ class ResponsiveScaffold extends StatelessWidget {
         floatingActionButton: floatingActionButton,
       );
 
-  /// 平板布局：侧边NavigationRail
+  /// Tablet layout: NavigationRail
   Widget _buildTabletLayout(BuildContext context) => Scaffold(
         body: Row(
           children: [
@@ -105,7 +85,7 @@ class ResponsiveScaffold extends StatelessWidget {
         ),
       );
 
-  /// 桌面布局：展开式侧边栏NavigationDrawer
+  /// Desktop layout: NavigationDrawer
   Widget _buildDesktopLayout(BuildContext context) => Scaffold(
         body: Row(
           children: [
@@ -115,17 +95,16 @@ class ResponsiveScaffold extends StatelessWidget {
                 selectedIndex: currentIndex,
                 onDestinationSelected: onDestinationSelected,
                 children: [
-                  // Logo和标题
                   Padding(
-                    padding: const EdgeInsets.all(DS.spacing24),
+                    padding: const EdgeInsets.all(SpacingSystem.xl),
                     child: Row(
                       children: [
                         Icon(
                           Icons.local_fire_department,
-                          color: DS.primaryBase,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 32,
                         ),
-                        const SizedBox(width: DS.spacing12),
+                        const SizedBox(width: SpacingSystem.md),
                         Text(
                           title ?? 'Sparkle',
                           style: Theme.of(context).textTheme.headlineSmall,
@@ -134,7 +113,6 @@ class ResponsiveScaffold extends StatelessWidget {
                     ),
                   ),
                   const Divider(),
-                  // 导航项
                   ...destinations.map(
                     (d) => NavigationDrawerDestination(
                       icon: d.icon,
@@ -158,9 +136,7 @@ class ResponsiveScaffold extends StatelessWidget {
       );
 }
 
-/// 内容宽度约束包装器
-///
-/// 根据屏幕尺寸自动限制内容最大宽度，提升大屏幕阅读体验
+/// Content width constraint wrapper for large screens.
 class ContentConstraint extends StatelessWidget {
   const ContentConstraint({
     required this.child,
@@ -176,29 +152,15 @@ class ContentConstraint extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!enabled) return child;
 
-    final layoutType = getLayoutType(context);
-
-    double maxWidth;
-    double horizontalPadding;
-
-    switch (layoutType) {
-      case LayoutType.desktop:
-        maxWidth = DS.contentMaxWidthDesktop;
-        horizontalPadding = DS.spacing32;
-      case LayoutType.tablet:
-        maxWidth = DS.contentMaxWidthTablet;
-        horizontalPadding = DS.spacing24;
-      case LayoutType.mobile:
-        maxWidth = double.infinity;
-        horizontalPadding = DS.spacing16;
-    }
+    final maxWidth = ContentConstraintSystem.maxWidth(context);
+    final horizontalPadding = ContentConstraintSystem.horizontalPadding(context);
 
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding:
-              padding ?? EdgeInsets.symmetric(horizontal: horizontalPadding),
+          padding: padding ??
+              EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: child,
         ),
       ),
@@ -206,17 +168,12 @@ class ContentConstraint extends StatelessWidget {
   }
 }
 
-/// 响应式网格布局
-///
-/// 自动根据屏幕尺寸调整列数：
-/// - 桌面：3列
-/// - 平板：2列
-/// - 手机：1列
+/// Responsive grid layout (non-sliver).
 class ResponsiveGrid extends StatelessWidget {
   const ResponsiveGrid({
     required this.children,
     super.key,
-    this.spacing = DS.spacing16,
+    this.spacing = 16.0,
     this.childAspectRatio,
   });
   final List<Widget> children;
@@ -225,27 +182,19 @@ class ResponsiveGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layoutType = getLayoutType(context);
-
-    int crossAxisCount;
-    switch (layoutType) {
-      case LayoutType.desktop:
-        crossAxisCount = 3;
-      case LayoutType.tablet:
-        crossAxisCount = 2;
-      case LayoutType.mobile:
-        crossAxisCount = 1;
-    }
+    final crossAxisCount = ResponsiveGridSystem.columns(context);
+    final resolvedSpacing = spacing;
+    final resolvedAspectRatio =
+        childAspectRatio ?? ResponsiveGridSystem.aspectRatio(context);
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: spacing,
-        mainAxisSpacing: spacing,
-        childAspectRatio:
-            childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
+        crossAxisSpacing: resolvedSpacing,
+        mainAxisSpacing: resolvedSpacing,
+        childAspectRatio: resolvedAspectRatio,
       ),
       itemCount: children.length,
       itemBuilder: (context, index) => children[index],
@@ -253,12 +202,12 @@ class ResponsiveGrid extends StatelessWidget {
   }
 }
 
-/// 响应式列布局（Sliver版本，用于CustomScrollView）
+/// Responsive sliver grid layout.
 class ResponsiveSliverGrid extends StatelessWidget {
   const ResponsiveSliverGrid({
     required this.children,
     super.key,
-    this.spacing = DS.spacing16,
+    this.spacing = 16.0,
     this.childAspectRatio,
   });
   final List<Widget> children;
@@ -267,25 +216,17 @@ class ResponsiveSliverGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layoutType = getLayoutType(context);
-
-    int crossAxisCount;
-    switch (layoutType) {
-      case LayoutType.desktop:
-        crossAxisCount = 3;
-      case LayoutType.tablet:
-        crossAxisCount = 2;
-      case LayoutType.mobile:
-        crossAxisCount = 1;
-    }
+    final crossAxisCount = ResponsiveGridSystem.columns(context);
+    final resolvedSpacing = spacing;
+    final resolvedAspectRatio =
+        childAspectRatio ?? ResponsiveGridSystem.aspectRatio(context);
 
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: spacing,
-        mainAxisSpacing: spacing,
-        childAspectRatio:
-            childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
+        crossAxisSpacing: resolvedSpacing,
+        mainAxisSpacing: resolvedSpacing,
+        childAspectRatio: resolvedAspectRatio,
       ),
       delegate: SliverChildBuilderDelegate(
         (context, index) => children[index],
@@ -295,10 +236,7 @@ class ResponsiveSliverGrid extends StatelessWidget {
   }
 }
 
-/// 响应式双栏布局
-///
-/// 桌面/平板：左右双栏（主内容+侧边栏）
-/// 手机：单栏（只显示主内容）
+/// Responsive two-column layout.
 class ResponsiveTwoColumn extends StatelessWidget {
   const ResponsiveTwoColumn({
     required this.main,
@@ -312,19 +250,18 @@ class ResponsiveTwoColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layoutType = getLayoutType(context);
+    final category = ResponsiveSystem.getCategory(context);
+    final isMobile = category == DeviceCategory.watch ||
+        category == DeviceCategory.phone ||
+        category == DeviceCategory.phablet;
 
-    if (layoutType == LayoutType.mobile) {
-      // 手机端只显示主内容
-      return main;
-    }
+    if (isMobile) return main;
 
-    // 平板和桌面显示双栏
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: main),
-        const SizedBox(width: DS.spacing16),
+        const SizedBox(width: SpacingSystem.lg),
         SizedBox(
           width: sidebarWidth,
           child: sidebar,

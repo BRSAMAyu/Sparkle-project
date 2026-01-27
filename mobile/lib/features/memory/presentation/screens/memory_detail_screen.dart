@@ -188,9 +188,11 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: _buildBody(context),
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: _buildBody(context),
+          ),
         ),
       );
 

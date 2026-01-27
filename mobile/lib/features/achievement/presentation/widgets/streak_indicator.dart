@@ -695,7 +695,7 @@ class _CircularProgressPainter extends CustomPainter {
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
     
-    final startAngle = -math.pi / 2;
+    const startAngle = -math.pi / 2;
     var currentAngle = startAngle;
     
     while (currentAngle < startAngle + 2 * math.pi) {

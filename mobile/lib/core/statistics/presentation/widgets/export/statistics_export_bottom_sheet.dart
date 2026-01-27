@@ -232,7 +232,7 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
                   _selectedFormat = format;
                 });
               },
-            )).toList(),
+            ),).toList(),
         ),
       ],
     );
@@ -429,7 +429,7 @@ class StatisticsShareBottomSheet extends StatelessWidget {
               // Navigator.pop(context);
             }
           },
-        )).toList(),
+        ),).toList(),
     );
 
   /// Show the share bottom sheet

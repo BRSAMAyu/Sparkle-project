@@ -167,7 +167,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
 
           // Main content
           SafeArea(
-            child: Column(
+            child: ContentConstraint(
+              child: Column(
               children: [
                 // Header with controls
                 _buildHeader(),
@@ -183,6 +184,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
                 // Navigation controls
                 _buildNavigationControls(),
               ],
+            ),
             ),
           ),
 

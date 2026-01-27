@@ -56,24 +56,26 @@ class _TaskDetailView extends ConsumerWidget {
               slivers: [
                 _buildSliverAppBar(context),
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoSection(context),
-                        const SizedBox(height: DS.spacing24),
-                        Text(
-                          '执行指南',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        _buildGuideSection(context),
-                        const SizedBox(height: DS.spacing64), // Space for bottom bar
-                      ],
+                  child: ContentConstraint(
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoSection(context),
+                          const SizedBox(height: DS.spacing24),
+                          Text(
+                            '执行指南',
+                            style:
+                                Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: DS.fontWeightBold,
+                                    ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildGuideSection(context),
+                          const SizedBox(height: DS.spacing64), // Space for bottom bar
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -157,7 +159,7 @@ class _TaskDetailView extends ConsumerWidget {
                               label: Text(
                                   toBeginningOfSentenceCase(task.type.name) ??
                                       task.type.name,
-                                  style: TextStyle(fontSize: DS.fontSizeSm),),
+                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor:
                                   DS.brandPrimary.withValues(alpha: 0.8),
                               avatar: Icon(Icons.category,
@@ -167,7 +169,7 @@ class _TaskDetailView extends ConsumerWidget {
                               label: Text(
                                   toBeginningOfSentenceCase(task.status.name) ??
                                       task.status.name,
-                                  style: TextStyle(fontSize: DS.fontSizeSm),),
+                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor: _getStatusColor(task.status)
                                   .withValues(alpha: 0.2),
                               labelStyle: TextStyle(

@@ -74,7 +74,8 @@ class _LearningForecastScreenState
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+            : ContentConstraint(
+              child: RefreshIndicator(
                 onRefresh: _loadDashboard,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -132,6 +133,7 @@ class _LearningForecastScreenState
                     ],
                   ),
                 ),
+              ),
               ),
       );
 

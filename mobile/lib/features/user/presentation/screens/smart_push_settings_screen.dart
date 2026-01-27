@@ -142,9 +142,10 @@ class _SmartPushSettingsScreenState
               ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(DS.lg),
-          children: [
+        body: ContentConstraint(
+          child: ListView(
+            padding: const EdgeInsets.all(DS.lg),
+            children: [
             _buildSectionTitle('角色设定 (Persona)'),
             const SizedBox(height: DS.sm),
             _buildPersonaSelector(),
@@ -184,8 +185,9 @@ class _SmartPushSettingsScreenState
                     style: TextStyle(color: DS.brandPrimaryConst),),
               ),
             ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       );
 

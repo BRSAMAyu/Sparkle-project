@@ -16,11 +16,17 @@ from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
 from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
 from app.models.event import TrackingEvent  # noqa: F401
 from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
+from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401
     ScaffoldingState,
     PassiveSignal,
     BehavioralOutcome,
     InterventionTemplate,
+)
+from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.community import (  # noqa: F401
+    Group, GroupMember, GroupMessage, PrivateMessage,
+    Friendship, GroupType, GroupRole
 )
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

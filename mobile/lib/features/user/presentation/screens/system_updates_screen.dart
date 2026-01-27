@@ -30,7 +30,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
         title: const Text('系统活动'),
       ),
       body: updatesAsync.when(
-        data: (items) => _buildList(context, items),
+        data: (items) => ContentConstraint(child: _buildList(context, items)),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('加载失败：$err')),
       ),

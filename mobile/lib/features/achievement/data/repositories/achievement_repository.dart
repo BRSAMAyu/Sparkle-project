@@ -3,7 +3,6 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-import 'package:sparkle/shared/models/api_response_model.dart';
 
 /// Achievement Repository
 /// 成就数据仓库

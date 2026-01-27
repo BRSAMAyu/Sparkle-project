@@ -332,7 +332,7 @@ class StatisticsChartDataHelper {
       gridData: FlGridData(
         drawVerticalLine: StatisticsChartConfig.showVerticalGrid,
         horizontalInterval: maxY != null ? (maxY - minY) / 4 : null,
-        getDrawingHorizontalLine: (value) => FlLine(
+        getDrawingHorizontalLine: (value) => const FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
             dashArray: StatisticsChartConfig.gridDashPattern,
@@ -366,7 +366,7 @@ class StatisticsChartDataHelper {
             interval: maxY != null ? (maxY - minY) / 4 : null,
             getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
@@ -383,15 +383,13 @@ class StatisticsChartDataHelper {
       borderData: FlBorderData(show: false),
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
-              return LineTooltipItem(
+          getTooltipItems: (touchedSpots) => touchedSpots.map((spot) => LineTooltipItem(
                 spot.y.toStringAsFixed(1),
                 TextStyle(
                   color: StatisticsChartConfig.tooltipTextColor,
                   fontSize: 12,
                 ),
-              );
-            }).toList(),
+              )).toList(),
         ),
       ),
     );
@@ -408,7 +406,7 @@ class StatisticsChartDataHelper {
       maxY: maxY,
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => FlLine(
+        getDrawingHorizontalLine: (value) => const FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
           ),
@@ -440,7 +438,7 @@ class StatisticsChartDataHelper {
             reservedSize: 40,
             getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),

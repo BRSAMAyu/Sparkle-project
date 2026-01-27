@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 
 /// Leaderboard Screen
@@ -78,30 +79,32 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
     return RefreshIndicator(
       onRefresh: () => _refreshLeaderboard(type),
-      child: CustomScrollView(
-        slivers: [
-          // Podium for top 3
-          if (leaderboard.entries.isNotEmpty)
+      child: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
+            // Podium for top 3
+            if (leaderboard.entries.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _buildPodium(leaderboard.entries.take(3).toList()),
+              ),
+
+            // My rank banner
             SliverToBoxAdapter(
-              child: _buildPodium(leaderboard.entries.take(3).toList()),
+              child: _buildMyRankBanner(leaderboard),
             ),
 
-          // My rank banner
-          SliverToBoxAdapter(
-            child: _buildMyRankBanner(leaderboard),
-          ),
-
-          // Full leaderboard
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index >= leaderboard.entries.length) return null;
-                return _buildLeaderboardEntry(leaderboard.entries[index]);
-              },
-              childCount: leaderboard.entries.length,
+            // Full leaderboard
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= leaderboard.entries.length) return null;
+                  return _buildLeaderboardEntry(leaderboard.entries[index]);
+                },
+                childCount: leaderboard.entries.length,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

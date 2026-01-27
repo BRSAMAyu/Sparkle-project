@@ -1,5 +1,6 @@
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 聊天流事件基类
@@ -241,6 +242,124 @@ class PlanReviewWidgetEvent extends ChatStreamEvent {
     super.promptVersion,
   });
   final Map<String, dynamic> reviewData;
+}
+
+/// State Change Event - Major state change notifications
+/// Triggered when: plan archived/restored/deleted, settings updated, memory cleanup
+class StateChangeEvent extends ChatStreamEvent {
+  StateChangeEvent({
+    required this.changeData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> changeData;
+
+  /// Type of state change
+  String get changeType => changeData['change_type'] as String? ?? 'unknown';
+
+  /// Change ID (UUID)
+  String get changeId => changeData['change_id'] as String? ?? '';
+
+  /// ISO timestamp
+  String get timestamp => changeData['timestamp'] as String? ?? '';
+
+  /// Intervention level: toast, card, modal
+  String get interventionLevel => changeData['intervention_level'] as String? ?? 'toast';
+
+  /// Priority: low, medium, high
+  String get priority => changeData['priority'] as String? ?? 'low';
+
+  /// Pre-formatted user-friendly message
+  String get formattedMessage => changeData['formatted_message'] as String? ?? '';
+
+  /// Plan-specific fields (for plan_archived, plan_restored, plan_deleted)
+  String? get planName => changeData['plan_name'] as String?;
+  String? get planId => changeData['plan_id'] as String?;
+  int get taskCountFreed => changeData['task_count_freed'] as int? ?? 0;
+  int get memoryCountRemoved => changeData['memory_count_removed'] as int? ?? 0;
+  String? get newPrimaryPlan => changeData['new_primary_plan'] as String?;
+
+  /// Settings-specific fields (for user_settings_updated)
+  String? get settingField => changeData['setting_field'] as String?;
+  String? get fieldLabel => changeData['field_label'] as String?;
+  dynamic get oldValue => changeData['old_value'];
+  dynamic get newValue => changeData['new_value'];
+  String? get impactDescription => changeData['impact_description'] as String?;
+
+  /// Memory-specific fields (for memory_cleanup)
+  int get memoriesRemoved => changeData['memories_removed'] as int? ?? 0;
+  double get spaceFreedMb => (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
+
+  /// Convert to InterventionPushMessage for display
+  InterventionPushMessage toInterventionMessage() {
+    return InterventionPushMessage(
+      interventionId: changeId,
+      level: _mapInterventionLevel(),
+      content: InterventionContent(
+        renderedMessage: formattedMessage,
+        intentType: changeType,
+        templateId: 'state_change_$changeType',
+        scaffoldingLevel: 0,
+        contextVariables: {
+          'change_type': changeType,
+          'change_id': changeId,
+          'timestamp': timestamp,
+          if (planId != null) 'plan_id': planId!,
+          if (planName != null) 'plan_name': planName!,
+        },
+      ),
+      actions: _getActions(),
+      expiresAt: DateTime.now().add(const Duration(hours: 24)),
+    );
+  }
+
+  InterventionLevel _mapInterventionLevel() {
+    switch (interventionLevel) {
+      case 'modal':
+        return InterventionLevel.modal;
+      case 'card':
+        return InterventionLevel.card;
+      case 'toast':
+      default:
+        return InterventionLevel.toast;
+    }
+  }
+
+  List<InterventionAction> _getActions() {
+    // For plan changes, offer to view the plan
+    if (planId != null && changeType.startsWith('plan_')) {
+      return [
+        InterventionAction(
+          id: 'view_plan',
+          label: '查看计划',
+          type: 'navigation',
+        ),
+      ];
+    }
+
+    // For settings changes, offer to view settings
+    if (changeType == 'user_settings_updated') {
+      return [
+        InterventionAction(
+          id: 'view_settings',
+          label: '查看设置',
+          type: 'navigation',
+        ),
+      ];
+    }
+
+    // Default: just acknowledge
+    return [
+      InterventionAction(
+        id: 'acknowledge',
+        label: '知道了',
+        type: 'secondary',
+      ),
+    ];
+  }
 }
 
 /// Milestone Proposal Event
@@ -552,6 +671,38 @@ class AchievementUnlockModel {
   final List<Map<String, dynamic>>? rewards;
 }
 
+/// ============================================
+/// Achievement Milestone Event
+/// ============================================
+
+/// 成就里程碑通知事件 - 当成就进度达到25%、50%、75%时触发
+class AchievementMilestoneEvent extends ChatStreamEvent {
+  AchievementMilestoneEvent({
+    required this.milestoneData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> milestoneData;
+
+  /// 成就ID
+  String get achievementId => milestoneData['achievement_id'] as String? ?? '';
+
+  /// 成就名称
+  String get achievementName => milestoneData['achievement_name'] as String? ?? '';
+
+  /// 里程碑百分比（25、50、75）
+  int get milestonePercent => milestoneData['milestone_percent'] as int? ?? 0;
+
+  /// 提示消息
+  String get message => milestoneData['message'] as String? ?? '';
+
+  /// 事件类型
+  String get type => milestoneData['type'] as String? ?? 'progress_milestone';
+}
+
 // ============================================
 // Transparency Events
 // ============================================
@@ -597,9 +748,14 @@ class TransparencyCompleteEvent extends ChatStreamEvent {
 
 /// 透明度数据模型
 class TransparencyData {
+  const TransparencyData({
+    required this.steps,
+    required this.totalDurationMs,
+    required this.requestId,
+    this.totalTokens = 0,
+  });
 
-  factory TransparencyData.fromJson(Map<String, dynamic> json) {
-    return TransparencyData(
+  factory TransparencyData.fromJson(Map<String, dynamic> json) => TransparencyData(
       steps: (json['steps'] as List<dynamic>?)
               ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -608,13 +764,6 @@ class TransparencyData {
       requestId: json['requestId'] as String? ?? '',
       totalTokens: json['totalTokens'] as int? ?? 0,
     );
-  }
-  const TransparencyData({
-    required this.steps,
-    required this.totalDurationMs,
-    required this.requestId,
-    this.totalTokens = 0,
-  });
 
   final List<TransparencyStep> steps;
   final int totalDurationMs;
@@ -632,20 +781,6 @@ class TransparencyData {
 
 /// 透明度步骤模型（数据定义）
 class TransparencyStep {
-
-  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
-    return TransparencyStep(
-      stepId: json['stepId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      durationMs: json['durationMs'] as int?,
-      result: json['result'] as Map<String, dynamic>?,
-      error: json['error'] as String?,
-      agentType: json['agentType'] as String?,
-      stepType: json['type'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
-    );
-  }
   const TransparencyStep({
     required this.stepId,
     required this.name,
@@ -657,6 +792,18 @@ class TransparencyStep {
     this.stepType,
     this.metadata,
   });
+
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) => TransparencyStep(
+      stepId: json['stepId'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      durationMs: json['durationMs'] as int?,
+      result: json['result'] as Map<String, dynamic>?,
+      error: json['error'] as String?,
+      agentType: json['agentType'] as String?,
+      stepType: json['type'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
 
   final String stepId;
   final String name;

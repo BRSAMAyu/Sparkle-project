@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
@@ -97,47 +98,49 @@ class ErrorDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     ErrorRecord error,
   ) =>
-      SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 科目和元数据
-            _buildMetadataSection(context, error),
+      ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 80),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 科目和元数据
+              _buildMetadataSection(context, error),
 
-            const Divider(height: 1),
-
-            // 题目内容
-            _buildQuestionSection(context, error),
-
-            const Divider(height: 1),
-
-            // 答案对比
-            _buildAnswerSection(context, error),
-
-            const Divider(height: 1),
-
-            // AI 分析
-            if (error.latestAnalysis != null) ...[
-              _buildAnalysisSection(context, error),
               const Divider(height: 1),
-            ],
 
-            // 同类错因语义摘要
-            _buildSemanticSummarySection(
-              context,
-              ref.watch(errorSemanticSummaryProvider(error.id)),
-            ),
+              // 题目内容
+              _buildQuestionSection(context, error),
 
-            // 关联知识点
-            if (error.knowledgeLinks.isNotEmpty) ...[
-              _buildKnowledgeSection(context, error),
               const Divider(height: 1),
-            ],
 
-            // 复习统计
-            _buildReviewStatsSection(context, error),
-          ],
+              // 答案对比
+              _buildAnswerSection(context, error),
+
+              const Divider(height: 1),
+
+              // AI 分析
+              if (error.latestAnalysis != null) ...[
+                _buildAnalysisSection(context, error),
+                const Divider(height: 1),
+              ],
+
+              // 同类错因语义摘要
+              _buildSemanticSummarySection(
+                context,
+                ref.watch(errorSemanticSummaryProvider(error.id)),
+              ),
+
+              // 关联知识点
+              if (error.knowledgeLinks.isNotEmpty) ...[
+                _buildKnowledgeSection(context, error),
+                const Divider(height: 1),
+              ],
+
+              // 复习统计
+              _buildReviewStatsSection(context, error),
+            ],
+          ),
         ),
       );
 
@@ -287,7 +290,10 @@ class ErrorDetailScreen extends ConsumerWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: summary.strategies.map((strategy) => _buildTagChip(context, strategy.title)).toList(),
+                      children: summary.strategies
+                          .map((strategy) =>
+                              _buildTagChip(context, strategy.title))
+                          .toList(),
                     ),
                     const SizedBox(height: 12),
                   ],

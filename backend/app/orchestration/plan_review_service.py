@@ -163,7 +163,7 @@ class PlanReviewService:
         reviewed_at = datetime.utcnow().isoformat()
 
         # Step 1: Quick rule-based check
-        rule_result = await self._quick_rule_check(plan)
+        rule_result = await self._quick_rule_check(plan, user_context)
         if rule_result:
             logger.info(f"Plan {plan.plan_id} auto-approved by rules: {rule_result}")
             return PlanReviewResult(
@@ -211,13 +211,32 @@ class PlanReviewService:
             ),
         )
 
-    async def _quick_rule_check(self, plan: ExecutablePlan) -> Optional[str]:
+    async def _quick_rule_check(self, plan: ExecutablePlan, user_context: Dict[str, Any]) -> Optional[str]:
         """
         Quick rule-based check for auto-approval.
+
+        P0 Fix #1: Added feasibility validation and overcommitment detection.
+
+        Args:
+            plan: The executable plan to check
+            user_context: User context including constraints and current commitments
 
         Returns:
             Reason string if auto-approved, None otherwise
         """
+        # === P0 Fix #2: Check for overcommitment (user already has too many plans) ===
+        active_plan_count = user_context.get("current_plan_count", 0)
+        if active_plan_count >= 3:
+            # Check if this plan creates another big plan
+            for tc in plan.tool_calls:
+                if tc.name in ["create_sprint_plan", "create_learning_plan", "create_plan"]:
+                    logger.warning(
+                        f"User already has {active_plan_count} active plans, "
+                        f"rejecting auto-approval for new plan creation"
+                    )
+                    # Don't auto-approve, let LLM review handle the warning
+                    return None
+
         # Check for high-risk tools
         for tool_call in plan.tool_calls:
             if tool_call.name in self.HIGH_RISK_TOOLS:
@@ -250,11 +269,122 @@ class PlanReviewService:
             logger.info(f"Risk flags present: {plan.risk_flags}")
             return None
 
-        # High confidence, low complexity plan
+        # === P0 Fix #1: Validate feasibility before auto-approving high confidence plans ===
         if plan.confidence >= 0.95 and len(plan.tool_calls) <= 2:
+            # Add feasibility validation for high confidence plans
+            feasibility_ok = await self._validate_feasibility(plan, user_context)
+            if not feasibility_ok:
+                logger.info(
+                    f"Plan rejected by feasibility check despite high confidence "
+                    f"(confidence={plan.confidence}, tool_calls={len(plan.tool_calls)})"
+                )
+                return None  # Don't auto-approve, will go to LLM review with feasibility concerns
+
             return "high_confidence_simple_plan"
 
         return None
+
+    async def _validate_feasibility(
+        self,
+        plan: ExecutablePlan,
+        user_context: Dict[str, Any],
+    ) -> bool:
+        """
+        P0 Fix #1: Validate plan feasibility against user constraints.
+
+        Checks for impossible constraints like:
+        - Expert-level goals with minimal time investment
+        - Time conflicts with user's schedule
+        - Skill mismatches
+
+        Args:
+            plan: The executable plan to validate
+            user_context: User context with constraints and skill level
+
+        Returns:
+            True if plan appears feasible, False if clearly infeasible
+        """
+        # Extract user skill level (default to intermediate if unknown)
+        user_skill_level = user_context.get("skill_level", "intermediate").lower()
+        user_background = user_context.get("user_background", "")
+
+        # Check each tool call for feasibility issues
+        for tc in plan.tool_calls:
+            params = tc.params or {}
+
+            # === Check 1: Time vs Difficulty constraints ===
+            daily_hours = params.get("daily_hours")
+            total_days = params.get("total_days", params.get("duration_days"))
+            difficulty = params.get("difficulty", "").lower()
+            goal_type = params.get("type", "").lower()
+            title = params.get("title", "").lower()
+
+            # Normalize difficulty from title if not in params
+            if not difficulty:
+                if any(word in title for word in ["精通", "专家", "expert", "master"]):
+                    difficulty = "expert"
+                elif any(word in title for word in ["入门", "基础", "beginner", "basic"]):
+                    difficulty = "beginner"
+
+            # Rule: Expert/master level goals require minimum time investment
+            if difficulty in ["expert", "master", "精通"]:
+                if daily_hours and daily_hours < 2:
+                    logger.warning(
+                        f"Feasibility check failed: {difficulty} level with only {daily_hours}h/day"
+                    )
+                    return False
+
+                # Additional check: liberal arts background needs more time for technical goals
+                if user_background == "liberal_arts" and daily_hours < 3:
+                    logger.warning(
+                        f"Feasibility check failed: liberal arts user attempting {difficulty} "
+                        f"technical goal with only {daily_hours}h/day"
+                    )
+                    return False
+
+            # Rule: Impossible to reach "expert" in 1 week with low hours
+            if total_days and total_days <= 7:
+                if difficulty in ["expert", "master", "精通"]:
+                    if daily_hours and daily_hours < 4:
+                        logger.warning(
+                            f"Feasibility check failed: {difficulty} in {total_days} days "
+                            f"with {daily_hours}h/day is unrealistic"
+                        )
+                        return False
+
+                # Check total hours required
+                if daily_hours and total_days:
+                    total_hours = daily_hours * total_days
+                    # Most skills need ~100 hours for proficiency, 1000+ for mastery
+                    if difficulty in ["expert", "master", "精通"] and total_hours < 50:
+                        logger.warning(
+                            f"Feasibility check failed: {difficulty} requires more than "
+                            f"{total_hours} total hours"
+                        )
+                        return False
+
+            # === Check 2: Liberal arts student attempting advanced technical goals ===
+            if user_background == "liberal_arts" or "文科" in str(user_background):
+                # If user indicated they don't know code, advanced programming goals need review
+                if any(word in title for word in ["爬虫", "web开发", "全栈", "crawler"]):
+                    # Check if plan includes setup/basics
+                    plan_has_setup = any(
+                        "环境" in str(tc.params.get("description", "")) or
+                        "安装" in str(tc.params.get("description", "")) or
+                        "基础" in str(tc.params.get("description", ""))
+                        for tc in plan.tool_calls
+                    )
+
+                    if not plan_has_setup:
+                        logger.warning(
+                            "Feasibility check: liberal arts user attempting advanced "
+                            "technical goal without setup steps"
+                        )
+                        # Don't block, but require LLM review to catch this
+                        return False
+
+        # All feasibility checks passed
+        return True
 
     async def _llm_review(
         self,

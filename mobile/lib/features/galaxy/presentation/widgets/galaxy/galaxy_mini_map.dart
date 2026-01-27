@@ -148,12 +148,13 @@ class _MiniMapPainter extends CustomPainter {
     final rect = Rect.fromLTRB(minX, minY, maxX, maxY);
 
     // Scale to minimap coordinates
-    final miniRect = Rect.fromLTRB(
+    var miniRect = Rect.fromLTRB(
       rect.left * minimapScale,
       rect.top * minimapScale,
       rect.right * minimapScale,
       rect.bottom * minimapScale,
     );
+    miniRect = miniRect.inflate(-2);
 
     // Draw viewport rectangle
     final viewportPaint = Paint()

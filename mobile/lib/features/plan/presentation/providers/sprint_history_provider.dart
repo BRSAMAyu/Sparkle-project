@@ -1,8 +1,7 @@
-import 'package:sparkle/shared/entities/task_model.dart' show TaskStatus;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart' show TaskStatus;
 
 /// Sprint history item - represents a completed/archived sprint
 class SprintHistoryItem {

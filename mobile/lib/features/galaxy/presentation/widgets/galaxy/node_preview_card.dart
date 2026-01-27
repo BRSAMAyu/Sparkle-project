@@ -9,11 +9,13 @@ class NodePreviewCard extends StatelessWidget {
     required this.node,
     required this.onClose,
     required this.onTap,
+    this.bottomInset = 100,
     super.key,
   });
   final GalaxyNodeModel node;
   final VoidCallback onClose;
   final VoidCallback onTap;
+  final double bottomInset;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,7 @@ class NodePreviewCard extends StatelessWidget {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 100, left: 20, right: 20),
+        margin: EdgeInsets.only(bottom: bottomInset, left: 20, right: 20),
         width: double.infinity,
         constraints: const BoxConstraints(maxWidth: 400),
         child: Material(

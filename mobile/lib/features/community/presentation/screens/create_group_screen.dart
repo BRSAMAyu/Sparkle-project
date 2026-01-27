@@ -157,9 +157,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           onPressed: () => context.pop(),
         ),
         title: const Text('Create Group'),),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Form(
+          body: ContentConstraint(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -74,35 +74,37 @@ class _AchievementListScreenState
     final state = ref.watch(achievementProvider);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // 顶部统计面板
-          SliverToBoxAdapter(
-            child: _buildHeader(context, state),
-          ),
+      body: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
+            // 顶部统计面板
+            SliverToBoxAdapter(
+              child: _buildHeader(context, state),
+            ),
 
-          // 筛选栏
-          SliverToBoxAdapter(
-            child: _buildFilterBar(context),
-          ),
+            // 筛选栏
+            SliverToBoxAdapter(
+              child: _buildFilterBar(context),
+            ),
 
-          // 分类标签
-          SliverToBoxAdapter(
-            child: _buildCategoryTabs(context, state),
-          ),
+            // 分类标签
+            SliverToBoxAdapter(
+              child: _buildCategoryTabs(context, state),
+            ),
 
-          // 内容区域
-          if (state.isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (state.error != null)
-            SliverFillRemaining(
-              child: _buildErrorView(context, state.error!),
-            )
-          else
-            _buildAchievementContent(state),
-        ],
+            // 内容区域
+            if (state.isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (state.error != null)
+              SliverFillRemaining(
+                child: _buildErrorView(context, state.error!),
+              )
+            else
+              _buildAchievementContent(state),
+          ],
+        ),
       ),
     );
   }
@@ -354,8 +356,8 @@ class _AchievementListScreenState
       return SliverPadding(
         padding: const EdgeInsets.all(DS.spacing16),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: context.isMobile ? 2 : 3,
             mainAxisSpacing: DS.spacing12,
             crossAxisSpacing: DS.spacing12,
           ),

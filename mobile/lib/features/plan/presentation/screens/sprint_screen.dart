@@ -47,9 +47,11 @@ class SprintScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(planListProvider.notifier).refresh(),
-        child: _buildBody(context, planState, activeSprint),
+      body: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(planListProvider.notifier).refresh(),
+          child: _buildBody(context, planState, activeSprint),
+        ),
       ),
     );
   }

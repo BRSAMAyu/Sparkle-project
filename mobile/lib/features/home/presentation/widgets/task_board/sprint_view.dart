@@ -122,7 +122,6 @@ class _SprintHeader extends ConsumerWidget {
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: DS.brandPrimary.withValues(alpha: 0.2),
-          width: 1,
         ),
       ),
       child: Row(
@@ -200,8 +199,8 @@ class _SprintHeader extends ConsumerWidget {
                 child: Row(
                   children: [
                     Icon(Icons.check_circle_rounded, color: DS.semanticSuccess),
-                    SizedBox(width: DS.spacing12),
-                    Text('完成冲刺'),
+                    const SizedBox(width: DS.spacing12),
+                    const Text('完成冲刺'),
                   ],
                 ),
               ),
@@ -210,8 +209,8 @@ class _SprintHeader extends ConsumerWidget {
                 child: Row(
                   children: [
                     Icon(Icons.date_range_rounded, color: DS.info),
-                    SizedBox(width: DS.spacing12),
-                    Text('延长冲刺'),
+                    const SizedBox(width: DS.spacing12),
+                    const Text('延长冲刺'),
                   ],
                 ),
               ),
@@ -220,8 +219,8 @@ class _SprintHeader extends ConsumerWidget {
                 child: Row(
                   children: [
                     Icon(Icons.cancel_rounded, color: DS.semanticError),
-                    SizedBox(width: DS.spacing12),
-                    Text('放弃冲刺'),
+                    const SizedBox(width: DS.spacing12),
+                    const Text('放弃冲刺'),
                   ],
                 ),
               ),

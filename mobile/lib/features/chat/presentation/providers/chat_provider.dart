@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
@@ -12,20 +13,20 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
-import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
-import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -56,6 +57,7 @@ class ChatState {
     this.pendingPlanReview,
     this.pendingReviewActionId,
     this.pendingContentReview,
+    this.pendingInterventions = const [],
     this.lastPromptTokens,
     this.lastCompletionTokens,
     this.lastTotalTokens,
@@ -104,6 +106,10 @@ class ChatState {
 
   // Content Review state (Phase 2b)
   final ContentReviewResult? pendingContentReview;
+
+  // State change interventions (Phase 2)
+  final List<InterventionPushMessage> pendingInterventions;
+
   final int? lastPromptTokens;
   final int? lastCompletionTokens;
   final int? lastTotalTokens;
@@ -158,6 +164,7 @@ class ChatState {
     String? pendingReviewActionId,
     ContentReviewResult? pendingContentReview,
     bool clearPendingContentReview = false,
+    List<InterventionPushMessage>? pendingInterventions,
     AchievementUnlockEvent? pendingAchievementUnlock,
     int? lastPromptTokens,
     int? lastCompletionTokens,
@@ -216,6 +223,7 @@ class ChatState {
         pendingContentReview: clearPendingContentReview
             ? null
             : pendingContentReview ?? this.pendingContentReview,
+        pendingInterventions: pendingInterventions ?? this.pendingInterventions,
         pendingAchievementUnlock:
             pendingAchievementUnlock ?? this.pendingAchievementUnlock,
         lastPromptTokens: lastPromptTokens ?? this.lastPromptTokens,
@@ -794,6 +802,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Plan Review Widget Event
           _handlePlanReviewWidget(event);
           flushPending();
+        } else if (event is StateChangeEvent) {
+          // State Change Event (plan archived/restored/deleted, settings updated)
+          _handleStateChangeEvent(event);
+          flushPending();
         } else if (event is PlanReviewStatusEvent) {
           // Plan Review Status Event
           _handlePlanReviewStatus(event);
@@ -809,6 +821,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          flushPending();
+        } else if (event is AchievementMilestoneEvent) {
+          // Achievement Milestone Event
+          _handleAchievementMilestone(event);
           flushPending();
         } else if (event is TransparencyStepEvent) {
           // Transparency Step Event
@@ -1096,6 +1112,26 @@ class ChatNotifier extends StateNotifier<ChatState> {
     });
   }
 
+  /// 处理成就里程碑事件
+  void _handleAchievementMilestone(AchievementMilestoneEvent event) {
+    debugPrint('📊 Achievement milestone: ${event.achievementName} - ${event.milestonePercent}%');
+
+    // 显示里程碑通知（可以作为轻量级提示）
+    state = state.copyWith(
+      lastActionStatus: 'milestone_reached',
+      lastActionMessage: event.message,
+    );
+
+    // Clear after delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(
+          clearActionFeedback: true,
+        );
+      }
+    });
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 
@@ -1163,6 +1199,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     debugPrint('📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})');
+  }
+
+  /// 处理 State Change Event (计划归档/恢复/删除、设置更新等重大状态变更)
+  void _handleStateChangeEvent(StateChangeEvent event) {
+    debugPrint('🔄 State change event received: ${event.changeType}');
+
+    // Convert to intervention message
+    final intervention = event.toInterventionMessage();
+
+    // Add to pending interventions
+    state = state.copyWith(
+      pendingInterventions: [...state.pendingInterventions, intervention],
+    );
+
+    debugPrint('📢 State change notification added: ${event.changeType} (${event.interventionLevel})');
   }
 
   /// 处理 Plan Review Status Event

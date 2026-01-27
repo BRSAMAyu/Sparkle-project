@@ -37,7 +37,7 @@ Future<bool> showConfirmCompleteDialog(
 Future<int?> showExtendSprintDialog(
   BuildContext context, {
   required String planName,
-}) async => await showDialog<int>(
+}) async => showDialog<int>(
     context: context,
     builder: (context) => _ExtendSprintDialog(planName: planName),
   );

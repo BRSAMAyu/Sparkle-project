@@ -32,15 +32,16 @@ class ThemeSettingsScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.lg,
-            vertical: DS.md,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: ContentConstraint(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.lg,
+              vertical: DS.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Theme Mode Section
               _ThemeModeSection(
                 currentMode: currentMode,
@@ -80,7 +81,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
 
               // Color Preview Section
               const _ColorPreviewSection(),
-            ],
+              ],
+            ),
           ),
         ),
       ),

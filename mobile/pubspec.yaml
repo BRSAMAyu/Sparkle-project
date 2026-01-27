@@ -102,6 +102,9 @@ dev_dependencies:
   flutter_lints: ^3.0.1
   mockito: ^5.4.4
 
+  # Golden Testing
+  golden_toolkit: ^0.15.0
+
   # Sentry Plugin for Source Maps
   sentry_dart_plugin: ^2.0.0
 

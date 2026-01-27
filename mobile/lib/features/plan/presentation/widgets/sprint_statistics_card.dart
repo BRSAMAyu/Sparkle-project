@@ -275,7 +275,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                       ),
                     ),
                   ],
-                )).toList(),
+                ),).toList(),
               gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(

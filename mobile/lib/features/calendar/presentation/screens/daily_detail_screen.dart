@@ -44,11 +44,12 @@ class DailyDetailScreen extends ConsumerWidget {
         title: Text(DateFormat('MM月dd日').format(date)),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 1. Date Header & Lunar
             _buildDateHeader(context, date, lunarData),
             const SizedBox(height: 20),
@@ -71,7 +72,8 @@ class DailyDetailScreen extends ConsumerWidget {
             _buildSectionTitle(context, '任务清单', Icons.check_circle_outline),
             const SizedBox(height: 10),
             _buildTaskList(context, dayTasks),
-          ],
+            ],
+          ),
         ),
       ),
     );

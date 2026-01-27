@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +45,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _isEntering = true;
   bool _hasCentered = false;
   bool _loadingTimedOut = false;
+  Size? _lastLayoutSize;
+  bool _showDebugOverlay = kDebugMode;
+  final Set<int> _activePointers = <int>{};
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -101,6 +105,26 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _transformationController.value = Matrix4.identity()
       ..translate(tx, ty)
       ..scale(initialScale);
+  }
+
+  void _recenterForResize({
+    required Size oldSize,
+    required Size newSize,
+  }) {
+    if (oldSize.width <= 0 || oldSize.height <= 0) return;
+    if (newSize.width <= 0 || newSize.height <= 0) return;
+
+    // Keep the same canvas point under the previous screen center.
+    final oldCenter = Offset(oldSize.width / 2, oldSize.height / 2);
+    final canvasPoint = _screenToCanvas(oldCenter);
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+
+    final tx = newSize.width / 2 - canvasPoint.dx * scale;
+    final ty = newSize.height / 2 - canvasPoint.dy * scale;
+
+    _transformationController.value = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(scale);
   }
 
   @override
@@ -190,7 +214,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     // Get current scale for dynamic hit radius
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    final hitRadius = 30 / scale; // Larger hit area when zoomed out
+    final effectiveScale = scale.clamp(0.3, 2.0);
+    final hitRadius = 30 / effectiveScale; // Stable hit area across zooms
 
     // Find the tapped node
     // Check visible nodes first for optimization
@@ -230,7 +255,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final canvasCenter = galaxyState.canvasCenter;
     final canvasTap = _screenToCanvas(details.localPosition);
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    final hitRadius = 30 / scale;
+    final effectiveScale = scale.clamp(0.3, 2.0);
+    final hitRadius = 30 / effectiveScale;
 
     final searchNodes = galaxyState.visibleNodes.isNotEmpty
         ? galaxyState.visibleNodes
@@ -498,6 +524,50 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
   }
 
+  void _resetToInitialView() {
+    final size = MediaQuery.of(context).size;
+    if (size.width <= 0 || size.height <= 0) return;
+
+    const targetScale = 0.25;
+    final tx = size.width / 2 - _canvasCenter * targetScale;
+    final ty = size.height / 2 - _canvasCenter * targetScale;
+
+    final targetMatrix = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(targetScale);
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _transientControllers.add(controller);
+
+    final animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: targetMatrix,
+    ).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeInOutCubic),
+    );
+
+    animation.addListener(() {
+      _transformationController.value = animation.value;
+    });
+
+    controller.forward().whenComplete(() {
+      if (_isDisposing) return;
+      if (_transientControllers.remove(controller)) {
+        controller.dispose();
+      }
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已回到全局视图'),
+        duration: Duration(milliseconds: 900),
+      ),
+    );
+  }
+
   void _showSearchDialog() {
     showDialog<void>(
       context: context,
@@ -513,11 +583,81 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final canvasSize = galaxyState.canvasSize;
     final canvasCenter = galaxyState.canvasCenter;
     final safePadding = MediaQuery.of(context).padding;
+    final screenSize = MediaQuery.of(context).size;
+    final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
+    final hasTightHeight = screenSize.height < 680;
+
+    final overlayInset = ResponsiveSystem.resolve(
+      context: context,
+      mobile: 16.0,
+      tablet: 20.0,
+      desktop: 24.0,
+      wide: 32.0,
+    );
+    final bottomInset = safePadding.bottom +
+        ResponsiveSystem.resolve(
+          context: context,
+          mobile: 32.0,
+          tablet: 40.0,
+          desktop: 48.0,
+          wide: 56.0,
+        );
+    final minimapSize = ResponsiveSystem.resolve(
+      context: context,
+      mobile: 96.0,
+      tablet: 120.0,
+      desktop: 140.0,
+      wide: 160.0,
+    );
+    final zoomSliderHeight = ResponsiveSystem.resolve(
+      context: context,
+      mobile: isLandscapeMobile ? 96.0 : 140.0,
+      tablet: 150.0,
+      desktop: 160.0,
+      wide: 180.0,
+    );
+    var nodePreviewBottomInset = bottomInset +
+        ResponsiveSystem.resolve(
+          context: context,
+          mobile: 64.0,
+          tablet: 72.0,
+          desktop: 80.0,
+          wide: 96.0,
+        );
+    if (hasTightHeight) {
+      nodePreviewBottomInset = nodePreviewBottomInset
+          .clamp(bottomInset + 40, bottomInset + 200);
+    }
+    final zoomControlsBottom = isLandscapeMobile
+        ? bottomInset + 56
+        : bottomInset + minimapSize / 2;
 
     return Scaffold(
       backgroundColor: DS.galaxyBackground, // Deep space background
-      body: Stack(
-        children: [
+      body: Listener(
+        onPointerDown: (event) => _activePointers.add(event.pointer),
+        onPointerUp: (event) => _activePointers.remove(event.pointer),
+        onPointerCancel: (event) => _activePointers.remove(event.pointer),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onDoubleTap: kDebugMode
+              ? () {
+                  setState(() {
+                    _showDebugOverlay = !_showDebugOverlay;
+                  });
+                }
+              : null,
+          onLongPressStart: kDebugMode
+              ? (_) {
+                  if (_activePointers.length >= 3) {
+                    setState(() {
+                      _showDebugOverlay = !_showDebugOverlay;
+                    });
+                  }
+                }
+              : null,
+          child: Stack(
+            children: [
           Positioned.fill(
             child: GalaxyShaderBackground(engine: _renderEngine),
           ),
@@ -535,12 +675,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           // 1. Star Map (Interactive)
           LayoutBuilder(
             builder: (context, constraints) {
-              if (!_hasCentered &&
-                  constraints.maxWidth > 0 &&
-                  constraints.maxHeight > 0) {
-                _performInitialCentering(constraints.biggest);
+              final size = constraints.biggest;
+
+              if (!_hasCentered && size.width > 0 && size.height > 0) {
+                _performInitialCentering(size);
                 _hasCentered = true;
+              } else if (_lastLayoutSize != null &&
+                  _lastLayoutSize != size &&
+                  size.width > 0 &&
+                  size.height > 0) {
+                _recenterForResize(
+                  oldSize: _lastLayoutSize!,
+                  newSize: size,
+                );
               }
+              _lastLayoutSize = size;
 
               return GestureDetector(
                 onPanStart: (details) {
@@ -733,8 +882,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 final tx = size.width / 2 - canvasCenter * targetScale;
                 final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
-                  ..translateByDouble(tx, ty, 0, 1)
-                  ..scaleByDouble(targetScale, targetScale, 1.0, 1);
+                  ..translate(tx, ty)
+                  ..scale(targetScale);
 
                 final animation = Matrix4Tween(
                   begin: startMatrix,
@@ -784,7 +933,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           if (!_isEntering)
             Positioned(
               top: safePadding.top + 8,
-              left: 16,
+              left: overlayInset,
               child: IconButton(
                 icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
                 onPressed: () => context.pop(),
@@ -795,7 +944,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           if (!_isEntering)
             Positioned(
               top: safePadding.top + 8,
-              right: 16,
+              right: overlayInset,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -812,6 +961,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           .loadGalaxy(forceRefresh: true),);
                     },
                   ),
+                  if (kDebugMode)
+                    IconButton(
+                      icon: Icon(
+                        _showDebugOverlay
+                            ? Icons.bug_report
+                            : Icons.bug_report_outlined,
+                        color: DS.brandPrimary,
+                      ),
+                      tooltip: 'Toggle LOD Debug Overlay',
+                      onPressed: () {
+                        setState(() {
+                          _showDebugOverlay = !_showDebugOverlay;
+                        });
+                      },
+                    ),
                 ],
               ),
             ),
@@ -819,8 +983,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           if (!_isEntering)
             Positioned(
               top: safePadding.top + 56,
-              left: 20,
-              right: 20,
+              left: overlayInset,
+              right: overlayInset,
               child: Center(
                 child: OfflineIndicator(
                   isUsingCache: galaxyState.isUsingCache,
@@ -836,22 +1000,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ),
 
           // 6. Mini Map (Bottom Left)
-          if (!_isEntering)
+          if (!_isEntering && !isLandscapeMobile)
             Positioned(
-              bottom: safePadding.bottom + 40,
-              left: 20,
+              bottom: bottomInset,
+              left: overlayInset,
               child: GalaxyMiniMap(
                 transformationController: _transformationController,
                 canvasSize: canvasSize,
-                screenSize: MediaQuery.of(context).size,
+                screenSize: screenSize,
+                minimapSize: minimapSize,
               ),
             ),
 
           // 6.1 Guide Button (Above Mini Map)
-          if (!_isEntering)
+          if (!_isEntering && !isLandscapeMobile)
             Positioned(
-              bottom: safePadding.bottom + 180, // Above mini map
-              left: 30, // Slightly indented
+              bottom: bottomInset + minimapSize + 12,
+              left: overlayInset + 8,
               child: FloatingActionButton.small(
                 heroTag: 'guide_btn',
                 backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -883,18 +1048,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           // 6.2 Zoom Controls (Right side, above Spark button)
           if (!_isEntering)
             Positioned(
-              bottom: safePadding.bottom + 120,
-              right: 20,
+              bottom: zoomControlsBottom,
+              right: overlayInset,
               child: ZoomControls(
                 transformationController: _transformationController,
+                sliderHeight: zoomSliderHeight,
               ),
             ),
 
           // 7. Spark Button (Bottom Right)
           if (!_isEntering)
             Positioned(
-              bottom: safePadding.bottom + 40,
-              right: 20,
+              bottom: bottomInset,
+              right: overlayInset,
               child: FloatingActionButton(
                 mini: true,
                 backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -912,6 +1078,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     _sparkNodeWithAnimation(node.id);
                   }
                 },
+              ),
+            ),
+
+          if (!_isEntering)
+            Positioned(
+              bottom: bottomInset + 56,
+              right: overlayInset,
+              child: FloatingActionButton.small(
+                heroTag: 'reset_view',
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
+                foregroundColor: DS.brandPrimary,
+                elevation: 3,
+                child: const Icon(Icons.public),
+                onPressed: _resetToInitialView,
+                tooltip: '回到全局视图',
               ),
             ),
 
@@ -966,13 +1149,32 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           onClose: () =>
                               ref.read(galaxyProvider.notifier).deselectNode(),
                           onTap: () => context.push('/galaxy/node/${node.id}'),
+                          bottomInset: isLandscapeMobile
+                              ? bottomInset + 56
+                              : nodePreviewBottomInset,
                         ),
                       );
                     },
                   )
                 : const SizedBox.shrink(),
           ),
-        ],
+
+          if (kDebugMode && _showDebugOverlay && !_isEntering)
+            Positioned(
+              top: safePadding.top + 56,
+              right: overlayInset,
+              child: _GalaxyDebugOverlay(
+                scale: galaxyState.currentScale,
+                aggregationLevel: galaxyState.aggregationLevel,
+                viewport: galaxyState.viewport,
+                visibleNodes: galaxyState.visibleNodes.length,
+                visibleEdges: galaxyState.visibleEdges.length,
+                screenSize: screenSize,
+              ),
+            ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -994,6 +1196,57 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ),
         ),
       );
+}
+
+class _GalaxyDebugOverlay extends StatelessWidget {
+  const _GalaxyDebugOverlay({
+    required this.scale,
+    required this.aggregationLevel,
+    required this.viewport,
+    required this.visibleNodes,
+    required this.visibleEdges,
+    required this.screenSize,
+  });
+
+  final double scale;
+  final AggregationLevel aggregationLevel;
+  final Rect? viewport;
+  final int visibleNodes;
+  final int visibleEdges;
+  final Size screenSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = ResponsiveSystem.getCategory(context);
+    final viewportText = viewport == null
+        ? 'viewport: null'
+        : 'vp ${viewport!.width.toStringAsFixed(0)}x${viewport!.height.toStringAsFixed(0)}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: DS.neutral700),
+      ),
+      child: DefaultTextStyle(
+        style: const TextStyle(color: Colors.white, fontSize: 11),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('scale: ${scale.toStringAsFixed(2)}'),
+            Text('lod: ${aggregationLevel.name}'),
+            Text('nodes: $visibleNodes edges: $visibleEdges'),
+            Text(
+              'screen: ${screenSize.width.toStringAsFixed(0)}x${screenSize.height.toStringAsFixed(0)}',
+            ),
+            Text('category: ${category.name}'),
+            Text(viewportText),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Data class for active energy transfer animation

@@ -45,23 +45,28 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
           ),
         ],
       ),
-      body: jobsState.when(
-        data: (jobs) => jobs.isEmpty
-            ? _buildEmptyState()
-            : RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(generationJobsProvider.notifier).fetchJobs(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  itemCount: jobs.length,
-                  itemBuilder: (context, index) {
-                    final job = jobs[index];
-                    return _JobCard(job: job);
-                  },
+      body: ContentConstraint(
+        child: jobsState.when(
+          data: (jobs) => jobs.isEmpty
+              ? _buildEmptyState()
+              : RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(generationJobsProvider.notifier).fetchJobs(),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: jobs.length,
+                    itemBuilder: (context, index) {
+                      final job = jobs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing16),
+                        child: _JobCard(job: job),
+                      );
+                    },
+                  ),
                 ),
-              ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('加载失败: $err')),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('加载失败: $err')),
+        ),
       ),
     );
   }

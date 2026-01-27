@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
@@ -88,8 +89,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
           final currentError = filteredErrors[_currentIndex];
 
-          return Column(
-            children: [
+          return ContentConstraint(
+            child: Column(
+              children: [
               // 进度条
               _buildProgressBar(context, _currentIndex, filteredErrors.length),
 
@@ -103,7 +105,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 _buildActionBar(context, currentError, filteredErrors.length)
               else
                 _buildRevealButton(context),
-            ],
+              ],
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

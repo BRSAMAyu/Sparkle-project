@@ -53,9 +53,10 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: SingleChildScrollView(
+      body: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           child: Column(
@@ -122,6 +123,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
               const SizedBox(height: DS.xxl),
             ],
           ),
+        ),
         ),
       ),
     );

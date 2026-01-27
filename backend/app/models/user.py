@@ -72,6 +72,10 @@ class User(BaseModel):
     age_verification_source = Column(String(50), nullable=True)  # registration, parent_consent, device_mode
     age_verified_at = Column(DateTime, nullable=True)
 
+    # 🆕 光子积分系统 (V3.2)
+    photon_balance = Column(Integer, default=0, nullable=False)  # 光子积分余额
+    photon_updated_at = Column(DateTime, nullable=True)  # 光子积分最后更新时间
+
     # 关系定义
     push_preference = relationship(
         "PushPreference",

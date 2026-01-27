@@ -152,9 +152,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
 
           // Mastery Progress Card
           SliverToBoxAdapter(
-            child: _MasteryCard(
-              stats: detail.userStats,
-              sectorColor: sectorStyle.primaryColor,
+            child: ContentConstraint(
+              child: _MasteryCard(
+                stats: detail.userStats,
+                sectorColor: sectorStyle.primaryColor,
+              ),
             ),
           ),
 
@@ -162,11 +164,13 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           if (detail.node.description != null &&
               detail.node.description!.isNotEmpty)
             SliverToBoxAdapter(
-              child: _SectionCard(
-                title: '描述',
-                child: Text(
-                  detail.node.description!,
-                  style: theme.textTheme.bodyMedium,
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '描述',
+                  child: Text(
+                    detail.node.description!,
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ),
               ),
             ),
@@ -174,19 +178,22 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Keywords
           if (detail.node.keywords.isNotEmpty)
             SliverToBoxAdapter(
-              child: _SectionCard(
-                title: '关键词',
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: detail.node.keywords
-                      .map(
-                        (keyword) => Chip(
-                          label: Text(keyword),
-                          backgroundColor: sectorStyle.glowColor.withAlpha(50),
-                        ),
-                      )
-                      .toList(),
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '关键词',
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: detail.node.keywords
+                        .map(
+                          (keyword) => Chip(
+                            label: Text(keyword),
+                            backgroundColor:
+                                sectorStyle.glowColor.withAlpha(50),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
             ),
@@ -194,31 +201,33 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Related Knowledge Nodes
           if (detail.relations.isNotEmpty)
             SliverToBoxAdapter(
-              child: _SectionCard(
-                title: '相关知识',
-                child: Column(
-                  children: detail.relations.map((relation) {
-                    final isSource = relation.sourceNodeId == nodeId;
-                    final relatedNodeId = isSource
-                        ? relation.targetNodeId
-                        : relation.sourceNodeId;
-                    final relatedNodeName = isSource
-                        ? relation.targetNodeName
-                        : relation.sourceNodeName;
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '相关知识',
+                  child: Column(
+                    children: detail.relations.map((relation) {
+                      final isSource = relation.sourceNodeId == nodeId;
+                      final relatedNodeId = isSource
+                          ? relation.targetNodeId
+                          : relation.sourceNodeId;
+                      final relatedNodeName = isSource
+                          ? relation.targetNodeName
+                          : relation.sourceNodeName;
 
-                    return ListTile(
-                      leading: Icon(
-                        _getRelationIcon(relation.relationType),
-                        color: sectorStyle.primaryColor,
-                      ),
-                      title: Text(relatedNodeName ?? '未知节点'),
-                      subtitle: Text(relation.relationLabel),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        context.push('/galaxy/node/$relatedNodeId');
-                      },
-                    );
-                  }).toList(),
+                      return ListTile(
+                        leading: Icon(
+                          _getRelationIcon(relation.relationType),
+                          color: sectorStyle.primaryColor,
+                        ),
+                        title: Text(relatedNodeName ?? '未知节点'),
+                        subtitle: Text(relation.relationLabel),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          context.push('/galaxy/node/$relatedNodeId');
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -226,27 +235,29 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Related Tasks
           if (detail.relatedTasks.isNotEmpty)
             SliverToBoxAdapter(
-              child: _SectionCard(
-                title: '相关任务',
-                child: Column(
-                  children: detail.relatedTasks
-                      .map(
-                        (task) => ListTile(
-                          leading: Icon(
-                            Icons.task_alt,
-                            color: task.status.name == 'completed'
-                                ? DS.success
-                                : DS.brandPrimary,
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '相关任务',
+                  child: Column(
+                    children: detail.relatedTasks
+                        .map(
+                          (task) => ListTile(
+                            leading: Icon(
+                              Icons.task_alt,
+                              color: task.status.name == 'completed'
+                                  ? DS.success
+                                  : DS.brandPrimary,
+                            ),
+                            title: Text(task.title),
+                            subtitle: Text('预计 ${task.estimatedMinutes} 分钟'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              context.push('/tasks/${task.id}');
+                            },
                           ),
-                          title: Text(task.title),
-                          subtitle: Text('预计 ${task.estimatedMinutes} 分钟'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            context.push('/tasks/${task.id}');
-                          },
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
             ),
@@ -254,32 +265,34 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           // Related Plans
           if (detail.relatedPlans.isNotEmpty)
             SliverToBoxAdapter(
-              child: _SectionCard(
-                title: '相关计划',
-                child: Column(
-                  children: detail.relatedPlans
-                      .map(
-                        (plan) => ListTile(
-                          leading: Icon(
-                            plan.planType == 'sprint'
-                                ? Icons.bolt
-                                : Icons.trending_up,
-                            color: sectorStyle.primaryColor,
+              child: ContentConstraint(
+                child: _SectionCard(
+                  title: '相关计划',
+                  child: Column(
+                    children: detail.relatedPlans
+                        .map(
+                          (plan) => ListTile(
+                            leading: Icon(
+                              plan.planType == 'sprint'
+                                  ? Icons.bolt
+                                  : Icons.trending_up,
+                              color: sectorStyle.primaryColor,
+                            ),
+                            title: Text(plan.title),
+                            subtitle: Text(
+                                plan.planType == 'sprint' ? '冲刺计划' : '成长计划'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              if (plan.planType == 'sprint') {
+                                context.push('/sprint');
+                              } else {
+                                context.push('/growth');
+                              }
+                            },
                           ),
-                          title: Text(plan.title),
-                          subtitle:
-                              Text(plan.planType == 'sprint' ? '冲刺计划' : '成长计划'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            if (plan.planType == 'sprint') {
-                              context.push('/sprint');
-                            } else {
-                              context.push('/growth');
-                            }
-                          },
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
             ),

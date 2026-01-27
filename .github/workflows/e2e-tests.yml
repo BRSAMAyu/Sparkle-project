@@ -1,0 +1,359 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run nightly E2E tests at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  POSTGRES_USER: sparkle
+  POSTGRES_PASSWORD: test
+  POSTGRES_DB: sparkle
+  REDIS_HOST: localhost
+
+jobs:
+  # =============================================================================
+  # Python E2E Tests
+  # =============================================================================
+  python-e2e:
+    name: Python E2E Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sparkle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Setup test database
+        run: |
+          PGPASSWORD=test psql -h localhost -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;"
+          PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
+          cd backend && alembic upgrade head
+
+      - name: Run Python E2E tests
+        env:
+          SPARKLE_INTEGRATION: true
+          DATABASE_URL: postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests_e2e/ -v \
+            --tb=short \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term \
+            --junitxml=test-results/python-e2e.xml
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/coverage.xml
+          flags: python-e2e
+          name: python-e2e-coverage
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: python-e2e-test-results
+          path: backend/test-results/
+
+  # =============================================================================
+  # Go Integration Tests
+  # =============================================================================
+  go-e2e:
+    name: Go Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sparkle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd backend/gateway
+          go mod download
+
+      - name: Run Go integration tests
+        run: |
+          cd backend/gateway
+          go test ./internal/handler/... -v -tags=integration -timeout=5m \
+            -coverprofile=coverage.out \
+            -junitxml=test-results/go-e2e.xml
+
+      - name: Generate coverage report
+        run: |
+          cd backend/gateway
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/gateway/coverage.out
+          flags: go-e2e
+          name: go-e2e-coverage
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: go-e2e-test-results
+          path: backend/gateway/test-results/
+
+  # =============================================================================
+  # Flutter Integration Tests
+  # =============================================================================
+  flutter-e2e:
+    name: Flutter Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          flutter pub get
+
+      - name: Enable integration tests
+        run: |
+          cd mobile
+          flutter test --help
+
+      - name: Run Flutter integration tests
+        run: |
+          cd mobile
+          flutter test integration_test/ \
+            --dart-define=SPARKLE_INTEGRATION=true \
+            --timeout=5m \
+            --coverage \
+            --coverage-path=coverage/lcov.info
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: mobile/coverage/lcov.info
+          flags: flutter-e2e
+          name: flutter-e2e-coverage
+
+  # =============================================================================
+  # Full Stack E2E Tests (All services)
+  # =============================================================================
+  fullstack-e2e:
+    name: Full Stack E2E Tests
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual dispatch
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sparkle
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sparkle
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+
+      - name: Install all dependencies
+        run: |
+          cd backend && pip install -r requirements.txt -r requirements-dev.txt
+          cd backend/gateway && go mod download
+          cd mobile && flutter pub get
+
+      - name: Setup environment
+        run: |
+          PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
+          cd backend && alembic upgrade head
+
+      - name: Start services
+        run: |
+          # Start Go Gateway (background)
+          cd backend/gateway && go run cmd/gateway/main.go &
+          echo $! > gateway.pid
+
+          # Start Python gRPC Server (background)
+          cd backend && python -m app.grpc_server &
+          echo $! > grpc.pid
+
+          # Wait for services to be ready
+          sleep 10
+
+      - name: Run full stack E2E tests
+        env:
+          SPARKLE_INTEGRATION: true
+          GATEWAY_URL: http://localhost:8080
+          GRPC_URL: localhost:50051
+        run: |
+          cd backend
+          pytest tests_e2e/ -v --tb=short --durations=10
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kill $(cat gateway.pid) || true
+          kill $(cat grpc.pid) || true
+
+  # =============================================================================
+  # Test Report Aggregation
+  # =============================================================================
+  test-report:
+    name: Aggregate Test Reports
+    runs-on: ubuntu-latest
+    needs: [python-e2e, go-e2e, flutter-e2e]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all test results
+        uses: actions/download-artifact@v3
+        with:
+          path: test-results/
+
+      - name: Generate combined report
+        run: |
+          echo "# E2E Test Report - ${{ github.run_number }}" > test-report.md
+          echo "" >> test-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> test-report.md
+          echo "**Commit:** ${{ github.sha }}" >> test-report.md
+          echo "**Date:** $(date)" >> test-report.md
+          echo "" >> test-report.md
+          echo "## Test Results" >> test-report.md
+          echo "" >> test-report.md
+          echo "### Python E2E" >> test-report.md
+          echo "- Status: ${{ needs.python-e2e.result }}" >> test-report.md
+          echo "" >> test-report.md
+          echo "### Go Integration" >> test-report.md
+          echo "- Status: ${{ needs.go-e2e.result }}" >> test-report.md
+          echo "" >> test-report.md
+          echo "### Flutter Integration" >> test-report.md
+          echo "- Status: ${{ needs.flutter-e2e.result }}" >> test-report.md
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: combined-test-report
+          path: test-report.md
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('test-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

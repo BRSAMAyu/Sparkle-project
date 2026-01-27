@@ -134,8 +134,9 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Column(
-        children: [
+      body: ContentConstraint(
+        child: Column(
+          children: [
           _buildFilterChips(state.selectedFilter),
           Expanded(
             child: state.isLoading
@@ -149,6 +150,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                     : _buildTaskList(filteredTasks),
           ),
         ],
+        ),
       ),
     );
   }

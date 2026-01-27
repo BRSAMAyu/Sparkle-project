@@ -28,7 +28,8 @@ class FocusMainScreen extends ConsumerWidget {
         foregroundColor: DS.brandPrimary,
       ),
       body: SafeArea(
-        child: Column(
+        child: ContentConstraint(
+          child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(DS.xl),
@@ -56,6 +57,7 @@ class FocusMainScreen extends ConsumerWidget {
             _buildQuickFocusButton(context),
             const SizedBox(height: 20),
           ],
+        ),
         ),
       ),
     );

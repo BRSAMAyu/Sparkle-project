@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -279,9 +281,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                     horizontal: 8.0,
                                   ),
                                   constraints: BoxConstraints(
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width *
-                                            0.72,
+                                    maxWidth: _bubbleMaxWidth(context),
                                   ),
                                   child: MaterialStyler(
                                     material: isUser
@@ -469,6 +469,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  double _bubbleMaxWidth(BuildContext context) {
+    final screenWidth = ResponsiveSystem.width(context);
+    final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
+    final baseMax =
+        contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
+    return min(screenWidth * 0.72, baseMax * 0.9);
   }
 
   Widget _buildQuoteArea(

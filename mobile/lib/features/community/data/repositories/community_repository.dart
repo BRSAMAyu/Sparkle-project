@@ -185,6 +185,53 @@ class CommunityRepository {
     throw Exception('Failed to search groups');
   }
 
+  Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.groupMembers(groupId),
+    );
+    if (response.statusCode == 200) {
+      final data = response.data as List<dynamic>;
+      return data.map((e) => GroupMemberInfo.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw Exception('Failed to load group members');
+  }
+
+  Future<void> kickMember(String groupId, String userId) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberKick(groupId, userId),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to kick member');
+    }
+  }
+
+  Future<void> promoteMember(String groupId, String userId) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberPromote(groupId, userId),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to promote member');
+    }
+  }
+
+  Future<void> demoteMember(String groupId, String userId) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupMemberDemote(groupId, userId),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to demote member');
+    }
+  }
+
+  Future<void> transferOwnership(String groupId, String userId) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.groupTransferOwnership(groupId, userId),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to transfer ownership');
+    }
+  }
+
   Future<List<MessageInfo>> getMessages(String groupId,
       {String? beforeId, int limit = 50,}) async {
     final response = await _apiClient.get<dynamic>(

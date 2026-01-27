@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
-import 'package:sparkle/features/achievement/presentation/widgets/achievement_card.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -72,8 +71,9 @@ class _AchievementDetailScreenState
     }
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
+      body: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
           // 自定义顶部
           _buildHeader(context, achievement),
 

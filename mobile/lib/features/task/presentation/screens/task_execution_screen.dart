@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
@@ -14,7 +15,6 @@ import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dar
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
-import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
@@ -251,14 +251,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 ),
               ),
               child: SafeArea(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(DS.spacing16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+                child: ContentConstraint(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(DS.spacing16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                             const SizedBox(height: DS.spacing16),
                             // 1. Focus Mode Entry Card (Prominent)
                             _buildFocusEntryCard(context, activeTask),
@@ -419,16 +420,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
                             // 4. Task Chat Panel
                             TaskChatPanel(taskId: activeTask.id),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    _BottomControls(
-                      task: activeTask,
-                      elapsedSeconds: _elapsedSeconds,
-                      onComplete: _handleCompletion,
-                    ),
-                  ],
+                      _BottomControls(
+                        task: activeTask,
+                        elapsedSeconds: _elapsedSeconds,
+                        onComplete: _handleCompletion,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

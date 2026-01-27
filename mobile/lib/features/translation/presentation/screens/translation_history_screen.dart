@@ -175,8 +175,9 @@ class _TranslationHistoryScreenState
             ),
         ],
       ),
-      body: Column(
-        children: [
+      body: ContentConstraint(
+        child: Column(
+          children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.all(DS.md),
@@ -279,7 +280,8 @@ class _TranslationHistoryScreenState
                         },
                       ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -492,7 +494,7 @@ class _TranslationCard extends StatelessWidget {
                           Icons.star,
                           size: 16,
                           color: index < item.rating ? Colors.amber : DS.neutral300,
-                        )),
+                        ),),
                     ),
                   ),
                   const SizedBox(width: DS.md),

@@ -27,12 +27,14 @@ class FriendsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _MyFriendsTab(),
-            _PendingRequestsTab(),
-            _RecommendationsTab(),
-          ],
+        body: ContentConstraint(
+          child: const TabBarView(
+            children: [
+              _MyFriendsTab(),
+              _PendingRequestsTab(),
+              _RecommendationsTab(),
+            ],
+          ),
         ),
       ),
     );

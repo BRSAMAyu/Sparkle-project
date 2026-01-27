@@ -33,6 +33,7 @@ library;
 
 // 便捷导入
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/breakpoints.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
@@ -40,8 +41,10 @@ import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
+export 'breakpoints.dart';
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
+export 'responsive_widgets.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';
@@ -213,15 +216,6 @@ class SparkleColorAliases {
       _theme.colors.getTaskGradient(taskType);
   Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
-}
-
-/// Responsive breakpoints for phone layouts.
-class Breakpoints {
-  const Breakpoints._();
-
-  static const double narrow = 360.0;
-  static const double standard = 390.0;
-  static const double wide = 428.0;
 }
 
 /// 设计令牌快捷访问
@@ -442,8 +436,8 @@ class DS {
   static const double smConst = 8.0;
 
   // Layout and sizing
-  static const double breakpointTablet = 768.0;
-  static const double breakpointDesktop = 1024.0;
+  static const double breakpointTablet = LayoutBreakpoints.tablet;
+  static const double breakpointDesktop = LayoutBreakpoints.desktop;
   static const double breakpointNarrow = Breakpoints.narrow;
   static const double breakpointStandard = Breakpoints.standard;
   static const double breakpointWide = Breakpoints.wide;
