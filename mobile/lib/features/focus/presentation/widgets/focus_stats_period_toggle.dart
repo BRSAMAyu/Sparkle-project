@@ -14,8 +14,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
   final ValueChanged<StatsViewPeriod> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.xs),
       decoration: BoxDecoration(
         color: DS.neutral100,
@@ -50,5 +49,4 @@ class FocusStatsPeriodToggle extends StatelessWidget {
         }).toList(),
       ),
     );
-  }
 }

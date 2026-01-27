@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/features/task/data/repositories/task_repository.dart' show taskRepositoryProvider;
 
 /// Task day summary for calendar markers
 class TaskDaySummary {
@@ -118,7 +118,7 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
   /// Load tasks for a specific month and calculate summaries
   Future<void> loadTasksForMonth(DateTime month) async {
     try {
-      final start = DateTime(month.year, month.month, 1);
+      final start = DateTime(month.year, month.month);
       final end = DateTime(month.year, month.month + 1, 0);
 
       final tasks = await _taskRepository.getTasksByDateRange(start, end);
@@ -151,22 +151,18 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
               pending: existing.pending + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
-            break;
           case TaskStatus.inProgress:
             newSummary = existing.copyWith(
               inProgress: existing.inProgress + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
-            break;
           case TaskStatus.completed:
             newSummary = existing.copyWith(
               completed: existing.completed + 1,
             );
-            break;
           case TaskStatus.abandoned:
             // Don't show abandoned tasks
             newSummary = existing;
-            break;
         }
 
         summaries[dueDate] = newSummary;
@@ -189,4 +185,136 @@ final taskCalendarProvider =
     StateNotifierProvider<TaskCalendarNotifier, TaskCalendarState>((ref) {
   final taskRepository = ref.watch(taskRepositoryProvider);
   return TaskCalendarNotifier(taskRepository);
+});
+
+/// Selected calendar date provider with persistence
+///
+/// Persists the user's selected date in the calendar view.
+final selectedCalendarDateProvider =
+    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) => SelectedCalendarDateNotifier());
+
+/// Notifier for the selected calendar date
+class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {
+  SelectedCalendarDateNotifier()
+      : super(
+          namespace: 'calendar',
+          key: 'selected_date',
+          defaultValue: DateTime.now(),
+          serializer: (date) => date.toIso8601String(),
+          deserializer: (isoString) {
+            if (isoString == null || isoString.isEmpty) {
+              return DateTime.now();
+            }
+            try {
+              return DateTime.parse(isoString);
+            } catch (e) {
+              return DateTime.now();
+            }
+          },
+        );
+
+  /// Select a specific date (normalized to midnight)
+  void selectDate(DateTime date) {
+    // Normalize to midnight for consistent comparisons
+    final normalized = DateTime(date.year, date.month, date.day);
+    state = normalized;
+  }
+
+  /// Go to today
+  void goToToday() {
+    state = DateTime.now();
+  }
+
+  /// Navigate by days
+  void addDays(int days) {
+    final newDate = DateTime(
+      state.year,
+      state.month,
+      state.day + days,
+    );
+    state = newDate;
+  }
+
+  /// Navigate by months
+  void addMonths(int months) {
+    final newDate = DateTime(
+      state.year,
+      state.month + months,
+      state.day,
+    );
+    state = newDate;
+  }
+}
+
+/// Provider for tasks on a specific day
+/// Returns tasks for the given date, sorted by priority (highest first)
+final dayTasksProvider =
+    Provider.family<List<TaskModel>, DateTime>((ref, date) {
+  final calendarState = ref.watch(taskCalendarProvider);
+  final normalizedDate = DateTime(date.year, date.month, date.day);
+
+  // Get all task summaries for the month
+  final summaries = calendarState.taskSummaries;
+
+  // If no tasks for this day, return empty list
+  final summary = summaries[normalizedDate];
+  if (summary == null || !summary.hasTasks) {
+    return const [];
+  }
+
+  // Fetch all tasks for the month and filter by date
+  final taskRepo = ref.read(taskRepositoryProvider);
+  final now = DateTime.now();
+  final startOfMonth = DateTime(now.year, now.month);
+  final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+  // This is a synchronous provider that depends on async data
+  // The async task loading is handled by taskCalendarProvider
+  // For now, we'll use the cached data from the repository if available
+  // or return an empty list that will be updated when data arrives
+
+  return []; // Placeholder - actual filtering happens in the widget
+});
+
+/// Async provider for loading tasks for a specific day
+/// Queries the entire month containing the selected date
+final dayTasksAsyncProvider =
+    FutureProvider.family<List<TaskModel>, DateTime>((ref, date) async {
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  final normalizedDate = DateTime(date.year, date.month, date.day);
+
+  // Get tasks for the month containing the selected date (not current month)
+  final startOfMonth = DateTime(date.year, date.month);
+  final endOfMonth = DateTime(date.year, date.month + 1, 0);
+
+  final allTasks = await taskRepo.getTasksByDateRange(startOfMonth, endOfMonth);
+
+  // Filter tasks for the specific date and exclude abandoned
+  final dayTasks = allTasks.where((task) {
+    if (task.dueDate == null) return false;
+    final taskDueDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return taskDueDate == normalizedDate && task.status != TaskStatus.abandoned;
+  }).toList();
+
+  // Sort by priority (highest first), then by status (pending > inProgress > completed)
+  dayTasks.sort((a, b) {
+    final priorityCompare = b.priority.compareTo(a.priority);
+    if (priorityCompare != 0) return priorityCompare;
+
+    // Secondary sort by status
+    final statusOrder = {
+      TaskStatus.pending: 0,
+      TaskStatus.inProgress: 1,
+      TaskStatus.completed: 2,
+    };
+    final aStatusOrder = statusOrder[a.status] ?? 3;
+    final bStatusOrder = statusOrder[b.status] ?? 3;
+    return aStatusOrder.compareTo(bStatusOrder);
+  });
+
+  return dayTasks;
 });

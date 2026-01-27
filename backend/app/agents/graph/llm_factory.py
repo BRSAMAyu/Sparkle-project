@@ -11,9 +11,8 @@ LLM Factory - LangGraph 兼容的模型工厂
     llm = LLMFactory.get_llm_for_task(TaskType.DEEP_REASONING)  # 按任务选择
 """
 
-from typing import Optional
+from typing import Optional, Any, TYPE_CHECKING
 from langchain_openai import ChatOpenAI
-from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.config import settings
 from app.core.llm_router import llm_router, LLMSelection

@@ -47,8 +47,8 @@ class LocalVocabularyState {
         allTags: allTags ?? this.allTags,
       );
 
-  int get dueCount => statistics['dueCount'] ?? 0;
-  int get totalCount => statistics['total'] ?? 0;
+  int get dueCount => statistics['dueCount'] as int? ?? 0;
+  int get totalCount => statistics['total'] as int? ?? 0;
 }
 
 /// Local vocabulary notifier
@@ -210,9 +210,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   }
 
   /// Check if a word exists
-  Future<VocabWordItem?> getByWord(String word) async {
-    return await _repository.getByWord(word);
-  }
+  Future<VocabWordItem?> getByWord(String word) async => _repository.getByWord(word);
 
   /// Get a word by ID
   Future<VocabWordItem?> getById(Id id) async {
@@ -249,7 +247,7 @@ final localVocabularyRepositoryProvider =
 /// State provider
 final localVocabularyProvider =
     StateNotifierProvider<LocalVocabularyNotifier, LocalVocabularyState>(
-        (ref) => LocalVocabularyNotifier(ref.watch(localVocabularyRepositoryProvider)));
+        (ref) => LocalVocabularyNotifier(ref.watch(localVocabularyRepositoryProvider)),);
 
 /// Due count provider (for badges)
 final localVocabularyDueCountProvider =

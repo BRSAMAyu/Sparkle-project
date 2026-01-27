@@ -1,7 +1,7 @@
 """
 Task Feedback Schemas
 """
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from uuid import UUID
 
@@ -72,5 +72,65 @@ class TaskFeedbackStats(BaseModel):
                     "too_easy": 4
                 },
                 "recent_feedbacks": []
+            }
+        }
+
+
+class NextActionSelectionCreate(BaseModel):
+    """下一步操作选择记录请求"""
+    task_id: UUID
+    action_type: str
+    action_title: str
+    selected: bool
+    skipped: bool = False
+    display_position: Optional[int] = None
+    displayed_actions_count: Optional[int] = None
+    context: Optional[Dict[str, Any]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "task_id": "123e4567-e89b-12d3-a456-426614174000",
+                "action_type": "quick_review",
+                "action_title": "快速回顾",
+                "selected": True,
+                "skipped": False,
+                "display_position": 0,
+                "displayed_actions_count": 3
+            }
+        }
+
+
+class PreferenceUpdateDetail(BaseModel):
+    """偏好更新详情"""
+    depth_preference: Optional[float] = Field(None, description="深度偏好变化")
+    difficulty_preference: Optional[float] = Field(None, description="难度偏好变化")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "depth_preference": 0.03,
+                "difficulty_preference": -0.05
+            }
+        }
+
+
+class TaskFeedbackSubmitResponse(BaseModel):
+    """任务反馈提交响应（增强版）"""
+    success: bool
+    message: Optional[str] = Field(None, description="响应消息")
+    data: Optional[TaskFeedbackResponse] = Field(None, description="反馈数据")
+    preference_updates: Optional[PreferenceUpdateDetail] = Field(None, description="偏好更新详情")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "偏好已更新",
+                "data": None,
+                "preference_updates": {
+                    "depth_preference": 0.03,
+                    "difficulty_preference": -0.05
+                }
             }
         }

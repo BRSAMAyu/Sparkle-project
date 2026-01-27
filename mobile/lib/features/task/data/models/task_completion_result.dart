@@ -1,4 +1,4 @@
-import 'next_action.dart';
+import 'package:sparkle/features/task/data/models/next_action.dart';
 
 class TaskCompletionResult {
   TaskCompletionResult({
@@ -27,7 +27,7 @@ class TaskCompletionResult {
     if (actionsJson == null) return const [];
     return actionsJson
         .map((json) =>
-            NextAction.fromJson(json as Map<String, dynamic>))
+            NextAction.fromJson(json as Map<String, dynamic>),)
         .toList();
   }
 

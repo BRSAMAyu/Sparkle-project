@@ -7,16 +7,18 @@ from datetime import datetime
 import uuid
 
 from google.protobuf.json_format import MessageToDict
+from google.protobuf import struct_pb2
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.llm_service import llm_service
+from app.services.system_update_service import SystemUpdateService
 from app.services.knowledge_service import KnowledgeService
 from app.services.galaxy_service import GalaxyService
 from app.services.user_service import UserService
 from app.services.focus_service import focus_service
 from app.models.task import Task, TaskStatus as ModelTaskStatus
 from app.models.plan import Plan
-from sqlalchemy import select, and_, desc, asc
+from sqlalchemy import select, and_, desc, asc, func
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.state_manager import SessionStateManager, FSMState
@@ -43,12 +45,19 @@ from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
 from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
+from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
 from opentelemetry import trace
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.request_router import RequestRouter
 from app.orchestration.grounding_validator import GroundingValidator
-from app.orchestration.schemas import ExecutablePlan, FeedbackPayload, StateSnapshot
+from app.orchestration.schemas import (
+    ExecutablePlan, FeedbackPayload, StateSnapshot,
+    VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
+    MAX_REPLAN_ATTEMPTS,
+    REPLAN_RATE_LIMIT_WINDOW,
+    REPLAN_MAX_PER_WINDOW,
+)
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 from app.orchestration.state_snapshot import StateSnapshotManager
 
@@ -56,8 +65,19 @@ from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.circuit_breaker import (
     CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 )
+# Multi-Agent Mode Support
+from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, CHAT_MODE_STANDARD
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
+
+# Phase 4: Sufficiency Checking
+from app.orchestration.sufficiency_checker import sufficiency_checker, SufficiencyStatus
+
+# Phase 5: Plan Execution Validation
+from app.orchestration.tool_result_extractor import ToolResultExtractor
+from app.services.plan_execution_validator import PlanExecutionValidator
+from app.services.plan_execution_record_service import PlanExecutionRecordService
+from app.orchestration.transparency_data_generator import TransparencyDataGenerator, StepType
 
 # FSM States
 STATE_INIT = "INIT"
@@ -189,7 +209,14 @@ class ChatOrchestrator:
         # Phase 1: Initialize new components
         self.request_router = RequestRouter(redis_client)
         self.grounding_validator = GroundingValidator(redis_client)
-        logger.info("ChatOrchestrator initialized with RequestRouter and GroundingValidator")
+
+        # Unified Intent Router (Fix #1): 统一功能入口路由
+        self.unified_router = UnifiedIntentRouter(
+            redis_client=redis_client,
+            llm_service=llm_service,
+            context_window_size=5
+        )
+        logger.info("ChatOrchestrator initialized with RequestRouter, GroundingValidator, and UnifiedIntentRouter")
 
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
         self.lang_graph_planner = LangGraphPlanner(redis_client)
@@ -221,10 +248,36 @@ class ChatOrchestrator:
         # Plan Review Service
         plan_review_service.set_redis(redis_client)
 
-        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview")
+        # Phase 3: Version Conflict Service (P1 enhancement)
+        from app.orchestration.version_conflict_service import VersionConflictService
+        self.version_conflict_service = VersionConflictService(
+            redis=redis_client,
+            planner=self.lang_graph_planner,
+        )
+
+        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview, VersionConflict")
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
+        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
+        responses: List[agent_service_pb2.ChatResponse] = []
+        for update in updates:
+            widget_struct = struct_pb2.Struct()
+            widget_struct.update(update)
+            responses.append(
+                agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name="system_update",
+                        success=True,
+                        widget_type="system_update",
+                        widget_data=widget_struct,
+                        tool_call_id="",
+                    )
+                )
+            )
+        return responses
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -424,6 +477,28 @@ class ChatOrchestrator:
             await self._save_context_versions(user_id, previous)
             logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
 
+    async def _check_replan_rate_limit(self, plan_id: Optional[uuid.UUID]) -> tuple[bool, int]:
+        """Check replan rate limit to prevent excessive replanning
+
+        Args:
+            plan_id: Plan ID to check rate limit for
+
+        Returns:
+            tuple[bool, int]: (is_allowed, current_count)
+        """
+        if not self.redis or not plan_id:
+            return True, 0
+
+        window_key = f"replan:rate:{plan_id}:{int(time.time()) // REPLAN_RATE_LIMIT_WINDOW}"
+
+        try:
+            current = await self.redis.incr(window_key)
+            await self.redis.expire(window_key, REPLAN_RATE_LIMIT_WINDOW)
+            return current <= REPLAN_MAX_PER_WINDOW, current
+        except Exception as e:
+            logger.warning(f"Failed to check replan rate limit: {e}")
+            return True, 0
+
     def _merge_user_contexts(self, local_context: Dict[str, Any], grpc_context: Dict[str, Any]) -> Dict[str, Any]:
         """
         P0: Merge user context from Go Gateway (gRPC) with local context (Python).
@@ -453,6 +528,75 @@ class ChatOrchestrator:
         logger.debug(f"Merged context keys: {list(merged.keys())}")
         return merged
 
+    async def _get_task_status_summary(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """Get summary of all tasks for user across all plans."""
+        try:
+            # Pending count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.PENDING
+                )
+            )
+            pending = result.scalar() or 0
+            
+            # In progress count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.IN_PROGRESS
+                )
+            )
+            in_progress = result.scalar() or 0
+            
+            # Overdue count (pending/in_progress and due_date < now)
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
+                    Task.due_date < datetime.utcnow()
+                )
+            )
+            overdue = result.scalar() or 0
+            
+            return {
+                "pending": pending,
+                "in_progress": in_progress,
+                "overdue": overdue
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get task status summary: {e}")
+            return {"pending": 0, "in_progress": 0, "overdue": 0}
+
+    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """获取认知模式摘要，注入 LLM 上下文
+
+        当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
+        """
+        try:
+            from app.services.cognitive_service import CognitiveService
+            from uuid import UUID
+
+            cognitive = CognitiveService(db_session)
+            patterns = await cognitive.get_user_patterns(UUID(user_id), min_confidence=0.6)
+
+            if patterns:
+                # 按类型分组
+                by_type = {"cognitive": [], "emotional": [], "execution": []}
+                for p in patterns:
+                    by_type.setdefault(p.pattern_type, []).append(p.pattern_name)
+
+                return {
+                    "has_cognitive_patterns": True,
+                    "pattern_count": len(patterns),
+                    "recent_patterns": [p.pattern_name for p in patterns[:3]],
+                    "patterns_by_type": {k: len(v) for k, v in by_type.items()}
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
+
+        return {"has_cognitive_patterns": False}
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -465,6 +609,9 @@ class ChatOrchestrator:
             user_service = UserService(db_session, self.redis)
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
+
+            # P1: Task Status Summary
+            task_status_summary = await self._get_task_status_summary(user_id, db_session)
 
             llm_profile_data = None
             preference_version = 0
@@ -530,19 +677,26 @@ class ChatOrchestrator:
                     }
                     for plan in plans
                 ]
-                
+
+                # P0: 认知棱镜上下文注入
+                cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
+
                 return {
                     "user_context": user_context_data, # Legacy field
-                    "analytics_summary": cognitive_context.engagement_metrics,
+                    "analytics_summary": cognitive_context.engagement_metrics or {},
                     "preferences": cognitive_context.preferences,
                     "next_actions": cognitive_context.active_tasks,
                     "active_plans": active_plans,
                     "focus_stats": cognitive_context.focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
-                    
+                    "task_status_summary": task_status_summary,
+
                     # New field for full context injection
-                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
+                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
+
+                    # 认知棱镜数据
+                    "cognitive_insights": cognitive_insights
                 }
             
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
@@ -621,6 +775,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
             else:
                 # Fallback to basic context
@@ -634,6 +789,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
 
         except Exception as e:
@@ -792,7 +948,7 @@ class ChatOrchestrator:
                     request_id=request_id,
                     error=agent_service_pb2.Error(
                         code="CONFLICT",
-                        message="Another request is processing for this session",
+                        message="会话正在处理另一个请求，请稍候",
                         retryable=True
                     ),
                     finish_reason=agent_service_pb2.ERROR
@@ -801,13 +957,20 @@ class ChatOrchestrator:
 
             total_prompt_tokens = 0
             total_completion_tokens = 0
+            transparency_generator: Optional[TransparencyDataGenerator] = None
 
             try:
                 # Step 3: Initialize Workflow State
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
 
+                # Step 3.5: Extract chat mode for multi-agent routing
+                chat_mode = CHAT_MODE_STANDARD
+                if request.chat_mode:
+                    chat_mode = request.chat_mode
+                    logger.info(f"Chat mode requested: {chat_mode}")
+
                 user_message = ""
-                if request.HasField("message"):
+                if request.message:
                     user_message = request.message
                 elif request.HasField("tool_result"):
                     tool_result = request.tool_result
@@ -835,6 +998,41 @@ class ChatOrchestrator:
                 if request_context:
                     grpc_context = {**grpc_context, **request_context}
 
+                # Extract plan_id from extra_context for PlanScope
+                plan_id = None
+                if grpc_context and "plan_id" in grpc_context:
+                    try:
+                        plan_id = uuid.UUID(grpc_context["plan_id"])
+                    except (ValueError, AttributeError):
+                        pass
+
+                # P0: Auto-switch plan based on task context if no plan_id provided
+                plan_switched = False
+                if not plan_id and user_message and active_db:
+                    with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
+                        try:
+                            from app.services.plan_matching_service import PlanMatchingService
+                            plan_matching = PlanMatchingService(active_db)
+
+                            # Try to match the message to a plan
+                            matched_plan_id = await self.state_manager.auto_switch_plan(
+                                session_id=session_id,
+                                user_id=uuid.UUID(user_id),
+                                task_context={
+                                    "content": user_message,
+                                    "type": grpc_context.get("task_type", "chat"),
+                                },
+                                db_session=active_db,
+                                plan_matching_service=plan_matching
+                            )
+
+                            if matched_plan_id:
+                                plan_id = matched_plan_id
+                                plan_switched = True
+                                logger.info(f"Auto-switched to plan {plan_id} based on message content")
+                        except Exception as e:
+                            logger.warning(f"Auto-switch plan failed: {e}")
+
                 overlay_versions = {}
                 if grpc_context:
                     versions = grpc_context.get("realtime_versions")
@@ -851,6 +1049,7 @@ class ChatOrchestrator:
 
                 user_context_payload = None
                 conversation_context = None
+                plan_context = None
 
                 with tracer.start_as_current_span("db.build_context"):
                     if active_db and user_id:
@@ -858,6 +1057,46 @@ class ChatOrchestrator:
                         # P0: Merge contexts - prioritize gRPC context (more recent) over local context
                         user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                         logger.info(f"Merged user context: {user_context_payload is not None}")
+
+                        # PlanScope: Build plan_context if plan_id is provided
+                        if plan_id:
+                            try:
+                                from app.core.plan_context import PlanContextBuilder
+                                plan_builder = PlanContextBuilder(active_db, self.redis)
+                                plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
+                                if plan_context:
+                                    logger.info(f"Built plan_context for plan_id={plan_id}")
+                                    # Include plan_context in user_context_payload
+                                    if user_context_payload is None:
+                                        user_context_payload = {}
+                                    user_context_payload["plan_context"] = plan_context
+
+                                    # P0-2: Check for phase rollback requirement
+                                    try:
+                                        from app.services.plan_state_service import PlanStateService
+                                        plan_state_svc = PlanStateService(active_db, self.redis)
+                                        plan_state = await plan_state_svc.get_plan_state(
+                                            uuid.UUID(user_id), uuid.UUID(plan_id)
+                                        )
+                                        if plan_state and plan_state.constraints.get("require_phase_rollback"):
+                                            logger.info(f"Phase rollback triggered for plan_id={plan_id}")
+                                            # Clear the flag
+                                            await plan_state_svc.upsert_plan_state(
+                                                user_id=uuid.UUID(user_id),
+                                                plan_id=uuid.UUID(plan_id),
+                                                patch={"constraints": {"require_phase_rollback": False}},
+                                                bump_version=False,
+                                            )
+                                            # Inject rollback context
+                                            plan_context["mode"] = "phase_rollback"
+                                            plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
+                                            # Get last 2 feedback entries for context
+                                            if plan_state.feedback_log:
+                                                plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
+                                    except Exception as e:
+                                        logger.warning(f"Failed to check phase rollback: {e}")
+                            except Exception as e:
+                                logger.warning(f"Failed to build plan context: {e}")
 
                         # P4: Tool Preference Routing
                         try:
@@ -885,14 +1124,11 @@ class ChatOrchestrator:
                 # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
-                
-                # Get tools
-                with tracer.start_as_current_span("orchestrator.get_tools"):
-                    tools = await self._get_tools_schema()
 
-                # Prepare queue for streaming
+                # Prepare queue for streaming early so it can be used by
+                # sufficiency checks and other early-return branches.
                 queue = asyncio.Queue()
-                
+
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     # Augment response with IDs
                     resp.response_id = response_id
@@ -903,12 +1139,131 @@ class ChatOrchestrator:
                     resp.trace_id = resp.trace_id or trace_id
                     await queue.put(resp)
 
+                # P4: Sufficiency Checking (skip for tool results)
+                if not request.HasField("tool_result"):
+                    with tracer.start_as_current_span("orchestrator.sufficiency_check"):
+                        try:
+                            # Predict intent from user message
+                            prediction = await shadow_prediction_service.predict_intent_only(
+                                user_message=user_message,
+                                active_plan_id=str(plan_id) if plan_id else None,
+                                user_id=user_id
+                            )
+
+                            # Extract basic entities from prediction
+                            extracted_entities = {
+                                "intent_type": prediction.get("intent_type", "unknown"),
+                                "suggested_tools": prediction.get("suggested_tools", []),
+                            }
+
+                            # Run sufficiency check
+                            check_result = await sufficiency_checker.check(
+                                intent=prediction.get("intent_type", "unknown"),
+                                extracted_entities=extracted_entities,
+                                conversation_context=conversation_context or [],
+                            )
+
+                            # If clarification needed, respond with questions
+                            if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
+                                logger.info(f"Sufficiency check requires clarification: {check_result.clarification_questions}")
+                                questions = "\n".join([f"- {q}" for q in check_result.clarification_questions])
+                                clarification_response = agent_service_pb2.ChatResponse(
+                                    delta=f"我需要更多信息来帮您：\n\n{questions}\n\n请提供以上信息，我将为您处理。",
+                                    metadata={
+                                        "requires_clarification": "true",
+                                        "missing_fields": ",".join(check_result.missing_fields),
+                                    }
+                                )
+                                await stream_callback(clarification_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                            # If confirmation needed, ask for confirmation
+                            if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                                logger.info(f"Sufficiency check requires confirmation: {check_result.confirmation_message}")
+                                confirmation_response = agent_service_pb2.ChatResponse(
+                                    delta=check_result.confirmation_message,
+                                    metadata={
+                                        "requires_confirmation": "true",
+                                    }
+                                )
+                                await stream_callback(confirmation_response)
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    finish_reason=agent_service_pb2.STOP
+                                ))
+                                # Release lock and return early
+                                await self._release_session_lock(session_id, request_id)
+                                ACTIVE_SESSIONS.dec()
+                                return
+
+                        except Exception as e:
+                            logger.warning(f"Sufficiency check failed, continuing: {e}")
+                
+                # Initialize transparency tracking (guarded by global settings).
+                transparency_enabled = bool(
+                    settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
+                )
+                transparency_generator = TransparencyDataGenerator(
+                    request_id=request_id or response_id,
+                    enabled=transparency_enabled,
+                )
+
+                async def emit_transparency_event(event: Optional[Dict[str, Any]]) -> None:
+                    if not event:
+                        return
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={
+                                    "event_type": "transparency",
+                                    "event_payload": json.dumps(event, ensure_ascii=False),
+                                }
+                            )
+                        )
+                    except Exception as exc:
+                        logger.debug(f"Failed to emit transparency event: {exc}")
+
+                # Get tools with a transparency step so the frontend can show progress.
+                tools_step = transparency_generator.create_step(
+                    name="加载工具配置",
+                    step_type=StepType.PLANNING,
+                    agent_type="ORCHESTRATOR",
+                    metadata={"phase": "tools_schema"},
+                )
+                transparency_generator.start_step(tools_step)
+                await emit_transparency_event(transparency_generator.get_step_event())
+                with tracer.start_as_current_span("orchestrator.get_tools"):
+                    tools = await self._get_tools_schema()
+                transparency_generator.complete_step(
+                    tools_step,
+                    metadata={"tool_count": len(tools)},
+                )
+                await emit_transparency_event(transparency_generator.get_step_event())
+
                 # Emit initial thinking status
                 await stream_callback(agent_service_pb2.ChatResponse(
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.THINKING
                     )
                 ))
+
+                # Check and notify pending milestone proposals
+                await self._notify_pending_milestone_proposals(user_id, stream_callback)
+
+                # P0: Send plan switch notification if auto-switched
+                if plan_switched and plan_id:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        metadata={
+                            "plan_switched": "true",
+                            "switched_to_plan_id": str(plan_id),
+                        }
+                    ))
+                    logger.info(f"Sent plan switch notification to client: plan_id={plan_id}")
 
                 # Inject Dependencies
                 if active_db:
@@ -919,17 +1274,141 @@ class ChatOrchestrator:
                     "session_id": session_id,
                     "stream_callback": stream_callback,
                     "tools_schema": tools,
+                    "transparency_generator": transparency_generator,
+                    "emit_transparency_event": emit_transparency_event,
                     "redis_client": self.redis,
                     "user_context": user_context_payload,
                     "conversation_context": conversation_context,
+                    "plan_context": plan_context,
                     "file_ids": list(request.file_ids),
                     "include_references": bool(request.include_references),
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                 })
 
+                # === Multi-Agent Mode Routing ===
+                # Check if a specific chat mode is requested
+                if chat_mode != CHAT_MODE_STANDARD:
+                    logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+
+                    # Prepare context for multi-agent workflow
+                    multi_agent_context = {
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "user_context": user_context_payload,
+                        "conversation_context": conversation_context,
+                        "plan_context": plan_context,
+                    }
+
+                    try:
+                        # Execute multi-agent workflow and stream responses
+                        async for response in execute_multi_agent_workflow(
+                            orchestrator=self,
+                            chat_mode=chat_mode,
+                            message=user_message,
+                            user_id=user_id,
+                            session_id=session_id,
+                            context_data=multi_agent_context,
+                            stream_callback=stream_callback,
+                        ):
+                            # Add response metadata
+                            response.response_id = response_id
+                            response.created_at = int(datetime.now().timestamp())
+                            response.request_id = request_id
+                            response.trace_id = response.trace_id or trace_id
+                            response.workflow_id = f"multi_agent_{chat_mode}"
+                            await queue.put(response)
+
+                        # Signal completion
+                        await queue.put(agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            trace_id=trace_id,
+                            workflow_id=f"multi_agent_{chat_mode}",
+                            finish_reason=agent_service_pb2.STOP,
+                        ))
+
+                        # Update final state
+                        await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
+
+                        # Stream all responses from queue
+                        while True:
+                            item = await queue.get()
+                            yield item
+                            if item.finish_reason != agent_service_pb2.NULL:
+                                break
+
+                        # Log completion
+                        REQUEST_COUNT.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode,
+                            status="success"
+                        ).inc()
+                        REQUEST_LATENCY.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode
+                        ).observe(time.time() - start_time)
+
+                        return
+
+                    except Exception as e:
+                        logger.error(f"Multi-agent workflow error: {e}")
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                code="MULTI_AGENT_ERROR",
+                                message=f"多Agent协作模式执行失败: {str(e)}",
+                                retryable=True,
+                            ),
+                            finish_reason=agent_service_pb2.ERROR,
+                        )
+                        return
+
                 # === Phase 1 & Phase 2: Routing & Validation Setup ===
-                # 路由决策
+
+                # Fix #1: 统一路由决策（优先于request_router）
+                unified_routing_result = None
+                try:
+                    unified_routing_result = await self.unified_router.route(
+                        message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        payload=grpc_context,
+                        conversation_history=conversation_context.get("history", []) if conversation_context else []
+                    )
+                    logger.info(
+                        f"Unified routing: {unified_routing_result.primary_intent.value} "
+                        f"(confidence={unified_routing_result.confidence:.2f}, "
+                        f"layer={unified_routing_result.routing_layer})"
+                    )
+                except Exception as e:
+                    logger.warning(f"Unified routing failed: {e}, falling back to request_router")
+
+                # 检查特殊意图并标记到context_data（供后续工具调用使用）
+                if unified_routing_result:
+                    state.context_data["unified_intent"] = {
+                        "primary_intent": unified_routing_result.primary_intent.value,
+                        "confidence": unified_routing_result.confidence,
+                        "routing_layer": unified_routing_result.routing_layer,
+                        "execution_mode": unified_routing_result.execution_mode,
+                        "context_signals": unified_routing_result.context_signals
+                    }
+
+                    # 特殊意图标记（供工具调用时识别）
+                    if unified_routing_result.primary_intent == UnifiedIntentType.COGNITIVE_PRISM:
+                        state.context_data["special_intent"] = "cognitive_prism"
+                        logger.info("Special intent detected: COGNITIVE_PRISM (认知棱镜)")
+                    elif unified_routing_result.primary_intent == UnifiedIntentType.TRANSLATION:
+                        state.context_data["special_intent"] = "translation"
+                        logger.info("Special intent detected: TRANSLATION (翻译)")
+                    elif unified_routing_result.primary_intent == UnifiedIntentType.SPRINT_PLAN:
+                        state.context_data["special_intent"] = "sprint_plan"
+                        logger.info("Special intent detected: SPRINT_PLAN (冲刺计划)")
+
+                # 原有路由决策（保持兼容）
                 route_decision = await self.request_router.decide(
                     message=user_message,
                     user_id=user_id,
@@ -954,6 +1433,35 @@ class ChatOrchestrator:
                 # === Phase 3: With Circuit Breaker, Observability, Shadow Mode ===
                 executable_plan = None
                 snapshot = None
+
+                # Fix #2: 信息收集检查（在LangGraph规划之前）
+                # 仅在识别为计划意图时触发信息收集
+                if unified_routing_result and unified_routing_result.primary_intent == UnifiedIntentType.PLAN:
+                    try:
+                        # 创建临时snapshot用于信息充足度检查
+                        temp_snapshot = await self.snapshot_manager.create_snapshot(
+                            user_id=user_id,
+                            session_id=session_id,
+                            db_session=active_db,
+                        )
+
+                        # 检查并收集信息
+                        info_collection_triggered = await self.check_and_collect_information(
+                            user_message=user_message,
+                            snapshot=temp_snapshot,
+                            user_id=user_id,
+                            session_id=session_id,
+                            stream_callback=stream_callback
+                        )
+
+                        # 如果触发了信息收集，继续正常流程（不中断）
+                        # 用户回复后会再次进入流程，此时信息会更充足
+                        if info_collection_triggered:
+                            logger.info(f"Information collection triggered, continuing with planning")
+
+                    except Exception as e:
+                        logger.warning(f"Information collection check failed: {e}")
+                        # 继续正常流程，不阻塞
 
                 if route_decision.execution_mode in ["langgraph", "hybrid"]:
                     logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
@@ -987,12 +1495,16 @@ class ChatOrchestrator:
                             if conversation_context:
                                 conversation_history = conversation_context.get("messages", [])
 
+                            # Phase 4: Pass plan_id for version tracking
+                            plan_id_str = str(plan_id) if plan_id else None
+
                             executable_plan = await self.lang_graph_planner.plan(
                                 message=user_message,
                                 snapshot=snapshot,
                                 user_id=user_id,
                                 session_id=session_id,
-                                conversation_history=conversation_history
+                                conversation_history=conversation_history,
+                                plan_id=plan_id_str,  # Phase 4
                             )
 
                             # === Phase 3: Log planning observability ===
@@ -1030,6 +1542,30 @@ class ChatOrchestrator:
                                 )
 
                                 if executable_plan.fallback_strategy.get("on_version_conflict") == "replan":
+                                    # P1: Check replan rate limit
+                                    plan_uuid = uuid.UUID(plan_id_str) if plan_id_str else None
+                                    user_uuid = uuid.UUID(user_id)
+
+                                    if plan_uuid:
+                                        can_replan, limit_reason, attempt_count = await self.version_conflict_service.can_replan(
+                                            user_uuid, plan_uuid
+                                        )
+
+                                        if not can_replan:
+                                            logger.warning(f"Replan rate limited: {limit_reason}")
+                                            await stream_callback(agent_service_pb2.ChatResponse(
+                                                delta=f"\n\n⚠️ {limit_reason}. 请稍后重试。",
+                                                metadata={
+                                                    "replan_blocked": "true",
+                                                    "reason": limit_reason,
+                                                    "attempt_count": str(attempt_count),
+                                                }
+                                            ))
+                                            return
+
+                                        # Record replan attempt
+                                        await self.version_conflict_service.record_replan_attempt(user_uuid, plan_uuid)
+
                                     logger.info("Version conflict -> attempting replan with latest snapshot")
                                     replan_attempted = True
                                     snapshot = await self.snapshot_manager.create_snapshot(
@@ -1042,7 +1578,8 @@ class ChatOrchestrator:
                                         snapshot=snapshot,
                                         user_id=user_id,
                                         session_id=session_id,
-                                        conversation_history=conversation_history
+                                        conversation_history=conversation_history,
+                                        plan_id=plan_id_str,  # Phase 4
                                     )
                                     current_versions = await self._load_context_versions(user_id)
                                     version_check = await self.snapshot_manager.compare_versions(
@@ -1146,6 +1683,169 @@ class ChatOrchestrator:
                                 await self.langgraph_breaker.on_failure("preflight_blocked")
                                 return
 
+                            # === Phase 4: Plan version conflict check before execution ===
+                            if plan_id and hasattr(executable_plan, 'plan_version'):
+                                from app.services.plan_state_service import PlanStateService
+                                from app.services.plan_feedback_service import get_plan_feedback_service
+
+                                plan_state_service = PlanStateService(active_db, self.redis)
+                                feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                # Check rate limit first
+                                rate_allowed, rate_count = await self._check_replan_rate_limit(plan_id)
+                                if not rate_allowed:
+                                    await stream_callback(agent_service_pb2.ChatResponse(
+                                        delta=f"\n\n⚠️ 计划重规划过于频繁，请稍后再试。"
+                                    ))
+                                    return
+
+                                # Retry loop for version conflict handling
+                                version_conflict_logged = False
+                                for replan_attempt in range(MAX_REPLAN_ATTEMPTS):
+                                    current_state = await plan_state_service.get_plan_state(
+                                        uuid.UUID(user_id), uuid.UUID(plan_id)
+                                    )
+
+                                    if not current_state or current_state.version == executable_plan.plan_version:
+                                        # No conflict or no state, exit loop successfully
+                                        break
+
+                                    # Version conflict detected
+                                    logger.warning(
+                                        f"Plan version conflict (attempt {replan_attempt + 1}/{MAX_REPLAN_ATTEMPTS}): "
+                                        f"planned v{executable_plan.plan_version} -> current v{current_state.version}"
+                                    )
+
+                                    # Log conflict feedback only once
+                                    if not version_conflict_logged:
+                                        await feedback_service.append_user_feedback(
+                                            user_id=uuid.UUID(user_id),
+                                            plan_id=uuid.UUID(plan_id),
+                                            content=(
+                                                f"Plan version conflict detected: "
+                                                f"planned v{executable_plan.plan_version}, "
+                                                f"current v{current_state.version}"
+                                            ),
+                                            decision="supplement",
+                                            priority="high"
+                                        )
+                                        version_conflict_logged = True
+
+                                    # Check if we've exhausted retries
+                                    if replan_attempt >= MAX_REPLAN_ATTEMPTS - 1:
+                                        # Max retries reached, require HITL
+                                        tool_calls_payload = [
+                                            {"id": tc.id, "name": tc.name, "params": tc.params}
+                                            for tc in executable_plan.tool_calls
+                                        ]
+                                        action_id = await pending_actions_store.save(
+                                            tool_name="__plan_version_conflict__",
+                                            arguments={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "tool_calls": tool_calls_payload,
+                                            },
+                                            user_id=str(user_id),
+                                            description=(
+                                                f"计划版本持续变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
+                                                f"是否继续执行？"
+                                            ),
+                                            preview_data={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "confidence": executable_plan.confidence,
+                                                "tool_calls": tool_calls_payload,
+                                            }
+                                        )
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict_max_retries").inc()
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=(
+                                                f"\n\n⚠️ 检测到持续状态变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
+                                                f"需要确认后继续执行。\naction_id={action_id}"
+                                            ),
+                                            metadata={
+                                                "requires_hitl": "true",
+                                                "action_id": action_id,
+                                                "reason": "plan_version_conflict_max_retries",
+                                            }
+                                        ))
+                                        return
+
+                                    # Handle conflict based on confidence
+                                    if executable_plan.confidence >= VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD:
+                                        # High confidence: auto replan
+                                        if replan_attempt == 0:
+                                            await stream_callback(agent_service_pb2.ChatResponse(
+                                                delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                            ))
+
+                                        # Create new snapshot and replan
+                                        new_snapshot = await self.snapshot_manager.create_snapshot(
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            db_session=active_db
+                                        )
+                                        executable_plan = await self.lang_graph_planner.replan(
+                                            message=user_message,
+                                            snapshot=new_snapshot,
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            previous_plan=executable_plan,
+                                            conflict_info={
+                                                "has_conflict": True,
+                                                "old_version": executable_plan.plan_version,
+                                                "new_version": current_state.version,
+                                            },
+                                            plan_id=plan_id_str,
+                                        )
+                                        # Continue loop to verify new plan version
+                                    else:
+                                        # Low confidence: require HITL confirmation (no retry)
+                                        tool_calls_payload = [
+                                            {"id": tc.id, "name": tc.name, "params": tc.params}
+                                            for tc in executable_plan.tool_calls
+                                        ]
+                                        action_id = await pending_actions_store.save(
+                                            tool_name="__plan_version_conflict__",
+                                            arguments={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "tool_calls": tool_calls_payload,
+                                            },
+                                            user_id=str(user_id),
+                                            description=(
+                                                f"计划版本已变更 (v{executable_plan.plan_version} -> v{current_state.version})，"
+                                                f"是否继续执行？"
+                                            ),
+                                            preview_data={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "confidence": executable_plan.confidence,
+                                                "tool_calls": tool_calls_payload,
+                                            }
+                                        )
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict_low_confidence").inc()
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=(
+                                                f"\n\n⚠️ 检测到状态变更，需要确认后继续执行。\n"
+                                                f"action_id={action_id}"
+                                            ),
+                                            metadata={
+                                                "requires_hitl": "true",
+                                                "action_id": action_id,
+                                                "reason": "plan_version_conflict",
+                                            }
+                                        ))
+                                        return
+
+                                # If we get here, version check passed (no conflict or resolved)
+                                if version_conflict_logged:
+                                    logger.info(f"Plan version conflict resolved for plan {plan_id}")
+
                             # 6. Plan Review (User Confirmation Loop)
                             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
                                 review_result = await plan_review_service.review_plan(
@@ -1153,6 +1853,20 @@ class ChatOrchestrator:
                                     user_message=user_message,
                                     user_context=user_context_payload or {}
                                 )
+
+                                # === Phase 4: Write review feedback to PlanScope (时机1: 审查完成后) ===
+                                if plan_id:
+                                    from app.services.plan_feedback_service import get_plan_feedback_service
+                                    feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                    # 写入审查结果到 feedback_log
+                                    await feedback_service.append_review_feedback(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        review_result=review_result,
+                                        user_decision=None,  # 尚未确认
+                                    )
+                                    logger.info(f"Review feedback written for plan {plan_id}")
 
                                 # Check if plan requires user action
                                 if review_result.decision in [
@@ -1314,15 +2028,76 @@ class ChatOrchestrator:
                         if not isinstance(llm_profile_meta, dict):
                             llm_profile_meta = {}
 
+                    # Build metadata with plan switch notification
+                    response_metadata = {
+                        "response_id": response_id,
+                        "trace_id": trace_id,
+                        "preference_version": (user_context_payload or {}).get("preference_version", 0),
+                        "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+                    }
+
+                    # P0: Add sprint mode switch notification
+                    if route_decision and "sprint" in route_decision.reason.lower():
+                        response_metadata["switch_to_sprint"] = True
+                        logger.info("Sprint mode switch notification added to response")
+
+                    # P0: Add plan switch notification to metadata
+                    if plan_switched and plan_id:
+                        response_metadata["plan_switched"] = True
+                        response_metadata["switched_to_plan_id"] = str(plan_id)
+                        logger.info(f"Plan switch notification added to response: plan_id={plan_id}")
+
+                    # === Phase 5: Plan Execution Validation ===
+                    # Validate plan execution results and persist to database
+                    if executable_plan and hasattr(executable_plan, 'plan_id') and active_db:
+                        try:
+                            with tracer.start_as_current_span("orchestrator.validate_execution"):
+                                # 1. Extract tool results from final_state.messages
+                                tool_extractor = ToolResultExtractor()
+                                tool_results = tool_extractor.extract_from_messages(
+                                    final_state.messages
+                                )
+
+                                # 2. Only validate if there were tool executions
+                                if tool_results or executable_plan.tool_calls:
+                                    # Create record service for persistence
+                                    record_service = PlanExecutionRecordService(active_db)
+
+                                    # Create validator with record service
+                                    execution_validator = PlanExecutionValidator(
+                                        record_service=record_service
+                                    )
+
+                                    # 3. Validate and persist
+                                    validation_result = await execution_validator.validate_and_record(
+                                        plan=executable_plan,
+                                        tool_results=tool_results,
+                                        user_id=uuid.UUID(user_id),
+                                    )
+
+                                    logger.info(
+                                        f"Plan execution validation: "
+                                        f"plan_id={validation_result.plan_id}, "
+                                        f"validation_status={validation_result.validation_status}, "
+                                        f"score={validation_result.quality_score:.2f}"
+                                    )
+
+                                    # 4. Add validation result to response metadata
+                                    response_metadata["execution_validation"] = {
+                                        "validation_status": validation_result.validation_status,
+                                        "quality_score": validation_result.quality_score,
+                                        "tools_total": validation_result.tool_summary.get("total", 0),
+                                        "tools_successful": validation_result.tool_summary.get("successful", 0),
+                                    }
+
+                        except Exception as e:
+                            logger.warning(f"Plan execution validation failed: {e}", exc_info=True)
+                            # Validation failure should not affect main flow
+
                     final_response_data = {
                         "message": full_response,
                         "tool_results": [],
-                        "metadata": {
-                            "response_id": response_id,
-                            "trace_id": trace_id,
-                            "preference_version": (user_context_payload or {}).get("preference_version", 0),
-                            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
-                        },
+                        "metadata": response_metadata,
                     }
                     try:
                         from app.services.decision_record_service import DecisionRecordService
@@ -1347,6 +2122,11 @@ class ChatOrchestrator:
                     
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.
+                    if transparency_generator is not None and "emit_transparency_event" in locals():
+                        await emit_transparency_event(transparency_generator.get_complete_event())
+                    for update_resp in await self._emit_system_updates(user_id):
+                        yield update_resp
+
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
@@ -1377,6 +2157,8 @@ class ChatOrchestrator:
                 ).inc()
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
+                if transparency_generator is not None and "emit_transparency_event" in locals():
+                    await emit_transparency_event(transparency_generator.get_complete_event())
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
@@ -1432,3 +2214,352 @@ class ChatOrchestrator:
 
                     except Exception as e:
                         logger.error(f"Failed to record token usage: {e}")
+
+    async def _notify_pending_milestone_proposals(
+        self,
+        user_id: str,
+        stream_callback,
+    ) -> None:
+        """
+        Check and send pending milestone proposals to user.
+        Called at the start of StreamChat to notify users of pending proposals.
+        """
+        from app.core.pending_actions import pending_actions_store
+
+        try:
+            actions = await pending_actions_store.get_all_by_user(user_id)
+
+            # Find milestone proposals
+            milestone_proposals = [
+                a for a in actions
+                if a.get("tool_name") == "milestone_task_proposal"
+            ]
+
+            if not milestone_proposals:
+                return
+
+            logger.info(f"Found {len(milestone_proposals)} pending milestone proposal(s) for user {user_id}")
+
+            for proposal_action in milestone_proposals:
+                preview = proposal_action.get("preview_data", {})
+                if not preview:
+                    continue
+
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"🎉 恭喜达成里程碑！为你推荐 {preview.get('suggested_count', 0)} 个新任务",
+                    metadata={
+                        "widget_event": "milestone_proposal",
+                        "proposal_id": preview.get("proposal_id"),
+                        "action_id": proposal_action.get("action_id"),
+                        "plan_id": preview.get("plan_id"),
+                        "milestone_id": preview.get("milestone_id"),
+                        "task_count": preview.get("suggested_count", 0),
+                        "reasoning": preview.get("reasoning", ""),
+                        "tasks": json.dumps(preview.get("proposed_tasks", [])),
+                    }
+                ))
+
+        except Exception as e:
+            logger.warning(f"Failed to notify milestone proposals: {e}")
+
+    # Fix #2: 多轮对话信息收集方法
+
+    async def _is_information_sufficient(
+        self,
+        collected_info: Dict[str, Any],
+        snapshot
+    ) -> tuple[bool, List[str]]:
+        """
+        使用LLM判断当前收集的信息是否充足
+
+        Args:
+            collected_info: 已收集的信息
+            snapshot: StateSnapshot对象
+
+        Returns:
+            (is_sufficient, list_of_missing_aspects)
+        """
+        prompt = f"""你是一个信息充足度判断专家。请分析当前收集的用户信息是否足够制定学习计划。
+
+## 用户初始请求
+{collected_info.get("initial_request", "")}
+
+## 已收集的澄清信息
+{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
+
+## 当前用户上下文
+{snapshot.to_prompt_context() if snapshot else "无"}
+
+请判断：
+1. 信息是否充足（可以开始制定计划）
+2. 如果不充足，列出缺失的关键方面（最多3个）
+
+返回JSON格式：
+{{
+  "is_sufficient": true/false,
+  "missing_aspects": ["缺失方面1", "缺失方面2"],
+  "reasoning": "判断理由"
+}}
+"""
+
+        try:
+            result = await llm_service.chat_json(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
+
+            is_sufficient = result.get("is_sufficient", False)
+            missing_aspects = result.get("missing_aspects", [])
+
+            logger.info(
+                f"Information sufficiency check: sufficient={is_sufficient}, "
+                f"missing={len(missing_aspects)}"
+            )
+
+            return is_sufficient, missing_aspects
+
+        except Exception as e:
+            logger.error(f"LLM information sufficiency check failed: {e}")
+            # 降级：认为信息充足，避免阻塞流程
+            return True, []
+
+    async def _generate_clarifying_question(
+        self,
+        missing_aspects: List[str],
+        collected_info: Dict[str, Any]
+    ) -> str:
+        """
+        生成追问
+
+        Args:
+            missing_aspects: 缺失的信息方面
+            collected_info: 已收集的信息
+
+        Returns:
+            追问文本
+        """
+        prompt = f"""你是一个善于提问的学习助手。需要向用户询问缺失的信息以制定学习计划。
+
+## 缺失的信息方面
+{chr(10).join(f"- {aspect}" for aspect in missing_aspects)}
+
+## 当前已收集的信息
+{json.dumps(collected_info, ensure_ascii=False, indent=2)}
+
+请生成一个自然、友好的追问，帮助用户提供这些缺失信息。
+
+要求：
+1. 问题要自然、口语化
+2. 一次只问1-2个相关问题
+3. 体现出你对用户情况的理解
+
+返回追问内容（直接返回问题文本，不要JSON）。"""
+
+        try:
+            question = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7
+            )
+            return question.strip()
+        except Exception as e:
+            logger.error(f"Failed to generate clarifying question: {e}")
+            return "为了更好地为您制定计划，请提供更多关于您学习目标和时间安排的信息。"
+
+    async def _synthesize_collected_info(
+        self,
+        collected_info: Dict[str, Any]
+    ) -> str:
+        """
+        提炼收集的信息为总结
+
+        Args:
+            collected_info: 已收集的信息
+
+        Returns:
+            信息总结文本
+        """
+        prompt = f"""请将以下收集的用户信息提炼为简洁的学习计划需求总结。
+
+## 用户初始请求
+{collected_info.get("initial_request", "")}
+
+## 澄清信息
+{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
+
+请提炼为一段简洁的总结（不超过200字），包含：
+1. 学习目标
+2. 时间安排
+3. 其他关键约束或偏好
+
+直接返回总结文本，不要JSON。"""
+
+        try:
+            summary = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+            return summary.strip()
+        except Exception as e:
+            logger.error(f"Failed to synthesize collected info: {e}")
+            # 降级：返回初始请求
+            return collected_info.get("initial_request", "")
+
+    async def _update_state_with_collected_info(
+        self,
+        session_id: str,
+        collected_info: Dict[str, Any],
+        summary: str
+    ):
+        """
+        将收集的信息写入state
+
+        Args:
+            session_id: 会话ID
+            collected_info: 已收集的信息
+            summary: 信息总结
+        """
+        try:
+            # 通过state_manager更新session context
+            if self.state_manager:
+                await self.state_manager.update_session_context(
+                    session_id=session_id,
+                    context_updates={
+                        "collected_information": collected_info,
+                        "user_requirement_summary": summary,
+                        "information_collection_completed_at": datetime.utcnow().isoformat()
+                    }
+                )
+                logger.info(f"Updated state with collected information for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to update state with collected info: {e}")
+
+    async def _needs_information_collection(
+        self,
+        user_message: str,
+        snapshot
+    ) -> bool:
+        """
+        快速判断是否需要信息收集（基于规则+LLM）
+
+        Args:
+            user_message: 用户消息
+            snapshot: StateSnapshot对象
+
+        Returns:
+            是否需要信息收集
+        """
+        # 规则1: 消息长度过短（<20字）可能需要更多信息
+        if len(user_message.strip()) < 20:
+            return True
+
+        # 规则2: 包含模糊关键词
+        vague_keywords = [
+            "计划", "学习", "复习", "安排", "帮我",
+            "制定", "设计", "规划"
+        ]
+        if any(keyword in user_message for keyword in vague_keywords):
+            # 检查是否包含具体信息
+            has_specific_info = any([
+                "天" in user_message or "周" in user_message or "月" in user_message,  # 时间
+                "考试" in user_message or "目标" in user_message,  # 目标
+                "数学" in user_message or "英语" in user_message or "语文" in user_message,  # 科目
+            ])
+            if not has_specific_info:
+                return True
+
+        # 规则3: 使用LLM判断（仅对复杂消息）
+        if len(user_message) > 50:
+            try:
+                prompt = f"""判断用户消息是否足够具体以制定学习计划。
+
+用户消息："{user_message}"
+
+如果消息包含足够的学习目标、时间安排、科目等信息，返回 {{"specific": true}}
+如果消息过于模糊或笼统，需要更多信息，返回 {{"specific": false}}
+
+只返回JSON，不要其他内容。"""
+
+                result = await llm_service.chat_json(
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1
+                )
+                return not result.get("specific", False)
+            except Exception as e:
+                logger.warning(f"LLM specificity check failed: {e}")
+
+        return False
+
+    async def check_and_collect_information(
+        self,
+        user_message: str,
+        snapshot,
+        user_id: str,
+        session_id: str,
+        stream_callback
+    ) -> bool:
+        """
+        检查是否需要信息收集，如果需要则生成追问（简化版本）
+
+        注意：这是简化实现，在单次响应中检测并提示信息收集。
+        完整的多轮loop需要客户端配合或WebSocket长连接。
+
+        Args:
+            user_message: 用户消息
+            snapshot: StateSnapshot对象
+            user_id: 用户ID
+            session_id: 会话ID
+            stream_callback: 流式回调函数
+
+        Returns:
+            True表示需要信息收集且已发送追问，False表示信息充足
+        """
+        # 检查是否需要信息收集
+        needs_collection = await self._needs_information_collection(user_message, snapshot)
+
+        if not needs_collection:
+            return False
+
+        logger.info(f"Information collection triggered for session {session_id}")
+
+        # 构建初始收集信息结构
+        collected_info = {
+            "initial_request": user_message,
+            "clarifications": []
+        }
+
+        # 检查信息充足度
+        is_sufficient, missing_aspects = await self._is_information_sufficient(
+            collected_info, snapshot
+        )
+
+        if is_sufficient:
+            return False
+
+        # 生成追问
+        question = await self._generate_clarifying_question(
+            missing_aspects, collected_info
+        )
+
+        # 流式返回追问
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=f"\n\n{question}"
+        ))
+
+        # 保存状态到Redis，标记"需要收集信息"
+        try:
+            await self.redis.setex(
+                f"info_collection_needed:{session_id}",
+                300,  # 5分钟过期
+                json.dumps({
+                    "collected_info": collected_info,
+                    "missing_aspects": missing_aspects,
+                    "round": 1,
+                    "max_rounds": 3,
+                    "triggered_at": datetime.utcnow().isoformat()
+                })
+            )
+            logger.info(f"Set information collection flag for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to set info collection flag: {e}")
+
+        return True

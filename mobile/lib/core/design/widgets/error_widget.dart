@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 错误组件类型
 enum ErrorType {
@@ -31,61 +32,74 @@ class CustomErrorWidget extends StatelessWidget {
     this.onClose,
     this.actions,
     this.showIcon = true,
+    this.l10n,
   });
 
-  /// 全屏错误页工厂构造函数
+  /// 全屏错误页工厂构造函数（带本地化支持）
   factory CustomErrorWidget.page({
     required String message,
+    required BuildContext context,
     Key? key,
     String? title,
     IconData? icon,
     VoidCallback? onRetry,
     List<Widget>? actions,
     ErrorSeverity severity = ErrorSeverity.error,
-  }) =>
-      CustomErrorWidget(
-        key: key,
-        type: ErrorType.page,
-        severity: severity,
-        title: title,
-        message: message,
-        icon: icon,
-        onRetry: onRetry,
-        actions: actions,
-      );
+  }) {
+    final l10n = AppLocalizations.of(context);
+    return CustomErrorWidget(
+      key: key,
+      type: ErrorType.page,
+      severity: severity,
+      title: title,
+      message: message,
+      icon: icon,
+      onRetry: onRetry,
+      actions: actions,
+      l10n: l10n,
+    );
+  }
 
-  /// 错误横幅工厂构造函数
+  /// 错误横幅工厂构造函数（带本地化支持）
   factory CustomErrorWidget.banner({
     required String message,
+    required BuildContext context,
     Key? key,
     String? title,
     VoidCallback? onClose,
     ErrorSeverity severity = ErrorSeverity.error,
-  }) =>
-      CustomErrorWidget(
-        key: key,
-        type: ErrorType.banner,
-        severity: severity,
-        title: title,
-        message: message,
-        onClose: onClose,
-      );
+  }) {
+    final l10n = AppLocalizations.of(context);
+    return CustomErrorWidget(
+      key: key,
+      type: ErrorType.banner,
+      severity: severity,
+      title: title,
+      message: message,
+      onClose: onClose,
+      l10n: l10n,
+    );
+  }
 
-  /// 内联错误提示工厂构造函数
+  /// 内联错误提示工厂构造函数（带本地化支持）
   factory CustomErrorWidget.inline({
     required String message,
+    required BuildContext context,
     Key? key,
     IconData? icon,
     bool showIcon = true,
     ErrorSeverity severity = ErrorSeverity.error,
-  }) =>
-      CustomErrorWidget(
-        key: key,
-        severity: severity,
-        message: message,
-        icon: icon,
-        showIcon: showIcon,
-      );
+  }) {
+    final l10n = AppLocalizations.of(context);
+    return CustomErrorWidget(
+      key: key,
+      severity: severity,
+      message: message,
+      icon: icon,
+      showIcon: showIcon,
+      l10n: l10n,
+    );
+  }
 
   /// 错误类型
   final ErrorType type;
@@ -113,6 +127,9 @@ class CustomErrorWidget extends StatelessWidget {
 
   /// 是否显示图标
   final bool showIcon;
+
+  /// 本地化实例
+  final AppLocalizations? l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -173,13 +190,15 @@ class CustomErrorWidget extends StatelessWidget {
   String _getDefaultTitle() {
     switch (severity) {
       case ErrorSeverity.error:
-        return '出错了';
+        return l10n?.errorTitle ?? '哎呀，出错了';
       case ErrorSeverity.warning:
-        return '警告';
+        return l10n?.warningTitle ?? '温馨提示';
       case ErrorSeverity.info:
-        return '提示';
+        return l10n?.infoTitle ?? '小提示';
     }
   }
+
+  String _getRetryText() => l10n?.retry ?? '重试';
 
   Widget _buildErrorPage(BuildContext context) => Center(
         child: Padding(
@@ -237,7 +256,7 @@ class CustomErrorWidget extends StatelessWidget {
                 ...actions!
               else if (onRetry != null)
                 CustomButton.primary(
-                  text: '重试',
+                  text: _getRetryText(),
                   onPressed: onRetry,
                   icon: Icons.refresh_rounded,
                   customGradient: _getGradient(),
@@ -358,12 +377,18 @@ class NetworkErrorPage extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '网络连接失败',
-        message: '请检查您的网络连接后重试',
-        icon: Icons.wifi_off_rounded,
-        onRetry: onRetry,
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
+    return CustomErrorWidget.page(
+      message: l10n.errorConnectionFailed,
+      context: context,
+      icon: Icons.wifi_off_rounded,
+      onRetry: onRetry,
+    );
+  }
 }
 
 /// 404错误页面
@@ -375,21 +400,27 @@ class NotFoundErrorPage extends StatelessWidget {
   final VoidCallback? onGoBack;
 
   @override
-  Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '页面不存在',
-        message: '抱歉，您访问的页面不存在或已被删除',
-        icon: Icons.search_off_rounded,
-        severity: ErrorSeverity.warning,
-        actions: [
-          if (onGoBack != null)
-            CustomButton.primary(
-              text: '返回',
-              onPressed: onGoBack,
-              icon: Icons.arrow_back_rounded,
-              customGradient: DS.warningGradient,
-            ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
+    return CustomErrorWidget.page(
+      message: l10n.errorNotFound,
+      context: context,
+      icon: Icons.search_off_rounded,
+      severity: ErrorSeverity.warning,
+      actions: [
+        if (onGoBack != null)
+          CustomButton.primary(
+            text: l10n.back,
+            onPressed: onGoBack,
+            icon: Icons.arrow_back_rounded,
+            customGradient: DS.warningGradient,
+          ),
+      ],
+    );
+  }
 }
 
 /// 服务器错误页面
@@ -403,10 +434,16 @@ class ServerErrorPage extends StatelessWidget {
   final String? errorMessage;
 
   @override
-  Widget build(BuildContext context) => CustomErrorWidget.page(
-        title: '服务器错误',
-        message: errorMessage ?? '服务器开小差了，请稍后重试',
-        icon: Icons.cloud_off_rounded,
-        onRetry: onRetry,
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const SizedBox.shrink();
+    }
+    return CustomErrorWidget.page(
+      message: errorMessage ?? l10n.errorServerIssue,
+      context: context,
+      icon: Icons.cloud_off_rounded,
+      onRetry: onRetry,
+    );
+  }
 }

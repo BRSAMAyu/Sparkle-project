@@ -54,6 +54,7 @@ type chatInput struct {
 	FileIds           []string               `json:"file_ids,omitempty"`
 	IncludeReferences bool                   `json:"include_references,omitempty"`
 	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
+	ChatMode          string                 `json:"chat_mode,omitempty"`
 }
 
 type wsMode int
@@ -94,6 +95,7 @@ func (c *chatInput) Reset() {
 	c.FileIds = nil
 	c.IncludeReferences = false
 	c.ExtraContext = nil
+	c.ChatMode = ""
 }
 
 // stringBuilderPool reuses string builders for text accumulation
@@ -119,12 +121,13 @@ type ChatOrchestrator struct {
 	userContext   *service.UserContextService
 	taskCommand   *service.TaskCommandService
 	backendURL    string
+	signalHub     *service.SignalHub
 	httpClient    *http.Client
 	wsConnections map[string]*websocket.Conn
 	wsMutex       sync.RWMutex
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
@@ -138,6 +141,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		userContext:  uc,
 		taskCommand:  tc,
 		backendURL:   strings.TrimRight(backendURL, "/"),
+		signalHub:    signalHub,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -533,8 +537,10 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	case *agentv1.ChatResponse_StatusUpdate:
 		result["type"] = "status_update"
 		result["status"] = map[string]interface{}{
-			"state":   content.StatusUpdate.State.String(),
-			"details": sanitizer.Sanitize(content.StatusUpdate.Details),
+			"state":              content.StatusUpdate.State.String(),
+			"details":            sanitizer.Sanitize(content.StatusUpdate.Details),
+			"current_agent_name": sanitizer.Sanitize(content.StatusUpdate.CurrentAgentName),
+			"active_agent":        content.StatusUpdate.ActiveAgent.String(),
 		}
 	case *agentv1.ChatResponse_FullText:
 		result["type"] = "full_text"
@@ -552,6 +558,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			"prompt_tokens":     content.Usage.PromptTokens,
 			"completion_tokens": content.Usage.CompletionTokens,
 			"total_tokens":      content.Usage.TotalTokens,
+			"cost_micro_usd":    content.Usage.CostMicroUsd,
 		}
 	case *agentv1.ChatResponse_Citations:
 		result["type"] = "citations"
@@ -828,6 +835,26 @@ func (r *envelopeResponder) SendMeta(meta map[string]interface{}) error {
 	return r.writeEnvelope(payload, traceparentFromContext(r.ctx))
 }
 
+func (r *envelopeResponder) SendPlanReviewStatus(reviewID, status string, data map[string]interface{}) {
+	statusMsg := map[string]interface{}{
+		"review_id":  reviewID,
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+	}
+	for k, v := range data {
+		statusMsg[k] = v
+	}
+	raw, _ := json.Marshal(statusMsg)
+	payload := map[string]json.RawMessage{
+		"plan_review_status": raw,
+	}
+	if err := r.writeEnvelope(payload, traceparentFromContext(r.ctx)); err != nil {
+		log.Printf("Failed to send plan review status: %v", err)
+	} else {
+		log.Printf("✅ Plan review status sent: status=%s, review_id=%s", status, reviewID)
+	}
+}
+
 func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, traceparent string) error {
 	envOut := wsEnvelopeOut{
 		Traceparent: traceparent,
@@ -1033,6 +1060,7 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 		return fmt.Errorf("unsupported chat_request input")
 	}
 	input.SessionID = req.GetSessionId()
+	input.ChatMode = req.GetChatMode()
 	input.Nickname = req.GetUserProfile().GetNickname()
 	input.FileIds = req.GetFileIds()
 	input.IncludeReferences = req.GetIncludeReferences()
@@ -1254,6 +1282,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		},
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
+		ChatMode:          input.ChatMode,
 		UserProfile: &agentv1.UserProfile{
 			Nickname:     input.Nickname,
 			Timezone:     "Asia/Shanghai",
@@ -2148,6 +2177,9 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 		_ = existing.Close()
 	}
 	h.wsConnections[userID] = conn
+	if h.signalHub != nil {
+		h.signalHub.Register(userID, conn)
+	}
 
 	// Publish connection event to Redis for cross-instance synchronization
 	if h.chatHistory != nil {
@@ -2160,8 +2192,12 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 
 func (h *ChatOrchestrator) unregisterConnection(userID string) {
 	h.wsMutex.Lock()
-	defer h.wsMutex.Unlock()
+	conn := h.wsConnections[userID]
 	delete(h.wsConnections, userID)
+	h.wsMutex.Unlock()
+	if h.signalHub != nil && conn != nil {
+		h.signalHub.Unregister(userID, conn)
+	}
 
 	// Publish disconnection event to Redis for cross-instance synchronization
 	if h.chatHistory != nil {

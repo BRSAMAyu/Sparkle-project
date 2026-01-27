@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:opentelemetry/api.dart' show Attribute;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -49,11 +48,80 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
 
+        // Check for transparency events (透明化与信任构建链路)
+        if (metadata != null && metadata['event_type'] == 'transparency') {
+          final eventPayload = metadata['event_payload'] as String?;
+          if (eventPayload != null && eventPayload.isNotEmpty) {
+            try {
+              final eventData = json.decode(eventPayload) as Map<String, dynamic>;
+              final eventType = eventData['type'] as String?;
+
+              if (eventType == 'transparency_step') {
+                final stepData = eventData['data'] as Map<String, dynamic>?;
+                return TransparencyStepEvent(
+                  stepData: stepData ?? eventData,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              } else if (eventType == 'transparency_complete') {
+                final transData = eventData['data'] as Map<String, dynamic>?;
+                return TransparencyCompleteEvent(
+                  transparencyData: transData != null
+                      ? TransparencyData.fromJson(transData)
+                      : null,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              }
+            } catch (e) {
+              // If parsing fails, fall through to regular text event
+              debugPrint('Failed to parse transparency event: $e');
+            }
+          }
+        }
+
+        // Check for sprint mode switch
+        if (metadata != null && _isTrue(metadata['switch_to_sprint'])) {
+          return SprintModeSwitchEvent(
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
+        // Phase 2b: Check if this delta contains content review data
+        if (metadata != null && _isTrue(metadata['has_review_result'])) {
+          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          return ContentReviewWidgetEvent(
+            reviewData: reviewData ?? metadata,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;
           return PlanReviewWidgetEvent(
             reviewData: reviewData ?? metadata,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
+        // Phase 2b: Check if this delta contains reflection result
+        if (metadata != null && _isTrue(metadata['has_reflection_result'])) {
+          return ContentReflectionResultEvent(
+            reflectionData: metadata,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -76,6 +144,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           return StatusUpdateEvent(
             state: status['state'] as String? ?? 'UNKNOWN',
             details: status['details'] as String? ?? '',
+            currentAgentName: status['current_agent_name'] as String?,
+            activeAgentType: status['active_agent'] as String?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -219,6 +289,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             promptTokens: usage['prompt_tokens'] as int? ?? 0,
             completionTokens: usage['completion_tokens'] as int? ?? 0,
             totalTokens: usage['total_tokens'] as int? ?? 0,
+            costMicroUsd: usage['cost_micro_usd'] as int?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -372,6 +443,84 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'milestone_proposal':
+        final proposalData = data['proposal'] as Map<String, dynamic>?;
+        if (proposalData != null) {
+          return MilestoneProposalEvent(
+            proposalData: proposalData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'achievement_unlock':
+        final achievementData = data['achievement_data'] as Map<String, dynamic>?;
+        if (achievementData != null) {
+          return AchievementUnlockEvent(
+            achievementData: achievementData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'transparency_step':
+        // 透明度步骤事件
+        final stepData = data['step_data'] as Map<String, dynamic>?;
+        if (stepData != null) {
+          return TransparencyStepEvent(
+            stepData: stepData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'transparency_complete':
+        // 透明度完整数据事件
+        final transData = data['transparency'] as Map<String, dynamic>?;
+        if (transData != null) {
+          return TransparencyCompleteEvent(
+            transparencyData: TransparencyData.fromJson(transData),
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {
@@ -493,6 +642,7 @@ class WebSocketChatServiceV2 {
     String? token,
     List<String>? fileIds,
     bool includeReferences = false,
+    String? chatMode,
   }) {
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
@@ -513,6 +663,7 @@ class WebSocketChatServiceV2 {
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
       if (includeReferences) 'include_references': true,
+      if (chatMode != null) 'chat_mode': chatMode,
     };
 
     // 发送或排队
@@ -903,7 +1054,7 @@ class WebSocketChatServiceV2 {
       final span = TracingService.instance.startSpan('ws.chat_send');
       payload.putIfAbsent('trace_id', TracingService.instance.createTraceId);
       if (payload['type'] is String) {
-        span.setAttribute(Attribute.fromString('ws.type', payload['type'] as String));
+        span.setAttribute('ws.type', payload['type'] as String);
       }
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');

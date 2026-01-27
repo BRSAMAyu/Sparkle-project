@@ -5,7 +5,7 @@ Models Package
 from app.models.base import BaseModel, GUID
 from app.models.user import User, PushPreference, UserDevice
 from app.models.task import Task, TaskType, TaskStatus
-from app.models.plan import Plan, PlanType
+from app.models.plan import Plan, PlanType, PlanStage
 from app.models.chat import ChatMessage, MessageRole
 from app.models.user import User
 from app.models.audit_log import SecurityAuditLog, DataAccessLog, ComplianceCheckLog, SystemConfigChangeLog
@@ -59,10 +59,15 @@ from app.models.intervention_adaptive import (
 )
 from app.models.response_feedback import ResponseFeedback
 from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
+from app.models.memory_evolution import (
+    MemoryEvolution,
+    EvolutionPrediction,
+)
 from app.models.context_pack import ContextPackRun, ContextBudgetProfile, ContextPackFeedback
 from app.models.memory_rank_policy import MemoryRankPolicy
 from app.models.ltm_daily_snapshot import LtmDailySnapshot
 from app.models.user_memory_settings import UserMemorySettings
+from app.models.user_settings import UserSettings
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.decision_record import DecisionRecord
 from app.models.seed_content import (
@@ -73,6 +78,14 @@ from app.models.seed_content import (
     LibraryVisibility,
     ItemType,
     DifficultyLevel,
+)
+from app.models.experiment import (
+    ABExperiment,
+    ABExperimentVariant,
+    ABExperimentMetric,
+    ABExperimentAssignment,
+    ExperimentStatus,
+    MetricType,
 )
 from app.models.achievement import (
     Achievement,
@@ -88,6 +101,19 @@ from app.models.achievement import (
     StudyBuddy,
     UserTitle,
 )
+from app.models.plan_state import PlanState, PlanStateStatus
+from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink, TaskResourceType
+from app.models.next_action_selection import NextActionSelection
+from app.models.review_system import (
+    ReviewHistory,
+    ReviewFeedback,
+    ReviewOverride,
+    ReviewAppeal,
+    ArbitrationCase,
+    ArbitrationDecision,
+)
+from app.models.plan_execution_record import PlanExecutionRecord
 
 __all__ = [
     "BaseModel",
@@ -100,6 +126,7 @@ __all__ = [
     "TaskStatus",
     "Plan",
     "PlanType",
+    "PlanStage",
     "ChatMessage",
     "MessageRole",
     "ErrorRecord",
@@ -179,12 +206,15 @@ __all__ = [
     "MemoryGoal",
     "EpisodicMemory",
     "MemoryCorrection",
+    "MemoryEvolution",
+    "EvolutionPrediction",
     "ContextPackRun",
     "ContextBudgetProfile",
     "ContextPackFeedback",
     "LtmDailySnapshot",
     "MemoryRankPolicy",
     "UserMemorySettings",
+    "UserSettings",
     "UserPreferencesCenter",
     "DecisionRecord",
     # Seed Content Library
@@ -195,6 +225,13 @@ __all__ = [
     "LibraryVisibility",
     "ItemType",
     "DifficultyLevel",
+    # A/B Testing
+    "ABExperiment",
+    "ABExperimentVariant",
+    "ABExperimentMetric",
+    "ABExperimentAssignment",
+    "ExperimentStatus",
+    "MetricType",
     # Achievement System
     "Achievement",
     "UserAchievement",
@@ -208,4 +245,24 @@ __all__ = [
     "UserGalaxySkin",
     "StudyBuddy",
     "UserTitle",
+    # Plan State
+    "PlanState",
+    "PlanStateStatus",
+    # Task Feedback
+    "TaskFeedback",
+    "TaskFeedbackCategory",
+    "TaskResourceLink",
+    "TaskKnowledgeLink",
+    "TaskResourceType",
+    # Next Action Selection
+    "NextActionSelection",
+    # Review System
+    "ReviewHistory",
+    "ReviewFeedback",
+    "ReviewOverride",
+    "ReviewAppeal",
+    "ArbitrationCase",
+    "ArbitrationDecision",
+    # Plan Execution
+    "PlanExecutionRecord",
 ]

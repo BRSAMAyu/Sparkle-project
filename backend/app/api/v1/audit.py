@@ -15,7 +15,7 @@ def admin_required(current_user: User = Depends(get_current_user)):
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="仅管理员可执行此操作"
+            detail="只有管理员才能执行此操作"
         )
     return current_user
 
@@ -36,7 +36,7 @@ async def approve_avatar(
     """通过头像审核"""
     user = await AuditService.approve_avatar(db, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="待审核用户不存在")
+        raise HTTPException(status_code=404, detail="没有找到待审核的用户")
     return user
 
 @router.post("/avatars/{user_id}/reject", response_model=UserProfile)
@@ -49,5 +49,5 @@ async def reject_avatar(
     """驳回头像审核"""
     user = await AuditService.reject_avatar(db, user_id, reason)
     if not user:
-        raise HTTPException(status_code=404, detail="待审核用户不存在")
+        raise HTTPException(status_code=404, detail="没有找到待审核的用户")
     return user

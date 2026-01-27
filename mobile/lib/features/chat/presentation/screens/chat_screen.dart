@@ -11,8 +11,15 @@ import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubbl
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -32,6 +39,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (next.length > (previous?.length ?? 0)) {
         _scrollToBottom();
       }
+    });
+
+    ref.listenManual(activePlanProvider, (previous, next) {
+      if (previous != next) {
+        unawaited(ref.read(chatProvider.notifier).switchPlanSession(next));
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final activePlanId = ref.read(activePlanProvider);
+      unawaited(ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
     });
   }
 
@@ -60,6 +78,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final transparentMode = ref.watch(transparentModeProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -317,8 +336,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
                     ),
+                  // Plan Selector Pill - allows selecting plan for chat context
+                  if (transparentMode)
+                    TransparencyPanel(
+                      status: chatState.aiStatus,
+                      details: chatState.aiStatusDetails,
+                      promptTokens: chatState.lastPromptTokens,
+                      completionTokens: chatState.lastCompletionTokens,
+                      totalTokens: chatState.lastTotalTokens,
+                      currentAgentName: chatState.currentAgentName,
+                      activeAgentType: chatState.activeAgentType,
+                      activeTools: chatState.activeTools,
+                      dailyTokens: chatState.dailyTokens,
+                      dailyTokenLimit: chatState.dailyTokenLimit,
+                      dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                      // Transparency data
+                      transparencyData: chatState.transparencyData,
+                      currentStepIndex: chatState.currentStepIndex,
+                    ),
+                  if (transparentMode) const SizedBox(height: DS.spacing12),
+                  const PlanSelectorPill(),
+                  // Chat Mode Selector Pill - allows selecting AI collaboration mode
+                  const ChatModeSelectorPill(),
+                  // Intent prediction bar
+                  const IntentPredictionBar(showIdle: false),
                   ChatInput(
                     enabled: !chatState.isSending,
+                    onTextChanged: (text) {
+                      ref.read(intentPredictionProvider.notifier).onInputChanged(text);
+                    },
                     onFileUploaded: (StoredFile file) {
                       if (file.status != 'processed') {
                         ScaffoldMessenger.of(context).showSnackBar(

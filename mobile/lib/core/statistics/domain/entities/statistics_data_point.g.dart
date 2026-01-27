@@ -31,10 +31,10 @@ _$StatisticsDataSeriesImpl _$$StatisticsDataSeriesImplFromJson(
     _$StatisticsDataSeriesImpl(
       id: json['id'] as String,
       name: json['name'] as String,
-      color: json['color'] as String?,
       points: (json['points'] as List<dynamic>)
           .map((e) => StatisticsDataPoint.fromJson(e as Map<String, dynamic>))
           .toList(),
+      color: json['color'] as String?,
       unit: json['unit'] as String?,
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       minValue: (json['minValue'] as num?)?.toDouble(),
@@ -47,8 +47,8 @@ Map<String, dynamic> _$$StatisticsDataSeriesImplToJson(
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'color': instance.color,
       'points': instance.points,
+      'color': instance.color,
       'unit': instance.unit,
       'maxValue': instance.maxValue,
       'minValue': instance.minValue,

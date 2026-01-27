@@ -451,6 +451,528 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'确定'**
   String get confirm;
+
+  /// No description provided for @errorConnectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络似乎有些不给力，请检查一下连接~'**
+  String get errorConnectionFailed;
+
+  /// No description provided for @errorConnectionTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时啦，请稍后再试'**
+  String get errorConnectionTimeout;
+
+  /// No description provided for @errorServerIssue.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器正在打盹，请稍后再试'**
+  String get errorServerIssue;
+
+  /// No description provided for @errorRateLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作太频繁啦，休息一下再试吧~'**
+  String get errorRateLimit;
+
+  /// No description provided for @errorAuthRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先登录后再使用这个功能哦'**
+  String get errorAuthRequired;
+
+  /// No description provided for @errorTokenExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录信息已过期，请重新登录~'**
+  String get errorTokenExpired;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到相关内容，试试其他关键词？'**
+  String get errorNotFound;
+
+  /// No description provided for @errorEmptyState.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里空空如也，快去添加内容吧'**
+  String get errorEmptyState;
+
+  /// No description provided for @retry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get retry;
+
+  /// No description provided for @back.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get back;
+
+  /// No description provided for @welcomeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'点燃你的学习潜能'**
+  String get welcomeSubtitle;
+
+  /// No description provided for @pleaseEnterUsername.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入用户名或邮箱'**
+  String get pleaseEnterUsername;
+
+  /// No description provided for @pleaseEnterPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入密码'**
+  String get pleaseEnterPassword;
+
+  /// No description provided for @orText.
+  ///
+  /// In zh, this message translates to:
+  /// **'或'**
+  String get orText;
+
+  /// No description provided for @continueAsGuest.
+  ///
+  /// In zh, this message translates to:
+  /// **'以访客身份继续'**
+  String get continueAsGuest;
+
+  /// No description provided for @joinSparkle.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入 Sparkle'**
+  String get joinSparkle;
+
+  /// No description provided for @usernameMinLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户名至少需要3个字符'**
+  String get usernameMinLength;
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的邮箱地址'**
+  String get invalidEmail;
+
+  /// No description provided for @passwordMinLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'密码至少需要6个字符'**
+  String get passwordMinLength;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认密码'**
+  String get confirmPassword;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'两次输入的密码不一致'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @google.
+  ///
+  /// In zh, this message translates to:
+  /// **'Google'**
+  String get google;
+
+  /// No description provided for @apple.
+  ///
+  /// In zh, this message translates to:
+  /// **'Apple'**
+  String get apple;
+
+  /// No description provided for @wechat.
+  ///
+  /// In zh, this message translates to:
+  /// **'微信'**
+  String get wechat;
+
+  /// No description provided for @createGrowthPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建成长计划'**
+  String get createGrowthPlan;
+
+  /// No description provided for @createSprintPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建冲刺计划'**
+  String get createSprintPlan;
+
+  /// No description provided for @featureComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'精彩功能即将登场'**
+  String get featureComingSoon;
+
+  /// No description provided for @stayTuned.
+  ///
+  /// In zh, this message translates to:
+  /// **'敬请期待~'**
+  String get stayTuned;
+
+  /// No description provided for @aiNudgeGentle.
+  ///
+  /// In zh, this message translates to:
+  /// **'休息一下吧，效率会更高哦'**
+  String get aiNudgeGentle;
+
+  /// No description provided for @aiNudgeFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持专注，你正在状态！'**
+  String get aiNudgeFocus;
+
+  /// No description provided for @qwen3CognitiveStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'Qwen3 认知状态'**
+  String get qwen3CognitiveStatus;
+
+  /// No description provided for @winStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜'**
+  String get winStreak;
+
+  /// No description provided for @myPersona.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的画像'**
+  String get myPersona;
+
+  /// No description provided for @systemActivity.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统活动'**
+  String get systemActivity;
+
+  /// No description provided for @memoryControl.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆控制'**
+  String get memoryControl;
+
+  /// No description provided for @brightness.
+  ///
+  /// In zh, this message translates to:
+  /// **'亮度'**
+  String get brightness;
+
+  /// No description provided for @dragToAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动控制点，调整你的AI辅导风格'**
+  String get dragToAdjust;
+
+  /// No description provided for @capsuleGeneration.
+  ///
+  /// In zh, this message translates to:
+  /// **'胶囊生成'**
+  String get capsuleGeneration;
+
+  /// No description provided for @adjustAndGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整偏好并生成专属好奇心胶囊'**
+  String get adjustAndGenerate;
+
+  /// No description provided for @generateNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即生成胶囊'**
+  String get generateNow;
+
+  /// No description provided for @generating.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中...'**
+  String get generating;
+
+  /// No description provided for @selectTimeSlots.
+  ///
+  /// In zh, this message translates to:
+  /// **'框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息'**
+  String get selectTimeSlots;
+
+  /// No description provided for @enableNotifications.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用通知'**
+  String get enableNotifications;
+
+  /// No description provided for @smartReminders.
+  ///
+  /// In zh, this message translates to:
+  /// **'智能碎片时间提醒'**
+  String get smartReminders;
+
+  /// No description provided for @pushMicroTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'在绿色时间段主动推送微任务'**
+  String get pushMicroTasks;
+
+  /// No description provided for @transparentMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'透明模式'**
+  String get transparentMode;
+
+  /// No description provided for @enableTransparentMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用透明模式'**
+  String get enableTransparentMode;
+
+  /// No description provided for @showStatusOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示状态与资源消耗概览'**
+  String get showStatusOverview;
+
+  /// No description provided for @transparencyLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'透明度级别'**
+  String get transparencyLevel;
+
+  /// No description provided for @basic.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础'**
+  String get basic;
+
+  /// No description provided for @standard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准'**
+  String get standard;
+
+  /// No description provided for @advanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'高级'**
+  String get advanced;
+
+  /// No description provided for @systemFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统反馈级别'**
+  String get systemFeedback;
+
+  /// No description provided for @controlUpdateDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制系统更新提示的详细程度'**
+  String get controlUpdateDetails;
+
+  /// No description provided for @silent.
+  ///
+  /// In zh, this message translates to:
+  /// **'静默'**
+  String get silent;
+
+  /// No description provided for @summary.
+  ///
+  /// In zh, this message translates to:
+  /// **'摘要'**
+  String get summary;
+
+  /// No description provided for @detailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'详细'**
+  String get detailed;
+
+  /// No description provided for @sync.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步'**
+  String get sync;
+
+  /// No description provided for @syncCenter.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步中心'**
+  String get syncCenter;
+
+  /// No description provided for @viewOfflineQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看离线队列状态与重试'**
+  String get viewOfflineQueue;
+
+  /// No description provided for @capsuleTaskCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'✨ 胶囊生成任务已创建'**
+  String get capsuleTaskCreated;
+
+  /// No description provided for @generationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成失败，请稍后重试'**
+  String get generationFailed;
+
+  /// No description provided for @generationFailedWithDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成失败: {error}'**
+  String generationFailedWithDetail(Object error);
+
+  /// No description provided for @version.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle v2.1.0-stable\n© 2025 Sparkle Team'**
+  String get version;
+
+  /// No description provided for @editPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑计划'**
+  String get editPlan;
+
+  /// No description provided for @planEditInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划编辑功能开发中'**
+  String get planEditInProgress;
+
+  /// No description provided for @planId.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划ID'**
+  String get planId;
+
+  /// No description provided for @featureInDevelopment.
+  ///
+  /// In zh, this message translates to:
+  /// **'此功能正在开发中，即将推出'**
+  String get featureInDevelopment;
+
+  /// No description provided for @sprintHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺历史'**
+  String get sprintHistory;
+
+  /// No description provided for @noSprintHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无冲刺历史'**
+  String get noSprintHistory;
+
+  /// No description provided for @loadingFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get loadingFailed;
+
+  /// No description provided for @completionProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成进度'**
+  String get completionProgress;
+
+  /// No description provided for @tasksCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'{completed}/{total} 任务'**
+  String tasksCompleted(Object completed, Object total);
+
+  /// No description provided for @sprintCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'✅ 冲刺已完成并归档'**
+  String get sprintCompleted;
+
+  /// No description provided for @sprintExtended.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺已延长 {days} 天'**
+  String sprintExtended(Object days);
+
+  /// No description provided for @sprintAbandoned.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺已放弃'**
+  String get sprintAbandoned;
+
+  /// No description provided for @noActiveSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有活跃的冲刺'**
+  String get noActiveSprint;
+
+  /// No description provided for @networkErrorRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络错误，请重试'**
+  String get networkErrorRetry;
+
+  /// No description provided for @submitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交失败，请重试'**
+  String get submitFailed;
+
+  /// No description provided for @loadHistoryFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载历史失败'**
+  String get loadHistoryFailed;
+
+  /// No description provided for @loadMoreFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多消息失败'**
+  String get loadMoreFailed;
+
+  /// No description provided for @sendFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败，请重试'**
+  String get sendFailed;
+
+  /// No description provided for @view.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get view;
+
+  /// No description provided for @ongoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get ongoing;
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'哎呀，出错了'**
+  String get errorTitle;
+
+  /// No description provided for @warningTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'温馨提示'**
+  String get warningTitle;
+
+  /// No description provided for @infoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'小提示'**
+  String get infoTitle;
 }
 
 class _AppLocalizationsDelegate

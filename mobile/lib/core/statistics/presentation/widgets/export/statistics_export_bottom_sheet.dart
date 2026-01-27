@@ -5,6 +5,11 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Export option button widget
 class ExportOptionButton extends StatelessWidget {
+
+  const ExportOptionButton({
+    required this.format, required this.icon, required this.label, required this.description, required this.onTap, super.key,
+    this.isSelected = false,
+  });
   /// Export format
   final ExportFormat format;
 
@@ -23,24 +28,13 @@ class ExportOptionButton extends StatelessWidget {
   /// Callback when tapped
   final VoidCallback onTap;
 
-  const ExportOptionButton({
-    super.key,
-    required this.format,
-    required this.icon,
-    required this.label,
-    required this.description,
-    this.isSelected = false,
-    required this.onTap,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: StatisticsAnimationConfig.fast,
         curve: StatisticsAnimationConfig.easeOut,
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: isSelected ? DS.brandPrimary.withValues(alpha: 0.1) : DS.neutral50,
           borderRadius: BorderRadius.circular(DS.borderRadiusLG),
@@ -52,7 +46,7 @@ class ExportOptionButton extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(DS.sm),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
                 color: isSelected ? DS.brandPrimary : DS.white,
                 borderRadius: BorderRadius.circular(DS.borderRadiusMD),
@@ -63,7 +57,7 @@ class ExportOptionButton extends StatelessWidget {
                 size: 24,
               ),
             ),
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             Text(
               label,
               style: DS.bodyStyle.copyWith(
@@ -71,7 +65,7 @@ class ExportOptionButton extends StatelessWidget {
                 color: isSelected ? DS.brandPrimary : DS.neutral700,
               ),
             ),
-            SizedBox(height: DS.xs),
+            const SizedBox(height: DS.xs),
             Text(
               description,
               style: DS.captionStyle.copyWith(
@@ -83,11 +77,22 @@ class ExportOptionButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// Bottom sheet for exporting statistics
 class StatisticsExportBottomSheet extends StatefulWidget {
+
+  const StatisticsExportBottomSheet({
+    required this.onExport, super.key,
+    this.availableFormats = const [
+      ExportFormat.json,
+      ExportFormat.csv,
+      ExportFormat.pngReport,
+    ],
+    this.selectedFormat,
+    this.showChartOptions = true,
+    this.includeCharts = true,
+  });
   /// Available export formats
   final List<ExportFormat> availableFormats;
 
@@ -103,19 +108,6 @@ class StatisticsExportBottomSheet extends StatefulWidget {
   /// Initial value for include charts
   final bool includeCharts;
 
-  const StatisticsExportBottomSheet({
-    super.key,
-    this.availableFormats = const [
-      ExportFormat.json,
-      ExportFormat.csv,
-      ExportFormat.pngReport,
-    ],
-    this.selectedFormat,
-    required this.onExport,
-    this.showChartOptions = true,
-    this.includeCharts = true,
-  });
-
   @override
   State<StatisticsExportBottomSheet> createState() =>
       _StatisticsExportBottomSheetState();
@@ -123,17 +115,15 @@ class StatisticsExportBottomSheet extends StatefulWidget {
   /// Show the bottom sheet
   static Future<void> show({
     required BuildContext context,
-    List<ExportFormat> availableFormats = const [
+    required Future<void> Function(ExportFormat format) onExport, List<ExportFormat> availableFormats = const [
       ExportFormat.json,
       ExportFormat.csv,
       ExportFormat.pngReport,
     ],
     ExportFormat? selectedFormat,
-    required Future<void> Function(ExportFormat format) onExport,
     bool showChartOptions = true,
     bool includeCharts = true,
-  }) {
-    return showModalBottomSheet<void>(
+  }) => showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -145,7 +135,6 @@ class StatisticsExportBottomSheet extends StatefulWidget {
         includeCharts: includeCharts,
       ),
     );
-  }
 }
 
 class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomSheet> {
@@ -161,9 +150,8 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
+  Widget build(BuildContext context) => Container(
+      decoration: const BoxDecoration(
         color: DS.white,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(DS.borderRadiusXL),
@@ -175,29 +163,27 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
       ),
       child: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(DS.xl),
+          padding: const EdgeInsets.all(DS.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeader(),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               _buildFormatOptions(),
               if (widget.showChartOptions) ...[
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 _buildChartOptions(),
               ],
-              SizedBox(height: DS.xl),
+              const SizedBox(height: DS.xl),
               _buildExportButton(),
             ],
           ),
         ),
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Row(
+  Widget _buildHeader() => Row(
       children: [
         Text(
           '导出统计数据',
@@ -216,10 +202,8 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
         ),
       ],
     );
-  }
 
-  Widget _buildFormatOptions() {
-    return Column(
+  Widget _buildFormatOptions() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -229,7 +213,7 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
             color: DS.neutral600,
           ),
         ),
-        SizedBox(height: DS.md),
+        const SizedBox(height: DS.md),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -237,8 +221,7 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
           mainAxisSpacing: DS.md,
           crossAxisSpacing: DS.md,
           childAspectRatio: 1.2,
-          children: widget.availableFormats.map((format) {
-            return ExportOptionButton(
+          children: widget.availableFormats.map((format) => ExportOptionButton(
               format: format,
               icon: _getIconForFormat(format),
               label: format.label,
@@ -249,16 +232,13 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
                   _selectedFormat = format;
                 });
               },
-            );
-          }).toList(),
+            )).toList(),
         ),
       ],
     );
-  }
 
-  Widget _buildChartOptions() {
-    return Container(
-      padding: EdgeInsets.all(DS.md),
+  Widget _buildChartOptions() => Container(
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.neutral50,
         borderRadius: BorderRadius.circular(DS.borderRadiusLG),
@@ -270,7 +250,7 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
             color: DS.neutral600,
             size: 20,
           ),
-          SizedBox(width: DS.sm),
+          const SizedBox(width: DS.sm),
           Expanded(
             child: Text(
               '包含图表数据',
@@ -286,12 +266,11 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
                 _includeCharts = value;
               });
             },
-            activeColor: DS.brandPrimary,
+            activeThumbColor: DS.brandPrimary,
           ),
         ],
       ),
     );
-  }
 
   Widget _buildExportButton() {
     final canExport = _selectedFormat != null;
@@ -304,18 +283,18 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
         backgroundColor: DS.brandPrimary,
         foregroundColor: DS.white,
         disabledBackgroundColor: DS.neutral200,
-        padding: EdgeInsets.symmetric(vertical: DS.md),
+        padding: const EdgeInsets.symmetric(vertical: DS.md),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DS.borderRadiusLG),
         ),
       ),
       child: _isExporting
-          ? SizedBox(
+          ? const SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             )
           : Text(
@@ -369,7 +348,7 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出失败: ${e.toString()}'),
+            content: Text('导出失败: $e'),
             backgroundColor: DS.error,
           ),
         );
@@ -386,42 +365,37 @@ class _StatisticsExportBottomSheetState extends State<StatisticsExportBottomShee
 
 /// Share bottom sheet for sharing statistics
 class StatisticsShareBottomSheet extends StatelessWidget {
+
+  const StatisticsShareBottomSheet({
+    required this.options, required this.onShare, super.key,
+  });
   /// Available share options
   final List<ShareOption> options;
 
   /// Callback when an option is selected
   final Future<void> Function(ShareOption option) onShare;
 
-  const StatisticsShareBottomSheet({
-    super.key,
-    required this.options,
-    required this.onShare,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
+  Widget build(BuildContext context) => Container(
+      decoration: const BoxDecoration(
         color: DS.white,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(DS.borderRadiusXL),
           topRight: Radius.circular(DS.borderRadiusXL),
         ),
       ),
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHeader(context),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildShareOptions(),
         ],
       ),
     );
-  }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
+  Widget _buildHeader(BuildContext context) => Row(
       children: [
         Text(
           '分享统计数据',
@@ -440,18 +414,14 @@ class StatisticsShareBottomSheet extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildShareOptions() {
-    return GridView.count(
+  Widget _buildShareOptions() => GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 4,
       mainAxisSpacing: DS.lg,
       crossAxisSpacing: DS.md,
-      childAspectRatio: 1,
-      children: options.map((option) {
-        return _ShareOptionButton(
+      children: options.map((option) => _ShareOptionButton(
           option: option,
           onTap: () async {
             await onShare(option);
@@ -459,18 +429,15 @@ class StatisticsShareBottomSheet extends StatelessWidget {
               // Navigator.pop(context);
             }
           },
-        );
-      }).toList(),
+        )).toList(),
     );
-  }
 
   /// Show the share bottom sheet
   static Future<void> show({
     required BuildContext context,
     required List<ShareOption> options,
     required Future<void> Function(ShareOption option) onShare,
-  }) {
-    return showModalBottomSheet<void>(
+  }) => showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => StatisticsShareBottomSheet(
@@ -478,21 +445,19 @@ class StatisticsShareBottomSheet extends StatelessWidget {
         onShare: onShare,
       ),
     );
-  }
 }
 
 class _ShareOptionButton extends StatelessWidget {
-  final ShareOption option;
-  final VoidCallback onTap;
 
   const _ShareOptionButton({
     required this.option,
     required this.onTap,
   });
+  final ShareOption option;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
@@ -509,7 +474,7 @@ class _ShareOptionButton extends StatelessWidget {
               size: 28,
             ),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             option.label,
             style: DS.captionStyle.copyWith(
@@ -520,11 +485,18 @@ class _ShareOptionButton extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// Share option data class
 class ShareOption {
+
+  const ShareOption({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.action, this.closeOnTap = true,
+  });
   /// Unique identifier
   final String id;
 
@@ -542,71 +514,52 @@ class ShareOption {
 
   /// Share action
   final Future<void> Function() action;
-
-  const ShareOption({
-    required this.id,
-    required this.label,
-    required this.icon,
-    required this.color,
-    this.closeOnTap = true,
-    required this.action,
-  });
 }
 
 /// Common share options
 class CommonShareOptions {
   /// Share to WeChat
-  static ShareOption weChat({required Future<void> Function() action}) {
-    return ShareOption(
+  static ShareOption weChat({required Future<void> Function() action}) => ShareOption(
       id: 'wechat',
       label: '微信',
       icon: Icons.chat,
       color: const Color(0xFF07C160),
       action: action,
     );
-  }
 
   /// Share to WeChat Moments
-  static ShareOption weChatMoments({required Future<void> Function() action}) {
-    return ShareOption(
+  static ShareOption weChatMoments({required Future<void> Function() action}) => ShareOption(
       id: 'wechat_moments',
       label: '朋友圈',
       icon: Icons.photo_camera,
       color: const Color(0xFF07C160),
       action: action,
     );
-  }
 
   /// Save to gallery
-  static ShareOption saveToGallery({required Future<void> Function() action}) {
-    return ShareOption(
+  static ShareOption saveToGallery({required Future<void> Function() action}) => ShareOption(
       id: 'save',
       label: '保存图片',
       icon: Icons.download,
       color: const Color(0xFF6366F1),
       action: action,
     );
-  }
 
   /// Copy link
-  static ShareOption copyLink({required Future<void> Function() action}) {
-    return ShareOption(
+  static ShareOption copyLink({required Future<void> Function() action}) => ShareOption(
       id: 'copy_link',
       label: '复制链接',
       icon: Icons.link,
       color: const Color(0xFF6B7280),
       action: action,
     );
-  }
 
   /// More options
-  static ShareOption more({required Future<void> Function() action}) {
-    return ShareOption(
+  static ShareOption more({required Future<void> Function() action}) => ShareOption(
       id: 'more',
       label: '更多',
       icon: Icons.more_horiz,
       color: const Color(0xFF6B7280),
       action: action,
     );
-  }
 }

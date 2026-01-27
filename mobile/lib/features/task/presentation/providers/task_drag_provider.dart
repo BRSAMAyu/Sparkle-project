@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -76,6 +75,4 @@ class TaskDragNotifier extends StateNotifier<TaskDragState> {
 
 /// Provider for task drag state
 final taskDragProvider =
-    StateNotifierProvider<TaskDragNotifier, TaskDragState>((ref) {
-  return TaskDragNotifier();
-});
+    StateNotifierProvider<TaskDragNotifier, TaskDragState>((ref) => TaskDragNotifier());

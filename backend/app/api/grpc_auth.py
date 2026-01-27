@@ -35,12 +35,12 @@ class AuthInterceptor(grpc.aio.ServerInterceptor):
                 return await continuation(handler_call_details)
             else:
                  logger.warning(f"INVALID INTERNAL KEY in gRPC call to {method}")
-                 return self._abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid internal API key")
+                 return self._abort(grpc.StatusCode.UNAUTHENTICATED, "内部API密钥无效")
 
         # Fallback to User Token Authentication
         if not auth_header or not auth_header.startswith("Bearer "):
             logger.warning(f"UNAUTHORIZED gRPC call to {method} - Missing or invalid header")
-            return self._abort(grpc.StatusCode.UNAUTHENTICATED, "Missing or invalid authorization header")
+            return self._abort(grpc.StatusCode.UNAUTHENTICATED, "缺少或无效的授权头信息")
 
         token = auth_header.split(" ")[1]
         try:
@@ -48,7 +48,7 @@ class AuthInterceptor(grpc.aio.ServerInterceptor):
             return await continuation(handler_call_details)
         except Exception as e:
             logger.warning(f"INVALID TOKEN in gRPC call to {method}: {e}")
-            return self._abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid or expired token")
+            return self._abort(grpc.StatusCode.UNAUTHENTICATED, "令牌无效或已过期")
 
     def _abort(self, code, details):
         async def abort_call(request, context):

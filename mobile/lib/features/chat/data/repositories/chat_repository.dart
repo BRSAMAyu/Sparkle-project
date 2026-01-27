@@ -102,6 +102,7 @@ class ChatRepository {
     String? token,
     List<String>? fileIds,
     bool includeReferences = false,
+    String? chatMode,
   }) {
     if (DemoDataService.isDemoMode) {
       // Mock stream generator
@@ -118,6 +119,7 @@ class ChatRepository {
       token: token,
       fileIds: fileIds,
       includeReferences: includeReferences,
+      chatMode: chatMode,
     );
   }
 

@@ -82,8 +82,7 @@ class _ToolButton extends StatelessWidget {
   final String route;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: () => context.push(route),
       borderRadius: DS.borderRadius16,
       child: MaterialStyler(
@@ -121,5 +120,4 @@ class _ToolButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

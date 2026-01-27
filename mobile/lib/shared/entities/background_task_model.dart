@@ -11,12 +11,10 @@ enum BackgroundTaskType {
   final String value;
   const BackgroundTaskType(this.value);
 
-  static BackgroundTaskType fromString(String value) {
-    return BackgroundTaskType.values.firstWhere(
+  static BackgroundTaskType fromString(String value) => BackgroundTaskType.values.firstWhere(
       (e) => e.value == value,
       orElse: () => BackgroundTaskType.dataSync,
     );
-  }
 }
 
 /// Background task status enumeration
@@ -30,12 +28,10 @@ enum BackgroundTaskStatus {
   final String value;
   const BackgroundTaskStatus(this.value);
 
-  static BackgroundTaskStatus fromString(String value) {
-    return BackgroundTaskStatus.values.firstWhere(
+  static BackgroundTaskStatus fromString(String value) => BackgroundTaskStatus.values.firstWhere(
       (e) => e.value == value,
       orElse: () => BackgroundTaskStatus.pending,
     );
-  }
 }
 
 /// Background task model
@@ -47,16 +43,38 @@ class BackgroundTaskModel extends BaseModel {
     required this.name,
     required this.status,
     required this.progress,
-    this.progressMessage,
+    required this.createdAt, this.progressMessage,
     this.resultData,
     this.errorMessage,
     this.relatedEntityId,
     this.relatedEntityType,
     this.externalTaskId,
-    required this.createdAt,
     this.updatedAt,
     this.completedAt,
   });
+
+  factory BackgroundTaskModel.fromJson(Map<String, dynamic> json) =>
+      BackgroundTaskModel(
+        id: json['id'] as String,
+        userId: json['user_id'] as String,
+        taskType: BackgroundTaskType.fromString(json['task_type'] as String),
+        name: json['name'] as String,
+        status: BackgroundTaskStatus.fromString(json['status'] as String),
+        progress: (json['progress'] as num).toDouble(),
+        progressMessage: json['progress_message'] as String?,
+        resultData: json['result_data'] as Map<String, dynamic>?,
+        errorMessage: json['error_message'] as String?,
+        relatedEntityId: json['related_entity_id'] as String?,
+        relatedEntityType: json['related_entity_type'] as String?,
+        externalTaskId: json['external_task_id'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: json['updated_at'] == null
+            ? null
+            : DateTime.parse(json['updated_at'] as String),
+        completedAt: json['completed_at'] == null
+            ? null
+            : DateTime.parse(json['completed_at'] as String),
+      );
 
   final String id;
   final String userId;
@@ -102,29 +120,6 @@ class BackgroundTaskModel extends BaseModel {
         'updated_at': updatedAt?.toIso8601String(),
         'completed_at': completedAt?.toIso8601String(),
       };
-
-  factory BackgroundTaskModel.fromJson(Map<String, dynamic> json) =>
-      BackgroundTaskModel(
-        id: json['id'] as String,
-        userId: json['user_id'] as String,
-        taskType: BackgroundTaskType.fromString(json['task_type'] as String),
-        name: json['name'] as String,
-        status: BackgroundTaskStatus.fromString(json['status'] as String),
-        progress: (json['progress'] as num).toDouble(),
-        progressMessage: json['progress_message'] as String?,
-        resultData: json['result_data'] as Map<String, dynamic>?,
-        errorMessage: json['error_message'] as String?,
-        relatedEntityId: json['related_entity_id'] as String?,
-        relatedEntityType: json['related_entity_type'] as String?,
-        externalTaskId: json['external_task_id'] as String?,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: json['updated_at'] == null
-            ? null
-            : DateTime.parse(json['updated_at'] as String),
-        completedAt: json['completed_at'] == null
-            ? null
-            : DateTime.parse(json['completed_at'] as String),
-      );
 
   BackgroundTaskModel copyWith({
     String? id,

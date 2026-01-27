@@ -6,6 +6,7 @@ import 'package:sparkle/features/home/presentation/providers/task_board_provider
 import 'package:sparkle/features/home/presentation/widgets/task_board/plan_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/priority_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/schedule_view.dart';
+import 'package:sparkle/features/home/presentation/widgets/task_board/sprint_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_view_switcher.dart';
 
 /// Task board card - Main container with view switcher and content
@@ -65,20 +66,18 @@ class TaskBoardCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildView(TaskViewMode mode) {
-    return KeyedSubtree(
+  Widget _buildView(TaskViewMode mode) => KeyedSubtree(
       key: ValueKey(mode),
       child: switch (mode) {
         TaskViewMode.schedule => const ScheduleView(),
         TaskViewMode.priority => const PriorityView(),
         TaskViewMode.plan => const PlanView(),
+        TaskViewMode.sprint => const SprintView(),
       },
     );
-  }
 
   /// Dual-column layout for tablet/desktop
-  Widget _buildDualColumnView(TaskViewMode mode) {
-    return KeyedSubtree(
+  Widget _buildDualColumnView(TaskViewMode mode) => KeyedSubtree(
       key: ValueKey('${mode}_dual'),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -104,10 +103,8 @@ class TaskBoardCard extends ConsumerWidget {
         },
       ),
     );
-  }
 
-  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) {
-    return Container(
+  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfacePrimary.withValues(alpha: 0.5),
@@ -128,14 +125,12 @@ class TaskBoardCard extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildPanelContent(TaskViewMode mode) {
-    return switch (mode) {
+  Widget _buildPanelContent(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _PanelItem(
+            const _PanelItem(
               icon: Icons.calendar_today_rounded,
               title: '按日期查看',
               description: '任务按到期日期分组显示',
@@ -145,11 +140,11 @@ class TaskBoardCard extends ConsumerWidget {
               icon: Icons.warning_rounded,
               title: '逾期任务',
               description: '红色高亮显示已逾期的任务',
-              color: DS.error,
+              color: DS.semanticError,
             ),
           ],
         ),
-      TaskViewMode.priority => Column(
+      TaskViewMode.priority => const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PanelItem(
@@ -157,7 +152,7 @@ class TaskBoardCard extends ConsumerWidget {
               title: '优先级排序',
               description: '高优先级任务显示在前面',
             ),
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _PanelItem(
               icon: Icons.tune_rounded,
               title: '自定义优先级',
@@ -165,7 +160,7 @@ class TaskBoardCard extends ConsumerWidget {
             ),
           ],
         ),
-      TaskViewMode.plan => Column(
+      TaskViewMode.plan => const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _PanelItem(
@@ -173,7 +168,7 @@ class TaskBoardCard extends ConsumerWidget {
               title: '按方案分组',
               description: '任务按所属方案分组显示',
             ),
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _PanelItem(
               icon: Icons.add_circle_outline_rounded,
               title: '创建方案',
@@ -181,8 +176,23 @@ class TaskBoardCard extends ConsumerWidget {
             ),
           ],
         ),
+      TaskViewMode.sprint => const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PanelItem(
+              icon: Icons.flash_on_rounded,
+              title: '冲刺专注模式',
+              description: '只显示当前冲刺的任务',
+            ),
+            SizedBox(height: DS.spacing12),
+            _PanelItem(
+              icon: Icons.timer_rounded,
+              title: '冲刺计时',
+              description: '关注剩余天数和进度',
+            ),
+          ],
+        ),
     };
-  }
 }
 
 class _PanelItem extends StatelessWidget {

@@ -89,6 +89,10 @@ services:
       - ZHIPU_BASE_URL=${ZHIPU_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
       - ZHIPU_CHAT_MODEL=${ZHIPU_CHAT_MODEL:-glm-4.7}
       - ZHIPU_TOOLS_MODEL=${ZHIPU_TOOLS_MODEL:-glm-4.7}
+      # Hunyuan Translation Configuration (via SiliconFlow)
+      - HUNYUAN_API_KEY=${HUNYUAN_API_KEY}
+      - HUNYUAN_BASE_URL=${HUNYUAN_BASE_URL:-https://api.siliconflow.cn/v1}
+      - HUNYUAN_TRANSLATE_MODEL=${HUNYUAN_TRANSLATE_MODEL:-tencent/Hunyuan-A13B-Instruct}
     volumes:
       - ./backend:/app
     deploy:
@@ -121,6 +125,23 @@ services:
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - GRPC_PORT=50051
       - GRPC_KEEPALIVE_TIME_MS=60000
+      # LLM Provider Configuration (keep parity with sparkle_api)
+      - LLM_PROVIDER=${LLM_PROVIDER:-xiaomi}
+      - XIAOMI_MIMO_API_KEY=${XIAOMI_MIMO_API_KEY}
+      - XIAOMI_MIMO_BASE_URL=${XIAOMI_MIMO_BASE_URL:-https://api.xiaomimimo.com/v1}
+      - XIAOMI_CHAT_MODEL=${XIAOMI_CHAT_MODEL:-mimo-v2-flash}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_CHAT_MODEL=${DEEPSEEK_CHAT_MODEL:-deepseek-chat}
+      - DEEPSEEK_REASON_MODEL=${DEEPSEEK_REASON_MODEL:-deepseek-reasoner}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+      - ZHIPU_BASE_URL=${ZHIPU_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      - ZHIPU_CHAT_MODEL=${ZHIPU_CHAT_MODEL:-glm-4.7}
+      - ZHIPU_TOOLS_MODEL=${ZHIPU_TOOLS_MODEL:-glm-4.7}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - DASHSCOPE_BASE_URL_COMPATIBLE=${DASHSCOPE_BASE_URL_COMPATIBLE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - DASHSCOPE_CHAT_MODEL=${DASHSCOPE_CHAT_MODEL:-qwen-plus}
+      - DASHSCOPE_REASON_MODEL=${DASHSCOPE_REASON_MODEL:-qwen-plus}
       - STT_PROVIDER=${STT_PROVIDER:-xunfei}
       - STT_ENHANCE_ENABLED=${STT_ENHANCE_ENABLED:-true}
       - XUNFEI_API_KEY=${XUNFEI_API_KEY}

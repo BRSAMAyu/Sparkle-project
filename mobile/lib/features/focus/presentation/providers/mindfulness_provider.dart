@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -214,7 +213,6 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           focusState: state,
           translationRequests: state.translationRequestCount,
           translationGranularity: state.lastTranslationGranularity,
-          unknownTermsSaved: 0, // TODO: Track from translation saves
         );
 
         debugPrint('📊 Context: interruptions=${state.interruptionCount}, '

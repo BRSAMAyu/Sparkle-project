@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
@@ -89,7 +88,6 @@ class TaskNotificationScheduler {
       task.dueDate!.month,
       task.dueDate!.day,
       9, // Default to 9 AM
-      0,
     );
 
     final now = DateTime.now();
@@ -235,6 +233,4 @@ final taskNotificationSchedulerProvider =
 
 /// Provider for task reminder settings
 final taskReminderConfigProvider =
-    StateProvider<TaskReminderConfig>((ref) {
-  return const TaskReminderConfig();
-});
+    StateProvider<TaskReminderConfig>((ref) => const TaskReminderConfig());

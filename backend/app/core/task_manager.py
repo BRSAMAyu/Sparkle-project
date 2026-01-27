@@ -280,18 +280,12 @@ class BackgroundTaskManager:
 
     def get_active_tasks(self) -> Dict[str, str]:
         """获取当前活跃的任务"""
-        active_tasks = {
+        return {
             task_id: task.get_name()
             for task_id, task in self._tasks.items()
-            if not task.done() and self._stats.get(task_id, TaskStats("", "", "", datetime.now())).status == "running"
+            if not task.done()
+            and self._stats.get(task_id, TaskStats("", "", "", datetime.now())).status == "running"
         }
-        queued_tasks = {
-            task_id: stats.task_name
-            for task_id, stats in self._stats.items()
-            if stats.status == "queued" and task_id not in active_tasks
-        }
-        active_tasks.update(queued_tasks)
-        return active_tasks
 
     async def wait_for_task(self, task_id: str, timeout: Optional[float] = None) -> bool:
         """

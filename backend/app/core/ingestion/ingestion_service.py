@@ -32,11 +32,16 @@ except ImportError:
     HAS_PPTX = False
 
 try:
-    import pytesseract
     from PIL import Image, ImageOps, ImageEnhance
-    HAS_OCR = True
+    HAS_PIL = True
 except ImportError:
-    HAS_OCR = False
+    HAS_PIL = False
+
+try:
+    import pytesseract
+    HAS_TESSERACT = True
+except ImportError:
+    HAS_TESSERACT = False
 
 class ExtractedChunk(BaseModel):
     text: str
@@ -110,12 +115,12 @@ class IngestionService:
                 # If text is empty or suspiciously short (scanned page), try OCR
                 if len(text.strip()) < 50:
                     logger.info(f"Page {i+1} has low text content ({len(text.strip())} chars). Attempting OCR...")
-                    ocr_text = self._attempt_ocr(page, options)
+                    ocr_text, ocr_confidence = self._attempt_ocr(page, options)
                     if ocr_text:
                         text = ocr_text
                         logger.info(
                             f"OCR recovered {len(text)} chars from Page {i+1} "
-                            f"(confidence: {ocr_confidence:.2f})" if ocr_confidence else
+                            f"(confidence: {ocr_confidence:.2f})" if ocr_confidence is not None else
                             f"OCR recovered {len(text)} chars from Page {i+1}"
                         )
                     else:
@@ -139,13 +144,13 @@ class IngestionService:
                 ))
         return chunks
 
-    def _attempt_ocr(self, page, options: Dict[str, Any]) -> str:
+    def _attempt_ocr(self, page, options: Dict[str, Any]) -> tuple[str, Optional[float]]:
         """
         Helper to run OCR on a pdfplumber page object.
         Dispatches to local Tesseract or Remote API based on options.
         """
-        if not HAS_OCR:
-            logger.warning("OCR requested but pytesseract/Pillow not installed.")
+        if not HAS_PIL:
+            logger.warning("OCR requested but Pillow not installed.")
             return "", None
 
         try:
@@ -156,15 +161,17 @@ class IngestionService:
             ocr_engine = options.get("ocr_engine", "local") # 'local' or 'deepseek'
             
             if ocr_engine == "deepseek":
-                return self._ocr_via_api(im, options)
-            else:
-                return self._ocr_via_local(im)
+                return self._ocr_via_api(im, options), None
+            if not HAS_TESSERACT:
+                logger.warning("Local OCR requested but pytesseract not installed.")
+                return "", None
+            return self._ocr_via_local(im)
 
         except Exception as e:
             logger.warning(f"OCR Error: {e}")
-            return ""
+            return "", None
 
-    def _ocr_via_local(self, im) -> str:
+    def _ocr_via_local(self, im) -> tuple[str, Optional[float]]:
         """Run local Tesseract OCR with preprocessing"""
         try:
             # --- Image Preprocessing for Accuracy ---
@@ -185,12 +192,18 @@ class IngestionService:
                 ocr_data = pytesseract.image_to_data(
                     im, lang='chi_sim+eng', config=config, output_type=pytesseract.Output.DICT
                 )
+                text = pytesseract.image_to_string(im, lang='chi_sim+eng', config=config).strip()
+                confidences = [
+                    int(conf) for conf in ocr_data.get("conf", []) if conf.isdigit() and int(conf) >= 0
+                ]
+                avg_confidence = (sum(confidences) / len(confidences) / 100.0) if confidences else None
+                return text, avg_confidence
             except pytesseract.TesseractError:
                 config = r'--oem 3 --psm 6'
-                return pytesseract.image_to_string(im, lang='eng', config=config)
+                return pytesseract.image_to_string(im, lang='eng', config=config).strip(), None
         except Exception as e:
             logger.warning(f"Local OCR Failed: {e}")
-            return ""
+            return "", None
 
     def _ocr_via_api(self, image, options: Dict[str, Any]) -> str:
         """

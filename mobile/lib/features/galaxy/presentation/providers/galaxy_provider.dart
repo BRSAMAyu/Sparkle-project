@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -20,6 +22,14 @@ enum AggregationLevel {
   cluster, // 0.4-0.6: Importance >= 3
   nebula, // 0.6-0.8: Importance >= 2
   full, // >= 0.8: All nodes
+}
+
+/// Convert from name string for AggregationLevel
+AggregationLevel aggregationLevelFromName(String name) {
+  for (final level in AggregationLevel.values) {
+    if (level.name == name) return level;
+  }
+  return AggregationLevel.full;
 }
 
 class GalaxyState {
@@ -178,21 +188,115 @@ class ClusterInfo {
   final List<String> childNodeIds;
 }
 
+/// Galaxy view state (persisted portion)
+///
+/// Only the view-related state that should be persisted across app restarts.
+class GalaxyViewState {
+  const GalaxyViewState({
+    this.currentScale = 1.0,
+    this.selectedNodeId,
+    this.aggregationLevel = AggregationLevel.full,
+  });
+
+  final double currentScale;
+  final String? selectedNodeId;
+  final AggregationLevel aggregationLevel;
+
+  /// Serialize to JSON
+  Map<String, dynamic> toJson() => {
+      'currentScale': currentScale,
+      'selectedNodeId': selectedNodeId,
+      'aggregationLevel': aggregationLevel.name,
+    };
+
+  /// Deserialize from JSON
+  static GalaxyViewState? fromJson(Map<String, dynamic> json) {
+    try {
+      return GalaxyViewState(
+        currentScale: (json['currentScale'] as num?)?.toDouble() ?? 1.0,
+        selectedNodeId: json['selectedNodeId'] as String?,
+        aggregationLevel: aggregationLevelFromName(
+          json['aggregationLevel'] as String? ?? 'full',
+        ),
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  GalaxyViewState copyWith({
+    double? currentScale,
+    String? selectedNodeId,
+    AggregationLevel? aggregationLevel,
+  }) =>
+      GalaxyViewState(
+        currentScale: currentScale ?? this.currentScale,
+        selectedNodeId: selectedNodeId ?? this.selectedNodeId,
+        aggregationLevel: aggregationLevel ?? this.aggregationLevel,
+      );
+}
+
+/// Galaxy view state provider with persistence
+///
+/// Persists the user's view state (scale, selected node, aggregation level).
+final galaxyViewStateProvider =
+    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>((ref) => GalaxyViewStateNotifier(ref));
+
+/// Notifier for the galaxy view state
+class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
+  GalaxyViewStateNotifier(super.ref)
+      : super(
+          namespace: 'galaxy',
+          key: 'view_state',
+          defaultValue: const GalaxyViewState(),
+          toJson: (s) => s.toJson(),
+          fromJson: GalaxyViewState.fromJson,
+        );
+
+  void updateScale(double scale) {
+    state = state.copyWith(currentScale: scale);
+  }
+
+  void updateSelectedNode(String? nodeId) {
+    state = state.copyWith(selectedNodeId: nodeId);
+  }
+
+  void updateAggregationLevel(AggregationLevel level) {
+    state = state.copyWith(aggregationLevel: level);
+  }
+
+  void updateAll({
+    double? scale,
+    String? selectedNodeId,
+    AggregationLevel? aggregationLevel,
+  }) {
+    state = GalaxyViewState(
+      currentScale: scale ?? state.currentScale,
+      selectedNodeId: selectedNodeId ?? state.selectedNodeId,
+      aggregationLevel: aggregationLevel ?? state.aggregationLevel,
+    );
+  }
+}
+
 final galaxyProvider =
     StateNotifierProvider<GalaxyNotifier, GalaxyState>((ref) {
   final repository = ref.watch(enhancedGalaxyRepositoryProvider);
-  return GalaxyNotifier(repository);
+  return GalaxyNotifier(repository, ref);
 });
 
 class GalaxyNotifier extends StateNotifier<GalaxyState> {
-  GalaxyNotifier(this._repository) : super(GalaxyState()) {
+  GalaxyNotifier(this._repository, this._ref) : super(GalaxyState()) {
+    // Load persisted view state
+    _loadPersistedState();
     _initEventsListener();
     _initPerformanceMonitor();
   }
   final EnhancedGalaxyRepository _repository;
+  final Ref _ref;
   StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
+  String? _lastEventId;
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;
@@ -202,6 +306,23 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   
   // Performance Monitor
   VoidCallback? _tierListener;
+
+  /// Load persisted view state
+  void _loadPersistedState() {
+    final viewState = _ref.read(galaxyViewStateProvider);
+    if (viewState.currentScale != 1.0) {
+      state = state.copyWith(
+        currentScale: viewState.currentScale,
+        aggregationLevel: _levelForScale(viewState.currentScale),
+      );
+    }
+    if (viewState.selectedNodeId != null) {
+      state = state.copyWith(selectedNodeId: viewState.selectedNodeId);
+    }
+    if (viewState.aggregationLevel != AggregationLevel.full) {
+      state = state.copyWith(aggregationLevel: viewState.aggregationLevel);
+    }
+  }
 
   void _initPerformanceMonitor() {
     // Start monitoring
@@ -546,6 +667,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       selectedNodeId: nodeId,
       expandedEdgeNodeIds: expanded,
     );
+    // Persist view state
+    _ref.read(galaxyViewStateProvider.notifier).updateSelectedNode(nodeId);
     _recalculateVisibility();
   }
 
@@ -575,6 +698,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       nodeAnimationProgress: state.nodeAnimationProgress,
       optimizationConfig: state.optimizationConfig,
     );
+    // Persist view state (clear selection)
+    _ref.read(galaxyViewStateProvider.notifier).updateSelectedNode(null);
     _recalculateVisibility();
   }
 
@@ -625,10 +750,17 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         aggregationLevel: newLevel,
         clusters: clusters,
       );
+      // Persist view state
+      _ref.read(galaxyViewStateProvider.notifier).updateAll(
+        scale: scale,
+        aggregationLevel: newLevel,
+      );
       // Trigger animation when LOD changes
       _recalculateVisibility(withAnimation: true);
     } else {
       state = state.copyWith(currentScale: scale);
+      // Persist view state
+      _ref.read(galaxyViewStateProvider.notifier).updateScale(scale);
       // Even if level didn't change, viewport culling might change with scale?
       // Actually usually viewport updates happen separately via updateViewport.
       // But if we zoomed, the viewport in world coordinates changed, so the screen might call updateViewport separately.

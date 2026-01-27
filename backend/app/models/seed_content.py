@@ -5,12 +5,16 @@ Seed Content Models
 import uuid
 from enum import Enum
 from typing import Optional, List, Any, Dict
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON
+from datetime import datetime
+from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 
 class LibraryCategory(str, Enum):
@@ -82,8 +86,8 @@ class SeedLibrary(BaseModel):
 
     # 元数据
     language = Column(String(10), nullable=False, default="zh", doc="语言代码")
-    tags = Column(JSONB, nullable=True, doc="标签数组，用于分类和搜索")
-    extra_metadata = Column(JSONB, nullable=True, doc="额外的元数据信息")
+    tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
+    extra_metadata = Column(JSONBCompat, nullable=True, doc="额外的元数据信息")
 
     # 官方标记
     is_official = Column(
@@ -175,7 +179,7 @@ class SeedItem(BaseModel):
 
     # 结构化数据 (用于存储复杂内容)
     content_data = Column(
-        JSONB,
+        JSONBCompat,
         nullable=True,
         doc="结构化内容数据，如题目选项、答案解析等"
     )
@@ -193,11 +197,11 @@ class SeedItem(BaseModel):
         index=True,
         doc="难度等级: beginner, intermediate, advanced, expert"
     )
-    tags = Column(JSONB, nullable=True, doc="标签数组，用于分类和搜索")
+    tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
 
     # 向量嵌入 (用于语义搜索)
     embedding = Column(
-        Vector(1024),
+        VectorCompat,
         nullable=True,
         doc="内容向量嵌入，用于语义相似度搜索"
     )
@@ -280,11 +284,14 @@ class UserLibrarySubscription(BaseModel):
 
     # 时间戳
     subscribed_at = Column(
-        # Note: Using created_at for subscription time
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.utcnow(),
         doc="订阅时间"
     )
     last_used_at = Column(
-        # Nullable field for last usage tracking
+        DateTime,
+        nullable=True,
         doc="最后使用时间"
     )
 

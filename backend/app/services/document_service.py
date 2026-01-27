@@ -1,6 +1,7 @@
 import asyncio
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any
 from uuid import UUID
 from fastapi import HTTPException
@@ -8,6 +9,7 @@ from app.core.ingestion.ingestion_service import ingestion_service
 from loguru import logger
 from app.core.cache import cache_service
 from app.config import settings
+from app.config.phase5_config import phase5_config, get_quality_threshold_for_doc_type
 
 
 @dataclass
@@ -267,14 +269,20 @@ class DocumentService:
         total_len = len(total_text)
 
         if total_len < phase5_config.DOC_QUALITY_MIN_LENGTH:
-            self._report_metrics("unknown", False, 0.1, 0.0, None, ["too_short"])
-            return QualityResult(
-                passed=False,
-                score=0.1,
-                issues=[
-                    f"Content too short: {total_len} chars "
-                    f"(minimum: {phase5_config.DOC_QUALITY_MIN_LENGTH})"
-                ]
+            has_ocr = any(c.ocr_confidence is not None for c in chunks)
+            if not has_ocr:
+                self._report_metrics("unknown", False, 0.1, 0.0, None, ["too_short"])
+                return QualityResult(
+                    passed=False,
+                    score=0.1,
+                    issues=[
+                        f"Content too short: {total_len} chars "
+                        f"(minimum: {phase5_config.DOC_QUALITY_MIN_LENGTH})"
+                    ]
+                )
+            issues.append(
+                f"Content too short: {total_len} chars "
+                f"(minimum: {phase5_config.DOC_QUALITY_MIN_LENGTH})"
             )
 
         # 1. 文档类型检测

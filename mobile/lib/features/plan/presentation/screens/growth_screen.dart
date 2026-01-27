@@ -12,7 +12,7 @@ class GrowthScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final planState = ref.watch(planListProvider);
     final growthPlans =
-        planState.plans.where((p) => p.type == PlanType.growth).toList();
+        planState.plans.where((p) => p.type == PlanType.growth && p.isActive).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -21,6 +21,13 @@ class GrowthScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: const Text('Growth Plans'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.archive_outlined),
+            tooltip: '历史计划',
+            onPressed: () => context.push('/plans/history'),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => ref

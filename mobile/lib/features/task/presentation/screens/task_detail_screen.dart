@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -440,6 +441,8 @@ class _BottomActionBar extends ConsumerWidget {
                   onPressed: () {
                     HapticFeedback.heavyImpact();
                     ref.read(activeTaskProvider.notifier).state = task;
+                    // P0-1: Auto-switch plan context when starting task
+                    ref.read(activePlanProvider.notifier).selectFromTaskPlanId(task.planId);
                     context.push('/tasks/${task.id}/execute');
                   },
                 ),

@@ -4,13 +4,6 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// Translation history item
 class TranslationHistoryItem {
-  final String id;
-  final String sourceText;
-  final String translation;
-  final String sourceLang;
-  final String targetLang;
-  final DateTime timestamp;
-  final bool isSaved;
 
   TranslationHistoryItem({
     required this.id,
@@ -21,6 +14,13 @@ class TranslationHistoryItem {
     required this.timestamp,
     this.isSaved = false,
   });
+  final String id;
+  final String sourceText;
+  final String translation;
+  final String sourceLang;
+  final String targetLang;
+  final DateTime timestamp;
+  final bool isSaved;
 }
 
 /// In-memory translation history provider (session-only)
@@ -157,8 +157,7 @@ class TranslationDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -176,14 +175,12 @@ class TranslationDrawer extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildHistoryItem(
     BuildContext context,
     WidgetRef ref,
     TranslationHistoryItem item,
-  ) {
-    return Card(
+  ) => Card(
       margin: const EdgeInsets.symmetric(
         horizontal: DS.sm,
         vertical: DS.xs,
@@ -261,7 +258,6 @@ class TranslationDrawer extends ConsumerWidget {
         },
       ),
     );
-  }
 
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();

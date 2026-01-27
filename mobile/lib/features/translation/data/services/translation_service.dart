@@ -9,9 +9,6 @@ final translationServiceProvider = Provider<TranslationService>((ref) {
 
 /// Translation segment data
 class TranslationSegmentData {
-  final String id;
-  final String translation;
-  final List<String> notes;
 
   TranslationSegmentData({
     required this.id,
@@ -19,8 +16,7 @@ class TranslationSegmentData {
     required this.notes,
   });
 
-  factory TranslationSegmentData.fromJson(Map<String, dynamic> json) {
-    return TranslationSegmentData(
+  factory TranslationSegmentData.fromJson(Map<String, dynamic> json) => TranslationSegmentData(
       id: json['id'] as String,
       translation: json['translation'] as String,
       notes: (json['notes'] as List<dynamic>?)
@@ -28,60 +24,57 @@ class TranslationSegmentData {
               .toList() ??
           [],
     );
-  }
+  final String id;
+  final String translation;
+  final List<String> notes;
 }
 
 /// Translation recommendation data
 class TranslationRecommendation {
-  final bool shouldCreateCard;
-  final String? reason;
-  final int dailyQuotaRemaining;
 
   TranslationRecommendation({
     required this.shouldCreateCard,
-    this.reason,
-    required this.dailyQuotaRemaining,
+    required this.dailyQuotaRemaining, this.reason,
   });
 
-  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) {
-    return TranslationRecommendation(
+  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) => TranslationRecommendation(
       shouldCreateCard: json['should_create_card'] as bool? ?? false,
       reason: json['reason'] as String?,
       dailyQuotaRemaining: json['daily_quota_remaining'] as int? ?? 0,
     );
-  }
+  final bool shouldCreateCard;
+  final String? reason;
+  final int dailyQuotaRemaining;
 }
 
 /// Translation result
 class TranslationResult {
-  final bool success;
-  final String translation;
-  final List<TranslationSegmentData> segments;
-  final TranslationRecommendation? recommendation;
-  final Map<String, dynamic> meta;
 
   TranslationResult({
     required this.success,
     required this.translation,
     required this.segments,
-    this.recommendation,
-    required this.meta,
+    required this.meta, this.recommendation,
   });
 
-  factory TranslationResult.fromJson(Map<String, dynamic> json) {
-    return TranslationResult(
-      success: json['success'] as bool,
-      translation: json['translation'] as String,
-      segments: (json['segments'] as List<dynamic>)
-          .map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  factory TranslationResult.fromJson(Map<String, dynamic> json) => TranslationResult(
+      success: json['success'] as bool? ?? false,
+      translation: json['translation'] as String? ?? '',
+      segments: (json['segments'] as List<dynamic>?)
+              ?.map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       recommendation: json['recommendation'] != null
           ? TranslationRecommendation.fromJson(
               json['recommendation'] as Map<String, dynamic>)
           : null,
-      meta: json['meta'] as Map<String, dynamic>,
+      meta: (json['meta'] as Map<String, dynamic>?) ?? {},
     );
-  }
+  final bool success;
+  final String translation;
+  final List<TranslationSegmentData> segments;
+  final TranslationRecommendation? recommendation;
+  final Map<String, dynamic> meta;
 
   /// Check if result was from cache
   bool get isCacheHit => meta['cache_hit'] == true;
@@ -102,9 +95,9 @@ class TranslationResult {
 
 /// Translation service for API calls
 class TranslationService {
-  final ApiClient _apiClient;
 
   TranslationService(this._apiClient);
+  final ApiClient _apiClient;
 
   /// Translate text from one language to another
   ///

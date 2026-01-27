@@ -357,7 +357,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     try {
       final success = await _repository.cancelContract();
       if (success) {
-        state = state.copyWith(activeContract: null);
+        state = state.copyWith();
       }
       return success;
     } catch (e) {
@@ -386,6 +386,23 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
       return unlocked;
     } catch (e) {
       debugPrint('Error processing event: $e');
+      return [];
+    }
+  }
+
+  /// Get achievements close to unlocking (80%+ progress)
+  /// 获取接近解锁的成就（用于临界提示）
+  Future<List<AchievementWithProgress>> getCloseToUnlockAchievements({
+    String? category,
+    double threshold = 0.8,
+  }) async {
+    try {
+      return await _repository.getCloseToUnlockAchievements(
+        category: category,
+        threshold: threshold,
+      );
+    } catch (e) {
+      debugPrint('Error getting close to unlock achievements: $e');
       return [];
     }
   }

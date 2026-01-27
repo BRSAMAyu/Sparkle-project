@@ -40,6 +40,9 @@ class AgentRole(str, Enum):
     SCIENCE_AGENT = "science_agent"
     SEARCH_AGENT = "search_agent"
 
+    # 审查角色
+    REVIEWER = "reviewer"                  # 内容审查专家（使用独立模型）
+
 
 class TaskType(str, Enum):
     """任务类型（用于动态模型选择）"""
@@ -58,6 +61,9 @@ class TaskType(str, Enum):
     TASK_DECOMPOSITION = "task_decomposition"  # 任务分解
     ERROR_DIAGNOSIS = "error_diagnosis"      # 错误诊断
     COLLABORATION = "collaboration"          # 多Agent协作
+
+    # 审查任务 - 使用专门模型进行质量审查
+    REVIEW = "review"                        # 内容审查（需要不同模型）
 
 
 class ModelTier(str, Enum):
@@ -171,7 +177,7 @@ Query: {query}"""
         description="知识图谱专家",
         model_tier=ModelTier.STANDARD,
         temperature=0.5,
-        allowed_tools=["search_knowledge_graph", "get_prerequisites"],
+        allowed_tools=["query_knowledge", "create_knowledge_node", "link_nodes"],
         system_prompt_template="""你是星图向导，Sparkle AI的知识图谱专家。
 
 你的职责：
@@ -189,7 +195,7 @@ Query: {query}"""
         description="考试预测与分析",
         model_tier=ModelTier.REASONING,
         temperature=0.3,
-        allowed_tools=["analyze_past_papers", "predict_exam_focus"],
+        allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
         system_prompt_template="""你是考试预言家，Sparkle AI的考试分析专家。
 
 你的职责：
@@ -205,7 +211,13 @@ Query: {query}"""
         description="学习计划与时间管理",
         model_tier=ModelTier.STANDARD,
         temperature=0.6,
-        allowed_tools=["create_study_task", "suggest_pomodoro_schedule"],
+        allowed_tools=[
+            "create_plan",
+            "generate_tasks_for_plan",
+            "create_task",
+            "batch_create_tasks",
+            "suggest_focus_session",
+        ],
         system_prompt_template="""你是时间导师，Sparkle AI的学习计划专家。
 
 你的职责：
@@ -259,6 +271,23 @@ Query: {query}"""
         model_tier=ModelTier.FAST,
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
+    ),
+
+    # ==================== 审查 Agents ====================
+    AgentRole.REVIEWER: AgentProfile(
+        role=AgentRole.REVIEWER,
+        display_name="审查专家",
+        description="AI内容质量审查（使用独立模型）",
+        model_tier=ModelTier.REASONING,  # 使用强推理模型
+        temperature=0.2,  # 低温确保客观
+        support_structured_output=True,
+        system_prompt_template="""你是内容审查专家，负责评估AI生成内容的质量。
+
+审查原则：
+1. 客观性：基于事实和标准进行评估，不带偏见
+2. 建设性：指出问题时必须给出可操作的改进建议
+3. 精准性：问题描述要具体，定位到具体位置
+4. 用户视角：始终考虑最终用户的需求和体验"""
     ),
 
     # ==================== 其他 Agents ====================
@@ -364,6 +393,10 @@ TASK_TO_AGENT_PROFILE: Dict[TaskType, Dict[str, Any]] = {
     TaskType.COLLABORATION: {
         "default_agent": AgentRole.ORCHESTRATOR,
         "model_tier": ModelTier.STANDARD,
+    },
+    TaskType.REVIEW: {
+        "default_agent": AgentRole.REVIEWER,
+        "model_tier": ModelTier.REASONING,  # 审查使用强推理模型
     },
 }
 

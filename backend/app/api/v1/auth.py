@@ -41,12 +41,12 @@ async def register(
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalars().first():
         logger.warning(f"Registration failed: username {data.username} already exists")
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail="这个用户名已经被注册了")
     
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalars().first():
         logger.warning(f"Registration failed: email {data.email} already exists")
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="这个邮箱已经被注册了")
 
     # Create user
     user = User(
@@ -99,7 +99,7 @@ async def login(
         logger.warning(f"Login attempt for non-existent user: {data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码不正确，请重试",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -107,7 +107,7 @@ async def login(
     if await account_lockout_service.check_and_handle_lockout(str(user.id), db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account locked due to too many failed attempts. Please try again in 15 minutes."
+            detail="登录失败次数过多，账号已临时锁定，请15分钟后再试"
         )
     
     if not verify_password(data.password, user.hashed_password):
@@ -116,13 +116,13 @@ async def login(
         await account_lockout_service.record_failed_login(str(user.id))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码不正确，请重试",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     if not user.is_active:
         logger.warning(f"Login attempt for inactive user: {user.username}")
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail="账号暂时无法使用，请联系客服")
 
     # Successful login - reset failed attempts
     await account_lockout_service.handle_successful_login(str(user.id))
@@ -164,10 +164,10 @@ async def social_login(
     if data.provider not in ['google', 'wechat']:
         if data.provider == 'apple':
              raise HTTPException(
-                 status_code=400, 
-                 detail="Apple login should be performed via /api/v1/auth/apple on the Gateway"
+                 status_code=400,
+                 detail="Apple 登录请通过 /api/v1/auth/apple 在 Gateway 上进行"
              )
-        raise HTTPException(status_code=400, detail="Unsupported provider")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
     
     # Verify social token with provider
     social_id = None
@@ -185,15 +185,15 @@ async def social_login(
                     params={"id_token": data.token}
                 )
                 if response.status_code != 200:
-                    raise HTTPException(status_code=401, detail="Invalid Google token")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
                 
                 token_info = response.json()
                 if token_info.get('iss') not in ['https://accounts.google.com', 'accounts.google.com']:
-                    raise HTTPException(status_code=401, detail="Invalid token issuer")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
                 if settings.GOOGLE_CLIENT_ID and token_info.get("aud") != settings.GOOGLE_CLIENT_ID:
-                    raise HTTPException(status_code=401, detail="Invalid token audience")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
                 if token_info.get("email_verified") not in (True, "true", "True", "1"):
-                    raise HTTPException(status_code=401, detail="Email not verified")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
                 
                 social_id = token_info.get('sub')
                 user_info = {
@@ -204,7 +204,7 @@ async def social_login(
         
         elif data.provider == 'wechat':
             if not data.openid:
-                raise HTTPException(status_code=400, detail="Missing openid for WeChat login")
+                raise HTTPException(status_code=400, detail="微信登录缺少 openid 参数")
             # WeChat token verification
             import httpx
             timeout = httpx.Timeout(5.0, connect=5.0)
@@ -215,11 +215,11 @@ async def social_login(
                     params={"access_token": data.token, "openid": data.openid}
                 )
                 if response.status_code != 200:
-                    raise HTTPException(status_code=401, detail="Invalid WeChat token")
+                    raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
                 
                 result = response.json()
                 if result.get('errcode') != 0:
-                    raise HTTPException(status_code=401, detail="Invalid WeChat token")
+                    raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
                 
                 social_id = data.openid
                 user_info = {
@@ -232,10 +232,10 @@ async def social_login(
         raise
     except Exception as e:
         logger.error(f"Social login verification failed for {data.provider}: {e}")
-        raise HTTPException(status_code=401, detail=f"Social login verification failed: {str(e)}")
+        raise HTTPException(status_code=401, detail="社交登录验证失败")
     
     if not social_id:
-        raise HTTPException(status_code=401, detail="Failed to verify social token")
+        raise HTTPException(status_code=401, detail="无法验证登录令牌")
     
     # Determine which field to check
     query = select(User)
@@ -244,7 +244,7 @@ async def social_login(
     elif data.provider == 'wechat':
         query = query.where(User.wechat_unionid == social_id)
     else:
-        raise HTTPException(status_code=400, detail="Unsupported provider")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
 
     result = await db.execute(query)
     user = result.scalars().first()
@@ -308,11 +308,11 @@ async def refresh_token(
         payload = decode_token(data.refresh_token, expected_type="refresh")
         user_id = payload.get("sub")
         if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="登录令牌无效，请重新登录")
 
         user = await db.get(User, user_id)
         if not user or not user.is_active:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="登录令牌无效，请重新登录")
             
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
@@ -324,4 +324,4 @@ async def refresh_token(
             "token_type": "bearer"
         }
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")

@@ -31,6 +31,11 @@ import pytest
 from app.core.celery_app import celery_app
 from app.core.task_manager import task_manager
 
+pytestmark = pytest.mark.skipif(
+    not os.getenv("RUN_PERFORMANCE_TESTS"),
+    reason="Performance tests are opt-in and require a configured Celery backend."
+)
+
 
 @dataclass
 class PerformanceMetrics:

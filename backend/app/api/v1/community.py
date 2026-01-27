@@ -353,36 +353,36 @@ async def _get_share_resource(
     if resource_type == SharedResourceType.PLAN:
         plan = await db.get(Plan, resource_id)
         if not plan:
-            raise HTTPException(status_code=404, detail="计划不存在")
+            raise HTTPException(status_code=404, detail="没有找到这个学习计划")
         if plan.user_id != owner_id:
-            raise HTTPException(status_code=403, detail="无权限分享该计划")
+            raise HTTPException(status_code=403, detail="您没有权限分享这个计划")
         return plan
     if resource_type == SharedResourceType.TASK:
         task = await db.get(Task, resource_id)
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            raise HTTPException(status_code=404, detail="没有找到这个任务")
         if task.user_id != owner_id:
-            raise HTTPException(status_code=403, detail="无权限分享该任务")
+            raise HTTPException(status_code=403, detail="您没有权限分享这个任务")
         return task
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = await db.get(CuriosityCapsule, resource_id)
         if not capsule:
-            raise HTTPException(status_code=404, detail="好奇心胶囊不存在")
+            raise HTTPException(status_code=404, detail="没有找到这个知识胶囊")
         if capsule.user_id != owner_id:
-            raise HTTPException(status_code=403, detail="无权限分享该好奇心胶囊")
+            raise HTTPException(status_code=403, detail="您没有权限分享这个知识胶囊")
         return capsule
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
         pattern = await db.get(BehaviorPattern, resource_id)
         if not pattern:
-            raise HTTPException(status_code=404, detail="认知棱镜不存在")
+            raise HTTPException(status_code=404, detail="没有找到这个认知棱镜")
         if pattern.user_id != owner_id:
-            raise HTTPException(status_code=403, detail="无权限分享该认知棱镜")
+            raise HTTPException(status_code=403, detail="您没有权限分享这个认知棱镜")
         return pattern
     fragment = await db.get(CognitiveFragment, resource_id)
     if not fragment:
-        raise HTTPException(status_code=404, detail="认知碎片不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个认知碎片")
     if fragment.user_id != owner_id:
-        raise HTTPException(status_code=403, detail="无权限分享该认知碎片")
+        raise HTTPException(status_code=403, detail="您没有权限分享这个认知碎片")
     return fragment
 
 
@@ -631,7 +631,7 @@ async def get_group(
     """获取群组详细信息"""
     group = await GroupService.get_group(db, group_id, current_user.id)
     if not group:
-        raise HTTPException(status_code=404, detail="群组不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个群组")
     return group
 
 
@@ -1474,7 +1474,7 @@ async def get_group_flame_status(
 
     group = await GroupService.get_group(db, group_id)
     if not group:
-        raise HTTPException(status_code=404, detail="群组不存在")
+        raise HTTPException(status_code=404, detail="没有找到这个群组")
 
     # 获取群组成员的火苗数据
     result = await db.execute(
@@ -1764,7 +1764,7 @@ async def revoke_encryption_key(
     """撤销指定的加密密钥"""
     success = await EncryptionService.revoke_key(db, current_user.id, key_id)
     if not success:
-        raise HTTPException(status_code=404, detail="密钥不存在或无权操作")
+        raise HTTPException(status_code=404, detail="没有找到这个密钥或无权操作")
     await db.commit()
     return {"success": True}
 
@@ -1953,7 +1953,7 @@ async def get_group_pending_reports(
         )
     )
     if not result.scalar_one_or_none():
-        raise HTTPException(status_code=403, detail="无权访问")
+        raise HTTPException(status_code=403, detail="您没有权限访问")
 
     reports = await ReportService.get_pending_reports(db, group_id, limit)
     return [

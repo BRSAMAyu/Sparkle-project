@@ -1,3 +1,19 @@
+/// CRDT synchronization for collaborative offline-first features.
+///
+/// **STATUS: NOT YET IMPLEMENTED**
+///
+/// This is a placeholder for future offline-first collaboration features.
+/// The current sync architecture uses:
+/// - Outbox queue pattern for reliable local-to-server sync
+/// - Exponential backoff retry logic
+/// - Isar database for local persistence
+///
+/// Future implementation may use YDoc or Automerge for true CRDT capabilities
+/// when multi-device collaborative editing is required.
+///
+/// @see sync_engine.dart for the current sync implementation
+library;
+
 import 'dart:async';
 import 'dart:convert';
 

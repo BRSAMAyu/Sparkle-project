@@ -85,6 +85,7 @@ class PlanUpdate {
   PlanUpdate({
     this.name,
     this.description,
+    this.targetDate,
     this.dailyAvailableMinutes,
     this.isActive,
   });
@@ -93,6 +94,8 @@ class PlanUpdate {
       _$PlanUpdateFromJson(json);
   final String? name;
   final String? description;
+  @JsonKey(name: 'target_date')
+  final DateTime? targetDate;
   @JsonKey(name: 'daily_available_minutes')
   final int? dailyAvailableMinutes;
   @JsonKey(name: 'is_active')

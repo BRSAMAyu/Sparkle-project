@@ -5,11 +5,13 @@ Tracks user feedback on predicted candidate actions for learning loop.
 Enables daily analysis to calibrate signal thresholds and improve predictions.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base, GUID
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class CandidateActionFeedback(Base):
@@ -31,8 +33,8 @@ class CandidateActionFeedback(Base):
     action_type = Column(String(32), nullable=False)  # "break", "review", "clarify", "plan_split"
     feedback_type = Column(String(16), nullable=False)  # "accept", "ignore", "dismiss"
     executed = Column(Boolean, nullable=False, default=False)  # Was action actually executed
-    completion_result = Column(JSONB, nullable=True)  # Result of executed action (if any)
-    context_snapshot = Column(JSONB, nullable=False)  # ContextEnvelope at time of feedback
+    completion_result = Column(JSONBCompat, nullable=True)  # Result of executed action (if any)
+    context_snapshot = Column(JSONBCompat, nullable=False)  # ContextEnvelope at time of feedback
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)

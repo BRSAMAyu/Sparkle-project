@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/intent/data/models/intent_data.dart';
+import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 
 /// Intent Preview Dialog
 ///
@@ -22,8 +24,10 @@ class IntentPreviewDialog extends ConsumerStatefulWidget {
 class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   bool _isAnalyzing = true;
   bool _isExecuting = false;
-  List<_IntentItem> _intents = [];
+  List<IntentData> _intents = [];
   String? _errorMessage;
+  String? _executionPlan;
+  int? _estimatedTime;
 
   @override
   void initState() {
@@ -32,8 +36,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -54,10 +57,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Container(
+  Widget _buildHeader() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
@@ -86,7 +87,6 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
   Widget _buildContent() {
     if (_isAnalyzing) {
@@ -166,9 +166,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             ),
           ),
           const SizedBox(height: 12),
-          ...List.generate(_intents.length, (index) {
-            return _buildIntentItem(_intents[index], index + 1);
-          }),
+          ...List.generate(_intents.length, (index) => _buildIntentItem(_intents[index], index + 1)),
           const SizedBox(height: 12),
           _buildExecutionPlan(),
         ],
@@ -176,8 +174,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     );
   }
 
-  Widget _buildIntentItem(_IntentItem intent, int index) {
-    return Container(
+  Widget _buildIntentItem(IntentData intent, int index) => Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -257,9 +254,11 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
   Widget _buildExecutionPlan() {
+    final planText = _executionPlan ?? _generateExecutionPlan();
+    final timeText = _estimatedTime != null ? ' (约 ${_estimatedTime!} 秒)' : '';
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -274,7 +273,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               Icon(Icons.schedule, size: 16, color: Colors.blue[700]),
               const SizedBox(width: 8),
               Text(
-                '执行计划',
+                '执行计划$timeText',
                 style: TextStyle(
                   color: Colors.blue[700],
                   fontWeight: FontWeight.w500,
@@ -284,7 +283,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           ),
           const SizedBox(height: 8),
           Text(
-            _generateExecutionPlan(),
+            planText,
             style: const TextStyle(fontSize: 12),
           ),
         ],
@@ -292,8 +291,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     );
   }
 
-  Widget _buildActions() {
-    return Container(
+  Widget _buildActions() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
@@ -326,7 +324,6 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
   Color _getIntentColor(String type) {
     switch (type) {
@@ -397,7 +394,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     final buffer = StringBuffer();
     for (var i = 0; i < _intents.length; i++) {
       if (i > 0) buffer.write(' → ');
-      buffer.write('${_getIntentLabel(_intents[i].type)}');
+      buffer.write(_getIntentLabel(_intents[i].type));
     }
 
     return buffer.toString();
@@ -407,56 +404,29 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     setState(() {
       _isAnalyzing = true;
       _errorMessage = null;
+      _executionPlan = null;
+      _estimatedTime = null;
     });
 
     try {
-      // TODO: Call actual API when backend is ready
-      // Expected API endpoint: POST /api/v1/intent/analyze
-      // Request body: { "message": widget.message }
-      // Response: { "intents": [...] }
-      //
-      // Example implementation:
-      // final authToken = await ref.read(authRepositoryProvider).getAccessToken();
-      // final response = await dio.post(
-      //   '/api/v1/intent/analyze',
-      //   data: {'message': widget.message},
-      //   options: Options(headers: {'Authorization': 'Bearer $authToken'}),
-      // );
-      // final data = response.data;
-      // final intents = (data['intents'] as List)
-      //     .map((e) => _IntentItem(
-      //           type: e['type'],
-      //           confidence: e['confidence'],
-      //           content: e['content'],
-      //           agentRole: e['agent_role'],
-      //         ))
-      //     .toList();
+      final repository = ref.read(intentRepositoryProvider);
+      final response = await repository.previewIntents(widget.message);
 
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-
-      // Mock response for demo - remove when API is ready
-      setState(() {
-        _isAnalyzing = false;
-        _intents = [
-          _IntentItem(
-            type: 'knowledge_query',
-            confidence: 0.92,
-            content: '复习Python闭包',
-            agentRole: 'galaxy_guide',
-          ),
-          _IntentItem(
-            type: 'time_planning',
-            confidence: 0.85,
-            content: '制定明天的学习计划',
-            agentRole: 'time_tutor',
-          ),
-        ];
-      });
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _intents = response.detectedIntents;
+          _executionPlan = response.executionPlan;
+          _estimatedTime = response.estimatedTime;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isAnalyzing = false;
-        _errorMessage = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _errorMessage = '意图分析失败: ${e}';
+        });
+      }
     }
   }
 
@@ -464,35 +434,42 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     setState(() => _isExecuting = true);
 
     try {
-      // TODO: Call actual execution API
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      final repository = ref.read(intentRepositoryProvider);
+      final response = await repository.analyzeAndExecute(
+        widget.message,
+        autoExecute: true, // 用户已确认，直接执行
+      );
 
       if (mounted) {
+        // 先关闭弹窗
         Navigator.of(context).pop(true);
-        widget.onConfirm();
+
+        final result = response.executionResult;
+        if (result?.success ?? false) {
+          // 执行成功，调用确认回调
+          widget.onConfirm();
+        } else {
+          // 执行失败，显示错误
+          final errorMsg = result?.errorMessages ?? '执行失败，请重试';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
-      setState(() => _isExecuting = false);
-
       if (mounted) {
+        // 错误时也关闭弹窗
+        Navigator.of(context).pop(false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('执行失败: $e')),
+          SnackBar(
+            content: Text('执行失败: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
-}
-
-class _IntentItem {
-  _IntentItem({
-    required this.type,
-    required this.confidence,
-    required this.content,
-    this.agentRole,
-  });
-
-  final String type;
-  final double confidence;
-  final String content;
-  final String? agentRole;
 }

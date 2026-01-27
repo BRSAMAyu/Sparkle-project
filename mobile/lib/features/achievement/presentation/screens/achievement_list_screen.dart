@@ -30,13 +30,11 @@ class AchievementFilterOptions {
     String? category,
     AchievementRarity? rarity,
     AchievementStatus? status,
-  }) {
-    return AchievementFilterOptions(
+  }) => AchievementFilterOptions(
       category: category ?? this.category,
       rarity: rarity ?? this.rarity,
       status: status ?? this.status,
     );
-  }
 
   bool get hasFilters => category != null || rarity != null || status != null;
 }
@@ -109,8 +107,7 @@ class _AchievementListScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context, AchievementState state) {
-    return Container(
+  Widget _buildHeader(BuildContext context, AchievementState state) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -161,10 +158,8 @@ class _AchievementListScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildViewToggle() {
-    return Container(
+  Widget _buildViewToggle() => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
         borderRadius: DS.borderRadius12,
@@ -186,14 +181,12 @@ class _AchievementListScreenState
         ],
       ),
     );
-  }
 
   Widget _buildViewModeButton({
     required IconData icon,
     required bool isActive,
     required VoidCallback onTap,
-  }) {
-    return GestureDetector(
+  }) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing8),
@@ -208,10 +201,8 @@ class _AchievementListScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildFilterBar(BuildContext context) {
-    return Container(
+  Widget _buildFilterBar(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing16,
         vertical: DS.spacing12,
@@ -276,7 +267,6 @@ class _AchievementListScreenState
         ],
       ),
     );
-  }
 
   Widget _buildFilterButton() {
     final hasFilters = _filterOptions.hasFilters;
@@ -326,8 +316,7 @@ class _AchievementListScreenState
     );
   }
 
-  Widget _buildCategoryChip(String category, bool isSelected) {
-    return GestureDetector(
+  Widget _buildCategoryChip(String category, bool isSelected) => GestureDetector(
       onTap: () => _selectCategory(category),
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -351,7 +340,6 @@ class _AchievementListScreenState
         ),
       ),
     );
-  }
 
   Widget _buildAchievementContent(AchievementState state) {
     final filteredAchievements = _filterAchievements(state.achievements);
@@ -370,7 +358,6 @@ class _AchievementListScreenState
             crossAxisCount: 2,
             mainAxisSpacing: DS.spacing12,
             crossAxisSpacing: DS.spacing12,
-            childAspectRatio: 1.0,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -406,8 +393,7 @@ class _AchievementListScreenState
     );
   }
 
-  Widget _buildEmptyView(BuildContext context) {
-    return Center(
+  Widget _buildEmptyView(BuildContext context) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -435,10 +421,8 @@ class _AchievementListScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildErrorView(BuildContext context, String error) {
-    return Center(
+  Widget _buildErrorView(BuildContext context, String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -474,7 +458,6 @@ class _AchievementListScreenState
         ],
       ),
     );
-  }
 
   List<AchievementWithProgress> _filterAchievements(
     List<AchievementWithProgress> achievements,
@@ -486,7 +469,7 @@ class _AchievementListScreenState
       filtered = filtered
           .where((a) =>
               a.achievement.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              (a.achievement.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false))
+              (a.achievement.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false),)
           .toList();
     }
 
@@ -502,15 +485,12 @@ class _AchievementListScreenState
       switch (_filterOptions.status!) {
         case AchievementStatus.unlocked:
           filtered = filtered.where((a) => a.isUnlocked).toList();
-          break;
         case AchievementStatus.locked:
           filtered = filtered.where((a) => !a.isUnlocked).toList();
-          break;
         case AchievementStatus.inProgress:
           filtered = filtered
               .where((a) => !a.isUnlocked && a.progressPercentage > 0)
               .toList();
-          break;
         case AchievementStatus.all:
           break;
       }
@@ -532,13 +512,10 @@ class _AchievementListScreenState
     switch (category) {
       case '已解锁':
         status = AchievementStatus.unlocked;
-        break;
       case '进行中':
         status = AchievementStatus.inProgress;
-        break;
       case '全部':
         status = AchievementStatus.all;
-        break;
       default:
         // Map category names to achievement categories
         final categoryMap = {
@@ -550,7 +527,6 @@ class _AchievementListScreenState
         setState(() {
           _filterOptions = _filterOptions.copyWith(
             category: categoryMap[category],
-            status: null,
           );
         });
         return;
@@ -559,7 +535,6 @@ class _AchievementListScreenState
     setState(() {
       _filterOptions = _filterOptions.copyWith(
         status: status,
-        category: null,
       );
     });
   }
@@ -623,7 +598,7 @@ class _AchievementListScreenState
                 borderRadius: DS.borderRadiusFull,
               ),
             ),
-            Text(
+            const Text(
               '连胜详情',
               style: TextStyle(
                 fontSize: DS.fontSizeXl,
@@ -652,8 +627,7 @@ class _AchievementFilterSheet extends StatelessWidget {
   final VoidCallback onClear;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
@@ -679,7 +653,7 @@ class _AchievementFilterSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 '筛选成就',
                 style: TextStyle(
                   fontSize: DS.fontSizeLg,
@@ -709,7 +683,7 @@ class _AchievementFilterSheet extends StatelessWidget {
               onPressed: () => onApply(currentOptions),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: DS.borderRadius12,
                 ),
               ),
@@ -719,10 +693,8 @@ class _AchievementFilterSheet extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildRarityFilter() {
-    return Column(
+  Widget _buildRarityFilter() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -750,10 +722,8 @@ class _AchievementFilterSheet extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildStatusFilter() {
-    return Column(
+  Widget _buildStatusFilter() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -781,10 +751,8 @@ class _AchievementFilterSheet extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildFilterChip(String label, bool isSelected, {VoidCallback? onTap}) {
-    return GestureDetector(
+  Widget _buildFilterChip(String label, bool isSelected, {VoidCallback? onTap}) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -807,7 +775,6 @@ class _AchievementFilterSheet extends StatelessWidget {
         ),
       ),
     );
-  }
 
   String _getRarityName(AchievementRarity rarity) {
     switch (rarity) {

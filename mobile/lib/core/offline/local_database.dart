@@ -7,8 +7,7 @@ import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
 
-// Use different implementations for web and other platforms
-import 'local_database_web.dart' if (dart.library.io) 'local_database_native.dart';
+part 'local_database.g.dart';
 
 // Global provider for the database instance
 final localDatabaseProvider = Provider<LocalDatabase>((ref) => LocalDatabase());

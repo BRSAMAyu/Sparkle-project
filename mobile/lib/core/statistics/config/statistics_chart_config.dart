@@ -181,7 +181,7 @@ class StatisticsChartConfig {
   static const double gridThickness = 1.0;
 
   /// Grid line dash pattern (null = solid)
-  static const List<int>? gridDashPattern = [4, 4];
+  static const List<int> gridDashPattern = [4, 4];
 
   /// Axis line thickness
   static const double axisThickness = 0.0; // Hidden by default
@@ -267,13 +267,10 @@ class StatisticsChartConfig {
   // ============================================
 
   /// Get a predefined color for an index
-  static Color getColorForIndex(int index) {
-    return pieColors[index % pieColors.length];
-  }
+  static Color getColorForIndex(int index) => pieColors[index % pieColors.length];
 
   /// Get gradient for line chart
-  static LinearGradient getLineGradient({Color? color}) {
-    return LinearGradient(
+  static LinearGradient getLineGradient({Color? color}) => LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
@@ -281,18 +278,15 @@ class StatisticsChartConfig {
         (color ?? primaryColor).withValues(alpha: 0.0),
       ],
     );
-  }
 
   /// Get gradient for bar chart
-  static LinearGradient getBarGradient({Color? color}) {
-    return LinearGradient(
+  static LinearGradient getBarGradient({Color? color}) => LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: color != null
           ? [color, color.withValues(alpha: 0.7)]
           : barGradientColors,
     );
-  }
 
   /// Get color based on trend
   static Color getTrendColor(double? changePercentage) {
@@ -329,27 +323,22 @@ class StatisticsChartDataHelper {
     required List<String> xLabels,
     double minY = 0,
     double? maxY,
-  }) {
-    return LineChartData(
+  }) => LineChartData(
       lineBarsData: lineBarsData,
       minX: 0,
       maxX: (xLabels.length - 1).toDouble(),
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: StatisticsChartConfig.showVerticalGrid,
         horizontalInterval: maxY != null ? (maxY - minY) / 4 : null,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
             dashArray: StatisticsChartConfig.gridDashPattern,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -360,7 +349,7 @@ class StatisticsChartDataHelper {
               if (index >= 0 && index < xLabels.length) {
                 return Text(
                   xLabels[index],
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: StatisticsChartConfig.axisLabelSize,
                     color: StatisticsChartConfig.axisLabelColor,
                   ),
@@ -375,30 +364,26 @@ class StatisticsChartDataHelper {
             showTitles: true,
             reservedSize: 40,
             interval: maxY != null ? (maxY - minY) / 4 : null,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),
       lineTouchData: LineTouchData(
-        enabled: StatisticsChartConfig.touchEnabled,
         touchTooltipData: LineTouchTooltipData(
-          getTooltipItems: (touchedSpots) {
-            return touchedSpots.map((spot) {
+          getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
               return LineTooltipItem(
                 spot.y.toStringAsFixed(1),
                 TextStyle(
@@ -406,12 +391,10 @@ class StatisticsChartDataHelper {
                   fontSize: 12,
                 ),
               );
-            }).toList();
-          },
+            }).toList(),
         ),
       ),
     );
-  }
 
   /// Get default bar chart data with styling applied
   static BarChartData getDefaultBarChartData({
@@ -419,23 +402,18 @@ class StatisticsChartDataHelper {
     required List<String> xLabels,
     double minY = 0,
     double? maxY,
-  }) {
-    return BarChartData(
+  }) => BarChartData(
       barGroups: barGroups,
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -446,7 +424,7 @@ class StatisticsChartDataHelper {
               if (index >= 0 && index < xLabels.length) {
                 return Text(
                   xLabels[index],
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: StatisticsChartConfig.axisLabelSize,
                     color: StatisticsChartConfig.axisLabelColor,
                   ),
@@ -460,31 +438,28 @@ class StatisticsChartDataHelper {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 40,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),
     );
-  }
 
   /// Calculate interval for X axis labels
   static double _getInterval(int labelCount) {
-    final maxLabels = StatisticsChartConfig.maxXLabels;
+    const maxLabels = StatisticsChartConfig.maxXLabels;
     if (labelCount <= maxLabels) return 1;
     return (labelCount / maxLabels).ceil().toDouble();
   }

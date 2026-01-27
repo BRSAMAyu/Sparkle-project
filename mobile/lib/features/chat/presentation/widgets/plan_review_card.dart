@@ -52,6 +52,7 @@ class PlanReviewResult {
     this.suggestedModifications,
     this.autoApproved = false,
     this.actionId,
+    this.userFacingReason,
   });
 
   final String reviewId;
@@ -63,6 +64,7 @@ class PlanReviewResult {
   final Map<String, dynamic>? suggestedModifications;
   final bool autoApproved;
   final String? actionId; // For feedback
+  final String? userFacingReason; // User-facing explanation of the decision
 
   static ReviewDecision _parseDecision(String value) {
     switch (value) {
@@ -93,6 +95,7 @@ class PlanReviewResult {
             json['suggested_modifications'] as Map<String, dynamic>?,
         autoApproved: json['auto_approved'] as bool? ?? false,
         actionId: json['action_id'] as String?,
+        userFacingReason: json['user_facing_reason'] as String?,
       );
 }
 
@@ -107,12 +110,19 @@ class PlanReviewCard extends StatefulWidget {
     this.onApprove,
     this.onReject,
     this.onModify,
+    this.onDecision,
   });
 
   final PlanReviewResult review;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onModify;
+  /// Callback for user decision with the decision type
+  final Future<bool> Function(
+    ReviewDecision decision, {
+    String? userComment,
+    Map<String, String>? meta,
+  })? onDecision;
 
   @override
   State<PlanReviewCard> createState() => _PlanReviewCardState();
@@ -124,6 +134,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
   late AnimationController _slideInController;
+
+  // Submission state
+  bool _isSubmitting = false;
+  bool _isSubmitted = false;
 
   @override
   void initState() {
@@ -157,6 +171,66 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     super.dispose();
   }
 
+  /// Handle user decision on the plan review
+  Future<void> _handleDecision(
+    ReviewDecision decision, {
+    String? userComment,
+    Map<String, String>? meta,
+  }) async {
+    if (_isSubmitting || _isSubmitted) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // Use new callback if provided
+      if (widget.onDecision != null) {
+        final success = await widget.onDecision!(
+          decision,
+          userComment: userComment,
+          meta: meta,
+        );
+        if (success) {
+          setState(() => _isSubmitted = true);
+        }
+      } else {
+        // Fall back to legacy callbacks
+        switch (decision) {
+          case ReviewDecision.approved:
+            widget.onApprove?.call();
+          case ReviewDecision.rejected:
+            widget.onReject?.call();
+          case ReviewDecision.needsModification:
+            widget.onModify?.call();
+          case ReviewDecision.requiresConfirmation:
+            widget.onApprove?.call();
+        }
+        setState(() => _isSubmitted = true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _handleRejectionFlow() async {
+    final feedback = await _showRejectionFeedbackSheet();
+    if (feedback == null) return;
+
+    final trimmedNote = feedback.note?.trim();
+    final meta = <String, String>{
+      'feedback_category': feedback.category,
+      if (trimmedNote != null && trimmedNote.isNotEmpty)
+        'feedback_note': trimmedNote,
+    };
+
+    await _handleDecision(
+      ReviewDecision.rejected,
+      userComment: trimmedNote,
+      meta: meta,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final decision = widget.review.decision;
@@ -166,9 +240,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     final title = _getDecisionTitle(decision);
 
     // For approved plans, don't show action buttons (auto-approved)
-    final showActions = !widget.review.autoApproved &&
+    final showActions = !_isSubmitted &&
+        !widget.review.autoApproved &&
         decision != ReviewDecision.approved &&
-        (widget.onApprove != null ||
+        (widget.onDecision != null ||
+            widget.onApprove != null ||
             widget.onReject != null ||
             widget.onModify != null);
 
@@ -179,7 +255,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       ).animate(CurvedAnimation(
         parent: _slideInController,
         curve: Curves.easeOut,
-      )),
+      ),),
       child: GestureDetector(
         onTapDown: showActions ? (_) => _pressController.forward() : null,
         onTapUp: showActions ? (_) => _pressController.reverse() : null,
@@ -310,6 +386,43 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                           ],
                         ),
 
+                        // User-facing reason
+                        if (widget.review.userFacingReason != null) ...[
+                          const SizedBox(height: DS.spacing12),
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.08),
+                              borderRadius: DS.borderRadius8,
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: DS.iconSizeSm,
+                                  color: color,
+                                ),
+                                const SizedBox(width: DS.spacing8),
+                                Expanded(
+                                  child: Text(
+                                    widget.review.userFacingReason!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: DS.neutral800,
+                                          height: 1.4,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         // Comments section
                         if (widget.review.comments.isNotEmpty) ...[
                           const SizedBox(height: DS.spacing16),
@@ -349,22 +462,18 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         label = '已通过';
         bgColor = DS.success.withValues(alpha: 0.1);
         textColor = DS.success;
-        break;
       case ReviewDecision.rejected:
         label = '未通过';
         bgColor = DS.error.withValues(alpha: 0.1);
         textColor = DS.error;
-        break;
       case ReviewDecision.needsModification:
         label = '需修改';
         bgColor = DS.warning.withValues(alpha: 0.1);
         textColor = DS.warning;
-        break;
       case ReviewDecision.requiresConfirmation:
         label = '待确认';
         bgColor = DS.info.withValues(alpha: 0.1);
         textColor = DS.info;
-        break;
     }
 
     return Container(
@@ -416,8 +525,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     );
   }
 
-  Widget _buildCommentGroup(String title, List<ReviewComment> comments, Color color) {
-    return Column(
+  Widget _buildCommentGroup(String title, List<ReviewComment> comments, Color color) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -431,13 +539,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ...comments.take(3).map((comment) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing6),
               child: _buildCommentItem(comment, color),
-            )),
+            ),),
       ],
     );
-  }
 
-  Widget _buildCommentItem(ReviewComment comment, Color color) {
-    return Container(
+  Widget _buildCommentItem(ReviewComment comment, Color color) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.06),
@@ -493,10 +599,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ],
       ),
     );
-  }
 
-  Widget _buildConfidenceBar() {
-    return Column(
+  Widget _buildConfidenceBar() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -535,7 +639,6 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ),
       ],
     );
-  }
 
   Widget _buildActionButtons(ReviewDecision decision, LinearGradient gradient) {
     // For rejected plans, only show retry option
@@ -544,9 +647,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           CustomButton.primary(
-            text: '重新描述',
+            text: _isSubmitting ? '提交中...' : '拒绝并反馈',
             icon: Icons.refresh_rounded,
-            onPressed: widget.onReject,
+            onPressed: _isSubmitting ? null : _handleRejectionFlow,
             size: CustomButtonSize.small,
           ),
         ],
@@ -558,18 +661,18 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (widget.onReject != null)
+          if (widget.onReject != null || widget.onDecision != null)
             CustomButton.text(
               text: '取消',
-              onPressed: widget.onReject,
+              onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
               size: CustomButtonSize.small,
             ),
           const SizedBox(width: DS.spacing8),
-          if (widget.onModify != null)
+          if (widget.onModify != null || widget.onDecision != null)
             CustomButton.primary(
-              text: '修改计划',
+              text: _isSubmitting ? '提交中...' : '修改计划',
               icon: Icons.edit_rounded,
-              onPressed: widget.onModify,
+              onPressed: _isSubmitting ? null : () => _handleDecision(decision),
               size: CustomButtonSize.small,
               customGradient: gradient,
             ),
@@ -581,21 +684,23 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (widget.onReject != null)
+        if (widget.onReject != null || widget.onDecision != null)
           CustomButton.text(
             text: '取消',
-            onPressed: widget.onReject,
+            onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
             size: CustomButtonSize.small,
           ),
         const SizedBox(width: DS.spacing8),
-        if (widget.onApprove != null)
+        if (widget.onApprove != null || widget.onDecision != null)
           CustomButton.primary(
-            text: '批准执行',
+            text: _isSubmitting ? '提交中...' : '批准执行',
             icon: Icons.check_rounded,
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              widget.onApprove?.call();
-            },
+            onPressed: _isSubmitting
+                ? null
+                : () {
+                    HapticFeedback.mediumImpact();
+                    _handleDecision(ReviewDecision.approved);
+                  },
             size: CustomButtonSize.small,
             customGradient: gradient,
           ),
@@ -668,6 +773,230 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       case 'suggestion':
       default:
         return Icons.lightbulb_rounded;
+    }
+  }
+}
+
+class _RejectionFeedback {
+  const _RejectionFeedback({
+    required this.category,
+    this.note,
+  });
+
+  final String category;
+  final String? note;
+}
+
+class _FeedbackOption {
+  const _FeedbackOption({
+    required this.value,
+    required this.label,
+  });
+
+  final String value;
+  final String label;
+  final String? subtitle;
+}
+
+extension on _PlanReviewCardState {
+  Future<_RejectionFeedback?> _showRejectionFeedbackSheet() async {
+    final controller = TextEditingController();
+    const options = [
+      _FeedbackOption(value: 'tasks_too_many', label: '任务太多'),
+      _FeedbackOption(value: 'tasks_too_few', label: '任务太少'),
+      _FeedbackOption(value: 'difficulty_too_high', label: '难度太高'),
+      _FeedbackOption(value: 'difficulty_too_low', label: '难度太低'),
+      _FeedbackOption(value: 'schedule_unreasonable', label: '时间安排不合理'),
+      _FeedbackOption(value: 'missing_key_task', label: '缺少关键任务'),
+      _FeedbackOption(value: 'other', label: '其他（自定义）'),
+    ];
+    String? selected;
+    var showError = false;
+
+    try {
+      return await showModalBottomSheet<_RejectionFeedback>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setSheetState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            void submit() {
+              final note = controller.text.trim();
+              final needsNote = selected == 'other';
+              if (selected == null || (needsNote && note.isEmpty)) {
+                setSheetState(() => showError = true);
+                return;
+              }
+              Navigator.of(context).pop(
+                _RejectionFeedback(category: selected!, note: note.isEmpty ? null : note),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? DS.neutral700 : DS.neutral300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+                        child: Row(
+                          children: [
+                            Icon(Icons.feedback_outlined, color: DS.primaryBase),
+                            const SizedBox(width: DS.spacing12),
+                            Text(
+                              '告诉我们拒绝原因',
+                              style: TextStyle(
+                                fontSize: DS.fontSizeLg,
+                                fontWeight: DS.fontWeightBold,
+                                color: isDark ? DS.neutral100 : DS.neutral900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      ...options.map((option) {
+                        final isSelected = selected == option.value;
+                        return InkWell(
+                          onTap: () => setSheetState(() {
+                            selected = option.value;
+                            showError = false;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing20,
+                              vertical: DS.spacing12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? DS.primaryBase.withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                              border: Border(
+                                left: BorderSide(
+                                  color: isSelected
+                                      ? DS.primaryBase
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option.label,
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeBase,
+                                      fontWeight: isSelected
+                                          ? DS.fontWeightSemibold
+                                          : DS.fontWeightRegular,
+                                      color: isDark ? DS.neutral100 : DS.neutral900,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: DS.primaryBase,
+                                    size: DS.iconSizeBase,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          DS.spacing20,
+                          DS.spacing8,
+                          DS.spacing20,
+                          0,
+                        ),
+                        child: TextField(
+                          controller: controller,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: '补充说明（可选）',
+                            errorText: showError && selected == 'other'
+                                ? '请补充说明'
+                                : null,
+                          ),
+                        ),
+                      ),
+                      if (showError && selected == null)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: DS.spacing20,
+                            right: DS.spacing20,
+                            top: DS.spacing8,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '请选择一个原因',
+                              style: TextStyle(
+                                color: DS.error,
+                                fontSize: DS.fontSizeSm,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: DS.spacing16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: CustomButton.text(
+                                text: '取消',
+                                onPressed: () => Navigator.of(context).pop(),
+                                size: CustomButtonSize.small,
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing12),
+                            Expanded(
+                              child: CustomButton.primary(
+                                text: '提交反馈',
+                                onPressed: submit,
+                                size: CustomButtonSize.small,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      controller.dispose();
     }
   }
 }

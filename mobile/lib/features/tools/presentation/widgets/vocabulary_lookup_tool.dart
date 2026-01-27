@@ -41,7 +41,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     super.dispose();
   }
 
-  void _lookup() async {
+  Future<void> _lookup() async {
     final word = _controller.text.trim();
     if (word.isNotEmpty) {
       // Check if word is already in local wordbook
@@ -77,7 +77,6 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           definition: definition,
           phonetic: result['phonetic'] as String?,
           taskId: widget.taskId,
-          importance: 3,
         );
 
     setState(() {

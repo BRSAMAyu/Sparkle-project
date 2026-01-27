@@ -40,11 +40,9 @@ class StatisticsDataSeries with _$StatisticsDataSeries {
     /// Display name for this series
     required String name,
 
-    /// Color code for this series (hex or named)
-    String? color,
-
     /// The data points in chronological order
-    required List<StatisticsDataPoint> points,
+    required List<StatisticsDataPoint> points, /// Color code for this series (hex or named)
+    String? color,
 
     /// Unit label for values (e.g., "分钟", "次", "分")
     String? unit,
@@ -137,7 +135,7 @@ extension StatisticsAggregationExt on StatisticsAggregation {
           Duration(days: dayOfWeek - 1),
         );
       case StatisticsAggregation.monthly:
-        return DateTime(dateTime.year, dateTime.month, 1);
+        return DateTime(dateTime.year, dateTime.month);
     }
   }
 }

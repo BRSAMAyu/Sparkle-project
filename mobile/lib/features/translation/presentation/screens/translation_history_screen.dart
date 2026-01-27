@@ -117,7 +117,7 @@ class _TranslationHistoryScreenState
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       await ref.read(translationHistoryProvider.notifier).delete(item.id);
     }
   }
@@ -153,7 +153,7 @@ class _TranslationHistoryScreenState
                       ],
                     ),
                   );
-                  if (confirmed == true && mounted) {
+                  if ((confirmed ?? false) && mounted) {
                     await ref
                         .read(translationHistoryProvider.notifier)
                         .deleteAll();
@@ -166,7 +166,7 @@ class _TranslationHistoryScreenState
                   child: Row(
                     children: [
                       Icon(Icons.delete_forever, color: DS.error),
-                      SizedBox(width: DS.sm),
+                      const SizedBox(width: DS.sm),
                       const Text('清空历史'),
                     ],
                   ),
@@ -321,13 +321,13 @@ class _TranslationHistoryScreenState
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: DS.sm),
-            Text(
-              subtitle,
-              style: TextStyle(color: DS.neutral400),
-            ),
-          ],
+          ...[
+          const SizedBox(height: DS.sm),
+          Text(
+            subtitle,
+            style: TextStyle(color: DS.neutral400),
+          ),
+        ],
         ],
       ),
     );
@@ -350,8 +350,7 @@ class _FilterChip extends StatelessWidget {
   final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -402,7 +401,6 @@ class _FilterChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _TranslationCard extends StatelessWidget {
@@ -421,8 +419,7 @@ class _TranslationCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onRatingTap,
@@ -491,13 +488,11 @@ class _TranslationCard extends StatelessWidget {
                     onTap: onRatingTap,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (index) {
-                        return Icon(
+                      children: List.generate(5, (index) => Icon(
                           Icons.star,
                           size: 16,
                           color: index < item.rating ? Colors.amber : DS.neutral300,
-                        );
-                      }),
+                        )),
                     ),
                   ),
                   const SizedBox(width: DS.md),
@@ -530,7 +525,6 @@ class _TranslationCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();

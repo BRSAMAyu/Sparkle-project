@@ -29,17 +29,15 @@ enum WsConnectionState {
 
 /// Community event received from WebSocket
 class CommunityEvent {
-  final String type;
-  final Map<String, dynamic> data;
 
   CommunityEvent({required this.type, required this.data});
 
-  factory CommunityEvent.fromJson(Map<String, dynamic> json) {
-    return CommunityEvent(
+  factory CommunityEvent.fromJson(Map<String, dynamic> json) => CommunityEvent(
       type: json['type'] as String? ?? 'unknown',
       data: json,
     );
-  }
+  final String type;
+  final Map<String, dynamic> data;
 
   /// Check if this is an ACK message
   bool get isAck => type == 'ack';
@@ -56,15 +54,15 @@ class CommunityEvent {
 
 /// Configuration for WebSocket reconnection
 class WsReconnectConfig {
-  final int maxAttempts;
-  final int baseDelayMs;
-  final int maxDelayMs;
 
   const WsReconnectConfig({
     this.maxAttempts = 10,
     this.baseDelayMs = 1000,
     this.maxDelayMs = 30000,
   });
+  final int maxAttempts;
+  final int baseDelayMs;
+  final int maxDelayMs;
 }
 
 /// Signature for ACK callback
@@ -73,6 +71,12 @@ typedef AckCallback = void Function(String);
 /// Community WebSocket Service
 /// Handles real-time communication for group chats and personal notifications
 class CommunityWebSocketService {
+
+  CommunityWebSocketService({
+    required AuthRepository authRepository,
+    WsReconnectConfig reconnectConfig = const WsReconnectConfig(),
+  })  : _authRepository = authRepository,
+        _reconnectConfig = reconnectConfig;
   final AuthRepository _authRepository;
   final WsReconnectConfig _reconnectConfig;
 
@@ -106,12 +110,6 @@ class CommunityWebSocketService {
 
   WsConnectionState? _groupConnectionState;
   WsConnectionState? _personalConnectionState;
-
-  CommunityWebSocketService({
-    required AuthRepository authRepository,
-    WsReconnectConfig reconnectConfig = const WsReconnectConfig(),
-  })  : _authRepository = authRepository,
-        _reconnectConfig = reconnectConfig;
 
   /// Get current group connection state
   WsConnectionState? get groupConnectionState => _groupConnectionState;
@@ -157,7 +155,7 @@ class CommunityWebSocketService {
       _setGroupState(WsConnectionState.connecting);
 
       _groupChannel!.stream.listen(
-        (data) => _handleGroupMessage(data),
+        _handleGroupMessage,
         onError: _handleGroupError,
         onDone: _handleGroupDone,
         cancelOnError: false,
@@ -208,7 +206,7 @@ class CommunityWebSocketService {
       _setPersonalState(WsConnectionState.connecting);
 
       _personalChannel!.stream.listen(
-        (data) => _handlePersonalMessage(data),
+        _handlePersonalMessage,
         onError: _handlePersonalError,
         onDone: _handlePersonalDone,
         cancelOnError: false,
@@ -262,7 +260,7 @@ class CommunityWebSocketService {
         'type': 'ack',
         'msg_id': msgId,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
-      }));
+      }),);
     } catch (e) {
       debugPrint('[WS] Error sending ACK: $e');
     }

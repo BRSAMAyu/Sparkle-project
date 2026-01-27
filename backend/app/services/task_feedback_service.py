@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -89,6 +90,20 @@ class TaskFeedbackService:
 
         # 更新用户推断偏好
         await self._update_inferred_preferences(user_id, depth_delta, difficulty_delta)
+
+        # Adaptive replanning based on feedback signals
+        if task.plan_id:
+            try:
+                adaptive_replanner = AdaptiveReplanner(self.db, self.redis)
+                await adaptive_replanner.on_task_feedback(
+                    user_id=user_id,
+                    plan_id=task.plan_id,
+                    task_id=task_id,
+                    category=feedback.category,
+                    difficulty_delta=difficulty_delta,
+                )
+            except Exception as e:
+                logger.warning(f"[TaskFeedback] Adaptive replanning failed: {e}")
 
         await self.db.commit()
         await self.db.refresh(feedback)

@@ -20,7 +20,7 @@ class FocusStatsHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 140,
         child: Center(
           child: Text(
@@ -37,7 +37,7 @@ class FocusStatsHeatmap extends StatelessWidget {
         Row(
           children: [
             Icon(Icons.calendar_month,
-                color: DS.brandPrimary.shade600, size: 20),
+                color: DS.brandPrimary.shade600, size: 20,),
             const SizedBox(width: DS.sm),
             const Text(
               '活跃热力图',
@@ -113,8 +113,7 @@ class FocusStatsHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCell(DateTime date, double minutes, double intensity) {
-    return Tooltip(
+  Widget _buildDayCell(DateTime date, double minutes, double intensity) => Tooltip(
       message: '${_formatDate(date)}\n专注时长: ${minutes.toInt()}分钟',
       child: Container(
         width: 12,
@@ -126,7 +125,6 @@ class FocusStatsHeatmap extends StatelessWidget {
         ),
       ),
     );
-  }
 
   double _getMinutesForDate(DateTime date) {
     // Find data for this date (ignoring time)
@@ -140,7 +138,7 @@ class FocusStatsHeatmap extends StatelessWidget {
   double _calculateIntensity(double minutes) {
     // Normalize: 0 minutes = 0, 180+ minutes = 1.0
     const maxMinutes = 180.0;
-    return (minutes.clamp(0.0, maxMinutes) / maxMinutes);
+    return minutes.clamp(0.0, maxMinutes) / maxMinutes;
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>

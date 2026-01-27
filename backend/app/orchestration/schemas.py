@@ -11,9 +11,22 @@ Defines core data structures for:
 - CircuitBreakerState: Circuit breaker state (Phase 3)
 - ShadowPrediction: Shadow prediction result (Phase 3)
 - ObservabilityEvent: Observability event (Phase 3)
+- PlanFeedback: Plan feedback entry (Phase 4)
 """
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Literal, Set
+
+# ============ Phase 4: Plan Version Constants ============
+
+# Version conflict handling thresholds
+VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD = 0.7  # confidence >= this value triggers auto-replan
+VERSION_CONFLICT_HITL_THRESHOLD = 0.7  # confidence < this value requires user confirmation
+MAX_REPLAN_ATTEMPTS = 2  # Maximum replan attempts before giving up
+
+# Replan rate limiting
+REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
+REPLAN_MAX_PER_WINDOW = 3  # max replans per window
+
+from typing import Dict, Any, List, Optional, Literal, Set, TYPE_CHECKING
 from datetime import datetime
 import uuid
 
@@ -50,13 +63,14 @@ class ToolCallSpec:
 
 @dataclass
 class ExecutablePlan:
-    """可执行计划 v1.0/v2.0/v3.0
+    """可执行计划 v1.0/v2.0/v3.0/v4.0
 
     统一的执行计划结构，包含工具调用序列和元数据
 
     Phase 1 (v1.0): Basic plan structure
     Phase 2 (v2.0): Added snapshot_id, enhanced fallback_strategy
     Phase 3 (v3.0): Added agents_involved, collaboration_mode, circuit_breaker_status
+    Phase 4 (v4.0): Added plan_version for version conflict detection
     """
     schema_version: str = "1.0"
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -84,6 +98,9 @@ class ExecutablePlan:
 
     # Phase 3: Circuit breaker metadata
     circuit_breaker_status: Optional[Dict[str, str]] = None  # NEW
+
+    # Phase 4: PlanState version at planning time
+    plan_version: int = 1  # NEW: PlanState.version when plan was created
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
@@ -115,7 +132,8 @@ class ExecutablePlan:
             ],
             "fallback_strategy": self.fallback_strategy,
             "success_criteria": self.success_criteria,
-            "circuit_breaker_status": self.circuit_breaker_status
+            "circuit_breaker_status": self.circuit_breaker_status,
+            "plan_version": self.plan_version,  # Phase 4
         }
 
 
@@ -270,3 +288,65 @@ class ObservabilityEvent:
 
     # 事件详情
     data: Dict[str, Any] = field(default_factory=dict)
+
+
+# ============ Phase 4: Plan Feedback ============
+
+@dataclass
+class PlanFeedback:
+    """计划反馈条目 (Phase 4)
+
+    用于记录审查意见和用户反馈到 PlanState.feedback_log
+    """
+    feedback_id: str = field(default_factory=lambda: f"fb-{uuid.uuid4().hex[:8]}")
+    feedback_type: Literal["review", "user_feedback", "plan_disagree"] = "review"
+    content: str = ""
+    decision: Literal["accept", "reject", "supplement"] = "accept"
+    priority: Literal["high", "normal"] = "normal"
+    source: Literal["reviewer", "user"] = "reviewer"
+    related_plan_id: Optional[str] = None
+    related_task_id: Optional[str] = None
+    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+
+    # Review-specific fields
+    review_id: Optional[str] = None
+    review_decision: Optional[str] = None  # APPROVED, REJECTED, etc.
+    review_comments: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "feedback_id": self.feedback_id,
+            "feedback_type": self.feedback_type,
+            "content": self.content,
+            "decision": self.decision,
+            "priority": self.priority,
+            "source": self.source,
+            "related_plan_id": self.related_plan_id,
+            "related_task_id": self.related_task_id,
+            "timestamp": self.timestamp,
+            "review_id": self.review_id,
+            "review_decision": self.review_decision,
+            "review_comments": self.review_comments,
+        }
+
+    @classmethod
+    def from_review_result(cls, review_result: Any) -> "PlanFeedback":
+        """从 PlanReviewResult 创建 PlanFeedback
+
+        Args:
+            review_result: PlanReviewResult instance from plan_review_service
+
+        Returns:
+            PlanFeedback instance
+        """
+        return cls(
+            feedback_type="review",
+            content=f"Plan review completed: {review_result.decision}",
+            decision="accept" if review_result.decision == "approved" else "supplement",
+            priority="high" if review_result.decision == "rejected" else "normal",
+            source="reviewer",
+            related_plan_id=review_result.plan_id,
+            review_id=review_result.review_id,
+            review_decision=review_result.decision,
+            review_comments=[c.to_dict() for c in review_result.comments],
+        )

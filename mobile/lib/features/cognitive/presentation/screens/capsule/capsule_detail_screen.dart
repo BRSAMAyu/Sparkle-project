@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -59,8 +59,8 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           detailState.whenOrNull(
             data: (capsule) => IconButton(
               icon: Icon(
-                capsule?.isFavorite == true ? Icons.favorite : Icons.favorite_border,
-                color: capsule?.isFavorite == true ? DS.error : null,
+                capsule?.isFavorite ?? false ? Icons.favorite : Icons.favorite_border,
+                color: capsule?.isFavorite ?? false ? DS.error : null,
               ),
               onPressed: () => _toggleFavorite(capsule),
             ),
@@ -330,7 +330,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   Future<void> _submitFeedback(CuriosityCapsuleModel capsule) async {
     if (_selectedRating == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请先评分')),
+        const SnackBar(content: Text('请先评分')),
       );
       return;
     }
@@ -350,7 +350,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('感谢您的反馈！'),
+            content: const Text('感谢您的反馈！'),
             backgroundColor: DS.success,
           ),
         );
@@ -407,7 +407,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 '提交反馈',
                 style: TextStyle(
                   fontSize: 18,
@@ -452,7 +452,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
             maxLines: 3,
             decoration: InputDecoration(
               hintText: '说说你的想法（可选）',
-              border: OutlineInputBorder(
+              border: const OutlineInputBorder(
                 borderRadius: DS.borderRadius8,
               ),
               filled: true,
@@ -470,7 +470,7 @@ class _FeedbackBottomSheet extends StatelessWidget {
                 backgroundColor: DS.primaryBase,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: DS.borderRadius12,
                 ),
               ),

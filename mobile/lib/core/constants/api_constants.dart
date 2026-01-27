@@ -67,6 +67,22 @@ class ApiConstants {
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration sendTimeout = Duration(seconds: 30);
 
+  // gRPC Configuration
+  /// gRPC server host (Python backend)
+  static String get grpcHost {
+    if (_baseUrlOverride.isNotEmpty) {
+      final uri = Uri.parse(_baseUrlOverride);
+      return uri.host;
+    }
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android) {
+      return '10.0.2.2';
+    }
+    return 'localhost';
+  }
+
+  /// gRPC server port (Python backend default)
+  static const int grpcPort = 50051;
+
   static String _defaultWsBaseUrl() {
     if (kIsWeb) {
       return 'ws://localhost:8080';

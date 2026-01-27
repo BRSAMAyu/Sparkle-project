@@ -13,28 +13,61 @@ from app.services.translation_service import (
 )
 
 
+# Language mapping: natural language → ISO code
+LANGUAGE_MAP = {
+    # Chinese
+    "中文": "zh-CN", "zh": "zh-CN", "chinese": "zh-CN", "zh-cn": "zh-CN",
+    # English
+    "英文": "en", "english": "en",
+    # Japanese
+    "日文": "ja", "日语": "ja", "japanese": "ja", "日本語": "ja",
+    # Korean
+    "韩文": "ko", "韩语": "ko", "korean": "ko", "한국어": "ko",
+    # French
+    "法文": "fr", "法语": "fr", "french": "fr",
+    # German
+    "德文": "de", "德语": "de", "german": "de",
+    # Spanish
+    "西班牙文": "es", "西班牙语": "es", "spanish": "es",
+    # Russian
+    "俄文": "ru", "俄语": "ru", "russian": "ru",
+}
+
+
+def _normalize_language_code(lang: str) -> str:
+    """将自然语言或ISO代码统一转换为标准代码"""
+    if not lang or lang == "auto":
+        return "auto"
+    lang_lower = lang.lower()
+    return LANGUAGE_MAP.get(lang_lower, lang)
+
+
 class TranslateTextParams(BaseModel):
-    """Translation tool parameters"""
+    """Translation tool parameters - supports both natural and ISO codes"""
     text: str = Field(..., description="Text to translate", max_length=5000)
-    source_lang: str = Field(
-        default="en",
-        description="Source language code (e.g., 'en', 'zh-CN')"
-    )
     target_lang: str = Field(
         default="zh-CN",
-        description="Target language code (e.g., 'en', 'zh-CN')"
+        description="Target language (e.g., '中文', 'zh-CN', 'en', 'ja')"
+    )
+    source_lang: str = Field(
+        default="auto",
+        description="Source language, 'auto' for detection"
     )
     domain: str = Field(
         default="general",
-        description="Domain for terminology: 'cs', 'math', 'business', 'general'"
+        description="Domain: 'cs', 'math', 'business', 'general'"
     )
     style: str = Field(
         default="natural",
-        description="Translation style: 'concise', 'literal', 'natural'"
+        description="Style: 'concise', 'literal', 'natural'"
     )
     glossary_id: Optional[str] = Field(
         default=None,
-        description="Optional glossary ID for terminology consistency (e.g., 'cs_terms_v1')"
+        description="Glossary ID for terminology (e.g., 'cs_terms_v1')"
+    )
+    fingerprint: Optional[str] = Field(
+        default=None,
+        description="Content fingerprint for signal tracking (v2)"
     )
 
 
@@ -55,13 +88,14 @@ class TranslateTextTool(BaseTool):
     - "Translate using concise style"
     """
 
-    name = "translate_text"
-    description = """Translate text from one language to another with domain-aware terminology.
-    Supports automatic segmentation, caching, and glossary-based consistency.
-    Use when the user asks to translate text, phrases, or paragraphs.
-    Example: "translate this to Chinese", "翻译成英文", "帮我翻译一下这段话"
+    name = "translate"
+    description = """翻译文本到指定语言，支持领域术语、分片处理和缓存。
+    使用场景：
+    - "把这段英文翻译成中文"
+    - "翻译成日语"
+    - "中译英（计算机领域）"
     """
-    category = ToolCategory.KNOWLEDGE
+    category = ToolCategory.QUERY
     parameters_schema = TranslateTextParams
     requires_confirmation = False
 
@@ -85,6 +119,10 @@ class TranslateTextTool(BaseTool):
             ToolResult with translation data and widget configuration
         """
         try:
+            # Normalize language codes (support natural language and ISO codes)
+            source_lang = _normalize_language_code(params.source_lang)
+            target_lang = _normalize_language_code(params.target_lang)
+
             # 1. Segment text into translation units
             segments = translation_service.segment_text(params.text)
 
@@ -97,19 +135,22 @@ class TranslateTextTool(BaseTool):
                 )
 
             logger.info(
-                f"Translating {len(segments)} segments from {params.source_lang} "
-                f"to {params.target_lang} (domain: {params.domain}, style: {params.style})"
+                f"Translating {len(segments)} segments from {source_lang} "
+                f"to {target_lang} (domain: {params.domain}, style: {params.style})"
             )
 
             # 2. Translate with caching
             result = await translation_service.translate(
                 segments=segments,
-                source_lang=params.source_lang,
-                target_lang=params.target_lang,
+                source_lang=source_lang,
+                target_lang=target_lang,
                 domain=params.domain,
                 style=params.style,
                 glossary_id=params.glossary_id,
-                timeout=5.0  # 5 seconds per segment
+                timeout=15.0,  # 15 seconds per segment (increased from 5s)
+                user_id=user_id,  # v2: Pass user_id for signal evaluation
+                fingerprint=params.fingerprint,  # v2: Content fingerprint for signal tracking
+                db=db_session,  # v2: Pass db for quota tracking
             )
 
             # 3. Combine segments into full translation
@@ -128,15 +169,24 @@ class TranslateTextTool(BaseTool):
                 f"segments={len(result.segments)}"
             )
 
-            # 6. Return result with widget data for frontend
+            # 6. Build recommendation data for frontend
+            recommendation_data = None
+            if result.recommendation:
+                recommendation_data = {
+                    "should_create_card": result.recommendation.get("should_create_card", False),
+                    "reason": result.recommendation.get("reason"),
+                    "daily_quota_remaining": result.recommendation.get("daily_quota_remaining", 0),
+                }
+
+            # 7. Return result with widget data for frontend
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={
                     "translation": full_translation,
                     "source_text": params.text,
-                    "source_lang": params.source_lang,
-                    "target_lang": params.target_lang,
+                    "source_lang": source_lang,
+                    "target_lang": target_lang,
                     "segments": [
                         {
                             "id": s.id,
@@ -149,14 +199,15 @@ class TranslateTextTool(BaseTool):
                     "provider": result.provider,
                     "model_id": result.model_id,
                     "cache_hit": result.cache_hit,
-                    "latency_ms": result.latency_ms
+                    "latency_ms": result.latency_ms,
+                    "recommendation": recommendation_data,  # v2: Signal evaluation results
                 },
                 widget_type="translation_result",
                 widget_data={
                     "source_text": params.text,
                     "target_text": full_translation,
-                    "source_lang": params.source_lang,
-                    "target_lang": params.target_lang,
+                    "source_lang": source_lang,
+                    "target_lang": target_lang,
                     "domain": params.domain,
                     "style": params.style,
                     "segments": [

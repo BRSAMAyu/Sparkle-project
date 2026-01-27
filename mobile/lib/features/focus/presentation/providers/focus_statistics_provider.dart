@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_statistics_repository.dart';
@@ -134,8 +136,7 @@ class FocusStatisticsState {
     Map<DateTime, double>? heatmapData,
     int? streakDays,
     int? longestStreak,
-  }) {
-    return FocusStatisticsState(
+  }) => FocusStatisticsState(
       period: period ?? this.period,
       isLoading: isLoading ?? this.isLoading,
       isRefreshing: isRefreshing ?? this.isRefreshing,
@@ -149,7 +150,6 @@ class FocusStatisticsState {
       streakDays: streakDays ?? this.streakDays,
       longestStreak: longestStreak ?? this.longestStreak,
     );
-  }
 }
 
 /// Focus statistics provider
@@ -165,32 +165,42 @@ class FocusStatistics extends _$FocusStatistics {
     _localRepo = FocusStatisticsRepository(db.isar);
     _apiRepo = ref.read(focusRepositoryProvider);
 
-    // Load initial data
-    loadTodayStats();
+    // Get the persisted period
+    final persistedPeriod = ref.watch(statsViewPeriodProvider);
 
-    return const FocusStatisticsState();
+    // Load initial data based on persisted period
+    switch (persistedPeriod) {
+      case StatsViewPeriod.today:
+        loadTodayStats();
+      case StatsViewPeriod.week:
+        loadWeeklyStats();
+      case StatsViewPeriod.month:
+        loadMonthlyStats();
+    }
+
+    return FocusStatisticsState(period: persistedPeriod);
   }
 
   /// Set the view period
   void setPeriod(StatsViewPeriod newPeriod) {
+    // Update the persisted period
+    ref.read(statsViewPeriodProvider.notifier).setValue(newPeriod);
+
     state = state.copyWith(period: newPeriod);
 
     switch (newPeriod) {
       case StatsViewPeriod.today:
         loadTodayStats();
-        break;
       case StatsViewPeriod.week:
         loadWeeklyStats();
-        break;
       case StatsViewPeriod.month:
         loadMonthlyStats();
-        break;
     }
   }
 
   /// Load today's statistics
   Future<void> loadTodayStats() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       // Try API first
@@ -225,7 +235,7 @@ class FocusStatistics extends _$FocusStatistics {
 
   /// Load weekly statistics
   Future<void> loadWeeklyStats() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       // Try API first
@@ -272,7 +282,7 @@ class FocusStatistics extends _$FocusStatistics {
 
   /// Load monthly statistics
   Future<void> loadMonthlyStats() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       // Try API first
@@ -360,8 +370,7 @@ class FocusStatistics extends _$FocusStatistics {
       // Fallback to local data
       if (_localRepo != null) {
         final localSessions = await _localRepo!.getSessionHistory(limit: limit);
-        final details = localSessions.map((s) {
-          return FocusSessionDetail(
+        final details = localSessions.map((s) => FocusSessionDetail(
             id: s.id.toString(),
             startTime: s.startTime,
             endTime: s.endTime,
@@ -371,8 +380,7 @@ class FocusStatistics extends _$FocusStatistics {
             taskId: s.taskId,
             taskTitle: s.taskTitle,
             whiteNoiseType: int.tryParse(s.whiteNoiseType ?? ''),
-          );
-        }).toList();
+          ),).toList();
         state = state.copyWith(sessionHistory: details);
       }
     } catch (e) {
@@ -464,7 +472,6 @@ class FocusStatistics extends _$FocusStatistics {
         durationMinutes: durationMinutes,
         taskId: taskId,
         focusType: focusType,
-        status: 'completed',
         whiteNoiseType: whiteNoiseType,
       );
       await _localRepo!.markAsSynced(record.id, response.id);
@@ -479,4 +486,21 @@ class FocusStatistics extends _$FocusStatistics {
 FocusStatisticsRepository localStatisticsRepo(Ref ref) {
   final db = ref.watch(localDatabaseProvider);
   return FocusStatisticsRepository(db.isar);
+}
+
+/// Stats view period provider with persistence
+///
+/// Persists the user's selected statistics view period (today/week/month).
+final statsViewPeriodProvider =
+    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>((ref) => StatsViewPeriodNotifier());
+
+/// Notifier for the stats view period
+class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {
+  StatsViewPeriodNotifier()
+      : super(
+          namespace: 'focus_statistics',
+          key: 'view_period',
+          defaultValue: StatsViewPeriod.today,
+          values: StatsViewPeriod.values,
+        );
 }
