@@ -8,10 +8,12 @@ class ZoomControls extends StatefulWidget {
     super.key,
     this.minScale = 0.1,
     this.maxScale = 3.0,
+    this.sliderHeight = 150,
   });
   final TransformationController transformationController;
   final double minScale;
   final double maxScale;
+  final double sliderHeight;
 
   @override
   State<ZoomControls> createState() => _ZoomControlsState();
@@ -144,7 +146,7 @@ class _ZoomControlsState extends State<ZoomControls>
             tooltip: 'Zoom In',
           ),
           SizedBox(
-            height: 150,
+            height: sliderHeight,
             child: RotatedBox(
               quarterTurns: 3,
               child: SliderTheme(

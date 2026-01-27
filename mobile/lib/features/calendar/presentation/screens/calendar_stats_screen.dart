@@ -193,14 +193,15 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
   Widget _buildYearView() => LayoutBuilder(
         builder: (context, constraints) {
-          // Calculate cell size to fit 3 columns
-          final monthWidth = (constraints.maxWidth - 40) / 3;
-          final monthHeight = (constraints.maxHeight - 40) / 4;
+          // Responsive columns: 3 on mobile, 4 on tablet/desktop
+          final crossAxisCount = context.isMobile ? 3 : 4;
+          final monthWidth = (constraints.maxWidth - 40) / crossAxisCount;
+          final monthHeight = (constraints.maxHeight - 40) / ((12 / crossAxisCount).ceil());
 
           return GridView.builder(
             padding: const EdgeInsets.all(DS.lg),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+              crossAxisCount: crossAxisCount,
               childAspectRatio: monthWidth / monthHeight,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,

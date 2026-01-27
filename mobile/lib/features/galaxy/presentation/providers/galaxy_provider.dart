@@ -24,6 +24,16 @@ enum AggregationLevel {
   full, // >= 0.8: All nodes
 }
 
+/// Shared LOD scale thresholds for Galaxy rendering (must match painter).
+class GalaxyLodThresholds {
+  const GalaxyLodThresholds._();
+
+  static const double universeMax = 0.2;
+  static const double galaxyMax = 0.4;
+  static const double clusterMax = 0.6;
+  static const double nebulaMax = 0.8;
+}
+
 /// Convert from name string for AggregationLevel
 AggregationLevel aggregationLevelFromName(String name) {
   for (final level in AggregationLevel.values) {
@@ -846,16 +856,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   AggregationLevel _levelForScale(double scale) {
-    if (scale < 0.15) {
+    if (scale < GalaxyLodThresholds.universeMax) {
       return AggregationLevel.universe;
     }
-    if (scale < 0.3) {
+    if (scale < GalaxyLodThresholds.galaxyMax) {
       return AggregationLevel.galaxy;
     }
-    if (scale < 0.5) {
+    if (scale < GalaxyLodThresholds.clusterMax) {
       return AggregationLevel.cluster;
     }
-    if (scale < 0.7) {
+    if (scale < GalaxyLodThresholds.nebulaMax) {
       return AggregationLevel.nebula;
     }
     return AggregationLevel.full;
