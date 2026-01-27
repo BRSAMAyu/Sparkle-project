@@ -24,6 +24,10 @@ from app.models.intervention_adaptive import (  # noqa: F401
     InterventionTemplate,
 )
 from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.community import (  # noqa: F401
+    Group, GroupMember, GroupMessage, PrivateMessage,
+    Friendship, GroupType, GroupRole
+)
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

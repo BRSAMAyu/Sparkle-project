@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
@@ -87,7 +89,7 @@ class ChatBubble extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           padding: const EdgeInsets.all(DS.md),
           constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,),
+              maxWidth: _bubbleMaxWidth(context),),
           decoration: BoxDecoration(
             color: isMe ? DS.brandPrimary : DS.brandPrimary,
             borderRadius: BorderRadius.only(
@@ -137,8 +139,16 @@ class ChatBubble extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      );
+      ),
+    );
+
+  double _bubbleMaxWidth(BuildContext context) {
+    final screenWidth = ResponsiveSystem.width(context);
+    final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
+    final baseMax =
+        contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
+    return min(screenWidth * 0.75, baseMax * 0.9);
+  }
 }
 
 /// 正在输入指示器 (动效)

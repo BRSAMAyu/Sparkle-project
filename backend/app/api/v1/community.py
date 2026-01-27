@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, and_, or_
 from typing import List, Optional
 from uuid import UUID
 
@@ -483,7 +483,7 @@ async def search_users(
     
     支持按用户名或昵称搜索
     """
-    from sqlalchemy import select, or_
+    from sqlalchemy import select, func, and_, or_, or_
     
     # Simple search implementation
     stmt = select(User).where(
@@ -509,6 +509,181 @@ async def search_users(
             flame_brightness=user.flame_brightness
         ) for user in users
     ]
+
+
+@router.get("/friends/recommendations", response_model=List[FriendRecommendation], summary="获取好友推荐")
+@limiter.limit("10/minute")
+async def get_friend_recommendations(
+    request: Request,
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    基于以下因素推荐好友：
+    1. 共同群组成员
+    2. 相似的学习偏好/标签
+    3. 地理位置（如果可用）
+    """
+    from app.models.community import GroupMember, Friendship
+
+    recommendations = []
+    seen_user_ids = set()
+
+    # 首先获取已经是好友或已发送请求的用户ID
+    friendship_stmt = select(Friendship.friend_id).where(
+        and_(
+            Friendship.user_id == current_user.id,
+            Friendship.status.in_(['accepted', 'pending'])
+        )
+    )
+    friendship_result = await db.execute(friendship_stmt)
+    for row in friendship_result.fetchall():
+        seen_user_ids.add(row[0])
+
+    # 获取用户已加入的群组
+    user_groups_stmt = select(GroupMember.group_id).where(
+        GroupMember.user_id == current_user.id
+    )
+    user_groups_result = await db.execute(user_groups_stmt)
+    user_group_ids = [row[0] for row in user_groups_result.fetchall()]
+
+    # 获取共同群组的成员
+    if user_group_ids:
+        common_groups_stmt = select(
+            GroupMember.user_id,
+            func.count(GroupMember.group_id).label('common_groups')
+        ).select_from(
+            GroupMember
+        ).where(
+            and_(
+                GroupMember.group_id.in_(user_group_ids),
+                GroupMember.user_id != current_user.id,
+                GroupMember.user_id.notin_(seen_user_ids) if seen_user_ids else True
+            )
+        ).group_by(
+            GroupMember.user_id
+        ).order_by(
+            func.count(GroupMember.group_id).desc()
+        ).limit(limit * 2)
+
+        common_groups_result = await db.execute(common_groups_stmt)
+        common_members = common_groups_result.fetchall()
+
+        for row in common_members:
+            user_id, common_count = row[0], row[1]
+            if user_id in seen_user_ids:
+                continue
+
+            user_stmt = select(User).where(User.id == user_id)
+            user_result = await db.execute(user_stmt)
+            user_obj = user_result.scalar_one_or_none()
+
+            if user_obj and user_obj.is_active:
+                seen_user_ids.add(user_id)
+                match_score = min(100, common_count * 25)
+
+                recommendations.append(FriendRecommendation(
+                    user=UserBrief(
+                        id=user_obj.id,
+                        username=user_obj.username,
+                        nickname=user_obj.nickname,
+                        avatar_url=user_obj.avatar_url,
+                        flame_level=user_obj.flame_level,
+                        flame_brightness=user_obj.flame_brightness
+                    ),
+                    match_score=float(match_score),
+                    match_reasons=[f"在 {common_count} 个相同的学习群组"]
+                ))
+
+                if len(recommendations) >= limit:
+                    break
+
+    # 如果推荐不足，基于学习标签补充推荐
+    if len(recommendations) < limit and current_user.learning_tags:
+        remaining_limit = limit - len(recommendations)
+        current_tags = set(current_user.learning_tags or [])
+
+        # 获取所有活跃用户，在Python中过滤标签匹配
+        active_users_stmt = select(User).where(
+            and_(
+                User.id != current_user.id,
+                User.id.notin_(seen_user_ids) if seen_user_ids else True,
+                User.is_active == True
+            )
+        ).limit(100)
+
+        tag_result = await db.execute(active_users_stmt)
+        tag_users = tag_result.scalars().all()
+
+        # 计算标签匹配度并排序
+        tag_matches = []
+        for user_obj in tag_users:
+            if user_obj.id in seen_user_ids:
+                continue
+
+            user_tags = set(user_obj.learning_tags or [])
+            common_tags = user_tags & current_tags
+
+            if common_tags:
+                tag_matches.append((user_obj, len(common_tags)))
+
+        tag_matches.sort(key=lambda x: x[1], reverse=True)
+
+        for user_obj, common_count in tag_matches[:remaining_limit]:
+            match_score = min(100, common_count * 20)
+
+            recommendations.append(FriendRecommendation(
+                user=UserBrief(
+                    id=user_obj.id,
+                    username=user_obj.username,
+                    nickname=user_obj.nickname,
+                    avatar_url=user_obj.avatar_url,
+                    flame_level=user_obj.flame_level,
+                    flame_brightness=user_obj.flame_brightness
+                ),
+                match_score=float(match_score),
+                match_reasons=[f"有 {common_count} 个相同的学习兴趣"]
+            ))
+
+            seen_user_ids.add(user_obj.id)
+
+            if len(recommendations) >= limit:
+                break
+
+    # 如果仍然不足，返回活跃用户（按最近登录时间排序）
+    if len(recommendations) < limit:
+        remaining_limit = limit - len(recommendations)
+
+        active_users_stmt = select(User).where(
+            and_(
+                User.id != current_user.id,
+                User.id.notin_(seen_user_ids) if seen_user_ids else True,
+                User.is_active == True,
+                User.last_login_at.isnot(None)
+            )
+        ).order_by(
+            User.last_login_at.desc()
+        ).limit(remaining_limit)
+
+        active_result = await db.execute(active_users_stmt)
+        active_users = active_result.scalars().all()
+
+        for user_obj in active_users:
+            recommendations.append(FriendRecommendation(
+                user=UserBrief(
+                    id=user_obj.id,
+                    username=user_obj.username,
+                    nickname=user_obj.nickname,
+                    avatar_url=user_obj.avatar_url,
+                    flame_level=user_obj.flame_level,
+                    flame_brightness=user_obj.flame_brightness
+                ),
+                match_score=50.0,
+                match_reasons=["活跃用户"]
+            ))
+
+    return recommendations
 
 
 # ============ WebSocket ============
@@ -1468,7 +1643,7 @@ async def get_group_flame_status(
 
     返回所有成员的火苗状态，用于渲染火堆动画
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, func, and_, or_
     from app.models.community import GroupMember
     import math
 

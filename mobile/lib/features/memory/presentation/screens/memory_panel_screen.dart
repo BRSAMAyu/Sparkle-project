@@ -118,11 +118,13 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? _buildError(context)
-                : AppFeatureFlags.enableMemoryPanelV2
-                    ? _buildV2Panel(context)
-                    : _buildV1Panel(context),
+            : ContentConstraint(
+                child: _error != null
+                    ? _buildError(context)
+                    : AppFeatureFlags.enableMemoryPanelV2
+                        ? _buildV2Panel(context)
+                        : _buildV1Panel(context),
+              ),
       );
 
   Widget _buildError(BuildContext context) => Center(

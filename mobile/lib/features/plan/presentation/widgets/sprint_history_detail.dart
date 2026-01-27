@@ -17,7 +17,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
     final dateFormat = DateFormat('yyyy年MM月dd日');
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: ResponsiveSystem.height(context) * 0.7,
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
         borderRadius: const BorderRadius.only(

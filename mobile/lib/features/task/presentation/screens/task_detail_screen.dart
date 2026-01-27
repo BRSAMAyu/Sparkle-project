@@ -56,24 +56,26 @@ class _TaskDetailView extends ConsumerWidget {
               slivers: [
                 _buildSliverAppBar(context),
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoSection(context),
-                        const SizedBox(height: DS.spacing24),
-                        Text(
-                          '执行指南',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        _buildGuideSection(context),
-                        const SizedBox(height: DS.spacing64), // Space for bottom bar
-                      ],
+                  child: ContentConstraint(
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoSection(context),
+                          const SizedBox(height: DS.spacing24),
+                          Text(
+                            '执行指南',
+                            style:
+                                Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: DS.fontWeightBold,
+                                    ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildGuideSection(context),
+                          const SizedBox(height: DS.spacing64), // Space for bottom bar
+                        ],
+                      ),
                     ),
                   ),
                 ),

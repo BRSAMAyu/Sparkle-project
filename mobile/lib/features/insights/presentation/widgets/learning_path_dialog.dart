@@ -19,7 +19,7 @@ class LearningPathDialog extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.all(DS.xl),
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: ResponsiveSystem.height(context) * 0.6,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),

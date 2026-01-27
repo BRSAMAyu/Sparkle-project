@@ -44,6 +44,7 @@ export '../statistics/statistics.dart';
 export 'breakpoints.dart';
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
+export 'responsive_widgets.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';

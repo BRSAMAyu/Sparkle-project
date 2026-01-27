@@ -56,6 +56,7 @@ class ChatState {
     this.pendingPlanReview,
     this.pendingReviewActionId,
     this.pendingContentReview,
+    this.pendingInterventions = const [],
     this.lastPromptTokens,
     this.lastCompletionTokens,
     this.lastTotalTokens,
@@ -104,6 +105,10 @@ class ChatState {
 
   // Content Review state (Phase 2b)
   final ContentReviewResult? pendingContentReview;
+
+  // State change interventions (Phase 2)
+  final List<InterventionPushMessage> pendingInterventions;
+
   final int? lastPromptTokens;
   final int? lastCompletionTokens;
   final int? lastTotalTokens;
@@ -158,6 +163,7 @@ class ChatState {
     String? pendingReviewActionId,
     ContentReviewResult? pendingContentReview,
     bool clearPendingContentReview = false,
+    List<InterventionPushMessage>? pendingInterventions,
     AchievementUnlockEvent? pendingAchievementUnlock,
     int? lastPromptTokens,
     int? lastCompletionTokens,
@@ -216,6 +222,7 @@ class ChatState {
         pendingContentReview: clearPendingContentReview
             ? null
             : pendingContentReview ?? this.pendingContentReview,
+        pendingInterventions: pendingInterventions ?? this.pendingInterventions,
         pendingAchievementUnlock:
             pendingAchievementUnlock ?? this.pendingAchievementUnlock,
         lastPromptTokens: lastPromptTokens ?? this.lastPromptTokens,
@@ -794,6 +801,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Plan Review Widget Event
           _handlePlanReviewWidget(event);
           flushPending();
+        } else if (event is StateChangeEvent) {
+          // State Change Event (plan archived/restored/deleted, settings updated)
+          _handleStateChangeEvent(event);
+          flushPending();
         } else if (event is PlanReviewStatusEvent) {
           // Plan Review Status Event
           _handlePlanReviewStatus(event);
@@ -809,6 +820,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          flushPending();
+        } else if (event is AchievementMilestoneEvent) {
+          // Achievement Milestone Event
+          _handleAchievementMilestone(event);
           flushPending();
         } else if (event is TransparencyStepEvent) {
           // Transparency Step Event
@@ -1096,6 +1111,26 @@ class ChatNotifier extends StateNotifier<ChatState> {
     });
   }
 
+  /// 处理成就里程碑事件
+  void _handleAchievementMilestone(AchievementMilestoneEvent event) {
+    debugPrint('📊 Achievement milestone: ${event.achievementName} - ${event.milestonePercent}%');
+
+    // 显示里程碑通知（可以作为轻量级提示）
+    state = state.copyWith(
+      lastActionStatus: 'milestone_reached',
+      lastActionMessage: event.message,
+    );
+
+    // Clear after delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(
+          clearActionFeedback: true,
+        );
+      }
+    });
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 
@@ -1163,6 +1198,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     debugPrint('📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})');
+  }
+
+  /// 处理 State Change Event (计划归档/恢复/删除、设置更新等重大状态变更)
+  void _handleStateChangeEvent(StateChangeEvent event) {
+    debugPrint('🔄 State change event received: ${event.changeType}');
+
+    // Convert to intervention message
+    final intervention = event.toInterventionMessage();
+
+    // Add to pending interventions
+    state = state.copyWith(
+      pendingInterventions: [...state.pendingInterventions, intervention],
+    );
+
+    debugPrint('📢 State change notification added: ${event.changeType} (${event.interventionLevel})');
   }
 
   /// 处理 Plan Review Status Event

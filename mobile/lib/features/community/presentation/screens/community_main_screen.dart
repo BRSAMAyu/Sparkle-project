@@ -106,12 +106,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _FriendsListTab(),
-          _GroupsListTab(),
-        ],
+      body: ContentConstraint(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _FriendsListTab(),
+            _GroupsListTab(),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},

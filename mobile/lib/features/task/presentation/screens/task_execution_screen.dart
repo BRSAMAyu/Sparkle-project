@@ -251,14 +251,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 ),
               ),
               child: SafeArea(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(DS.spacing16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+                child: ContentConstraint(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(DS.spacing16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                             const SizedBox(height: DS.spacing16),
                             // 1. Focus Mode Entry Card (Prominent)
                             _buildFocusEntryCard(context, activeTask),
@@ -419,16 +420,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
                             // 4. Task Chat Panel
                             TaskChatPanel(taskId: activeTask.id),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    _BottomControls(
-                      task: activeTask,
-                      elapsedSeconds: _elapsedSeconds,
-                      onComplete: _handleCompletion,
-                    ),
-                  ],
+                      _BottomControls(
+                        task: activeTask,
+                        elapsedSeconds: _elapsedSeconds,
+                        onComplete: _handleCompletion,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

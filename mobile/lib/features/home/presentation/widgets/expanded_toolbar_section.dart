@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
 
 /// Expanded toolbar section - Quick action tools
 class ExpandedToolbarSection extends ConsumerWidget {
@@ -10,11 +9,17 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final size = MediaQuery.of(context).size;
+    final category = ResponsiveSystem.getCategory(context);
+
     // Responsive column count: 3 for narrow mobile, 4 for standard, 5 for tablet/desktop
-    final crossAxisCount = switch (context.layoutType) {
-      LayoutType.mobile => MediaQuery.of(context).size.width < 400 ? 3 : 4,
-      LayoutType.tablet => 5,
-      LayoutType.desktop => 5,
+    final crossAxisCount = switch (category) {
+      DeviceCategory.tablet => 5,
+      DeviceCategory.desktop => 5,
+      DeviceCategory.tv => 5,
+      DeviceCategory.watch => size.width < 400 ? 3 : 4,
+      DeviceCategory.phone => size.width < 400 ? 3 : 4,
+      DeviceCategory.phablet => size.width < 400 ? 3 : 4,
     };
 
     return Padding(

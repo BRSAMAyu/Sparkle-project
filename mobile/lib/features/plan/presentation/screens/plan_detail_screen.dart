@@ -79,9 +79,10 @@ class _PlanOverviewTab extends ConsumerWidget {
         ? DateFormat.yMMMd().format(plan.targetDate!)
         : null;
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: [
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
         Card(
           elevation: 2,
           shape:
@@ -140,7 +141,8 @@ class _PlanOverviewTab extends ConsumerWidget {
           ),
         const SizedBox(height: DS.lg),
         _buildArchiveActions(context, ref),
-      ],
+        ],
+      ),
     );
   }
 
@@ -226,9 +228,10 @@ class _PlanProgressTab extends StatelessWidget {
 
     final dayBuckets = _buildDailyCompletionBuckets(tasks);
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: [
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
         const _SectionHeader(title: '完成率'),
         const SizedBox(height: DS.spacing12),
         SizedBox(
@@ -394,7 +397,8 @@ class _PlanProgressTab extends StatelessWidget {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 

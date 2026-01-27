@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class StaggeredResponsiveGrid extends StatefulWidget {
   const StaggeredResponsiveGrid({

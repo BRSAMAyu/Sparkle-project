@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,13 @@ import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:uuid/uuid.dart';
+
+// WebSocket connection state enum
+enum WebSocketConnectionState {
+  connecting,
+  connected,
+  disconnected,
+}
 
 // Token provider for WebSocket connections
 final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
@@ -307,6 +315,70 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   }
 }
 
+// 4.5. Group Members Provider (Family)
+final groupMembersProvider = StateNotifierProvider.family<GroupMembersNotifier,
+        AsyncValue<List<GroupMemberInfo>>, String>(
+    (ref, groupId) =>
+        GroupMembersNotifier(ref.watch(communityRepositoryProvider), groupId),);
+
+class GroupMembersNotifier
+    extends StateNotifier<AsyncValue<List<GroupMemberInfo>>> {
+  GroupMembersNotifier(this._repository, this._groupId)
+      : super(const AsyncValue.loading()) {
+    loadMembers();
+  }
+  final CommunityRepository _repository;
+  final String _groupId;
+
+  Future<void> loadMembers() async {
+    state = const AsyncValue.loading();
+    try {
+      final members = await _repository.getGroupMembers(_groupId);
+      state = AsyncValue.data(members);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => loadMembers();
+
+  Future<void> kickMember(String userId) async {
+    try {
+      await _repository.kickMember(_groupId, userId);
+      await loadMembers();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> promoteMember(String userId) async {
+    try {
+      await _repository.promoteMember(_groupId, userId);
+      await loadMembers();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> demoteMember(String userId) async {
+    try {
+      await _repository.demoteMember(_groupId, userId);
+      await loadMembers();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> transferOwnership(String userId) async {
+    try {
+      await _repository.transferOwnership(_groupId, userId);
+      await loadMembers();
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
 // 5. Group Chat Provider (Family)
 final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier,
     AsyncValue<List<MessageInfo>>, String>(
@@ -339,6 +411,13 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   String? _currentUserId;
 
+  // WebSocket reconnection state
+  WebSocketConnectionState _connectionState = WebSocketConnectionState.disconnected;
+  WebSocketConnectionState get connectionState => _connectionState;
+  int _retryCount = 0;
+  static const int _maxRetries = 5;
+  StreamSubscription<dynamic>? _wsSubscription;
+
   Future<void> _initialize() async {
     // Get current user ID for filtering notifications
     // In a real implementation, you'd decode the token to get user ID
@@ -355,9 +434,15 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     await _connectWebSocket();
   }
 
-  Future<void> _connectWebSocket() async {
+  Future<void> _connectWebSocket({bool isRetry = false}) async {
+    if (_connectionState == WebSocketConnectionState.connecting) return;
+
+    _connectionState = WebSocketConnectionState.connecting;
     final token = await _authRepository.getAccessToken();
-    if (token == null) return;
+    if (token == null) {
+      _connectionState = WebSocketConnectionState.disconnected;
+      return;
+    }
 
     final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
     // 安全修复：token不再放在URL中，改用headers
@@ -367,84 +452,123 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     };
 
     try {
+      // Cancel existing subscription if any
+      await _wsSubscription?.cancel();
+
       _wsService.connect(wsUrl, headers: headers);
-      _wsService.stream.listen((data) {
-        if (data is String) {
-          try {
-            final jsonData = jsonDecode(data) as Map<String, dynamic>;
+      _wsSubscription = _wsService.stream.listen(
+        (data) {
+          if (data is String) {
+            try {
+              final jsonData = jsonDecode(data) as Map<String, dynamic>;
 
-            if (jsonData['type'] == 'ack') {
-              final nonce = jsonData['nonce'];
-              if (nonce != null && _pendingNonces.contains(nonce)) {
-                _pendingNonces.remove(nonce);
-                Future(() => _cacheService.removePendingGroupMessage(
-                    _groupId, nonce.toString(),),);
-                state.whenData(
-                    (messages) => state = AsyncValue.data([...messages]),);
-              }
-              return;
-            }
-
-            if (jsonData['type'] == 'message_edit' &&
-                jsonData['message'] != null) {
-              final message = MessageInfo.fromJson(
-                jsonData['message'] as Map<String, dynamic>,
-              );
-              _handleEditedEvent(message);
-              return;
-            }
-
-            if (jsonData['type'] == 'message_revoke' ||
-                jsonData['type'] == 'revoked') {
-              final messageId = jsonData['message_id'];
-              if (messageId != null) {
-                _handleRevokedEvent(messageId.toString());
-              }
-              return;
-            }
-
-            if (jsonData['type'] == 'reaction_update') {
-              final messageId = jsonData['message_id'];
-              final reactions = jsonData['reactions'];
-              if (messageId != null) {
-                _handleReactionUpdate(
-                    messageId.toString(), reactions as Map<String, dynamic>?,);
-              }
-              return;
-            }
-
-            final message = MessageInfo.fromJson(jsonData);
-            state.whenData((messages) {
-              if (!messages.any((m) => m.id == message.id)) {
-                state = AsyncValue.data([message, ...messages]);
-
-                // Trigger in-app notification for incoming group messages
-                // Only notify if message is from someone else
-                if (message.sender != null &&
-                    message.sender!.id != _currentUserId) {
-                  _ref.read(unreadMessageCountProvider.notifier).increment();
-                  _ref.read(inAppNotificationProvider.notifier).show(
-                        NotificationMessage(
-                          id: message.id,
-                          senderName: message.sender!.displayName,
-                          senderAvatarUrl: message.sender!.avatarUrl,
-                          content: message.content ?? '',
-                          timestamp: message.createdAt,
-                          type: NotificationType.groupMessage,
-                          targetId: _groupId,
-                        ),
-                      );
+              if (jsonData['type'] == 'ack') {
+                final nonce = jsonData['nonce'];
+                if (nonce != null && _pendingNonces.contains(nonce)) {
+                  _pendingNonces.remove(nonce);
+                  Future(() => _cacheService.removePendingGroupMessage(
+                      _groupId, nonce.toString(),),);
+                  state.whenData(
+                      (messages) => state = AsyncValue.data([...messages]),);
                 }
+                return;
               }
-            });
-          } catch (e) {
-            debugPrint('WS Parse Error: $e');
+
+              if (jsonData['type'] == 'message_edit' &&
+                  jsonData['message'] != null) {
+                final message = MessageInfo.fromJson(
+                  jsonData['message'] as Map<String, dynamic>,
+                );
+                _handleEditedEvent(message);
+                return;
+              }
+
+              if (jsonData['type'] == 'message_revoke' ||
+                  jsonData['type'] == 'revoked') {
+                final messageId = jsonData['message_id'];
+                if (messageId != null) {
+                  _handleRevokedEvent(messageId.toString());
+                }
+                return;
+              }
+
+              if (jsonData['type'] == 'reaction_update') {
+                final messageId = jsonData['message_id'];
+                final reactions = jsonData['reactions'];
+                if (messageId != null) {
+                  _handleReactionUpdate(
+                      messageId.toString(), reactions as Map<String, dynamic>?,);
+                }
+                return;
+              }
+
+              final message = MessageInfo.fromJson(jsonData);
+              state.whenData((messages) {
+                if (!messages.any((m) => m.id == message.id)) {
+                  state = AsyncValue.data([message, ...messages]);
+
+                  // Trigger in-app notification for incoming group messages
+                  // Only notify if message is from someone else
+                  if (message.sender != null &&
+                      message.sender!.id != _currentUserId) {
+                    _ref.read(unreadMessageCountProvider.notifier).increment();
+                    _ref.read(inAppNotificationProvider.notifier).show(
+                          NotificationMessage(
+                            id: message.id,
+                            senderName: message.sender!.displayName,
+                            senderAvatarUrl: message.sender!.avatarUrl,
+                            content: message.content ?? '',
+                            timestamp: message.createdAt,
+                            type: NotificationType.groupMessage,
+                            targetId: _groupId,
+                          ),
+                        );
+                  }
+                }
+              });
+            } catch (e) {
+              debugPrint('WS Parse Error: $e');
+            }
           }
-        }
-      });
+        },
+        onError: (error) {
+          debugPrint('WS Stream Error: $error');
+          _handleConnectionError();
+        },
+        onDone: () {
+          debugPrint('WS Stream Done');
+          _handleConnectionError();
+        },
+      );
+
+      // Connection successful
+      _connectionState = WebSocketConnectionState.connected;
+      _retryCount = 0;
     } catch (e) {
       debugPrint('WS Connect Error: $e');
+      _handleConnectionError();
     }
+  }
+
+  void _handleConnectionError() {
+    _connectionState = WebSocketConnectionState.disconnected;
+    if (_retryCount < _maxRetries) {
+      _retryCount++;
+      final delay = Duration(seconds: 1 << _retryCount); // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+      debugPrint('WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)');
+      Future.delayed(delay, () {
+        if (mounted) {
+          _connectWebSocket(isRetry: true);
+        }
+      });
+    } else {
+      debugPrint('WS max retries reached, giving up');
+    }
+  }
+
+  Future<void> manualReconnect() async {
+    _retryCount = 0;
+    await _connectWebSocket();
   }
 
   Future<void> _retryPendingGroupMessages() async {
@@ -485,6 +609,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   @override
   void dispose() {
+    _wsSubscription?.cancel();
     _wsService.disconnect();
     super.dispose();
   }

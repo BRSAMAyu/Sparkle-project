@@ -84,6 +84,18 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Check for state change events (计划归档/恢复/删除等重大状态变更)
+        if (metadata != null && metadata['state_change_event'] != null) {
+          final stateChangeData = metadata['state_change_event'] as Map<String, dynamic>;
+          return StateChangeEvent(
+            changeData: stateChangeData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         // Check for sprint mode switch
         if (metadata != null && _isTrue(metadata['switch_to_sprint'])) {
           return SprintModeSwitchEvent(
@@ -467,6 +479,25 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         if (achievementData != null) {
           return AchievementUnlockEvent(
             achievementData: achievementData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'achievement_milestone':
+        final milestoneData = data['data'] as Map<String, dynamic>?;
+        if (milestoneData != null) {
+          return AchievementMilestoneEvent(
+            milestoneData: milestoneData,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
