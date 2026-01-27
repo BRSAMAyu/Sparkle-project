@@ -687,6 +687,11 @@ func main() {
 	if backendURL == "" {
 		backendURL = "http://sparkle_api:8000" // Docker network
 	}
+	abTestMiddleware := middleware.NewABTestMiddleware(&middleware.ABTestConfig{
+		BackendURL: backendURL,
+		Timeout:    3 * time.Second,
+		Enabled:    true,
+	})
 	targetURL, err := url.Parse(backendURL)
 	if err != nil {
 		log.Fatalf("Failed to parse Python backend URL: %v", err)
@@ -739,7 +744,10 @@ func main() {
 			c.Request.Header.Set("X-User-ID", userID)
 		}
 
+		// Assign A/B variant (if configured for this route) and forward headers.
+		abTestMiddleware.AssignVariant()(c)
 		proxy.ServeHTTP(c.Writer, c.Request)
+		abTestMiddleware.RecordMetricAfter(c)
 	})
 
 	logger.Log.Info("Gateway starting", zap.String("port", cfg.Port))

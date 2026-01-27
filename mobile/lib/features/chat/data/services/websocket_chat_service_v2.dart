@@ -48,6 +48,42 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
 
+        // Check for transparency events (透明化与信任构建链路)
+        if (metadata != null && metadata['event_type'] == 'transparency') {
+          final eventPayload = metadata['event_payload'] as String?;
+          if (eventPayload != null && eventPayload.isNotEmpty) {
+            try {
+              final eventData = json.decode(eventPayload) as Map<String, dynamic>;
+              final eventType = eventData['type'] as String?;
+
+              if (eventType == 'transparency_step') {
+                final stepData = eventData['data'] as Map<String, dynamic>?;
+                return TransparencyStepEvent(
+                  stepData: stepData ?? eventData,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              } else if (eventType == 'transparency_complete') {
+                final transData = eventData['data'] as Map<String, dynamic>?;
+                return TransparencyCompleteEvent(
+                  transparencyData: transData != null
+                      ? TransparencyData.fromJson(transData)
+                      : null,
+                  responseId: responseId,
+                  traceId: traceId,
+                  workflowId: workflowId,
+                  promptVersion: promptVersion,
+                );
+              }
+            } catch (e) {
+              // If parsing fails, fall through to regular text event
+              debugPrint('Failed to parse transparency event: $e');
+            }
+          }
+        }
+
         // Check for sprint mode switch
         if (metadata != null && _isTrue(metadata['switch_to_sprint'])) {
           return SprintModeSwitchEvent(

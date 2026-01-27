@@ -58,24 +58,50 @@ class RequestRouter:
     # Vision: Translation Keywords (5c)
     TRANSLATION_KEYWORDS = {
         "翻译", "translate", "解释意思", "what does this mean",
-        "怎么说", "in english", "in chinese"
+        "怎么说", "in english", "in chinese", "是什么意思"
     }
 
-    # Vision: Prism/Behavior Keywords (5b, 15)
+    # Vision: Prism/Behavior Keywords (5b, 15) - P0 Fix: Expanded
     PRISM_KEYWORDS = {
         "行为分析", "behavior analysis", "我的画像", "user profile",
         "认知棱镜", "cognitive prism", "学习习惯", "study habits",
-        "周报", "weekly report", "日报", "daily report"
+        "周报", "weekly report", "日报", "daily report",
+        "画像", "profile", "分析", "analysis", "学习分析",  # P0 Fix: Added
     }
 
-    # Vision: Sprint Keywords (5d)
+    # Vision: Sprint Keywords (5d) - P0 Fix: Expanded
     SPRINT_KEYWORDS = {
         "冲刺", "sprint", "专注模式", "focus mode",
-        "突击", "cram", "考试冲刺"
+        "突击", "cram", "考试冲刺",
+        "专注", "focus", "集中", "concentrate", "集中注意力",  # P0 Fix: Added
     }
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
+
+    def _preprocess_voice_input(self, message: str) -> str:
+        """P0 Fix: 预处理语音转文字输入
+
+        处理语音识别的常见问题：
+        - 省略号 (...) → 替换为逗号
+        - 重复短语 ("帮我...帮我") → 去重
+        - 多余空格 → 清理
+        """
+        import re
+
+        # 移除省略号
+        message = re.sub(r'\.\.+', '，', message)
+
+        # 移除重复的短语的简单实现
+        # "帮我...帮我" → "帮我"
+        message = re.sub(r'(.{1,3})[，,]\s*\1', r'\1', message)
+        # 处理 "...分隔..." 模式
+        message = re.sub(r'(.{1,5})\.\.+(.{1,5})', r'\1，\2', message)
+
+        # 移除多余的空格
+        message = ' '.join(message.split())
+
+        return message
 
     async def decide(
         self,
@@ -190,39 +216,64 @@ class RequestRouter:
         return "chat"
 
     async def _classify_intent_with_confidence(self, message: str) -> Tuple[str, float]:
-        """意图分类（带置信度评分）
+        """意图分类（带置信度评分） - P0 Fix: Improved priority handling
 
         P2 Improvement: Returns intent with confidence score.
         Low confidence triggers LLM-assisted classification.
+
+        P0 Fix: 组合模式优先级优化，解决"学习"误匹配问题
         """
+        # P0 Fix: 预处理语音输入
+        message = self._preprocess_voice_input(message)
         msg_lower = message.lower()
         scores = {}
 
+        # === P0 Fix: 优先级1: 组合模式 (更高置信度 0.85) ===
+        # Pattern: 动词 + 对象 (解决"帮我制定学习计划"被误判为learn的问题)
+        if (any(k in msg_lower for k in ["创建", "制定", "安排", "make", "create", "schedule"]) and
+            any(k in msg_lower for k in ["任务", "计划", "时间", "task", "plan", "time"])):
+            scores["create"] = 0.85
+
+        if (any(k in msg_lower for k in ["复习", "回顾", "review"]) and
+            any(k in msg_lower for k in ["数学", "英语", "物理", "化学", "math", "english", "physics"])):
+            scores["review"] = 0.85
+
+        # === 优先级2: 特殊意图 (高置信度 0.8) ===
+        # Prism (已扩展关键词)
+        if any(k in msg_lower for k in self.PRISM_KEYWORDS):
+            scores["prism"] = max(scores.get("prism", 0), 0.8)
+
+        # Sprint (已扩展关键词)
+        if any(k in msg_lower for k in self.SPRINT_KEYWORDS):
+            scores["sprint"] = max(scores.get("sprint", 0), 0.8)
+
         # Translation
         if any(k in msg_lower for k in self.TRANSLATION_KEYWORDS):
-            scores["translation"] = scores.get("translation", 0) + 0.8
+            scores["translation"] = max(scores.get("translation", 0), 0.8)
 
-        # Prism
-        if any(k in msg_lower for k in self.PRISM_KEYWORDS):
-            scores["prism"] = scores.get("prism", 0) + 0.8
+        # === 优先级3: 标准意图 (中等置信度 0.7) ===
+        if any(k in msg_lower for k in ["删除", "delete", "remove", "移除"]):
+            scores["delete"] = max(scores.get("delete", 0), 0.8)
 
-        # Sprint
-        if any(k in msg_lower for k in self.SPRINT_KEYWORDS):
-            scores["sprint"] = scores.get("sprint", 0) + 0.8
+        if any(k in msg_lower for k in ["创建", "create", "新建", "添加", "add", "new"]):
+            scores["create"] = max(scores.get("create", 0), 0.7)
 
-        # Standard intents
-        if any(k in msg_lower for k in ["创建", "create", "新建"]):
-            scores["create"] = scores.get("create", 0) + 0.7
-        if any(k in msg_lower for k in ["查询", "query", "获取"]):
-            scores["query"] = scores.get("query", 0) + 0.7
-        if any(k in msg_lower for k in ["更新", "update", "修改"]):
-            scores["update"] = scores.get("update", 0) + 0.7
-        if any(k in msg_lower for k in ["删除", "delete"]):
-            scores["delete"] = scores.get("delete", 0) + 0.8
-        if any(k in msg_lower for k in ["学习", "learn", "study"]):
-            scores["learn"] = scores.get("learn", 0) + 0.6
+        if any(k in msg_lower for k in ["更新", "update", "修改", "edit", "改变", "change", "改"]):
+            scores["update"] = max(scores.get("update", 0), 0.7)
+
+        if any(k in msg_lower for k in ["查询", "query", "获取", "get", "搜索", "search", "看看"]):
+            scores["query"] = max(scores.get("query", 0), 0.7)
+
+        # === P0 Fix: 优先级4: 单独"学习"关键词 (降低权重 0.5，避免覆盖create) ===
+        # 只有在没有明确"创建/制定"时才匹配learn
+        if ("学习" in msg_lower or "learn" in msg_lower or "study" in msg_lower):
+            # P0 Fix: 检查是否有创建类动词，如果有则不增加learn分数
+            has_create_verb = any(k in msg_lower for k in ["创建", "制定", "安排", "make", "create", "schedule"])
+            if not has_create_verb:
+                scores["learn"] = max(scores.get("learn", 0), 0.5)
+
         if any(k in msg_lower for k in ["复习", "review"]):
-            scores["review"] = scores.get("review", 0) + 0.6
+            scores["review"] = max(scores.get("review", 0), 0.6)
 
         if not scores:
             return "chat", 0.5

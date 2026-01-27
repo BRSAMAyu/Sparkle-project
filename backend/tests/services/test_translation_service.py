@@ -123,6 +123,41 @@ async def test_translate_cache_miss(mock_cache_service, mock_llm_service):
 
 
 @pytest.mark.asyncio
+async def test_translate_with_siliconflow_provider_label(mock_cache_service, mock_llm_service):
+    """When only SILICONFLOW_API_KEY is set, provider should be siliconflow."""
+    service = TranslationService()
+
+    # Mock cache miss
+    mock_cache_service.get.return_value = None
+
+    segments = [TranslationSegment(id="s0", text="database")]
+
+    # Mock AsyncOpenAI response
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "数据库"
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    with patch("app.services.translation_service.cache_service", mock_cache_service), \
+         patch("app.services.translation_service.llm_service", mock_llm_service), \
+         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.settings.HUNYUAN_API_KEY", ""), \
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
+        result = await service.translate(
+            segments=segments,
+            source_lang="en",
+            target_lang="zh-CN",
+        )
+
+    assert result.cache_hit is False
+    assert result.provider == "siliconflow"
+    assert result.segments[0].translation == "数据库"
+    mock_client.chat.completions.create.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_translate_with_glossary(mock_cache_service, mock_llm_service):
     """Test translation with glossary application"""
     service = TranslationService()

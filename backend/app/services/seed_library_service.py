@@ -30,10 +30,33 @@ from app.schemas.seed_content import (
     LibraryListParams,
     ItemListParams,
 )
+from app.services.embedding_service import embedding_service
 
 
 class SeedLibraryService:
     """种子内容库服务"""
+
+    # ============ 辅助方法 ============
+
+    def _build_embedding_text(self, title: Optional[str], content: Optional[str]) -> Optional[str]:
+        """
+        构建用于生成 embedding 的文本
+
+        Args:
+            title: 标题
+            content: 内容
+
+        Returns:
+            合并后的文本，若无有效内容则返回 None
+        """
+        parts = []
+        if title:
+            parts.append(title.strip())
+        if content:
+            # 限制内容长度，避免过长文本
+            content_text = content.strip()[:2000]
+            parts.append(content_text)
+        return " ".join(parts) if parts else None
 
     # ============ 库管理 ============
 
@@ -369,6 +392,15 @@ class SeedLibraryService:
             tags=item_data.tags,
             order_index=item_data.order_index,
         )
+
+        # 生成 embedding 用于语义搜索
+        embedding_text = self._build_embedding_text(item_data.title, item_data.content)
+        if embedding_text:
+            try:
+                item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+            except Exception as e:
+                logger.warning(f"Failed to generate embedding for seed item: {e}")
+
         db.add(item)
         await db.flush()
         await db.refresh(item)
@@ -496,10 +528,17 @@ class SeedLibraryService:
         if library and library.owner_id != user_id and not is_superuser:
             raise PermissionError("No permission to update this item")
 
+        # 跟踪内容是否变化（需要更新 embedding）
+        content_changed = False
+
         # 更新字段
         if update_data.title is not None:
+            if item.title != update_data.title:
+                content_changed = True
             item.title = update_data.title
         if update_data.content is not None:
+            if item.content != update_data.content:
+                content_changed = True
             item.content = update_data.content
         if update_data.content_data is not None:
             item.content_data = update_data.content_data
@@ -513,6 +552,15 @@ class SeedLibraryService:
             item.order_index = update_data.order_index
         if update_data.is_active is not None:
             item.is_active = update_data.is_active
+
+        # 内容变化时更新 embedding
+        if content_changed:
+            embedding_text = self._build_embedding_text(item.title, item.content)
+            if embedding_text:
+                try:
+                    item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+                except Exception as e:
+                    logger.warning(f"Failed to update embedding for seed item {item_id}: {e}")
 
         await db.flush()
         await db.refresh(item)
@@ -1011,3 +1059,128 @@ class SeedLibraryService:
             "item_count": item_count,
             "subscriber_count": subscriber_count,
         }
+
+    # ============ Embedding 管理 ============
+
+    async def backfill_embeddings(
+        self,
+        db: AsyncSession,
+        batch_size: int = 50,
+        library_id: Optional[uuid.UUID] = None,
+    ) -> Dict[str, int]:
+        """
+        批量为缺少 embedding 的 SeedItem 生成向量
+
+        Args:
+            db: 数据库会话
+            batch_size: 每批处理数量
+            library_id: 可选，限定特定库
+
+        Returns:
+            {"processed": n, "failed": m, "skipped": k}
+        """
+        conditions = [
+            SeedItem.deleted_at.is_(None),
+            SeedItem.embedding.is_(None),
+        ]
+        if library_id:
+            conditions.append(SeedItem.library_id == library_id)
+
+        # 查询所有缺少 embedding 的 items
+        result = await db.execute(
+            select(SeedItem)
+            .where(and_(*conditions))
+            .limit(batch_size)
+        )
+        items = list(result.scalars().all())
+
+        processed = 0
+        failed = 0
+        skipped = 0
+
+        for item in items:
+            embedding_text = self._build_embedding_text(item.title, item.content)
+            if not embedding_text:
+                skipped += 1
+                continue
+
+            try:
+                item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+                processed += 1
+            except Exception as e:
+                logger.warning(f"Failed to generate embedding for item {item.id}: {e}")
+                failed += 1
+
+        if processed > 0:
+            await db.commit()
+
+        logger.info(f"Backfill embeddings: processed={processed}, failed={failed}, skipped={skipped}")
+        return {"processed": processed, "failed": failed, "skipped": skipped}
+
+    async def semantic_search_items(
+        self,
+        db: AsyncSession,
+        query: str,
+        user_id: Optional[uuid.UUID] = None,
+        library_ids: Optional[List[uuid.UUID]] = None,
+        item_types: Optional[List[str]] = None,
+        limit: int = 10,
+        threshold: float = 0.3,
+    ) -> List[Tuple["SeedItem", float]]:
+        """
+        语义搜索种子内容项
+
+        Args:
+            db: 数据库会话
+            query: 查询文本
+            user_id: 用户ID（可选，用于限定订阅库）
+            library_ids: 限定库ID列表
+            item_types: 限定内容类型
+            limit: 返回数量限制
+            threshold: 相似度阈值
+
+        Returns:
+            [(SeedItem, similarity_score), ...]
+        """
+        # 生成查询向量
+        try:
+            query_embedding = await embedding_service.get_embedding(query, text_type="query")
+        except Exception as e:
+            logger.error(f"Failed to generate query embedding: {e}")
+            return []
+
+        # 构建查询条件
+        conditions = [
+            SeedItem.deleted_at.is_(None),
+            SeedItem.is_active == True,
+            SeedItem.embedding.isnot(None),
+        ]
+
+        if library_ids:
+            conditions.append(SeedItem.library_id.in_(library_ids))
+
+        if item_types:
+            conditions.append(SeedItem.item_type.in_(item_types))
+
+        # 使用 pgvector 的 cosine 距离进行相似度搜索
+        # 注意：pgvector 的 <=> 操作符返回距离，需要转换为相似度
+        from sqlalchemy import literal
+
+        similarity_expr = (1 - SeedItem.embedding.cosine_distance(query_embedding)).label("similarity")
+
+        query_stmt = (
+            select(SeedItem, similarity_expr)
+            .where(and_(*conditions))
+            .order_by(similarity_expr.desc())
+            .limit(limit * 2)  # 取更多结果以便后续过滤
+        )
+
+        result = await db.execute(query_stmt)
+        rows = result.all()
+
+        # 过滤低于阈值的结果
+        filtered_results = [
+            (item, float(score)) for item, score in rows if score >= threshold
+        ]
+
+        return filtered_results[:limit]

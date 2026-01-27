@@ -567,17 +567,20 @@ class TransparencyStepEvent extends ChatStreamEvent {
   });
   final Map<String, dynamic> stepData;
 
-  /// 当前步骤ID
-  String get currentStep => stepData['current_step'] as String? ?? '';
-
-  /// 步骤名称
-  String get stepName => stepData['step_name'] as String? ?? '';
-
-  /// 步骤索引
-  int get stepIndex => stepData['step_index'] as int? ?? 0;
+  /// 当前步骤索引 (1-based, from backend)
+  int get currentStep => stepData['currentStep'] as int? ?? 0;
 
   /// 总步骤数
-  int get totalSteps => stepData['total_steps'] as int? ?? 0;
+  int get totalSteps => stepData['totalSteps'] as int? ?? 0;
+
+  /// 步骤数据
+  Map<String, dynamic>? get step => stepData['step'] as Map<String, dynamic>?;
+
+  /// 步骤名称 (从step中获取)
+  String get stepName => step?['name'] as String? ?? '';
+
+  /// 步骤索引 (0-based, for display)
+  int get stepIndex => (currentStep > 0 ? currentStep - 1 : 0);
 }
 
 /// 透明度完整数据事件（流结束时）
@@ -601,19 +604,22 @@ class TransparencyData {
               ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      totalDurationMs: json['total_duration_ms'] as int? ?? 0,
-      requestId: json['request_id'] as String? ?? '',
+      totalDurationMs: json['totalDurationMs'] as int? ?? 0,
+      requestId: json['requestId'] as String? ?? '',
+      totalTokens: json['totalTokens'] as int? ?? 0,
     );
   }
   const TransparencyData({
     required this.steps,
     required this.totalDurationMs,
     required this.requestId,
+    this.totalTokens = 0,
   });
 
   final List<TransparencyStep> steps;
   final int totalDurationMs;
   final String requestId;
+  final int totalTokens;
 
   /// 格式化总耗时
   String get formattedTotalDuration {
@@ -629,12 +635,15 @@ class TransparencyStep {
 
   factory TransparencyStep.fromJson(Map<String, dynamic> json) {
     return TransparencyStep(
-      stepId: json['step_id'] as String? ?? '',
+      stepId: json['stepId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
-      durationMs: json['duration_ms'] as int?,
+      durationMs: json['durationMs'] as int?,
       result: json['result'] as Map<String, dynamic>?,
       error: json['error'] as String?,
+      agentType: json['agentType'] as String?,
+      stepType: json['type'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
   const TransparencyStep({
@@ -644,6 +653,9 @@ class TransparencyStep {
     this.durationMs,
     this.result,
     this.error,
+    this.agentType,
+    this.stepType,
+    this.metadata,
   });
 
   final String stepId;
@@ -652,6 +664,9 @@ class TransparencyStep {
   final int? durationMs;
   final Map<String, dynamic>? result;
   final String? error;
+  final String? agentType;
+  final String? stepType;
+  final Map<String, dynamic>? metadata;
 
   /// 获取本地化状态标签
   String get statusLabel {

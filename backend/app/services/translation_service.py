@@ -261,7 +261,7 @@ class TranslationService:
         style: str,
         glossary_terms: List[Dict[str, str]]
     ) -> Dict[str, Any]:
-        """使用混元模型翻译，fallback 到通用 LLM。返回翻译结果和使用的 provider 信息"""
+        """使用翻译专用模型（经由 Hunyuan 或 SiliconFlow），失败时 fallback 到通用 LLM。"""
 
         # Language name mapping for clearer prompts
         LANGUAGE_NAMES = {
@@ -296,31 +296,34 @@ Output ONLY the translation, no explanations."""
         used_provider = "llm"
         used_model = llm_service.chat_model
 
-        # 优先使用混元模型 (通过 SiliconFlow 或直接调用)
+        # Prefer translation-specific model (via Hunyuan key or SiliconFlow key)
         try:
-            api_key = settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY
-            # 如果使用的是 SILICONFLOW_API_KEY，确保 base_url 也是 siliconflow 的
-            base_url = settings.HUNYUAN_BASE_URL
-            if not settings.HUNYUAN_API_KEY and settings.SILICONFLOW_API_KEY:
+            if settings.HUNYUAN_API_KEY:
+                provider_label = "hunyuan"
+                api_key = settings.HUNYUAN_API_KEY
+                base_url = settings.HUNYUAN_BASE_URL
+            elif settings.SILICONFLOW_API_KEY:
+                provider_label = "siliconflow"
+                api_key = settings.SILICONFLOW_API_KEY
                 base_url = settings.SILICONFLOW_BASE_URL
-            
-            if api_key:
-                hunyuan_client = AsyncOpenAI(
-                    api_key=api_key,
-                    base_url=base_url
-                )
-                response = await hunyuan_client.chat.completions.create(
-                    model=settings.HUNYUAN_TRANSLATE_MODEL,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.3
-                )
-                translation = response.choices[0].message.content.strip()
-                used_provider = "hunyuan"
-                used_model = settings.HUNYUAN_TRANSLATE_MODEL
             else:
                 raise ValueError("Neither HUNYUAN_API_KEY nor SILICONFLOW_API_KEY is configured")
+
+            translate_client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                timeout=30.0,
+            )
+            response = await translate_client.chat.completions.create(
+                model=settings.HUNYUAN_TRANSLATE_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+            translation = response.choices[0].message.content.strip()
+            used_provider = provider_label
+            used_model = settings.HUNYUAN_TRANSLATE_MODEL
         except Exception as e:
-            logger.warning(f"Hunyuan translation failed, using fallback: {e}")
+            logger.warning(f"Translation model failed, using fallback LLM: {e}")
             # Fallback 到通用 LLM
             response = await llm_service.chat(
                 messages=[{"role": "user", "content": prompt}],

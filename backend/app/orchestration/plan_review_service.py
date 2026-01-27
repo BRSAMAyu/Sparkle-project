@@ -97,6 +97,8 @@ class PlanReviewService:
     Implements a two-tier review system:
     1. Quick rule-based checks for auto-approval
     2. LLM-based deep review for complex plans
+
+    Includes retry mechanism and graceful degradation when LLM review fails.
     """
 
     # High-risk tools that always require confirmation
@@ -125,6 +127,12 @@ class PlanReviewService:
 
     # Maximum number of tool calls for auto-approval
     AUTO_APPROVE_MAX_TOOLS = 5
+
+    # Maximum retry attempts for LLM review
+    MAX_LLM_REVIEW_RETRIES = 2
+
+    # Retry delay in seconds
+    RETRY_DELAY = 0.5
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
@@ -255,7 +263,12 @@ class PlanReviewService:
         user_context: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Perform LLM-based deep review of the plan.
+        Perform LLM-based deep review of the plan with retry mechanism.
+
+        Implements a three-tier fallback strategy:
+        1. Try LLM review with retries
+        2. If LLM fails, use rule-based fallback
+        3. If rule-based is inconclusive, use safe defaults
 
         Args:
             plan: The executable plan
@@ -268,49 +281,154 @@ class PlanReviewService:
         # Build review prompt
         prompt = self._build_review_prompt(plan, user_message, user_context)
 
-        try:
-            # 使用 reason_json 方法获取 JSON 格式的推理结果
-            messages = [
-                {
-                    "role": "system",
-                    "content": self._get_review_system_prompt(),
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ]
-            result = await llm_service.reason_json(
-                messages=messages,
-                temperature=0.2,
-            )
-
-            # reason_json 已返回解析后的对象，无需再解析
-            if not result or not isinstance(result, dict):
-                raise ValueError(f"Invalid LLM response type: {type(result)}")
-
-            # 验证 decision 字段
-            decision = result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
-            valid_decisions = {d.value for d in ReviewDecision}
-            if decision not in valid_decisions:
-                result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
-
-            return result
-
-        except Exception as e:
-            logger.error(f"LLM review failed: {e}")
-            # Default to requiring confirmation on error
-            return {
-                "decision": ReviewDecision.REQUIRES_CONFIRMATION.value,
-                "confidence": 0.0,
-                "comments": [
+        # Try LLM review with retries
+        last_error = None
+        for attempt in range(self.MAX_LLM_REVIEW_RETRIES):
+            try:
+                messages = [
                     {
-                        "category": ReviewCategory.SAFETY.value,
-                        "severity": SeverityLevel.WARNING.value,
-                        "message": "Unable to verify plan safety. Please review before proceeding.",
-                    }
-                ],
+                        "role": "system",
+                        "content": self._get_review_system_prompt(),
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    },
+                ]
+                result = await llm_service.reason_json(
+                    messages=messages,
+                    temperature=0.2,
+                )
+
+                # Validate response
+                if not result or not isinstance(result, dict):
+                    raise ValueError(f"Invalid LLM response type: {type(result)}")
+
+                # Validate decision field
+                decision = result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
+                valid_decisions = {d.value for d in ReviewDecision}
+                if decision not in valid_decisions:
+                    result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
+
+                # Success - log and return
+                logger.info(
+                    f"LLM review succeeded on attempt {attempt + 1}: "
+                    f"decision={result.get('decision')}, "
+                    f"confidence={result.get('confidence', 0.0)}"
+                )
+                return result
+
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"LLM review attempt {attempt + 1}/{self.MAX_LLM_REVIEW_RETRIES} failed: {e}"
+                )
+                if attempt < self.MAX_LLM_REVIEW_RETRIES - 1:
+                    await asyncio.sleep(self.RETRY_DELAY * (attempt + 1))
+
+        # LLM review failed after all retries - use rule-based fallback
+        logger.error(f"LLM review failed after {self.MAX_LLM_REVIEW_RETRIES} attempts: {last_error}")
+        return await self._llm_review_fallback(plan, user_message, user_context)
+
+    async def _llm_review_fallback(
+        self,
+        plan: ExecutablePlan,
+        user_message: str,
+        user_context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Rule-based fallback when LLM review is unavailable.
+
+        Implements intelligent degradation based on plan characteristics:
+        - Safe/read-only plans: auto-approve
+        - Mixed plans: require confirmation
+        - High-risk plans: reject with warning
+
+        Args:
+            plan: The executable plan
+            user_message: Original user message
+            user_context: User context
+
+        Returns:
+            Dictionary with decision, confidence, comments
+        """
+        logger.info("Using rule-based fallback for plan review")
+
+        # Analyze plan characteristics
+        tool_names = [tc.name for tc in plan.tool_calls]
+
+        # Handle empty plan first (edge case)
+        if not plan.tool_calls or not tool_names:
+            decision = ReviewDecision.APPROVED.value
+            confidence = 1.0
+            logger.info("Fallback: Empty plan auto-approved")
+            return {
+                "decision": decision,
+                "confidence": confidence,
+                "comments": [{
+                    "category": ReviewCategory.SAFETY.value,
+                    "severity": SeverityLevel.INFO.value,
+                    "message": "Empty plan (no tool calls). Auto-approved.",
+                }],
+                "fallback_used": True,
+                "fallback_reason": "llm_review_unavailable",
             }
+
+        has_high_risk = any(name in self.HIGH_RISK_TOOLS for name in tool_names)
+        has_safe_only = all(
+            any(safe in name.lower() for safe in self.SAFE_TOOL_CATEGORIES)
+            for name in tool_names
+        )
+        has_mixed = not has_high_risk and not has_safe_only
+
+        comments = []
+        decision = ReviewDecision.REQUIRES_CONFIRMATION.value
+        confidence = 0.5
+
+        if has_safe_only and len(plan.tool_calls) <= self.AUTO_APPROVE_MAX_TOOLS:
+            # Safe plan - auto-approve
+            decision = ReviewDecision.APPROVED.value
+            confidence = 0.9
+            comments.append({
+                "category": ReviewCategory.SAFETY.value,
+                "severity": SeverityLevel.INFO.value,
+                "message": "Plan contains only read-only operations. Auto-approved by rule.",
+            })
+            logger.info(f"Fallback: Auto-approved safe plan with {len(plan.tool_calls)} read-only tools")
+
+        elif has_high_risk:
+            # High-risk plan - require confirmation with warning
+            decision = ReviewDecision.REQUIRES_CONFIRMATION.value
+            confidence = 0.3
+            high_risk_tools = [name for name in tool_names if name in self.HIGH_RISK_TOOLS]
+            comments.append({
+                "category": ReviewCategory.SAFETY.value,
+                "severity": SeverityLevel.WARNING.value,
+                "message": f"Plan contains high-risk operations: {', '.join(high_risk_tools)}",
+                "suggested_fix": "Please review carefully before proceeding.",
+                "affected_tool_calls": high_risk_tools,
+            })
+            logger.warning(f"Fallback: High-risk plan requires confirmation: {high_risk_tools}")
+
+        elif has_mixed:
+            # Mixed plan - require confirmation
+            decision = ReviewDecision.REQUIRES_CONFIRMATION.value
+            confidence = 0.6
+            comments.append({
+                "category": ReviewCategory.SAFETY.value,
+                "severity": SeverityLevel.INFO.value,
+                "message": "LLM review unavailable. Plan requires manual confirmation.",
+                "suggested_fix": "Review the tool calls below and confirm if you wish to proceed.",
+            })
+            logger.info("Fallback: Mixed plan requires confirmation")
+
+        return {
+            "decision": decision,
+            "confidence": confidence,
+            "comments": comments,
+            "fallback_used": True,
+            "fallback_reason": "llm_review_unavailable",
+        }
 
     def _get_review_system_prompt(self) -> str:
         """Get system prompt for plan review"""

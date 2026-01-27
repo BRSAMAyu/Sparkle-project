@@ -5,8 +5,7 @@ import 'package:sparkle/features/seed_library/data/models/seed_library_model.dar
 /// Displays a seed item in a card format
 class SeedItemCard extends StatelessWidget {
   const SeedItemCard({
-    super.key,
-    required this.item,
+    required this.item, super.key,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -18,8 +17,7 @@ class SeedItemCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
@@ -73,7 +71,6 @@ class SeedItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: _getDifficultyColor(),
-                                width: 1,
                               ),
                             ),
                             child: Text(
@@ -123,8 +120,7 @@ class SeedItemCard extends StatelessWidget {
                                 ),
                                 backgroundColor: Colors.blue.shade50,
                               ),
-                            ...?item.tags?.take(2).map((tag) {
-                              return Chip(
+                            ...?item.tags?.take(2).map((tag) => Chip(
                                 label: Text(
                                   tag,
                                   style: const TextStyle(fontSize: 11),
@@ -135,8 +131,7 @@ class SeedItemCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 backgroundColor: Colors.grey.shade200,
-                              );
-                            }),
+                              ),),
                           ],
                         ),
                       ),
@@ -152,10 +147,8 @@ class SeedItemCard extends StatelessWidget {
                     switch (value) {
                       case 'edit':
                         onEdit?.call();
-                        break;
                       case 'delete':
                         _showDeleteDialog(context);
-                        break;
                     }
                   },
                   itemBuilder: (context) => [
@@ -188,7 +181,6 @@ class SeedItemCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   IconData _getItemTypeIcon() {
     switch (item.itemType) {
@@ -220,9 +212,7 @@ class SeedItemCard extends StatelessWidget {
     }
   }
 
-  String _getItemTypeDisplayName() {
-    return item.itemTypeDisplayName;
-  }
+  String _getItemTypeDisplayName() => item.itemTypeDisplayName;
 
   Color _getDifficultyColor() {
     switch (item.difficultyLevel) {

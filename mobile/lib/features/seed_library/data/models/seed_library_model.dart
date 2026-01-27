@@ -1,5 +1,6 @@
 /// Seed Library Data Models
 /// 种子库数据模型
+library;
 
 import 'package:json_annotation/json_annotation.dart';
 
@@ -53,9 +54,85 @@ enum DifficultyLevel {
   expert,
 }
 
+/// Extensions for enumerations
+extension LibraryCategoryExtension on LibraryCategory {
+  String get displayName {
+    switch (this) {
+      case LibraryCategory.fewShot:
+        return 'Few Shot';
+      case LibraryCategory.teachingContent:
+        return '教学内容';
+      case LibraryCategory.replyTemplate:
+        return '回复模板';
+      case LibraryCategory.custom:
+        return '自定义';
+    }
+  }
+}
+
+extension LibraryVisibilityExtension on LibraryVisibility {
+  String get displayName {
+    switch (this) {
+      case LibraryVisibility.private:
+        return '私有';
+      case LibraryVisibility.public:
+        return '公开';
+      case LibraryVisibility.official:
+        return '官方';
+    }
+  }
+}
+
+extension ItemTypeExtension on ItemType {
+  String get displayName {
+    switch (this) {
+      case ItemType.example:
+        return '示例';
+      case ItemType.exercise:
+        return '练习';
+      case ItemType.knowledge:
+        return '知识点';
+      case ItemType.template:
+        return '模板';
+      case ItemType.flashcard:
+        return '闪卡';
+    }
+  }
+}
+
+extension DifficultyLevelExtension on DifficultyLevel {
+  String get displayName {
+    switch (this) {
+      case DifficultyLevel.beginner:
+        return '初级';
+      case DifficultyLevel.intermediate:
+        return '中级';
+      case DifficultyLevel.advanced:
+        return '高级';
+      case DifficultyLevel.expert:
+        return '专家';
+    }
+  }
+}
+
 /// Seed Library model
 @JsonSerializable()
 class SeedLibrary {
+
+  SeedLibrary({
+    required this.id,
+    required this.name,
+    required this.category, required this.visibility, required this.language, required this.isOfficial, required this.isFeatured, required this.usageCount, required this.itemCount, required this.subscriberCount, required this.createdAt, required this.updatedAt, this.description,
+    this.ownerId,
+    this.tags,
+    this.extraMetadata,
+    this.qualityScore,
+    this.isSubscribed,
+    this.subscriptionPriority,
+  });
+
+  factory SeedLibrary.fromJson(Map<String, dynamic> json) =>
+      _$SeedLibraryFromJson(json);
   final String id;
   final String name;
   final String? description;
@@ -91,31 +168,6 @@ class SeedLibrary {
   bool? isSubscribed;
   @JsonKey(includeFromJson: false, includeToJson: false)
   int? subscriptionPriority;
-
-  SeedLibrary({
-    required this.id,
-    required this.name,
-    this.description,
-    required this.category,
-    required this.visibility,
-    this.ownerId,
-    required this.language,
-    this.tags,
-    this.extraMetadata,
-    required this.isOfficial,
-    required this.isFeatured,
-    required this.usageCount,
-    this.qualityScore,
-    required this.itemCount,
-    required this.subscriberCount,
-    required this.createdAt,
-    required this.updatedAt,
-    this.isSubscribed,
-    this.subscriptionPriority,
-  });
-
-  factory SeedLibrary.fromJson(Map<String, dynamic> json) =>
-      _$SeedLibraryFromJson(json);
 
   Map<String, dynamic> toJson() => _$SeedLibraryToJson(this);
 
@@ -170,8 +222,7 @@ class SeedLibrary {
     DateTime? updatedAt,
     bool? isSubscribed,
     int? subscriptionPriority,
-  }) {
-    return SeedLibrary(
+  }) => SeedLibrary(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
@@ -192,12 +243,27 @@ class SeedLibrary {
       isSubscribed: isSubscribed ?? this.isSubscribed,
       subscriptionPriority: subscriptionPriority ?? this.subscriptionPriority,
     );
-  }
 }
 
 /// Seed Item model
 @JsonSerializable()
 class SeedItem {
+
+  SeedItem({
+    required this.id,
+    required this.libraryId,
+    required this.itemType,
+    required this.isActive, required this.createdAt, required this.updatedAt, this.title,
+    this.content,
+    this.contentData,
+    this.subject,
+    this.difficultyLevel,
+    this.tags,
+    this.orderIndex,
+  });
+
+  factory SeedItem.fromJson(Map<String, dynamic> json) =>
+      _$SeedItemFromJson(json);
   final String id;
   @JsonKey(name: 'library_id')
   final String libraryId;
@@ -219,25 +285,6 @@ class SeedItem {
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
-
-  SeedItem({
-    required this.id,
-    required this.libraryId,
-    required this.itemType,
-    this.title,
-    this.content,
-    this.contentData,
-    this.subject,
-    this.difficultyLevel,
-    this.tags,
-    this.orderIndex,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  factory SeedItem.fromJson(Map<String, dynamic> json) =>
-      _$SeedItemFromJson(json);
 
   Map<String, dynamic> toJson() => _$SeedItemToJson(this);
 
@@ -286,8 +333,7 @@ class SeedItem {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return SeedItem(
+  }) => SeedItem(
       id: id ?? this.id,
       libraryId: libraryId ?? this.libraryId,
       itemType: itemType ?? this.itemType,
@@ -302,12 +348,25 @@ class SeedItem {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }
 
 /// User Library Subscription model
 @JsonSerializable()
 class UserLibrarySubscription {
+
+  UserLibrarySubscription({
+    required this.id,
+    required this.userId,
+    required this.libraryId,
+    required this.isEnabled,
+    required this.priority,
+    required this.subscribedAt, required this.createdAt, required this.updatedAt, this.notes,
+    this.lastUsedAt,
+    this.library,
+  });
+
+  factory UserLibrarySubscription.fromJson(Map<String, dynamic> json) =>
+      _$UserLibrarySubscriptionFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String userId;
@@ -330,23 +389,6 @@ class UserLibrarySubscription {
   @JsonKey(includeFromJson: false, includeToJson: false)
   SeedLibrary? library;
 
-  UserLibrarySubscription({
-    required this.id,
-    required this.userId,
-    required this.libraryId,
-    required this.isEnabled,
-    required this.priority,
-    this.notes,
-    required this.subscribedAt,
-    this.lastUsedAt,
-    required this.createdAt,
-    required this.updatedAt,
-    this.library,
-  });
-
-  factory UserLibrarySubscription.fromJson(Map<String, dynamic> json) =>
-      _$UserLibrarySubscriptionFromJson(json);
-
   Map<String, dynamic> toJson() => _$UserLibrarySubscriptionToJson(this);
 
   UserLibrarySubscription copyWith({
@@ -361,8 +403,7 @@ class UserLibrarySubscription {
     DateTime? createdAt,
     DateTime? updatedAt,
     SeedLibrary? library,
-  }) {
-    return UserLibrarySubscription(
+  }) => UserLibrarySubscription(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       libraryId: libraryId ?? this.libraryId,
@@ -375,18 +416,11 @@ class UserLibrarySubscription {
       updatedAt: updatedAt ?? this.updatedAt,
       library: library ?? this.library,
     );
-  }
 }
 
 /// Paginated response model
 @JsonSerializable(genericArgumentFactories: true)
 class PaginatedResponse<T> {
-  final List<T> items;
-  final int total;
-  final int page;
-  final int pageSize;
-  @JsonKey(name: 'total_pages')
-  final int totalPages;
 
   PaginatedResponse({
     required this.items,
@@ -401,6 +435,12 @@ class PaginatedResponse<T> {
     T Function(Object? json) fromJsonT,
   ) =>
       _$PaginatedResponseFromJson(json, fromJsonT);
+  final List<T> items;
+  final int total;
+  final int page;
+  final int pageSize;
+  @JsonKey(name: 'total_pages')
+  final int totalPages;
 
   Map<String, dynamic> toJson(Object? Function(T value) toJsonT) =>
       _$PaginatedResponseToJson(this, toJsonT);
@@ -409,6 +449,17 @@ class PaginatedResponse<T> {
 /// Create library request model
 @JsonSerializable()
 class CreateLibraryRequest {
+
+  CreateLibraryRequest({
+    required this.name,
+    required this.category, required this.visibility, this.description,
+    this.language = 'zh',
+    this.tags,
+    this.extraMetadata,
+  });
+
+  factory CreateLibraryRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateLibraryRequestFromJson(json);
   final String name;
   final String? description;
   final LibraryCategory category;
@@ -418,35 +469,12 @@ class CreateLibraryRequest {
   @JsonKey(name: 'extra_metadata')
   final Map<String, dynamic>? extraMetadata;
 
-  CreateLibraryRequest({
-    required this.name,
-    this.description,
-    required this.category,
-    required this.visibility,
-    this.language = 'zh',
-    this.tags,
-    this.extraMetadata,
-  });
-
-  factory CreateLibraryRequest.fromJson(Map<String, dynamic> json) =>
-      _$CreateLibraryRequestFromJson(json);
-
   Map<String, dynamic> toJson() => _$CreateLibraryRequestToJson(this);
 }
 
 /// Update library request model
 @JsonSerializable()
 class UpdateLibraryRequest {
-  final String? name;
-  final String? description;
-  final LibraryCategory? category;
-  final LibraryVisibility? visibility;
-  final String? language;
-  final List<String>? tags;
-  @JsonKey(name: 'extra_metadata')
-  final Map<String, dynamic>? extraMetadata;
-  @JsonKey(name: 'quality_score')
-  final double? qualityScore;
 
   UpdateLibraryRequest({
     this.name,
@@ -461,6 +489,16 @@ class UpdateLibraryRequest {
 
   factory UpdateLibraryRequest.fromJson(Map<String, dynamic> json) =>
       _$UpdateLibraryRequestFromJson(json);
+  final String? name;
+  final String? description;
+  final LibraryCategory? category;
+  final LibraryVisibility? visibility;
+  final String? language;
+  final List<String>? tags;
+  @JsonKey(name: 'extra_metadata')
+  final Map<String, dynamic>? extraMetadata;
+  @JsonKey(name: 'quality_score')
+  final double? qualityScore;
 
   Map<String, dynamic> toJson() => _$UpdateLibraryRequestToJson(this);
 }

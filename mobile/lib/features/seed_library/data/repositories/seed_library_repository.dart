@@ -360,7 +360,7 @@ class SeedLibraryRepository {
         queryParameters: queryParams,
       );
 
-      final data = response.data! as Map<String, dynamic>;
+      final data = response.data!;
       final result = <String, List<SeedItem>>{};
 
       for (final entry in data.entries) {

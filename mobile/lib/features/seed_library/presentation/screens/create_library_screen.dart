@@ -48,7 +48,6 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
               : _descriptionController.text.trim(),
           category: _selectedCategory,
           visibility: _selectedVisibility,
-          language: 'zh',
           tags: _tags.isEmpty ? null : _tags,
         ),
       );
@@ -94,8 +93,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('创建种子库'),
       ),
@@ -146,7 +144,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
               children: LibraryCategory.values.map((category) {
                 final isSelected = _selectedCategory == category;
                 return ChoiceChip(
-                  label: Text(category.categoryDisplayName),
+                  label: Text(category.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -172,7 +170,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
               children: LibraryVisibility.values.map((visibility) {
                 final isSelected = _selectedVisibility == visibility;
                 return ChoiceChip(
-                  label: Text(visibility.visibilityDisplayName),
+                  label: Text(visibility.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -229,13 +227,11 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _tags.map((tag) {
-                  return Chip(
+                children: _tags.map((tag) => Chip(
                     label: Text(tag),
                     deleteIcon: const Icon(Icons.close, size: 18),
                     onDeleted: () => _removeTag(tag),
-                  );
-                }).toList(),
+                  ),).toList(),
               ),
             ],
           ],
@@ -260,5 +256,4 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
         ),
       ),
     );
-  }
 }

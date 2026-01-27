@@ -77,6 +77,7 @@ from app.orchestration.sufficiency_checker import sufficiency_checker, Sufficien
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.plan_execution_record_service import PlanExecutionRecordService
+from app.orchestration.transparency_data_generator import TransparencyDataGenerator, StepType
 
 # FSM States
 STATE_INIT = "INIT"
@@ -956,6 +957,7 @@ class ChatOrchestrator:
 
             total_prompt_tokens = 0
             total_completion_tokens = 0
+            transparency_generator: Optional[TransparencyDataGenerator] = None
 
             try:
                 # Step 3: Initialize Workflow State
@@ -1123,6 +1125,20 @@ class ChatOrchestrator:
                 state = WorkflowState()
                 state.append_message("user", user_message)
 
+                # Prepare queue for streaming early so it can be used by
+                # sufficiency checks and other early-return branches.
+                queue = asyncio.Queue()
+
+                async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                    # Augment response with IDs
+                    resp.response_id = response_id
+                    resp.created_at = int(datetime.now().timestamp())
+                    resp.request_id = request_id
+                    resp.workflow_id = resp.workflow_id or workflow_id
+                    resp.prompt_version = resp.prompt_version or prompt_version
+                    resp.trace_id = resp.trace_id or trace_id
+                    await queue.put(resp)
+
                 # P4: Sufficiency Checking (skip for tool results)
                 if not request.HasField("tool_result"):
                     with tracer.start_as_current_span("orchestrator.sufficiency_check"):
@@ -1188,22 +1204,46 @@ class ChatOrchestrator:
                         except Exception as e:
                             logger.warning(f"Sufficiency check failed, continuing: {e}")
                 
-                # Get tools
+                # Initialize transparency tracking (guarded by global settings).
+                transparency_enabled = bool(
+                    settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
+                )
+                transparency_generator = TransparencyDataGenerator(
+                    request_id=request_id or response_id,
+                    enabled=transparency_enabled,
+                )
+
+                async def emit_transparency_event(event: Optional[Dict[str, Any]]) -> None:
+                    if not event:
+                        return
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={
+                                    "event_type": "transparency",
+                                    "event_payload": json.dumps(event, ensure_ascii=False),
+                                }
+                            )
+                        )
+                    except Exception as exc:
+                        logger.debug(f"Failed to emit transparency event: {exc}")
+
+                # Get tools with a transparency step so the frontend can show progress.
+                tools_step = transparency_generator.create_step(
+                    name="加载工具配置",
+                    step_type=StepType.PLANNING,
+                    agent_type="ORCHESTRATOR",
+                    metadata={"phase": "tools_schema"},
+                )
+                transparency_generator.start_step(tools_step)
+                await emit_transparency_event(transparency_generator.get_step_event())
                 with tracer.start_as_current_span("orchestrator.get_tools"):
                     tools = await self._get_tools_schema()
-
-                # Prepare queue for streaming
-                queue = asyncio.Queue()
-                
-                async def stream_callback(resp: agent_service_pb2.ChatResponse):
-                    # Augment response with IDs
-                    resp.response_id = response_id
-                    resp.created_at = int(datetime.now().timestamp())
-                    resp.request_id = request_id
-                    resp.workflow_id = resp.workflow_id or workflow_id
-                    resp.prompt_version = resp.prompt_version or prompt_version
-                    resp.trace_id = resp.trace_id or trace_id
-                    await queue.put(resp)
+                transparency_generator.complete_step(
+                    tools_step,
+                    metadata={"tool_count": len(tools)},
+                )
+                await emit_transparency_event(transparency_generator.get_step_event())
 
                 # Emit initial thinking status
                 await stream_callback(agent_service_pb2.ChatResponse(
@@ -1234,6 +1274,8 @@ class ChatOrchestrator:
                     "session_id": session_id,
                     "stream_callback": stream_callback,
                     "tools_schema": tools,
+                    "transparency_generator": transparency_generator,
+                    "emit_transparency_event": emit_transparency_event,
                     "redis_client": self.redis,
                     "user_context": user_context_payload,
                     "conversation_context": conversation_context,
@@ -2080,6 +2122,8 @@ class ChatOrchestrator:
                     
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.
+                    if transparency_generator is not None and "emit_transparency_event" in locals():
+                        await emit_transparency_event(transparency_generator.get_complete_event())
                     for update_resp in await self._emit_system_updates(user_id):
                         yield update_resp
 
@@ -2113,6 +2157,8 @@ class ChatOrchestrator:
                 ).inc()
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
+                if transparency_generator is not None and "emit_transparency_event" in locals():
+                    await emit_transparency_event(transparency_generator.get_complete_event())
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,
                     created_at=int(datetime.now().timestamp()),

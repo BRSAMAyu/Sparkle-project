@@ -8,8 +8,7 @@ import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_car
 /// Displays details of a single seed library and its items
 class SeedLibraryDetailScreen extends ConsumerStatefulWidget {
   const SeedLibraryDetailScreen({
-    super.key,
-    required this.libraryId,
+    required this.libraryId, super.key,
   });
 
   final String libraryId;
@@ -23,29 +22,28 @@ class _SeedLibraryDetailScreenState
     extends ConsumerState<SeedLibraryDetailScreen> {
   @override
   Widget build(BuildContext context) {
-    final provider = seedLibraryDetailProvider(widget.libraryId);
-    final state = ref.watch(provider);
+    final state = ref.watch(seedLibraryDetailProvider(widget.libraryId));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(state.library?.name ?? '种子库详情'),
         actions: [
-          if (state.library != null && state.library!.isEditable)
+          if (state.library != null && state.library!.ownerId == null) // Editable check
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
                 // TODO: Implement edit
               },
             ),
-          if (state.library != null && state.library!.isEditable)
+          if (state.library != null && state.library!.ownerId == null)
             IconButton(
               icon: const Icon(Icons.delete),
-              onPressed: () => _showDeleteDialog(context, provider.notifier),
+              onPressed: () => _showDeleteDialog(context),
             ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'subscribe') {
-                provider.notifier.toggleSubscription();
+                ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).toggleSubscription();
               }
             },
             itemBuilder: (context) => [
@@ -59,14 +57,13 @@ class _SeedLibraryDetailScreenState
           ),
         ],
       ),
-      body: _buildBody(context, state, provider.notifier),
+      body: _buildBody(context, state),
     );
   }
 
   Widget _buildBody(
     BuildContext context,
     SeedLibraryDetailState state,
-    SeedLibraryDetailNotifier notifier,
   ) {
     if (state.isLoadingLibrary) {
       return const Center(child: CircularProgressIndicator());
@@ -82,7 +79,7 @@ class _SeedLibraryDetailScreenState
             Text(state.error!),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => notifier.loadLibrary(),
+              onPressed: () => ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).loadLibrary(),
               child: const Text('重试'),
             ),
           ],
@@ -98,8 +95,8 @@ class _SeedLibraryDetailScreenState
 
     return RefreshIndicator(
       onRefresh: () async {
-        await notifier.loadLibrary();
-        await notifier.loadItems(refresh: true);
+        await ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).loadLibrary();
+        await ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).loadItems(refresh: true);
       },
       child: CustomScrollView(
         slivers: [
@@ -115,13 +112,13 @@ class _SeedLibraryDetailScreenState
                     spacing: 8,
                     children: [
                       Chip(
-                        label: Text(library.categoryDisplayName),
+                        label: Text(library.category.displayName),
                         backgroundColor: Theme.of(context)
                             .colorScheme
                             .primaryContainer,
                       ),
                       Chip(
-                        label: Text(library.visibilityDisplayName),
+                        label: Text(library.visibility.displayName),
                         backgroundColor: library.visibility == LibraryVisibility.official
                             ? Colors.amber.shade100
                             : null,
@@ -217,8 +214,7 @@ class _SeedLibraryDetailScreenState
           ),
 
           // Items list
-          state.items.isEmpty
-              ? SliverFillRemaining(
+          if (state.items.isEmpty) SliverFillRemaining(
                   child: state.isLoadingItems
                       ? const Center(child: CircularProgressIndicator())
                       : Center(
@@ -236,15 +232,14 @@ class _SeedLibraryDetailScreenState
                             ],
                           ),
                         ),
-                )
-              : SliverPadding(
+                ) else SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         if (index >= state.items.length) {
                           // Load more indicator
-                          notifier.loadItems();
+                          ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).loadItems();
                           return const SizedBox(
                             height: 100,
                             child: Center(child: CircularProgressIndicator()),
@@ -268,8 +263,7 @@ class _SeedLibraryDetailScreenState
     IconData icon,
     String value,
     String label,
-  ) {
-    return Row(
+  ) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 18, color: Colors.grey[600]),
@@ -289,11 +283,9 @@ class _SeedLibraryDetailScreenState
         ),
       ],
     );
-  }
 
   void _showDeleteDialog(
     BuildContext context,
-    SeedLibraryDetailNotifier notifier,
   ) {
     showDialog(
       context: context,
@@ -308,7 +300,7 @@ class _SeedLibraryDetailScreenState
           ElevatedButton(
             onPressed: () async {
               try {
-                await notifier.deleteLibrary();
+                await ref.read(seedLibraryDetailProvider(widget.libraryId).notifier).deleteLibrary();
                 if (context.mounted) {
                   Navigator.pop(context); // Close dialog
                   Navigator.pop(context); // Close screen

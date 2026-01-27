@@ -5,8 +5,7 @@ import 'package:sparkle/features/seed_library/data/models/seed_library_model.dar
 /// Displays a seed library in a card format
 class SeedLibraryCard extends StatelessWidget {
   const SeedLibraryCard({
-    super.key,
-    required this.library,
+    required this.library, super.key,
     this.onTap,
     this.onLongPress,
   });
@@ -16,8 +15,7 @@ class SeedLibraryCard extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
@@ -159,8 +157,7 @@ class SeedLibraryCard extends StatelessWidget {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: library.tags!.take(3).map((tag) {
-                    return Chip(
+                  children: library.tags!.take(3).map((tag) => Chip(
                       label: Text(
                         tag,
                         style: const TextStyle(fontSize: 12),
@@ -169,8 +166,7 @@ class SeedLibraryCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       side: BorderSide.none,
                       backgroundColor: Colors.grey.shade200,
-                    );
-                  }).toList(),
+                    ),).toList(),
                 ),
               ],
             ],
@@ -178,10 +174,8 @@ class SeedLibraryCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildStat(BuildContext context, IconData icon, String value, String label) {
-    return Row(
+  Widget _buildStat(BuildContext context, IconData icon, String value, String label) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 16, color: Colors.grey[600]),
@@ -202,7 +196,6 @@ class SeedLibraryCard extends StatelessWidget {
         ),
       ],
     );
-  }
 
   IconData _getCategoryIcon() {
     switch (library.category) {
