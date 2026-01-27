@@ -1,21 +1,12 @@
-from typing import List
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.llm_factory import LLMFactory
-
-# --- 1. 定义工具 (Mock for now, will connect to real services) ---
-@tool
-def search_knowledge_graph(keyword: str):
-    """Search for knowledge nodes in the Sparkle Galaxy."""
-    # 实际项目中这里调用 GalaxyService
-    return f"Found nodes related to '{keyword}': [Node A (ID: 1), Node B (ID: 2)]"
-
-@tool
-def get_prerequisites(node_id: str):
-    """Get prerequisite knowledge points for a specific node."""
-    return f"Prerequisites for Node {node_id}: [Basic Algebra, Calculus I]"
+from app.agents.graph.nodes.registry_tools import (
+    query_knowledge,
+    create_knowledge_node,
+    link_nodes,
+)
 
 # --- 2. 节点逻辑 ---
 async def galaxy_guide_node(state: SparkleState):
@@ -28,12 +19,24 @@ async def galaxy_guide_node(state: SparkleState):
     if collaboration_context:
         messages = list(messages)
         messages.append(HumanMessage(content=collaboration_context))
+
+    if state.get("planning_mode") or state.get("_planning_mode"):
+        messages = list(messages)
+        messages.insert(
+            0,
+            SystemMessage(
+                content=(
+                    "You are in planning-only mode. Use tool calls to create a plan or retrieve "
+                    "knowledge. Respond with one or more tool calls, not a final narrative answer."
+                )
+            ),
+        )
     
     # 获取 DeepSeek 或强推理模型
     llm = LLMFactory.get_llm("galaxy_guide")
     
     # 绑定工具
-    tools = [search_knowledge_graph, get_prerequisites]
+    tools = [query_knowledge, create_knowledge_node, link_nodes]
     llm_with_tools = llm.bind_tools(tools)
     
     # 执行

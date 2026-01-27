@@ -176,14 +176,14 @@ class StateGraph:
                     new_state = await node_action.invoke(state, max_steps=max_steps - steps)
                     # Sync back state? Usually yes.
                     if new_state:
-                        state = new_state
+                        state = self._merge_state(state, new_state)
                 
                 # Check if it's a Parallel State (List of callables/graphs)
                 elif isinstance(node_action, list):
                     logger.info(f"🔀 Executing parallel nodes: {len(node_action)}")
                     new_state = await self._execute_parallel(node_action, state)
                     if new_state:
-                        state = new_state
+                        state = self._merge_state(state, new_state)
 
                 # Standard Callable Node
                 else:
@@ -193,7 +193,7 @@ class StateGraph:
                         new_state = node_action(state)
                     
                     if new_state:
-                        state = new_state
+                        state = self._merge_state(state, new_state)
 
             except Exception as e:
                 logger.exception("❌ Error in node '{}' : {}", current_node_name, e)
@@ -228,6 +228,35 @@ class StateGraph:
         logger.info(f"🏁 [{self.name}] Execution finished")
         await self._emit_event(GraphEventType.GRAPH_END, self.name, state)
         return state
+
+    def _merge_state(self, current_state: WorkflowState, new_state: Any) -> WorkflowState:
+        if isinstance(new_state, WorkflowState):
+            return new_state
+        if isinstance(new_state, dict):
+            # Primary workflow fields
+            if "messages" in new_state:
+                current_state.messages = new_state["messages"]
+            if "next_step" in new_state:
+                current_state.next_step = new_state["next_step"]
+            if "errors" in new_state:
+                current_state.errors.extend(new_state["errors"])
+            if "trace_id" in new_state:
+                current_state.trace_id = new_state["trace_id"]
+            if "is_finished" in new_state:
+                current_state.is_finished = new_state["is_finished"]
+
+            # Context data
+            context_data = new_state.get("context_data")
+            if isinstance(context_data, dict):
+                current_state.context_data.update(context_data)
+
+            # Promote any remaining keys into context_data
+            for key, value in new_state.items():
+                if key in {"messages", "next_step", "errors", "trace_id", "is_finished", "context_data"}:
+                    continue
+                current_state.context_data[key] = value
+            return current_state
+        return current_state
 
     async def _execute_parallel(self, branches: List[Callable], state: WorkflowState) -> WorkflowState:
         """

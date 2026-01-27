@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from openai import AsyncOpenAI
 
 from app.config.settings import settings
 from app.services.llm_service import llm_service
@@ -73,7 +74,7 @@ class TranslationService:
         domain: str = "general",
         style: str = "natural",
         glossary_id: Optional[str] = None,
-        timeout: float = 5.0,
+        timeout: float = 15.0,
         # v2 Signals
         user_id: Optional[UUID] = None,
         fingerprint: Optional[str] = None,
@@ -89,7 +90,7 @@ class TranslationService:
             domain: Domain for terminology ("cs", "math", "business", "general")
             style: Translation style ("concise", "literal", "natural")
             glossary_id: Optional glossary for terminology consistency
-            timeout: Max time per segment (default: 5.0s)
+            timeout: Max time per segment (default: 15.0s)
             user_id: User ID for quota tracking
             fingerprint: Content hash for signal tracking
             db: Database session for quota check
@@ -131,16 +132,24 @@ class TranslationService:
 
         # 3. Translate each segment
         translated_segments = []
+        actual_provider = "llm"
+        actual_model = llm_service.chat_model
+        
         for segment in segments:
             try:
-                result = await asyncio.wait_for(
+                # _translate_segment now returns a dict with provider info
+                tx_result = await asyncio.wait_for(
                     self._translate_segment(
                         segment, source_lang, target_lang,
                         domain, style, glossary_terms
                     ),
                     timeout=timeout
                 )
-                translated_segments.append(result)
+                translated_segments.append(tx_result["segment"])
+                
+                # Update provider info from the last successful segment
+                actual_provider = tx_result["provider"]
+                actual_model = tx_result["model"]
             except asyncio.TimeoutError:
                 logger.warning(f"Translation timeout for segment {segment.id}: {segment.text[:50]}...")
                 # Fallback: simple placeholder
@@ -162,8 +171,8 @@ class TranslationService:
         # 4. Store in cache
         result = TranslationResult(
             segments=translated_segments,
-            provider="llm",  # Or specific provider
-            model_id=llm_service.chat_model,
+            provider=actual_provider,
+            model_id=actual_model,
             cache_hit=False,
             latency_ms=int((time.time() - start_time) * 1000),
             recommendation=recommendation
@@ -182,23 +191,45 @@ class TranslationService:
         return result
 
     async def _evaluate_signals(
-        self, 
-        user_id: UUID, 
-        fingerprint: Optional[str], 
+        self,
+        user_id: Optional[UUID | str],
+        fingerprint: Optional[str],
         db: AsyncSession
     ) -> Dict[str, Any]:
         """
         Evaluate user signals to generate recommendations.
-        
+
         Rules:
         1. Daily Quota: Max cards/day (configurable).
         2. Repetition: If fingerprint seen > 1 times in 1 hour -> Suggest card.
         """
         daily_limit = settings.TRANSLATION_DAILY_CARD_LIMIT
-        
+
+        # Convert user_id to UUID if it's a string
+        user_uuid = None
+        if user_id:
+            try:
+                if isinstance(user_id, str):
+                    user_uuid = UUID(user_id)
+                else:
+                    user_uuid = user_id
+            except ValueError:
+                logger.warning(f"Invalid user_id format: {user_id}")
+                return {
+                    "should_create_card": False,
+                    "reason": None,
+                    "daily_quota_remaining": daily_limit
+                }
+
         # 1. Check Quota (Fast DB query)
-        created_today = await vocabulary_service.get_today_creation_count(db, user_id)
-        quota_remaining = max(0, daily_limit - created_today)
+        quota_remaining = daily_limit
+        if user_uuid:
+            try:
+                created_today = await vocabulary_service.get_today_creation_count(db, user_uuid)
+                quota_remaining = max(0, daily_limit - created_today)
+            except Exception as e:
+                logger.warning(f"Failed to check quota: {e}")
+                quota_remaining = daily_limit  # Assume full quota on error
         
         should_create = False
         reason = None
@@ -229,8 +260,23 @@ class TranslationService:
         domain: str,
         style: str,
         glossary_terms: List[Dict[str, str]]
-    ) -> TranslatedSegment:
-        """Translate a single segment using LLM"""
+    ) -> Dict[str, Any]:
+        """使用翻译专用模型（经由 Hunyuan 或 SiliconFlow），失败时 fallback 到通用 LLM。"""
+
+        # Language name mapping for clearer prompts
+        LANGUAGE_NAMES = {
+            "zh-CN": "Chinese (Simplified)", "zh": "Chinese",
+            "en": "English",
+            "ja": "Japanese", "ko": "Korean",
+            "fr": "French", "de": "German",
+            "es": "Spanish", "ru": "Russian",
+            "ar": "Arabic", "pt": "Portuguese",
+            "it": "Italian", "nl": "Dutch",
+            "auto": "auto-detected language"
+        }
+
+        source_name = LANGUAGE_NAMES.get(source_lang, source_lang)
+        target_name = LANGUAGE_NAMES.get(target_lang, target_lang)
 
         # Build prompt with glossary
         glossary_text = ""
@@ -239,22 +285,53 @@ class TranslationService:
                 [f"- {t['source']}: {t['target']}" for t in glossary_terms[:10]]
             )
 
-        prompt = f"""Translate the following {source_lang} text to {target_lang}.
+        prompt = f"""Translate the following text from {source_name} to {target_name}.
 Domain: {domain}
-Style: {style}
-{glossary_text}
+Style: {style}{glossary_text}
 
 Text: {segment.text}
 
 Output ONLY the translation, no explanations."""
 
-        # Call LLM service
-        response = await llm_service.chat(
-            messages=[{"role": "user", "content": prompt}],
-            model=llm_service.chat_model  # Fast model
-        )
+        used_provider = "llm"
+        used_model = llm_service.chat_model
 
-        translation = response.strip()
+        # Prefer translation-specific model (via Hunyuan key or SiliconFlow key)
+        try:
+            if settings.HUNYUAN_API_KEY:
+                provider_label = "hunyuan"
+                api_key = settings.HUNYUAN_API_KEY
+                base_url = settings.HUNYUAN_BASE_URL
+            elif settings.SILICONFLOW_API_KEY:
+                provider_label = "siliconflow"
+                api_key = settings.SILICONFLOW_API_KEY
+                base_url = settings.SILICONFLOW_BASE_URL
+            else:
+                raise ValueError("Neither HUNYUAN_API_KEY nor SILICONFLOW_API_KEY is configured")
+
+            translate_client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                timeout=30.0,
+            )
+            response = await translate_client.chat.completions.create(
+                model=settings.HUNYUAN_TRANSLATE_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+            translation = response.choices[0].message.content.strip()
+            used_provider = provider_label
+            used_model = settings.HUNYUAN_TRANSLATE_MODEL
+        except Exception as e:
+            logger.warning(f"Translation model failed, using fallback LLM: {e}")
+            # Fallback 到通用 LLM
+            response = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                model=llm_service.chat_model
+            )
+            translation = response.strip()
+            used_provider = "llm"
+            used_model = llm_service.chat_model
 
         # Extract terminology notes (simple heuristic)
         notes = []
@@ -262,12 +339,16 @@ Output ONLY the translation, no explanations."""
             if term["source"].lower() in segment.text.lower():
                 notes.append(f"{term['source']} = {term['target']}")
 
-        return TranslatedSegment(
-            id=segment.id,
-            translation=translation,
-            notes=notes,
-            spans=[]  # TODO: Implement alignment extraction in Phase 2
-        )
+        return {
+            "segment": TranslatedSegment(
+                id=segment.id,
+                translation=translation,
+                notes=notes,
+                spans=[]
+            ),
+            "provider": used_provider,
+            "model": used_model
+        }
 
     def _generate_cache_key(
         self,

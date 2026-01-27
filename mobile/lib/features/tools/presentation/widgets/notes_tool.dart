@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
@@ -45,7 +44,7 @@ class _NotesToolState extends State<NotesTool> {
     await prefs.remove(_notesKey);
     await prefs.remove(_notesTimestampKey);
     if (mounted) {
-      setState(() => _controller.clear());
+      setState(_controller.clear);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('笔记已清空')),
       );
@@ -70,7 +69,7 @@ class _NotesToolState extends State<NotesTool> {
       padding: const EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfaceBaseElevated,
+        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),

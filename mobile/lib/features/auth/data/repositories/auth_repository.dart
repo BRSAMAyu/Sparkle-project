@@ -34,7 +34,7 @@ class AuthRepository {
       final data = response.data;
       final tokenResponse = TokenResponse.fromJson(data!['token'] as Map<String, dynamic>);
       await saveTokens(tokenResponse);
-      return UserModel.fromJson(data!['user'] as Map<String, dynamic>);
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
@@ -271,7 +271,7 @@ final flutterSecureStorageProvider =
           iOptions: IOSOptions(
             accessibility: KeychainAccessibility.first_unlock,
           ),
-        ));
+        ),);
 
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

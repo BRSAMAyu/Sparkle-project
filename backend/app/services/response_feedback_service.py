@@ -15,6 +15,7 @@ from app.learning.prompt_bandit import PromptBandit
 from app.models.response_feedback import ResponseFeedback
 from app.models.context_pack import ContextPackRun, ContextPackFeedback
 from app.services.budget_tuning_service import BudgetTuningService
+from app.services.content_quality_evaluator import ContentQualityEvaluator
 from app.config import settings
 
 
@@ -112,6 +113,15 @@ class ResponseFeedbackService:
             reasons,
             meta or {},
         )
+
+        # Opportunistically evaluate and auto-seed high-quality responses.
+        try:
+            evaluator = ContentQualityEvaluator(self.db)
+            evaluation = await evaluator.evaluate_response_quality(response_id)
+            if evaluation.get("should_seed"):
+                await evaluator.auto_seed_to_library(response_id)
+        except Exception as exc:
+            logger.warning(f"Auto-seed evaluation failed: {exc}")
 
         logger.info(
             "Response feedback stored trace_id=%s response_id=%s workflow_id=%s prompt_version=%s",

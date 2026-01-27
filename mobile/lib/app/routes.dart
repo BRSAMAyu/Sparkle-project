@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/calendar/calendar.dart';
 import 'package:sparkle/features/chat/chat.dart';
@@ -13,11 +14,11 @@ import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
-import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user.dart';
 
 /// Router configuration provider
@@ -50,6 +51,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnSplash = state.uri.path == '/';
       final isOnAuth =
           state.uri.path == '/login' || state.uri.path == '/register';
+      final isOnPersonaOnboarding =
+          state.uri.path == UserRoutes.personaOnboarding;
+      final onboardingCompleted = ref.read(onboardingCompletedProvider);
 
       // Still loading authentication state
       if (isLoading) {
@@ -66,6 +70,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Authenticated but trying to access auth pages or splash
       if (isAuthenticated && (isOnAuth || isOnSplash)) {
+        return '/home';
+      }
+
+      if (isAuthenticated && !onboardingCompleted && !isOnPersonaOnboarding) {
+        return UserRoutes.personaOnboarding;
+      }
+
+      if (isAuthenticated && onboardingCompleted && isOnPersonaOnboarding) {
         return '/home';
       }
 

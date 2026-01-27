@@ -34,6 +34,8 @@ enum AchievementType {
   studyTime,
   @JsonValue('node_explore')
   nodeExplore,
+  @JsonValue('sprint')
+  sprint,
 }
 
 /// 视觉特效类型
@@ -152,8 +154,7 @@ class AchievementModel {
     int? totalUnlocked,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return AchievementModel(
+  }) => AchievementModel(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
@@ -175,7 +176,6 @@ class AchievementModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }
 
 // ========== 用户成就进度 ==========
@@ -226,8 +226,7 @@ class UserAchievementProgress {
     bool? isFirstUnlocker,
     DateTime? unlockedAt,
     DateTime? lastProgressUpdate,
-  }) {
-    return UserAchievementProgress(
+  }) => UserAchievementProgress(
       achievementId: achievementId ?? this.achievementId,
       progress: progress ?? this.progress,
       progressValue: progressValue ?? this.progressValue,
@@ -238,7 +237,6 @@ class UserAchievementProgress {
       unlockedAt: unlockedAt ?? this.unlockedAt,
       lastProgressUpdate: lastProgressUpdate ?? this.lastProgressUpdate,
     );
-  }
 }
 
 // ========== 成就与进度组合 ==========
@@ -274,10 +272,7 @@ class StreakStats {
     required this.currentStreak,
     required this.maxStreak,
     required this.longestStreak,
-    this.lastActivityDate,
-    required this.freezeCharges,
-    @JsonKey(name: 'max_freeze_charges') required this.maxFreezeCharges,
-    required this.totalCheckinDays,
+    required this.freezeCharges, @JsonKey(name: 'max_freeze_charges') required this.maxFreezeCharges, required this.totalCheckinDays, this.lastActivityDate,
     this.longestStreakStart,
     this.longestStreakEnd,
   });
@@ -373,9 +368,7 @@ class SparkContract {
     return (currentDays / targetDays).clamp(0.0, 1.0);
   }
 
-  bool get isCompletedToday {
-    return currentMinutes >= targetStudyMinutes;
-  }
+  bool get isCompletedToday => currentMinutes >= targetStudyMinutes;
 }
 
 // ========== 星系皮肤 ==========

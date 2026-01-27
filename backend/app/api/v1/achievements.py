@@ -473,3 +473,31 @@ async def process_achievement_event(
         "unlocked_count": len(unlocked),
         "unlocked": unlocked
     }
+
+
+# ========== Enhancement Endpoints ==========
+
+@router.get("/close-to-unlock", response_model=Dict[str, Any])
+async def get_close_to_unlock_achievements(
+    category: Optional[str] = Query(None, description="Filter by category (e.g., 'sprint')"),
+    threshold: float = Query(0.8, description="Progress threshold (0.0-1.0)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取接近解锁的成就（用于临界提示）
+
+    Returns achievements that are close to being unlocked but not yet unlocked.
+    Useful for showing "X more to unlock" prompts.
+    """
+    engine = AchievementEngine(db)
+    close_achievements = await engine.get_close_to_unlock_achievements(
+        current_user.id,
+        threshold=threshold,
+        category=category
+    )
+
+    return {
+        "data": close_achievements,
+        "count": len(close_achievements)
+    }

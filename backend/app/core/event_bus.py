@@ -71,7 +71,7 @@ class ErrorCreated(Event):
 class TaskCompleted(Event):
     def __init__(self, user_id: str, task_id: str, estimated_minutes: int,
                  actual_minutes: int, difficulty: int, completion_rate: float,
-                 user_note: Optional[str] = None):
+                 user_note: Optional[str] = None, plan_id: Optional[str] = None):
         self.user_id = user_id
         self.task_id = task_id
         self.estimated_minutes = estimated_minutes
@@ -79,6 +79,7 @@ class TaskCompleted(Event):
         self.difficulty = difficulty
         self.completion_rate = completion_rate
         self.user_note = user_note
+        self.plan_id = plan_id
         self.timestamp = datetime.utcnow()
 
     def to_dict(self):
@@ -91,17 +92,20 @@ class TaskCompleted(Event):
             "difficulty": self.difficulty,
             "completion_rate": self.completion_rate,
             "user_note": self.user_note,
+            "plan_id": self.plan_id,
             "timestamp": self.timestamp.isoformat()
         }
 
 class TaskAbandoned(Event):
     def __init__(self, user_id: str, task_id: str, reason: Optional[str] = None,
-                 estimated_minutes: Optional[int] = None, time_spent: Optional[int] = None):
+                 estimated_minutes: Optional[int] = None, time_spent: Optional[int] = None,
+                 plan_id: Optional[str] = None):
         self.user_id = user_id
         self.task_id = task_id
         self.reason = reason
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
+        self.plan_id = plan_id
         self.timestamp = datetime.utcnow()
 
     def to_dict(self):
@@ -112,6 +116,7 @@ class TaskAbandoned(Event):
             "reason": self.reason,
             "estimated_minutes": self.estimated_minutes,
             "time_spent": self.time_spent,
+            "plan_id": self.plan_id,
             "timestamp": self.timestamp.isoformat()
         }
 

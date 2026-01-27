@@ -74,6 +74,16 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_created(db_obj)
+            except Exception as e:
+                logger.warning(f"Failed to sync task creation with plan state: {e}")
+
         return db_obj
 
     @staticmethod
@@ -82,25 +92,109 @@ class TaskService:
     ) -> Task:
         """Update task"""
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
+        # Track status change for sync
+        old_status = db_obj.status
+        status_changed = "status" in update_data
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-            
+
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan and status changed
+        if db_obj.plan_id and status_changed:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task update with plan state: {e}")
+
         return db_obj
 
     @staticmethod
     async def start(db: AsyncSession, db_obj: Task) -> Task:
         """Start task"""
+        old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
         db_obj.started_at = datetime.utcnow()
-        
+
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task start with plan state: {e}")
+
         return db_obj
+
+    @staticmethod
+    async def start_task(
+        db: AsyncSession, task_id: UUID, user_id: UUID
+    ) -> Task:
+        """
+        Start task by ID - syncs with plan state
+
+        Args:
+            db: Database session
+            task_id: Task ID to start
+            user_id: User ID for ownership verification
+
+        Returns:
+            The started task
+
+        Raises:
+            NotFoundError: If task not found or doesn't belong to user
+        """
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+            raise NotFoundError(message="Task not found")
+
+        return await TaskService.start(db, task)
+
+    @staticmethod
+    async def complete_task(
+        db: AsyncSession, task_id: UUID, user_id: UUID,
+        actual_minutes: int, note: Optional[str] = None
+    ) -> Task:
+        """
+        Complete task by ID - publishes task.completed event
+
+        This is the preferred method for task completion as it ensures:
+        - Task status is updated
+        - Plan progress is updated
+        - Task state is synced
+        - Task completion event is published (triggers AdaptiveReplanner)
+
+        Args:
+            db: Database session
+            task_id: Task ID to complete
+            user_id: User ID for ownership verification
+            actual_minutes: Actual time spent on task
+            note: Optional user note
+
+        Returns:
+            The completed task
+
+        Raises:
+            NotFoundError: If task not found or doesn't belong to user
+        """
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+            raise NotFoundError(message="Task not found")
+
+        return await TaskService.complete(db, task, actual_minutes, note)
 
     @staticmethod
     async def complete(
@@ -121,6 +215,28 @@ class TaskService:
         if db_obj.plan_id:
             from app.services.plan_service import PlanService
             await PlanService.update_progress(db, db_obj.plan_id, db_obj.user_id)
+
+            # Sync with PlanState
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_completed(db_obj, actual_minutes)
+            except Exception as e:
+                logger.warning(f"Failed to sync task completion with plan state: {e}")
+
+            # Append task summary for plan context
+            try:
+                from app.services.plan_state_service import PlanStateService
+                plan_state_service = PlanStateService(db, cache_service.redis)
+                summary = TaskService._build_task_summary(db_obj, actual_minutes, note)
+                await plan_state_service.append_task_summary(
+                    user_id=db_obj.user_id,
+                    plan_id=db_obj.plan_id,
+                    summary=summary,
+                    limit=20,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to append task summary: {e}")
 
         if db_obj.knowledge_node_id:
             from app.services.galaxy_service import GalaxyService
@@ -151,7 +267,8 @@ class TaskService:
             actual_minutes=actual_minutes,
             difficulty=db_obj.difficulty or 1,
             completion_rate=completion_rate,
-            user_note=note
+            user_note=note,
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus.publish("task.completed", event.to_dict())
 
@@ -168,6 +285,39 @@ class TaskService:
         return max(1, min(5, int(mapped)))
 
     @staticmethod
+    def _build_task_summary(task: Task, actual_minutes: int, note: Optional[str]) -> dict:
+        estimated = task.estimated_minutes or 0
+        delta = actual_minutes - estimated
+        if delta == 0:
+            delta_label = "0min"
+        else:
+            delta_label = f"{'+' if delta > 0 else ''}{delta}min"
+
+        sentiment = TaskService._infer_sentiment(note)
+
+        return {
+            "task_id": str(task.id),
+            "title": task.title,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "actual_vs_estimated": delta_label,
+            "user_sentiment": sentiment,
+            "key_takeaway": note if note else None,
+        }
+
+    @staticmethod
+    def _infer_sentiment(note: Optional[str]) -> str:
+        if not note:
+            return "neutral"
+        lowered = note.lower()
+        negative = ["hard", "difficult", "confusing", "stuck", "tough", "frustrated"]
+        positive = ["easy", "smooth", "clear", "good", "great", "helpful"]
+        if any(word in lowered for word in negative):
+            return "negative"
+        if any(word in lowered for word in positive):
+            return "positive"
+        return "neutral"
+
+    @staticmethod
     async def abandon(
         db: AsyncSession, db_obj: Task, reason: Optional[str] = None
     ) -> Task:
@@ -181,6 +331,15 @@ class TaskService:
         await db.commit()
         await db.refresh(db_obj)
 
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=TaskStatus(db_obj.status) if reason else None)
+            except Exception as e:
+                logger.warning(f"Failed to sync task abandonment with plan state: {e}")
+
         # Publish task abandonment event for cognitive analysis
         from app.core.event_bus import event_bus, TaskAbandoned
 
@@ -193,11 +352,44 @@ class TaskService:
             task_id=str(db_obj.id),
             reason=reason,
             estimated_minutes=db_obj.estimated_minutes,
-            time_spent=time_spent
+            time_spent=time_spent,
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus.publish("task.abandoned", event.to_dict())
 
         return db_obj
+
+    @staticmethod
+    async def abandon_task(
+        db: AsyncSession, task_id: UUID, user_id: UUID,
+        reason: Optional[str] = None
+    ) -> Task:
+        """
+        Abandon task by ID - publishes task.abandoned event
+
+        This is the preferred method for task abandonment as it ensures:
+        - Task status is updated
+        - Task state is synced
+        - Task abandonment event is published (for cognitive analysis)
+
+        Args:
+            db: Database session
+            task_id: Task ID to abandon
+            user_id: User ID for ownership verification
+            reason: Optional reason for abandonment
+
+        Returns:
+            The abandoned task
+
+        Raises:
+            NotFoundError: If task not found or doesn't belong to user
+        """
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+            raise NotFoundError(message="Task not found")
+
+        return await TaskService.abandon(db, task, reason)
 
     @staticmethod
     async def confirm_tasks_by_tool_result(
@@ -206,6 +398,8 @@ class TaskService:
         """
         Confirm all tasks associated with a specific tool_result_id.
         Changes status from PENDING to IN_PROGRESS.
+
+        Note: Uses TaskService.start() to ensure plan state synchronization.
         """
         query = select(Task).where(
             and_(
@@ -216,22 +410,26 @@ class TaskService:
         )
         result = await db.execute(query)
         tasks = result.scalars().all()
-        
+
         if not tasks:
             return []
 
         current_time = datetime.utcnow()
+        confirmed_tasks = []
         for task in tasks:
-            task.status = TaskStatus.IN_PROGRESS
-            task.confirmed_at = current_time
-            db.add(task)
-            
+            # Use TaskService.start() to ensure proper state synchronization
+            started_task = await TaskService.start(db, task)
+            # Set confirmed_at for tracking purposes
+            started_task.confirmed_at = current_time
+            db.add(started_task)
+            confirmed_tasks.append(started_task)
+
         await db.commit()
         # Refresh all tasks to get updated fields
-        for task in tasks:
+        for task in confirmed_tasks:
             await db.refresh(task)
-            
-        return list(tasks)
+
+        return confirmed_tasks
 
     @staticmethod
     async def get_multi(

@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, taskReminderConfigProvider;
+import 'package:sparkle/features/task/data/models/next_action.dart';
+import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, TaskReminderConfig, taskReminderConfigProvider;
 
 // A dummy filter class for now
 class TaskFilter {}
@@ -312,6 +315,56 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     } catch (e) {
       // Feedback is optional - fail silently
       // Don't update state or show errors
+    }
+  }
+
+  /// Submit task feedback and get response with preference updates
+  Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
+    String taskId,
+    TaskFeedbackSubmission feedback,
+  ) async {
+    try {
+      return await _taskRepository.submitTaskFeedbackWithResponse(
+        taskId,
+        feedback,
+      );
+    } catch (e) {
+      // Feedback is optional - fail silently
+      return null;
+    }
+  }
+
+  /// Record user interaction with a next action suggestion
+  Future<void> recordNextActionSelection(
+    String taskId,
+    NextAction action,
+    int position,
+    bool selected,
+    int displayedActionsCount,
+  ) async {
+    try {
+      final selection = NextActionSelectionSubmission.fromAction(
+        taskId: taskId,
+        action: action,
+        selected: selected,
+        displayPosition: position,
+        displayedActionsCount: displayedActionsCount,
+      );
+      await _taskRepository.recordNextActionSelection(taskId, selection);
+    } catch (e) {
+      // Selection tracking is optional - fail silently
+    }
+  }
+
+  /// Record that user skipped all next action suggestions
+  Future<void> recordNextActionsSkip(
+    String taskId,
+    List<NextAction> actions,
+  ) async {
+    try {
+      await _taskRepository.recordNextActionsSkip(taskId, actions);
+    } catch (e) {
+      // Selection tracking is optional - fail silently
     }
   }
 }

@@ -31,7 +31,7 @@ class LeaderboardRepository {
     );
 
     if (response.data['success'] == true) {
-      return LeaderboardData.fromJson(response.data['data']);
+      return LeaderboardData.fromJson(response.data['data'] as Map<String, dynamic>);
     } else {
       throw Exception(response.data['message'] ?? 'Failed to load leaderboard');
     }

@@ -30,13 +30,13 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
     memory_service = MemoryService(db_session)
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="tone",
+        pref_key="feedback_tone",
         pref_value={"value": "direct"},
         evidence_refs=[{"type": "event", "id": "evt_1"}, {"type": "concept", "id": "c_1"}],
     )
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="tone",
+        pref_key="feedback_tone",
         pref_value={"value": "soft"},
         evidence_refs=[{"type": "event", "id": "evt_2"}],
     )
@@ -86,6 +86,17 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
 
     assert pack.metadata is not None
     assert pack.metadata.get("conflicts")
-    assert pack.preferences["tone"]["value"] == "direct"
-    assert len(pack.goals) == 1
-    assert len(pack.episodic_memories) == 1
+    assert pack.preferences["feedback_tone"]["value"] == "direct"
+
+    # Conflict resolution suppresses duplicate/conflicting items
+    # Both "Learn Rust" and "learn rust" are suppressed as duplicates
+    # Both similar episodic memories are suppressed
+    assert len(pack.goals) == 0
+    assert len(pack.episodic_memories) == 0
+
+    # Verify conflicts were detected
+    conflicts = pack.metadata.get("conflicts", [])
+    goal_conflicts = [c for c in conflicts if c.get("type") == "goal"]
+    episodic_conflicts = [c for c in conflicts if c.get("type") == "episodic"]
+    assert len(goal_conflicts) > 0, "Expected goal conflicts to be detected"
+    assert len(episodic_conflicts) > 0, "Expected episodic conflicts to be detected"

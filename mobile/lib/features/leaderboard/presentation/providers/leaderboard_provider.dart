@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/leaderboard/data/repositories/leaderboard_repository.dart';
 
@@ -16,12 +17,10 @@ enum LeaderboardType {
   const LeaderboardType(this.value);
   final String value;
 
-  static LeaderboardType fromString(String value) {
-    return LeaderboardType.values.firstWhere(
+  static LeaderboardType fromString(String value) => LeaderboardType.values.firstWhere(
       (type) => type.value == value,
       orElse: () => LeaderboardType.global,
     );
-  }
 }
 
 enum LeaderboardPeriod {
@@ -33,12 +32,10 @@ enum LeaderboardPeriod {
   const LeaderboardPeriod(this.value);
   final String value;
 
-  static LeaderboardPeriod fromString(String value) {
-    return LeaderboardPeriod.values.firstWhere(
+  static LeaderboardPeriod fromString(String value) => LeaderboardPeriod.values.firstWhere(
       (type) => type.value == value,
       orElse: () => LeaderboardPeriod.allTime,
     );
-  }
 }
 
 // ========== Leaderboard State ==========
@@ -57,19 +54,7 @@ class LeaderboardEntry {
     this.badge,
   });
 
-  final int rank;
-  final String userId;
-  final String username;
-  final String? avatarUrl;
-  final double score;
-  final String scoreLabel;
-  final bool isMe;
-  final int? change;
-  final Map<String, dynamic> stats;
-  final String? badge;
-
-  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
-    return LeaderboardEntry(
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) => LeaderboardEntry(
       rank: json['rank'] as int,
       userId: json['user_id'] as String,
       username: json['username'] as String,
@@ -81,10 +66,19 @@ class LeaderboardEntry {
       stats: json['stats'] as Map<String, dynamic>? ?? {},
       badge: json['badge'] as String?,
     );
-  }
 
-  Map<String, dynamic> toJson() {
-    return {
+  final int rank;
+  final String userId;
+  final String username;
+  final String? avatarUrl;
+  final double score;
+  final String scoreLabel;
+  final bool isMe;
+  final int? change;
+  final Map<String, dynamic> stats;
+  final String? badge;
+
+  Map<String, dynamic> toJson() => {
       'rank': rank,
       'user_id': userId,
       'username': username,
@@ -96,7 +90,6 @@ class LeaderboardEntry {
       'stats': stats,
       'badge': badge,
     };
-  }
 }
 
 class LeaderboardData {
@@ -104,24 +97,11 @@ class LeaderboardData {
     required this.type,
     required this.title,
     required this.entries,
-    this.myRank,
+    required this.lastUpdated, required this.totalParticipants, required this.period, this.myRank,
     this.myScore,
-    required this.lastUpdated,
-    required this.totalParticipants,
-    required this.period,
   });
 
-  final LeaderboardType type;
-  final String title;
-  final List<LeaderboardEntry> entries;
-  final int? myRank;
-  final double? myScore;
-  final DateTime lastUpdated;
-  final int totalParticipants;
-  final LeaderboardPeriod period;
-
-  factory LeaderboardData.fromJson(Map<String, dynamic> json) {
-    return LeaderboardData(
+  factory LeaderboardData.fromJson(Map<String, dynamic> json) => LeaderboardData(
       type: LeaderboardType.fromString(json['type'] as String),
       title: json['title'] as String,
       entries: (json['entries'] as List<dynamic>)
@@ -133,7 +113,15 @@ class LeaderboardData {
       totalParticipants: json['total_participants'] as int,
       period: LeaderboardPeriod.fromString(json['period'] as String? ?? 'all_time'),
     );
-  }
+
+  final LeaderboardType type;
+  final String title;
+  final List<LeaderboardEntry> entries;
+  final int? myRank;
+  final double? myScore;
+  final DateTime lastUpdated;
+  final int totalParticipants;
+  final LeaderboardPeriod period;
 }
 
 class LeaderboardState {
@@ -174,9 +162,7 @@ class LeaderboardState {
         lastUpdated: lastUpdated ?? this.lastUpdated,
       );
 
-  LeaderboardData? getLeaderboard(LeaderboardType type) {
-    return leaderboards[type];
-  }
+  LeaderboardData? getLeaderboard(LeaderboardType type) => leaderboards[type];
 }
 
 class MyRankState {
@@ -191,16 +177,6 @@ class MyRankState {
     this.isLoading = false,
     this.error,
   });
-
-  final int? rank;
-  final double? score;
-  final String? scoreLabel;
-  final int? totalParticipants;
-  final double? percentile;
-  final int? changeFromLastPeriod;
-  final List<LeaderboardEntry> nearbyUsers;
-  final bool isLoading;
-  final String? error;
 
   MyRankState.loading()
       : rank = null,
@@ -223,6 +199,16 @@ class MyRankState {
         nearbyUsers = const [],
         isLoading = false,
         error = errorMessage;
+
+  final int? rank;
+  final double? score;
+  final String? scoreLabel;
+  final int? totalParticipants;
+  final double? percentile;
+  final int? changeFromLastPeriod;
+  final List<LeaderboardEntry> nearbyUsers;
+  final bool isLoading;
+  final String? error;
 }
 
 // ========== Providers ==========
@@ -268,8 +254,7 @@ class LeaderboardNotifier extends StateNotifier<LeaderboardState> {
         types.map((type) => _repository.getLeaderboard(
           type: type,
           period: LeaderboardPeriod.allTime,
-          limit: 50,
-        )),
+        ),),
       );
 
       final leaderboards = <LeaderboardType, LeaderboardData>{};
@@ -319,9 +304,7 @@ class LeaderboardNotifier extends StateNotifier<LeaderboardState> {
   }
 
   /// Get leaderboard data
-  LeaderboardData? getData(LeaderboardType type) {
-    return state.leaderboards[type];
-  }
+  LeaderboardData? getData(LeaderboardType type) => state.leaderboards[type];
 }
 
 class MyRankNotifier extends StateNotifier<MyRankState> {

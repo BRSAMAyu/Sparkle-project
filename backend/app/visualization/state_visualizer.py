@@ -12,11 +12,17 @@ class StateVisualizer:
         Highlights current node if state is provided.
         """
         lines = ["graph TD"]
-        
+        context_data = None
+        if current_state is not None:
+            if isinstance(current_state, dict):
+                context_data = current_state.get("context_data", {})
+            else:
+                context_data = current_state.context_data
+
         # Nodes
         for node_name in graph.nodes:
             style = ""
-            if current_state and current_state.context_data.get("current_node") == node_name:
+            if context_data and context_data.get("current_node") == node_name:
                 style = ":::current"
             elif node_name == graph.entry_point:
                 style = ":::start"

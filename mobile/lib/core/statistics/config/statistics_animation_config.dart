@@ -158,52 +158,43 @@ class StatisticsAnimationConfig {
   static const CardAnimationSpec cardEntranceSpec = CardAnimationSpec(
     duration: cardEntrance,
     curve: cardCurve,
-    scaleBegin: 0.9,
     offsetBegin: Offset(0, 20),
   );
 
   /// Animation config for staggered list items
-  static List<ItemAnimationSpec> staggeredListSpec(int count) {
-    return List.generate(
+  static List<ItemAnimationSpec> staggeredListSpec(int count) => List.generate(
       count,
       (index) => ItemAnimationSpec(
         duration: listEntrance,
         curve: listCurve,
         delay: Duration(milliseconds: listStaggerDelay.inMilliseconds * index),
-        offsetBegin: Offset(0, listSlideOffset),
+        offsetBegin: const Offset(0, listSlideOffset),
       ),
     );
-  }
 }
 
 /// Specification for chart animations
 class ChartAnimationSpec {
-  final Duration duration;
-  final Curve curve;
-  final Duration delay;
 
   const ChartAnimationSpec({
     required this.duration,
     required this.curve,
     required this.delay,
   });
+  final Duration duration;
+  final Curve curve;
+  final Duration delay;
 
   /// Reverse animation spec (for exit)
-  ChartAnimationSpec reverse() {
-    return ChartAnimationSpec(
+  ChartAnimationSpec reverse() => ChartAnimationSpec(
       duration: duration,
       curve: curve.flipped,
       delay: Duration.zero,
     );
-  }
 }
 
 /// Specification for card animations
 class CardAnimationSpec {
-  final Duration duration;
-  final Curve curve;
-  final double scaleBegin;
-  final Offset offsetBegin;
 
   const CardAnimationSpec({
     required this.duration,
@@ -211,14 +202,14 @@ class CardAnimationSpec {
     this.scaleBegin = 0.9,
     this.offsetBegin = Offset.zero,
   });
+  final Duration duration;
+  final Curve curve;
+  final double scaleBegin;
+  final Offset offsetBegin;
 }
 
 /// Specification for list item animations
 class ItemAnimationSpec {
-  final Duration duration;
-  final Curve curve;
-  final Duration delay;
-  final Offset offsetBegin;
 
   const ItemAnimationSpec({
     required this.duration,
@@ -226,6 +217,10 @@ class ItemAnimationSpec {
     required this.delay,
     this.offsetBegin = Offset.zero,
   });
+  final Duration duration;
+  final Curve curve;
+  final Duration delay;
+  final Offset offsetBegin;
 }
 
 /// Extension for creating animation controllers with statistics config
@@ -234,54 +229,44 @@ extension StatisticsAnimationExtension on AnimationController {
   CurvedAnimation fadeIn({
     Duration? duration,
     Curve curve = StatisticsAnimationConfig.easeOut,
-  }) {
-    return CurvedAnimation(
+  }) => CurvedAnimation(
       parent: this,
       curve: curve,
     );
-  }
 
   /// Create a standard slide-in animation
   Animation<Offset> slideIn({
     Duration? duration,
     Curve curve = StatisticsAnimationConfig.easeOut,
     Offset begin = const Offset(0, 1),
-  }) {
-    return Tween<Offset>(begin: begin, end: Offset.zero).animate(
+  }) => Tween<Offset>(begin: begin, end: Offset.zero).animate(
       CurvedAnimation(parent: this, curve: curve),
     );
-  }
 
   /// Create a standard scale-in animation
   Animation<double> scaleIn({
     Duration? duration,
     Curve curve = StatisticsAnimationConfig.easeOutBack,
     double begin = 0.0,
-  }) {
-    return Tween<double>(begin: begin, end: 1.0).animate(
+  }) => Tween<double>(begin: begin, end: 1.0).animate(
       CurvedAnimation(parent: this, curve: curve),
     );
-  }
 }
 
 /// Extension for Curve to get flipped version
 extension CurveExtension on Curve {
-  Curve get flipped {
-    return FlippedCurve(this);
-  }
+  Curve get flipped => FlippedCurve(this);
 }
 
 /// Flipped curve for reverse animations
 class FlippedCurve extends Curve {
-  final Curve curve;
 
   const FlippedCurve(this.curve);
+  final Curve curve;
 
   @override
-  double transform(double t) {
-    return 1 - curve.transform(1 - t);
-  }
+  double transform(double t) => 1 - curve.transform(1 - t);
 
   @override
-  String toString() => '${curve.toString()}.flipped';
+  String toString() => '$curve.flipped';
 }

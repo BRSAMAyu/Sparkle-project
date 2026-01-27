@@ -138,12 +138,10 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
 
   /// Delete all records
   Future<bool> deleteAll() async {
-    final success = await _repository.deleteAll();
-    if (success) {
-      await loadHistory();
-      await loadStatistics();
-    }
-    return success;
+    await _repository.deleteAll();
+    await loadHistory();
+    await loadStatistics();
+    return true;
   }
 
   /// Save a new translation
@@ -176,13 +174,11 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     required String originalText,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async {
-    return await _repository.findSimilar(
+  }) async => _repository.findSimilar(
       originalText: originalText,
       sourceLanguage: sourceLanguage,
       targetLanguage: targetLanguage,
     );
-  }
 }
 
 /// Repository provider
@@ -207,4 +203,4 @@ final localTranslationRepositoryProvider =
 /// History state provider
 final translationHistoryProvider =
     StateNotifierProvider<TranslationHistoryNotifier, TranslationHistoryState>(
-        (ref) => TranslationHistoryNotifier(ref.watch(localTranslationRepositoryProvider)));
+        (ref) => TranslationHistoryNotifier(ref.watch(localTranslationRepositoryProvider)),);

@@ -49,7 +49,7 @@ class KnowledgeIntegrationService {
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         debugPrint('✅ Vocabulary node created/updated: ${response.data['node_id']}');
-        return VocabularyNodeResult.fromJson(response.data);
+        return VocabularyNodeResult.fromJson(response.data as Map<String, dynamic>);
       } else {
         debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
         return null;
@@ -163,19 +163,17 @@ class VocabularyNodeResult {
     required this.message,
   });
 
-  final bool success;
-  final String nodeId;
-  final String status;
-  final String message;
-
-  factory VocabularyNodeResult.fromJson(Map<String, dynamic> json) {
-    return VocabularyNodeResult(
+  factory VocabularyNodeResult.fromJson(Map<String, dynamic> json) => VocabularyNodeResult(
       success: json['success'] as bool,
       nodeId: json['node_id'] as String,
       status: json['status'] as String,
       message: json['message'] as String,
     );
-  }
+
+  final bool success;
+  final String nodeId;
+  final String status;
+  final String message;
 }
 
 /// Exception thrown when service is unavailable (503)
@@ -199,7 +197,7 @@ class RateLimitException implements Exception {
 
   @override
   String toString() =>
-      retryAfter != null ? '$message (重试间隔: ${retryAfter}秒)' : message;
+      retryAfter != null ? '$message (重试间隔: $retryAfter秒)' : message;
 }
 
 /// Generic network exception

@@ -66,8 +66,9 @@ class EvidenceHealthService:
             "resolved": resolved,
         }
 
-    async def run_health_check(self, user_id: UUID, limit: int = 50) -> Dict[str, int]:
+    async def run_health_check(self, user_id: UUID, limit: int = 50) -> Dict[str, Dict[str, int]]:
         counts = {"preferences": 0, "goals": 0, "episodic": 0}
+        missing_counts = {"preferences": 0, "goals": 0, "episodic": 0}
 
         prefs = await self._get_recent(MemoryPreference, user_id, limit)
         for item in prefs:
@@ -77,6 +78,7 @@ class EvidenceHealthService:
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="preference").inc()
+                missing_counts["preferences"] += 1
             counts["preferences"] += 1
 
         goals = await self._get_recent(MemoryGoal, user_id, limit)
@@ -87,6 +89,7 @@ class EvidenceHealthService:
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="goal").inc()
+                missing_counts["goals"] += 1
             counts["goals"] += 1
 
         episodic = await self._get_recent(EpisodicMemory, user_id, limit)
@@ -98,10 +101,11 @@ class EvidenceHealthService:
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="episodic").inc()
+                missing_counts["episodic"] += 1
             counts["episodic"] += 1
 
         await self.db.commit()
-        return counts
+        return {"checked": counts, "missing": missing_counts}
 
     async def _get_recent(self, model, user_id: UUID, limit: int):
         conditions = [model.user_id == user_id, model.deleted_at.is_(None)]

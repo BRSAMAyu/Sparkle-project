@@ -54,10 +54,18 @@ class PlanType(str, Enum):
     SPRINT = "sprint"    # 考试冲刺
     GROWTH = "growth"    # 长期成长
 
+
+class PlanStage(str, Enum):
+    SPRINT = "sprint"
+    DAILY = "daily"
+    REVIEW = "review"
+    PAUSED = "paused"
+
 class CreatePlanParams(BaseModel):
     """创建计划的参数"""
     title: str = Field(..., description="计划名称")
     plan_type: PlanType = Field(..., description="计划类型")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="计划阶段")
     subject_id: Optional[str] = Field(None, description="关联科目 ID")
     target_date: Optional[datetime] = Field(None, description="目标日期（冲刺计划必填）")
     target_mastery: Optional[float] = Field(None, description="目标掌握度 0-1", ge=0, le=1)
@@ -132,3 +140,104 @@ class WebSearchContentSize(str, Enum):
     """返回内容长度"""
     MEDIUM = "medium"   # 摘要信息
     HIGH = "high"       # 详细内容
+
+
+# ============ P0-3: 任务查询和修改工具参数 ============
+
+class TaskStatusFilter(str, Enum):
+    """任务状态筛选"""
+    ALL = "all"
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class QueryPlanTasksParams(BaseModel):
+    """查询计划内任务列表的参数"""
+    plan_id: str = Field(..., description="计划 ID (必填)")
+    status_filter: TaskStatusFilter = Field(
+        default=TaskStatusFilter.ALL,
+        description="任务状态筛选：all/pending/in_progress/completed/abandoned"
+    )
+    type_filter: Optional[TaskType] = Field(
+        default=None,
+        description="任务类型筛选 (可选)"
+    )
+    limit: int = Field(
+        default=10,
+        description="返回数量限制",
+        ge=1,
+        le=50
+    )
+
+
+class ModifyPlanTaskParams(BaseModel):
+    """修改计划内任务属性的参数"""
+    task_id: str = Field(..., description="任务 ID (必填)")
+    title: Optional[str] = Field(None, description="新标题", max_length=100)
+    status: Optional[str] = Field(
+        None,
+        description="新状态: pending/in_progress/completed/abandoned"
+    )
+    priority: Optional[int] = Field(
+        None,
+        description="新优先级 1-5，5 最高",
+        ge=1,
+        le=5
+    )
+    guide_content: Optional[str] = Field(
+        None,
+        description="执行指南内容 (Markdown)"
+    )
+
+
+# ============ P0-4: 任务详情查询和跨计划查询参数 ============
+
+class GetTaskDetailsParams(BaseModel):
+    """获取任务完整详情的参数"""
+    task_id: str = Field(..., description="任务 ID (必填)")
+    include_guide: bool = Field(
+        default=True,
+        description="是否包含执行指南内容"
+    )
+    include_subtasks: bool = Field(
+        default=True,
+        description="是否包含子任务列表"
+    )
+    include_knowledge_context: bool = Field(
+        default=True,
+        description="是否包含关联的知识节点信息"
+    )
+    include_learning_resources: bool = Field(
+        default=True,
+        description="是否包含关联学习资源/种子库信息"
+    )
+    include_progress_history: bool = Field(
+        default=False,
+        description="是否包含任务执行历史（反馈记录等）"
+    )
+
+
+class QueryAllTasksParams(BaseModel):
+    """跨计划查询用户所有任务的参数"""
+    include_inactive_plans: bool = Field(
+        default=False,
+        description="是否包含非活跃计划的任务"
+    )
+    status_filter: TaskStatusFilter = Field(
+        default=TaskStatusFilter.PENDING,
+        description="任务状态筛选"
+    )
+    limit_per_plan: int = Field(
+        default=5,
+        description="每个计划返回的任务数量",
+        ge=1,
+        le=20
+    )
+    total_limit: int = Field(
+        default=30,
+        description="总返回数量限制",
+        ge=1,
+        le=100
+    )

@@ -84,7 +84,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
       sourceLang: widget.sourceLang,
       targetLang: widget.targetLang,
       domain: widget.domain,
-      onSaveToKnowledge: () {
+      onSaved: () {
         Navigator.of(context).pop();
         if (widget.onSaveToKnowledge != null) {
           // Note: Translation result is not available in callback
@@ -133,8 +133,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SelectableText(
+  Widget build(BuildContext context) => SelectableText(
       widget.text,
       style: widget.style,
       onSelectionChanged: (selection, cause) {
@@ -191,7 +190,6 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
         );
       },
     );
-  }
 }
 
 /// Helper class for text selection management
@@ -218,8 +216,7 @@ class TranslationDemoScreen extends StatelessWidget {
   const TranslationDemoScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Translation Demo'),
       ),
@@ -243,8 +240,6 @@ In computer science, caching is a technique used to store frequently accessed da
 
 Caching improves performance by reducing the number of expensive operations, such as database queries or network requests. However, cache invalidation can be challenging, as stale data may persist in the cache even after the original data has been updated.
 ''',
-              sourceLang: 'en',
-              targetLang: 'zh-CN',
               domain: 'cs', // Computer science domain for terminology
               style: const TextStyle(
                 fontSize: 16,
@@ -260,5 +255,4 @@ Caching improves performance by reducing the number of expensive operations, suc
         ),
       ),
     );
-  }
 }

@@ -112,12 +112,10 @@ class _AchievementDetailScreenState
                 children: [
                   AnimatedBuilder(
                     animation: _glowAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
+                    builder: (context, child) => Transform.scale(
                         scale: _glowAnimation.value,
                         child: _buildLargeIcon(achievement),
-                      );
-                    },
+                      ),
                   ),
                   const SizedBox(height: DS.spacing16),
                   RarityBadge(rarity: rarity),
@@ -154,8 +152,7 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildHeaderBackground(Color rarityColor) {
-    return Container(
+  Widget _buildHeaderBackground(Color rarityColor) => Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -168,14 +165,11 @@ class _AchievementDetailScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildHeaderParticles(AchievementRarity rarity) {
-    return CustomPaint(
+  Widget _buildHeaderParticles(AchievementRarity rarity) => CustomPaint(
       painter: _HeaderParticlePainter(rarity),
       size: Size.infinite,
     );
-  }
 
   Widget _buildLargeIcon(AchievementWithProgress achievement) {
     final rarity = achievement.achievement.rarity;
@@ -217,8 +211,7 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildContent(AchievementWithProgress achievement) {
-    return Container(
+  Widget _buildContent(AchievementWithProgress achievement) => Container(
       padding: const EdgeInsets.all(DS.spacing20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,10 +259,8 @@ class _AchievementDetailScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildTitleSection(AchievementWithProgress achievement) {
-    return Row(
+  Widget _buildTitleSection(AchievementWithProgress achievement) => Row(
       children: [
         Expanded(
           child: Column(
@@ -343,10 +334,8 @@ class _AchievementDetailScreenState
         ),
       ],
     );
-  }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
+  Widget _buildSectionTitle(String title) => Text(
       title,
       style: TextStyle(
         fontSize: DS.fontSizeBase,
@@ -354,10 +343,8 @@ class _AchievementDetailScreenState
         color: DS.textPrimary,
       ),
     );
-  }
 
-  Widget _buildDescription(AchievementWithProgress achievement) {
-    return Container(
+  Widget _buildDescription(AchievementWithProgress achievement) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -373,7 +360,6 @@ class _AchievementDetailScreenState
         ),
       ),
     );
-  }
 
   Widget _buildProgressCard(AchievementWithProgress achievement) {
     final userProgress = achievement.userProgress;
@@ -520,7 +506,7 @@ class _AchievementDetailScreenState
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -565,12 +551,10 @@ class _AchievementDetailScreenState
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          ...rewards.map((reward) {
-            return Padding(
+          ...rewards.map((reward) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _buildRewardItem(reward),
-            );
-          }).toList(),
+            ),),
         ],
       ),
     );
@@ -587,19 +571,15 @@ class _AchievementDetailScreenState
       case 'photons':
         icon = '💎';
         label = '$amount 光子';
-        break;
       case 'title':
         icon = '🏅';
         label = reward['name'] as String? ?? '称号';
-        break;
       case 'skin':
         icon = '🎨';
         label = reward['name'] as String? ?? '星系皮肤';
-        break;
       case 'xp':
         icon = '⭐';
         label = '$amount 经验';
-        break;
       default:
         icon = '🎁';
         label = '神秘奖励';
@@ -653,7 +633,7 @@ class _AchievementDetailScreenState
               '解锁时间',
               _formatDate(userProgress!.unlockedAt!),
             ),
-          if (userProgress?.shareCount != null && userProgress!.shareCount! > 0)
+          if (userProgress?.shareCount != null && userProgress!.shareCount > 0)
             _buildStatRow(
               '分享次数',
               '${userProgress.shareCount}',
@@ -669,8 +649,7 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildStatRow(String label, String value, {bool highlight = false}) {
-    return Padding(
+  Widget _buildStatRow(String label, String value, {bool highlight = false}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -693,10 +672,8 @@ class _AchievementDetailScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildNotFoundView() {
-    return Center(
+  Widget _buildNotFoundView() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -706,7 +683,7 @@ class _AchievementDetailScreenState
             color: DS.semanticError,
           ),
           const SizedBox(height: DS.spacing16),
-          Text(
+          const Text(
             '成就未找到',
             style: TextStyle(
               fontSize: DS.fontSizeLg,
@@ -716,7 +693,6 @@ class _AchievementDetailScreenState
         ],
       ),
     );
-  }
 
   IconData _getIconForAchievement(AchievementWithProgress achievement) {
     switch (achievement.achievement.type) {
@@ -738,6 +714,8 @@ class _AchievementDetailScreenState
         return Icons.people;
       case AchievementType.contract:
         return Icons.description;
+      case AchievementType.sprint:
+        return Icons.directions_run;
     }
   }
 
@@ -761,6 +739,8 @@ class _AchievementDetailScreenState
         return '社交';
       case AchievementType.contract:
         return '契约';
+      case AchievementType.sprint:
+        return '冲刺';
     }
   }
 
@@ -777,9 +757,7 @@ class _AchievementDetailScreenState
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
-  }
+  String _formatDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
 
   void _togglePin(AchievementWithProgress achievement) {
     final isPinned = achievement.userProgress?.isPinned ?? false;
@@ -791,9 +769,9 @@ class _AchievementDetailScreenState
   void _shareAchievement(AchievementWithProgress achievement) {
     // TODO: 实现分享功能
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('分享功能开发中'),
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -810,7 +788,7 @@ class _HeaderParticlePainter extends CustomPainter {
     final color = RarityColorProvider.getColor(rarity);
     final random = math.Random(42);
 
-    for (int i = 0; i < 20; i++) {
+    for (var i = 0; i < 20; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final radius = 1 + random.nextDouble() * 3;

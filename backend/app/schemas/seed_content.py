@@ -108,7 +108,7 @@ class LibraryListParams(BaseModel):
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
     sort_by: str = Field(default="created_at", description="排序字段")
-    sort_order: str = Field(default="desc", regex="^(asc|desc)$", description="排序方向")
+    sort_order: str = Field(default="desc", pattern="^(asc|desc)$", description="排序方向")
 
 
 # ============ 内容项相关 Schema ============
@@ -173,7 +173,7 @@ class ItemListParams(BaseModel):
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
     sort_by: str = Field(default="order_index", description="排序字段")
-    sort_order: str = Field(default="asc", regex="^(asc|desc)$", description="排序方向")
+    sort_order: str = Field(default="asc", pattern="^(asc|desc)$", description="排序方向")
 
 
 # ============ 订阅相关 Schema ============

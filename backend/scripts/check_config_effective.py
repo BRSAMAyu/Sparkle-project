@@ -12,7 +12,8 @@ import redis
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.config import settings, to_sync_database_url
+from app.config import settings
+from app.config.settings import to_sync_database_url
 
 
 def _redact_url(raw_url: str) -> str:

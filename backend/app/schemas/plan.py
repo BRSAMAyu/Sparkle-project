@@ -5,7 +5,7 @@ from uuid import UUID
 from datetime import date
 
 from app.schemas.common import BaseSchema
-from app.models.plan import PlanType
+from app.models.plan import PlanType, PlanPriority, PlanStage
 
 # ========== Request Schemas ==========
 
@@ -18,6 +18,8 @@ class PlanCreate(BaseModel):
     target_date: Optional[date] = Field(default=None, description="Target date (for sprint plans)")
     daily_available_minutes: int = Field(default=60, ge=1, description="Daily available minutes")
     total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
+    priority: Optional[PlanPriority] = Field(default=PlanPriority.NORMAL, description="Plan priority")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
 
 class PlanUpdate(BaseModel):
     """Update plan"""
@@ -27,6 +29,8 @@ class PlanUpdate(BaseModel):
     daily_available_minutes: Optional[int] = Field(default=None, ge=1, description="Daily available minutes")
     total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
     is_active: Optional[bool] = Field(default=None, description="Is active")
+    priority: Optional[PlanPriority] = Field(default=None, description="Plan priority")
+    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
 
 class PlanActivate(BaseModel):
     """Activate plan"""
@@ -47,6 +51,9 @@ class PlanBase(BaseSchema):
     target_date: Optional[date] = Field(description="Target date")
     progress: float = Field(description="Progress percentage")
     is_active: bool = Field(description="Is active")
+    priority: PlanPriority = Field(description="Plan priority")
+    is_primary: bool = Field(description="Is primary plan")
+    plan_stage: PlanStage = Field(description="Plan stage")
 
 class PlanDetail(PlanBase):
     """Plan detailed information"""
@@ -77,3 +84,27 @@ class PlanSummary(BaseModel):
     active: int = Field(description="Active plans")
     sprint_plans: int = Field(description="Sprint plans")
     growth_plans: int = Field(description="Growth plans")
+
+
+# ========== Quota Related Schemas ==========
+
+class PlanQuotaStatus(BaseModel):
+    """Plan quota status"""
+    used: int = Field(description="Number of active plans")
+    limit: int = Field(description="Quota limit")
+    remaining: int = Field(description="Remaining quota (-1 if unlimited)")
+    is_unlimited: bool = Field(description="Is unlimited quota")
+    primary_plan_id: Optional[UUID] = Field(default=None, description="Current primary plan ID")
+
+    class Config:
+        from_attributes = True
+
+
+class SetPrimaryPlanRequest(BaseModel):
+    """Set primary plan request"""
+    plan_id: UUID = Field(description="Plan ID to set as primary")
+
+
+class PlanPriorityUpdate(BaseModel):
+    """Update plan priority request"""
+    priority: PlanPriority = Field(description="New priority")

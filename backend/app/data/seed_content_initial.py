@@ -437,11 +437,13 @@ async def initialize_seed_libraries(db_session) -> int:
     item_count = 0
 
     for lib_data in OFFICIAL_LIBRARIES:
-        # 提取 items 数据
-        items_data = lib_data.pop("items", [])
+        # 提取 items 数据 (使用 get 避免修改原数据)
+        items_data = lib_data.get("items", [])
+        # 创建库的副本，避免修改全局常量
+        lib_attrs = {k: v for k, v in lib_data.items() if k != "items"}
 
         # 创建库
-        library = SeedLibrary(**lib_data)
+        library = SeedLibrary(**lib_attrs)
         db_session.add(library)
         await db_session.flush()
 

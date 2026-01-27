@@ -124,7 +124,7 @@ class KnowledgeNode(BaseModel):
     
     # Phase 5B: Document Engine Traceability
     source_file_id = Column(GUID(), ForeignKey("stored_files.id"), nullable=True)
-    chunk_refs = Column(JSONB, nullable=True) # List of chunk IDs or {chunk_id: score}
+    chunk_refs = Column(JSONBCompat, nullable=True) # List of chunk IDs or {chunk_id: score}
     status = Column(String(20), default='published', index=True) # draft | published | needs_review
 
     # AI 属性 (向量)

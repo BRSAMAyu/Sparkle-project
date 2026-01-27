@@ -10,6 +10,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import BaseModel, GUID
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 from app.models.task import Task
 
 
@@ -53,7 +55,7 @@ class CuriosityCapsule(BaseModel):
     # 增强字段
     depth_level = Column(Enum(DepthLevel), nullable=True, index=True)
     generation_method = Column(String(100), nullable=True)  # e.g. "xiaomi_chat", "zhipu_chat", "deepseek_reason"
-    source_context = Column(JSONB, nullable=True)  # 来源上下文数据
+    source_context = Column(JSONBCompat, nullable=True)  # 来源上下文数据
     quality_score = Column(Float, nullable=True, index=True)  # 0.0-1.0 质量评分
     feedback_count = Column(Integer, nullable=False, default=0)  # 反馈数量
     share_count = Column(Integer, nullable=False, default=0)  # 分享次数

@@ -8,24 +8,15 @@ import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart'
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:uuid/uuid.dart';
-
-// Import task calendar provider
-import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart'
-    show
-        TaskDaySummary,
-        taskCalendarProvider,
-        TaskCalendarNotifier;
-
-// Import drag and drop components
-import 'package:sparkle/shared/widgets/draggable_task_card.dart'
-    show CalendarDayDragTarget;
-
 // Import task provider for updating tasks
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
     show taskListProvider;
 import 'package:sparkle/shared/entities/task_model.dart';
+// Import drag and drop components
+import 'package:sparkle/shared/widgets/draggable_task_card.dart'
+    show CalendarDayDragTarget;
+import 'package:table_calendar/table_calendar.dart';
+import 'package:uuid/uuid.dart';
 
 enum CalendarViewMode { month, twoWeeks, year }
 
@@ -78,7 +69,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       // Update the task with new due date
       final taskUpdate = TaskUpdate(dueDate: newDueDate);
       await ref.read(taskListProvider.notifier).updateTask(task.id, taskUpdate);
@@ -386,7 +377,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     .toList();
 
             // Show task markers
-            final List<Widget> taskMarkers = [];
+            final taskMarkers = <Widget>[];
             if (taskSummary != null && taskSummary.hasTasks) {
               final today = DateTime.now();
               final isToday = date.year == today.year &&
@@ -434,7 +425,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 );
               } else {
                 // Show dots for 1-3 tasks
-                for (int i = 0; i < taskSummary.total && i < 3; i++) {
+                for (var i = 0; i < taskSummary.total && i < 3; i++) {
                   taskMarkers.add(
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 1.0),
@@ -464,27 +455,21 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               ),
             );
           },
-          defaultBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+          defaultBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, false),
-            );
-          },
-          todayBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+            ),
+          todayBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, true),
-            );
-          },
-          selectedBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+            ),
+          selectedBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, false, isSelected: true),
-            );
-          },
+            ),
         ),
       );
 

@@ -7,7 +7,9 @@ import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -189,12 +191,40 @@ class ProfileScreen extends ConsumerWidget {
                 );
               },
             ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.psychology_alt_outlined,
+              title: l10n.myPersona,
+              gradient: DS.infoGradient,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const UserPersonaScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 1, indent: 60),
+            _buildSettingsTile(
+              context,
+              icon: Icons.history_rounded,
+              title: l10n.systemActivity,
+              gradient: DS.secondaryGradient,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SystemUpdatesScreen(),
+                  ),
+                );
+              },
+            ),
             if (AppFeatureFlags.enableUserMemoryControls) ...[
               const Divider(height: 1, indent: 60),
               _buildSettingsTile(
                 context,
                 icon: Icons.memory_rounded,
-                title: '记忆控制',
+                title: l10n.memoryControl,
                 gradient: DS.primaryGradient,
                 onTap: () {
                   Navigator.of(context).push(

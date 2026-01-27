@@ -34,6 +34,16 @@ class AchievementEvent:
     CONTRACT_FAILED = "contract_failed"
     MUTUAL_STUDY = "mutual_study"  # 与搭子同时学习
     HIDDEN_TRIGGER = "hidden_trigger"  # 隐藏成就特殊触发
+    # Sprint events
+    SPRINT_STARTED = "sprint_started"
+    SPRINT_COMPLETED = "sprint_completed"
+    SPRINT_ABANDONED = "sprint_abandoned"
+    SPRINT_PERFECT = "sprint_perfect"  # 100%完成
+    SPRINT_STREAK = "sprint_streak"    # 连续冲刺
+    SPRINT_AHEAD = "sprint_ahead"      # 超前完成
+    # Enhancement events
+    ACHIEVEMENT_COMBO = "achievement_combo"  # 连续解锁成就
+    PROGRESS_MILESTONE = "progress_milestone"  # 进度里程碑
 
 
 class AchievementEngine:
@@ -85,7 +95,7 @@ class AchievementEngine:
             **kwargs: 事件相关数据
 
         Returns:
-            新解锁的成就列表
+            新解锁的成就列表，包含连击和里程碑信息
         """
         # 1. 更新连胜统计
         await self._update_streak_stats(user_id, event_type, **kwargs)
@@ -95,6 +105,7 @@ class AchievementEngine:
 
         # 3. 检查每个成就的条件
         unlocked = []
+        milestones = []  # 进度里程碑通知
         for achievement in relevant_achievements:
             # 检查是否已解锁
             if await self._is_unlocked(user_id, achievement.id):
@@ -109,19 +120,42 @@ class AchievementEngine:
                 user_id, achievement, **kwargs
             )
 
+            # 记录解锁前的进度，用于里程碑检测
+            old_progress = await self._get_old_progress(user_id, achievement.id)
+
             # 更新或创建进度记录
             await self._update_progress(
                 user_id, achievement.id, progress, current_value, target_value
             )
+
+            # 检查进度里程碑（每25%进度）
+            milestone = await self._check_progress_milestone(
+                user_id, achievement, old_progress, progress
+            )
+            if milestone:
+                milestones.append(milestone)
 
             # 检查是否解锁
             if progress >= 1.0:
                 unlock_data = await self._unlock_achievement(user_id, achievement)
                 unlocked.append(unlock_data)
 
-        # 4. 发送通知和触发视觉效果
+        # 4. 处理连击检测
+        combo_info = None
+        if unlocked:
+            combo_info = await self._handle_achievement_combo(user_id, len(unlocked))
+            # 将连击信息添加到每个解锁的成就中
+            if combo_info:
+                for unlock_data in unlocked:
+                    unlock_data["combo_info"] = combo_info
+
+        # 5. 发送通知和触发视觉效果
         if unlocked:
             await self._notify_unlocks(user_id, unlocked)
+
+        # 6. 发送里程碑通知
+        if milestones:
+            await self._notify_milestones(user_id, milestones)
 
         return unlocked
 
@@ -155,6 +189,19 @@ class AchievementEngine:
                         relevant.append(achievement)
                 case AchievementEvent.STUDY_MINUTES_ACCUMULATED:
                     if trigger_code in ["STUDY_MINUTES_TOTAL", "STUDY_MINUTES_SINGLE"]:
+                        relevant.append(achievement)
+                # Sprint event matching
+                case AchievementEvent.SPRINT_COMPLETED:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_PERFECT:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED", "SPRINT_PERFECT"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_STREAK:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_STREAK"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_AHEAD:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINT_AHEAD"]:
                         relevant.append(achievement)
 
         return relevant
@@ -315,6 +362,95 @@ class AchievementEngine:
                     if status and status.mastery_score >= 100:
                         return (1.0, 100, 100)
                 return (0.0, 0, 100)
+
+            # ========== Sprint Achievement Triggers ==========
+            # 冲刺完成总数
+            case "SPRINTS_TOTAL":
+                from app.models.plan import Plan, PlanType
+                target = config.get("count", 1)
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False  # 已归档（完成/放弃）
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 完美冲刺（100%完成率）
+            case "SPRINT_PERFECT":
+                from app.models.plan import Plan, PlanType
+                target = config.get("count", 1)
+                # 查询完成率为100%的冲刺
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False,
+                        Plan.progress >= 1.0
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 连续冲刺（连续完成多个冲刺）
+            case "SPRINTS_STREAK":
+                from app.models.plan import Plan, PlanType
+                target = config.get("streak", 3)
+
+                # 获取最近归档的冲刺（按archived_at降序）
+                query = select(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False
+                    )
+                ).order_by(Plan.updated_at.desc())
+
+                result = await self.db.execute(query)
+                sprints = result.scalars().all()
+
+                # 计算连续完成的冲刺（progress >= 0.8视为完成）
+                streak = 0
+                for sprint in sprints:
+                    if sprint.progress >= 0.8:
+                        streak += 1
+                    else:
+                        break  # 断开连续
+
+                current = streak
+                return (min(current / target, 1.0), current, target)
+
+            # 超前完成（提前完成冲刺）
+            case "SPRINT_AHEAD":
+                # 这个在事件触发时检查，这里返回当前值
+                completion_rate = kwargs.get("completion_rate", 0.0)
+                days_ahead = kwargs.get("days_ahead", 0)
+
+                # 检查是否100%完成且提前至少1天
+                if completion_rate >= 1.0 and days_ahead > 0:
+                    return (1.0, days_ahead, 1)
+
+                # 统计历史超前完成次数
+                from app.models.plan import Plan, PlanType
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False,
+                        Plan.progress >= 1.0,
+                        Plan.target_date.isnot(None)
+                    )
+                )
+                result = await self.db.execute(query)
+                total = result.scalar_one() or 0
+
+                # 估算超前完成数（这里简化处理，实际应用中需要更精确的记录）
+                target = config.get("count", 1)
+                return (min(1.0, total / target) if total > 0 else (0.0, 0, target), total, target)
 
             case _:
                 logger.warning(f"Unknown trigger code: {trigger_code}")
@@ -787,6 +923,177 @@ class AchievementEngine:
             current_streak=stats.current_streak,
             total_photons=0  # TODO: 计算从成就获得的光子总数
         ).model_dump()
+
+    # ========== Enhancement Methods: Combo, Milestone, Daily First ==========
+
+    async def _get_old_progress(self, user_id: str, achievement_id: str) -> float:
+        """获取成就的旧进度（用于里程碑检测）"""
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_achievement = result.scalar_one_or_none()
+        return user_achievement.progress if user_achievement else 0.0
+
+    async def _check_progress_milestone(
+        self,
+        user_id: str,
+        achievement: Achievement,
+        old_progress: float,
+        new_progress: float
+    ) -> Optional[Dict[str, Any]]:
+        """
+        检查进度里程碑（每25%进度）
+
+        Returns:
+            里程碑信息，如果触发了里程碑则返回数据，否则返回None
+        """
+        milestones = [25, 50, 75]
+        old_percent = int(old_progress * 100)
+        new_percent = int(new_progress * 100)
+
+        for milestone in milestones:
+            # 检查是否刚跨越这个里程碑
+            if old_percent < milestone <= new_percent:
+                return {
+                    "achievement_id": achievement.id,
+                    "achievement_name": achievement.name,
+                    "milestone_percent": milestone,
+                    "message": f"「{achievement.name}」进度达到{milestone}%！加油！",
+                    "type": "progress_milestone"
+                }
+        return None
+
+    async def _handle_achievement_combo(
+        self,
+        user_id: str,
+        unlock_count: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        处理成就连击检测
+
+        Returns:
+            连击信息，如果触发连击则返回数据，否则返回None
+        """
+        session_key = f"{settings.APP_NAME}:achievement_combo:{user_id}"
+        combo = await cache_service.get(session_key) or 0
+
+        # 更新连击计数
+        combo += unlock_count
+        await cache_service.set(session_key, combo, ex=300)  # 5分钟内有效
+
+        # 只在连击>=2时返回信息
+        if combo >= 2:
+            bonus_photons = combo * 10 if combo >= 3 else 0
+            return {
+                "combo": combo,
+                "message": f"🔥 {combo}连击解锁！",
+                "bonus_photons": bonus_photons,
+                "type": "achievement_combo"
+            }
+        return None
+
+    async def _notify_milestones(self, user_id: str, milestones: List[Dict[str, Any]]):
+        """发送里程碑通知"""
+        for milestone in milestones:
+            logger.info(f"Milestone for user {user_id}: {milestone['message']}")
+            # TODO: 通过WebSocket发送里程碑通知到前端
+
+    async def check_daily_first(
+        self,
+        user_id: str,
+        db: AsyncSession
+    ) -> Optional[Dict[str, Any]]:
+        """
+        检查今日首胜奖励
+
+        Returns:
+            首胜奖励数据，如果今天已领取则返回None
+        """
+        today = date.today()
+        cache_key = f"{settings.APP_NAME}:daily_first:{user_id}:{today.isoformat()}"
+
+        # 检查今天是否已领取
+        if await cache_service.get(cache_key):
+            return None
+
+        # 标记为已领取
+        await cache_service.set(cache_key, True, ex=86400)  # 24小时
+
+        # 获取连胜统计
+        stats = await self._get_or_create_streak_stats(user_id)
+
+        return {
+            "type": "daily_first",
+            "reward": {
+                "photon": 30,
+                "freeze_charges": 1 if stats.current_streak >= 3 else 0,
+            },
+            "message": "🔥 今日首胜！获得30光子" +
+                      (" + 1张连胜保护卡" if stats.current_streak >= 3 else ""),
+            "streak": stats.current_streak,
+            "date": today.isoformat(),
+        }
+
+    async def get_close_to_unlock_achievements(
+        self,
+        user_id: str,
+        threshold: float = 0.8,
+        category: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        获取接近解锁的成就（用于临界提示）
+
+        Args:
+            user_id: 用户ID
+            threshold: 进度阈值，默认80%
+            category: 筛选特定类别，如 "sprint"
+
+        Returns:
+            接近解锁的成就列表，包含进度信息
+        """
+        all_achievements = await self._get_all_achievements()
+
+        # 过滤类别
+        if category:
+            all_achievements = [a for a in all_achievements if a.category == category]
+
+        close_achievements = []
+
+        for achievement in all_achievements:
+            # 跳过已解锁的
+            if await self._is_unlocked(user_id, achievement.id):
+                continue
+
+            # 检查前置条件
+            if not await self._check_prerequisites(user_id, achievement):
+                continue
+
+            # 评估进度
+            progress, current_value, target_value = await self._evaluate_progress(
+                user_id, achievement
+            )
+
+            # 只返回达到阈值的
+            if progress >= threshold:
+                close_achievements.append({
+                    "achievement_id": achievement.id,
+                    "name": achievement.name,
+                    "description": achievement.description,
+                    "rarity": achievement.rarity.value,
+                    "progress": progress,
+                    "progress_value": current_value,
+                    "progress_target": target_value,
+                    "remaining": target_value - current_value,
+                })
+
+        # 按进度降序排序
+        close_achievements.sort(key=lambda x: x["progress"], reverse=True)
+
+        return close_achievements
 
 
 class ContractService:

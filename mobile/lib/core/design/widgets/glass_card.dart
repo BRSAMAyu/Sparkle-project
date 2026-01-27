@@ -84,7 +84,7 @@ class _GlassCardState extends State<GlassCard>
     );
 
     // Wrap with width/height constraints if specified
-    var content = sparkleCard;
+    Widget content = sparkleCard;
     if (widget.width != null || widget.height != null) {
       content = SizedBox(
         width: widget.width,

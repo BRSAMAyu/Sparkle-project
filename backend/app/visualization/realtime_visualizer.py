@@ -19,7 +19,8 @@ class RealtimeVisualizer(StateVisualizer):
     async def on_graph_event(self, event: GraphEvent):
         """Listen to graph events and push updates."""
         # Extract session_id from state
-        session_id = event.state.context_data.get("session_id")
+        context_data = self._state_attr(event.state, "context_data", {}) or {}
+        session_id = context_data.get("session_id")
         if not session_id:
             return
         
@@ -75,15 +76,23 @@ class RealtimeVisualizer(StateVisualizer):
     
     def _serialize_state(self, state) -> Dict:
         """Serialize state for transport."""
+        messages = self._state_attr(state, "messages", []) or []
+        context_data = self._state_attr(state, "context_data", {}) or {}
         return {
-            "messages_count": len(state.messages),
-            "context_keys": list(state.context_data.keys()),
-            "errors": state.errors,
-            "next_step": state.next_step,
-            "trace_id": state.trace_id,
+            "messages_count": len(messages),
+            "context_keys": list(context_data.keys()),
+            "errors": self._state_attr(state, "errors", []),
+            "next_step": self._state_attr(state, "next_step"),
+            "trace_id": self._state_attr(state, "trace_id"),
             # Maybe include last message content preview
-            "last_message": state.messages[-1]["content"][:50] + "..." if state.messages else ""
+            "last_message": messages[-1]["content"][:50] + "..." if messages else ""
         }
+
+    @staticmethod
+    def _state_attr(state, key, default=None):
+        if isinstance(state, dict):
+            return state.get(key, default)
+        return getattr(state, key, default)
 
 # Global instance
 visualizer = RealtimeVisualizer()

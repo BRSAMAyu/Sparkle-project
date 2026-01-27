@@ -66,7 +66,7 @@ class LocalCognitiveRepository {
         .filter()
         .topicEqualTo('cognitive')
         .statusEqualTo(SyncStatus.pending)
-        .sortByCreatedAtDesc()
+        .sortByCreatedAt()
         .findAll();
 
     return pending

@@ -76,8 +76,7 @@ class _StreakIndicatorCompact extends StatelessWidget {
   Color get _flameColor => _getFlameColor(streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -89,7 +88,6 @@ class _StreakIndicatorCompact extends StatelessWidget {
           borderRadius: DS.borderRadius12,
           border: Border.all(
             color: _flameColor.withValues(alpha: 0.3),
-            width: 1,
           ),
         ),
         child: Row(
@@ -113,7 +111,6 @@ class _StreakIndicatorCompact extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Color _getFlameColor(int streak) {
     if (streak >= 30) return const Color(0xFFFFD700); // 金色 - 大师级
@@ -136,8 +133,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
   Color get _flameColor => _getFlameColor(streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
@@ -204,10 +200,8 @@ class _StreakIndicatorStandard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildFlameIcon() {
-    return Container(
+  Widget _buildFlameIcon() => Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
@@ -228,13 +222,12 @@ class _StreakIndicatorStandard extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
+      child: const Icon(
         Icons.whatshot_rounded,
         color: Colors.white,
         size: DS.iconSizeLg,
       ),
     );
-  }
 
   Color _getFlameColor(int streak) {
     if (streak >= 30) return const Color(0xFFFFD700);
@@ -290,8 +283,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
   Color get _flameColor => _getFlameColor(widget.streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: widget.onTap,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
@@ -378,10 +370,8 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         ),
       ),
     );
-  }
 
-  Widget _buildLargeFlameIcon() {
-    return Container(
+  Widget _buildLargeFlameIcon() => Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
@@ -402,16 +392,14 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
           ),
         ],
       ),
-      child: Icon(
+      child: const Icon(
         Icons.whatshot_rounded,
         color: Colors.white,
         size: DS.iconSize3xl,
       ),
     );
-  }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Container(
+  Widget _buildStatItem(String label, String value, IconData icon) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing8,
@@ -453,7 +441,6 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         ],
       ),
     );
-  }
 
   Widget _buildFreezeCharges() {
     final charges = widget.streakStats.freezeCharges;
@@ -475,7 +462,6 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
               borderRadius: DS.borderRadius4,
               border: Border.all(
                 color: isActive ? Colors.cyan : DS.neutral400,
-                width: 1,
               ),
             ),
           );
@@ -662,7 +648,7 @@ class _CircularProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - 12) / 2;
-    final strokeWidth = 8.0;
+    const strokeWidth = 8.0;
 
     // 绘制底色圆环
     final backgroundPaint = Paint()
@@ -709,8 +695,8 @@ class _CircularProgressPainter extends CustomPainter {
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
     
-    double startAngle = -math.pi / 2;
-    double currentAngle = startAngle;
+    final startAngle = -math.pi / 2;
+    var currentAngle = startAngle;
     
     while (currentAngle < startAngle + 2 * math.pi) {
       final arcAngle = (dashWidth / circumference) * 2 * math.pi;
@@ -742,12 +728,10 @@ class NavStreakIndicator extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return StreakIndicator(
+  Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
       style: StreakIndicatorStyle.compact,
       onTap: onTap,
     );
-  }
 }
 
 /// 便捷组件：卡片连胜指示器
@@ -760,12 +744,9 @@ class CardStreakIndicator extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return StreakIndicator(
-      style: StreakIndicatorStyle.standard,
+  Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
       onTap: onTap,
     );
-  }
 }
 
 /// 便捷组件：仪表盘圆形指示器
@@ -778,10 +759,8 @@ class DashboardStreakIndicator extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return StreakIndicator(
+  Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
       style: StreakIndicatorStyle.circular,
       onTap: onTap,
     );
-  }
 }

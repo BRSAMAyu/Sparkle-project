@@ -29,7 +29,7 @@ async def create_error_record(
     if not subject:
         raise HTTPException(
             status_code=400,
-            detail=f"Subject with id {record_in.subject_id} not found"
+            detail=f"未找到ID为 {record_in.subject_id} 的学科"
         )
     
     # 创建记录

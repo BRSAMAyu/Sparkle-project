@@ -5,7 +5,7 @@ Plan Model - 冲刺计划和成长计划
 import enum
 from sqlalchemy import (
     Column, String, Integer, Float, Text, Enum,
-    ForeignKey, Date, Boolean, Index
+    ForeignKey, Date, Boolean, Index, CheckConstraint
 )
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,22 @@ class PlanType(str, enum.Enum):
     """计划类型枚举"""
     SPRINT = "sprint"  # 冲刺计划(短期考试)
     GROWTH = "growth"  # 成长计划(长期技能)
+
+
+class PlanPriority(str, enum.Enum):
+    """计划优先级枚举"""
+    CRITICAL = "critical"  # 紧急/截止日期临近
+    HIGH = "high"          # 重要
+    NORMAL = "normal"      # 普通
+    LOW = "low"            # 低优先级
+
+
+class PlanStage(str, enum.Enum):
+    """计划阶段枚举"""
+    SPRINT = "sprint"
+    DAILY = "daily"
+    REVIEW = "review"
+    PAUSED = "paused"
 
 
 class Plan(BaseModel):
@@ -50,6 +66,14 @@ class Plan(BaseModel):
     type = Column(Enum(PlanType), nullable=False)
     description = Column(Text, nullable=True)
 
+    # 计划阶段
+    plan_stage = Column(
+        Enum(PlanStage),
+        nullable=False,
+        default=PlanStage.DAILY,
+        index=True
+    )
+
     # 时间相关
     target_date = Column(Date, nullable=True)  # 冲刺计划的目标日期
     daily_available_minutes = Column(Integer, default=60, nullable=False)
@@ -64,6 +88,15 @@ class Plan(BaseModel):
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+
+    # 优先级和主计划 (P0: 并行计划限制)
+    priority = Column(
+        Enum(PlanPriority),
+        default=PlanPriority.NORMAL,
+        nullable=False,
+        index=True
+    )
+    is_primary = Column(Boolean, default=False, nullable=False, index=True)
 
     # 关系定义
     user = relationship("User", back_populates="plans")
@@ -83,3 +116,8 @@ Index("idx_plans_user_id", Plan.user_id)
 Index("idx_plans_is_active", Plan.is_active)
 Index("idx_plans_type", Plan.type)
 Index("idx_plans_target_date", Plan.target_date)
+Index("idx_plans_priority", Plan.priority)
+Index("idx_plans_is_primary", Plan.is_primary)
+Index("idx_plans_stage", Plan.plan_stage)
+# 复合索引：用户活跃计划查询优化
+Index("idx_plans_user_active", Plan.user_id, Plan.is_active)

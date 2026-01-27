@@ -181,7 +181,7 @@ class LeaderboardService:
         my_stats = await self._get_my_stats(user_id)
 
         return LeaderboardSummary(
-            global=global_board,
+            global_ranking=global_board,
             friends=friends_board,
             weekly=weekly_board,
             streak=streak_board,

@@ -127,8 +127,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
     );
   }
 
-  Widget _buildSection({required String title, required Widget child}) {
-    return Container(
+  Widget _buildSection({required String title, required Widget child}) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.neutral0,
@@ -143,5 +142,4 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
       ),
       child: child,
     );
-  }
 }

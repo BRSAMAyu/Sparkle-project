@@ -5,11 +5,19 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 
 /// Intent prediction bar - Fixed above OmniBar
 class IntentPredictionBar extends ConsumerWidget {
-  const IntentPredictionBar({super.key});
+  const IntentPredictionBar({
+    super.key,
+    this.showIdle = true,
+  });
+
+  final bool showIdle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final predictions = ref.watch(visiblePredictionsProvider);
+    final predictionState = ref.watch(intentPredictionProvider);
+    final predictions = predictionState.isTyping
+        ? predictionState.typingPredictions
+        : (showIdle ? predictionState.idlePredictions : <PredictedAction>[]);
 
     if (predictions.isEmpty) {
       return const SizedBox.shrink();
@@ -47,8 +55,7 @@ class _PredictionChip extends StatelessWidget {
   final PredictedAction prediction;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: prediction.action,
       borderRadius: DS.borderRadiusFull,
       child: Container(
@@ -63,7 +70,6 @@ class _PredictionChip extends StatelessWidget {
           border: Border.all(
             color: prediction.color?.withValues(alpha: 0.3) ??
                 DS.brandPrimary.withValues(alpha: 0.2),
-            width: 1,
           ),
         ),
         child: Row(
@@ -86,5 +92,4 @@ class _PredictionChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }

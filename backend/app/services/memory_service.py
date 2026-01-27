@@ -15,6 +15,8 @@ from app.services.evidence_scoring import compute_score
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.ltm_rollout_service import LtmRolloutService
+from app.services.memory_evolution_service import MemoryEvolutionService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 from loguru import logger
 
 
@@ -30,6 +32,15 @@ ALLOWED_EVIDENCE_TYPES = {
 
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
+SUMMARY_MAX_LEN = 48
+
+
+def _truncate_summary(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= SUMMARY_MAX_LEN:
+        return value
+    return f"{value[:SUMMARY_MAX_LEN - 1]}…"
 
 
 class MemoryService:
@@ -93,6 +104,52 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="preference", status="ok").inc()
+
+        # Track preference evolution without blocking the main write path.
+        try:
+            evolution = MemoryEvolutionService(self.db)
+            old_snapshot = (
+                {
+                    **(latest.pref_value or {}),
+                    "confidence": latest.confidence or 0.0,
+                    "evidence_count": len(latest.evidence_refs or []),
+                    "evidence_refs": latest.evidence_refs or [],
+                }
+                if latest
+                else {}
+            )
+            new_snapshot = {
+                **(record.pref_value or {}),
+                "confidence": record.confidence or 0.0,
+                "evidence_count": len(record.evidence_refs or []),
+                "evidence_refs": record.evidence_refs or [],
+            }
+            change_reason = "user_edit" if source_type == "user_state" else "system_update"
+            await evolution.track_memory_change(
+                memory_id=str(record.id),
+                memory_type="preference",
+                old_value=old_snapshot,
+                new_value=new_snapshot,
+                change_reason=change_reason,
+                workflow_id=source_type,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to track preference evolution: {exc}")
+
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_preference_updated",
+                category="memory",
+                title=f"更新了偏好：{pref_key}",
+                description="已记录你的最新学习偏好",
+                priority="low",
+                metadata={
+                    "pref_key": pref_key,
+                    "version": record.version,
+                },
+            ),
+        )
         return record
 
     async def create_goal(
@@ -134,6 +191,20 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="goal", status="ok").inc()
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_goal_created",
+                category="goal",
+                title=f"记录了目标：{_truncate_summary(title)}",
+                description="学习目标已保存",
+                priority="medium",
+                metadata={
+                    "goal_id": str(record.id),
+                    "status": record.status,
+                },
+            ),
+        )
         return record
 
     async def update_goal(
@@ -152,6 +223,16 @@ class MemoryService:
         record = result.scalar_one_or_none()
         if record is None:
             return None
+        old_snapshot = {
+            "title": record.title,
+            "status": record.status,
+            "target_date": record.target_date.isoformat() if record.target_date else None,
+            "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+            "metadata": record.metadata_payload or {},
+            "confidence": 0.0,
+            "evidence_count": len(record.evidence_refs or []),
+            "evidence_refs": record.evidence_refs or [],
+        }
 
         if "evidence_refs" in updates:
             updates["evidence_refs"] = _normalize_evidence_refs(
@@ -174,6 +255,29 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
+
+        try:
+            evolution = MemoryEvolutionService(self.db)
+            new_snapshot = {
+                "title": record.title,
+                "status": record.status,
+                "target_date": record.target_date.isoformat() if record.target_date else None,
+                "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+                "metadata": record.metadata_payload or {},
+                "confidence": 0.0,
+                "evidence_count": len(record.evidence_refs or []),
+                "evidence_refs": record.evidence_refs or [],
+            }
+            await evolution.track_memory_change(
+                memory_id=str(record.id),
+                memory_type="goal",
+                old_value=old_snapshot,
+                new_value=new_snapshot,
+                change_reason="user_edit",
+                workflow_id="update_goal",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to track goal evolution: {exc}")
         return record
 
     async def list_active_goals(self, user_id: UUID, now: Optional[datetime] = None) -> List[MemoryGoal]:
@@ -195,6 +299,84 @@ class MemoryService:
         for record in records:
             latest_by_key[record.pref_key] = record.pref_value
         return latest_by_key
+
+    async def get_preference_record(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+    ) -> Optional[MemoryPreference]:
+        result = await self.db.execute(
+            select(MemoryPreference).where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.id == preference_id,
+                MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.retracted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def find_preference(
+        self,
+        user_id: UUID,
+        pref_key: str,
+    ) -> Optional[MemoryPreference]:
+        result = await self.db.execute(
+            select(MemoryPreference)
+            .where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.pref_key == pref_key,
+                MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.retracted_at.is_(None),
+            )
+            .order_by(MemoryPreference.version.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_preference(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+        pref_key: Optional[str] = None,
+        pref_value: Optional[Dict[str, Any]] = None,
+        value: Optional[Dict[str, Any]] = None,
+        confidence: Optional[float] = None,
+        evidence_refs: Optional[Iterable[Any]] = None,
+    ) -> Optional[MemoryPreference]:
+        record = await self.get_preference_record(user_id, preference_id)
+        if record is None:
+            return None
+
+        resolved_key = pref_key or record.pref_key
+        resolved_value = pref_value if pref_value is not None else value
+        if resolved_value is None:
+            resolved_value = record.pref_value
+
+        refs = evidence_refs or record.evidence_refs or [
+            {"type": "user_state", "id": "batch_edit", "schema_version": "batch_edit.v1"}
+        ]
+
+        return await self.upsert_preference(
+            user_id=user_id,
+            pref_key=resolved_key,
+            pref_value=resolved_value,
+            evidence_refs=refs,
+            confidence=confidence if confidence is not None else record.confidence,
+            source_type="user_state",
+        )
+
+    async def delete_preference(
+        self,
+        user_id: UUID,
+        preference_id: UUID,
+        reason: Optional[str] = None,
+    ) -> bool:
+        return await self.retract_memory(
+            kind="preference",
+            memory_id=preference_id,
+            user_id=user_id,
+            reason=reason or "batch_delete",
+        )
 
     async def list_preference_records(self, user_id: UUID) -> List[MemoryPreference]:
         result = await self.db.execute(
@@ -222,6 +404,29 @@ class MemoryService:
             )
             .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
         )
+        return list(result.scalars().all())
+
+    async def list_goals(
+        self,
+        user_id: UUID,
+        status_filter: Optional[str] = None,
+        include_expired: bool = False,
+        limit: int = 20,
+    ) -> List[MemoryGoal]:
+        now = datetime.utcnow()
+        stmt = select(MemoryGoal).where(
+            MemoryGoal.user_id == user_id,
+            MemoryGoal.deleted_at.is_(None),
+            MemoryGoal.retracted_at.is_(None),
+        )
+        if status_filter:
+            stmt = stmt.where(MemoryGoal.status == status_filter)
+        if not include_expired:
+            stmt = stmt.where(
+                (MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
+            )
+        stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def list_recent_episodic(
@@ -288,6 +493,20 @@ class MemoryService:
         self.db.add(record)
         await self.db.commit()
         await self.db.refresh(record)
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_created",
+                category="memory",
+                title=f"记住了：{_truncate_summary(summary)}",
+                description="已写入长期记忆",
+                priority="low",
+                metadata={
+                    "memory_id": str(record.id),
+                    "source_type": source_type,
+                },
+            ),
+        )
         return record
 
     async def retract_memory(
@@ -323,6 +542,20 @@ class MemoryService:
 
         await self.db.commit()
         MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_retracted",
+                category="memory",
+                title="移除了记忆",
+                description="已按你的请求删除记录",
+                priority="medium",
+                metadata={
+                    "memory_type": kind,
+                    "memory_id": str(memory_id),
+                },
+            ),
+        )
         return True
 
     async def apply_correction(
@@ -391,6 +624,21 @@ class MemoryService:
             user_id=user_id,
             memory_id=record.id,
             action=action,
+        )
+        await SystemUpdateService().enqueue(
+            user_id,
+            build_system_update(
+                update_type="memory_corrected",
+                category="memory",
+                title="收到纠错反馈",
+                description="系统会调整你的画像与记忆",
+                priority="medium",
+                metadata={
+                    "memory_type": kind,
+                    "memory_id": str(record.id),
+                    "action": action,
+                },
+            ),
         )
         return record
 

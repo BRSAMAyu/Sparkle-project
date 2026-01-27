@@ -12,8 +12,7 @@ import 'package:sparkle/shared/entities/task_model.dart';
 /// Interactive task card - expandable card with quick actions
 class InteractiveTaskCard extends ConsumerWidget {
   const InteractiveTaskCard({
-    super.key,
-    required this.task,
+    required this.task, super.key,
     this.showDueDate = true,
   });
 
@@ -112,14 +111,12 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpandedContent(BuildContext context, WidgetRef ref, TaskModel task) {
-    return Container(
+  Widget _buildExpandedContent(BuildContext context, WidgetRef ref, TaskModel task) => Container(
       padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing12),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
             color: DS.border.withValues(alpha: 0.3),
-            width: 1,
           ),
         ),
       ),
@@ -159,7 +156,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                 side: BorderSide.none,
-              )).toList(),
+              ),).toList(),
             ),
           ],
           const SizedBox(height: DS.spacing12),
@@ -197,7 +194,6 @@ class InteractiveTaskCard extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildPriorityIndicator(int priority) {
     Color color;
@@ -361,8 +357,7 @@ class _QuickCompleteButton extends ConsumerWidget {
   final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
+  Widget build(BuildContext context, WidgetRef ref) => IconButton(
       icon: const Icon(Icons.check_circle_outline_rounded),
       color: DS.success.withValues(alpha: 0.7),
       iconSize: DS.iconSizeSm,
@@ -378,7 +373,6 @@ class _QuickCompleteButton extends ConsumerWidget {
         minHeight: DS.touchTargetMinSize,
       ),
     );
-  }
 }
 
 class _ActionButton extends StatelessWidget {
@@ -395,8 +389,7 @@ class _ActionButton extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: DS.borderRadius8,
       child: Container(
@@ -423,5 +416,4 @@ class _ActionButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

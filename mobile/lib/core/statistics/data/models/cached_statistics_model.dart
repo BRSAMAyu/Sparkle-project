@@ -12,6 +12,34 @@ class CachedStatisticsModel {
   /// Unnamed constructor required by Isar
   CachedStatisticsModel();
 
+  /// Create from statistics entity
+  factory CachedStatisticsModel.fromEntity(
+    StatisticsEntity entity, {
+    required List<int> jsonData,
+    int? ttlSeconds,
+    int priority = 0,
+    String? metadata,
+  }) {
+    final now = DateTime.now();
+
+    return CachedStatisticsModel()
+      ..cacheKey = generateKey(
+        type: entity.type,
+        period: entity.period,
+      )
+      ..type = entity.type
+      ..period = entity.period
+      ..periodStart = entity.period.getStartTime()
+      ..periodEnd = entity.period.getEndTime()
+      ..jsonData = jsonData
+      ..createdAt = now
+      ..lastAccessedAt = now
+      ..ttlSeconds = ttlSeconds
+      ..priority = priority
+      ..isFullySynced = !entity.isFromCache
+      ..metadata = metadata;
+  }
+
   /// Auto-incrementing ID
   Id id = Isar.autoIncrement;
 
@@ -100,34 +128,6 @@ class CachedStatisticsModel {
     return buffer.toString();
   }
 
-  /// Create from statistics entity
-  factory CachedStatisticsModel.fromEntity(
-    StatisticsEntity entity, {
-    required List<int> jsonData,
-    int? ttlSeconds,
-    int priority = 0,
-    String? metadata,
-  }) {
-    final now = DateTime.now();
-
-    return CachedStatisticsModel()
-      ..cacheKey = generateKey(
-        type: entity.type,
-        period: entity.period,
-      )
-      ..type = entity.type
-      ..period = entity.period
-      ..periodStart = entity.period.getStartTime()
-      ..periodEnd = entity.period.getEndTime()
-      ..jsonData = jsonData
-      ..createdAt = now
-      ..lastAccessedAt = now
-      ..ttlSeconds = ttlSeconds
-      ..priority = priority
-      ..isFullySynced = !entity.isFromCache
-      ..metadata = metadata;
-  }
-
   /// Copy with
   CachedStatisticsModel copyWith({
     String? cacheKey,
@@ -164,6 +164,13 @@ class CachedStatisticsModel {
 
 /// Cache statistics for monitoring
 class CacheStatistics {
+
+  const CacheStatistics({
+    required this.totalEntries,
+    required this.totalSizeBytes,
+    required this.expiredEntries,
+    required this.entriesByType,
+  });
   /// Total number of entries
   final int totalEntries;
 
@@ -175,13 +182,6 @@ class CacheStatistics {
 
   /// Number of entries by type
   final Map<StatisticsType, int> entriesByType;
-
-  const CacheStatistics({
-    required this.totalEntries,
-    required this.totalSizeBytes,
-    required this.expiredEntries,
-    required this.entriesByType,
-  });
 
   /// Get total size in human readable format
   String get totalSizeHuman {

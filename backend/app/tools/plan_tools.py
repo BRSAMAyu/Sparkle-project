@@ -8,9 +8,10 @@ from .schemas import CreatePlanParams, GenerateTasksForPlanParams
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 from app.services.llm_service import llm_service
+from app.services.knowledge_service import KnowledgeService
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
-from app.models.plan import PlanType as ModelPlanType
+from app.models.plan import PlanType as ModelPlanType, PlanStage as ModelPlanStage
 from app.models.task import TaskType as ModelTaskType
 
 
@@ -32,10 +33,14 @@ class CreatePlanTool(BaseTool):
         try:
             user_uuid = UUID(user_id)
             plan_type = ModelPlanType(params.plan_type.value)
+            plan_stage = None
+            if params.plan_stage:
+                plan_stage = ModelPlanStage(params.plan_stage.value)
 
             plan_create = PlanCreate(
                 name=params.title,
                 type=plan_type,
+                plan_stage=plan_stage,
                 description=params.description,
                 subject=params.subject_id,
                 target_date=params.target_date.date() if params.target_date else None,
@@ -57,6 +62,7 @@ class CreatePlanTool(BaseTool):
                     "id": str(plan.id),
                     "title": plan.name,
                     "type": plan.type.value,
+                    "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
                     "description": plan.description,
                     "target_date": plan.target_date.isoformat() if plan.target_date else None,
                     "target_mastery": params.target_mastery,
@@ -75,7 +81,8 @@ class GenerateTasksForPlanTool(BaseTool):
     """P1: 根据学习计划自动生成可执行的微任务"""
     name = "generate_tasks_for_plan"
     description = """根据给定的学习计划和主题，使用 AI 智能生成 3-8 个具体可执行的微任务。
-每个任务都在 15-45 分钟内可完成，并自动关联到指定计划。"""
+每个任务都在 15-45 分钟内可完成，并自动关联到指定计划。
+自动利用知识图谱 (GraphRAG) 分析用户当前的知识掌握情况，生成更具针对性的任务。"""
     category = ToolCategory.PLAN
     parameters_schema = GenerateTasksForPlanParams
     requires_confirmation = True  # 需要用户确认才能创建
@@ -90,16 +97,6 @@ class GenerateTasksForPlanTool(BaseTool):
         try:
             user_uuid = UUID(user_id)
             plan_uuid = UUID(params.plan_id)
-            
-            # Use TaskService to create tasks
-            created_tasks = []
-            # ... (logic to generate tasks from LLM if not already there)
-            # For now, let's assume it generates some sample tasks if none
-            
-            # If we were using LLM here:
-            # tasks_data = await llm_service.generate_tasks(plan_name)
-            # for t in tasks_data:
-            #     task = await TaskService.create(..., tool_result_id=tool_call_id)
 
             # 第一步: 验证计划存在
             plan = await PlanService.get_by_id(db_session, plan_uuid)
@@ -111,13 +108,34 @@ class GenerateTasksForPlanTool(BaseTool):
                     suggestion="请检查计划 ID 是否正确"
                 )
 
-            # 第二步: 调用 LLM 生成任务建议
+            # 第二步: 获取知识图谱上下文 (GraphRAG)
+            knowledge_context = ""
+            try:
+                from app.orchestration.graph_rag import GraphRAGRetriever
+                logger.info(f"Querying Knowledge Graph for context: {params.topic} ({params.difficulty})")
+                knowledge_service = KnowledgeService(db_session)
+                retriever = GraphRAGRetriever(knowledge_service)
+                
+                # 构造查询：结合主题和难度，查询相关知识点和前置依赖
+                query = f"{params.topic} {params.difficulty} learning path prerequisites"
+                rag_result = await retriever.retrieve(query, str(user_uuid), depth=2)
+                
+                if rag_result and rag_result.fused_context:
+                    knowledge_context = rag_result.fused_context
+                    logger.info("Retrieved GraphRAG context successfully")
+                else:
+                    logger.info("No relevant GraphRAG context found")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve knowledge context (non-fatal): {e}")
+
+            # 第三步: 调用 LLM 生成任务建议 (带知识上下文)
             task_list = await self._generate_tasks_with_llm(
                 plan_title=plan.name,
                 plan_description=plan.description,
                 topic=params.topic,
                 difficulty=params.difficulty,
-                task_count=params.task_count
+                task_count=params.task_count,
+                knowledge_context=knowledge_context
             )
 
             if not task_list:
@@ -128,17 +146,17 @@ class GenerateTasksForPlanTool(BaseTool):
                     suggestion="请稍后重试或手动创建任务"
                 )
 
-            # 第三步: 批量创建任务
+            # 第四步: 批量创建任务
             created_tasks = []
             for task_data in task_list:
                 try:
                     task_create = TaskCreate(
                         title=task_data["title"],
                         description=task_data.get("description"),
-                        type=ModelTaskType(task_data.get("type", "learning")),
+                        type=ModelTaskType(task_data.get("type", "learning").upper()),
                         estimated_minutes=task_data.get("estimated_minutes", 25),
                         priority=task_data.get("priority", 2),
-                        plan_id=plan_id_uuid
+                        plan_id=plan_uuid
                     )
 
                     task = await TaskService.create(
@@ -156,7 +174,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         "description": task.description
                     })
 
-                    logger.debug(f"Created task: {task.id} for plan {plan_id_uuid}")
+                    logger.debug(f"Created task: {task.id} for plan {plan_uuid}")
 
                 except Exception as e:
                     logger.warning(f"Failed to create task: {e}, continuing...")
@@ -170,22 +188,23 @@ class GenerateTasksForPlanTool(BaseTool):
                     suggestion="请检查计划信息并重试"
                 )
 
-            logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_id_uuid}")
+            logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_uuid}")
 
-            # 第四步: 返回卡片化结果
+            # 第五步: 返回卡片化结果
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={
                     "plan_id": params.plan_id,
                     "task_count": len(created_tasks),
-                    "tasks": created_tasks
+                    "tasks": created_tasks,
+                    "has_context": bool(knowledge_context)
                 },
                 widget_type="task_list",
                 widget_data={
                     "tasks": created_tasks,
                     "plan_title": plan.name,
-                    "source": "ai_generated"
+                    "source": "graph_augmented_ai" if knowledge_context else "ai_generated"
                 }
             )
 
@@ -212,18 +231,26 @@ class GenerateTasksForPlanTool(BaseTool):
         plan_description: Optional[str],
         topic: str,
         difficulty: str,
-        task_count: int
+        task_count: int,
+        knowledge_context: str = ""
     ) -> Optional[List[dict]]:
         """
-        使用 LLM 生成结构化的任务建议
-
-        返回任务列表，每个任务包含:
-        - title: 任务标题
-        - description: 任务描述
-        - type: 任务类型 (learning/training/error_fix/reflection)
-        - estimated_minutes: 预估时长 (15-45分钟)
-        - priority: 优先级 (1-5)
+        使用 LLM 生成结构化的任务建议 (支持 GraphRAG 上下文)
         """
+        
+        context_prompt = ""
+        if knowledge_context:
+            context_prompt = f"""
+参考以下知识图谱上下文 (包含相关概念、前置知识和用户当前的掌握情况):
+--------------------------------------------------
+{knowledge_context}
+--------------------------------------------------
+请根据上述上下文调整任务：
+1. 优先安排用户尚未掌握 (Status: Locked 或 Mastery 低) 的前置知识。
+2. 对于已掌握的知识，可以生成复习或高阶应用任务。
+3. 确保任务覆盖上下文中的关键盲点。
+"""
+
         prompt = f"""
 你是一个学习规划专家。根据以下学习计划信息，生成 {task_count} 个具体可执行的微任务。
 
@@ -232,6 +259,8 @@ class GenerateTasksForPlanTool(BaseTool):
 - 计划描述: {plan_description or "未提供"}
 - 学习主题: {topic}
 - 难度级别: {difficulty}
+
+{context_prompt}
 
 任务要求:
 1. 每个任务必须在 15-45 分钟内可完成

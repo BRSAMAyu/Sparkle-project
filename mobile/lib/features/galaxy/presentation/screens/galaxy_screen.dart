@@ -50,6 +50,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   // Canvas constants
   static const double _centralFlameSize = 60.0;
+  final double _canvasCenter = 500.0; // Canvas center coordinate
+  final double _canvasSize = 1000.0; // Canvas size
 
   // Track last scale to avoid unnecessary updates
   double _lastScale = 1.0;
@@ -145,7 +147,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     
     // Relative Viewport (Center Relative -2500..2500) - For Provider Culling
     final relativeViewport = absoluteViewport.shift(
-        const Offset(-_canvasCenter, -_canvasCenter),
+        Offset(-_canvasCenter, -_canvasCenter),
     );
         
     ref.read(galaxyProvider.notifier).updateViewport(relativeViewport);
@@ -630,7 +632,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           _canvasCenter, _canvasCenter,),
                       viewport: absoluteViewport, // Use absolute for painter
                       center:
-                          const Offset(_canvasCenter, _canvasCenter),
+                          Offset(_canvasCenter, _canvasCenter),
                       selectedNodeIdHash: selectedHash,
                       highlightedNodeIdHashes: highlightedHashes,
                       highlightRevision: galaxyState.highlightRevision,

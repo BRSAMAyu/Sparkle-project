@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
-import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_stats_model.dart';
+import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 
 /// 胶囊仓库 - 支持增强功能
 class CapsuleRepository {
@@ -41,8 +41,8 @@ class CapsuleRepository {
     final response = await _apiClient.get<dynamic>('/capsules/favorites', queryParameters: {
       'limit': limit,
       'offset': offset,
-    });
-    return (response.data as List);
+    },);
+    return response.data as List;
   }
 
   /// 收藏/取消收藏胶囊
@@ -52,7 +52,7 @@ class CapsuleRepository {
   }) async {
     final response = await _apiClient.post<dynamic>('/capsules/$id/favorite', queryParameters: {
       if (note != null) 'note': note,
-    });
+    },);
     return response.data as Map<String, dynamic>;
   }
 
@@ -100,7 +100,7 @@ class CapsuleRepository {
   }) async {
     final response = await _apiClient.get<dynamic>('/capsules/generation/jobs', queryParameters: {
       'limit': limit,
-    });
+    },);
     return (response.data as List)
         .map((e) => CapsuleGenerationJobModel.fromJson(e as Map<String, dynamic>))
         .toList();

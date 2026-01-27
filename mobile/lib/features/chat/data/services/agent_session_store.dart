@@ -7,6 +7,7 @@ enum AgentSessionScope {
   group,
   privateChat,
   focus,
+  plan,
 }
 
 class AgentSessionStore {

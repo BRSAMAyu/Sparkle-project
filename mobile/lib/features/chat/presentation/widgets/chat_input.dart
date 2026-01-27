@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({
@@ -18,6 +18,7 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onCancelQuote,
     this.onFileUploaded,
     this.fileUploadGroupId,
+    this.onTextChanged,
   });
   final bool enabled;
   final String? hintText;
@@ -26,6 +27,7 @@ class ChatInput extends ConsumerStatefulWidget {
   final VoidCallback? onCancelQuote;
   final void Function(StoredFile file)? onFileUploaded;
   final String? fileUploadGroupId;
+  final void Function(String text)? onTextChanged;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -84,6 +86,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (_textNotEmpty.value != hasText) {
       _textNotEmpty.value = hasText;
     }
+    // Notify intent prediction
+    widget.onTextChanged?.call(_controller.text);
   }
 
   @override
@@ -97,6 +101,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void dispose() {
     _controller.removeListener(_handleTextChange);
+    widget.onTextChanged?.call(''); // Notify empty text
     _controller.dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();

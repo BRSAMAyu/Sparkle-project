@@ -8,6 +8,19 @@ part 'focus_statistics_provider.g.dart';
 
 /// Focus statistics entity
 class FocusStatisticsData extends StatisticsEntity {
+
+  FocusStatisticsData({
+    required this.id,
+    required this.period,
+    required this.lastRefreshedAt,
+    required this.isFromCache,
+    required this.totalMinutes,
+    required this.totalSessions,
+    required this.averageSessionDuration,
+    required this.longestSession,
+    required this.currentStreak,
+    required this.dailyData,
+  });
   @override
   final String id;
 
@@ -44,19 +57,6 @@ class FocusStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalMinutes.toDouble();
 
-  FocusStatisticsData({
-    required this.id,
-    required this.period,
-    required this.lastRefreshedAt,
-    required this.isFromCache,
-    required this.totalMinutes,
-    required this.totalSessions,
-    required this.averageSessionDuration,
-    required this.longestSession,
-    required this.currentStreak,
-    required this.dailyData,
-  });
-
   /// Calculate change from previous period
   @override
   double? calculateChange(StatisticsEntity? previous) {
@@ -81,8 +81,7 @@ class FocusStatisticsData extends StatisticsEntity {
     int? longestSession,
     int? currentStreak,
     List<DailyFocusData>? dailyData,
-  }) {
-    return FocusStatisticsData(
+  }) => FocusStatisticsData(
       id: id ?? this.id,
       period: period ?? this.period,
       lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
@@ -94,20 +93,19 @@ class FocusStatisticsData extends StatisticsEntity {
       currentStreak: currentStreak ?? this.currentStreak,
       dailyData: dailyData ?? this.dailyData,
     );
-  }
 }
 
 /// Daily focus data for charts
 class DailyFocusData {
-  final DateTime date;
-  final int minutes;
-  final int sessions;
 
   const DailyFocusData({
     required this.date,
     required this.minutes,
     required this.sessions,
   });
+  final DateTime date;
+  final int minutes;
+  final int sessions;
 }
 
 /// Repository for focus statistics
@@ -142,8 +140,7 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
   }
 
   @override
-  FocusStatisticsData deserializeEntity(Map<String, dynamic> json) {
-    return FocusStatisticsData(
+  FocusStatisticsData deserializeEntity(Map<String, dynamic> json) => FocusStatisticsData(
       id: json['id'] as String,
       period: StatisticsPeriodExt.fromCode(json['period'] as String),
       lastRefreshedAt: DateTime.parse(json['lastRefreshedAt'] as String),
@@ -158,15 +155,13 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
                     date: DateTime.parse(e['date'] as String),
                     minutes: e['minutes'] as int,
                     sessions: e['sessions'] as int,
-                  ))
+                  ),)
               .toList() ??
           [],
     );
-  }
 
   @override
-  Map<String, dynamic> serializeEntity(FocusStatisticsData entity) {
-    return {
+  Map<String, dynamic> serializeEntity(FocusStatisticsData entity) => {
       'id': entity.id,
       'type': entity.type.code,
       'period': entity.period.name,
@@ -182,10 +177,9 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
                 'date': d.date.toIso8601String(),
                 'minutes': d.minutes,
                 'sessions': d.sessions,
-              })
+              },)
           .toList(),
     };
-  }
 
   int _generateMockTotal(StatisticsPeriod period) {
     switch (period) {
@@ -246,9 +240,7 @@ FocusStatsRepository focusStatsRepository(FocusStatsRepositoryRef ref) {
 @riverpod
 class FocusStatistics extends _$FocusStatistics {
   @override
-  StatisticsState<FocusStatisticsData> build() {
-    return const StatisticsState.initial();
-  }
+  StatisticsState<FocusStatisticsData> build() => const StatisticsState.initial();
 
   /// Load focus statistics for a period
   Future<void> load(

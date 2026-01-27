@@ -46,17 +46,24 @@ from app.api.v1 import (
     memory_admin,
     preferences,
     seed_libraries,
+    experiments,
     achievements,
     multi_intent,
+    prediction,
     recommendations,
     leaderboards,
     monitoring,
+    suggestions, # Vision Item 3
+    profile_transparency,
+    user_settings,
+    user_persona_batch,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(suggestions.router, prefix="/suggestions", tags=["suggestions"]) # Vision Item 3
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(interventions.router, tags=["interventions"])
@@ -90,10 +97,15 @@ api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(preferences.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
+api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
 api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
+api_router.include_router(prediction.router, prefix="/prediction", tags=["prediction"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
+api_router.include_router(profile_transparency.router)
+api_router.include_router(user_settings.router)
+api_router.include_router(user_persona_batch.router)
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:
@@ -124,6 +136,7 @@ async def api_root():
             "/omnibar",
             "/dashboard",
             "/multi-intent",
+            "/prediction",
             "/recommendations",
             "/leaderboards",
             "/ws",

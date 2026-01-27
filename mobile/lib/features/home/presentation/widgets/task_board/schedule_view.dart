@@ -29,8 +29,7 @@ class ScheduleView extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing32),
       child: Column(
         children: [
@@ -56,7 +55,6 @@ class ScheduleView extends ConsumerWidget {
         ],
       ),
     );
-  }
 }
 
 class _ScheduleGroup extends StatelessWidget {
@@ -86,7 +84,7 @@ class _ScheduleGroup extends StatelessWidget {
         ...group.tasks.map((task) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: InteractiveTaskCard(task: task),
-            )),
+            ),),
       ],
     );
   }
