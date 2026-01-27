@@ -44,9 +44,10 @@ class GroupDetailScreen extends ConsumerWidget {
     final isSprint = group.isSprint;
     final theme = Theme.of(context);
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
+    return ContentConstraint(
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
         SliverAppBar(
           expandedHeight: 200.0,
           pinned: true,
@@ -282,6 +283,7 @@ class GroupDetailScreen extends ConsumerWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

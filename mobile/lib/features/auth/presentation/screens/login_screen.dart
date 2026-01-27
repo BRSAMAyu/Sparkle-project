@@ -71,9 +71,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.xl),
-          child: Form(
+        child: ContentConstraint(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(DS.xl),
+            child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,6 +248,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
           ),
+          ),
+        ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
@@ -64,16 +65,18 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filter bar
-          _buildFilterBar(),
+      body: ContentConstraint(
+        child: Column(
+          children: [
+            // Filter bar
+            _buildFilterBar(),
 
-          // Notifications list
-          Expanded(
-            child: _buildContent(state),
-          ),
-        ],
+            // Notifications list
+            Expanded(
+              child: _buildContent(state),
+            ),
+          ],
+        ),
       ),
     );
   }

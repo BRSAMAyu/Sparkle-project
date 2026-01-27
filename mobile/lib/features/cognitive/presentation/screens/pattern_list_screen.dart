@@ -39,6 +39,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
           gradient: DS.deepSpaceGradient,
         ),
         child: SafeArea(
+          child: ContentConstraint(
           child: Column(
             children: [
               // Custom app bar
@@ -62,6 +63,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

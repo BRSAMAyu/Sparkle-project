@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_card.dart';
@@ -102,11 +103,12 @@ class _SeedLibraryDetailScreenState
         slivers: [
           // Header section
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: ContentConstraint(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Category and visibility badges
                   Wrap(
                     spacing: 8,
@@ -185,30 +187,33 @@ class _SeedLibraryDetailScreenState
                           .toList(),
                     ),
                   ],
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
           // Items section
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(
-                children: [
-                  Text(
-                    '内容项',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () {
-                      // TODO: Show filter dialog
-                    },
-                    icon: const Icon(Icons.filter_list, size: 18),
-                    label: const Text('筛选'),
-                  ),
-                ],
+            child: ContentConstraint(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      '内容项',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        // TODO: Show filter dialog
+                      },
+                      icon: const Icon(Icons.filter_list, size: 18),
+                      label: const Text('筛选'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

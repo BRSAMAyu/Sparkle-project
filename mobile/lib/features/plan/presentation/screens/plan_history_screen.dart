@@ -21,9 +21,11 @@ class PlanHistoryScreen extends ConsumerWidget {
         ),
         title: const Text('历史计划'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(planListProvider.notifier).refresh(),
-        child: _buildBody(context, archivedPlans, planState.isLoading),
+      body: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(planListProvider.notifier).refresh(),
+          child: _buildBody(context, archivedPlans, planState.isLoading),
+        ),
       ),
     );
   }

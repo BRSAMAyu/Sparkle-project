@@ -134,9 +134,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
+      body: ContentConstraint(
+        child: Form(
+          key: _formKey,
+          child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // 提示卡片

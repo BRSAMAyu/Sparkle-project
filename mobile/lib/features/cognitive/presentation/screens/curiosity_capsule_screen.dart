@@ -29,19 +29,21 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             : RefreshIndicator(
                 onRefresh: () =>
                     ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: capsules.length,
-                  itemBuilder: (context, index) {
-                    final capsule = capsules[index];
-                    final isHighlight =
-                        highlightId != null && capsule.id == highlightId;
-                    return CuriosityCapsuleCard(
-                      capsule: capsule,
-                      highlighted: isHighlight,
-                      initiallyExpanded: isHighlight,
-                    );
-                  },
+                child: ContentConstraint(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    itemCount: capsules.length,
+                    itemBuilder: (context, index) {
+                      final capsule = capsules[index];
+                      final isHighlight =
+                          highlightId != null && capsule.id == highlightId;
+                      return CuriosityCapsuleCard(
+                        capsule: capsule,
+                        highlighted: isHighlight,
+                        initiallyExpanded: isHighlight,
+                      );
+                    },
+                  ),
                 ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),

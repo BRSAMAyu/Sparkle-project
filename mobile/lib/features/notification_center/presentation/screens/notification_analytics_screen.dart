@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart';
 
 /// Notification Analytics Screen
@@ -77,7 +78,8 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
   Widget _buildContent(analytics) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: ContentConstraint(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Summary cards
@@ -98,6 +100,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           // Hourly distribution
           _buildHourlyDistributionSection(analytics.hourlyDistribution),
         ],
+      ),
       ),
     );
   }

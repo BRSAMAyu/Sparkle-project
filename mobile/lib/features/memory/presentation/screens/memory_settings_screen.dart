@@ -189,9 +189,10 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         ),
       );
 
-  Widget _buildContent(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(DS.lg),
-        children: [
+  Widget _buildContent(BuildContext context) => ContentConstraint(
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
           _buildSectionTitle('总开关'),
           SwitchListTile(
             value: _enabled,
@@ -283,7 +284,8 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             label: _saving ? '保存中...' : '保存设置',
             onPressed: _saving ? () {} : _saveSettings,
           ),
-        ],
+          ],
+        ),
       );
 
   Widget _buildSectionTitle(String title) => Padding(

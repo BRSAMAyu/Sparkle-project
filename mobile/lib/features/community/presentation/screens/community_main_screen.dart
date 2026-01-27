@@ -8,6 +8,7 @@ import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
+import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -32,6 +33,82 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         TabController(length: 2, vsync: this, initialIndex: savedIndex);
     _tabController.addListener(_onTabChanged);
     _loadSavedTab();
+  }
+
+  void _showSearchOptions() {
+    final currentTabIndex = _tabController.index;
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.person_search, color: DS.primaryBase),
+              title: const Text('搜索用户'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/community/users/search');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.search, color: DS.primaryBase),
+              title: const Text('搜索群组'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/community/groups/search');
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.person_add, color: DS.primaryBase),
+              title: const Text('发现新好友'),
+              subtitle: const Text('查看推荐的好友'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/community/friends/discover');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.group_add, color: DS.primaryBase),
+              title: const Text('创建群组'),
+              subtitle: const Text('创建一个新的学习群组'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/community/groups/create');
+              },
+            ),
+            const SizedBox(height: DS.spacing8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleFabPressed() {
+    final currentTabIndex = _tabController.index;
+
+    if (currentTabIndex == 0) {
+      // Friends tab - show friend discovery
+      _showAddOptions();
+    } else {
+      // Groups tab - navigate to group creation
+      context.push('/community/groups/create');
+    }
   }
 
   Future<void> _loadSavedTab() async {
@@ -95,9 +172,16 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
           IconButton(
-              icon: const Icon(Icons.person_add_outlined), onPressed: () {},),
+            icon: const Icon(Icons.search),
+            tooltip: '搜索',
+            onPressed: _showSearchOptions,
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add_outlined),
+            tooltip: '添加',
+            onPressed: _showAddOptions,
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -116,7 +200,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _handleFabPressed,
+        tooltip: _tabController.index == 0 ? '添加好友' : '创建群组',
         child: const Icon(Icons.add),
       ),
     );

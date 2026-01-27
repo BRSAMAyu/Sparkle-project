@@ -71,9 +71,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         title: const Text('重置密码'),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.spacing24),
-        child: Form(
+      body: ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.spacing24),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,6 +146,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

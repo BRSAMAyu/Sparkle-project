@@ -39,9 +39,10 @@ class _PersonaOnboardingScreenState
       appBar: AppBar(
         title: const Text('画像引导'),
       ),
-      body: Stepper(
-        currentStep: _currentStep,
-        onStepContinue: _submitting ? null : () => _handleContinue(steps.length),
+      body: ContentConstraint(
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepContinue: _submitting ? null : () => _handleContinue(steps.length),
         onStepCancel: _submitting ? null : _handleBack,
         controlsBuilder: (context, details) {
           final isLast = _currentStep == steps.length - 1;
@@ -67,6 +68,7 @@ class _PersonaOnboardingScreenState
           );
         },
         steps: steps,
+      ),
       ),
     );
   }

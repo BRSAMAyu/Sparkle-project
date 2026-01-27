@@ -105,8 +105,9 @@ class _TaskReminderSettingsScreenState
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ListView(
-        children: [
+      body: ContentConstraint(
+        child: ListView(
+          children: [
           _buildEnableSwitch(config),
           Divider(color: DS.brandPrimary10),
           _buildReminderTimesSection(config),
@@ -115,6 +116,7 @@ class _TaskReminderSettingsScreenState
           const SizedBox(height: 20),
           _buildInfoSection(),
         ],
+        ),
       ),
     );
   }

@@ -284,16 +284,17 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop
     final category = ResponsiveSystem.getCategory(context);
-    final screenWidth = MediaQuery.of(context).size.width;
+    final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
 
     // Responsive column count based on screen size
     final crossAxisCount = switch (category) {
       DeviceCategory.desktop => 3,
       DeviceCategory.tv => 3,
       DeviceCategory.tablet => 2,
-      DeviceCategory.watch => screenWidth < 390 ? 1 : 2,
-      DeviceCategory.phone => screenWidth < 390 ? 1 : 2,
-      DeviceCategory.phablet => screenWidth < 390 ? 1 : 2,
+      // Use 2 columns for landscape mobile, 1 for portrait
+      DeviceCategory.watch => isLandscapeMobile ? 2 : 1,
+      DeviceCategory.phone => isLandscapeMobile ? 2 : 1,
+      DeviceCategory.phablet => isLandscapeMobile ? 2 : 1,
     };
 
     return ContentConstraint(

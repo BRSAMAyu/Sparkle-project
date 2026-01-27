@@ -106,25 +106,27 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         children: [
           const Positioned.fill(child: WeatherHeader()),
           SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context),
-                _buildViewSwitcher(),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: _viewMode == CalendarViewMode.year
-                      ? _buildYearView()
-                      : Column(
-                          children: [
-                            _buildTableCalendar(notifier),
-                            Divider(color: DS.brandPrimary10),
-                            Expanded(
-                              child: _buildEventList(selectedEvents, notifier),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+            child: ContentConstraint(
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  _buildViewSwitcher(),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: _viewMode == CalendarViewMode.year
+                        ? _buildYearView()
+                        : Column(
+                            children: [
+                              _buildTableCalendar(notifier),
+                              Divider(color: DS.brandPrimary10),
+                              Expanded(
+                                child: _buildEventList(selectedEvents, notifier),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

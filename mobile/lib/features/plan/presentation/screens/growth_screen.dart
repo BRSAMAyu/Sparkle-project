@@ -29,11 +29,13 @@ class GrowthScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref
-            .read(planListProvider.notifier)
-            .loadPlans(type: PlanType.growth),
-        child: _buildBody(context, planState, growthPlans),
+      body: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: () => ref
+              .read(planListProvider.notifier)
+              .loadPlans(type: PlanType.growth),
+          child: _buildBody(context, planState, growthPlans),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
