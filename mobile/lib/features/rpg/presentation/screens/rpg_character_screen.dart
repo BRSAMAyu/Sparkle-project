@@ -4,7 +4,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/rpg/data/models/rpg_models.dart';
 import 'package:sparkle/features/rpg/presentation/providers/rpg_providers.dart';
 import 'package:sparkle/features/rpg/presentation/widgets/equipment_detail_card.dart';
-import 'package:sparkle/features/rpg/presentation/widgets/pixel_character.dart';
+import 'package:sparkle/features/rpg/presentation/widgets/reward_banner.dart';
+import 'package:sparkle/features/rpg/presentation/widgets/rpg_character_card.dart';
 
 /// RPG角色页面
 class RpgCharacterScreen extends ConsumerWidget {
@@ -17,67 +18,33 @@ class RpgCharacterScreen extends ConsumerWidget {
     final totalAttributes = ref.watch(totalAttributesProvider);
     
     return Scaffold(
-      backgroundColor: DS.neutral50,
+      backgroundColor: DS.surfacePrimary,
       appBar: AppBar(
         title: const Text('我的角色'),
-        backgroundColor: DS.brandPrimary,
-        foregroundColor: Colors.white,
+        backgroundColor: DS.glassBackground,
+        foregroundColor: DS.textPrimary,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           children: [
-            // 角色信息卡片
-            Container(
-              padding: const EdgeInsets.all(DS.spacing24),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                borderRadius: DS.borderRadius16,
-                boxShadow: DS.shadowSm,
-              ),
-              child: Column(
-                children: [
-                  // 像素角色展示
-                  SizedBox(
-                    height: 200,
-                    child: Center(
-                      child: PixelCharacter(
-                        character: character,
-                        size: 180,
-                      ),
-                    ),
+            // 角色信息卡片 - 使用新的RpgCharacterCard组件
+            const RpgCharacterCard(),
+            
+            const SizedBox(height: DS.spacing24),
+            
+            // 奖励横幅
+            RewardBanner(
+              onTap: () {
+                // 打开奖励创建弹窗
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('奖励功能开发中...'),
                   ),
-                  
-                  const SizedBox(height: DS.spacing24),
-                  
-                  // 角色基本信息
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _StatItem(
-                        label: '等级',
-                        value: character.level.toString(),
-                        color: DS.primaryBase,
-                      ),
-                      _StatItem(
-                        label: '经验',
-                        value: character.experience.toString(),
-                        color: DS.success,
-                      ),
-                      _StatItem(
-                        label: '登录天数',
-                        value: character.totalLoginDays?.toString() ?? '0',
-                        color: DS.info,
-                      ),
-                      _StatItem(
-                        label: '职业',
-                        value: character.characterClass ?? '无',
-                        color: DS.warning,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              },
+              gold: character.gold,
             ),
             
             const SizedBox(height: DS.spacing24),
@@ -146,26 +113,29 @@ class RpgCharacterScreen extends ConsumerWidget {
                   const SizedBox(height: DS.spacing16),
                   
                   // 装备列表
-                  ListView.builder(
+                  GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.9, // 增加纵横比，使卡片更高
+                      crossAxisSpacing: DS.spacing16,
+                      mainAxisSpacing: DS.spacing16,
+                    ),
                     itemCount: equipmentList.length,
                     itemBuilder: (context, index) {
                       final equipment = equipmentList[index];
                       final isEquipped = _isEquipped(character, equipment);
-                      
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: DS.spacing16),
-                        child: EquipmentDetailCard(
-                          equipment: equipment,
-                          isEquipped: isEquipped,
-                          onEquip: () {
-                            ref.read(characterProvider.notifier).equipItem(
-                              equipment.id,
-                              equipment.type,
-                            );
-                          },
-                        ),
+                       
+                      return EquipmentDetailCard(
+                        equipment: equipment,
+                        isEquipped: isEquipped,
+                        onEquip: () {
+                          ref.read(characterProvider.notifier).equipItem(
+                            equipment.id,
+                            equipment.type,
+                          );
+                        },
                       );
                     },
                   ),

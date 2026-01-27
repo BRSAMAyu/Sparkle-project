@@ -102,8 +102,14 @@ _$CharacterImpl _$$CharacterImplFromJson(Map<String, dynamic> json) =>
     _$CharacterImpl(
       id: json['id'] as String,
       userId: json['userId'] as String,
+      nickname: json['nickname'] as String,
       level: (json['level'] as num).toInt(),
       experience: (json['experience'] as num).toInt(),
+      maxExperience: (json['maxExperience'] as num).toInt(),
+      currentHp: (json['currentHp'] as num).toInt(),
+      maxHp: (json['maxHp'] as num).toInt(),
+      gold: (json['gold'] as num).toInt(),
+      gems: (json['gems'] as num).toInt(),
       baseAttributes: (json['baseAttributes'] as List<dynamic>)
           .map((e) => AttributeValue.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -124,8 +130,14 @@ Map<String, dynamic> _$$CharacterImplToJson(_$CharacterImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'userId': instance.userId,
+      'nickname': instance.nickname,
       'level': instance.level,
       'experience': instance.experience,
+      'maxExperience': instance.maxExperience,
+      'currentHp': instance.currentHp,
+      'maxHp': instance.maxHp,
+      'gold': instance.gold,
+      'gems': instance.gems,
       'baseAttributes': instance.baseAttributes,
       'equipment': instance.equipment,
       'unlockedEquipment': instance.unlockedEquipment,

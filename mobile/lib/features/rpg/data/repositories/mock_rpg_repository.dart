@@ -7,8 +7,14 @@ class MockRpgRepository {
     return Character(
       id: 'user_123',
       userId: 'user_123',
+      nickname: '学习战士',
       level: 10,
       experience: 1500,
+      maxExperience: 2000,
+      currentHp: 85,
+      maxHp: 100,
+      gold: 500,
+      gems: 10,
       baseAttributes: [
         AttributeValue(attribute: CharacterAttribute.strength, value: 15),
         AttributeValue(attribute: CharacterAttribute.intelligence, value: 12),

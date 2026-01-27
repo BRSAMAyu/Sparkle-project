@@ -18,7 +18,7 @@ class EquipmentDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing10), // 减小内边距
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
         borderRadius: DS.borderRadius16,
@@ -40,10 +40,11 @@ class EquipmentDetailCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
+                      fontSize: 15, // 减小字体大小
                     ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing4),
+                padding: const EdgeInsets.symmetric(horizontal: DS.spacing6, vertical: DS.spacing4), // 减小内边距
                 decoration: BoxDecoration(
                   color: _getRarityColor(equipment.rarity),
                   borderRadius: DS.borderRadius8,
@@ -52,7 +53,7 @@ class EquipmentDetailCard extends StatelessWidget {
                   _getRarityName(equipment.rarity),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 11, // 减小字体大小
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -60,52 +61,54 @@ class EquipmentDetailCard extends StatelessWidget {
             ],
           ),
           
-          const SizedBox(height: DS.spacing8),
+          const SizedBox(height: DS.spacing4), // 减小间距
           
           // 装备类型
           Text(
             _getEquipmentTypeName(equipment.type),
             style: TextStyle(
               color: DS.textSecondary,
-              fontSize: 14,
+              fontSize: 11, // 减小字体大小
             ),
           ),
           
-          const SizedBox(height: DS.spacing12),
+          const SizedBox(height: DS.spacing6), // 减小间距
           
           // 装备描述
-          if (equipment.description != null)
+          if (equipment.description != null) 
             Text(
               equipment.description!,
               style: TextStyle(
                 color: DS.textSecondary,
-                fontSize: 14,
+                fontSize: 11, // 减小字体大小
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           
-          const SizedBox(height: DS.spacing16),
+          const SizedBox(height: DS.spacing8), // 减小间距
           
           // 属性加成
           const Text(
             '属性加成:',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 11, // 减小字体大小
             ),
           ),
           
-          const SizedBox(height: DS.spacing8),
+          const SizedBox(height: DS.spacing4), // 减小间距
           
           for (final attr in equipment.attributes)
             Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              padding: const EdgeInsets.only(bottom: DS.spacing4), // 减小间距
               child: Row(
                 children: [
                   Text(
                     _getAttributeName(attr.attribute),
                     style: TextStyle(
                       color: DS.textSecondary,
-                      fontSize: 14,
+                      fontSize: 11, // 减小字体大小
                     ),
                   ),
                   const Spacer(),
@@ -114,20 +117,20 @@ class EquipmentDetailCard extends StatelessWidget {
                     style: TextStyle(
                       color: DS.success,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 11, // 减小字体大小
                     ),
                   ),
                 ],
               ),
             ),
           
-          const SizedBox(height: DS.spacing16),
+          const SizedBox(height: DS.spacing8), // 减小间距
           
           // 装备按钮
           if (onEquip != null)
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 32, // 减小按钮高度
               child: ElevatedButton(
                 onPressed: onEquip,
                 style: ElevatedButton.styleFrom(
@@ -135,6 +138,9 @@ class EquipmentDetailCard extends StatelessWidget {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: DS.borderRadius12,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 13, // 减小字体大小
                   ),
                 ),
                 child: Text(isEquipped ? '已装备' : '装备'),

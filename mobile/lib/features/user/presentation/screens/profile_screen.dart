@@ -8,6 +8,7 @@ import 'package:sparkle/features/rpg/data/repositories/mock_rpg_repository.dart'
 import 'package:sparkle/features/rpg/presentation/screens/rpg_character_screen.dart';
 import 'package:sparkle/features/rpg/presentation/screens/task_list_screen.dart';
 import 'package:sparkle/features/rpg/presentation/widgets/pixel_character.dart';
+import 'package:sparkle/features/rpg/presentation/widgets/rpg_character_card.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -36,10 +37,6 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   const SizedBox(height: DS.spacing24),
-                  const StatisticsCard(),
-                  const SizedBox(height: DS.spacing24),
-                  _buildSettingsSection(context, ref, l10n),
-                  const SizedBox(height: DS.spacing24),
                   
                   // RPG Character Button
                   SizedBox(
@@ -55,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
                         );
                       },
                       icon: const Icon(Icons.person_outline),
-                      label: const Text('我的RPG角色'),
+                      label: const Text('我的角色'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: DS.brandPrimary,
                         foregroundColor: Colors.white,
@@ -93,6 +90,11 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   
+                  const SizedBox(height: DS.spacing24),
+                  const StatisticsCard(),
+                  const SizedBox(height: DS.spacing24),
+                  _buildSettingsSection(context, ref, l10n),
+                  
                   const SizedBox(height: 100), // Bottom padding
                 ],
               ),
@@ -104,7 +106,6 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, UserModel user) => SizedBox(
-        height: 400,
         child: Stack(
           children: [
             // Wave Background
@@ -118,6 +119,7 @@ class ProfileScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(DS.spacing24),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: DS.spacing16),
                     Row(
@@ -202,14 +204,10 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: DS.spacing24),
                     
-                    // 像素风格角色形象
-                    Expanded(
-                      child: Center(
-                        child: PixelCharacter(
-                          character: mockRpgRepository.getMockCharacter(),
-                          size: 160,
-                        ),
-                      ),
+                    // RPG角色状态卡片 - 限制最大高度
+                    SizedBox(
+                      height: 250, // 限制最大高度
+                      child: RpgCharacterCard(),
                     ),
                   ],
                 ),

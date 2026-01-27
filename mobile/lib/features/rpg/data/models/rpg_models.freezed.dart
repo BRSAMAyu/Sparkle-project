@@ -765,8 +765,14 @@ Character _$CharacterFromJson(Map<String, dynamic> json) {
 mixin _$Character {
   String get id => throw _privateConstructorUsedError;
   String get userId => throw _privateConstructorUsedError;
+  String get nickname => throw _privateConstructorUsedError;
   int get level => throw _privateConstructorUsedError;
   int get experience => throw _privateConstructorUsedError;
+  int get maxExperience => throw _privateConstructorUsedError;
+  int get currentHp => throw _privateConstructorUsedError;
+  int get maxHp => throw _privateConstructorUsedError;
+  int get gold => throw _privateConstructorUsedError;
+  int get gems => throw _privateConstructorUsedError;
   List<AttributeValue> get baseAttributes => throw _privateConstructorUsedError;
   CharacterEquipment get equipment => throw _privateConstructorUsedError;
   List<String>? get unlockedEquipment => throw _privateConstructorUsedError;
@@ -789,8 +795,14 @@ abstract class $CharacterCopyWith<$Res> {
   $Res call(
       {String id,
       String userId,
+      String nickname,
       int level,
       int experience,
+      int maxExperience,
+      int currentHp,
+      int maxHp,
+      int gold,
+      int gems,
       List<AttributeValue> baseAttributes,
       CharacterEquipment equipment,
       List<String>? unlockedEquipment,
@@ -817,8 +829,14 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
   $Res call({
     Object? id = null,
     Object? userId = null,
+    Object? nickname = null,
     Object? level = null,
     Object? experience = null,
+    Object? maxExperience = null,
+    Object? currentHp = null,
+    Object? maxHp = null,
+    Object? gold = null,
+    Object? gems = null,
     Object? baseAttributes = null,
     Object? equipment = null,
     Object? unlockedEquipment = freezed,
@@ -836,6 +854,10 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
           ? _value.userId
           : userId // ignore: cast_nullable_to_non_nullable
               as String,
+      nickname: null == nickname
+          ? _value.nickname
+          : nickname // ignore: cast_nullable_to_non_nullable
+              as String,
       level: null == level
           ? _value.level
           : level // ignore: cast_nullable_to_non_nullable
@@ -843,6 +865,26 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
       experience: null == experience
           ? _value.experience
           : experience // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxExperience: null == maxExperience
+          ? _value.maxExperience
+          : maxExperience // ignore: cast_nullable_to_non_nullable
+              as int,
+      currentHp: null == currentHp
+          ? _value.currentHp
+          : currentHp // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxHp: null == maxHp
+          ? _value.maxHp
+          : maxHp // ignore: cast_nullable_to_non_nullable
+              as int,
+      gold: null == gold
+          ? _value.gold
+          : gold // ignore: cast_nullable_to_non_nullable
+              as int,
+      gems: null == gems
+          ? _value.gems
+          : gems // ignore: cast_nullable_to_non_nullable
               as int,
       baseAttributes: null == baseAttributes
           ? _value.baseAttributes
@@ -895,8 +937,14 @@ abstract class _$$CharacterImplCopyWith<$Res>
   $Res call(
       {String id,
       String userId,
+      String nickname,
       int level,
       int experience,
+      int maxExperience,
+      int currentHp,
+      int maxHp,
+      int gold,
+      int gems,
       List<AttributeValue> baseAttributes,
       CharacterEquipment equipment,
       List<String>? unlockedEquipment,
@@ -922,8 +970,14 @@ class __$$CharacterImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? userId = null,
+    Object? nickname = null,
     Object? level = null,
     Object? experience = null,
+    Object? maxExperience = null,
+    Object? currentHp = null,
+    Object? maxHp = null,
+    Object? gold = null,
+    Object? gems = null,
     Object? baseAttributes = null,
     Object? equipment = null,
     Object? unlockedEquipment = freezed,
@@ -941,6 +995,10 @@ class __$$CharacterImplCopyWithImpl<$Res>
           ? _value.userId
           : userId // ignore: cast_nullable_to_non_nullable
               as String,
+      nickname: null == nickname
+          ? _value.nickname
+          : nickname // ignore: cast_nullable_to_non_nullable
+              as String,
       level: null == level
           ? _value.level
           : level // ignore: cast_nullable_to_non_nullable
@@ -948,6 +1006,26 @@ class __$$CharacterImplCopyWithImpl<$Res>
       experience: null == experience
           ? _value.experience
           : experience // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxExperience: null == maxExperience
+          ? _value.maxExperience
+          : maxExperience // ignore: cast_nullable_to_non_nullable
+              as int,
+      currentHp: null == currentHp
+          ? _value.currentHp
+          : currentHp // ignore: cast_nullable_to_non_nullable
+              as int,
+      maxHp: null == maxHp
+          ? _value.maxHp
+          : maxHp // ignore: cast_nullable_to_non_nullable
+              as int,
+      gold: null == gold
+          ? _value.gold
+          : gold // ignore: cast_nullable_to_non_nullable
+              as int,
+      gems: null == gems
+          ? _value.gems
+          : gems // ignore: cast_nullable_to_non_nullable
               as int,
       baseAttributes: null == baseAttributes
           ? _value._baseAttributes
@@ -987,8 +1065,14 @@ class _$CharacterImpl implements _Character {
   const _$CharacterImpl(
       {required this.id,
       required this.userId,
+      required this.nickname,
       required this.level,
       required this.experience,
+      required this.maxExperience,
+      required this.currentHp,
+      required this.maxHp,
+      required this.gold,
+      required this.gems,
       required final List<AttributeValue> baseAttributes,
       required this.equipment,
       final List<String>? unlockedEquipment,
@@ -1007,9 +1091,21 @@ class _$CharacterImpl implements _Character {
   @override
   final String userId;
   @override
+  final String nickname;
+  @override
   final int level;
   @override
   final int experience;
+  @override
+  final int maxExperience;
+  @override
+  final int currentHp;
+  @override
+  final int maxHp;
+  @override
+  final int gold;
+  @override
+  final int gems;
   final List<AttributeValue> _baseAttributes;
   @override
   List<AttributeValue> get baseAttributes {
@@ -1043,7 +1139,7 @@ class _$CharacterImpl implements _Character {
 
   @override
   String toString() {
-    return 'Character(id: $id, userId: $userId, level: $level, experience: $experience, baseAttributes: $baseAttributes, equipment: $equipment, unlockedEquipment: $unlockedEquipment, currentSprite: $currentSprite, characterClass: $characterClass, totalLoginDays: $totalLoginDays, lastLogin: $lastLogin)';
+    return 'Character(id: $id, userId: $userId, nickname: $nickname, level: $level, experience: $experience, maxExperience: $maxExperience, currentHp: $currentHp, maxHp: $maxHp, gold: $gold, gems: $gems, baseAttributes: $baseAttributes, equipment: $equipment, unlockedEquipment: $unlockedEquipment, currentSprite: $currentSprite, characterClass: $characterClass, totalLoginDays: $totalLoginDays, lastLogin: $lastLogin)';
   }
 
   @override
@@ -1053,9 +1149,18 @@ class _$CharacterImpl implements _Character {
             other is _$CharacterImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.userId, userId) || other.userId == userId) &&
+            (identical(other.nickname, nickname) ||
+                other.nickname == nickname) &&
             (identical(other.level, level) || other.level == level) &&
             (identical(other.experience, experience) ||
                 other.experience == experience) &&
+            (identical(other.maxExperience, maxExperience) ||
+                other.maxExperience == maxExperience) &&
+            (identical(other.currentHp, currentHp) ||
+                other.currentHp == currentHp) &&
+            (identical(other.maxHp, maxHp) || other.maxHp == maxHp) &&
+            (identical(other.gold, gold) || other.gold == gold) &&
+            (identical(other.gems, gems) || other.gems == gems) &&
             const DeepCollectionEquality()
                 .equals(other._baseAttributes, _baseAttributes) &&
             (identical(other.equipment, equipment) ||
@@ -1078,8 +1183,14 @@ class _$CharacterImpl implements _Character {
       runtimeType,
       id,
       userId,
+      nickname,
       level,
       experience,
+      maxExperience,
+      currentHp,
+      maxHp,
+      gold,
+      gems,
       const DeepCollectionEquality().hash(_baseAttributes),
       equipment,
       const DeepCollectionEquality().hash(_unlockedEquipment),
@@ -1106,8 +1217,14 @@ abstract class _Character implements Character {
   const factory _Character(
       {required final String id,
       required final String userId,
+      required final String nickname,
       required final int level,
       required final int experience,
+      required final int maxExperience,
+      required final int currentHp,
+      required final int maxHp,
+      required final int gold,
+      required final int gems,
       required final List<AttributeValue> baseAttributes,
       required final CharacterEquipment equipment,
       final List<String>? unlockedEquipment,
@@ -1124,9 +1241,21 @@ abstract class _Character implements Character {
   @override
   String get userId;
   @override
+  String get nickname;
+  @override
   int get level;
   @override
   int get experience;
+  @override
+  int get maxExperience;
+  @override
+  int get currentHp;
+  @override
+  int get maxHp;
+  @override
+  int get gold;
+  @override
+  int get gems;
   @override
   List<AttributeValue> get baseAttributes;
   @override
