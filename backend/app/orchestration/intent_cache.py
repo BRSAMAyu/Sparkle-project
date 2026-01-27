@@ -69,7 +69,7 @@ class IntentCache:
                 logger.debug(f"Intent cache HIT: '{message[:30]}...' -> {data['intent']}")
                 return data["intent"], data["confidence"]
             else:
-                logger.debug(f"Intent cache MISS: '{message[:30]...}'")
+                logger.debug(f"Intent cache MISS: '{message[:30]}...'")
 
         except Exception as e:
             logger.warning(f"Intent cache lookup failed: {e}")

@@ -1025,8 +1025,16 @@ class SeedLibraryService:
         sorted_ids = sorted(item_scores.keys(), key=lambda x: item_scores[x], reverse=True)
         merged_items = [item_map[item_id] for item_id in sorted_ids[:limit]]
 
-        # 估算总数（取两种搜索的最大值）
-        total = max(len(semantic_results), keyword_total)
+        # 估算总数：使用关键词总数作为基准（因为语义搜索未返回总数）
+        # 如果语义搜索返回的结果较少，说明语义匹配更精准，使用实际去重后的数量
+        # 如果语义搜索满了，则使用关键词总数作为保守估计
+        semantic_limit = limit * 2
+        if len(semantic_results) < semantic_limit:
+            # 语义搜索没满，说明匹配结果有限，使用去重后的实际数量
+            total = len(item_map)
+        else:
+            # 语义搜索满了，使用关键词总数作为估计（可能偏高但保守）
+            total = max(keyword_total, len(item_map))
 
         return merged_items, total
 

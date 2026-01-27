@@ -67,9 +67,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
           children: [
             if (_avatarUrl != null)
               Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: DS.spacing8),
                 child: SparkleAvatar(
-                    radius: 16, url: _avatarUrl, fallbackText: _displayName,),
+                    radius: DS.iconSizeSm, url: _avatarUrl, fallbackText: _displayName,),
               ),
             Text(_displayName ?? '聊天'),
           ],
@@ -86,9 +86,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.chat_bubble_outline,
-                            size: 48, color: DS.neutral300,),
-                        const SizedBox(height: DS.lg),
-                        Text('开始对话吧!', style: TextStyle(color: DS.neutral500)),
+                            size: DS.iconSize3xl, color: DS.neutral300,),
+                        const SizedBox(height: DS.spacing24),
+                        Text('开始对话吧!', style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeBase)),
                       ],
                     ),
                   );
@@ -96,7 +96,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 return ListView.builder(
                   reverse: true,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+                      const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];

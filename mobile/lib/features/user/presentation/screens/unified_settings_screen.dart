@@ -65,7 +65,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             Text(
               l10n.dragToAdjust,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
             ),
             const SizedBox(height: DS.spacing16),
             LearningModeControl(
@@ -85,7 +85,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             Text(
               l10n.adjustAndGenerate,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
             ),
             const SizedBox(height: DS.spacing16),
 
@@ -139,7 +139,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             Text(
               l10n.selectTimeSlots,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
             ),
             const SizedBox(height: DS.spacing16),
             WeeklyAgendaGrid(
@@ -285,7 +285,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: Text(
                   l10n.version,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10),
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeXs),
                 ),
               ),
             ),
@@ -357,13 +357,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   Widget _buildSectionHeader(IconData icon, String title) => Row(
         children: [
-          Icon(icon, color: DS.primaryBase),
-          const SizedBox(width: DS.sm),
+          Icon(icon, color: DS.primaryBase, size: DS.iconSizeBase),
+          const SizedBox(width: DS.spacing8),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: DS.fontSizeLg,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
         ],

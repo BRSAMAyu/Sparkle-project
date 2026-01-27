@@ -651,13 +651,31 @@ class PlanStateService:
                 "tasks_completed": completed,
             })
 
-        # Milestone: 50% completion
+        # Milestone: 25% completion
         total = task_index.get("total", 0)
         rate = task_index.get("avg_completion_rate", 0)
+        if total >= 10 and rate >= 0.25 and "ms-25pct-completion" not in existing_ids:
+            new_milestones.append({
+                "id": "ms-25pct-completion",
+                "title": "Reached 25% completion rate",
+                "achieved_at": datetime.utcnow().isoformat(),
+                "completion_rate": rate,
+            })
+
+        # Milestone: 50% completion
         if total >= 10 and rate >= 0.5 and "ms-50pct-completion" not in existing_ids:
             new_milestones.append({
                 "id": "ms-50pct-completion",
                 "title": "Reached 50% completion rate",
+                "achieved_at": datetime.utcnow().isoformat(),
+                "completion_rate": rate,
+            })
+
+        # Milestone: 75% completion
+        if total >= 10 and rate >= 0.75 and "ms-75pct-completion" not in existing_ids:
+            new_milestones.append({
+                "id": "ms-75pct-completion",
+                "title": "Reached 75% completion rate",
                 "achieved_at": datetime.utcnow().isoformat(),
                 "completion_rate": rate,
             })

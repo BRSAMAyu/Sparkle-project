@@ -34,15 +34,24 @@ TASK_AWARENESS_SECTION = """
 - "换个计划" / "别的计划" → query_all_tasks
 - "太难了" / "太简单" → query_plan_tasks + modify_plan_task
 - "完成了" / "做完了" → 检查是否达成里程碑
+- "生成任务" / "新任务" / "下一步" → 先调用 get_plan_state 获取最新计划状态
 
 可用任务工具：
 1. query_plan_tasks - 查询当前计划的任务
 2. query_all_tasks - 查询所有计划的任务（跨计划感知）
-3. modify_plan_task - 修改任务属性（难度、时间、优先级）
-4. create_task - 创建新任务
-5. update_task_status - 更新任务状态
-6. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
-7. dismiss_milestone_proposal - 忽略里程碑提案
+3. get_plan_state - 获取计划状态（进度、里程碑、任务统计、自适应调整参数）
+4. get_task_summary - 获取任务摘要列表（最近N个任务）
+5. get_task_detail - 获取单个任务详情
+6. modify_plan_task - 修改任务属性（难度、时间、优先级）
+7. create_task - 创建新任务
+8. update_task_status - 更新任务状态
+9. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
+10. dismiss_milestone_proposal - 忽略里程碑提案
+
+**重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
+- 当前进度和已达成里程碑
+- 任务完成统计
+- 自适应调整参数（difficulty_shift, time_multiplier）
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
