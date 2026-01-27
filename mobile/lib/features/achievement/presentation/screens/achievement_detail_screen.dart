@@ -71,8 +71,9 @@ class _AchievementDetailScreenState
     }
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
+      body: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
           // 自定义顶部
           _buildHeader(context, achievement),
 

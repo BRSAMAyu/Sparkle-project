@@ -64,31 +64,33 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
               ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(DS.lg),
-            itemCount: groups.length,
-            separatorBuilder: (context, index) => const SizedBox(height: DS.md),
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              return Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: DS.brandPrimary.shade200,
-                    child: Icon(group.type.name == 'sprint'
-                        ? Icons.timer
-                        : Icons.group,),
+          return ContentConstraint(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(DS.lg),
+              itemCount: groups.length,
+              separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+              itemBuilder: (context, index) {
+                final group = groups[index];
+                return Card(
+                  elevation: 2,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: DS.brandPrimary.shade200,
+                      child: Icon(group.type.name == 'sprint'
+                          ? Icons.timer
+                          : Icons.group,),
+                    ),
+                    title: Text(group.name),
+                    subtitle: Text(
+                        '${group.memberCount} members • ${group.totalFlamePower} flame',),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      context.push('/community/groups/${group.id}');
+                    },
                   ),
-                  title: Text(group.name),
-                  subtitle: Text(
-                      '${group.memberCount} members • ${group.totalFlamePower} flame',),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    context.push('/community/groups/${group.id}');
-                  },
-                ),
-              );
-            },
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: LoadingIndicator()),

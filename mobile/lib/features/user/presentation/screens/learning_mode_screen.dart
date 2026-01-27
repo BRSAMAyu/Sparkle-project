@@ -81,9 +81,10 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
         ),
         title: const Text('学习模式设置'),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Column(
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -139,6 +140,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       );

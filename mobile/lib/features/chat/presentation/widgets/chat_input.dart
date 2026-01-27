@@ -134,7 +134,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isNarrow = MediaQuery.of(context).size.width < DS.breakpointNarrow;
+    // Use ResponsiveSystem instead of MediaQuery width for consistency
+    final isNarrow = ResponsiveSystem.isMobile(context);
     final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
     final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
     final attachmentPadding = isNarrow ? 4.0 : 8.0;

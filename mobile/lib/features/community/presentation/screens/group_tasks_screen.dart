@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 class GroupTasksScreen extends ConsumerWidget {
@@ -112,8 +113,130 @@ class GroupTasksScreen extends ConsumerWidget {
   }
 
   void _showCreateTaskDialog(BuildContext context, WidgetRef ref) {
-    // Basic dialog to create task
-    // Using a simple placeholder for now as detailed implementation would require more fields
-    // and connecting to createGroupTask method in repo (which needs to be added to notifier)
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    int estimatedMinutes = 30;
+    int difficulty = 2;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('创建群组任务'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: '任务标题',
+                    hintText: '例如：完成第三章练习',
+                    border: OutlineInputBorder(),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: DS.md),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: '任务描述（可选）',
+                    hintText: '详细描述任务内容...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: DS.md),
+                Text(
+                  '预计时间: $estimatedMinutes 分钟',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Slider(
+                  value: estimatedMinutes.toDouble(),
+                  min: 5,
+                  max: 180,
+                  divisions: 35,
+                  label: '$estimatedMinutes 分钟',
+                  onChanged: (value) {
+                    setState(() {
+                      estimatedMinutes = value.toInt();
+                    });
+                  },
+                ),
+                const SizedBox(height: DS.md),
+                Text(
+                  '难度: $difficulty/5',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Slider(
+                  value: difficulty.toDouble(),
+                  min: 1,
+                  max: 5,
+                  divisions: 4,
+                  label: '$difficulty',
+                  onChanged: (value) {
+                    setState(() {
+                      difficulty = value.toInt();
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final title = titleController.text.trim();
+                if (title.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('请输入任务标题')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(context);
+
+                try {
+                  await ref.read(groupTasksProvider(groupId).notifier).createTask(
+                        GroupTaskCreate(
+                          title: title,
+                          description: descriptionController.text.trim().isEmpty
+                              ? null
+                              : descriptionController.text.trim(),
+                          estimatedMinutes: estimatedMinutes,
+                          difficulty: difficulty,
+                        ),
+                      );
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('任务创建成功'),
+                        backgroundColor: DS.success,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('创建失败: $e'),
+                        backgroundColor: DS.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('创建'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

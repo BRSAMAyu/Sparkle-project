@@ -879,6 +879,15 @@ class GroupTasksNotifier
       rethrow;
     }
   }
+
+  Future<void> createTask(GroupTaskCreate task) async {
+    try {
+      await _repository.createGroupTask(_groupId, task);
+      await loadTasks();
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 
 // 8. Private Chat Provider (Family)

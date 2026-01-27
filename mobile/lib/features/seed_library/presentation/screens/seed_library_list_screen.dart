@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
@@ -26,11 +27,13 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     super.initState();
     // Load initial libraries
     Future.microtask(() {
-      ref.read(seedLibraryListProvider({
+      ref.read(seedLibraryListProvider((
         category: _selectedCategory,
+        isFeatured: null,
+        isOfficial: null,
         visibility: _selectedVisibility,
         search: _searchController.text.isEmpty ? null : _searchController.text,
-      }).notifier,);
+      )).notifier);
     });
   }
 
@@ -41,11 +44,15 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _applyFilters() {
-    ref.read(seedLibraryListProvider({
-      category: _selectedCategory,
-      visibility: _selectedVisibility,
-      search: _searchController.text.isEmpty ? null : _searchController.text,
-    }).notifier,).refresh(
+    ref
+        .read(seedLibraryListProvider((
+          category: _selectedCategory,
+          isFeatured: null,
+          isOfficial: null,
+          visibility: _selectedVisibility,
+          search: _searchController.text.isEmpty ? null : _searchController.text,
+        )).notifier)
+        .refresh(
       category: _selectedCategory,
       visibility: _selectedVisibility,
       search: _searchController.text.isEmpty ? null : _searchController.text,
@@ -54,11 +61,15 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(seedLibraryListProvider({
+    final params = (
       category: _selectedCategory,
+      isFeatured: null,
+      isOfficial: null,
       visibility: _selectedVisibility,
       search: _searchController.text.isEmpty ? null : _searchController.text,
-    }),);
+    );
+    final state = ref.watch(seedLibraryListProvider(params));
+    final notifier = ref.read(seedLibraryListProvider(params).notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -74,8 +85,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
+      body: ContentConstraint(
+        child: Column(
+          children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
@@ -138,9 +150,10 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
 
           // Library list
           Expanded(
-            child: _buildLibraryList(context, state),
+            child: _buildLibraryList(context, state, notifier),
           ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -162,6 +175,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   Widget _buildLibraryList(
     BuildContext context,
     SeedLibraryListState state,
+    SeedLibraryListNotifier notifier,
   ) {
     if (state.isLoading && state.libraries.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -267,7 +281,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               children: LibraryCategory.values.map((category) {
                 final isSelected = _selectedCategory == category;
                 return FilterChip(
-                  label: Text(category.categoryDisplayName),
+                  label: Text(category.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -285,7 +299,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               children: LibraryVisibility.values.map((visibility) {
                 final isSelected = _selectedVisibility == visibility;
                 return FilterChip(
-                  label: Text(visibility.visibilityDisplayName),
+                  label: Text(visibility.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {

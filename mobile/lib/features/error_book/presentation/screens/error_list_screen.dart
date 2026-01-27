@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
@@ -114,8 +115,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ],
         ),
       ),
-      body: Column(
-        children: [
+      body: ContentConstraint(
+        child: Column(
+          children: [
           // 如果有认知维度筛选，显示提示条
           if (filterState.cognitiveDimension != null)
              Container(
@@ -181,7 +183,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToAddError(context),

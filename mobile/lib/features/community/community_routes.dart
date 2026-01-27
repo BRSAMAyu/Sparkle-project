@@ -5,9 +5,12 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_list_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
 
 Page<dynamic> _buildTransitionPage({
   required GoRouterState state,
@@ -30,11 +33,15 @@ class CommunityRoutes {
   // Route constants for deep linking and navigation
   static const String home = '/community';
   static const String friends = '/community/friends';
+  static const String friendsDiscover = '/community/friends/discover';
+  static const String userSearch = '/community/users/search';
   static const String groups = '/community/groups';
   static const String groupsSearch = '/community/groups/search';
   static const String groupsCreate = '/community/groups/create';
   static const String groupDetail = '/community/groups/:id';
   static const String groupTasks = '/community/groups/:id/tasks';
+  static const String groupMembers = '/community/groups/:id/members';
+  static const String groupFiles = '/community/groups/:id/files';
 
   static List<RouteBase> get routes => [
     // Friends list (detail page, full-screen)
@@ -45,6 +52,26 @@ class CommunityRoutes {
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const FriendsScreen(),
+        ),
+      ),
+    // Friends discover / recommendations (detail page, full-screen)
+    GoRoute(
+        path: friendsDiscover,
+        name: 'friendsDiscover',
+        parentNavigatorKey: navigatorKey,
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const FriendsScreen(),
+        ),
+      ),
+    // User search (detail page, full-screen)
+    GoRoute(
+        path: userSearch,
+        name: 'userSearch',
+        parentNavigatorKey: navigatorKey,
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const UserSearchScreen(),
         ),
       ),
     // Group list (detail page, full-screen)
@@ -103,6 +130,38 @@ class CommunityRoutes {
           return _buildTransitionPage(
             state: state,
             child: GroupTasksScreen(groupId: groupId),
+          );
+        },
+      ),
+    // Group members (full-screen, uses root navigator)
+    GoRoute(
+        path: groupMembers,
+        name: 'groupMembers',
+        parentNavigatorKey: navigatorKey,
+        pageBuilder: (context, state) {
+          // id is required in path, so it won't be null
+          final groupId = state.pathParameters['id']!;
+          final groupName = state.uri.queryParameters['name'] ?? '';
+          return _buildTransitionPage(
+            state: state,
+            child: GroupMembersScreen(
+              groupId: groupId,
+              groupName: groupName,
+            ),
+          );
+        },
+      ),
+    // Group files (full-screen, uses root navigator)
+    GoRoute(
+        path: groupFiles,
+        name: 'groupFiles',
+        parentNavigatorKey: navigatorKey,
+        pageBuilder: (context, state) {
+          // id is required in path, so it won't be null
+          final groupId = state.pathParameters['id']!;
+          return _buildTransitionPage(
+            state: state,
+            child: GroupFilesScreen(groupId: groupId),
           );
         },
       ),

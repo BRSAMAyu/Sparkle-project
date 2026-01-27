@@ -10,5 +10,7 @@ export 'presentation/screens/friends_screen.dart';
 export 'presentation/screens/group_detail_screen.dart';
 export 'presentation/screens/group_files_screen.dart';
 export 'presentation/screens/group_list_screen.dart';
+export 'presentation/screens/group_members_screen.dart';
 export 'presentation/screens/group_search_screen.dart';
 export 'presentation/screens/group_tasks_screen.dart';
+export 'presentation/screens/user_search_screen.dart';

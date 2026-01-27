@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 
@@ -97,11 +98,12 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
       appBar: AppBar(
         title: const Text('创建种子库'),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: ContentConstraint(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
             // Name field
             TextFormField(
               controller: _nameController,
@@ -234,7 +236,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                   ),).toList(),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(

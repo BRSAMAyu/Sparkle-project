@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -19,9 +20,10 @@ class TransparencySettingsScreen extends ConsumerWidget {
         title: const Text('透明模式设置'),
       ),
       body: preferences.when(
-        data: (prefs) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+        data: (prefs) => ContentConstraint(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
             // Global toggle
             Card(
               child: SwitchListTile(
@@ -116,6 +118,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
               ),
             ],
           ],
+          ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(

@@ -50,14 +50,16 @@ class SprintHistoryScreen extends ConsumerWidget {
       return _buildEmptyState(context, l10n);
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(DS.spacing16),
-      itemCount: state.items.length,
-      separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
-      itemBuilder: (context, index) {
-        final item = state.items[index];
-        return _SprintHistoryCard(item: item);
-      },
+    return ContentConstraint(
+      child: ListView.separated(
+        padding: const EdgeInsets.all(DS.spacing16),
+        itemCount: state.items.length,
+        separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
+        itemBuilder: (context, index) {
+          final item = state.items[index];
+          return _SprintHistoryCard(item: item);
+        },
+      ),
     );
   }
 

@@ -54,10 +54,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
+      body: ContentConstraint(
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: TextField(
               controller: _searchController,
@@ -74,7 +75,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(DS.radiusMd),
+                  borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                 ),
                 filled: true,
                 fillColor: DS.neutral50,
@@ -150,13 +151,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.spacingLg, DS.spacing16, DS.sm),
+      padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.lg, DS.spacing16, DS.sm),
       child: Text(
         title,
         style: TextStyle(
@@ -176,7 +178,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
       margin: const EdgeInsets.symmetric(horizontal: DS.spacing16, vertical: DS.xs),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        borderRadius: BorderRadius.circular(DS.radiusMd),
+        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
         border: Border.all(color: DS.neutral200),
       ),
       child: ListTile(
@@ -305,12 +307,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                         ),
                       ));
                     }
-                    items.add(const PopupMenuItem(
+                    items.add(PopupMenuItem(
                       value: 'transfer',
                       child: Row(
                         children: [
                           Icon(Icons.supervisor_account, size: 18, color: DS.warning),
-                          SizedBox(width: DS.sm),
+                          const SizedBox(width: DS.sm),
                           Text('Transfer Ownership', style: TextStyle(color: DS.warning)),
                         ],
                       ),
@@ -319,12 +321,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
 
                   items.add(const PopupMenuDivider());
 
-                  items.add(const PopupMenuItem(
+                  items.add(PopupMenuItem(
                     value: 'kick',
                     child: Row(
                       children: [
                         Icon(Icons.person_remove, size: 18, color: DS.error),
-                        SizedBox(width: DS.sm),
+                        const SizedBox(width: DS.sm),
                         Text('Remove from Group', style: TextStyle(color: DS.error)),
                       ],
                     ),

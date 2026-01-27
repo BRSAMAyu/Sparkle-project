@@ -59,9 +59,10 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
             ],
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Column(
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               statsAsync.when(
@@ -131,6 +132,7 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
         bottomNavigationBar: Padding(

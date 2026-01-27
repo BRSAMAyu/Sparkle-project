@@ -111,9 +111,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: Column(
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: Column(
             children: [
               TextField(
                 controller: _contentController,
@@ -162,6 +163,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       );

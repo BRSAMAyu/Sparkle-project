@@ -414,9 +414,10 @@ class _InteractiveOnboardingScreenState
     required List<String> features,
     required Widget demoWidget,
   }) =>
-      SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
+      ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
           children: [
             // Icon
             Container(
@@ -482,6 +483,7 @@ class _InteractiveOnboardingScreenState
               ),
             ),
           ],
+        ),
         ),
       );
 

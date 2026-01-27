@@ -52,9 +52,10 @@ class UserPersonaScreen extends ConsumerWidget {
     final fragments =
         (layer3['fragments'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.spacing16),
-      children: [
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.spacing16),
+        children: [
         _buildOnboardingBanner(context, completed),
         _sectionTitle('L1 用户声明'),
         _subSectionList(
@@ -110,6 +111,7 @@ class UserPersonaScreen extends ConsumerWidget {
           fragments.map(_readonlyRow).toList(),
         ),
       ],
+      ),
     );
   }
 

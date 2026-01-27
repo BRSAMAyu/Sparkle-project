@@ -787,4 +787,34 @@ class MockCommunityRepository implements CommunityRepository {
     // Mock implementation - do nothing
     return;
   }
+
+  @override
+  Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
+    // Mock implementation - return empty list
+    return [];
+  }
+
+  @override
+  Future<void> kickMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> promoteMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> demoteMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> transferOwnership(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
 }

@@ -175,8 +175,9 @@ class _TranslationHistoryScreenState
             ),
         ],
       ),
-      body: Column(
-        children: [
+      body: ContentConstraint(
+        child: Column(
+          children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.all(DS.md),
@@ -279,7 +280,8 @@ class _TranslationHistoryScreenState
                         },
                       ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

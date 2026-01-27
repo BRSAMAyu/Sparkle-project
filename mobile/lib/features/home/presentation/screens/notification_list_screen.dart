@@ -26,12 +26,14 @@ class NotificationListScreen extends ConsumerWidget {
           if (notifications.isEmpty) {
             return const Center(child: Text('No new notifications'));
           }
-          return ListView.builder(
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return NotificationItem(notification: notification);
-            },
+          return ContentConstraint(
+            child: ListView.builder(
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                return NotificationItem(notification: notification);
+              },
+            ),
           );
         },
         loading: () => Center(child: LoadingIndicator.circular()),

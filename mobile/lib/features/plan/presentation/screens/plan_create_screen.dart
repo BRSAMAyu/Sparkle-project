@@ -25,27 +25,29 @@ class PlanCreateScreen extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-            const SizedBox(height: DS.lg),
-            Text(
-              l10n.featureComingSoon,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              l10n.stayTuned,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.xl),
-            CustomButton.primary(
-              text: l10n.back,
-              onPressed: () => context.pop(),
-            ),
-          ],
+      body: ContentConstraint(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.construction, size: 80, color: DS.brandPrimary),
+              const SizedBox(height: DS.lg),
+              Text(
+                l10n.featureComingSoon,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                l10n.stayTuned,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.xl),
+              CustomButton.primary(
+                text: l10n.back,
+                onPressed: () => context.pop(),
+              ),
+            ],
+          ),
         ),
       ),
     );
