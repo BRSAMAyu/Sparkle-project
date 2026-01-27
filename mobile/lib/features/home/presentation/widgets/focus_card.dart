@@ -102,8 +102,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     builder: (context, child) => Transform.scale(
                       scale: _flameAnimation.value,
                       child: Container(
-                        width: 50,
-                        height: 50,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
                             colors: [
@@ -117,7 +117,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         child: Icon(
                           Icons.local_fire_department_rounded,
                           color: DS.warning,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                     ),

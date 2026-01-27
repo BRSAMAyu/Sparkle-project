@@ -49,7 +49,7 @@ class LongTermPlanCard extends ConsumerWidget {
                 Text(
                   '${(growth.progress * 100).toInt()}%',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: DS.success,
                   ),

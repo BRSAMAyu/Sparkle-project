@@ -276,9 +276,19 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop
+    final layoutType = getLayoutType(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive column count based on screen size
+    final crossAxisCount = switch (layoutType) {
+      LayoutType.desktop => 3,
+      LayoutType.tablet => 2,
+      LayoutType.mobile => screenWidth < 390 ? 1 : 2, // 1列 for iPhone SE, 2列 for larger phones
+    };
+
     return ContentConstraint(
       child: StaggeredGrid.count(
-        crossAxisCount: 2,
+        crossAxisCount: crossAxisCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         children: [

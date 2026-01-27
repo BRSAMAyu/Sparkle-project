@@ -72,7 +72,7 @@ class _TaskDetailView extends ConsumerWidget {
                         ),
                         const SizedBox(height: DS.spacing12),
                         _buildGuideSection(context),
-                        const SizedBox(height: 100), // Space for bottom bar
+                        const SizedBox(height: DS.spacing64), // Space for bottom bar
                       ],
                     ),
                   ),
@@ -120,7 +120,7 @@ class _TaskDetailView extends ConsumerWidget {
   }
 
   Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
-        expandedHeight: 200.0,
+        expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
         flexibleSpace: FlexibleSpaceBar(
           background: Hero(
@@ -151,25 +151,28 @@ class _TaskDetailView extends ConsumerWidget {
                         const SizedBox(height: DS.spacing8),
                         Wrap(
                           spacing: DS.spacing8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Chip(
                               label: Text(
                                   toBeginningOfSentenceCase(task.type.name) ??
-                                      task.type.name,),
+                                      task.type.name,
+                                  style: TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor:
                                   DS.brandPrimary.withValues(alpha: 0.8),
                               avatar: Icon(Icons.category,
-                                  size: 16, color: DS.primaryBase,),
+                                  size: DS.iconSizeXs, color: DS.primaryBase,),
                             ),
                             Chip(
                               label: Text(
                                   toBeginningOfSentenceCase(task.status.name) ??
-                                      task.status.name,),
+                                      task.status.name,
+                                  style: TextStyle(fontSize: DS.fontSizeSm),),
                               backgroundColor: _getStatusColor(task.status)
                                   .withValues(alpha: 0.2),
                               labelStyle: TextStyle(
                                   color: _getStatusColor(task.status),
-                                  fontWeight: FontWeight.bold,),
+                                  fontWeight: DS.fontWeightBold,),
                             ),
                           ],
                         ),
@@ -184,6 +187,7 @@ class _TaskDetailView extends ConsumerWidget {
       );
 
   Widget _buildInfoSection(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _InfoTileCard(
             icon: Icons.timer_outlined,
@@ -356,7 +360,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(DS.spacing10),
                   decoration: BoxDecoration(
                     gradient: widget.gradient,
                     borderRadius: DS.borderRadius8,
@@ -364,12 +368,12 @@ class _InfoTileCardState extends State<_InfoTileCard>
                       BoxShadow(
                         color:
                             widget.gradient.colors.first.withValues(alpha: 0.3),
-                        blurRadius: 8,
+                        blurRadius: DS.spacing8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Icon(widget.icon, color: DS.brandPrimary, size: 22),
+                  child: Icon(widget.icon, color: DS.brandPrimary, size: DS.iconSizeSm),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(
@@ -384,7 +388,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
                               letterSpacing: 0.5,
                             ),
                       ),
-                      const SizedBox(height: DS.xs),
+                      const SizedBox(height: DS.spacing4),
                       Text(
                         widget.content,
                         style:
@@ -459,6 +463,7 @@ class _BottomActionBar extends ConsumerWidget {
                 ),
                 child: IconButton(
                   icon: Icon(Icons.delete_outline, color: DS.error),
+                  iconSize: DS.iconSizeBase,
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     showDialog<void>(

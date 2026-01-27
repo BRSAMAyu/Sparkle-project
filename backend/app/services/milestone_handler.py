@@ -45,7 +45,9 @@ class MilestoneHandler:
         "ms-first-10-tasks",
         "ms-25-tasks",
         "ms-50-tasks",
+        "ms-25pct-completion",   # 新增
         "ms-50pct-completion",
+        "ms-75pct-completion",   # 新增
     }
 
     def __init__(self, db: AsyncSession):

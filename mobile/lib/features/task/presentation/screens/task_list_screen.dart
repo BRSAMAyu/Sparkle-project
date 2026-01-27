@@ -83,7 +83,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: const EdgeInsets.all(DS.spacing8),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: DS.borderRadius8,
@@ -91,15 +91,16 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       child: Icon(
                         Icons.task_alt_rounded,
                         color: DS.brandPrimaryConst,
-                        size: 20,
+                        size: DS.iconSizeSm,
                       ),
                     ),
-                    const SizedBox(width: DS.md),
+                    const SizedBox(width: DS.spacing16),
                     Text(
                       '我的任务',
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontWeight: DS.fontWeightBold,
+                        fontSize: DS.fontSizeLg,
                       ),
                     ),
                   ],
@@ -108,7 +109,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         actions: [
           IconButton(
             icon:
-                Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
+                Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded, size: DS.iconSizeBase),
             color: DS.brandPrimaryConst,
             onPressed: () {
               setState(() {
@@ -123,7 +124,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         onRefresh: () => ref.read(taskListProvider.notifier).refreshTasks(),
         child: Column(
           children: [
-            if (!_isSearching) _FilterChips(),
+            if (!_isSearching) const _FilterChips(),
             Expanded(
               child: _buildTaskList(context, taskListState, tasks, ref),
             ),
@@ -244,19 +245,19 @@ class _FilterChips extends ConsumerWidget {
     final currentFilter = ref.watch(taskFilterProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: DS.spacing12, horizontal: DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: DS.shadowSm,
       ),
       child: SizedBox(
-        height: 40,
+        height: DS.spacing40,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: TaskFilterOptions.values.map((filter) {
             final isSelected = currentFilter == filter;
             return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
+              padding: const EdgeInsets.only(right: DS.spacing8),
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();

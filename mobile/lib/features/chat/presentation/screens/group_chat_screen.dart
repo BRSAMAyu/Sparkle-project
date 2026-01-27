@@ -167,12 +167,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 }
                 return ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.all(DS.lg),
+                  padding: const EdgeInsets.all(DS.spacing16),
                   itemCount: mergedMessages.length + (showAgentStatus ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (showAgentStatus && index == 0) {
                       return const Padding(
-                        padding: EdgeInsets.only(bottom: DS.md),
+                        padding: EdgeInsets.only(bottom: DS.spacing16),
                         child: AiStatusIndicator(
                           status: 'THINKING',
                           details: 'AI助手正在整理思路...',
@@ -229,10 +229,10 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           if (agentState.error != null)
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: DS.lg, vertical: DS.sm,),
+                  horizontal: DS.spacing16, vertical: DS.spacing8,),
               child: Text(
                 agentState.error!,
-                style: TextStyle(color: DS.error, fontSize: 12),
+                style: TextStyle(color: DS.error, fontSize: DS.fontSizeSm),
               ),
             ),
           _buildAgentToolbar(
@@ -360,7 +360,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     required List<MessageInfo> messages,
   }) =>
       Padding(
-        padding: const EdgeInsets.fromLTRB(DS.lg, DS.sm, DS.lg, 0),
+        padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.spacing8, DS.spacing16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -370,7 +370,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   selected: _agentMode,
                   label: Text(_agentMode ? 'AI协作已开启' : 'AI协作'),
                   avatar: Icon(Icons.auto_awesome,
-                      size: 16,
+                      size: DS.iconSizeXs,
                       color: _agentMode ? DS.brandPrimary : DS.neutral500,),
                   onSelected: (value) {
                     setState(() {
@@ -384,26 +384,26 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     });
                   },
                 ),
-                const SizedBox(width: DS.md),
+                const SizedBox(width: DS.spacing8),
                 if (_agentMode)
                   Text(
                     '仅你可见',
-                    style: TextStyle(fontSize: 12, color: DS.neutral500),
+                    style: TextStyle(fontSize: DS.fontSizeSm, color: DS.neutral500),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
                   Text(
                     'AI处理中...',
-                    style: TextStyle(fontSize: 12, color: DS.brandPrimary70),
+                    style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary70),
                   ),
               ],
             ),
             if (_agentMode)
               Padding(
-                padding: const EdgeInsets.only(top: DS.sm),
+                padding: const EdgeInsets.only(top: DS.spacing8),
                 child: Wrap(
-                  spacing: DS.sm,
-                  runSpacing: DS.xs,
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing4,
                   children: [
                     _AgentQuickChip(
                       label: '总结讨论',
@@ -473,23 +473,23 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               top: false,
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: DS.lg,
-                  right: DS.lg,
-                  top: DS.lg,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + DS.lg,
+                  left: DS.spacing16,
+                  right: DS.spacing16,
+                  top: DS.spacing16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 36,
-                      height: 4,
+                      width: DS.spacing40,
+                      height: DS.spacing4,
                       decoration: BoxDecoration(
                         color: DS.neutral300,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(DS.spacing4),
                       ),
                     ),
-                    const SizedBox(height: DS.md),
+                    const SizedBox(height: DS.spacing16),
                     TextField(
                       controller: controller,
                       decoration: const InputDecoration(
@@ -503,7 +503,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         setState(() => isLoading = false);
                       },
                     ),
-                    const SizedBox(height: DS.md),
+                    const SizedBox(height: DS.spacing16),
                     if (isLoading) const LoadingIndicator(),
                     if (!isLoading)
                       SizedBox(
@@ -543,7 +543,7 @@ class _AgentQuickChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ActionChip(
         label:
-            Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
+            Text(label, style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary)),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
       );
