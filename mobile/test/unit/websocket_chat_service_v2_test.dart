@@ -484,5 +484,277 @@ void main() {
         await sub.cancel();
       });
     });
+
+    // ============================================================================
+    // Transparency Event Flow Tests (透明化与信任构建链路)
+    // ============================================================================
+
+    group('Transparency Event Flow', () {
+      late WebSocketChatServiceV2 transparencyService;
+      late MockWebSocketChannel transparencyChannel;
+
+      setUp(() {
+        transparencyChannel = MockWebSocketChannel();
+        transparencyService = WebSocketChatServiceV2(
+          baseUrl: 'ws://test.com',
+          channelFactory: (uri, {headers}) => transparencyChannel,
+        );
+      });
+
+      tearDown(() {
+        transparencyService.dispose();
+        unawaited(transparencyChannel.close());
+      });
+
+      test('Parses transparency_step from delta metadata', () async {
+        // Connect
+        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Simulate incoming delta with transparency event metadata
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': '',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload':
+                json.encode({
+                  'type': 'transparency_step',
+                  'data': {
+                    'currentStep': 1,
+                    'totalSteps': 3,
+                    'step': {
+                      'stepId': 'step-001',
+                      'name': '加载工具配置',
+                      'type': 'planning',
+                      'status': 'in_progress',
+                      'durationMs': 150,
+                      'agentType': 'ORCHESTRATOR',
+                    },
+                  },
+                }),
+          },
+        });
+        transparencyChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Should receive TransparencyStepEvent instead of TextEvent
+        expect(events.length, 1);
+        expect(events.first, isA<TransparencyStepEvent>());
+
+        final stepEvent = events.first as TransparencyStepEvent;
+        expect(stepEvent.currentStep, 1);
+        expect(stepEvent.totalSteps, 3);
+        expect(stepEvent.stepIndex, 0); // currentStep - 1
+        expect(stepEvent.stepName, '加载工具配置');
+        expect(stepEvent.step?['status'], 'in_progress');
+
+        await sub.cancel();
+      });
+
+      test('Parses transparency_complete from delta metadata', () async {
+        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Simulate incoming delta with transparency_complete event
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': '',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload':
+                json.encode({
+                  'type': 'transparency_complete',
+                  'data': {
+                    'requestId': 'req-123',
+                    'totalDurationMs': 2500,
+                    'totalTokens': 450,
+                    'steps': [
+                      {
+                        'stepId': 'step-001',
+                        'name': '加载工具配置',
+                        'type': 'planning',
+                        'status': 'completed',
+                        'durationMs': 150,
+                        'agentType': 'ORCHESTRATOR',
+                      },
+                      {
+                        'stepId': 'step-002',
+                        'name': '执行工具: calculator',
+                        'type': 'executing_tool',
+                        'status': 'completed',
+                        'durationMs': 1200,
+                        'agentType': 'MATH',
+                      },
+                      {
+                        'stepId': 'step-003',
+                        'name': '生成回复',
+                        'type': 'generating',
+                        'status': 'completed',
+                        'durationMs': 800,
+                        'agentType': 'ORCHESTRATOR',
+                      },
+                    ],
+                  },
+                }),
+          },
+        });
+        transparencyChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(events.length, 1);
+        expect(events.first, isA<TransparencyCompleteEvent>());
+
+        final completeEvent = events.first as TransparencyCompleteEvent;
+        expect(completeEvent.transparencyData, isNotNull);
+        expect(completeEvent.transparencyData!.requestId, 'req-123');
+        expect(completeEvent.transparencyData!.totalDurationMs, 2500);
+        expect(completeEvent.transparencyData!.totalTokens, 450);
+        expect(completeEvent.transparencyData!.steps.length, 3);
+        expect(completeEvent.transparencyData!.steps[0].name, '加载工具配置');
+        expect(completeEvent.transparencyData!.steps[1].agentType, 'MATH');
+
+        await sub.cancel();
+      });
+
+      test('Handles transparency events with step progress tracking', () async {
+        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Simulate multiple transparency step events in sequence
+        final step1Json = json.encode({
+          'type': 'delta',
+          'delta': '',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload': json.encode({
+              'type': 'transparency_step',
+              'data': {
+                'currentStep': 1,
+                'totalSteps': 3,
+                'step': {
+                  'stepId': 'step-001',
+                  'name': '制定计划',
+                  'status': 'completed',
+                  'agentType': 'ORCHESTRATOR',
+                },
+              },
+            }),
+          },
+        });
+
+        final step2Json = json.encode({
+          'type': 'delta',
+          'delta': '',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload': json.encode({
+              'type': 'transparency_step',
+              'data': {
+                'currentStep': 2,
+                'totalSteps': 3,
+                'step': {
+                  'stepId': 'step-002',
+                  'name': '执行工具: calculator',
+                  'status': 'in_progress',
+                  'agentType': 'MATH',
+                },
+              },
+            }),
+          },
+        });
+
+        transparencyChannel.simulateIncomingMessage(step1Json);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        transparencyChannel.simulateIncomingMessage(step2Json);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        expect(events.length, 2);
+        expect(events[0], isA<TransparencyStepEvent>());
+        expect(events[1], isA<TransparencyStepEvent>());
+
+        expect((events[0] as TransparencyStepEvent).currentStep, 1);
+        expect((events[0] as TransparencyStepEvent).stepName, '制定计划');
+
+        expect((events[1] as TransparencyStepEvent).currentStep, 2);
+        expect((events[1] as TransparencyStepEvent).stepName, '执行工具: calculator');
+
+        await sub.cancel();
+      });
+
+      test('Falls back to TextEvent for malformed transparency events', () async {
+        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Delta with event_type=transparency but invalid JSON
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': 'Some text',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload': 'invalid json{{',
+          },
+        });
+        transparencyChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Should fall back to TextEvent
+        expect(events.length, 1);
+        expect(events.first, isA<TextEvent>());
+        expect((events.first as TextEvent).content, 'Some text');
+
+        await sub.cancel();
+      });
+
+      test('Handles transparency_step with missing optional fields', () async {
+        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Transparency step with minimal data
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': '',
+          'metadata': {
+            'event_type': 'transparency',
+            'event_payload': json.encode({
+              'type': 'transparency_step',
+              'data': {
+                'currentStep': 1,
+                'totalSteps': 5,
+                // step is null/missing
+              },
+            }),
+          },
+        });
+        transparencyChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(events.length, 1);
+        expect(events.first, isA<TransparencyStepEvent>());
+
+        final stepEvent = events.first as TransparencyStepEvent;
+        expect(stepEvent.currentStep, 1);
+        expect(stepEvent.totalSteps, 5);
+        expect(stepEvent.stepName, ''); // Empty when step is missing
+        expect(stepEvent.step, isNull);
+
+        await sub.cancel();
+      });
+    });
   });
 }

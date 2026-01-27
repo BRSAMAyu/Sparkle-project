@@ -34,6 +34,7 @@ class TaskDetailScreen extends ConsumerWidget {
             ),
           ),
           error: (err, stack) => CustomErrorWidget.page(
+            context: context,
             message: '任务加载失败：$err',
             onRetry: () => ref.refresh(taskDetailProvider(taskId)),
           ),

@@ -26,6 +26,7 @@ class GroupDetailScreen extends ConsumerWidget {
           appBar: AppBar(),
           body: Center(
             child: CustomErrorWidget.page(
+              context: context,
               message: e.toString(),
               onRetry: () {
                 ref.read(groupDetailProvider(groupId).notifier).refresh();
