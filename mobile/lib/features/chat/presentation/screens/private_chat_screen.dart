@@ -69,7 +69,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: DS.spacing8),
                 child: SparkleAvatar(
-                    radius: DS.iconSizeSm, url: _avatarUrl, fallbackText: _displayName,),
+                    url: _avatarUrl, fallbackText: _displayName,),
               ),
             Text(_displayName ?? '聊天'),
           ],

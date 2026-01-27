@@ -126,7 +126,7 @@ class UserPersonaScreen extends ConsumerWidget {
           child: Row(
             children: [
               Icon(Icons.assignment_turned_in_outlined,
-                  color: DS.brandPrimaryConst),
+                  color: DS.brandPrimaryConst,),
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: Text(

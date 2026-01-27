@@ -66,7 +66,7 @@ class TranslationResult {
           [],
       recommendation: json['recommendation'] != null
           ? TranslationRecommendation.fromJson(
-              json['recommendation'] as Map<String, dynamic>)
+              json['recommendation'] as Map<String, dynamic>,)
           : null,
       meta: (json['meta'] as Map<String, dynamic>?) ?? {},
     );

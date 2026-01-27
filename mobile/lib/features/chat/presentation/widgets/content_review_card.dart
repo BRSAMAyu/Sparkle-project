@@ -457,7 +457,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         borderRadius: DS.borderRadius12,
         border: Border.all(
           color: color.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Row(

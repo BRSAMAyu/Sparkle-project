@@ -86,6 +86,13 @@ class PlanContextSummary extends ConsumerWidget {
 }
 
 class PlanContextData {
+  const PlanContextData({
+    required this.facts,
+    required this.taskSummary,
+    required this.recentFeedback,
+    this.planId,
+    this.status,
+  });
 
   factory PlanContextData.fromJson(Map<String, dynamic> json) {
     final taskSummary =
@@ -103,13 +110,6 @@ class PlanContextData {
           <Map<String, dynamic>>[],
     );
   }
-  const PlanContextData({
-    required this.facts,
-    required this.taskSummary,
-    required this.recentFeedback,
-    this.planId,
-    this.status,
-  });
 
   final String? planId;
   final String? status;

@@ -79,7 +79,7 @@ class _ExpandableSectionState extends State<ExpandableSection>
   }
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: widget.backgroundColor ?? DS.surfaceSecondary,
         borderRadius: DS.borderRadius8,

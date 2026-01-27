@@ -89,6 +89,7 @@ class ABExperiment(BaseModel):
     variants = relationship(
         "ABExperimentVariant",
         back_populates="experiment",
+        foreign_keys="[ABExperimentVariant.experiment_id]",
         cascade="all, delete-orphan",
         order_by="ABExperimentVariant.created_at"
     )
@@ -156,7 +157,7 @@ class ABExperimentVariant(BaseModel):
     extra_metadata = Column(JSONBCompat, nullable=True, doc="额外的元数据信息")
 
     # 关系
-    experiment = relationship("ABExperiment", back_populates="variants")
+    experiment = relationship("ABExperiment", back_populates="variants", foreign_keys=[experiment_id])
     metrics = relationship(
         "ABExperimentMetric",
         back_populates="variant",

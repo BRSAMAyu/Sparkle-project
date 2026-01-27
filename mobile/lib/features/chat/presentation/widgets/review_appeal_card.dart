@@ -636,7 +636,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                             ?.copyWith(color: DS.neutral400),
                         filled: true,
                         fillColor: DS.neutral100,
-                        border: OutlineInputBorder(
+                        border: const OutlineInputBorder(
                           borderRadius: DS.borderRadius8,
                           borderSide: BorderSide.none,
                         ),

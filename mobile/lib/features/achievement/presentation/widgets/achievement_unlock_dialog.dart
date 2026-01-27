@@ -659,10 +659,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 vertical: DS.spacing10,
               ),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    const Color(0xFFFF6B6B),
-                    const Color(0xFFFFD93D),
+                    Color(0xFFFF6B6B),
+                    Color(0xFFFFD93D),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
@@ -1004,6 +1004,12 @@ class _RainbowExplosionPainter extends CustomPainter {
 
 /// P1功能: 里程碑信息类
 class MilestoneInfo {
+  MilestoneInfo({
+    required this.milestoneType,
+    required this.description,
+    this.reward,
+    this.progressPercentage,
+  });
 
   factory MilestoneInfo.fromProgress(double oldProgress, double newProgress) {
     final oldMilestone = (oldProgress * 100).toInt() ~/ 25;
@@ -1012,20 +1018,14 @@ class MilestoneInfo {
     if (newMilestone > oldMilestone && newMilestone <= 4) {
       final percentage = newMilestone * 25;
       return MilestoneInfo(
-        milestoneType: '${percentage}%',
-        description: '达成${percentage}%进度！',
+        milestoneType: '$percentage%',
+        description: '达成$percentage%进度！',
         reward: _getMilestoneReward(percentage),
         progressPercentage: newProgress,
       );
     }
     throw ArgumentError('No milestone crossed');
   }
-  MilestoneInfo({
-    required this.milestoneType,
-    required this.description,
-    this.reward,
-    this.progressPercentage,
-  });
 
   final String milestoneType; // '25%', '50%', '75%', '100%'
   final String description;

@@ -14,7 +14,7 @@ class FocusStatisticsRepository {
   // ==================== Save Operations ====================
 
   /// Save a focus session to local storage
-  Future<int> saveSession(FocusSessionRecord session) async => _isar.writeTxn(() async => await _collection.put(session));
+  Future<int> saveSession(FocusSessionRecord session) async => _isar.writeTxn(() async => _collection.put(session));
 
   /// Save multiple sessions at once
   Future<void> saveSessions(List<FocusSessionRecord> sessions) async {
@@ -417,7 +417,7 @@ class FocusStatisticsRepository {
   }
 
   /// Delete a session by local ID
-  Future<bool> deleteSession(int id) async => _isar.writeTxn(() async => await _collection.delete(id));
+  Future<bool> deleteSession(int id) async => _isar.writeTxn(() async => _collection.delete(id));
 
   /// Clear all local data (use with caution)
   Future<void> clearAll() async {

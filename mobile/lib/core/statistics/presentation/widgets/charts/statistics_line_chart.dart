@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/statistics/config/statistics_config.dart';
-import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Line chart widget for statistics data visualization
 class StatisticsLineChart extends StatelessWidget {

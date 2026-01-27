@@ -1,6 +1,6 @@
+import 'package:sparkle/core/statistics/domain/entities/statistics_data_point.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
-import 'package:sparkle/core/statistics/domain/entities/statistics_data_point.dart';
 
 /// Error types for statistics operations
 enum StatisticsError {

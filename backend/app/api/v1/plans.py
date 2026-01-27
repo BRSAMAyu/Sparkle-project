@@ -24,6 +24,7 @@ from app.services.plan_state_service import PlanStateService
 from app.models.plan_state import PlanStateStatus
 from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError, AuthorizationError, QuotaExceededError
+from app.services.state_notification_service import state_notification_service
 
 router = APIRouter()
 

@@ -239,8 +239,8 @@ class ArbitrationQueueStatsResult {
       totalInReview: stats.totalInReview,
       totalResolvedToday: stats.totalResolvedToday,
       avgResolutionTimeHours: stats.avgResolutionTimeHours,
-      byPriority: stats.byPriority.map((k, v) => MapEntry(k, v)),
-      byReason: stats.byReason.map((k, v) => MapEntry(k, v)),
+      byPriority: stats.byPriority.map(MapEntry.new),
+      byReason: stats.byReason.map(MapEntry.new),
     );
 
   final bool success;
@@ -334,7 +334,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewOverrideResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -391,7 +391,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewAppealResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -560,7 +560,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ReviewFeedbackResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -639,7 +639,7 @@ class ReviewGrpcService {
     } catch (e) {
       return RegenerationResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -756,7 +756,7 @@ class ReviewGrpcService {
     } catch (e) {
       return ArbitrationQueueResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -806,7 +806,7 @@ class ReviewGrpcService {
     } catch (e) {
       return AssignCaseResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }
@@ -869,7 +869,7 @@ class ReviewGrpcService {
     } catch (e) {
       return SubmitDecisionResult(
         success: false,
-        message: 'Error: ${e}',
+        message: 'Error: $e',
       );
     }
   }

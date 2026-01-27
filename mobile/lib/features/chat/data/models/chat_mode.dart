@@ -28,7 +28,7 @@ abstract class ChatMode {
   /// Get ChatMode from API value
   static ChatMode fromApiValue(String value) => chatModeValues.firstWhere(
       (mode) => mode.apiValue == value,
-      orElse: () => ChatModeStandard(),
+      orElse: ChatModeStandard.new,
     );
 
   /// Check if this is a multi-agent mode (not standard)

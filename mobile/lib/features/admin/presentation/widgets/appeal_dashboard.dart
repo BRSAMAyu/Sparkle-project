@@ -58,9 +58,29 @@ enum AppealDecision {
 
 /// Arbitration case data model
 class ArbitrationCase {
+  const ArbitrationCase({
+    required this.caseId,
+    required this.appealId,
+    required this.reviewId,
+    required this.userId,
+    required this.escalationReason,
+    required this.priority,
+    required this.createdAt,
+    this.status = 'pending',
+    this.assignedTo,
+    this.assignedAt,
+    this.originalReviewScore = 0.0,
+    this.secondaryReviewScore,
+    this.scoreDiscrepancy = 0.0,
+    this.resolution,
+    this.finalDecision,
+    this.resolvedAt,
+    this.resolvedBy,
+    this.notes = const [],
+    this.evidence = const {},
+  });
 
-  factory ArbitrationCase.fromJson(Map<String, dynamic> json) {
-    return ArbitrationCase(
+  factory ArbitrationCase.fromJson(Map<String, dynamic> json) => ArbitrationCase(
       caseId: json['case_id'] as String? ?? '',
       appealId: json['appeal_id'] as String? ?? '',
       reviewId: json['review_id'] as String? ?? '',
@@ -90,28 +110,6 @@ class ArbitrationCase {
           [],
       evidence: json['evidence'] as Map<String, dynamic>? ?? {},
     );
-  }
-  const ArbitrationCase({
-    required this.caseId,
-    required this.appealId,
-    required this.reviewId,
-    required this.userId,
-    required this.escalationReason,
-    required this.priority,
-    required this.createdAt,
-    this.status = 'pending',
-    this.assignedTo,
-    this.assignedAt,
-    this.originalReviewScore = 0.0,
-    this.secondaryReviewScore,
-    this.scoreDiscrepancy = 0.0,
-    this.resolution,
-    this.finalDecision,
-    this.resolvedAt,
-    this.resolvedBy,
-    this.notes = const [],
-    this.evidence = const {},
-  });
 
   final String caseId;
   final String appealId;
@@ -141,9 +139,17 @@ class ArbitrationCase {
 
 /// Arbitration queue statistics
 class ArbitrationQueueStats {
+  const ArbitrationQueueStats({
+    required this.totalPending,
+    required this.totalAssigned,
+    required this.totalInReview,
+    required this.totalResolvedToday,
+    required this.avgResolutionTimeHours,
+    this.byPriority = const {},
+    this.byReason = const {},
+  });
 
-  factory ArbitrationQueueStats.fromJson(Map<String, dynamic> json) {
-    return ArbitrationQueueStats(
+  factory ArbitrationQueueStats.fromJson(Map<String, dynamic> json) => ArbitrationQueueStats(
       totalPending: json['total_pending'] as int? ?? 0,
       totalAssigned: json['total_assigned'] as int? ?? 0,
       totalInReview: json['total_in_review'] as int? ?? 0,
@@ -157,16 +163,6 @@ class ArbitrationQueueStats {
               ?.map((k, v) => MapEntry(k, v as int)) ??
           {},
     );
-  }
-  const ArbitrationQueueStats({
-    required this.totalPending,
-    required this.totalAssigned,
-    required this.totalInReview,
-    required this.totalResolvedToday,
-    required this.avgResolutionTimeHours,
-    this.byPriority = const {},
-    this.byReason = const {},
-  });
 
   final int totalPending;
   final int totalAssigned;
@@ -302,7 +298,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
               resolvedAt: info.resolvedAt,
               resolvedBy: info.resolvedBy,
               notes: info.notes,
-            )).toList();
+            ),).toList();
         });
       } else {
         // Fallback to empty list when no cases available
@@ -1023,7 +1019,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    )),
+                    ),),
                   const SizedBox(height: 16),
                 ],
 
@@ -1055,7 +1051,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           ],
                         ),
                       ),
-                    )),
+                    ),),
                 ] else ...[
                   Text(
                     '已解决',
@@ -1202,8 +1198,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   ),
                 ),
               ),
-              ...ArbitrationPriority.values.map((p) {
-                return ListTile(
+              ...ArbitrationPriority.values.map((p) => ListTile(
                   leading: Icon(Icons.circle, color: p.color, size: 12),
                   title: Text(p.label),
                   onTap: () {
@@ -1219,8 +1214,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   trailing: _priorityFilter == p
                       ? const Icon(Icons.check, color: Colors.green)
                       : null,
-                );
-              }),
+                )),
               ListTile(
                 title: const Center(child: Text('清除筛选')),
                 onTap: () {

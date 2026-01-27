@@ -420,7 +420,7 @@ class ViewStorageService {
 
   /// Get all view state keys (for debugging)
   Set<String> getAllViewStateKeys() => _prefs.getKeys()
-        .where((key) => key.startsWith('$_viewStatePrefix'))
+        .where((key) => key.startsWith(_viewStatePrefix))
         .toSet();
 
   /// Clear all view state data (use with caution)
