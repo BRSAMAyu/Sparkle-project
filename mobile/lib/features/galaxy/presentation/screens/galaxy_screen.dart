@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/central_flame.dart';

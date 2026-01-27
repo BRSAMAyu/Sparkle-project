@@ -292,6 +292,29 @@ class IntentMonitor:
         except Exception as e:
             logger.warning(f"Failed to update rates: {e}")
 
+    def _get_gauge_value(self, gauge) -> float:
+        """Get current value from a Prometheus Gauge
+
+        Args:
+            gauge: Prometheus Gauge metric
+
+        Returns:
+            Current gauge value
+        """
+        try:
+            # Prometheus Gauge doesn't have a simple get() method
+            # We need to use the internal _value() or access samples
+            if hasattr(gauge, '_value'):
+                return gauge._value()
+            elif hasattr(gauge, 'metrics'):
+                # Try to get value from metrics
+                samples = list(gauge.collect())[0].samples
+                if samples:
+                    return samples[0].value
+            return 0.0
+        except Exception:
+            return 0.0
+
     def get_intent_distribution(self) -> Dict[str, int]:
         """Get current intent distribution
 
@@ -316,10 +339,10 @@ class IntentMonitor:
             return {"enabled": False}
 
         try:
-            # Get rates
-            fallback_rate = self.llm_fallback_rate._value() if hasattr(self.llm_fallback_rate, '_value') else 0
-            hit_rate = self.cache_hit_rate._value() if hasattr(self.cache_hit_rate, '_value') else 0
-            accuracy = self.accuracy_gauge._value() if hasattr(self.accuracy_gauge, '_value') else 0
+            # Get rates using helper method
+            fallback_rate = self._get_gauge_value(self.llm_fallback_rate)
+            hit_rate = self._get_gauge_value(self.cache_hit_rate)
+            accuracy = self._get_gauge_value(self.accuracy_gauge)
 
             return {
                 "total_classifications": self._total_classifications,
