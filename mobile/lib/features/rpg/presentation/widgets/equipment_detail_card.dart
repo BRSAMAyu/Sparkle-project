@@ -8,11 +8,13 @@ class EquipmentDetailCard extends StatelessWidget {
     super.key,
     required this.equipment,
     this.onEquip,
+    this.onUnequip,
     this.isEquipped = false,
   });
 
   final Equipment equipment;
   final VoidCallback? onEquip;
+  final VoidCallback? onUnequip;
   final bool isEquipped;
 
   @override
@@ -126,13 +128,13 @@ class EquipmentDetailCard extends StatelessWidget {
           
           const SizedBox(height: DS.spacing8), // 减小间距
           
-          // 装备按钮
-          if (onEquip != null)
+          // 装备/卸下按钮
+          if (onEquip != null || onUnequip != null)
             SizedBox(
               width: double.infinity,
               height: 32, // 减小按钮高度
               child: ElevatedButton(
-                onPressed: onEquip,
+                onPressed: isEquipped ? onUnequip : onEquip,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isEquipped ? DS.neutral400 : DS.primaryBase,
                   foregroundColor: Colors.white,
@@ -143,7 +145,7 @@ class EquipmentDetailCard extends StatelessWidget {
                     fontSize: 13, // 减小字体大小
                   ),
                 ),
-                child: Text(isEquipped ? '已装备' : '装备'),
+                child: Text(isEquipped ? '卸下' : '装备'),
               ),
             ),
         ],

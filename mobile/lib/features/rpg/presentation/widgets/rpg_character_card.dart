@@ -28,7 +28,7 @@ class RpgCharacterCard extends ConsumerWidget {
           width: 1,
         ),
       ),
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing12),
       child: Column(
         children: [
           // 角色信息行 - 等级和名称
@@ -41,7 +41,7 @@ class RpgCharacterCard extends ConsumerWidget {
                   Text(
                     character.nickname,
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: DS.fontWeightBold,
                       color: DS.textPrimary,
                     ),
@@ -54,13 +54,13 @@ class RpgCharacterCard extends ConsumerWidget {
                       borderRadius: DS.borderRadius12,
                     ),
                     child: Text(
-                  '等级 ${character.level}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
+                      '等级 ${character.level}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -76,14 +76,14 @@ class RpgCharacterCard extends ConsumerWidget {
                     children: [
                       Icon(
                         Icons.calendar_today,
-                        size: 16,
+                        size: 14,
                         color: DS.textSecondary,
                       ),
                       const SizedBox(width: DS.spacing4),
                       Text(
                         '登录 ${character.totalLoginDays} 天',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 10,
                           color: DS.textSecondary,
                         ),
                       ),
@@ -94,7 +94,7 @@ class RpgCharacterCard extends ConsumerWidget {
             ],
           ),
           
-          const SizedBox(height: DS.spacing24),
+          const SizedBox(height: DS.spacing16),
           
           // 像素角色渲染区域
           Container(
@@ -103,11 +103,11 @@ class RpgCharacterCard extends ConsumerWidget {
               borderRadius: DS.borderRadius16,
               boxShadow: DS.shadowSm,
             ),
-            padding: const EdgeInsets.all(DS.spacing24),
-            child: PixelCharacter(character: character),
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: PixelCharacter(character: character, size: 60),
           ),
           
-          const SizedBox(height: DS.spacing24),
+          const SizedBox(height: DS.spacing16),
           
           // 状态条 - HP和XP
           Column(
@@ -130,47 +130,6 @@ class RpgCharacterCard extends ConsumerWidget {
                 percentage: xpPercentage,
                 color: DS.primaryBase,
                 icon: Icons.star,
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: DS.spacing24),
-          
-          // 货币和属性统计
-          Column(
-            children: [
-              // 货币行
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _CurrencyChip(
-                    icon: Icons.monetization_on,
-                    label: '金币',
-                    value: character.gold,
-                    color: DS.warning,
-                  ),
-                  _CurrencyChip(
-                    icon: Icons.diamond,
-                    label: '宝石',
-                    value: character.gems,
-                    color: DS.primaryBase,
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: DS.spacing16),
-              
-              // 核心属性概览
-              SizedBox(
-                height: 60,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: totalAttributes.length,
-                  itemBuilder: (context, index) {
-                    final attr = totalAttributes[index];
-                    return _AttributeChip(attribute: attr);
-                  },
-                ),
               ),
             ],
           ),

@@ -38,12 +38,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
   List<Widget> get _screens => [
-        const _DashboardScreen(),
+        const _DashboardScreen(topOverlayBuilder: _buildTopOverlay),
         const GalaxyScreen(),
         const ChatScreen(),
         const CommunityScreen(),
         const ProfileScreen(),
       ];
+
+  static Widget _buildTopOverlay(BuildContext context, UserModel? user, AppLocalizations l10n, VoidCallback onAvatarTap) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: GestureDetector(
+          onTap: onAvatarTap,
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage:
+                    user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                backgroundColor: DS.primaryBase,
+                child: user?.avatarUrl == null
+                    ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lv.${user?.flameLevel ?? 1}',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.warning,
+                    ),
+                  ),
+                  Text(
+                    user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.brandPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +165,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _DashboardScreen extends ConsumerWidget {
-  const _DashboardScreen();
+  const _DashboardScreen({required this.topOverlayBuilder});
+
+  final Widget Function(BuildContext, UserModel?, AppLocalizations, VoidCallback) topOverlayBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
     final l10n = AppLocalizations.of(context)!;
+
+    // 获取父级 HomeScreen 的 setState 方法
+    final homeState = context.findAncestorStateOfType<_HomeScreenState>();
 
     return Scaffold(
       extendBody: true,
@@ -151,7 +199,10 @@ class _DashboardScreen extends ConsumerWidget {
                 slivers: [
                   // Top Overlay
                   SliverToBoxAdapter(
-                      child: _buildTopOverlay(context, user, l10n),),
+                      child: topOverlayBuilder(context, user, l10n, () {
+                        // 导航到个人资料页面
+                        homeState?.setState(() => homeState!._selectedIndex = 4);
+                      }),),
 
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
@@ -213,47 +264,6 @@ class _DashboardScreen extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _buildTopOverlay(
-          BuildContext context, UserModel? user, AppLocalizations l10n,) =>
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage:
-                  user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-              backgroundColor: DS.primaryBase,
-              child: user?.avatarUrl == null
-                  ? Text((user?.nickname ?? 'U')[0].toUpperCase())
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Lv.${user?.flameLevel ?? 1}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.warning,
-                  ),
-                ),
-                Text(
-                  user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop

@@ -116,11 +116,11 @@ class RpgCharacterScreen extends ConsumerWidget {
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.9, // 增加纵横比，使卡片更高
-                      crossAxisSpacing: DS.spacing16,
-                      mainAxisSpacing: DS.spacing16,
+                      childAspectRatio: 0.75, // 调整为更合适的纵向比例
+                      crossAxisSpacing: DS.spacing12,
+                      mainAxisSpacing: DS.spacing12,
                     ),
                     itemCount: equipmentList.length,
                     itemBuilder: (context, index) {
@@ -135,6 +135,9 @@ class RpgCharacterScreen extends ConsumerWidget {
                             equipment.id,
                             equipment.type,
                           );
+                        },
+                        onUnequip: () {
+                          ref.read(characterProvider.notifier).unequipItem(equipment.type);
                         },
                       );
                     },

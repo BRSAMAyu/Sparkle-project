@@ -21,6 +21,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_backg
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart';
+import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -622,28 +623,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         .nodeAnimationProgress
                         .map((id, val) => MapEntry(id.hashCode, val));
 
-                    final painter = StarMapPainter(
-                      nodes: compactNodes,
-                      edges: galaxyState.visibleEdges,
-                      scale: scale,
-                      performanceTier: PerformanceService.instance.currentTier.value,
-                      currentDpr: PerformanceService.instance.currentDpr.value,
-                      aggregationLevel: galaxyState.aggregationLevel,
-                      clusters: _centerClusters(
-                        galaxyState.clusters,
-                        canvasCenter,
-                        canvasCenter,
-                      ),
-                      viewport: viewport,
-                      center: Offset(canvasCenter, canvasCenter),
-                      selectedNodeIdHash: selectedHash,
-                      highlightedNodeIdHashes: highlightedHashes,
-                      highlightRevision: galaxyState.highlightRevision,
-                      expandedEdgeNodeIdHashes: expandedHashes,
-                      nodeAnimationProgress: animationHashes,
-                      selectionPulse: _selectionPulseController.value,
-                    );
-
                     final content = Stack(
                       children: [
                         // 1. Background: Sector nebula and stars (Static, Cached)
@@ -671,7 +650,42 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         Positioned.fill(
                           child: Opacity(
                             opacity: _isEntering ? 0.0 : 1.0,
-                            child: CustomPaint(painter: painter),
+                            child: Stack(
+                              children: [
+                                // Static Painter with RepaintBoundary
+                                RepaintBoundary(
+                                  child: CustomPaint(
+                                    painter: StarMapStaticPainter(
+                                      nodes: compactNodes,
+                                      edges: galaxyState.visibleEdges,
+                                      scale: scale,
+                                      performanceTier: PerformanceService.instance.currentTier.value,
+                                      currentDpr: PerformanceService.instance.currentDpr.value,
+                                      aggregationLevel: galaxyState.aggregationLevel,
+                                      clusters: _centerClusters(
+                                        galaxyState.clusters,
+                                        canvasCenter,
+                                        canvasCenter,
+                                      ),
+                                      viewport: viewport,
+                                      center: Offset(canvasCenter, canvasCenter),
+                                      expandedEdgeNodeIdHashes: expandedHashes,
+                                      nodeAnimationProgress: animationHashes,
+                                    ),
+                                  ),
+                                ),
+                                // Dynamic Painter
+                                CustomPaint(
+                                  painter: StarMapDynamicPainter(
+                                    positionCache: _generatePositionCache(compactNodes),
+                                    selectedNodeIdHash: selectedHash,
+                                    highlightedNodeIdHashes: highlightedHashes,
+                                    selectionPulse: _selectionPulseController.value,
+                                    performanceTier: PerformanceService.instance.currentTier.value,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -989,6 +1003,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ),
         ),
       );
+
+  // Helper to generate position cache for dynamic painter
+  Map<int, Offset> _generatePositionCache(List<CompactKnowledgeNode> nodes) {
+    final cache = <int, Offset>{};
+    for (final node in nodes) {
+      cache[node.idHash] = Offset(node.x, node.y);
+    }
+    return cache;
+  }
 }
 
 /// Data class for active energy transfer animation

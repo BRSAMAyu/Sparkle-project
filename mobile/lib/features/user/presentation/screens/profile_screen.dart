@@ -41,7 +41,6 @@ class ProfileScreen extends ConsumerWidget {
                   // RPG Character Button
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -59,6 +58,7 @@ class ProfileScreen extends ConsumerWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: DS.borderRadius12,
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
@@ -68,7 +68,6 @@ class ProfileScreen extends ConsumerWidget {
                   // Task Center Button
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -86,6 +85,7 @@ class ProfileScreen extends ConsumerWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: DS.borderRadius12,
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
@@ -105,7 +105,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserModel user) => SizedBox(
+  Widget _buildHeader(BuildContext context, UserModel user) => Container(
         child: Stack(
           children: [
             // Wave Background
@@ -204,9 +204,9 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: DS.spacing24),
                     
-                    // RPG角色状态卡片 - 限制最大高度
-                    SizedBox(
-                      height: 250, // 限制最大高度
+                    // RPG角色状态卡片 - 自适应高度
+                    Padding(
+                      padding: const EdgeInsets.only(top: DS.spacing16),
                       child: RpgCharacterCard(),
                     ),
                   ],
