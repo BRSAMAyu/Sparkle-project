@@ -7,6 +7,9 @@ Provides batch operations for managing user preferences and personas.
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from uuid import UUID
+import csv
+import io
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -212,8 +215,17 @@ async def import_persona_data(
     imported_count = 0
     errors = []
     data = request.data
+    total_items = 0
+
+    def _csv_count(payload: Optional[str]) -> int:
+        if not payload:
+            return 0
+        # Count non-header lines; ignore blank lines
+        lines = [line for line in payload.splitlines() if line.strip()]
+        return max(0, len(lines) - 1)
 
     if request.format == "json":
+        total_items = len(data.get("preferences", [])) + len(data.get("goals", []))
         # Import preferences
         for pref_data in data.get("preferences", []):
             try:
@@ -339,9 +351,95 @@ async def import_persona_data(
                 errors.append(f"Failed to import goal {goal_data.get('title', 'unknown')}: {str(e)}")
                 logger.error(f"Import failed: {e}")
 
+    elif request.format == "csv":
+        preferences_csv = data.get("preferences_csv") if isinstance(data, dict) else None
+        total_items += _csv_count(preferences_csv)
+        if preferences_csv:
+            reader = csv.DictReader(io.StringIO(preferences_csv))
+            for row in reader:
+                try:
+                    pref_key = (row.get("pref_key") or row.get("key") or "").strip()
+                    if not pref_key:
+                        raise ValueError("pref_key missing")
+
+                    raw_value = row.get("pref_value") or row.get("value")
+                    if raw_value is None:
+                        raise ValueError("pref_value missing")
+
+                    try:
+                        parsed_value = json.loads(raw_value)
+                    except Exception:
+                        parsed_value = {"value": raw_value}
+                    if not isinstance(parsed_value, dict):
+                        parsed_value = {"value": parsed_value}
+
+                    confidence_raw = row.get("confidence")
+                    confidence_val = float(confidence_raw) if confidence_raw else 0.8
+
+                    await memory_service.upsert_preference(
+                        user_id=current_user.id,
+                        pref_key=pref_key,
+                        pref_value=parsed_value,
+                        evidence_refs=[
+                            {
+                                "type": "user_state",
+                                "id": "batch_import_csv",
+                                "schema_version": "batch_import.v1",
+                            }
+                        ],
+                        confidence=confidence_val,
+                        source_type="user_state",
+                    )
+                    imported_count += 1
+                except Exception as e:
+                    errors.append(f"Failed to import preference {row.get('pref_key', 'unknown')}: {str(e)}")
+                    logger.error(f"CSV import failed: {e}")
+
+        goals_csv = data.get("goals_csv") if isinstance(data, dict) else None
+        total_items += _csv_count(goals_csv)
+        if goals_csv:
+            reader = csv.DictReader(io.StringIO(goals_csv))
+            for row in reader:
+                try:
+                    title = (row.get("title") or "").strip()
+                    if not title:
+                        raise ValueError("title missing")
+
+                    target_date_val = None
+                    target_date_raw = row.get("target_date")
+                    if target_date_raw:
+                        try:
+                            from datetime import date
+
+                            target_date_val = date.fromisoformat(target_date_raw)
+                        except Exception:
+                            target_date_val = datetime.fromisoformat(target_date_raw).date()
+
+                    metadata: Dict[str, Any] = {}
+                    if row.get("description"):
+                        metadata["description"] = row.get("description")
+                    if row.get("priority"):
+                        metadata["priority"] = row.get("priority")
+
+                    await memory_service.create_goal(
+                        user_id=current_user.id,
+                        title=title,
+                        status=row.get("status") or "active",
+                        target_date=target_date_val,
+                        metadata=metadata or None,
+                        source_type="user_state",
+                    )
+                    imported_count += 1
+                except Exception as e:
+                    errors.append(f"Failed to import goal {row.get('title', 'unknown')}: {str(e)}")
+                    logger.error(f"CSV goal import failed: {e}")
+
+        if total_items == 0:
+            errors.append("No CSV payload provided (expected preferences_csv and/or goals_csv)")
+
     return {
         "imported_count": imported_count,
-        "total_items": len(data.get("preferences", [])) + len(data.get("goals", [])),
+        "total_items": total_items,
         "errors": errors,
     }
 

@@ -4,11 +4,6 @@ import 'package:sparkle/features/seed_library/data/repositories/seed_library_rep
 
 /// Seed library list state
 class SeedLibraryListState {
-  final List<SeedLibrary> libraries;
-  final bool isLoading;
-  final String? error;
-  final int page;
-  final bool hasMore;
 
   const SeedLibraryListState({
     this.libraries = const [],
@@ -17,6 +12,11 @@ class SeedLibraryListState {
     this.page = 1,
     this.hasMore = true,
   });
+  final List<SeedLibrary> libraries;
+  final bool isLoading;
+  final String? error;
+  final int page;
+  final bool hasMore;
 
   SeedLibraryListState copyWith({
     List<SeedLibrary>? libraries,
@@ -24,15 +24,13 @@ class SeedLibraryListState {
     String? error,
     int? page,
     bool? hasMore,
-  }) {
-    return SeedLibraryListState(
+  }) => SeedLibraryListState(
       libraries: libraries ?? this.libraries,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
     );
-  }
 }
 
 /// Seed library list notifier
@@ -55,7 +53,7 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
       state = const SeedLibraryListState();
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final response = await _repository.listLibraries(
@@ -65,7 +63,6 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
         isFeatured: isFeatured,
         search: search,
         page: refresh ? 1 : state.page,
-        pageSize: 20,
       );
 
       state = state.copyWith(
@@ -107,14 +104,6 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
 
 /// Single library state
 class SeedLibraryDetailState {
-  final SeedLibrary? library;
-  final List<SeedItem> items;
-  final bool isLoadingLibrary;
-  final bool isLoadingItems;
-  final String? error;
-  final bool isSubscribed;
-  final int itemsPage;
-  final bool hasMoreItems;
 
   const SeedLibraryDetailState({
     this.library,
@@ -126,6 +115,14 @@ class SeedLibraryDetailState {
     this.itemsPage = 1,
     this.hasMoreItems = true,
   });
+  final SeedLibrary? library;
+  final List<SeedItem> items;
+  final bool isLoadingLibrary;
+  final bool isLoadingItems;
+  final String? error;
+  final bool isSubscribed;
+  final int itemsPage;
+  final bool hasMoreItems;
 
   SeedLibraryDetailState copyWith({
     SeedLibrary? library,
@@ -136,8 +133,7 @@ class SeedLibraryDetailState {
     bool? isSubscribed,
     int? itemsPage,
     bool? hasMoreItems,
-  }) {
-    return SeedLibraryDetailState(
+  }) => SeedLibraryDetailState(
       library: library ?? this.library,
       items: items ?? this.items,
       isLoadingLibrary: isLoadingLibrary ?? this.isLoadingLibrary,
@@ -147,7 +143,6 @@ class SeedLibraryDetailState {
       itemsPage: itemsPage ?? this.itemsPage,
       hasMoreItems: hasMoreItems ?? this.hasMoreItems,
     );
-  }
 }
 
 /// Single library notifier
@@ -162,7 +157,7 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   final String libraryId;
 
   Future<void> loadLibrary() async {
-    state = state.copyWith(isLoadingLibrary: true, error: null);
+    state = state.copyWith(isLoadingLibrary: true);
 
     try {
       final library = await _repository.getLibrary(libraryId);
@@ -192,7 +187,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       final response = await _repository.listLibraryItems(
         libraryId,
         page: refresh ? 1 : state.itemsPage,
-        pageSize: 20,
       );
 
       state = state.copyWith(
@@ -284,27 +278,25 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
 
 /// Subscriptions state
 class SubscriptionsState {
-  final List<UserLibrarySubscription> subscriptions;
-  final bool isLoading;
-  final String? error;
 
   const SubscriptionsState({
     this.subscriptions = const [],
     this.isLoading = false,
     this.error,
   });
+  final List<UserLibrarySubscription> subscriptions;
+  final bool isLoading;
+  final String? error;
 
   SubscriptionsState copyWith({
     List<UserLibrarySubscription>? subscriptions,
     bool? isLoading,
     String? error,
-  }) {
-    return SubscriptionsState(
+  }) => SubscriptionsState(
       subscriptions: subscriptions ?? this.subscriptions,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
-  }
 }
 
 /// Subscriptions notifier
@@ -314,7 +306,7 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
   final SeedLibraryRepository _repository;
 
   Future<void> loadSubscriptions() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final response = await _repository.getMySubscriptions();

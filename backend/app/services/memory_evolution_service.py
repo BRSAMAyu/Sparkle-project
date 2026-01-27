@@ -89,6 +89,7 @@ class MemoryEvolutionService:
             trigger_source=trigger_source or self._identify_trigger_source(workflow_id),
             workflow_id=workflow_id,
             created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
 
         self.db.add(evolution)
@@ -369,6 +370,7 @@ class MemoryEvolutionService:
                 factors=pred.get('factors'),
                 similar_evolutions=pred.get('similar_evolutions', []),
                 created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
             )
             self.db.add(prediction_record)
 

@@ -169,66 +169,77 @@ func (m *ABTestMiddleware) RecordMetric() gin.HandlerFunc {
 		}
 
 		// Defer metric recording until after handler executes
-		defer func() {
-			variant, hasVariant := c.Get("ab_test_variant")
-			if !hasVariant {
-				return
-			}
-
-			variantInfo := variant.(*VariantInfo)
-			authHeader := c.GetHeader("Authorization")
-
-			// Extract metric info from response
-			statusCode := c.Writer.Status()
-			latency := c.GetString("latency") // Set by another middleware
-
-			// Convert to metric type
-			metricName := "success"
-			metricValue := float64(0)
-
-			if statusCode >= 200 && statusCode < 300 {
-				metricValue = 1.0 // Success
-			} else {
-				metricValue = 0.0 // Failure
-			}
-
-			// Get latency if available
-			if latency != "" {
-				if latencyMs, err := strconv.ParseFloat(latency, 64); err == nil {
-					// Record latency metric
-					go m.recordMetricAsync(
-						variantInfo.ExperimentID,
-						variantInfo.VariantID,
-						"latency",
-						latencyMs,
-						"latency",
-						map[string]interface{}{
-							"path":   c.Request.URL.Path,
-							"method": c.Request.Method,
-						},
-						authHeader,
-					)
-				}
-			}
-
-			// Record success/error metric asynchronously
-			go m.recordMetricAsync(
-				variantInfo.ExperimentID,
-				variantInfo.VariantID,
-				metricName,
-				metricValue,
-				"success",
-				map[string]interface{}{
-					"path":        c.Request.URL.Path,
-					"method":      c.Request.Method,
-					"status_code": statusCode,
-				},
-				authHeader,
-			)
-		}()
+		defer m.recordFromContext(c)
 
 		c.Next()
 	}
+}
+
+// RecordMetricAfter records metrics for a request that is not part of the Gin
+// middleware chain (e.g., NoRoute reverse proxy).
+func (m *ABTestMiddleware) RecordMetricAfter(c *gin.Context) {
+	if !m.config.Enabled {
+		return
+	}
+	m.recordFromContext(c)
+}
+
+func (m *ABTestMiddleware) recordFromContext(c *gin.Context) {
+	variant, hasVariant := c.Get("ab_test_variant")
+	if !hasVariant {
+		return
+	}
+
+	variantInfo := variant.(*VariantInfo)
+	authHeader := c.GetHeader("Authorization")
+
+	// Extract metric info from response
+	statusCode := c.Writer.Status()
+	latency := c.GetString("latency") // Set by another middleware
+
+	// Convert to metric type
+	metricName := "success"
+	metricValue := float64(0)
+
+	if statusCode >= 200 && statusCode < 300 {
+		metricValue = 1.0 // Success
+	} else {
+		metricValue = 0.0 // Failure
+	}
+
+	// Get latency if available
+	if latency != "" {
+		if latencyMs, err := strconv.ParseFloat(latency, 64); err == nil {
+			// Record latency metric
+			go m.recordMetricAsync(
+				variantInfo.ExperimentID,
+				variantInfo.VariantID,
+				"latency",
+				latencyMs,
+				"latency",
+				map[string]interface{}{
+					"path":   c.Request.URL.Path,
+					"method": c.Request.Method,
+				},
+				authHeader,
+			)
+		}
+	}
+
+	// Record success/error metric asynchronously
+	go m.recordMetricAsync(
+		variantInfo.ExperimentID,
+		variantInfo.VariantID,
+		metricName,
+		metricValue,
+		"success",
+		map[string]interface{}{
+			"path":        c.Request.URL.Path,
+			"method":      c.Request.Method,
+			"status_code": statusCode,
+		},
+		authHeader,
+	)
 }
 
 // recordMetricAsync records a metric asynchronously
@@ -300,6 +311,7 @@ func NewExperimentReporter(config *ABTestConfig) *ExperimentReporter {
 // GetExperimentStats fetches experiment statistics
 func (r *ExperimentReporter) GetExperimentStats(
 	experimentID string,
+	authHeader string,
 ) (map[string]interface{}, error) {
 	if r.config.BackendURL == "" {
 		return nil, fmt.Errorf("backend URL is not configured")
@@ -313,6 +325,9 @@ func (r *ExperimentReporter) GetExperimentStats(
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build stats request: %w", err)
+	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
 	}
 
 	client := &http.Client{Timeout: r.config.Timeout}

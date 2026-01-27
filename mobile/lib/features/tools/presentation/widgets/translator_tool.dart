@@ -85,7 +85,9 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         final success = data['success'] as bool? ?? false;
 
         if (success) {
-          final translatedText = data['translated_text'] as String? ?? '';
+          // Backend returns `translation` (not `translated_text`).
+          final translatedText =
+              (data['translation'] ?? data['translated_text']) as String? ?? '';
           setState(() {
             _output = translatedText;
             _currentRating = 3;
@@ -96,7 +98,10 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           _saveTranslation(translatedText);
         } else {
           setState(() {
-            _errorMessage = data['error_message'] as String? ?? '翻译失败';
+            // Backend error is usually nested under `meta.error`.
+            final meta = data['meta'] as Map<String, dynamic>?;
+            _errorMessage =
+                (meta?['error'] ?? data['error_message']) as String? ?? '翻译失败';
           });
         }
       } else {

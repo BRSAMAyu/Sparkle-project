@@ -116,7 +116,7 @@ class ChatState {
 
   // Transparency fields
   final TransparencyData? transparencyData;
-  final String? currentStepId;
+  final int? currentStepId;
   final int? currentStepIndex;
 
   int get listItemCount =>
@@ -170,7 +170,7 @@ class ChatState {
     int? dailyCostMicroUsd,
     // Transparency fields
     TransparencyData? transparencyData,
-    String? currentStepId,
+    int? currentStepId,
     int? currentStepIndex,
     bool clearTransparency = false,
   }) =>

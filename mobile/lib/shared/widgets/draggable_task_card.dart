@@ -214,18 +214,21 @@ class CalendarDayDragTarget extends ConsumerWidget {
           onTaskDropped?.call(result.task, result.newDueDate);
         }
       },
-      builder: (context, candidateData, rejectedData) => DecoratedBox(
-          decoration: isHovered
-              ? BoxDecoration(
-                  border: Border.all(
-                    color: DS.primaryBase.withValues(alpha: 0.8),
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                )
-              : null,
-          child: child,
-        ),
+      builder: (context, candidateData, rejectedData) {
+        if (isHovered) {
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: DS.primaryBase.withValues(alpha: 0.8),
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: child,
+          );
+        }
+        return child;
+      },
     );
   }
 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
-import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
+import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_library_card.dart';
 
 /// Seed Library List Screen
@@ -26,11 +26,11 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     super.initState();
     // Load initial libraries
     Future.microtask(() {
-      ref.read(seedLibraryListProvider(({
+      ref.read(seedLibraryListProvider({
         category: _selectedCategory,
         visibility: _selectedVisibility,
         search: _searchController.text.isEmpty ? null : _searchController.text,
-      }).notifier));
+      }).notifier,);
     });
   }
 
@@ -41,11 +41,11 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _applyFilters() {
-    ref.read(seedLibraryListProvider(({
+    ref.read(seedLibraryListProvider({
       category: _selectedCategory,
       visibility: _selectedVisibility,
       search: _searchController.text.isEmpty ? null : _searchController.text,
-    }).notifier)).refresh(
+    }).notifier,).refresh(
       category: _selectedCategory,
       visibility: _selectedVisibility,
       search: _searchController.text.isEmpty ? null : _searchController.text,
@@ -54,12 +54,11 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = seedLibraryListProvider(({
+    final state = ref.watch(seedLibraryListProvider({
       category: _selectedCategory,
       visibility: _selectedVisibility,
       search: _searchController.text.isEmpty ? null : _searchController.text,
-    });
-    final state = ref.watch(provider);
+    }),);
 
     return Scaffold(
       appBar: AppBar(
@@ -67,7 +66,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _applyFilters(),
+            onPressed: _applyFilters,
           ),
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -98,7 +97,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
               onSubmitted: (_) => _applyFilters(),
             ),
@@ -113,7 +112,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 children: [
                   if (_selectedCategory != null)
                     Chip(
-                      label: Text(_selectedCategory!.categoryDisplayName),
+                      label: Text(_selectedCategory!.displayName),
                       deleteIcon: const Icon(Icons.close, size: 18),
                       onDeleted: () {
                         setState(() {
@@ -124,7 +123,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                     ),
                   if (_selectedVisibility != null)
                     Chip(
-                      label: Text(_selectedVisibility!.visibilityDisplayName),
+                      label: Text(_selectedVisibility!.displayName),
                       deleteIcon: const Icon(Icons.close, size: 18),
                       onDeleted: () {
                         setState(() {
@@ -139,7 +138,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
 
           // Library list
           Expanded(
-            child: _buildLibraryList(context, state, provider.notifier),
+            child: _buildLibraryList(context, state),
           ),
         ],
       ),
@@ -151,7 +150,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               builder: (context) => const CreateLibraryScreen(),
             ),
           );
-          if (result == true) {
+          if (result ?? false) {
             _applyFilters();
           }
         },
@@ -163,7 +162,6 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   Widget _buildLibraryList(
     BuildContext context,
     SeedLibraryListState state,
-    SeedLibraryListNotifier notifier,
   ) {
     if (state.isLoading && state.libraries.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -197,7 +195,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.library_books_outlined,
-                size: 64, color: Colors.grey[400]),
+                size: 64, color: Colors.grey[400],),
             const SizedBox(height: 16),
             Text(
               '暂无种子库',

@@ -15,6 +15,7 @@ from app.services.evidence_scoring import compute_score
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.ltm_rollout_service import LtmRolloutService
+from app.services.memory_evolution_service import MemoryEvolutionService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from loguru import logger
 
@@ -103,6 +104,38 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="preference", status="ok").inc()
+
+        # Track preference evolution without blocking the main write path.
+        try:
+            evolution = MemoryEvolutionService(self.db)
+            old_snapshot = (
+                {
+                    **(latest.pref_value or {}),
+                    "confidence": latest.confidence or 0.0,
+                    "evidence_count": len(latest.evidence_refs or []),
+                    "evidence_refs": latest.evidence_refs or [],
+                }
+                if latest
+                else {}
+            )
+            new_snapshot = {
+                **(record.pref_value or {}),
+                "confidence": record.confidence or 0.0,
+                "evidence_count": len(record.evidence_refs or []),
+                "evidence_refs": record.evidence_refs or [],
+            }
+            change_reason = "user_edit" if source_type == "user_state" else "system_update"
+            await evolution.track_memory_change(
+                memory_id=str(record.id),
+                memory_type="preference",
+                old_value=old_snapshot,
+                new_value=new_snapshot,
+                change_reason=change_reason,
+                workflow_id=source_type,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to track preference evolution: {exc}")
+
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
@@ -190,6 +223,16 @@ class MemoryService:
         record = result.scalar_one_or_none()
         if record is None:
             return None
+        old_snapshot = {
+            "title": record.title,
+            "status": record.status,
+            "target_date": record.target_date.isoformat() if record.target_date else None,
+            "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+            "metadata": record.metadata_payload or {},
+            "confidence": 0.0,
+            "evidence_count": len(record.evidence_refs or []),
+            "evidence_refs": record.evidence_refs or [],
+        }
 
         if "evidence_refs" in updates:
             updates["evidence_refs"] = _normalize_evidence_refs(
@@ -212,6 +255,29 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
+
+        try:
+            evolution = MemoryEvolutionService(self.db)
+            new_snapshot = {
+                "title": record.title,
+                "status": record.status,
+                "target_date": record.target_date.isoformat() if record.target_date else None,
+                "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+                "metadata": record.metadata_payload or {},
+                "confidence": 0.0,
+                "evidence_count": len(record.evidence_refs or []),
+                "evidence_refs": record.evidence_refs or [],
+            }
+            await evolution.track_memory_change(
+                memory_id=str(record.id),
+                memory_type="goal",
+                old_value=old_snapshot,
+                new_value=new_snapshot,
+                change_reason="user_edit",
+                workflow_id="update_goal",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to track goal evolution: {exc}")
         return record
 
     async def list_active_goals(self, user_id: UUID, now: Optional[datetime] = None) -> List[MemoryGoal]:

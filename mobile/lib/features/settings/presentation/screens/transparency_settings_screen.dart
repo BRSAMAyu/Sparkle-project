@@ -213,17 +213,6 @@ Future<TransparencyPreferences> transparencyPreferences(Ref ref) async {
 /// Notifier for transparency preferences
 @riverpod
 class TransparencyPreferencesNotifier extends _$TransparencyPreferencesNotifier {
-  TransparencyPreferencesNotifier(Ref ref)
-      : super(
-          ref,
-          const TransparencyPreferences(
-            enabled: false,
-            showTokenUsage: true,
-            showAgentSwitching: true,
-            showReasoningSteps: true,
-          ),
-        );
-
   Future<void> _updatePreferences(TransparencyPreferences prefs) async {
     state = await AsyncValue.data(prefs);
 
