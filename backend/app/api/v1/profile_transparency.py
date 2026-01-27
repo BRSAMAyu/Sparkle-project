@@ -65,7 +65,24 @@ def _editability_meta(
     confidence: float,
     risk_level: str,
     field_type: str,
+    source_type: str = None,
 ) -> Dict[str, Any]:
+    """
+    构建偏好项的可编辑性元数据
+
+    Args:
+        source: 数据来源 ("user", "system", "mixed")
+        confidence: 置信度 (0-1)
+        risk_level: 风险等级 ("low", "medium", "high")
+        field_type: 字段类型 ("preference", "behavior", "analysis")
+        source_type: 来源类型，用于前端显示
+            - "explicit": 用户直接设置的偏好
+            - "inferred": 系统推断的偏好
+            - "collaborative": 协作校准的内容
+
+    Returns:
+        包含可编辑性元数据的字典
+    """
     score = (
         0.4 * _source_score(source)
         + 0.3 * confidence
@@ -84,11 +101,30 @@ def _editability_meta(
         "warn": "建议提交修正，系统评估后采纳",
         "readonly": "基于系统分析，暂不支持修改",
     }
+
+    # 自动推断 source_type（如果未显式指定）
+    if source_type is None:
+        if source == "user":
+            source_type = "explicit"
+        elif source == "system":
+            source_type = "inferred"
+        else:  # mixed
+            source_type = "collaborative"
+
+    # source_type 的用户友好标签
+    source_type_labels = {
+        "explicit": "用户设置",
+        "inferred": "系统推断",
+        "collaborative": "协作校准",
+    }
+
     return {
         "level": level,
         "score": round(score, 2),
         "reason": reason_map[level],
         "source": source,
+        "source_type": source_type,
+        "source_type_label": source_type_labels.get(source_type, source_type),
         "risk_level": risk_level,
         "confidence": confidence,
         "field_type": field_type,

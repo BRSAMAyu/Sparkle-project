@@ -38,13 +38,21 @@ class SeedLibraryService:
 
     # ============ 辅助方法 ============
 
-    def _build_embedding_text(self, title: Optional[str], content: Optional[str]) -> Optional[str]:
+    def _build_embedding_text(
+        self,
+        title: Optional[str],
+        content: Optional[str],
+        content_data: Optional[Dict[str, Any]] = None,
+        item_type: Optional[str] = None,
+    ) -> Optional[str]:
         """
         构建用于生成 embedding 的文本
 
         Args:
             title: 标题
             content: 内容
+            content_data: 结构化内容数据
+            item_type: 内容类型 (example, exercise, knowledge, template, flashcard)
 
         Returns:
             合并后的文本，若无有效内容则返回 None
@@ -56,6 +64,42 @@ class SeedLibraryService:
             # 限制内容长度，避免过长文本
             content_text = content.strip()[:2000]
             parts.append(content_text)
+
+        # 处理 content_data 中的结构化内容
+        if content_data:
+            if item_type == ItemType.EXAMPLE.value or item_type == "example":
+                # Few-shot 示例：包含 input/output
+                if content_data.get("input"):
+                    parts.append(f"输入: {str(content_data['input'])[:500]}")
+                if content_data.get("output"):
+                    parts.append(f"输出: {str(content_data['output'])[:500]}")
+                if content_data.get("explanation"):
+                    parts.append(f"解释: {str(content_data['explanation'])[:300]}")
+            elif item_type == ItemType.EXERCISE.value or item_type == "exercise":
+                # 练习题：包含 question/answer/options
+                if content_data.get("question"):
+                    parts.append(f"问题: {str(content_data['question'])[:500]}")
+                if content_data.get("answer"):
+                    parts.append(f"答案: {str(content_data['answer'])[:300]}")
+                if content_data.get("options"):
+                    options_text = " ".join([str(opt) for opt in content_data["options"][:5]])
+                    parts.append(f"选项: {options_text[:200]}")
+            elif item_type == ItemType.FLASHCARD.value or item_type == "flashcard":
+                # 抽认卡：包含 front/back
+                if content_data.get("front"):
+                    parts.append(f"正面: {str(content_data['front'])[:300]}")
+                if content_data.get("back"):
+                    parts.append(f"背面: {str(content_data['back'])[:300]}")
+            elif item_type == ItemType.KNOWLEDGE.value or item_type == "knowledge":
+                # 知识点：可能包含 definition/formula/examples
+                if content_data.get("definition"):
+                    parts.append(f"定义: {str(content_data['definition'])[:500]}")
+                if content_data.get("formula"):
+                    parts.append(f"公式: {str(content_data['formula'])[:200]}")
+                if content_data.get("key_points"):
+                    kp_text = " ".join([str(kp) for kp in content_data["key_points"][:5]])
+                    parts.append(f"要点: {kp_text[:300]}")
+
         return " ".join(parts) if parts else None
 
     # ============ 库管理 ============
@@ -394,7 +438,12 @@ class SeedLibraryService:
         )
 
         # 生成 embedding 用于语义搜索
-        embedding_text = self._build_embedding_text(item_data.title, item_data.content)
+        embedding_text = self._build_embedding_text(
+            title=item_data.title,
+            content=item_data.content,
+            content_data=item_data.content_data,
+            item_type=item_data.item_type.value,
+        )
         if embedding_text:
             try:
                 item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
@@ -541,6 +590,9 @@ class SeedLibraryService:
                 content_changed = True
             item.content = update_data.content
         if update_data.content_data is not None:
+            # content_data 变化也需要更新 embedding（包含 input/output 等）
+            if item.content_data != update_data.content_data:
+                content_changed = True
             item.content_data = update_data.content_data
         if update_data.subject is not None:
             item.subject = update_data.subject
@@ -555,7 +607,12 @@ class SeedLibraryService:
 
         # 内容变化时更新 embedding
         if content_changed:
-            embedding_text = self._build_embedding_text(item.title, item.content)
+            embedding_text = self._build_embedding_text(
+                title=item.title,
+                content=item.content,
+                content_data=item.content_data,
+                item_type=item.item_type,
+            )
             if embedding_text:
                 try:
                     item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
@@ -778,7 +835,7 @@ class SeedLibraryService:
         query_request: ItemQueryRequest,
     ) -> Tuple[List[SeedItem], int]:
         """
-        跨订阅库查询内容项
+        跨订阅库查询内容项 - 支持语义搜索和关键词搜索
 
         Args:
             db: 数据库会话
@@ -788,11 +845,9 @@ class SeedLibraryService:
         Returns:
             (内容项列表, 总数)
         """
-        conditions = [SeedItem.deleted_at.is_(None), SeedItem.is_active == True]
-
         # 确定查询的库范围
+        lib_ids: Optional[List[uuid.UUID]] = None
         if query_request.use_subscribed_only:
-            # 仅从订阅的库查询
             subscribed_lib_ids = await db.execute(
                 select(UserLibrarySubscription.library_id).where(
                     and_(
@@ -805,7 +860,6 @@ class SeedLibraryService:
             lib_ids = [row[0] for row in subscribed_lib_ids.all()]
 
             if query_request.include_official:
-                # 也包含官方库
                 official_libs = await db.execute(
                     select(SeedLibrary.id).where(
                         and_(
@@ -819,32 +873,66 @@ class SeedLibraryService:
             if not lib_ids:
                 return [], 0
 
+        # 准备类型筛选
+        item_types = [t.value for t in query_request.item_types] if query_request.item_types else None
+
+        # 语义搜索 + 关键词搜索混合
+        if query_request.use_semantic_search and query_request.query:
+            return await self._hybrid_query_items(
+                db=db,
+                query=query_request.query,
+                lib_ids=lib_ids,
+                item_types=item_types,
+                subjects=query_request.subjects,
+                difficulty_levels=[d.value for d in query_request.difficulty_levels] if query_request.difficulty_levels else None,
+                tags=query_request.tags,
+                limit=query_request.limit,
+            )
+
+        # 仅关键词搜索（原有逻辑）
+        return await self._keyword_query_items(
+            db=db,
+            query=query_request.query,
+            lib_ids=lib_ids,
+            item_types=item_types,
+            subjects=query_request.subjects,
+            difficulty_levels=[d.value for d in query_request.difficulty_levels] if query_request.difficulty_levels else None,
+            tags=query_request.tags,
+            limit=query_request.limit,
+        )
+
+    async def _keyword_query_items(
+        self,
+        db: AsyncSession,
+        query: Optional[str],
+        lib_ids: Optional[List[uuid.UUID]],
+        item_types: Optional[List[str]],
+        subjects: Optional[List[str]],
+        difficulty_levels: Optional[List[str]],
+        tags: Optional[List[str]],
+        limit: int,
+    ) -> Tuple[List[SeedItem], int]:
+        """关键词搜索内部实现"""
+        conditions = [SeedItem.deleted_at.is_(None), SeedItem.is_active == True]
+
+        if lib_ids:
             conditions.append(SeedItem.library_id.in_(lib_ids))
 
-        # 类型筛选
-        if query_request.item_types:
-            conditions.append(
-                SeedItem.item_type.in_([t.value for t in query_request.item_types])
-            )
+        if item_types:
+            conditions.append(SeedItem.item_type.in_(item_types))
 
-        # 学科筛选
-        if query_request.subjects:
-            conditions.append(SeedItem.subject.in_(query_request.subjects))
+        if subjects:
+            conditions.append(SeedItem.subject.in_(subjects))
 
-        # 难度筛选
-        if query_request.difficulty_levels:
-            conditions.append(
-                SeedItem.difficulty_level.in_([d.value for d in query_request.difficulty_levels])
-            )
+        if difficulty_levels:
+            conditions.append(SeedItem.difficulty_level.in_(difficulty_levels))
 
-        # 标签筛选
-        if query_request.tags:
-            for tag in query_request.tags:
+        if tags:
+            for tag in tags:
                 conditions.append(SeedItem.tags.contains([tag]))
 
-        # 关键词搜索
-        if query_request.query:
-            search_term = f"%{query_request.query}%"
+        if query:
+            search_term = f"%{query}%"
             conditions.append(
                 or_(
                     SeedItem.title.ilike(search_term),
@@ -852,22 +940,95 @@ class SeedLibraryService:
                 )
             )
 
-        # 构建查询
-        query = select(SeedItem).where(and_(*conditions))
+        stmt = select(SeedItem).where(and_(*conditions))
 
-        # 计算总数
         total_query = select(func.count()).select_from(SeedItem).where(and_(*conditions))
         total_result = await db.execute(total_query)
         total = total_result.scalar() or 0
 
-        # 应用限制
-        query = query.limit(query_request.limit)
-        query = query.order_by(desc(SeedItem.created_at))
+        stmt = stmt.limit(limit).order_by(desc(SeedItem.created_at))
 
-        result = await db.execute(query)
+        result = await db.execute(stmt)
         items = list(result.scalars().all())
 
         return items, total
+
+    async def _hybrid_query_items(
+        self,
+        db: AsyncSession,
+        query: str,
+        lib_ids: Optional[List[uuid.UUID]],
+        item_types: Optional[List[str]],
+        subjects: Optional[List[str]],
+        difficulty_levels: Optional[List[str]],
+        tags: Optional[List[str]],
+        limit: int,
+        semantic_weight: float = 0.6,
+        keyword_weight: float = 0.4,
+    ) -> Tuple[List[SeedItem], int]:
+        """
+        混合搜索：语义搜索 + 关键词搜索，使用 RRF 融合
+
+        Args:
+            semantic_weight: 语义搜索权重
+            keyword_weight: 关键词搜索权重
+        """
+        import asyncio
+
+        # 并行执行语义搜索和关键词搜索
+        semantic_task = self.semantic_search_items(
+            db=db,
+            query=query,
+            library_ids=lib_ids,
+            item_types=item_types,
+            limit=limit * 2,
+            threshold=0.25,
+        )
+
+        keyword_task = self._keyword_query_items(
+            db=db,
+            query=query,
+            lib_ids=lib_ids,
+            item_types=item_types,
+            subjects=subjects,
+            difficulty_levels=difficulty_levels,
+            tags=tags,
+            limit=limit * 2,
+        )
+
+        semantic_results, (keyword_items, keyword_total) = await asyncio.gather(
+            semantic_task,
+            keyword_task,
+        )
+
+        # RRF (Reciprocal Rank Fusion) 融合
+        k = 60  # RRF 常数
+        item_scores: Dict[uuid.UUID, float] = {}
+        item_map: Dict[uuid.UUID, SeedItem] = {}
+
+        # 语义搜索结果评分
+        for rank, (item, sim_score) in enumerate(semantic_results):
+            item_id = item.id
+            item_map[item_id] = item
+            rrf_score = semantic_weight * (1 / (k + rank + 1))
+            item_scores[item_id] = item_scores.get(item_id, 0) + rrf_score
+
+        # 关键词搜索结果评分
+        for rank, item in enumerate(keyword_items):
+            item_id = item.id
+            if item_id not in item_map:
+                item_map[item_id] = item
+            rrf_score = keyword_weight * (1 / (k + rank + 1))
+            item_scores[item_id] = item_scores.get(item_id, 0) + rrf_score
+
+        # 按 RRF 分数排序
+        sorted_ids = sorted(item_scores.keys(), key=lambda x: item_scores[x], reverse=True)
+        merged_items = [item_map[item_id] for item_id in sorted_ids[:limit]]
+
+        # 估算总数（取两种搜索的最大值）
+        total = max(len(semantic_results), keyword_total)
+
+        return merged_items, total
 
     async def get_few_shot_examples(
         self,
@@ -1099,7 +1260,12 @@ class SeedLibraryService:
         skipped = 0
 
         for item in items:
-            embedding_text = self._build_embedding_text(item.title, item.content)
+            embedding_text = self._build_embedding_text(
+                title=item.title,
+                content=item.content,
+                content_data=item.content_data,
+                item_type=item.item_type,
+            )
             if not embedding_text:
                 skipped += 1
                 continue
@@ -1112,6 +1278,7 @@ class SeedLibraryService:
                 failed += 1
 
         if processed > 0:
+            await db.flush()  # 确保写入数据库
             await db.commit()
 
         logger.info(f"Backfill embeddings: processed={processed}, failed={failed}, skipped={skipped}")
