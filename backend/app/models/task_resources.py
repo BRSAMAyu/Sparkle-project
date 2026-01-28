@@ -47,7 +47,7 @@ class TaskResourceLink(BaseModel):
     title = Column(String(255), nullable=True)
     url = Column(String(500), nullable=True)
     summary = Column(Text, nullable=True)
-    resource_metadata = Column(JSONBCompat, nullable=True)
+    resource_metadata = Column("metadata", JSONBCompat, nullable=True)
 
     order_index = Column(Integer, default=0, nullable=False)
     is_primary = Column(Boolean, default=False, nullable=False)

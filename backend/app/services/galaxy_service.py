@@ -6,7 +6,7 @@ Refactored to delegate to specialized services:
 """
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional, List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -364,6 +364,13 @@ class GalaxyService:
         """
         Update node mastery with Outbox pattern and version checking to prevent race conditions
         """
+        def _to_utc_naive(dt: Optional[datetime]) -> Optional[datetime]:
+            if dt is None:
+                return None
+            if dt.tzinfo is not None:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
+
         # 1. Get current state from user_node_status
         query_current = text("""
             SELECT mastery_score, updated_at, revision
@@ -380,7 +387,7 @@ class GalaxyService:
             # We skip version check for new entries or use a very old one
         else:
             old_mastery = current[0]
-            current_updated_at = current[1]
+            current_updated_at = _to_utc_naive(current[1])
             current_revision = current[2] or 0
             
             # 2. Conflict Resolution (Logical Clock Priority)
@@ -393,7 +400,7 @@ class GalaxyService:
                      return {"success": False, "reason": "stale_revision", "current_revision": current_revision}
             
             # Fallback to Physical Clock if revision not provided (Legacy)
-            elif version and current_updated_at and version <= current_updated_at:
+            elif version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
                 logger.warning(f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}")
                 return {"success": False, "reason": "stale_update", "current_revision": current_revision}
 
@@ -431,7 +438,7 @@ class GalaxyService:
                     revision = EXCLUDED.revision
             """)
             
-            update_time = version or datetime.utcnow()
+            update_time = _to_utc_naive(version) or datetime.utcnow()
             
             await self.db.execute(upsert_query, {
                 "user_id": user_id, 

@@ -87,8 +87,15 @@ def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
     解码 JWT token
     """
     try:
+        audience = settings.JWT_AUDIENCE or None
+        issuer = settings.JWT_ISSUER or None
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+            audience=audience,
+            issuer=issuer,
+            options={"verify_aud": bool(audience)},
         )
     except JWTError as exc:
         raise exc
