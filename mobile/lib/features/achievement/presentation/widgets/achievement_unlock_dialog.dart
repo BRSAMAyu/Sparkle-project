@@ -646,7 +646,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   /// P1功能: 成就连击横幅
   Widget _buildComboBanner() {
     final comboCount = widget.comboCount!;
-    final colors = _getRarityColors();
 
     return Positioned(
       top: -20,

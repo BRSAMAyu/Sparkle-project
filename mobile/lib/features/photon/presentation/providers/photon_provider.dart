@@ -59,8 +59,8 @@ class PhotonBalanceNotifier extends StateNotifier<PhotonBalanceState> {
     }
   }
 
-  void refreshBalance() {
-    loadBalance();
+  Future<void> refreshBalance() async {
+    await loadBalance();
   }
 }
 
@@ -154,8 +154,8 @@ class PhotonTransactionsNotifier
     }
   }
 
-  void refresh() {
-    loadTransactions(refresh: true);
+  Future<void> refresh() async {
+    await loadTransactions(refresh: true);
   }
 }
 

@@ -96,7 +96,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   void _showImportanceDialog(VocabWordItem word) {
     var selectedImportance = word.importance;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(

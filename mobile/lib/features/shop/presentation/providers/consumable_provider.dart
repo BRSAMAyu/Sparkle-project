@@ -217,7 +217,7 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
 /// 消耗品效果Provider
 final consumableEffectProvider =
     StateNotifierProvider<ConsumableEffectNotifier, ConsumableEffectState>((ref) {
-  final shopRepository = ref.watch(shopRepositoryProvider);
+  final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
   return ConsumableEffectNotifier(shopRepository);
 });
 

@@ -52,8 +52,8 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return {
         'layer_1': {
-          'preferences': [],
-          'goals': [],
+          'preferences': <String>[],
+          'goals': <String>[],
         },
         'layer_2': {
           'persona': {
@@ -63,8 +63,8 @@ class UserRepository {
           'editable': false,
         },
         'layer_3': {
-          'patterns': [],
-          'fragments': [],
+          'patterns': <Map<String, dynamic>>[],
+          'fragments': <Map<String, dynamic>>[],
         },
       };
     }

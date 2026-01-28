@@ -67,7 +67,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
   /// 显示权限申请对话框
   void _showPermissionDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('需要麦克风权限'),
@@ -104,7 +104,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       _isRecording = true;
       _isProcessing = false;
       _recordingDuration = 0;
-      _currentTranscription = null;
     });
 
     _animationController?.forward();

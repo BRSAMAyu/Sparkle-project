@@ -531,7 +531,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
             }
           }
         },
-        onError: (error) {
+        onError: (Object error) {
           debugPrint('WS Stream Error: $error');
           _handleConnectionError();
         },

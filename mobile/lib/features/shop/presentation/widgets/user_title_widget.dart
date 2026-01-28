@@ -26,7 +26,6 @@ class UserTitleBadge extends ConsumerWidget {
     }
 
     final titleText = ref.watch(titleTextProvider);
-    final displayFormat = ref.watch(titleDisplayFormatProvider);
 
     if (titleText == null) {
       return const SizedBox.shrink();

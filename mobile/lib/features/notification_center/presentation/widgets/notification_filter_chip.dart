@@ -27,7 +27,7 @@ class NotificationFilterChip extends StatelessWidget {
         side: BorderSide(
           color: isSelected
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withOpacity(0.5),
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
         ),
       ),
     );

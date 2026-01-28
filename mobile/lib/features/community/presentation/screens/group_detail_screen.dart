@@ -238,7 +238,7 @@ class GroupDetailScreen extends ConsumerWidget {
                           icon: Icons.people_outline,
                           onPressed: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(
+                              MaterialPageRoute<void>(
                                 builder: (context) => GroupMembersScreen(
                                   groupId: groupId,
                                   groupName: group.name,

@@ -35,8 +35,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   }
 
   void _showSearchOptions() {
-    final currentTabIndex = _tabController.index;
-
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(

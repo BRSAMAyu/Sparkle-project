@@ -102,7 +102,7 @@ class ResponseFeedbackService:
             )
 
         RESPONSE_FEEDBACK_INGESTED.labels(
-            type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
         ).inc()
 
         await self._record_feedback_ts(user_id, workflow_id, prompt_version)

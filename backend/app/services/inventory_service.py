@@ -87,14 +87,21 @@ class InventoryService:
                     })
 
         # 2. 获取已购买的皮肤和称号
+        exclude_ids: list[str] = []
+        if user:
+            if user.equipped_skin:
+                exclude_ids.append(user.equipped_skin)
+            if user.equipped_title:
+                exclude_ids.append(user.equipped_title)
+
         purchase_query = select(ShopPurchase).where(
-            and_(
-                ShopPurchase.user_id == user_id,
-                ShopPurchase.item_id.notin_(
-                    [user.equipped_skin, user.equipped_title] if user else []
-                )
+            ShopPurchase.user_id == user_id
+        )
+        if exclude_ids:
+            purchase_query = purchase_query.where(
+                ShopPurchase.item_id.notin_(exclude_ids)
             )
-        ).options(selectinload(ShopPurchase.item))
+        purchase_query = purchase_query.options(selectinload(ShopPurchase.item))
 
         purchase_result = await self.db.execute(purchase_query)
         purchases = purchase_result.scalars().all()
@@ -167,7 +174,7 @@ class InventoryService:
     async def equip_skin(
         self,
         user_id: str,
-        item_id: str
+        item_id: Optional[str]
     ) -> Dict[str, Any]:
         """
         装备皮肤
@@ -182,20 +189,7 @@ class InventoryService:
         Raises:
             ValueError: 物品不存在或未拥有
         """
-        # 1. 验证物品存在且是皮肤类型
-        item = await self._get_shop_item(item_id)
-        if not item:
-            raise ValueError(f"Item {item_id} not found")
-
-        if item.item_type != ShopItemType.SKIN:
-            raise ValueError(f"Item {item_id} is not a skin")
-
-        # 2. 验证用户拥有该皮肤
-        owned = await self._check_item_ownership(user_id, item_id, ShopItemType.SKIN)
-        if not owned:
-            raise ValueError(f"User does not own skin {item_id}")
-
-        # 3. 更新用户装备
+        # 1. 更新用户装备
         user_query = select(User).where(User.id == user_id)
         result = await self.db.execute(user_query)
         user = result.scalar_one_or_none()
@@ -203,6 +197,32 @@ class InventoryService:
         if not user:
             raise ValueError(f"User {user_id} not found")
 
+        if item_id is None:
+            user.equipped_skin = None
+            await self.db.commit()
+            await self.db.refresh(user)
+            logger.info(f"User {user_id} unequipped skin")
+            return {
+                "success": True,
+                "item_id": None,
+                "item_name": None,
+                "equipped_at": datetime.utcnow().isoformat()
+            }
+
+        # 2. 验证物品存在且是皮肤类型
+        item = await self._get_shop_item(item_id)
+        if not item:
+            raise ValueError(f"Item {item_id} not found")
+
+        if item.item_type != ShopItemType.SKIN:
+            raise ValueError(f"Item {item_id} is not a skin")
+
+        # 3. 验证用户拥有该皮肤
+        owned = await self._check_item_ownership(user_id, item_id, ShopItemType.SKIN)
+        if not owned:
+            raise ValueError(f"User does not own skin {item_id}")
+
+        # 4. 更新用户装备
         user.equipped_skin = item_id
         await self.db.commit()
         await self.db.refresh(user)
@@ -219,7 +239,7 @@ class InventoryService:
     async def equip_title(
         self,
         user_id: str,
-        item_id: str
+        item_id: Optional[str]
     ) -> Dict[str, Any]:
         """
         装备称号
@@ -234,20 +254,7 @@ class InventoryService:
         Raises:
             ValueError: 物品不存在或未拥有
         """
-        # 1. 验证物品存在且是称号类型
-        item = await self._get_shop_item(item_id)
-        if not item:
-            raise ValueError(f"Item {item_id} not found")
-
-        if item.item_type != ShopItemType.TITLE:
-            raise ValueError(f"Item {item_id} is not a title")
-
-        # 2. 验证用户拥有该称号
-        owned = await self._check_item_ownership(user_id, item_id, ShopItemType.TITLE)
-        if not owned:
-            raise ValueError(f"User does not own title {item_id}")
-
-        # 3. 更新用户装备
+        # 1. 更新用户装备
         user_query = select(User).where(User.id == user_id)
         result = await self.db.execute(user_query)
         user = result.scalar_one_or_none()
@@ -255,6 +262,32 @@ class InventoryService:
         if not user:
             raise ValueError(f"User {user_id} not found")
 
+        if item_id is None:
+            user.equipped_title = None
+            await self.db.commit()
+            await self.db.refresh(user)
+            logger.info(f"User {user_id} unequipped title")
+            return {
+                "success": True,
+                "item_id": None,
+                "item_name": None,
+                "equipped_at": datetime.utcnow().isoformat()
+            }
+
+        # 2. 验证物品存在且是称号类型
+        item = await self._get_shop_item(item_id)
+        if not item:
+            raise ValueError(f"Item {item_id} not found")
+
+        if item.item_type != ShopItemType.TITLE:
+            raise ValueError(f"Item {item_id} is not a title")
+
+        # 3. 验证用户拥有该称号
+        owned = await self._check_item_ownership(user_id, item_id, ShopItemType.TITLE)
+        if not owned:
+            raise ValueError(f"User does not own title {item_id}")
+
+        # 4. 更新用户装备
         user.equipped_title = item_id
         await self.db.commit()
         await self.db.refresh(user)
@@ -454,7 +487,7 @@ class InventoryService:
 
 
 # 全局单例获取函数
-async def get_inventory_service(db: AsyncSession) -> InventoryService:
+def get_inventory_service(db: AsyncSession) -> InventoryService:
     """
     获取物品管理服务实例
 

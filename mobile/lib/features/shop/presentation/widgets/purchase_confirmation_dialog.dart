@@ -43,7 +43,7 @@ class _PurchaseConfirmationDialogState
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: _getRarityColor(widget.item.rarity).withOpacity(0.1),
+                  color: _getRarityColor(widget.item.rarity).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _getRarityColor(widget.item.rarity),
@@ -199,9 +199,9 @@ class _PurchaseConfirmationDialogState
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [

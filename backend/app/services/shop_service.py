@@ -186,101 +186,85 @@ class ShopService:
             ValueError: 物品不存在、不可购买、库存不足、余额不足等
         """
         try:
-            # 0. 先查询物品基本信息（不加锁）
-            basic_query = select(ShopItem).where(
-                and_(
-                    ShopItem.id == item_id,
-                    ShopItem.is_available == True
-                )
+            tx_context = (
+                self.db.begin_nested()
+                if self.db.in_transaction()
+                else self.db.begin()
             )
-            basic_result = await self.db.execute(basic_query)
-            basic_item = basic_result.scalar_one_or_none()
+            async with tx_context:
+                # 1. 查询物品（加行锁防止并发超卖）
+                query = select(ShopItem).where(
+                    and_(
+                        ShopItem.id == item_id,
+                        ShopItem.is_available == True
+                    )
+                ).with_for_update()  # 行锁
 
-            if not basic_item:
-                raise ValueError(f"Item {item_id} not found or not available")
+                result = await self.db.execute(query)
+                item = result.scalar_one_or_none()
 
-            # 1. 检查余额（在行锁之前检查，避免死锁）
-            balance_before = await self.photon_service.get_balance(user_id)
-            actual_price = basic_item.price_photons
+                if not item:
+                    raise ValueError(f"Item {item_id} not found or not available")
 
-            if balance_before < actual_price:
-                raise ValueError(
-                    f"Insufficient photon balance: {balance_before} < {actual_price}"
+                actual_price = item.price_photons
+
+                # 2. 检查库存
+                if item.is_limited and item.stock_quantity <= 0:
+                    raise ValueError(f"Item {item_id} is out of stock")
+
+                # 3. 检查是否已拥有（非消耗品）
+                if item.item_type not in ["consumable", "boost"]:
+                    already_owned = await self._check_item_ownership(user_id, item_id, item.item_type)
+                    if already_owned:
+                        raise ValueError(f"User already owns item {item_id}")
+
+                # 4. 扣除光子（使用内部方法，不提交事务）
+                old_balance, new_balance, _ = await self.photon_service._update_balance(
+                    user_id, -actual_price, delete_cache=False, lock_for_update=True
                 )
 
-            # 2. 查询物品（加行锁防止并发超卖）
-            query = select(ShopItem).where(
-                and_(
-                    ShopItem.id == item_id,
-                    ShopItem.is_available == True
+                # 5. 记录交易历史（修复bug：购买未记录交易）
+                await self.photon_service.record_transaction(
+                    user_id=user_id,
+                    transaction_type="purchase",
+                    amount=-actual_price,
+                    balance_before=old_balance,
+                    balance_after=new_balance,
+                    source=f"Shop purchase: {item.name}",
+                    related_item_id=item_id,
+                    extra_data={
+                        "item_name": item.name,
+                        "item_type": item.item_type,
+                        "item_rarity": item.rarity
+                    }
                 )
-            ).with_for_update()  # 行锁
 
-            result = await self.db.execute(query)
-            item = result.scalar_one_or_none()
+                # 6. 更新库存（限量物品）
+                if item.is_limited:
+                    item.stock_quantity -= 1
+                    await self.db.flush()
 
-            if not item:
-                raise ValueError(f"Item {item_id} not found or not available")
+                # 7. 发放物品到背包
+                await self._grant_item_to_user(user_id, item)
 
-            # 3. 检查库存
-            if item.is_limited and item.stock_quantity <= 0:
-                raise ValueError(f"Item {item_id} is out of stock")
-
-            # 4. 检查是否已拥有（非消耗品）
-            if item.item_type not in ["consumable", "boost"]:
-                already_owned = await self._check_item_ownership(user_id, item_id, item.item_type)
-                if already_owned:
-                    raise ValueError(f"User already owns item {item_id}")
-
-            # 5. 扣除光子（使用内部方法，不提交事务）
-            old_balance, new_balance, user = await self.photon_service._update_balance(
-                user_id, -actual_price, delete_cache=False
-            )
-
-            # 6. 记录交易历史（修复bug：购买未记录交易）
-            await self.photon_service.record_transaction(
-                user_id=user_id,
-                transaction_type="purchase",
-                amount=-actual_price,
-                balance_before=old_balance,
-                balance_after=new_balance,
-                source=f"Shop purchase: {item.name}",
-                related_item_id=item_id,
-                extra_data={
-                    "item_name": item.name,
-                    "item_type": item.item_type,
-                    "item_rarity": item.rarity
-                }
-            )
-
-            # 6. 更新库存（限量物品）
-            if item.is_limited:
-                item.stock_quantity -= 1
+                # 8. 创建购买记录
+                purchase = ShopPurchase(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    item_id=item_id,
+                    price_paid=actual_price,
+                    photon_balance_before=old_balance,
+                    photon_balance_after=new_balance
+                )
+                self.db.add(purchase)
                 await self.db.flush()
 
-            # 7. 发放物品到背包
-            await self._grant_item_to_user(user_id, item)
-
-            # 8. 创建购买记录
-            purchase = ShopPurchase(
-                id=str(uuid4()),
-                user_id=user_id,
-                item_id=item_id,
-                price_paid=actual_price,
-                photon_balance_before=old_balance,
-                photon_balance_after=new_balance
-            )
-            self.db.add(purchase)
-            await self.db.flush()
-
-            # 9. 删除缓存
+            # 9. 删除缓存（事务提交后）
             from app.core.cache import cache_service
             from app.config import settings
             cache_key = f"{settings.APP_NAME}:photon:balance:{user_id}"
             await cache_service.delete(cache_key)
 
-            # 提交事务
-            await self.db.commit()
             await self.db.refresh(purchase)
 
             logger.info(
@@ -454,7 +438,7 @@ class ShopService:
 
 
 # 全局单例获取函数
-async def get_shop_service(db: AsyncSession) -> ShopService:
+def get_shop_service(db: AsyncSession) -> ShopService:
     """
     获取商城服务实例
 

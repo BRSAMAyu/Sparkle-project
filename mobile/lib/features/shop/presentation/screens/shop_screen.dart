@@ -130,7 +130,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
   }
 
   void _showPurchaseDialog(ShopItem item) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => PurchaseConfirmationDialog(
         item: item,

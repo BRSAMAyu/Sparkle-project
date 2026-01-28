@@ -24,7 +24,7 @@ class CandidateFeedbackService {
     try {
       debugPrint('📤 Sending feedback: $candidateId ($feedbackType)');
 
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/signals/feedback',
         data: {
           'candidate_id': candidateId,
@@ -50,7 +50,7 @@ class CandidateFeedbackService {
   /// Get feedback statistics for current user
   Future<Map<String, dynamic>?> getFeedbackStats() async {
     try {
-      final response = await _dio.get('/signals/feedback/stats');
+      final response = await _dio.get<Map<String, dynamic>>('/signals/feedback/stats');
 
       if (response.statusCode == 200 && response.data['ok'] == true) {
         return {

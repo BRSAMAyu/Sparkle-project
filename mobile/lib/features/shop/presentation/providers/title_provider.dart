@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
+import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// 称号服务
 ///
@@ -33,19 +34,22 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
   Future<void> _loadTitle(String titleId) async {
     try {
       final inventory = await _shopRepository.getInventory();
-      final titles = inventory['titles'] as List<dynamic>? ?? [];
+      final titles = inventory['titles'] ?? [];
 
-      final title = titles.firstWhere(
-        (item) => item['id'] == titleId,
-        orElse: () => null,
-      );
+      InventoryItem? matchedTitle;
+      for (final item in titles) {
+        if (item.id == titleId) {
+          matchedTitle = item;
+          break;
+        }
+      }
 
-      if (title != null) {
-        final titleConfig = title['item_config'] as Map<String, dynamic>?;
+      if (matchedTitle != null) {
+        final titleConfig = matchedTitle.itemConfig;
         if (titleConfig != null) {
           state = {
             'id': titleId,
-            'name': title['name'],
+            'name': matchedTitle.name,
             'config': titleConfig,
           };
         }
@@ -59,7 +63,10 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
   /// 装备称号
   Future<bool> equipTitle(String titleId) async {
     try {
-      final result = await _shopRepository.equipItem('title', titleId);
+      final result = await _shopRepository.equipItem(
+        itemType: 'title',
+        itemId: titleId,
+      );
       if (result['success'] == true) {
         await _loadTitle(titleId);
         return true;
@@ -74,7 +81,10 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
   /// 卸载称号
   Future<bool> unequipTitle() async {
     try {
-      final result = await _shopRepository.equipItem('title', null);
+      final result = await _shopRepository.equipItem(
+        itemType: 'title',
+        itemId: null,
+      );
       if (result['success'] == true) {
         state = null;
         return true;
@@ -95,8 +105,8 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
 
 /// 称号Provider
 final titleProvider = StateNotifierProvider<TitleNotifier, Map<String, dynamic>?>((ref) {
-  final shopRepository = ref.watch(shopRepositoryProvider);
-  final authNotifier = ref.watch(authProvider.notifier);
+  final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
+  final authNotifier = ref.watch<AuthNotifier>(authProvider.notifier);
 
   return TitleNotifier(
     shopRepository,

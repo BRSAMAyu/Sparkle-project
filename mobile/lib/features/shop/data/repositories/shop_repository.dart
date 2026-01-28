@@ -26,19 +26,6 @@ class ShopRepository {
     throw Exception('Unexpected response format');
   }
 
-  List<dynamic> _unwrapResponseList(dynamic data) {
-    if (data is List) {
-      return data;
-    }
-    if (data is Map<String, dynamic>) {
-      final listData = data['data'];
-      if (listData is List) {
-        return listData;
-      }
-    }
-    throw Exception('Unexpected response format, expected List');
-  }
-
   /// Get shop items list
   /// 获取商城物品列表
   Future<List<ShopItem>> getShopItems({
@@ -195,11 +182,14 @@ class ShopRepository {
 
   /// Equip item (skin or title)
   /// 装备物品
-  Future<Map<String, dynamic>> equipItem(String itemType, String? itemId) async {
+  Future<Map<String, dynamic>> equipItem({
+    required String itemType,
+    String? itemId,
+  }) async {
     try {
       final requestData = <String, dynamic>{
         'item_type': itemType,
-        if (itemId != null) 'item_id': itemId,
+        'item_id': itemId,
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(

@@ -125,7 +125,7 @@ class TranslationService {
     int? pageNo,
     String? sourceFileId,
   }) async {
-    final response = await _apiClient.post(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '/translation/translate',
       data: {
         'text': text,
@@ -148,7 +148,7 @@ class TranslationService {
 
   /// Get available glossaries
   Future<List<Map<String, dynamic>>> getGlossaries() async {
-    final response = await _apiClient.get('/translation/glossaries');
+    final response = await _apiClient.get<Map<String, dynamic>>('/translation/glossaries');
     final data = response.data as Map<String, dynamic>;
     return (data['glossaries'] as List<dynamic>)
         .map((e) => e as Map<String, dynamic>)

@@ -45,10 +45,10 @@ class SubtaskListWidget extends ConsumerStatefulWidget {
   });
 
   final String parentTaskId;
-  final Function(SubTaskModel) onSubtaskToggle;
-  final Function(String) onSubtaskDelete;
-  final Function(String, String)? onSubtaskAdd;
-  final Function(List<SubTaskModel>)? onReorder;
+  final void Function(SubTaskModel) onSubtaskToggle;
+  final void Function(String) onSubtaskDelete;
+  final void Function(String, String)? onSubtaskAdd;
+  final void Function(List<SubTaskModel>)? onReorder;
   final bool readOnly;
 
   @override
@@ -179,9 +179,9 @@ class SubtaskItemWidget extends StatelessWidget {
   });
 
   final SubTaskModel subtask;
-  final Function() onToggle;
-  final Function() onDelete;
-  final Function(String)? onEdit;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+  final void Function(String)? onEdit;
   final bool isDragging;
 
   @override

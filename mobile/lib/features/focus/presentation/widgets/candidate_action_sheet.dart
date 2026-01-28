@@ -21,8 +21,8 @@ class CandidateActionSheet extends ConsumerStatefulWidget {
   });
 
   final List<CandidateActionModel> candidates;
-  final Function(CandidateActionModel)? onAccept;
-  final Function(CandidateActionModel)? onDismiss;
+  final void Function(CandidateActionModel)? onAccept;
+  final void Function(CandidateActionModel)? onDismiss;
 
   @override
   ConsumerState<CandidateActionSheet> createState() => _CandidateActionSheetState();

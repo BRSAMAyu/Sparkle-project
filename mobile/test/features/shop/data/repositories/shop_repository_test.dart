@@ -1,18 +1,111 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
-class MockApiClient extends Mock implements ApiClient {}
+class TestApiClient implements ApiClient {
+  Future<Response<dynamic>> Function(
+    String path,
+    Map<String, dynamic>? queryParameters,
+  )? getHandler;
+  Future<Response<dynamic>> Function(
+    String path,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  )? postHandler;
+
+  @override
+  Dio get dio => throw UnimplementedError();
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = getHandler;
+    if (handler == null) {
+      throw UnimplementedError('No get handler configured');
+    }
+    final response = await handler(path, queryParameters);
+    return response as Response<T>;
+  }
+
+  @override
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = postHandler;
+    if (handler == null) {
+      throw UnimplementedError('No post handler configured');
+    }
+    final response = await handler(path, data, queryParameters);
+    return response as Response<T>;
+  }
+
+  @override
+  Future<Response<T>> put<T>(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> patch<T>(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> delete<T>(String path) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> getStream(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+ShopItem buildShopItem({
+  required String id,
+  required String name,
+  required ShopItemType itemType,
+  String category = 'skins',
+  int pricePhotons = 100,
+  ItemRarity rarity = ItemRarity.common,
+  int sortOrder = 0,
+  bool hasDiscount = false,
+  bool isInStock = true,
+  bool isOwned = false,
+  bool isAvailable = true,
+  bool isLimited = false,
+}) {
+  return ShopItem(
+    id: id,
+    name: name,
+    itemType: itemType,
+    category: category,
+    pricePhotons: pricePhotons,
+    rarity: rarity,
+    sortOrder: sortOrder,
+    hasDiscount: hasDiscount,
+    isInStock: isInStock,
+    isOwned: isOwned,
+    isAvailable: isAvailable,
+    isLimited: isLimited,
+  );
+}
 
 void main() {
-  late MockApiClient mockApiClient;
+  late TestApiClient mockApiClient;
   late ShopRepository repository;
 
   setUp(() {
-    mockApiClient = MockApiClient();
+    mockApiClient = TestApiClient();
     repository = ShopRepository(mockApiClient);
   });
 
@@ -67,19 +160,16 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/shop/items',
-          queryParameters: {
-            'only_available': true,
-          },
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/shop/items');
+        expect(queryParameters, {
+          'only_available': true,
+        });
+        return Response(
           requestOptions: RequestOptions(path: '/shop/items'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getShopItems();
 
@@ -96,16 +186,10 @@ void main() {
     });
 
     test('filters items by type', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/shop/items',
-          queryParameters: argThat(
-            (Map<String, dynamic> params) => params['item_type'] == 'skin',
-            named: 'queryParameters',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/shop/items');
+        expect(queryParameters?['item_type'], 'skin');
+        return Response(
           requestOptions: RequestOptions(path: '/shop/items'),
           data: {
             'success': true,
@@ -126,8 +210,8 @@ void main() {
               },
             ],
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getShopItems(itemType: 'skin');
 
@@ -136,20 +220,16 @@ void main() {
     });
 
     test('returns empty list when no items', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          any,
-          queryParameters: anyNamed('queryParameters'),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/shop/items');
+        return Response(
           requestOptions: RequestOptions(path: '/shop/items'),
           data: {
             'success': true,
             'data': [],
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getShopItems();
 
@@ -184,20 +264,14 @@ void main() {
         'price_paid': 100,
       };
 
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-            '/shop/purchase',
-            data: argThat(
-              (Map<String, dynamic> data) => data['item_id'] == itemId,
-              named: 'data',
-            ),
-          ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, '/shop/purchase');
+        expect((data as Map<String, dynamic>)['item_id'], itemId);
+        return Response(
           requestOptions: RequestOptions(path: '/shop/purchase'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.purchaseItem(itemId);
 
@@ -206,20 +280,11 @@ void main() {
       expect(result['balance_before'], 500);
       expect(result['balance_after'], 400);
 
-      verify(mockApiClient.post<Map<String, dynamic>>(
-        '/shop/purchase',
-        data: anyNamed('data'),
-      )).called(1);
     });
 
     test('throws exception on insufficient balance', () async {
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/shop/purchase',
-          data: anyNamed('data'),
-        ),
-      ).thenThrow(
-        DioException(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        throw DioException(
           requestOptions: RequestOptions(path: '/shop/purchase'),
           type: DioExceptionType.badResponse,
           response: Response(
@@ -227,8 +292,8 @@ void main() {
             data: {'detail': 'Insufficient photon balance'},
             statusCode: 400,
           ),
-        ),
-      );
+        );
+      };
 
       expect(
         () => repository.purchaseItem('skin_001'),
@@ -241,13 +306,8 @@ void main() {
     });
 
     test('throws exception on out of stock', () async {
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/shop/purchase',
-          data: anyNamed('data'),
-        ),
-      ).thenThrow(
-        DioException(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        throw DioException(
           requestOptions: RequestOptions(path: '/shop/purchase'),
           type: DioExceptionType.badResponse,
           response: Response(
@@ -255,8 +315,8 @@ void main() {
             data: {'detail': 'Item is out of stock'},
             statusCode: 400,
           ),
-        ),
-      );
+        );
+      };
 
       expect(
         () => repository.purchaseItem('limited_item'),
@@ -304,20 +364,17 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/shop/purchases',
-          queryParameters: {
-            'limit': 20,
-            'offset': 0,
-          },
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/shop/purchases');
+        expect(queryParameters, {
+          'limit': 20,
+          'offset': 0,
+        });
+        return Response(
           requestOptions: RequestOptions(path: '/shop/purchases'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getPurchaseHistory();
 
@@ -329,17 +386,11 @@ void main() {
     });
 
     test('paginates correctly', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/shop/purchases',
-          queryParameters: argThat(
-            (Map<String, dynamic> params) =>
-                params['limit'] == 10 && params['offset'] == 10,
-            named: 'queryParameters',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/shop/purchases');
+        expect(queryParameters?['limit'], 10);
+        expect(queryParameters?['offset'], 10);
+        return Response(
           requestOptions: RequestOptions(path: '/shop/purchases'),
           data: {
             'success': true,
@@ -356,8 +407,8 @@ void main() {
               },
             ],
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getPurchaseHistory(
         limit: 10,
@@ -414,14 +465,13 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>('/inventory'),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/inventory');
+        return Response(
           requestOptions: RequestOptions(path: '/inventory'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getInventory();
 
@@ -449,21 +499,16 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/inventory/equip',
-          data: argThat(
-            (Map<String, dynamic> data) =>
-                data['item_id'] == itemId && data['item_type'] == itemType,
-            named: 'data',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, '/inventory/equip');
+        final payload = data as Map<String, dynamic>;
+        expect(payload['item_id'], itemId);
+        expect(payload['item_type'], itemType);
+        return Response(
           requestOptions: RequestOptions(path: '/inventory/equip'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.equipItem(
         itemId: itemId,
@@ -473,10 +518,6 @@ void main() {
       expect(result['success'], isTrue);
       expect(result['item_id'], itemId);
 
-      verify(mockApiClient.post<Map<String, dynamic>>(
-        '/inventory/equip',
-        data: anyNamed('data'),
-      )).called(1);
     });
   });
 
@@ -491,17 +532,14 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/inventory/owned',
-          queryParameters: {},
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/inventory/owned');
+        expect(queryParameters, {});
+        return Response(
           requestOptions: RequestOptions(path: '/inventory/owned'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getOwnedItems();
 
@@ -512,24 +550,18 @@ void main() {
     });
 
     test('filters by item type', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/inventory/owned',
-          queryParameters: argThat(
-            (Map<String, dynamic> params) => params['item_type'] == 'skin',
-            named: 'queryParameters',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/inventory/owned');
+        expect(queryParameters?['item_type'], 'skin');
+        return Response(
           requestOptions: RequestOptions(path: '/inventory/owned'),
           data: {
             'success': true,
             'data': ['skin_001', 'skin_002'],
             'meta': {'total_count': 2, 'item_type': 'skin'},
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getOwnedItems(itemType: 'skin');
 
@@ -554,25 +586,17 @@ void main() {
         'remaining_quantity': 1,
       };
 
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/inventory/consumables/use',
-          data: argThat(
-            (Map<String, dynamic> data) =>
-                data['consumable_id'] == consumableId &&
-                data['quantity'] == quantity,
-            named: 'data',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, '/inventory/consumables/$consumableId/use');
+        expect((data as Map<String, dynamic>)['quantity'], quantity);
+        return Response(
           requestOptions: RequestOptions(path: '/inventory/consumables/use'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.useConsumable(
-        consumableId: consumableId,
+        consumableId,
         quantity: quantity,
       );
 
@@ -581,25 +605,20 @@ void main() {
     });
 
     test('throws exception when insufficient quantity', () async {
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/inventory/consumables/use',
-          data: anyNamed('data'),
-        ),
-      ).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/inventory/consumables/use'),
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
           type: DioExceptionType.badResponse,
           response: Response(
-            requestOptions: RequestOptions(path: '/inventory/consumables/use'),
+            requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
             data: {'detail': 'Insufficient consumable quantity'},
             statusCode: 400,
           ),
-        ),
-      );
+        );
+      };
 
       expect(
-        () => repository.useConsumable(consumableId: 'boost_001'),
+        () => repository.useConsumable('boost_001'),
         throwsA(isA<Exception>()),
       );
     });
@@ -607,22 +626,17 @@ void main() {
 
   group('ShopItem Model', () {
     test('returns correct rarity color', () {
-      final commonItem = ShopItem(
+      final commonItem = buildShopItem(
         id: '1',
         name: 'Common',
         itemType: ShopItemType.skin,
         category: 'skins',
-        pricePhotons: 100,
-        rarity: ItemRarity.common,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       expect(commonItem.rarityColor, '#9E9E9E');
 
-      final rareItem = ShopItem(
+      final rareItem = buildShopItem(
         id: '2',
         name: 'Rare',
         itemType: ShopItemType.skin,
@@ -630,31 +644,23 @@ void main() {
         pricePhotons: 200,
         rarity: ItemRarity.rare,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       expect(rareItem.rarityColor, '#2196F3');
     });
 
     test('returns correct item type display name', () {
-      final skinItem = ShopItem(
+      final skinItem = buildShopItem(
         id: '1',
         name: 'Skin',
         itemType: ShopItemType.skin,
         category: 'skins',
-        pricePhotons: 100,
-        rarity: ItemRarity.common,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       expect(skinItem.itemTypeName, '皮肤');
 
-      final titleItem = ShopItem(
+      final titleItem = buildShopItem(
         id: '2',
         name: 'Title',
         itemType: ShopItemType.title,
@@ -662,9 +668,6 @@ void main() {
         pricePhotons: 150,
         rarity: ItemRarity.rare,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       expect(titleItem.itemTypeName, '称号');

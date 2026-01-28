@@ -1,18 +1,81 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/photon/data/repositories/photon_repository.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
 
-class MockApiClient extends Mock implements ApiClient {}
+class TestApiClient implements ApiClient {
+  Future<Response<dynamic>> Function(
+    String path,
+    Map<String, dynamic>? queryParameters,
+  )? getHandler;
+  Future<Response<dynamic>> Function(
+    String path,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  )? postHandler;
+
+  @override
+  Dio get dio => throw UnimplementedError();
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = getHandler;
+    if (handler == null) {
+      throw UnimplementedError('No get handler configured');
+    }
+    final response = await handler(path, queryParameters);
+    return response as Response<T>;
+  }
+
+  @override
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = postHandler;
+    if (handler == null) {
+      throw UnimplementedError('No post handler configured');
+    }
+    final response = await handler(path, data, queryParameters);
+    return response as Response<T>;
+  }
+
+  @override
+  Future<Response<T>> put<T>(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> patch<T>(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> delete<T>(String path) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> getStream(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+  }) {
+    throw UnimplementedError();
+  }
+}
 
 void main() {
-  late MockApiClient mockApiClient;
+  late TestApiClient mockApiClient;
   late PhotonRepository repository;
 
   setUp(() {
-    mockApiClient = MockApiClient();
+    mockApiClient = TestApiClient();
     repository = PhotonRepository(mockApiClient);
   });
 
@@ -27,33 +90,24 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/photons/balance',
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/photons/balance');
+        return Response(
           requestOptions: RequestOptions(path: '/photons/balance'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getBalance();
 
       expect(result.userId, 'user-123');
       expect(result.balance, 500);
       expect(result.updatedAt, isNotNull);
-      verify(mockApiClient.get<Map<String, dynamic>>('/photons/balance'))
-          .called(1);
     });
 
     test('throws exception on API error', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/photons/balance',
-        ),
-      ).thenThrow(
-        DioException(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        throw DioException(
           requestOptions: RequestOptions(path: '/photons/balance'),
           type: DioExceptionType.badResponse,
           response: Response(
@@ -61,8 +115,8 @@ void main() {
             data: {'detail': 'Unauthorized'},
             statusCode: 401,
           ),
-        ),
-      );
+        );
+      };
 
       expect(
         () => repository.getBalance(),
@@ -110,20 +164,17 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/photons/transactions',
-          queryParameters: {
-            'limit': 50,
-            'offset': 0,
-          },
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/photons/transactions');
+        expect(queryParameters, {
+          'limit': 50,
+          'offset': 0,
+        });
+        return Response(
           requestOptions: RequestOptions(path: '/photons/transactions'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getTransactionHistory();
 
@@ -137,17 +188,10 @@ void main() {
     });
 
     test('filters by transaction type', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/photons/transactions',
-          queryParameters: argThat(
-            (Map<String, dynamic> params) =>
-                params['transaction_type'] == 'grant_achievement',
-            named: 'queryParameters',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/photons/transactions');
+        expect(queryParameters?['transaction_type'], 'grant_achievement');
+        return Response(
           requestOptions: RequestOptions(path: '/photons/transactions'),
           data: {
             'success': true,
@@ -163,8 +207,8 @@ void main() {
               },
             ],
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getTransactionHistory(
         transactionType: 'grant_achievement',
@@ -175,20 +219,16 @@ void main() {
     });
 
     test('returns empty list when no transactions', () async {
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          any,
-          queryParameters: anyNamed('queryParameters'),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/photons/transactions');
+        return Response(
           requestOptions: RequestOptions(path: '/photons/transactions'),
           data: {
             'success': true,
             'data': [],
           },
-        ),
-      );
+        );
+      };
 
       final result = await repository.getTransactionHistory();
 
@@ -215,17 +255,14 @@ void main() {
         },
       };
 
-      when(
-        mockApiClient.get<Map<String, dynamic>>(
-          '/photons/transactions/summary',
-          queryParameters: {'days': 30},
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.getHandler = (path, queryParameters) async {
+        expect(path, '/photons/transactions/summary');
+        expect(queryParameters, {'days': 30});
+        return Response(
           requestOptions: RequestOptions(path: '/photons/transactions/summary'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.getTransactionSummary(days: 30);
 
@@ -257,23 +294,17 @@ void main() {
         'recipient_username': 'test_user',
       };
 
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/photons/transfer',
-          data: argThat(
-            (Map<String, dynamic> data) =>
-                data['recipient_id'] == recipientId &&
-                data['amount'] == amount &&
-                data['message'] == message,
-            named: 'data',
-          ),
-        ),
-      ).thenAnswer(
-        (_) async => Response(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, '/photons/transfer');
+        final payload = data as Map<String, dynamic>;
+        expect(payload['recipient_id'], recipientId);
+        expect(payload['amount'], amount);
+        expect(payload['message'], message);
+        return Response(
           requestOptions: RequestOptions(path: '/photons/transfer'),
           data: responseData,
-        ),
-      );
+        );
+      };
 
       final result = await repository.transferPhotons(
         recipientId: recipientId,
@@ -284,20 +315,11 @@ void main() {
       expect(result['amount'], amount);
       expect(result['from_balance'], 400);
       expect(result['to_balance'], 100);
-      verify(mockApiClient.post<Map<String, dynamic>>(
-        '/photons/transfer',
-        data: anyNamed('data'),
-      )).called(1);
     });
 
     test('throws exception on insufficient balance', () async {
-      when(
-        mockApiClient.post<Map<String, dynamic>>(
-          '/photons/transfer',
-          data: anyNamed('data'),
-        ),
-      ).thenThrow(
-        DioException(
+      mockApiClient.postHandler = (path, data, queryParameters) async {
+        throw DioException(
           requestOptions: RequestOptions(path: '/photons/transfer'),
           type: DioExceptionType.badResponse,
           response: Response(
@@ -305,8 +327,8 @@ void main() {
             data: {'detail': 'Insufficient photon balance'},
             statusCode: 400,
           ),
-        ),
-      );
+        );
+      };
 
       expect(
         () => repository.transferPhotons(

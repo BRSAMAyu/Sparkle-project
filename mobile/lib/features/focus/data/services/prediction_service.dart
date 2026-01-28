@@ -27,7 +27,7 @@ class PredictionService {
       debugPrint('🔮 Requesting predictions for user: $userId');
       debugPrint('📊 Context: ${jsonEncode(contextEnvelope)}');
 
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/inference/run',
         data: {
           'task_type': 'PREDICT_NEXT_ACTIONS',

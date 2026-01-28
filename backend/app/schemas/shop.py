@@ -154,7 +154,7 @@ class InventoryResponse(BaseModel):
 
 class EquipRequest(BaseModel):
     """Equip item request"""
-    item_id: str = Field(description="Item ID to equip")
+    item_id: Optional[str] = Field(default=None, description="Item ID to equip (null to unequip)")
     item_type: ShopItemType = Field(description="Item type (skin, title)")
 
     class Config:
