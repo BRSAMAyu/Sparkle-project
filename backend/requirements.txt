@@ -36,10 +36,14 @@ aiofiles>=23.2.1
 # Development & Testing
 pytest>=7.4.4
 pytest-asyncio>=0.23.3
+pytest-cov>=4.1.0
 psutil>=5.9.0
 black>=24.1.1
 flake8>=7.0.0
 mypy>=1.8.0
+locust>=2.18.0
+prometheus-api-client>=0.1.1
+websockets>=12.0
 
 # LLM & AI
 openai>=1.10.0

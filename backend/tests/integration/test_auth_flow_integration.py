@@ -28,11 +28,11 @@ import grpc
 from app.models.user import User
 from app.core.security import (
     create_access_token,
-    verify_token,
+    decode_token,
     get_password_hash,
     verify_password
 )
-from app.core.config import settings
+# from app.core.config import settings  # TODO: Fix config module import
 
 
 # ============================================================
@@ -152,7 +152,7 @@ class TestJWTTokens:
 
     def test_verify_valid_token(self, valid_token: str):
         """Test verifying a valid token"""
-        payload = verify_token(valid_token)
+        payload = decode_token(valid_token)
 
         assert payload is not None
         assert "sub" in payload
@@ -160,7 +160,7 @@ class TestJWTTokens:
 
     def test_verify_expired_token(self, expired_token: str):
         """Test verifying an expired token"""
-        payload = verify_token(expired_token)
+        payload = decode_token(expired_token)
 
         assert payload is None
 
@@ -168,7 +168,7 @@ class TestJWTTokens:
         """Test verifying an invalid token"""
         invalid_token = "not.a.valid.token"
 
-        payload = verify_token(invalid_token)
+        payload = decode_token(invalid_token)
 
         assert payload is None
 
@@ -187,7 +187,7 @@ class TestJWTTokens:
         )
 
         # Should fail verification
-        result = verify_token(token)
+        result = decode_token(token)
         assert result is None
 
 
@@ -379,7 +379,7 @@ class TestUserLoginFlow:
         assert token is not None
 
         # Verify token
-        payload = verify_token(token)
+        payload = decode_token(token)
         assert payload is not None
         assert payload["sub"] == email
 
@@ -440,8 +440,8 @@ class TestTokenRefresh:
         )
 
         # Both tokens should be valid
-        assert verify_token(initial_token) is not None
-        assert verify_token(new_token) is not None
+        assert decode_token(initial_token) is not None
+        assert decode_token(new_token) is not None
 
         # Tokens should be different (different iat timestamps)
         assert initial_token != new_token

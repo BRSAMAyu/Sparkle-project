@@ -114,6 +114,7 @@ from app.models.review_system import (
     ArbitrationDecision,
 )
 from app.models.plan_execution_record import PlanExecutionRecord
+from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 
 __all__ = [
     "BaseModel",
@@ -265,4 +266,7 @@ __all__ = [
     "ArbitrationDecision",
     # Plan Execution
     "PlanExecutionRecord",
+    # Notification System
+    "NotificationInteraction",
+    "NotificationPreferences",
 ]

@@ -44,7 +44,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update(
-        {"exp": expire, "iat": now, "jti": str(uuid4()), "type": "access"}
+        {
+            "exp": expire,
+            "iat": now,
+            "jti": str(uuid4()),
+            "type": "access",
+            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
+            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+        }
     )
     encoded_jwt = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
@@ -60,7 +67,14 @@ def create_refresh_token(data: dict) -> str:
     now = datetime.utcnow()
     expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update(
-        {"exp": expire, "iat": now, "jti": str(uuid4()), "type": "refresh"}
+        {
+            "exp": expire,
+            "iat": now,
+            "jti": str(uuid4()),
+            "type": "refresh",
+            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
+            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+        }
     )
     encoded_jwt = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM

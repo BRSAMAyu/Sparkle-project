@@ -52,10 +52,14 @@ celery_app.conf.update(
     # 任务配置
     task_track_started=True,
     task_send_sent_event=True,
+    task_ignore_result=False,
 
     # 重试配置
     task_reject_on_worker_lost=True,
     task_acks_late=True,
+
+    # 任务名称配置（支持短名称和完整路径）
+    task_create_missing_queues=True,
 
     # 队列配置
     task_queues={
@@ -81,6 +85,7 @@ celery_app.conf.update(
         "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
         "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
         "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
+        "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},

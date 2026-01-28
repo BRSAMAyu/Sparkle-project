@@ -109,6 +109,8 @@ class Settings(BaseSettings):
     # Security
     # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
     SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
+    JWT_ISSUER: str = "sparkle-gateway"
+    JWT_AUDIENCE: str = "sparkle-app"
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""

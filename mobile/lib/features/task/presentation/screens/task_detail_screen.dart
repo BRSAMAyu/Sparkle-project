@@ -344,29 +344,30 @@ class _InfoTileCardState extends State<_InfoTileCard>
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: (_) => _controller.forward(),
-        onTapUp: (_) => _controller.reverse(),
-        onTapCancel: () => _controller.reverse(),
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
-              // Inject the gradient tint into the ceramic material
-              backgroundColor:
-                  widget.gradient.colors.first.withValues(alpha: 0.1),
-              borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
-            ),
-            borderRadius: DS.borderRadius12,
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.spacing10),
-                  decoration: BoxDecoration(
-                    gradient: widget.gradient,
-                    borderRadius: DS.borderRadius8,
-                    boxShadow: [
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: MaterialStyler(
+          material: AppMaterials.ceramic.copyWith(
+            // Inject the gradient tint into the ceramic material
+            backgroundColor:
+                widget.gradient.colors.first.withValues(alpha: 0.1),
+            borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
+          ),
+          borderRadius: DS.borderRadius12,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing10),
+                decoration: BoxDecoration(
+                  gradient: widget.gradient,
+                  borderRadius: DS.borderRadius8,
+                  boxShadow: [
                       BoxShadow(
                         color:
                             widget.gradient.colors.first.withValues(alpha: 0.3),
@@ -374,39 +375,39 @@ class _InfoTileCardState extends State<_InfoTileCard>
                         offset: const Offset(0, 2),
                       ),
                     ],
-                  ),
-                  child: Icon(widget.icon, color: DS.brandPrimaryConst, size: DS.iconSizeSm),
                 ),
-                const SizedBox(width: DS.spacing16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: DS.neutral600,
-                              fontWeight: DS.fontWeightMedium,
-                              letterSpacing: 0.5,
-                            ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        widget.content,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                  color: DS.neutral900,
-                                ),
-                      ),
-                    ],
-                  ),
+                child: Icon(widget.icon, color: DS.brandPrimaryConst, size: DS.iconSizeSm),
+              ),
+              const SizedBox(width: DS.spacing16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: DS.neutral600,
+                            fontWeight: DS.fontWeightMedium,
+                            letterSpacing: 0.5,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      widget.content,
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: DS.fontWeightBold,
+                                color: DS.neutral900,
+                              ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
