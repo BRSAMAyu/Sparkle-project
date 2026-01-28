@@ -5,6 +5,7 @@
 /// - Time of day
 /// - Recent user actions
 /// - User preferences
+library;
 
 class ContextAwareIntentClassifier {
   const ContextAwareIntentClassifier._();

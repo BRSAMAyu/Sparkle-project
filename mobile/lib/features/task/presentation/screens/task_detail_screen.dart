@@ -414,10 +414,19 @@ class _BottomActionBar extends ConsumerWidget {
   final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing16),
-          decoration: BoxDecoration(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Max width for bottom action bar on larger screens
+    final maxBarWidth = context.isMobile
+        ? double.infinity
+        : DS.contentMaxWidthDesktop;
+
+    return SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxBarWidth),
+            child: Container(
+              padding: const EdgeInsets.all(DS.spacing16),
+              decoration: BoxDecoration(
             color: DS.brandPrimary,
             boxShadow: DS.shadowMd,
             border: Border(

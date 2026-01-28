@@ -500,11 +500,17 @@ class DocumentService:
         """
         Main entry point for "Document Cleaning".
         Returns a structured summary designed for both UI display and Agent context.
+
+        Size limit: Cleaned content is limited to 10MB. For larger documents,
+        only compressed summaries are returned.
         """
         options = options or {}
         enable_ocr = options.get("enable_ocr", True)
         # Note: IngestionService currently auto-detects OCR need. We could pass this flag down if we refactor IngestionService further.
-        
+
+        # 定义10MB大小限制（字节）
+        MAX_CLEANED_SIZE = 10 * 1024 * 1024
+
         try:
             resolved_path = _resolve_allowed_path(file_path)
             if not resolved_path:
@@ -516,7 +522,7 @@ class DocumentService:
             # 1. Physical Ingestion (OCR, Parsing)
             # This is a synchronous CPU-bound operation, might block event loop if not careful.
             chunks = await asyncio.to_thread(ingestion_service.process_file, resolved_path, options)
-            
+
             if not chunks:
                 await self.update_progress(task_id, "Failed: No text found", 100, {"error": "No extractable text found."})
                 return {"status": "failed", "error": "No extractable text found."}
@@ -528,18 +534,18 @@ class DocumentService:
             total_chars = 0
             current_section = []
             sections = []
-            SECTION_LIMIT = 15000 
-            
+            SECTION_LIMIT = 15000
+
             for chunk in chunks:
                 meta = chunk.metadata
                 prefix = "## " if meta.get("is_header") else ""
                 if meta.get("is_bold"): prefix += "**"
                 suffix = "**" if meta.get("is_bold") and not meta.get("is_header") else ""
-                
+
                 text = f"{prefix}{chunk.text}{suffix}"
                 current_section.append(text)
                 total_chars += len(text)
-                
+
                 if sum(len(s) for s in current_section) > SECTION_LIMIT:
                     sections.append("\n\n".join(current_section))
                     current_section = []
@@ -547,64 +553,138 @@ class DocumentService:
             if current_section:
                 sections.append("\n\n".join(current_section))
 
-            # 3. Process based on size
+            # 3. Process based on size (10MB = approximately 5 million characters in UTF-8)
+            MAX_CHARS = MAX_CLEANED_SIZE  # Conservative estimate
+            await self.update_progress(task_id, f"Processing document ({total_chars:,} chars)...", 40)
+
             if total_chars < 20000:
                 await self.update_progress(task_id, "Generating summary...", 60)
-                
+
                 # Small file: Return full text and a quick overall summary
                 full_text = "\n\n".join(sections)
                 summary = await self._generate_quick_summary(full_text)
-                
+
+                # 检查是否超过大小限制
+                full_text_size = len(full_text.encode('utf-8'))
+                if full_text_size > MAX_CLEANED_SIZE:
+                    logger.warning(f"Cleaned content ({full_text_size:,} bytes) exceeds 10MB limit, truncating")
+                    # 截断到接近10MB
+                    max_chars = int(MAX_CLEANED_SIZE * 0.9)  # 留一些余量
+                    full_text = full_text[:max_chars] + "\n\n... [Content truncated due to size limit]"
+
                 result = {
                     "status": "completed",
                     "mode": "full_text",
                     "summary": summary,
                     "full_text": full_text,
-                    "char_count": total_chars
+                    "char_count": total_chars,
+                    "size_bytes": full_text_size,
+                    "truncated": full_text_size > MAX_CLEANED_SIZE
                 }
                 await self.update_progress(task_id, "Completed", 100, result)
                 return result
-            else:
-                # Large file: Map-Reduce
-                await self.update_progress(task_id, f"Processing {len(sections)} sections (Map-Reduce)...", 50)
-                
-                document_map = await self._run_map_reduce(sections, task_id)
-                
+
+            elif total_chars <= MAX_CHARS:
+                # Medium file: Return full text (within 10MB limit)
+                await self.update_progress(task_id, f"Processing {len(sections)} sections...", 50)
+
+                full_text = "\n\n".join(sections)
+                summary = await self._generate_quick_summary(full_text[:50000])  # Summary from first 50K chars
+
                 result = {
                     "status": "completed",
-                    "mode": "map_reduce",
-                    "summary": document_map, # This is the "compressed" version
-                    "full_text_preview": sections[0][:1000] + "...", # Only preview
+                    "mode": "full_text",
+                    "summary": summary,
+                    "full_text": full_text,
                     "char_count": total_chars,
-                    "section_count": len(sections)
+                    "size_bytes": len(full_text.encode('utf-8')),
+                    "truncated": False
+                }
+                await self.update_progress(task_id, "Completed", 100, result)
+                return result
+
+            else:
+                # Large file (>10MB): Map-Reduce compression only
+                await self.update_progress(task_id, f"Compressing large document ({total_chars:,} chars)...", 50)
+
+                document_map = await self._run_map_reduce(sections, task_id)
+                compressed_size = len(document_map.encode('utf-8'))
+
+                logger.info(
+                    f"Compressed document from {total_chars:,} chars to "
+                    f"{compressed_size:,} bytes ({compressed_size/total_chars*100:.1f}% of original)"
+                )
+
+                result = {
+                    "status": "completed",
+                    "mode": "compressed",
+                    "summary": document_map,  # This is the "compressed" version
+                    "full_text_preview": sections[0][:2000] + "\n\n... [Content truncated due to size limit]",
+                    "char_count": total_chars,
+                    "compressed_size_bytes": compressed_size,
+                    "section_count": len(sections),
+                    "truncated": True,
+                    "message": f"Document exceeds 10MB limit. Only compressed summary is available."
                 }
                 await self.update_progress(task_id, "Completed", 100, result)
                 return result
 
         except Exception as e:
-            logger.error(f"Document cleaning failed: {e}")
+            logger.error(f"Document cleaning failed: {e}", exc_info=True)
             await self.update_progress(task_id, f"Error: {str(e)}", 100, {"error": str(e)})
             return {"status": "error", "error": str(e)}
 
 
 def _resolve_allowed_path(file_path: str) -> Optional[str]:
+    """
+    安全地解析文件路径，防止路径穿越攻击。
+
+    安全措施：
+    1. 显式检查 .. 路径组件
+    2. 拒绝绝对路径（除非在允许的根目录下）
+    3. 使用 abspath 而不是 realpath（不跟随符号链接）
+    4. 验证符号链接目标也在允许范围内
+    """
     if not file_path:
         return None
 
-    resolved = os.path.realpath(file_path)
+    # 1. 显式检查路径遍历攻击
+    if ".." in file_path:
+        logger.warning(f"Path traversal attempt detected: {file_path}")
+        return None
+
+    # 2. 规范化路径（不跟随符号链接）
+    resolved = os.path.abspath(file_path)
+
+    # 3. 验证文件存在且是常规文件
     if not os.path.isfile(resolved):
         return None
 
+    # 4. 检查是否是符号链接
+    if os.path.islink(resolved):
+        logger.warning(f"Symbolic links are not allowed: {file_path}")
+        return None
+
+    # 5. 验证在允许的目录下
     allowed_roots = [
-        os.path.realpath(settings.UPLOAD_DIR),
-        os.path.realpath("/tmp/sparkle_uploads"),
+        os.path.abspath(settings.UPLOAD_DIR),
+        os.path.abspath(os.getenv("SPARKLE_UPLOAD_TEMP_DIR", "/tmp/sparkle_uploads")),
     ]
 
     for root in allowed_roots:
+        # 确保根目录存在
+        if not os.path.isdir(root):
+            continue
+
+        # 不能直接是根目录
         if resolved == root:
             return None
+
+        # 必须在根目录下
         if resolved.startswith(root + os.sep):
             return resolved
+
+    logger.warning(f"File path outside allowed roots: {file_path}")
     return None
 
     async def _generate_quick_summary(self, text: str) -> str:

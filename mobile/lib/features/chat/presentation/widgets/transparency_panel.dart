@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/molecules/stepper_indicator.dart';
 import 'package:sparkle/core/design/components/organisms/expandable_section.dart';

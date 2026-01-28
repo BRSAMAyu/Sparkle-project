@@ -53,10 +53,10 @@ void main() {
     _TestCase('你好呀', null, 0.0, '简短问候'),
   ];
 
-  int passed = 0;
-  int failed = 0;
+  var passed = 0;
+  var failed = 0;
 
-  for (int i = 0; i < testCases.length; i++) {
+  for (var i = 0; i < testCases.length; i++) {
     final testCase = testCases[i];
     final result = EnhancedIntentClassifier.classify(testCase.input);
 
@@ -101,10 +101,10 @@ void main() {
 }
 
 class _TestCase {
+
+  _TestCase(this.input, this.expectedType, this.expectedConfidence, this.description);
   final String input;
   final EnhancedIntentType? expectedType;
   final double expectedConfidence;
   final String description;
-
-  _TestCase(this.input, this.expectedType, this.expectedConfidence, this.description);
 }

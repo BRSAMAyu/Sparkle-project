@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'enhanced_intent_classifier.dart';
+import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 
 /// Legacy enum for backward compatibility
 @Deprecated('Use EnhancedIntentType instead')
@@ -26,9 +26,7 @@ class IntentClassifier {
   ///
   /// Returns [IntentClassification] with type and confidence score (0.0-1.0)
   /// Returns null if no clear intent is detected (confidence < 0.5)
-  static IntentClassification? classify(String text) {
-    return EnhancedIntentClassifier.classify(text);
-  }
+  static IntentClassification? classify(String text) => EnhancedIntentClassifier.classify(text);
 
   /// Legacy method for backward compatibility
   /// Returns simple enum without confidence score

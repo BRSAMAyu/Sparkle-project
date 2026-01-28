@@ -234,9 +234,13 @@ class _PlanProgressTab extends StatelessWidget {
         children: [
         const _SectionHeader(title: '完成率'),
         const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: PieChart(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive chart height: 220px on mobile, up to 300px on larger screens
+            final chartHeight = context.isMobile ? 220.0 : 280.0;
+            return SizedBox(
+              height: chartHeight,
+              child: PieChart(
             PieChartData(
               centerSpaceRadius: 60,
               sectionsSpace: 2,
@@ -265,9 +269,13 @@ class _PlanProgressTab extends StatelessWidget {
         const SizedBox(height: DS.spacing24),
         const _SectionHeader(title: '任务类型分布'),
         const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: BarChart(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive chart height: 220px on mobile, up to 300px on larger screens
+            final chartHeight = context.isMobile ? 220.0 : 280.0;
+            return SizedBox(
+              height: chartHeight,
+              child: BarChart(
             BarChartData(
               alignment: BarChartAlignment.spaceAround,
               maxY: (byType.values.isEmpty ? 1 : byType.values.reduce((a, b) => a > b ? a : b)) + 1,
@@ -333,9 +341,13 @@ class _PlanProgressTab extends StatelessWidget {
         const SizedBox(height: DS.spacing24),
         const _SectionHeader(title: '每日完成趋势'),
         const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: LineChart(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive chart height: 220px on mobile, up to 300px on larger screens
+            final chartHeight = context.isMobile ? 220.0 : 280.0;
+            return SizedBox(
+              height: chartHeight,
+              child: LineChart(
             LineChartData(
               titlesData: FlTitlesData(
                 topTitles: const AxisTitles(),

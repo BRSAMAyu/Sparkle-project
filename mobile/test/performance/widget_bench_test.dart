@@ -2,6 +2,7 @@
 /// Widget性能基准测试
 ///
 /// Tests render performance, build times, and memory usage for key widgets.
+library;
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ void main() {
               planId: 'test-plan',
               reviewId: 'test-review',
               overallScore: 85,
-              issues: [],
+              issues: const [],
               onApprove: () {},
               onReject: () {},
               onModify: () {},
@@ -41,10 +42,10 @@ void main() {
       final stopwatch = Stopwatch()..start();
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: TaskBoardCard(
-              task: const TaskBoard(
+              task: TaskBoard(
                 id: 'task-1',
                 title: 'Test Task',
                 status: TaskStatus.inProgress,
@@ -128,7 +129,7 @@ void main() {
               planId: 'test-plan',
               reviewId: 'test-review',
               overallScore: 85,
-              issues: [],
+              issues: const [],
               onApprove: () {},
               onReject: () {},
               onModify: () {},
@@ -149,7 +150,7 @@ void main() {
               planId: 'test-plan',
               reviewId: 'test-review',
               overallScore: 90, // Changed score
-              issues: [],
+              issues: const [],
               onApprove: () {},
               onReject: () {},
               onModify: () {},
@@ -174,7 +175,7 @@ void main() {
               planId: 'test-plan',
               reviewId: 'test-review',
               overallScore: 85,
-              issues: [],
+              issues: const [],
               onApprove: () {},
               onReject: () {},
               onModify: () {},
@@ -188,7 +189,7 @@ void main() {
       // Measure 60 frames (1 second at 60fps)
       for (var i = 0; i < 60; i++) {
         final frameStopwatch = Stopwatch()..start();
-        await tester.pump(Duration(milliseconds: 16));
+        await tester.pump(const Duration(milliseconds: 16));
         frameStopwatch.stop();
         frameTimes.add(frameStopwatch.elapsedMicroseconds);
       }
@@ -211,9 +212,7 @@ void main() {
           home: Scaffold(
             body: ListView.builder(
               itemCount: items.length,
-              itemBuilder: (context, index) {
-                return ListTile(title: Text(items[index]));
-              },
+              itemBuilder: (context, index) => ListTile(title: Text(items[index])),
             ),
           ),
         ),
@@ -254,7 +253,7 @@ void main() {
               planId: 'test-plan',
               reviewId: 'test-review',
               overallScore: 85,
-              issues: [],
+              issues: const [],
               onApprove: () {},
               onReject: () {},
               onModify: () {},
@@ -282,9 +281,7 @@ void main() {
           home: Scaffold(
             body: ListView.builder(
               itemCount: items.length,
-              itemBuilder: (context, index) {
-                return ListTile(title: Text(items[index]));
-              },
+              itemBuilder: (context, index) => ListTile(title: Text(items[index])),
             ),
           ),
         ),
@@ -308,8 +305,7 @@ int _getCurrentMemoryUsage() {
   return 0; // Placeholder
 }
 
-List<GalaxyNode> _generateMockNodes(int count) {
-  return List.generate(
+List<GalaxyNode> _generateMockNodes(int count) => List.generate(
     count,
     (i) => GalaxyNode(
       id: 'node-$i',
@@ -320,41 +316,37 @@ List<GalaxyNode> _generateMockNodes(int count) {
       label: 'Node $i',
     ),
   );
-}
 
-List<GalaxyEdge> _generateMockEdges(List<GalaxyNode> nodes) {
-  return [
+List<GalaxyEdge> _generateMockEdges(List<GalaxyNode> nodes) => [
     for (var i = 0; i < nodes.length - 1; i++)
       GalaxyEdge(
         from: nodes[i].id,
         to: nodes[i + 1].id,
       ),
   ];
-}
 
 // Mock classes
 class TaskBoard {
-  final String id;
-  final String title;
-  final TaskStatus status;
 
   const TaskBoard({
     required this.id,
     required this.title,
     required this.status,
   });
+  final String id;
+  final String title;
+  final TaskStatus status;
 }
 
 enum TaskStatus { inProgress, completed, pending }
 
 class TaskBoardCard extends StatelessWidget {
-  final TaskBoard task;
 
   const TaskBoardCard({super.key, required this.task});
+  final TaskBoard task;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -366,14 +358,9 @@ class TaskBoardCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class ChatMessage {
-  final String id;
-  final String content;
-  final String role;
-  final DateTime timestamp;
 
   ChatMessage({
     required this.id,
@@ -381,33 +368,35 @@ class ChatMessage {
     required this.role,
     required this.timestamp,
   });
+  final String id;
+  final String content;
+  final String role;
+  final DateTime timestamp;
 }
 
 class GalaxyScreen extends StatelessWidget {
-  final List<GalaxyNode> nodes;
-  final List<GalaxyEdge> edges;
 
   const GalaxyScreen({
     super.key,
     required this.nodes,
     required this.edges,
   });
+  final List<GalaxyNode> nodes;
+  final List<GalaxyEdge> edges;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       body: CustomPaint(
         painter: GalaxyPainter(nodes: nodes, edges: edges),
       ),
     );
-  }
 }
 
 class GalaxyPainter extends CustomPainter {
-  final List<GalaxyNode> nodes;
-  final List<GalaxyEdge> edges;
 
   GalaxyPainter({required this.nodes, required this.edges});
+  final List<GalaxyNode> nodes;
+  final List<GalaxyEdge> edges;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -425,20 +414,20 @@ class GalaxyPainter extends CustomPainter {
 }
 
 class GalaxyNode {
-  final String id;
-  final Offset position;
-  final String label;
 
   GalaxyNode({
     required this.id,
     required this.position,
     required this.label,
   });
+  final String id;
+  final Offset position;
+  final String label;
 }
 
 class GalaxyEdge {
-  final String from;
-  final String to;
 
   GalaxyEdge({required this.from, required this.to});
+  final String from;
+  final String to;
 }

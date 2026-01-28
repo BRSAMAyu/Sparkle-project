@@ -294,8 +294,7 @@ class StateChangeEvent extends ChatStreamEvent {
   double get spaceFreedMb => (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
 
   /// Convert to InterventionPushMessage for display
-  InterventionPushMessage toInterventionMessage() {
-    return InterventionPushMessage(
+  InterventionPushMessage toInterventionMessage() => InterventionPushMessage(
       interventionId: changeId,
       level: _mapInterventionLevel(),
       content: InterventionContent(
@@ -314,7 +313,6 @@ class StateChangeEvent extends ChatStreamEvent {
       actions: _getActions(),
       expiresAt: DateTime.now().add(const Duration(hours: 24)),
     );
-  }
 
   InterventionLevel _mapInterventionLevel() {
     switch (interventionLevel) {
@@ -332,7 +330,7 @@ class StateChangeEvent extends ChatStreamEvent {
     // For plan changes, offer to view the plan
     if (planId != null && changeType.startsWith('plan_')) {
       return [
-        InterventionAction(
+        const InterventionAction(
           id: 'view_plan',
           label: '查看计划',
           type: 'navigation',
@@ -343,7 +341,7 @@ class StateChangeEvent extends ChatStreamEvent {
     // For settings changes, offer to view settings
     if (changeType == 'user_settings_updated') {
       return [
-        InterventionAction(
+        const InterventionAction(
           id: 'view_settings',
           label: '查看设置',
           type: 'navigation',
@@ -353,7 +351,7 @@ class StateChangeEvent extends ChatStreamEvent {
 
     // Default: just acknowledge
     return [
-      InterventionAction(
+      const InterventionAction(
         id: 'acknowledge',
         label: '知道了',
         type: 'secondary',

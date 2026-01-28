@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/core/network/api_client.dart';
 
 /// Key for storing 'Enter to Send' preference in SharedPreferences
 const String kEnterToSendKey = 'settings_enter_to_send';
@@ -9,6 +11,158 @@ const String kTransparentModeKey = 'settings_transparent_mode';
 const String kTransparencyLevelKey = 'settings_transparency_level';
 const String kOnboardingCompletedKey = 'settings_onboarding_completed';
 const String kSystemUpdateLevelKey = 'settings_system_update_level';
+
+/// Learning preferences model
+class LearningPreferences {
+  const LearningPreferences({
+    required this.depth,
+    required this.curiosity,
+  });
+
+  final double depth;
+  final double curiosity;
+
+  LearningPreferences copyWith({double? depth, double? curiosity}) {
+    return LearningPreferences(
+      depth: depth ?? this.depth,
+      curiosity: curiosity ?? this.curiosity,
+    );
+  }
+}
+
+/// Provider for learning preferences (depth and curiosity)
+final learningPreferencesProvider =
+    StateNotifierProvider<LearningPreferencesNotifier, LearningPreferences>(
+  (ref) => LearningPreferencesNotifier(ref),
+);
+
+/// Provider for push notification preferences
+final pushPreferencesProvider =
+    StateNotifierProvider<PushPreferencesNotifier, PushPreferences>(
+  (ref) => PushPreferencesNotifier(ref),
+);
+
+class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
+  PushPreferencesNotifier(this._ref)
+      : super(PushPreferences(
+          enableCuriosity: true,
+          personaType: 'coach',
+          dailyCap: 5,
+        )) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromUser(next.user!);
+      }
+    });
+    _loadFromUser(_ref.read(authProvider).user);
+  }
+
+  final Ref _ref;
+
+  void _loadFromUser(UserModel? user) {
+    if (user?.pushPreferences != null) {
+      state = user!.pushPreferences!;
+    }
+  }
+
+  Future<void> updatePreferences({
+    bool? enableCuriosity,
+    String? personaType,
+    int? dailyCap,
+    List<Map<String, String>>? activeSlots,
+  }) async {
+    final currentState = state;
+    final updatedPrefs = PushPreferences(
+      enableCuriosity: enableCuriosity ?? currentState.enableCuriosity,
+      personaType: personaType ?? currentState.personaType,
+      dailyCap: dailyCap ?? currentState.dailyCap,
+      activeSlots: activeSlots ?? currentState.activeSlots,
+      timezone: currentState.timezone,
+    );
+
+    // Optimistic update
+    state = updatedPrefs;
+
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      await apiClient.put<Map<String, dynamic>>(
+        '/users/me/push-preference',
+        data: updatedPrefs.toJson(),
+      );
+
+      // Refresh user to get updated data
+      await _ref.read(authProvider.notifier).refreshUser();
+    } catch (e) {
+      // Revert on error
+      state = currentState;
+      rethrow;
+    }
+  }
+
+  Future<void> toggleEnableCuriosity() async {
+    await updatePreferences(
+      enableCuriosity: !state.enableCuriosity,
+    );
+  }
+}
+
+class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
+  LearningPreferencesNotifier(this._ref)
+      : super(const LearningPreferences(depth: 0.5, curiosity: 0.5)) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromUser(next.user!);
+      }
+    });
+    _loadFromUser(_ref.read(authProvider).user);
+  }
+
+  final Ref _ref;
+
+  void _loadFromUser(UserModel? user) {
+    if (user != null) {
+      state = LearningPreferences(
+        depth: user.depthPreference,
+        curiosity: user.curiosityPreference,
+      );
+    }
+  }
+
+  Future<void> updatePreferences({
+    double? depth,
+    double? curiosity,
+  }) async {
+    final newState = state.copyWith(depth: depth, curiosity: curiosity);
+    state = newState;
+
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      final updatedUser = await repo.updateUserPreferences(
+        UserPreferences(
+          depthPreference: newState.depth,
+          curiosityPreference: newState.curiosity,
+        ),
+      );
+      // Update auth state with new user data
+      final authNotifier = _ref.read(authProvider.notifier);
+      final currentAuthState = _ref.read(authProvider);
+      authNotifier.state = currentAuthState.copyWith(user: updatedUser);
+    } catch (e) {
+      // Revert state on error
+      state = LearningPreferences(
+        depth: user.depthPreference,
+        curiosity: user.curiosityPreference,
+      );
+      rethrow;
+    }
+  }
+}
 
 /// Provider to manage the 'Enter to Send' preference
 final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>(

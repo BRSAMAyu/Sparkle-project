@@ -20,6 +20,8 @@ class LeaderboardType(str, Enum):
     WEEKLY = "weekly"          # 本周学习排行榜
     STREAK = "streak"          # 连胜排行榜
     GROUP_FLAME = "group_flame"  # 群组火苗榜
+    PHOTON = "photon"          # 光子积分排行榜
+    PHOTON_WEEKLY = "photon_weekly"  # 本周光子收入排行榜
 
 
 class LeaderboardPeriod(str, Enum):
@@ -85,6 +87,8 @@ class LeaderboardSummary(BaseModel):
     friends: Optional[LeaderboardResponse] = Field(default=None, description="好友榜")
     weekly: Optional[LeaderboardResponse] = Field(default=None, description="周榜")
     streak: Optional[LeaderboardResponse] = Field(default=None, description="连胜榜")
+    photon: Optional[LeaderboardResponse] = Field(default=None, description="光子积分榜")
+    photon_weekly: Optional[LeaderboardResponse] = Field(default=None, description="本周光子收入榜")
     my_stats: Dict[str, Any] = Field(default_factory=dict, description="我的统计信息")
 
 

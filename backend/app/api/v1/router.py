@@ -58,6 +58,9 @@ from app.api.v1 import (
     user_settings,
     user_persona_batch,
     notification_center,
+    shop,
+    photons,
+    inventory,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -108,6 +111,10 @@ api_router.include_router(profile_transparency.router)
 api_router.include_router(user_settings.router)
 api_router.include_router(user_persona_batch.router)
 api_router.include_router(notification_center.router)
+# Shop & Photon system
+api_router.include_router(shop.router, prefix="/shop", tags=["shop"])
+api_router.include_router(photons.router, prefix="/photons", tags=["photons"])
+api_router.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:
@@ -141,6 +148,9 @@ async def api_root():
             "/prediction",
             "/recommendations",
             "/leaderboards",
+            "/shop",
+            "/photons",
+            "/inventory",
             "/ws",
         ],
     }

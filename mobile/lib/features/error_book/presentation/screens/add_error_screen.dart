@@ -277,6 +277,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             const SizedBox(height: 16),
           ],
         ),
+        ),
       ),
     );
   }
