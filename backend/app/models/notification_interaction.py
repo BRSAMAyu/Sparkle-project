@@ -42,7 +42,7 @@ class NotificationPreferences(Base):
     """
     __tablename__ = "notification_preferences"
 
-    user_id = Column(GUID(), primary_key=True, nullable=False)
+    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True, nullable=False)
     enable_system = Column(Boolean, default=True, nullable=False)
     enable_interventions = Column(Boolean, default=True, nullable=False)
     notification_level = Column(String(20), default="standard", nullable=False)

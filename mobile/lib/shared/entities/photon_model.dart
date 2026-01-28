@@ -2,6 +2,18 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'photon_model.g.dart';
 
+// ========== Photon System Models ==========
+//
+// NOTE: All photon models use snake_case JSON serialization via fieldRename:
+// FieldRename.snake to match the backend API contract. This means toJson()
+// will emit snake_case JSON (e.g., "user_id", "transaction_type") rather than
+// camelCase. Ensure any local storage or caching layers handle this correctly.
+//
+// Backend field mapping: PhotonTransaction.metadata is stored as "extra_data"
+// in the API response, mapped via @JsonKey(name: 'extra_data').
+//
+// ==========
+
 /// 光子交易类型
 enum PhotonTransactionType {
   @JsonValue('grant_achievement')
@@ -30,7 +42,7 @@ enum PhotonTransactionType {
 
 // ========== 光子余额实体 ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class PhotonBalance {
   final String userId;
   final int balance;
@@ -67,7 +79,7 @@ class PhotonBalance {
 
 // ========== 光子交易记录实体 ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class PhotonTransaction {
   final String id;
   final PhotonTransactionType transactionType;
@@ -76,7 +88,11 @@ class PhotonTransaction {
   final int balanceAfter;
   final String? source;
   final String? relatedItemId;
+
+  /// Backend field: extra_data
+  @JsonKey(name: 'extra_data')
   final Map<String, dynamic>? metadata;
+
   final DateTime createdAt;
 
   PhotonTransaction({
@@ -162,7 +178,7 @@ class PhotonTransaction {
 
 // ========== 交易汇总统计实体 ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class TransactionSummary {
   final int totalIncome;
   final int totalExpense;

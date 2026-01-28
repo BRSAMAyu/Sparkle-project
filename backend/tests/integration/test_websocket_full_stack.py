@@ -17,6 +17,7 @@ from typing import AsyncGenerator, List, Dict, Any
 from datetime import datetime
 import websockets
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.db.session import get_db
 from app.models.user import User
@@ -29,7 +30,7 @@ from app.core.security import create_access_token
 # ============================================================
 
 @pytest.fixture
-async def test_user(db: AsyncSession) -> User:
+async def test_user(db_session: AsyncSession) -> User:
     """Create a test user for WebSocket authentication"""
     from app.services.user_service import user_service
 
@@ -40,7 +41,7 @@ async def test_user(db: AsyncSession) -> User:
     }
 
     # Try to get existing user
-    result = await db.execute(
+    result = await db_session.execute(
         select(User).where(User.email == user_data["email"])
     )
     user = result.scalar_one_or_none()
@@ -48,15 +49,15 @@ async def test_user(db: AsyncSession) -> User:
     if not user:
         # Create new user
         user = User(**user_data)
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
     yield user
 
     # Cleanup
-    await db.delete(user)
-    await db.commit()
+    await db_session.delete(user)
+    await db_session.commit()
 
 
 @pytest.fixture

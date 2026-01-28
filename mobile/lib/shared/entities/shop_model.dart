@@ -26,6 +26,15 @@ enum ItemRarity {
   legendary,
 }
 
+// ========== Shop System Models ==========
+//
+// NOTE: All shop models use snake_case JSON serialization via fieldRename:
+// FieldRename.snake to match the backend API contract. This means toJson()
+// will emit snake_case JSON (e.g., "item_type", "price_photons") rather than
+// camelCase. Ensure any local storage or caching layers handle this correctly.
+//
+// ==========
+
 /// 消耗品效果类型
 enum ConsumableEffectType {
   @JsonValue('exp_boost')
@@ -44,7 +53,7 @@ enum ConsumableEffectType {
 
 // ========== 商城物品实体 ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ShopItem {
   final String id;
   final String name;
@@ -169,7 +178,7 @@ class ShopItem {
 
 // ========== 购买记录实体 ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class ShopPurchase {
   final String id;
   final String itemId;
@@ -230,7 +239,7 @@ class ShopPurchase {
 
 // ========== 用户物品实体（背包） ==========
 
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class InventoryItem {
   final String id;
   final String name;

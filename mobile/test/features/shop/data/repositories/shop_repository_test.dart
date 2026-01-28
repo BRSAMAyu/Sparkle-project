@@ -28,7 +28,16 @@ class TestApiClient implements ApiClient {
       throw UnimplementedError('No get handler configured');
     }
     final response = await handler(path, queryParameters);
-    return response as Response<T>;
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -42,7 +51,16 @@ class TestApiClient implements ApiClient {
       throw UnimplementedError('No post handler configured');
     }
     final response = await handler(path, data, queryParameters);
-    return response as Response<T>;
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -66,6 +84,11 @@ class TestApiClient implements ApiClient {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
   }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> postStream(String path, {Object? data}) {
     throw UnimplementedError();
   }
 }
@@ -558,7 +581,7 @@ void main() {
           data: {
             'success': true,
             'data': ['skin_001', 'skin_002'],
-            'meta': {'total_count': 2, 'item_type': 'skin'},
+            'meta': {'total_count': 2, 'itemType': 'skin'},
           },
         );
       };
@@ -580,10 +603,9 @@ void main() {
         'message': 'Consumable used',
         'data': {
           'effect': 'exp_boost',
-          'duration_hours': 24,
+          'durationHours': 24,
           'multiplier': 2.0,
         },
-        'remaining_quantity': 1,
       };
 
       mockApiClient.postHandler = (path, data, queryParameters) async {
@@ -601,7 +623,7 @@ void main() {
       );
 
       expect(result['effect'], 'exp_boost');
-      expect(result['remaining_quantity'], 1);
+      expect(result['durationHours'], 24);
     });
 
     test('throws exception when insufficient quantity', () async {

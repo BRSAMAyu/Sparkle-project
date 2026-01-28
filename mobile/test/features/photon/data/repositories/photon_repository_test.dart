@@ -28,7 +28,16 @@ class TestApiClient implements ApiClient {
       throw UnimplementedError('No get handler configured');
     }
     final response = await handler(path, queryParameters);
-    return response as Response<T>;
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -42,7 +51,16 @@ class TestApiClient implements ApiClient {
       throw UnimplementedError('No post handler configured');
     }
     final response = await handler(path, data, queryParameters);
-    return response as Response<T>;
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -66,6 +84,11 @@ class TestApiClient implements ApiClient {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
   }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> postStream(String path, {Object? data}) {
     throw UnimplementedError();
   }
 }
@@ -142,7 +165,7 @@ void main() {
             'balance_after': 100,
             'source': 'achievement:test_achievement',
             'related_item_id': 'test_achievement',
-            'metadata': {'achievement_name': 'Test Achievement'},
+            'extra_data': {'achievement_name': 'Test Achievement'},
             'created_at': '2024-01-28T10:00:00.000Z',
           },
           {
@@ -153,7 +176,7 @@ void main() {
             'balance_after': 50,
             'source': 'shop:purchase',
             'related_item_id': 'item_123',
-            'metadata': null,
+            'extra_data': null,
             'created_at': '2024-01-28T11:00:00.000Z',
           },
         ],
@@ -182,9 +205,11 @@ void main() {
       expect(result[0].transactionType, PhotonTransactionType.grantAchievement);
       expect(result[0].amount, 100);
       expect(result[0].isIncome, isTrue);
+      expect(result[0].metadata, {'achievement_name': 'Test Achievement'});  // Verify extra_data → metadata mapping
       expect(result[1].transactionType, PhotonTransactionType.purchase);
       expect(result[1].amount, -50);
       expect(result[1].isExpense, isTrue);
+      expect(result[1].metadata, null);  // Verify null handling
     });
 
     test('filters by transaction type', () async {

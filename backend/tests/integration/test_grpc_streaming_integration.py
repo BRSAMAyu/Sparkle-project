@@ -24,7 +24,7 @@ from sqlalchemy import select
 from app.models.user import User
 from app.models.plan import Plan
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
-from app.services.agent_grpc_service import AgentService
+from app.services.agent_grpc_service import AgentServiceImpl
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.core.security import create_access_token
 from google.protobuf import struct_pb2
@@ -35,9 +35,9 @@ from google.protobuf import struct_pb2
 # ============================================================
 
 @pytest.fixture
-async def test_user(db: AsyncSession) -> User:
+async def test_user(db_session: AsyncSession) -> User:
     """Create a test user"""
-    result = await db.execute(
+    result = await db_session.execute(
         select(User).where(User.email == "grpc_test@example.com")
     )
     user = result.scalar_one_or_none()
@@ -48,9 +48,9 @@ async def test_user(db: AsyncSession) -> User:
             nickname="gRPC Test User",
             password_hash="test_password"
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
     yield user
 
@@ -67,8 +67,10 @@ async def grpc_channel():
     grpc_port = os.getenv("GRPC_PORT", "50051")
 
     channel = grpc.aio.insecure_channel(f"{grpc_host}:{grpc_port}")
-    yield channel
-    await channel.close()
+    try:
+        yield channel
+    finally:
+        await channel.close()
 
 
 @pytest.fixture

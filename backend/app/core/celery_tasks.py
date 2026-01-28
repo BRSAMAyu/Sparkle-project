@@ -11,7 +11,7 @@ from app.core.celery_app import celery_app
 from loguru import logger
 
 
-@celery_app.task(bind=True, name="health_check_task")
+@celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
 def health_check_task(self):
     """健康检查任务"""
     from app.core.task_manager import task_manager

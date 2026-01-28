@@ -18,7 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from httpx import AsyncClient
 
 from app.main import app
-from app.database import get_db
+from app.db.session import get_db
 from app.models.experiment import (
     ABExperiment,
     ABExperimentVariant,
@@ -27,7 +27,7 @@ from app.models.experiment import (
     ExperimentStatus,
 )
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
-from app.core.config import settings
+# from app.core.config import settings  # TODO: Fix config module import
 
 
 @pytest.mark.asyncio

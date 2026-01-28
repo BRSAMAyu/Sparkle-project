@@ -26,7 +26,7 @@ import redis.asyncio as redis
 from app.models.user import User
 from app.models.plan import Plan
 from app.core.security import create_access_token
-from app.services.cache_service import cache_service
+from app.core.cache import cache_service
 
 
 # ============================================================
@@ -461,7 +461,7 @@ class TestCachePerformance:
         self,
         db: AsyncSession,
         test_user: User,
-        redis_client: redis.Client
+        redis_client: redis.Redis
     ):
         """Compare cache vs DB query performance"""
         import time
