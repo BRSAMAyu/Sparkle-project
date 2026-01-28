@@ -106,7 +106,7 @@ class DraggableTaskCard extends ConsumerWidget {
                       Text(
                         task.title,
                         style: TextStyle(
-                          color: DS.brandPrimary,
+                          color: DS.brandPrimaryConst,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -133,7 +133,7 @@ class DraggableTaskCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.drag_indicator, color: DS.brandPrimary38, size: 20),
+                Icon(Icons.drag_indicator, color: DS.brandPrimary38Const, size: 20),
               ],
             ),
           ),

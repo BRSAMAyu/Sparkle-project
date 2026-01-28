@@ -330,7 +330,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         title: Text(
           '返回任务执行',
           style: TextStyle(
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             fontWeight: FontWeight.bold,
           ),
         ),

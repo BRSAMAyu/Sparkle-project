@@ -234,7 +234,7 @@ class _TaskDetailView extends ConsumerWidget {
   Widget _buildGuideSection(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.neutral200),
           boxShadow: DS.shadowSm,
@@ -375,7 +375,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
                       ),
                     ],
                   ),
-                  child: Icon(widget.icon, color: DS.brandPrimary, size: DS.iconSizeSm),
+                  child: Icon(widget.icon, color: DS.brandPrimaryConst, size: DS.iconSizeSm),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(
@@ -407,6 +407,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
           ),
         ),
       );
+  }
 }
 
 class _BottomActionBar extends ConsumerWidget {
@@ -421,101 +422,104 @@ class _BottomActionBar extends ConsumerWidget {
         : DS.contentMaxWidthDesktop;
 
     return SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxBarWidth),
-            child: Container(
-              padding: const EdgeInsets.all(DS.spacing16),
-              decoration: BoxDecoration(
-            color: DS.brandPrimary,
-            boxShadow: DS.shadowMd,
-            border: Border(
-              top: BorderSide(
-                color: DS.neutral200,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxBarWidth),
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: DS.brandPrimaryConst,
+              boxShadow: DS.shadowMd,
+              border: Border(
+                top: BorderSide(
+                  color: DS.neutral200,
+                ),
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: CustomButton.secondary(
-                  text: '编辑',
-                  icon: Icons.edit_outlined,
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    // TODO: 需要创建任务编辑页面，暂时导航到创建页面
-                    context.push('/tasks/new');
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                flex: 2,
-                child: CustomButton.primary(
-                  text: '开始任务',
-                  icon: Icons.play_arrow_rounded,
-                  onPressed: () {
-                    HapticFeedback.heavyImpact();
-                    ref.read(activeTaskProvider.notifier).state = task;
-                    // P0-1: Auto-switch plan context when starting task
-                    ref.read(activePlanProvider.notifier).selectFromTaskPlanId(task.planId);
-                    context.push('/tasks/${task.id}/execute');
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: DS.error.withValues(alpha: 0.3),
-                    width: 1.5,
+            child: Row(
+              children: [
+                Expanded(
+                  child: CustomButton.secondary(
+                    text: '编辑',
+                    icon: Icons.edit_outlined,
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      // TODO: 需要创建任务编辑页面，暂时导航到创建页面
+                      context.push('/tasks/new');
+                    },
                   ),
-                  borderRadius: DS.borderRadius12,
                 ),
-                child: IconButton(
-                  icon: Icon(Icons.delete_outline, color: DS.error),
-                  iconSize: DS.iconSizeBase,
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: DS.borderRadius20,
-                        ),
-                        title: const Text(
-                          '删除任务',
-                          style: TextStyle(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
-                        content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
-                        actions: [
-                          CustomButton.text(
-                            text: '取消',
-                            onPressed: () => Navigator.of(ctx).pop(),
-                          ),
-                          CustomButton.primary(
-                            text: '删除',
-                            icon: Icons.delete_rounded,
-                            onPressed: () {
-                              HapticFeedback.heavyImpact();
-                              Navigator.of(ctx).pop();
-                              ref
-                                  .read(taskListProvider.notifier)
-                                  .deleteTask(task.id);
-                              context.pop();
-                            },
-                            customGradient: DS.errorGradient,
-                            size: CustomButtonSize.small,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  flex: 2,
+                  child: CustomButton.primary(
+                    text: '开始任务',
+                    icon: Icons.play_arrow_rounded,
+                    onPressed: () {
+                      HapticFeedback.heavyImpact();
+                      ref.read(activeTaskProvider.notifier).state = task;
+                      // P0-1: Auto-switch plan context when starting task
+                      ref
+                          .read(activePlanProvider.notifier)
+                          .selectFromTaskPlanId(task.planId);
+                      context.push('/tasks/${task.id}/execute');
+                    },
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.spacing12),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: DS.error.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.delete_outline, color: DS.error),
+                    iconSize: DS.iconSizeBase,
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      showDialog<void>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: DS.borderRadius20,
+                          ),
+                          title: const Text(
+                            '删除任务',
+                            style: TextStyle(
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                          content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
+                          actions: [
+                            CustomButton.text(
+                              text: '取消',
+                              onPressed: () => Navigator.of(ctx).pop(),
+                            ),
+                            CustomButton.primary(
+                              text: '删除',
+                              icon: Icons.delete_rounded,
+                              onPressed: () {
+                                HapticFeedback.heavyImpact();
+                                Navigator.of(ctx).pop();
+                                ref
+                                    .read(taskListProvider.notifier)
+                                    .deleteTask(task.id);
+                                context.pop();
+                              },
+                              customGradient: DS.errorGradient,
+                              size: CustomButtonSize.small,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

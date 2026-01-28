@@ -299,8 +299,6 @@ class ReportPreviewWidget extends StatefulWidget {
 }
 
 class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
-  final bool _isGenerating = false;
-
   @override
   Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
@@ -405,4 +403,3 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
     );
   }
 }
-

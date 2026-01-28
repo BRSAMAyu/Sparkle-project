@@ -226,7 +226,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   else if (_controller.text.isEmpty && !_isListening)
                     IconButton(
                       icon: Icon(Icons.mic,
-                          color: DS.brandPrimary, size: iconSize,),
+                          color: DS.brandPrimaryConst, size: iconSize,),
                       onPressed: _toggleListening,
                       tooltip: '语音输入',
                       padding: EdgeInsets.zero,

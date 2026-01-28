@@ -358,7 +358,7 @@ class _GroupsListTab extends ConsumerWidget {
                                         color: DS.neutral500, fontSize: 12,),),
                                 const SizedBox(width: DS.md),
                                 Icon(Icons.local_fire_department,
-                                    size: 14, color: DS.brandPrimary,),
+                                    size: 14, color: DS.brandPrimaryConst,),
                                 const SizedBox(width: DS.xs),
                                 Text('${g.totalFlamePower}',
                                     style: TextStyle(

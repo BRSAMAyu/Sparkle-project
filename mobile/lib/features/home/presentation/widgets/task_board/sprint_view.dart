@@ -135,7 +135,7 @@ class _SprintHeader extends ConsumerWidget {
             child: Icon(
               Icons.flash_on_rounded,
               size: DS.iconSizeSm,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
           ),
           const SizedBox(width: DS.spacing12),
@@ -180,7 +180,7 @@ class _SprintHeader extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: Icon(
               Icons.more_vert_rounded,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
             tooltip: '更多操作',
             padding: const EdgeInsets.all(DS.spacing4),

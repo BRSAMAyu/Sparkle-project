@@ -123,12 +123,12 @@ class ProfileScreen extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.local_fire_department_rounded,
-                                        color: DS.brandPrimary, size: 16,),
+                                        color: DS.brandPrimaryConst, size: 16,),
                                     const SizedBox(width: DS.xs),
                                     Text(
                                       'Lv.${user.flameLevel}',
                                       style: TextStyle(
-                                        color: DS.brandPrimary,
+                                        color: DS.brandPrimaryConst,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

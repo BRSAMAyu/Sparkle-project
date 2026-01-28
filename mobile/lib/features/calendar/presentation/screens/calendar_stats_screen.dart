@@ -140,7 +140,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           children: [
             IconButton(
               icon: Icon(Icons.arrow_back_ios_new,
-                  color: DS.brandPrimary,),
+                  color: DS.brandPrimaryConst,),
               onPressed: () => context.pop(),
             ),
             Text(
@@ -148,7 +148,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const Spacer(),
@@ -284,7 +284,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   '$day',
                   style: TextStyle(
                     fontSize: 8,
-                    color: DS.brandPrimary38,
+                    color: DS.brandPrimary38Const,
                   ),
                 ),
               );
@@ -351,7 +351,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
-          titleTextStyle: TextStyle(color: DS.brandPrimary, fontSize: 16),
+          titleTextStyle: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
           leftChevronIcon: Icon(Icons.chevron_left, color: DS.brandPrimary),
           rightChevronIcon: Icon(Icons.chevron_right, color: DS.brandPrimary),
         ),
@@ -417,7 +417,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       child: Text(
                         '${taskSummary.total}',
                         style: TextStyle(
-                          color: DS.brandPrimary,
+                          color: DS.brandPrimaryConst,
                           fontSize: 8,
                           fontWeight: FontWeight.bold,
                         ),
@@ -542,7 +542,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               Text(
                 '${DateFormat('MM月dd日').format(_selectedDay ?? _focusedDay)} 日程',
                 style: TextStyle(
-                    color: DS.brandPrimary70, fontWeight: FontWeight.bold,),
+                    color: DS.brandPrimary70Const, fontWeight: FontWeight.bold,),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -708,7 +708,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: DS.brandPrimary,),
+                      color: DS.brandPrimaryConst,),
                 ),
                 TextButton(
                   onPressed: _saveEvent,
@@ -777,7 +777,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               child: Container(
                 padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10,
+                  color: DS.brandPrimary10Const,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -789,7 +789,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                     Text(
                       DateFormat('MM-dd HH:mm').format(_startTime),
                       style: TextStyle(
-                          color: DS.brandPrimary, fontWeight: FontWeight.bold,),
+                          color: DS.brandPrimaryConst, fontWeight: FontWeight.bold,),
                     ),
                   ],
                 ),
@@ -797,7 +797,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
           ),
           const SizedBox(width: 10),
-          Icon(Icons.arrow_forward, color: DS.brandPrimary38, size: 16),
+          Icon(Icons.arrow_forward, color: DS.brandPrimary38Const, size: 16),
           const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
@@ -805,7 +805,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               child: Container(
                 padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10,
+                  color: DS.brandPrimary10Const,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -817,7 +817,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                     Text(
                       DateFormat('MM-dd HH:mm').format(_endTime),
                       style: TextStyle(
-                          color: DS.brandPrimary, fontWeight: FontWeight.bold,),
+                          color: DS.brandPrimaryConst, fontWeight: FontWeight.bold,),
                     ),
                   ],
                 ),
@@ -888,7 +888,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                 color: Color(color),
                 shape: BoxShape.circle,
                 border: isSelected
-                    ? Border.all(color: DS.brandPrimary, width: 2)
+                    ? Border.all(color: DS.brandPrimaryConst, width: 2)
                     : null,
               ),
               child: isSelected

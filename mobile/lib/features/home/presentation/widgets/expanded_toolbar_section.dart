@@ -105,7 +105,7 @@ class _ToolButton extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 size: DS.iconSizeSm,
               ),
             ),

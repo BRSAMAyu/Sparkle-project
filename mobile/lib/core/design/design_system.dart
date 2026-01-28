@@ -21,7 +21,7 @@
 ///
 /// // 3. 在UI中使用设计令牌
 /// Container(
-///   color: DS.brandPrimary,
+///   color: DS.brandPrimaryConst,
 ///   padding: SpacingSystem.edgeLg,
 ///   child: SparkleButton.primary(
 ///     label: '点击',

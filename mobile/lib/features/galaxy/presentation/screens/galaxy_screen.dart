@@ -967,7 +967,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         _showDebugOverlay
                             ? Icons.bug_report
                             : Icons.bug_report_outlined,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                       ),
                       tooltip: 'Toggle LOD Debug Overlay',
                       onPressed: () {

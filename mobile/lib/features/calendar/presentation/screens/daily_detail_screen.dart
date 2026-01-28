@@ -101,7 +101,7 @@ class DailyDetailScreen extends ConsumerWidget {
               style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimary,),
+                  color: DS.brandPrimaryConst,),
             ),
             const SizedBox(width: DS.lg),
             Column(
@@ -175,7 +175,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: DS.brandPrimary,),),
+                    color: DS.brandPrimaryConst,),),
             const SizedBox(height: DS.xs),
             Text(label,
                 style: TextStyle(fontSize: 12, color: DS.brandPrimary54),),

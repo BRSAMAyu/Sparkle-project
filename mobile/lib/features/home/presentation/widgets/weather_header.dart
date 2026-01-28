@@ -124,7 +124,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Icon(icon, color: DS.brandPrimary, size: 18);
+    return Icon(icon, color: DS.brandPrimaryConst, size: 18);
   }
 
   String _getWeatherTitle(String type) {

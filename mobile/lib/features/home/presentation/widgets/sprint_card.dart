@@ -128,7 +128,7 @@ class SprintCard extends ConsumerWidget {
             ),
             child: Icon(
               Icons.flash_on_rounded,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               size: 20,
             ),
           ),

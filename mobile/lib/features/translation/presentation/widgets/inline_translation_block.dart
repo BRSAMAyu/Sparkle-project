@@ -117,14 +117,14 @@ class _InlineTranslationBlockState
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
                     size: 18,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     _isExpanded ? '隐藏译文' : '显示译文',
                     style: TextStyle(
                       fontSize: 13,
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -252,7 +252,7 @@ class _InlineTranslationBlockState
                         note,
                         style: TextStyle(
                           fontSize: 11,
-                          color: DS.brandPrimary,
+                          color: DS.brandPrimaryConst,
                         ),
                       ),
                     ),

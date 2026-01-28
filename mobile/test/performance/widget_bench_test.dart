@@ -401,10 +401,10 @@ class GalaxyPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Simplified galaxy rendering
-    for (final edge in edges) {
+    for (final _ in edges) {
       // Draw edge
     }
-    for (final node in nodes) {
+    for (final _ in nodes) {
       // Draw node
     }
   }

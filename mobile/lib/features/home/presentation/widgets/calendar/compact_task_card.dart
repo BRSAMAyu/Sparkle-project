@@ -133,7 +133,7 @@ class CompactTaskCard extends ConsumerWidget {
       case TaskStatus.inProgress:
         return _ActionButton(
           icon: Icons.check_rounded,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           onTap: () => context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
         );
       case TaskStatus.completed:

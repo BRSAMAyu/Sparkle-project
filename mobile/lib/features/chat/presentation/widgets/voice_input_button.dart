@@ -285,7 +285,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         height: 22,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
         ),
       );
     }
@@ -296,14 +296,14 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         children: [
           Icon(
             Icons.mic,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             size: 20,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
               fontSize: 8,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontWeight: DS.fontWeightBold,
             ),
           ),

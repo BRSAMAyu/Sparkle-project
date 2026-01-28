@@ -84,7 +84,7 @@ class _RelationStyle {
             dashLength: 6,
             baseWidth: 1.0,);
       case EdgeRelationType.parentChild:
-        return _RelationStyle(color: DS.brandPrimary, baseWidth: 1.8);
+        return _RelationStyle(color: DS.brandPrimaryConst, baseWidth: 1.8);
     }
   }
 }
@@ -475,7 +475,7 @@ class StarMapPainter extends CustomPainter {
     if (scale >= _lod0Limit) return;
 
     _textRenderer.drawText(canvas, name, pos + Offset(0, r + 8),
-        TextStyle(color: DS.brandPrimary, fontSize: 12),);
+        TextStyle(color: DS.brandPrimaryConst, fontSize: 12),);
   }
 
   void _drawNodes(Canvas canvas, {required bool onlyLarge}) {

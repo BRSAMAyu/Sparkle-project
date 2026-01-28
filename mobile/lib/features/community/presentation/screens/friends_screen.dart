@@ -110,7 +110,7 @@ class _MyFriendsTab extends ConsumerWidget {
                         ),
                       ),
                       Icon(Icons.chevron_right,
-                          size: 20, color: DS.brandPrimary,),
+                          size: 20, color: DS.brandPrimaryConst,),
                     ],
                   ),
                 ),

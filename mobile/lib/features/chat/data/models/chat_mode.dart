@@ -75,7 +75,7 @@ class ChatModeStandard extends ChatMode {
         apiValue: 'standard',
         label: '标准对话',
         icon: Icons.chat_bubble_outline,
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
       );
 }
 
