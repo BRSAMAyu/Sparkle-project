@@ -98,10 +98,10 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
         Expanded(
           child: TextField(
             controller: _titleController,
-            style: TextStyle(color: DS.brandPrimary, fontSize: 14),
+            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
             decoration: InputDecoration(
               hintText: '添加子任务...',
-              hintStyle: TextStyle(color: DS.brandPrimary38, fontSize: 14),
+              hintStyle: TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
               border: InputBorder.none,
               filled: true,
               fillColor: DS.brandPrimary10,
@@ -152,7 +152,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
           Icon(
             Icons.checklist,
             size: 48,
-            color: DS.brandPrimary38,
+            color: DS.brandPrimary38Const,
           ),
           const SizedBox(height: DS.sm),
           Text(
@@ -235,9 +235,9 @@ class SubtaskItemWidget extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.drag_handle, color: DS.brandPrimary38, size: 20),
+            Icon(Icons.drag_handle, color: DS.brandPrimary38Const, size: 20),
             IconButton(
-              icon: Icon(Icons.close, color: DS.brandPrimary38, size: 18),
+              icon: Icon(Icons.close, color: DS.brandPrimary38Const, size: 18),
               onPressed: onDelete,
               tooltip: '删除',
               padding: EdgeInsets.zero,
@@ -281,7 +281,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10,
+                  color: DS.brandPrimary10Const,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -305,7 +305,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
           Text(
             '$completed/$total',
             style: TextStyle(
-              color: DS.brandPrimary70,
+              color: DS.brandPrimary70Const,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),

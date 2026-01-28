@@ -27,7 +27,7 @@ class StatisticsCard extends StatelessWidget {
                   ),
                   child: Icon(
                     Icons.show_chart_rounded,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     size: 16,
                   ),
                 ),
@@ -113,7 +113,7 @@ class _WeeklyTrendChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(

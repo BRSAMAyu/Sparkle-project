@@ -189,7 +189,7 @@ class _LineChart extends StatelessWidget {
           LineChartBarData(
             spots: dataPoints,
             isCurved: true,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             barWidth: 2.5,
             isStrokeCapRound: true,
             dotData: FlDotData(

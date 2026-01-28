@@ -209,14 +209,14 @@ class DashboardScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: DS.shadowLg,
                 color: DS.surfaceSecondary,
-                border: Border.all(color: DS.brandPrimary, width: 2),
+                border: Border.all(color: DS.brandPrimaryConst, width: 2),
               ),
               child: Icon(
                 Theme.of(context).brightness == Brightness.dark
                     ? Icons.wb_sunny
                     : Icons.nightlight_round,
                 size: 24,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
           ),
@@ -258,7 +258,7 @@ class DashboardScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                 ),
               ],
@@ -267,7 +267,7 @@ class DashboardScreen extends ConsumerWidget {
             // Edge AI Entry Point
             IconButton(
               icon: const Icon(Icons.psychology_outlined),
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               tooltip: 'Qwen3 认知状态',
               onPressed: () {
                 Navigator.of(context).push(

@@ -35,7 +35,7 @@ class UserTitleBadge extends ConsumerWidget {
     final defaultStyle = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w600,
-      color: DS.brandPrimary,
+      color: DS.brandPrimaryConst,
     );
 
     return Container(
@@ -230,7 +230,7 @@ class TitleSelector extends ConsumerWidget {
                   Icon(
                     Icons.check_circle,
                     size: 16,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
               ],
             ),

@@ -127,7 +127,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                 children: [
                   Icon(
                     Icons.flash_on_rounded,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                   const SizedBox(width: DS.spacing12),
                   Expanded(

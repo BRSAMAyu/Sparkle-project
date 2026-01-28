@@ -120,12 +120,12 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
               // Title
               Row(
                 children: [
-                  Icon(Icons.share, color: DS.brandPrimary, size: 28),
+                  Icon(Icons.share, color: DS.brandPrimaryConst, size: 28),
                   const SizedBox(width: DS.md),
                   Text(
                     '分享成就',
                     style: TextStyle(
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),

@@ -106,7 +106,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                 Text(
                   _getTitle(),
                   style: TextStyle(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),

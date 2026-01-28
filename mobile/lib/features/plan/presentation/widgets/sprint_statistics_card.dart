@@ -40,7 +40,7 @@ class SprintStatisticsCard extends ConsumerWidget {
               Icon(
                 Icons.bar_chart_rounded,
                 size: DS.iconSizeSm,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               const SizedBox(width: DS.spacing8),
               Text(
@@ -267,7 +267,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                   barRods: [
                     BarChartRodData(
                       toY: entry.value.tasksCompleted.toDouble(),
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       width: 16,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(4),

@@ -284,7 +284,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     height: 22,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: DS.brandPrimary,),
+                                        color: DS.brandPrimaryConst,),
                                   )
                                 : Icon(
                                     Icons.arrow_upward_rounded,
@@ -317,7 +317,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           color: isDark ? DS.neutral800 : DS.brandPrimary200,
           borderRadius: BorderRadius.circular(12),
           border: Border(
-            left: BorderSide(color: DS.brandPrimary, width: 4),
+            left: BorderSide(color: DS.brandPrimaryConst, width: 4),
           ),
         ),
         child: Row(
@@ -331,7 +331,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                     ),
                   ),
                   const SizedBox(height: DS.spacing4),

@@ -201,7 +201,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: DS.brandPrimary,),
+                              strokeWidth: 2, color: DS.brandPrimaryConst,),
                         )
                       : Text(l10n.register),
                 ),

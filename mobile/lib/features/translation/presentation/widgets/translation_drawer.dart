@@ -206,7 +206,7 @@ class TranslationDrawer extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: DS.xs),
@@ -239,7 +239,7 @@ class TranslationDrawer extends ConsumerWidget {
           ],
         ),
         trailing: item.isSaved
-            ? Icon(Icons.bookmark, color: DS.brandPrimary, size: 20)
+            ? Icon(Icons.bookmark, color: DS.brandPrimaryConst, size: 20)
             : (onSaveToKnowledge != null
                 ? IconButton(
                     icon: const Icon(Icons.bookmark_add_outlined, size: 20),
@@ -311,7 +311,7 @@ class TranslationDrawer extends ConsumerWidget {
                 item.translation,
                 style: TextStyle(
                   fontSize: 15,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ],

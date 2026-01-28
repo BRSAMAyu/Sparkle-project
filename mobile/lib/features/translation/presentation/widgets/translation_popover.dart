@@ -364,7 +364,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
               firstNote,
               style: TextStyle(
                 fontSize: 11,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

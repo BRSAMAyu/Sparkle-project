@@ -203,7 +203,7 @@ class TaskPreviewPanel extends ConsumerWidget {
             Text(
               '查看全部 $totalCount 个任务',
               style: context.sparkleTypography.labelSmall.copyWith(
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -211,7 +211,7 @@ class TaskPreviewPanel extends ConsumerWidget {
             Icon(
               Icons.arrow_forward_rounded,
               size: DS.iconSizeXs,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
           ],
         ),

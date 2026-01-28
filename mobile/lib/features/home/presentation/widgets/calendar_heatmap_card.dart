@@ -278,7 +278,7 @@ class _DayCell extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.w600,
-                  color: DS.brandPrimary70,
+                  color: DS.brandPrimary70Const,
                 ),
               )
             : null,

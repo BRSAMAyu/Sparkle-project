@@ -290,7 +290,7 @@ class _SprintAchievementsProgressState
                           Icon(
                             Icons.military_tech,
                             size: DS.iconSizeSm,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                           ),
                           const SizedBox(width: DS.sm),
                           Text(
@@ -381,7 +381,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
                   '即将解锁！',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                       ),
                 ),
                 Text(

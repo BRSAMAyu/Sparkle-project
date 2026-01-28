@@ -84,7 +84,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ),
@@ -129,7 +129,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: DS.sm),
@@ -296,11 +296,11 @@ class _PatternCard extends StatelessWidget {
                         context.push('/focus');
                       },
                       icon: Icon(Icons.arrow_forward,
-                          size: 16, color: DS.brandPrimary,),
+                          size: 16, color: DS.brandPrimaryConst,),
                       label: Text(
                         '立即行动',
                         style: TextStyle(
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                             fontWeight: FontWeight.bold,),
                       ),
                       style: TextButton.styleFrom(

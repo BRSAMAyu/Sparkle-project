@@ -143,7 +143,7 @@ class _TaskReminderSettingsScreenState
           child: Text(
             '提醒时间',
             style: TextStyle(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -211,7 +211,7 @@ class _TaskReminderSettingsScreenState
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary10,
+          color: DS.brandPrimary10Const,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -224,7 +224,7 @@ class _TaskReminderSettingsScreenState
                 Text(
                   '关于任务提醒',
                   style: TextStyle(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -237,7 +237,7 @@ class _TaskReminderSettingsScreenState
               '• 完成或删除任务会自动取消提醒\n'
               '• 建议开启系统通知权限以接收提醒',
               style: TextStyle(
-                color: DS.brandPrimary70,
+                color: DS.brandPrimary70Const,
                 fontSize: 13,
                 height: 1.5,
               ),

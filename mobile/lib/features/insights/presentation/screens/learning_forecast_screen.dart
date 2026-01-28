@@ -156,7 +156,7 @@ class _LearningForecastScreenState
                 color: DS.brandPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.auto_graph, color: DS.brandPrimary, size: 32),
+              child: Icon(Icons.auto_graph, color: DS.brandPrimaryConst, size: 32),
             ),
             const SizedBox(width: DS.lg),
             Expanded(
@@ -166,7 +166,7 @@ class _LearningForecastScreenState
                   Text(
                     'AI 预测系统',
                     style: TextStyle(
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -188,7 +188,7 @@ class _LearningForecastScreenState
   Widget _buildSectionTitle(String title) => Text(
         title,
         style: TextStyle(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
