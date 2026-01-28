@@ -493,7 +493,11 @@ class PhotonService:
         # 按类型分组
         by_type = {}
         for t in transactions:
-            type_key = t.transaction_type.value
+            # Handle both enum and string types
+            if hasattr(t.transaction_type, 'value'):
+                type_key = t.transaction_type.value
+            else:
+                type_key = str(t.transaction_type)
             if type_key not in by_type:
                 by_type[type_key] = 0
             by_type[type_key] += t.amount

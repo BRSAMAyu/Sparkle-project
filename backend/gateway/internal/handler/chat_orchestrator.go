@@ -518,8 +518,11 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			var decoded interface{}
 			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
 				metadata[key] = decoded
-				continue
+			} else {
+				log.Printf("Failed to decode collaboration_timeline: %v", err)
+				metadata[key] = value
 			}
+			continue
 		}
 		metadata[key] = value
 	}

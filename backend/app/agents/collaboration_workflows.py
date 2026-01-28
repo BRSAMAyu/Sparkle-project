@@ -46,16 +46,17 @@ def _build_timeline_step(
     duration_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Normalize timeline steps to a consistent schema."""
+    now = datetime.now()
+    elapsed_ms = int((now - start_time).total_seconds() * 1000)
     step = {
         "agent_name": agent_name,
         "action": action,
         "status": status,
-        "start_time_ms": int((datetime.now() - start_time).total_seconds() * 1000),
+        "start_time_ms": int(start_time.timestamp() * 1000),
     }
     if agent_role:
         step["agent_role"] = agent_role
-    if duration_ms is not None:
-        step["duration_ms"] = duration_ms
+    step["duration_ms"] = duration_ms if duration_ms is not None else elapsed_ms
     if output_summary:
         step["output_summary"] = output_summary
     return step

@@ -412,8 +412,8 @@ class _PlanProgressTab extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     ),
         ],
       ),
@@ -506,5 +506,5 @@ class _DayBucket {
 
   final String label;
   final DateTime date;
-  int count;
+  int count = 0;
 }

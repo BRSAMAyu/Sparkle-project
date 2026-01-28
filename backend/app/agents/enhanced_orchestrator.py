@@ -302,6 +302,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
             steps.append(step)
 
         collaboration_timeline = {
+            "schema_version": "1.0",
             "workflow_type": result.workflow_type,
             "execution_time_ms": execution_time_ms,
             "steps": steps,

@@ -125,7 +125,7 @@ INSERT INTO users (
     registration_source, is_active, apple_id, updated_at, created_at
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title
 `
 
 type CreateSocialUserParams struct {
@@ -182,6 +182,10 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
 	)
 	return i, err
 }
@@ -189,7 +193,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title
 `
 
 type CreateUserParams struct {
@@ -242,6 +246,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
 	)
 	return i, err
 }
@@ -749,7 +757,7 @@ func (q *Queries) GetSnapshotCount(ctx context.Context, projectionName string) (
 
 const getTaskByID = `-- name: GetTaskByID :one
 
-SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, completed_at, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, id, created_at, updated_at, deleted_at FROM tasks WHERE id = $1 AND deleted_at IS NULL
+SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, completed_at, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, id, created_at, updated_at, deleted_at, confirmed_at, tool_result_id, subtasks_total, subtasks_completed FROM tasks WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -781,6 +789,10 @@ func (q *Queries) GetTaskByID(ctx context.Context, id pgtype.UUID) (Task, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.ConfirmedAt,
+		&i.ToolResultID,
+		&i.SubtasksTotal,
+		&i.SubtasksCompleted,
 	)
 	return i, err
 }
@@ -828,7 +840,7 @@ func (q *Queries) GetUnpublishedOutboxEntries(ctx context.Context, limit int32) 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at FROM users WHERE id = $1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -865,12 +877,16 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
 	)
 	return i, err
 }
 
 const getUserByAppleID = `-- name: GetUserByAppleID :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at FROM users WHERE apple_id = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title FROM users WHERE apple_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (User, error) {
@@ -907,12 +923,16 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at FROM users WHERE email = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -949,6 +969,10 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.AgeVerified,
 		&i.AgeVerificationSource,
 		&i.AgeVerifiedAt,
+		&i.PhotonBalance,
+		&i.PhotonUpdatedAt,
+		&i.EquippedSkin,
+		&i.EquippedTitle,
 	)
 	return i, err
 }
