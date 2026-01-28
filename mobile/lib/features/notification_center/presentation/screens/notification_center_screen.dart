@@ -38,7 +38,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           // Mark all as read button
           if (state.unreadCount > 0)
             TextButton.icon(
-              onPressed: () => _markAllAsRead(),
+              onPressed: _markAllAsRead,
               icon: const Icon(Icons.done_all, size: 20),
               label: Text('全部已读 (${state.unreadCount})'),
             ),
@@ -81,8 +81,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     );
   }
 
-  Widget _buildFilterBar() {
-    return Container(
+  Widget _buildFilterBar() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorCode.surface,
@@ -128,7 +127,6 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         ],
       ),
     );
-  }
 
   Widget _buildContent(NotificationCenterState state) {
     if (state.isLoading && state.notifications.isEmpty) {
@@ -150,7 +148,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     }
 
     return RefreshIndicator(
-      onRefresh: () => _refresh(),
+      onRefresh: _refresh,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: filteredNotifications.length,
@@ -166,8 +164,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     );
   }
 
-  Widget _buildError(String error) {
-    return Center(
+  Widget _buildError(String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -187,10 +184,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         ],
       ),
     );
-  }
 
-  Widget _buildEmpty() {
-    return Center(
+  Widget _buildEmpty() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -210,7 +205,6 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         ],
       ),
     );
-  }
 
   List<UnifiedNotification> _filterNotifications(List<UnifiedNotification> notifications) {
     var filtered = notifications;
@@ -219,10 +213,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     switch (_filter) {
       case NotificationFilter.unread:
         filtered = filtered.where((n) => !n.isRead).toList();
-        break;
       case NotificationFilter.read:
         filtered = filtered.where((n) => n.isRead).toList();
-        break;
       case NotificationFilter.all:
         break;
     }
@@ -231,10 +223,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     switch (_sourceFilter) {
       case SourceTypeFilter.system:
         filtered = filtered.where((n) => n.sourceType == 'system').toList();
-        break;
       case SourceTypeFilter.intervention:
         filtered = filtered.where((n) => n.sourceType == 'intervention').toList();
-        break;
       case SourceTypeFilter.all:
         break;
     }
@@ -319,7 +309,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       await ref.read(notificationCenterProvider.notifier).clearReadNotifications();
 
       if (mounted) {
@@ -341,9 +331,9 @@ extension ColorSchemeExtension on ColorScheme {
 }
 
 class _CustomColors {
-  final ColorScheme colorScheme;
 
   _CustomColors(this.colorScheme);
+  final ColorScheme colorScheme;
 
   Color get surface => colorScheme.surface;
   Color get borderSubtle => colorScheme.outline.withOpacity(0.3);

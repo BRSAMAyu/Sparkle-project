@@ -43,6 +43,8 @@ class UserUpdate(BaseModel):
     depth_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
     curiosity_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
     status: Optional[UserStatusEnum] = Field(default=None, description="Status update") # Allow update here too?
+    equipped_skin: Optional[str] = Field(default=None, max_length=50, description="Equipped skin ID")
+    equipped_title: Optional[str] = Field(default=None, max_length=50, description="Equipped title ID")
 
 class PasswordChange(BaseModel):
     """Password change"""
@@ -86,6 +88,10 @@ class UserProfile(UserBase):
     is_active: bool = Field(description="Is active")
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="Status")
     created_at: str = Field(description="Registration time")
+    photon_balance: int = Field(default=0, description="Photon balance")
+    equipped_skin: Optional[str] = Field(default=None, description="Equipped skin ID")
+    equipped_title: Optional[str] = Field(default=None, description="Equipped title ID")
+    push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
 
 class UserFlameStatus(BaseModel):
     """User flame status"""
@@ -107,6 +113,27 @@ class UserPreferences(BaseModel):
     notification_enabled: bool = Field(default=True, description="Whether notifications are enabled")
     persona_type: str = Field(default="coach", description="AI persona type (coach, anime, etc.)")
     daily_cap: int = Field(default=5, description="Daily interaction cap")
+
+    class Config:
+        from_attributes = True
+
+
+class PushPreferenceUpdate(BaseModel):
+    """Push preference update request"""
+    enable_curiosity: Optional[bool] = Field(default=None, description="Enable curiosity-based push notifications")
+    persona_type: Optional[str] = Field(default=None, description="AI persona type (coach, anime, mentor, friend)")
+    daily_cap: Optional[int] = Field(default=None, ge=1, le=20, description="Daily push notification cap")
+    active_slots: Optional[list[Dict[str, str]]] = Field(default=None, description="Active time slots [{'start': '08:00', 'end': '09:00'}]")
+    timezone: Optional[str] = Field(default=None, description="User timezone")
+
+
+class PushPreferenceResponse(BaseModel):
+    """Push preference response"""
+    enable_curiosity: bool = Field(description="Enable curiosity-based push notifications")
+    persona_type: str = Field(description="AI persona type")
+    daily_cap: int = Field(description="Daily push notification cap")
+    active_slots: Optional[list[Dict[str, str]]] = Field(default=None, description="Active time slots")
+    timezone: str = Field(description="User timezone")
 
     class Config:
         from_attributes = True

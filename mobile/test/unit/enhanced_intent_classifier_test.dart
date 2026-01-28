@@ -270,7 +270,7 @@ void main() {
       });
 
       test('handles special characters', () {
-        final result = EnhancedIntentClassifier.classify('翻译：这段文本！@#\$%');
+        final result = EnhancedIntentClassifier.classify(r'翻译：这段文本！@#$%');
         expect(result, isNotNull);
         expect(result!.type, EnhancedIntentType.translation);
       });
@@ -315,7 +315,7 @@ void main() {
     group('Performance', () {
       test('classifies simple text in under 2ms', () {
         final stopwatch = Stopwatch()..start();
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
           EnhancedIntentClassifier.classify('翻译这段文本');
         }
         stopwatch.stop();

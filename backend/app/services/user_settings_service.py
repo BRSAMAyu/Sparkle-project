@@ -12,6 +12,8 @@ from app.models.user_settings import UserSettings
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "transparency_level": 0,
     "system_update_level": 1,
+    "task_reminders_enabled": True,
+    "task_reminder_times": [1440, 60, 15],  # 1 day, 1 hour, 15 minutes
 }
 
 

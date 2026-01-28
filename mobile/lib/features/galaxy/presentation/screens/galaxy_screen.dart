@@ -1092,9 +1092,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     : Colors.white.withValues(alpha: 0.9),
                 foregroundColor: DS.brandPrimary,
                 elevation: 3,
-                child: const Icon(Icons.public),
                 onPressed: _resetToInitialView,
                 tooltip: '回到全局视图',
+                child: const Icon(Icons.public),
               ),
             ),
 

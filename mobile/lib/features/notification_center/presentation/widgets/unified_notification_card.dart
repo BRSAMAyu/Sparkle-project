@@ -4,10 +4,7 @@ import 'package:sparkle/features/notification_center/data/models/unified_notific
 /// Unified Notification Card Widget
 class UnifiedNotificationCard extends StatelessWidget {
   const UnifiedNotificationCard({
-    super.key,
-    required this.notification,
-    required this.onRead,
-    required this.onDelete,
+    required this.notification, required this.onRead, required this.onDelete, super.key,
   });
 
   final UnifiedNotification notification;
@@ -15,8 +12,7 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    return Dismissible(
+  Widget build(BuildContext context) => Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onDelete(),
@@ -152,7 +148,6 @@ class UnifiedNotificationCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildSourceBadge(BuildContext context) {
     Color badgeColor;
@@ -162,11 +157,9 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'system':
         badgeColor = Colors.blue;
         badgeLabel = '系统';
-        break;
       case 'intervention':
         badgeColor = Colors.orange;
         badgeLabel = '干预';
-        break;
       default:
         badgeColor = Colors.grey;
         badgeLabel = '通知';
@@ -201,7 +194,6 @@ class UnifiedNotificationCard extends StatelessWidget {
           // Navigate to plan detail
           // TODO: Implement navigation
         }
-        break;
 
       case 'settings_updated':
         // Navigate to settings
@@ -216,7 +208,6 @@ class UnifiedNotificationCard extends StatelessWidget {
       default:
         // Show detail dialog
         _showDetailDialog(context);
-        break;
     }
   }
 

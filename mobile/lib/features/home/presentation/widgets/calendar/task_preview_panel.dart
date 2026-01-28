@@ -132,7 +132,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                   index: index,
                   child: CompactTaskCard(task: displayTasks[index]),
                 ),
-              )),
+              ),),
             if (hasMore) ...[
               const SizedBox(height: DS.spacing12),
               _buildViewAllLink(context, selectedDate, tasks.length),

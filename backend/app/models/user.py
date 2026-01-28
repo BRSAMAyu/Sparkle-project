@@ -76,6 +76,10 @@ class User(BaseModel):
     photon_balance = Column(Integer, default=0, nullable=False)  # 光子积分余额
     photon_updated_at = Column(DateTime, nullable=True)  # 光子积分最后更新时间
 
+    # 🆕 商城装备系统 (V3.2)
+    equipped_skin = Column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（对应shop_items.id）
+    equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（对应shop_items.id）
+
     # 关系定义
     push_preference = relationship(
         "PushPreference",
@@ -217,6 +221,29 @@ class User(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="dynamic"
+    )
+
+    # 🛒 商城系统关系 (v3.2)
+    shop_purchases = relationship(
+        "ShopPurchase",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    consumables = relationship(
+        "UserConsumable",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    photon_transactions = relationship(
+        "PhotonTransactionHistory",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+        order_by="desc(PhotonTransactionHistory.created_at)"
     )
 
     def __repr__(self):

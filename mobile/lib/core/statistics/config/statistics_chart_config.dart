@@ -385,11 +385,11 @@ class StatisticsChartDataHelper {
         touchTooltipData: LineTouchTooltipData(
           getTooltipItems: (touchedSpots) => touchedSpots.map((spot) => LineTooltipItem(
                 spot.y.toStringAsFixed(1),
-                TextStyle(
+                const TextStyle(
                   color: StatisticsChartConfig.tooltipTextColor,
                   fontSize: 12,
                 ),
-              )).toList(),
+              ),).toList(),
         ),
       ),
     );

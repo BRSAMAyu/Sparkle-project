@@ -667,6 +667,15 @@ class AchievementEngine:
         for unlock in unlocked:
             logger.info(f"Achievement unlocked for user {user_id}: {unlock['name']}")
 
+            # 提取光子奖励信息（显式）
+            photon_granted = 0
+            rewards = unlock.get("rewards", [])
+            if rewards:
+                for reward in rewards:
+                    if reward.get("type") == "photon":
+                        photon_granted = reward.get("quantity", 0)
+                        break
+
             # 通过 WebSocket 发送成就解锁事件
             message = {
                 "type": "achievement_unlock",
@@ -680,7 +689,10 @@ class AchievementEngine:
                     "is_first": unlock.get("is_first", False),
                     "unlocked_at": unlock["unlocked_at"].isoformat() if isinstance(unlock["unlocked_at"], datetime) else unlock["unlocked_at"],
                     # 添加连击信息
-                    "combo_info": unlock.get("combo_info")
+                    "combo_info": unlock.get("combo_info"),
+                    # 显式添加光子奖励信息
+                    "photon_granted": photon_granted,
+                    "has_photon_reward": photon_granted > 0
                 }
             }
 

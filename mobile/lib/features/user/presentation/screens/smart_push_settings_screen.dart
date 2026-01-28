@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class SmartPushSettingsScreen extends ConsumerStatefulWidget {
@@ -58,10 +59,16 @@ class _SmartPushSettingsScreenState
 
       await ref.read(userRepositoryProvider).updatePushPreferences(prefs);
 
-      // Force refresh user profile to update state
-      // Assuming authProvider has a refresh method or we just rely on the updated user return
-      // Ideally ref.read(authProvider.notifier).updateUser(updatedUser);
-      // For now just show success
+      // Refresh auth state to update all screens
+      await ref.read(authProvider.notifier).refreshUser();
+
+      // Also update push preferences provider
+      ref.read(pushPreferencesProvider.notifier).updatePreferences(
+        personaType: _persona,
+        dailyCap: _dailyCap,
+        activeSlots: _activeSlots,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('设置已保存')),

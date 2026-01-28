@@ -147,21 +147,19 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
 /// Transparency preferences model
 class TransparencyPreferences {
-
-  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) {
-    return TransparencyPreferences(
-      enabled: json['enabled'] ?? false,
-      showTokenUsage: json['showTokenUsage'] ?? true,
-      showAgentSwitching: json['showAgentSwitching'] ?? true,
-      showReasoningSteps: json['showReasoningSteps'] ?? true,
-    );
-  }
   const TransparencyPreferences({
     required this.enabled,
     required this.showTokenUsage,
     required this.showAgentSwitching,
     required this.showReasoningSteps,
   });
+
+  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) => TransparencyPreferences(
+      enabled: json['enabled'] ?? false,
+      showTokenUsage: json['showTokenUsage'] ?? true,
+      showAgentSwitching: json['showAgentSwitching'] ?? true,
+      showReasoningSteps: json['showReasoningSteps'] ?? true,
+    );
 
   final bool enabled;
   final bool showTokenUsage;

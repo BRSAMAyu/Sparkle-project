@@ -7,6 +7,8 @@ import 'package:sparkle/features/cognitive/presentation/providers/cognitive_prov
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 
 /// Predicted action for intent prediction bar
 class PredictedAction {
@@ -117,8 +119,24 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
 
   void onInputChanged(String text) {
     final isTyping = text.isNotEmpty;
-    final result = IntentClassifier.classify(text);
 
+    if (text.isEmpty) {
+      state = state.copyWith(
+        isTyping: false,
+        currentInput: '',
+        typingPredictions: [],
+      );
+      return;
+    }
+
+    // Try backend API prediction first (for text longer than 2 characters)
+    if (text.length > 2) {
+      _fetchBackendPrediction(text);
+      return;
+    }
+
+    // Fall back to local classifier for short text
+    final result = IntentClassifier.classify(text);
     final typingPredictions = <PredictedAction>[];
 
     if (result != null) {
@@ -250,8 +268,8 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             ),
           ]);
       }
-    } else if (text.length > 3) {
-      // Generic predictions for longer input without clear intent
+    } else {
+      // Generic predictions for input without clear intent
       typingPredictions.addAll([
         PredictedAction(
           label: '发送给AI',
@@ -282,6 +300,205 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       currentInput: text,
       typingPredictions: typingPredictions,
     );
+  }
+
+  /// Fetch intent prediction from backend API
+  Future<void> _fetchBackendPrediction(String text) async {
+    try {
+      final repository = _ref.read(intentRepositoryProvider);
+
+      // Get active plan ID if available
+      final activePlanId = _ref.read(activePlanProvider);
+
+      final prediction = await repository.predictIntent(
+        partialText: text,
+        activePlanId: activePlanId,
+      );
+
+      // Convert backend prediction to PredictedAction list
+      final typingPredictions = _convertPredictionToActions(prediction, text);
+
+      // Sort predictions by confidence
+      typingPredictions.sort((a, b) => b.confidence.compareTo(a.confidence));
+
+      state = state.copyWith(
+        isTyping: true,
+        currentInput: text,
+        typingPredictions: typingPredictions,
+      );
+    } catch (e) {
+      // Fall back to local classifier on API error
+      debugPrint('Backend prediction failed, using local classifier: $e');
+
+      // Trigger local classification
+      final result = IntentClassifier.classify(text);
+      if (result != null) {
+        onInputChanged(text);
+      }
+    }
+  }
+
+  /// Convert backend prediction response to PredictedAction list
+  List<PredictedAction> _convertPredictionToActions(
+    IntentPredictionResponse prediction,
+    String originalText,
+  ) {
+    final actions = <PredictedAction>[];
+    final intentType = prediction.intentType;
+    final confidence = prediction.confidence;
+    final suggestedActions = prediction.suggestedActions;
+
+    // Map intent type to action configuration
+    final actionConfig = _getActionConfigForIntentType(intentType);
+
+    // Generate actions from backend suggestions
+    for (final actionLabel in suggestedActions) {
+      final config = actionConfig[actionLabel];
+      if (config != null) {
+        actions.add(PredictedAction(
+          label: actionLabel,
+          icon: config['icon'],
+          confidence: confidence,
+          color: config['color'],
+          action: config['action'],
+        ));
+      }
+    }
+
+    // If no actions from suggestions, use defaults
+    if (actions.isEmpty) {
+      actions.addAll(_getDefaultActionsForIntentType(intentType, confidence, originalText));
+    }
+
+    return actions;
+  }
+
+  /// Get action configuration for intent type
+  Map<String, Map<String, dynamic>> _getActionConfigForIntentType(String intentType) {
+    switch (intentType) {
+      case 'task_management':
+        return {
+          '创建任务': {
+            'icon': Icons.add_task_rounded,
+            'color': const Color(0xFF66BB6A),
+            'action': () => _navigateToTaskCreate(),
+          },
+          '设置提醒': {
+            'icon': Icons.notification_add_rounded,
+            'color': const Color(0xFF66BB6A),
+            'action': () => _navigateToTaskCreate(),
+          },
+        };
+      case 'knowledge_query':
+        return {
+          '发送给AI': {
+            'icon': Icons.auto_awesome_rounded,
+            'color': const Color(0xFF42A5F5),
+            'action': () => _sendChatMessage(''),
+          },
+          '查看星图': {
+            'icon': Icons.public_rounded,
+            'color': const Color(0xFF42A5F5),
+            'action': () => _navigateToGalaxy(),
+          },
+        };
+      case 'time_planning':
+        return {
+          '创建计划': {
+            'icon': Icons.edit_calendar_rounded,
+            'color': const Color(0xFFEC407A),
+            'action': () => _navigateToTaskCreate(),
+          },
+          '日历视图': {
+            'icon': Icons.calendar_today_rounded,
+            'color': const Color(0xFFEC407A),
+            'action': _navigateToCalendar,
+          },
+        };
+      case 'learning':
+        return {
+          '开始学习': {
+            'icon': Icons.school_rounded,
+            'color': const Color(0xFFEC407A),
+            'action': () => _sendChatMessage(),
+          },
+          '学习计划': {
+            'icon': Icons.edit_calendar_rounded,
+            'color': const Color(0xFFEC407A),
+            'action': () => _navigateToTaskCreate(),
+          },
+        };
+      case 'reflection':
+        return {
+          '开始复习': {
+            'icon': Icons.replay_rounded,
+            'color': const Color(0xFF5C6BC0),
+            'action': () => _sendChatMessage(),
+          },
+          '错题本': {
+            'icon': Icons.menu_book_rounded,
+            'color': const Color(0xFF5C6BC0),
+            'action': _navigateToErrorBook,
+          },
+        };
+      default:
+        return {
+          '发送给AI': {
+            'icon': Icons.auto_awesome_rounded,
+            'color': const Color(0xFF42A5F5),
+            'action': () => _sendChatMessage(),
+          },
+        };
+    }
+  }
+
+  /// Get default actions for intent type when backend provides no suggestions
+  List<PredictedAction> _getDefaultActionsForIntentType(
+    String intentType,
+    double confidence,
+    String originalText,
+  ) {
+    switch (intentType) {
+      case 'task_management':
+        return [
+          PredictedAction(
+            label: '创建任务',
+            icon: Icons.add_task_rounded,
+            confidence: confidence,
+            color: const Color(0xFF66BB6A),
+            action: () => _navigateToTaskCreate(originalText),
+          ),
+        ];
+      case 'knowledge_query':
+        return [
+          PredictedAction(
+            label: '发送给AI',
+            icon: Icons.auto_awesome_rounded,
+            confidence: confidence,
+            color: const Color(0xFF42A5F5),
+            action: () => _sendChatMessage(originalText),
+          ),
+        ];
+      case 'learning':
+        return [
+          PredictedAction(
+            label: '开始学习',
+            icon: Icons.school_rounded,
+            confidence: confidence,
+            color: const Color(0xFFEC407A),
+            action: () => _sendChatMessage(originalText),
+          ),
+        ];
+      default:
+        return [
+          PredictedAction(
+            label: '发送给AI',
+            icon: Icons.auto_awesome_rounded,
+            confidence: confidence,
+            action: () => _sendChatMessage(originalText),
+          ),
+        ];
+    }
   }
 
   void onInputCleared() {
@@ -349,6 +566,13 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     final context = navigatorKey.currentContext;
     if (context != null) {
       GoRouter.of(context).push('/error-book');
+    }
+  }
+
+  void _navigateToGalaxy() {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      GoRouter.of(context).push('/galaxy');
     }
   }
 

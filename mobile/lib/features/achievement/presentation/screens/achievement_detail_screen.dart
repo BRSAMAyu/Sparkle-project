@@ -83,7 +83,8 @@ class _AchievementDetailScreenState
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildHeader(BuildContext context, AchievementWithProgress achievement) {

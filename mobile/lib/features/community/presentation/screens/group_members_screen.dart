@@ -113,15 +113,15 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                   children: [
                     if (owners.isNotEmpty) ...[
                       _buildSectionHeader('Owner (${owners.length})'),
-                      ...owners.map((m) => _buildMemberTile(m)),
+                      ...owners.map(_buildMemberTile),
                     ],
                     if (admins.isNotEmpty) ...[
                       _buildSectionHeader('Admins (${admins.length})'),
-                      ...admins.map((m) => _buildMemberTile(m)),
+                      ...admins.map(_buildMemberTile),
                     ],
                     if (regularMembers.isNotEmpty) ...[
                       _buildSectionHeader('Members (${regularMembers.length})'),
-                      ...regularMembers.map((m) => _buildMemberTile(m)),
+                      ...regularMembers.map(_buildMemberTile),
                     ],
                   ],
                 );
@@ -156,8 +156,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
+  Widget _buildSectionHeader(String title) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.lg, DS.spacing16, DS.sm),
       child: Text(
         title,
@@ -168,7 +167,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildMemberTile(GroupMemberInfo member) {
     final isOwner = member.role == GroupRole.owner;
@@ -294,7 +292,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                             Text('Demote to Member'),
                           ],
                         ),
-                      ));
+                      ),);
                     } else {
                       items.add(const PopupMenuItem(
                         value: 'promote',
@@ -305,7 +303,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                             Text('Promote to Admin'),
                           ],
                         ),
-                      ));
+                      ),);
                     }
                     items.add(PopupMenuItem(
                       value: 'transfer',
@@ -316,7 +314,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                           Text('Transfer Ownership', style: TextStyle(color: DS.warning)),
                         ],
                       ),
-                    ));
+                    ),);
                   }
 
                   items.add(const PopupMenuDivider());
@@ -330,7 +328,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                         Text('Remove from Group', style: TextStyle(color: DS.error)),
                       ],
                     ),
-                  ));
+                  ),);
 
                   return items;
                 },
@@ -346,8 +344,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     );
   }
 
-  Widget _buildDefaultAvatar(UserBrief user) {
-    return CircleAvatar(
+  Widget _buildDefaultAvatar(UserBrief user) => CircleAvatar(
       backgroundColor: _getFlameColor(user.flameLevel ?? 1),
       child: Text(
         user.displayName.substring(0, 1).toUpperCase(),
@@ -358,7 +355,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         ),
       ),
     );
-  }
 
   Color _getFlameColor(int flamePower) {
     if (flamePower >= 10000) return DS.error;
@@ -367,14 +363,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     return DS.neutral300;
   }
 
-  void _handleMemberAction(GroupMemberInfo member, String action) async {
+  Future<void> _handleMemberAction(GroupMemberInfo member, String action) async {
     switch (action) {
       case 'promote':
         final confirmed = await _showConfirmDialog(
           'Promote ${member.user.displayName}?',
           'This member will become an admin and can manage the group.',
         );
-        if (confirmed == true && mounted) {
+        if ((confirmed ?? false) && mounted) {
           try {
             await ref.read(groupMembersProvider(widget.groupId).notifier).promoteMember(member.user.id);
             if (mounted) {
@@ -390,14 +386,13 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             }
           }
         }
-        break;
 
       case 'demote':
         final confirmed = await _showConfirmDialog(
           'Demote ${member.user.displayName}?',
           'This admin will become a regular member.',
         );
-        if (confirmed == true && mounted) {
+        if ((confirmed ?? false) && mounted) {
           try {
             await ref.read(groupMembersProvider(widget.groupId).notifier).demoteMember(member.user.id);
             if (mounted) {
@@ -413,7 +408,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             }
           }
         }
-        break;
 
       case 'transfer':
         final confirmed = await _showConfirmDialog(
@@ -421,7 +415,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
           'You will become a regular member. This action cannot be undone.',
           isDestructive: true,
         );
-        if (confirmed == true && mounted) {
+        if ((confirmed ?? false) && mounted) {
           try {
             await ref.read(groupMembersProvider(widget.groupId).notifier).transferOwnership(member.user.id);
             if (mounted) {
@@ -438,7 +432,6 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             }
           }
         }
-        break;
 
       case 'kick':
         final confirmed = await _showConfirmDialog(
@@ -446,7 +439,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
           'This member will be removed from the group.',
           isDestructive: true,
         );
-        if (confirmed == true && mounted) {
+        if ((confirmed ?? false) && mounted) {
           try {
             await ref.read(groupMembersProvider(widget.groupId).notifier).kickMember(member.user.id);
             if (mounted) {
@@ -462,12 +455,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             }
           }
         }
-        break;
     }
   }
 
-  Future<bool?> _showConfirmDialog(String title, String message, {bool isDestructive = false}) {
-    return showDialog<bool>(
+  Future<bool?> _showConfirmDialog(String title, String message, {bool isDestructive = false}) => showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
@@ -485,5 +476,4 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         ],
       ),
     );
-  }
 }

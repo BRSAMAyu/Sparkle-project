@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
@@ -8,9 +9,6 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
         taskNotificationSchedulerProvider,
         taskReminderConfigProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
-import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
-    show taskListProvider;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Screen for configuring task reminder settings
 class TaskReminderSettingsScreen extends ConsumerStatefulWidget {

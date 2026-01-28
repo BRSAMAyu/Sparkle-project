@@ -87,6 +87,10 @@ class LeaderboardService:
             return await self._get_weekly_leaderboard(request, current_user_id)
         elif request.type == LeaderboardType.STREAK:
             return await self._get_streak_leaderboard(request, current_user_id)
+        elif request.type == LeaderboardType.PHOTON:
+            return await self._get_photon_leaderboard(request, current_user_id)
+        elif request.type == LeaderboardType.PHOTON_WEEKLY:
+            return await self._get_photon_weekly_leaderboard(request, current_user_id)
         else:
             return await self._get_global_leaderboard(request, current_user_id)
 
@@ -680,6 +684,155 @@ class LeaderboardService:
         return LeaderboardResponse(
             type=LeaderboardType.STREAK,
             title="连胜榜",
+            entries=entries,
+            my_rank=my_rank,
+            my_score=float(my_score),
+            last_updated=datetime.utcnow(),
+            total_participants=len(rows),
+            period=request.period
+        )
+
+    async def _get_photon_leaderboard(
+        self,
+        request: LeaderboardRequest,
+        current_user_id: UUID
+    ) -> LeaderboardResponse:
+        """光子积分排行榜（总余额）"""
+        query = select(
+            User.id,
+            User.username,
+            User.avatar_url,
+            User.photon_balance
+        ).where(
+            User.is_active == True,
+            User.not_deleted_filter(),
+            User.photon_balance.isnot(None),
+            User.photon_balance > 0
+        ).order_by(desc(User.photon_balance))
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # 构建条目
+        entries = []
+        for rank, user_row in enumerate(rows[:request.limit], 1):
+            is_me = user_row.id == current_user_id
+
+            entry = LeaderboardEntry(
+                rank=rank,
+                user_id=user_row.id,
+                username=user_row.username,
+                avatar_url=user_row.avatar_url,
+                score=float(user_row.photon_balance or 0),
+                score_label=f"{user_row.photon_balance or 0} 光子",
+                is_me=is_me,
+                stats={
+                    "photon_balance": user_row.photon_balance or 0
+                },
+                badge=self._get_badge_for_rank(rank)
+            )
+            entries.append(entry)
+
+        # 查找我的排名
+        my_rank = next(
+            (i + 1 for i, user_row in enumerate(rows) if user_row.id == current_user_id),
+            None
+        )
+
+        # 获取我的光子余额
+        my_balance_query = select(User.photon_balance).where(User.id == current_user_id)
+        my_balance_result = await self.db.execute(my_balance_query)
+        my_score = my_balance_result.scalar() or 0
+
+        return LeaderboardResponse(
+            type=LeaderboardType.PHOTON,
+            title="光子积分榜",
+            entries=entries,
+            my_rank=my_rank,
+            my_score=float(my_score),
+            last_updated=datetime.utcnow(),
+            total_participants=len(rows),
+            period=request.period
+        )
+
+    async def _get_photon_weekly_leaderboard(
+        self,
+        request: LeaderboardRequest,
+        current_user_id: UUID
+    ) -> LeaderboardResponse:
+        """本周光子收入排行榜"""
+        from app.models.shop import PhotonTransactionHistory
+
+        # 计算本周开始时间（周一）
+        today = date.today()
+        week_start = datetime.combine(today - timedelta(days=today.weekday()), datetime.min.time())
+
+        # 查询本周所有光子收入记录，按用户聚合
+        query = select(
+            User.id,
+            User.username,
+            User.avatar_url,
+            func.coalesce(func.sum(
+                case(
+                    (PhotonTransactionHistory.amount > 0, PhotonTransactionHistory.amount),
+                    else_=0
+                )
+            ), 0).label("total_income")
+        ).join(
+            PhotonTransactionHistory, PhotonTransactionHistory.user_id == User.id
+        ).where(
+            User.is_active == True,
+            User.not_deleted_filter(),
+            PhotonTransactionHistory.created_at >= week_start
+        ).group_by(
+            User.id, User.username, User.avatar_url
+        ).order_by(desc("total_income"))
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # 构建条目
+        entries = []
+        for rank, user_row in enumerate(rows[:request.limit], 1):
+            is_me = user_row.id == current_user_id
+
+            entry = LeaderboardEntry(
+                rank=rank,
+                user_id=user_row.id,
+                username=user_row.username,
+                avatar_url=user_row.avatar_url,
+                score=float(user_row.total_income),
+                score_label=f"{user_row.total_income} 光子",
+                is_me=is_me,
+                stats={
+                    "weekly_income": int(user_row.total_income)
+                },
+                badge=self._get_badge_for_rank(rank)
+            )
+            entries.append(entry)
+
+        # 查找我的排名和收入
+        my_rank = next(
+            (i + 1 for i, user_row in enumerate(rows) if user_row.id == current_user_id),
+            None
+        )
+
+        # 计算我的本周收入
+        my_income_query = select(func.coalesce(func.sum(
+            case(
+                (PhotonTransactionHistory.amount > 0, PhotonTransactionHistory.amount),
+                else_=0
+            )
+        ), 0)).where(
+            PhotonTransactionHistory.user_id == current_user_id,
+            PhotonTransactionHistory.created_at >= week_start
+        )
+        my_income_result = await self.db.execute(my_income_query)
+        my_score = my_income_result.scalar() or 0
+
+        return LeaderboardResponse(
+            type=LeaderboardType.PHOTON_WEEKLY,
+            title="本周光子收入榜",
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score),

@@ -1,5 +1,6 @@
 /// Golden Tests for Chat Screen
 /// 聊天屏幕Golden测试
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -218,10 +219,6 @@ void main() {
 
 // Mock implementations
 class ChatScreen extends StatelessWidget {
-  final List<ChatMessage> messages;
-  final bool isTyping;
-  final bool showPlanReview;
-  final PlanReviewData? planReviewData;
 
   const ChatScreen({
     super.key,
@@ -230,10 +227,13 @@ class ChatScreen extends StatelessWidget {
     this.showPlanReview = false,
     this.planReviewData,
   });
+  final List<ChatMessage> messages;
+  final bool isTyping;
+  final bool showPlanReview;
+  final PlanReviewData? planReviewData;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Chat')),
       body: Column(
         children: [
@@ -252,10 +252,8 @@ class ChatScreen extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildMessageBubble(ChatMessage msg) {
-    return Container(
+  Widget _buildMessageBubble(ChatMessage msg) => Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
@@ -264,10 +262,8 @@ class ChatScreen extends StatelessWidget {
       ),
       child: Text(msg.content),
     );
-  }
 
-  Widget _buildTypingIndicator() {
-    return const Padding(
+  Widget _buildTypingIndicator() => const Padding(
       padding: EdgeInsets.all(16),
       child: Row(
         children: [
@@ -281,10 +277,8 @@ class ChatScreen extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildPlanReviewCard(PlanReviewData data) {
-    return Container(
+  Widget _buildPlanReviewCard(PlanReviewData data) => Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -306,15 +300,9 @@ class ChatScreen extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class ChatMessage {
-  final String id;
-  final String content;
-  final String role;
-  final DateTime timestamp;
-  final bool isError;
 
   ChatMessage({
     required this.id,
@@ -323,31 +311,35 @@ class ChatMessage {
     required this.timestamp,
     this.isError = false,
   });
+  final String id;
+  final String content;
+  final String role;
+  final DateTime timestamp;
+  final bool isError;
 }
 
 class PlanReviewData {
-  final String planId;
-  final int overallScore;
-  final List<PlanIssue> issues;
 
   PlanReviewData({
     required this.planId,
     required this.overallScore,
     required this.issues,
   });
+  final String planId;
+  final int overallScore;
+  final List<PlanIssue> issues;
 }
 
 class PlanIssue {
-  final IssueSeverity severity;
-  final String message;
 
   PlanIssue({required this.severity, required this.message});
+  final IssueSeverity severity;
+  final String message;
 }
 
 enum IssueSeverity { info, warning, error }
 
-List<ChatMessage> _generateMockMessages(int count) {
-  return List.generate(
+List<ChatMessage> _generateMockMessages(int count) => List.generate(
     count,
     (i) => ChatMessage(
       id: 'msg-$i',
@@ -356,4 +348,3 @@ List<ChatMessage> _generateMockMessages(int count) {
       timestamp: DateTime.now(),
     ),
   );
-}

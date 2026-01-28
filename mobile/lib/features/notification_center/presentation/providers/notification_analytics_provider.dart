@@ -6,10 +6,6 @@ part 'notification_analytics_provider.g.dart';
 
 /// Analytics State
 class NotificationAnalyticsState {
-  final NotificationAnalytics? analytics;
-  final String period;
-  final bool isLoading;
-  final String? error;
 
   const NotificationAnalyticsState({
     this.analytics,
@@ -17,20 +13,22 @@ class NotificationAnalyticsState {
     this.isLoading = false,
     this.error,
   });
+  final NotificationAnalytics? analytics;
+  final String period;
+  final bool isLoading;
+  final String? error;
 
   NotificationAnalyticsState copyWith({
     NotificationAnalytics? analytics,
     String? period,
     bool? isLoading,
     String? error,
-  }) {
-    return NotificationAnalyticsState(
+  }) => NotificationAnalyticsState(
       analytics: analytics ?? this.analytics,
       period: period ?? this.period,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
-  }
 }
 
 /// Notification Analytics Notifier
@@ -41,7 +39,7 @@ class NotificationAnalytics extends _$NotificationAnalytics {
   @override
   NotificationAnalyticsState build() {
     _repository = ref.watch(notificationCenterRepositoryProvider);
-    return const NotificationAnalyticsState(period: '7d');
+    return const NotificationAnalyticsState();
   }
 
   /// Load analytics for a specific period
@@ -79,10 +77,10 @@ class NotificationAnalytics extends _$NotificationAnalytics {
 
 /// Period options
 class AnalyticsPeriod {
-  final String value;
-  final String label;
 
   const AnalyticsPeriod(this.value, this.label);
+  final String value;
+  final String label;
 
   static const List<AnalyticsPeriod> all = [
     AnalyticsPeriod('1d', '1天'),

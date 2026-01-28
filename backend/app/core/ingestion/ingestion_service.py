@@ -89,19 +89,71 @@ class IngestionService:
     def _validate_magic_bytes(self, file_path: str):
         """
         Check if the file header matches its extension to prevent spoofing.
+        Enhanced with comprehensive magic byte validation.
         """
         _, ext = os.path.splitext(file_path)
         ext = ext.lower()
 
         with open(file_path, "rb") as f:
-            header = f.read(4)
+            # 读取前512字节用于魔数检测
+            header = f.read(512)
+            if not header:
+                raise ValueError("Empty file or cannot read file header")
 
+        # 验证魔数
         if ext == ".pdf":
-            if header != b"%PDF":
-                raise ValueError(f"Invalid PDF header: {header}")
-        elif ext in [".docx", ".pptx"]:
-            if header != b"PK\x03\x04":
-                raise ValueError(f"Invalid ZIP/Office header: {header}")
+            # PDF文件以 %PDF- 开头
+            if not header.startswith(b"%PDF-"):
+                raise ValueError(
+                    f"Invalid PDF file: missing PDF magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext in [".docx", ".xlsx", ".pptx"]:
+            # Office文档都是ZIP格式，以PK\x03\x04开头
+            if not header.startswith(b"PK\x03\x04"):
+                raise ValueError(
+                    f"Invalid Office document: missing ZIP magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".png":
+            # PNG以 \x89PNG\r\n\x1a\n 开头
+            png_magic = b'\x89PNG\r\n\x1a\n'
+            if not header.startswith(png_magic):
+                raise ValueError(
+                    f"Invalid PNG file: missing PNG magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext in [".jpg", ".jpeg"]:
+            # JPEG以 \xFF\xD8\xFF 开头
+            if not header.startswith(b'\xFF\xD8\xFF'):
+                raise ValueError(
+                    f"Invalid JPEG file: missing JPEG magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".gif":
+            # GIF以 GIF87a 或 GIF89a 开头
+            if not (header.startswith(b"GIF87a") or header.startswith(b"GIF89a")):
+                raise ValueError(
+                    f"Invalid GIF file: missing GIF magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".webp":
+            # WebP以 RIFF....WEBP 开头
+            if len(header) < 12:
+                raise ValueError("File too short to be a valid WebP")
+            if not header.startswith(b"RIFF") or header[8:12] != b"WEBP":
+                raise ValueError(
+                    f"Invalid WebP file: missing WebP magic bytes. "
+                    f"File may be corrupted or renamed with wrong extension."
+                )
+
+        else:
+            logger.warning(f"No magic byte validation implemented for extension: {ext}")
 
     def _process_pdf(self, path: str, options: Dict[str, Any]) -> List[ExtractedChunk]:
         chunks = []

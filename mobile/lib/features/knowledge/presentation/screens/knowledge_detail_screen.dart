@@ -280,7 +280,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(plan.title),
                             subtitle: Text(
-                                plan.planType == 'sprint' ? '冲刺计划' : '成长计划'),
+                                plan.planType == 'sprint' ? '冲刺计划' : '成长计划',),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               if (plan.planType == 'sprint') {

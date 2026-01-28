@@ -241,35 +241,25 @@ void main() {
 // Mock widgets and providers for testing
 class TaskBoardCard extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
+  Widget build(BuildContext context) => Container();
 }
 
 class AssistantMessageBubble extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
+  Widget build(BuildContext context) => Container();
 }
 
 class KnowledgeGalaxyWidget extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
+  Widget build(BuildContext context) => Container();
 }
 
 class KnowledgeNodeWidget extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
+  Widget build(BuildContext context) => Container();
 }
 
 class ChatMessageList extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
+  Widget build(BuildContext context) => Container();
 }

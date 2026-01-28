@@ -37,6 +37,7 @@ class ChatMessageModel {
     this.traceId,
     this.workflowId,
     this.promptVersion,
+    this.agentCollaboration,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -91,6 +92,13 @@ class ChatMessageModel {
   final String? workflowId;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? promptVersion;
+
+  // Multi-Agent Collaboration Timeline data
+  // Contains workflow type, steps, execution time, etc.
+  // Received from backend when multi-agent mode is used
+  @JsonKey(includeFromJson: true, includeToJson: false)
+  final Map<String, dynamic>? agentCollaboration;
+
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
   ChatMessageModel copyWith({
@@ -116,6 +124,7 @@ class ChatMessageModel {
     String? traceId,
     String? workflowId,
     String? promptVersion,
+    Map<String, dynamic>? agentCollaboration,
   }) =>
       ChatMessageModel(
         id: id ?? this.id,
@@ -140,6 +149,7 @@ class ChatMessageModel {
         traceId: traceId ?? this.traceId,
         workflowId: workflowId ?? this.workflowId,
         promptVersion: promptVersion ?? this.promptVersion,
+        agentCollaboration: agentCollaboration ?? this.agentCollaboration,
       );
 }
 

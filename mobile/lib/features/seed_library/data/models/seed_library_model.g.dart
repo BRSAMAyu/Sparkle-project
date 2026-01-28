@@ -9,21 +9,21 @@ part of 'seed_library_model.dart';
 SeedLibrary _$SeedLibraryFromJson(Map<String, dynamic> json) => SeedLibrary(
       id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
       category: $enumDecode(_$LibraryCategoryEnumMap, json['category']),
       visibility: $enumDecode(_$LibraryVisibilityEnumMap, json['visibility']),
-      ownerId: json['owner_id'] as String?,
       language: json['language'] as String,
-      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
-      extraMetadata: json['extra_metadata'] as Map<String, dynamic>?,
       isOfficial: json['is_official'] as bool,
       isFeatured: json['is_featured'] as bool,
       usageCount: (json['usage_count'] as num).toInt(),
-      qualityScore: (json['quality_score'] as num?)?.toDouble(),
       itemCount: (json['item_count'] as num).toInt(),
       subscriberCount: (json['subscriber_count'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      description: json['description'] as String?,
+      ownerId: json['owner_id'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      extraMetadata: json['extra_metadata'] as Map<String, dynamic>?,
+      qualityScore: (json['quality_score'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
@@ -64,6 +64,9 @@ SeedItem _$SeedItemFromJson(Map<String, dynamic> json) => SeedItem(
       id: json['id'] as String,
       libraryId: json['library_id'] as String,
       itemType: $enumDecode(_$ItemTypeEnumMap, json['item_type']),
+      isActive: json['is_active'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
       title: json['title'] as String?,
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
@@ -72,9 +75,6 @@ SeedItem _$SeedItemFromJson(Map<String, dynamic> json) => SeedItem(
           _$DifficultyLevelEnumMap, json['difficulty_level']),
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       orderIndex: (json['order_index'] as num?)?.toInt(),
-      isActive: json['is_active'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$SeedItemToJson(SeedItem instance) => <String, dynamic>{
@@ -116,13 +116,13 @@ UserLibrarySubscription _$UserLibrarySubscriptionFromJson(
       libraryId: json['library_id'] as String,
       isEnabled: json['is_enabled'] as bool,
       priority: (json['priority'] as num).toInt(),
-      notes: json['notes'] as String?,
       subscribedAt: DateTime.parse(json['subscribed_at'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      notes: json['notes'] as String?,
       lastUsedAt: json['last_used_at'] == null
           ? null
           : DateTime.parse(json['last_used_at'] as String),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$UserLibrarySubscriptionToJson(
@@ -168,9 +168,9 @@ CreateLibraryRequest _$CreateLibraryRequestFromJson(
         Map<String, dynamic> json) =>
     CreateLibraryRequest(
       name: json['name'] as String,
-      description: json['description'] as String?,
       category: $enumDecode(_$LibraryCategoryEnumMap, json['category']),
       visibility: $enumDecode(_$LibraryVisibilityEnumMap, json['visibility']),
+      description: json['description'] as String?,
       language: json['language'] as String? ?? 'zh',
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       extraMetadata: json['extra_metadata'] as Map<String, dynamic>?,

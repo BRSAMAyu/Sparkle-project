@@ -1,10 +1,11 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
-import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
+import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就解锁弹窗
 ///

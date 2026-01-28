@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
+import 'package:sparkle/features/intent/data/models/intent_prediction_response.dart';
 
 /// Intent Repository Provider
 final intentRepositoryProvider = Provider<IntentRepository>((ref) => IntentRepository(ref.read(apiClientProvider)));
@@ -193,5 +194,63 @@ class IntentRepository {
     }
 
     return AnalyzeAndExecuteResponse.fromJson(data);
+  }
+
+  /// Predict intent from partial text input
+  ///
+  /// Calls POST /prediction/intent/predict
+  ///
+  /// This endpoint provides real-time intent prediction as the user types.
+  /// Used by the intent prediction bar in the chat interface.
+  ///
+  /// Request body:
+  /// ```json
+  /// {
+  ///   "partial_text": "创建一个任务",
+  ///   "active_plan_id": "plan_123"
+  /// }
+  /// ```
+  ///
+  /// Response:
+  /// ```json
+  /// {
+  ///   "success": true,
+  ///   "data": {
+  ///     "intent_type": "task_management",
+  ///     "confidence": 0.85,
+  ///     "suggested_actions": ["创建任务", "设置提醒"],
+  ///     "suggested_tools": ["task_create"],
+  ///     "execution_mode": "direct",
+  ///     "mode_confidence": 0.9
+  ///   }
+  /// }
+  /// ```
+  Future<IntentPredictionResponse> predictIntent({
+    required String partialText,
+    String? activePlanId,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.intentPredict,
+      data: {
+        'partial_text': partialText,
+        if (activePlanId != null) 'active_plan_id': activePlanId,
+      },
+    );
+
+    final responseData = response.data;
+    if (responseData == null) {
+      throw Exception('Empty response from intent prediction API');
+    }
+
+    if (responseData['success'] != true) {
+      throw Exception(responseData['error'] ?? 'Intent prediction failed');
+    }
+
+    final data = responseData['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      throw Exception('No data in response from intent prediction API');
+    }
+
+    return IntentPredictionResponse.fromJson(data);
   }
 }

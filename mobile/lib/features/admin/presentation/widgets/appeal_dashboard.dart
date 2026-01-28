@@ -1214,7 +1214,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   trailing: _priorityFilter == p
                       ? const Icon(Icons.check, color: Colors.green)
                       : null,
-                )),
+                ),),
               ListTile(
                 title: const Center(child: Text('清除筛选')),
                 onTap: () {

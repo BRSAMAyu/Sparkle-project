@@ -1,5 +1,6 @@
 /// Golden Tests for Dashboard Screen
 /// Dashboard屏幕Golden测试
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,10 +81,10 @@ void main() {
 
     testGoldens('Dashboard responsive layout - mobile', (tester) async {
       await tester.pumpWidgetBuilder(
-        MaterialApp(
+        const MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(size: Size(375, 667)), // iPhone SE
-            child: const DashboardScreen(),
+            data: MediaQueryData(size: Size(375, 667)), // iPhone SE
+            child: DashboardScreen(),
           ),
         ),
       );
@@ -98,10 +99,10 @@ void main() {
 
     testGoldens('Dashboard responsive layout - tablet', (tester) async {
       await tester.pumpWidgetBuilder(
-        MaterialApp(
+        const MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(size: Size(768, 1024)), // iPad
-            child: const DashboardScreen(),
+            data: MediaQueryData(size: Size(768, 1024)), // iPad
+            child: DashboardScreen(),
           ),
         ),
       );
@@ -141,13 +142,13 @@ void main() {
 
 // Mock classes and types
 class NotificationItem {
-  final String title;
-  final String message;
-  final DateTime timestamp;
 
   NotificationItem({
     required this.title,
     required this.message,
     required this.timestamp,
   });
+  final String title;
+  final String message;
+  final DateTime timestamp;
 }
