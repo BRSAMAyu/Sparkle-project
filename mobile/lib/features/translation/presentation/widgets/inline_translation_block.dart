@@ -186,7 +186,7 @@ class _InlineTranslationBlockState
   Widget _buildError() => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: DS.error.withOpacity(0.1),
+        color: DS.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -209,10 +209,10 @@ class _InlineTranslationBlockState
     return Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: DS.brandPrimary.withOpacity(0.05),
+        color: DS.brandPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: DS.brandPrimary.withOpacity(0.15),
+          color: DS.brandPrimary.withValues(alpha: 0.15),
         ),
       ),
       child: Column(
@@ -224,7 +224,7 @@ class _InlineTranslationBlockState
             style: TextStyle(
               fontSize: 15,
               height: 1.5,
-              color: DS.brandPrimary.withOpacity(0.9),
+              color: DS.brandPrimary.withValues(alpha: 0.9),
             ),
           ),
 
@@ -245,7 +245,7 @@ class _InlineTranslationBlockState
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: DS.brandPrimary.withOpacity(0.15),
+                        color: DS.brandPrimary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

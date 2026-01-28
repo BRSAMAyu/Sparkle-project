@@ -50,7 +50,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                       Theme.of(context).colorScheme.primary,
                     ],
                     begin: Alignment.topLeft,
@@ -72,7 +72,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                         Text(
                           '当前余额',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
@@ -228,7 +228,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
   void _showAmountSelector(int currentBalance) {
     final quickAmounts = [100, 500, 1000, 2000, 5000];
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       builder: (context) {
         return Container(
@@ -275,7 +275,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     final amount = int.parse(_amountController.text);
     final recipientId = _recipientIdController.text;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -323,7 +323,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     try {
       // TODO: Implement actual transfer API call
       // For now, just simulate
-      await Future.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 2));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

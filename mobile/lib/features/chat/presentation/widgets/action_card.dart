@@ -554,7 +554,6 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   void _handleFocusCardAction(BuildContext context, WidgetPayload action) {
     final taskData = action.data['task'] as Map<String, dynamic>?;
-    final duration = (action.data['duration_minutes'] as int?) ?? 25;
 
     // 构建任务 ID 或使用默认的快速专注 ID
     final taskId = taskData?['id']?.toString() ?? 'focus_${DateTime.now().millisecondsSinceEpoch}';

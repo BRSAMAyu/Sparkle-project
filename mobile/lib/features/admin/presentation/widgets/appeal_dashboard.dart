@@ -1233,7 +1233,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
   void _showDecisionDialog(String caseId, AppealDecision decision) {
     final controller = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
           title: Text(decision.label),

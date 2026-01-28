@@ -336,5 +336,5 @@ class _CustomColors {
   final ColorScheme colorScheme;
 
   Color get surface => colorScheme.surface;
-  Color get borderSubtle => colorScheme.outline.withOpacity(0.3);
+  Color get borderSubtle => colorScheme.outline.withValues(alpha: 0.3);
 }

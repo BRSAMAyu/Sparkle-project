@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
-import 'package:sparkle/features/photon/presentation/screens/photon_transfer_screen.dart';
 
 /// Photon Balance Card Widget
 /// 光子余额卡片组件
@@ -24,7 +23,7 @@ class PhotonBalanceCard extends ConsumerWidget {
           () {
             // Navigate to transaction history
             Navigator.of(context).push(
-              MaterialPageRoute(
+              MaterialPageRoute<void>(
                 builder: (context) => const TransactionHistoryScreen(),
               ),
             );
@@ -33,7 +32,7 @@ class PhotonBalanceCard extends ConsumerWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.8),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
               Theme.of(context).colorScheme.primary,
             ],
             begin: Alignment.topLeft,
@@ -42,7 +41,7 @@ class PhotonBalanceCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -57,7 +56,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -76,7 +75,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                     Text(
                       '光子积分',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -95,7 +94,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                       Text(
                         '加载失败',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -121,7 +120,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                   },
                   icon: Icon(
                     Icons.refresh_rounded,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
             ],

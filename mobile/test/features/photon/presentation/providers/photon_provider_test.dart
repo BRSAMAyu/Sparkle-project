@@ -1,21 +1,82 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/photon/data/repositories/photon_repository.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
 
-class MockPhotonRepository extends Mock implements PhotonRepository {}
+class TestPhotonRepository implements PhotonRepository {
+  int getBalanceCalls = 0;
+  int getTransactionHistoryCalls = 0;
+  int getTransactionSummaryCalls = 0;
 
-class MockApiClient extends Mock implements ApiClient {}
+  Future<PhotonBalance> Function()? getBalanceHandler;
+  Future<List<PhotonTransaction>> Function({
+    String? transactionType,
+    int limit,
+    int offset,
+  })? getTransactionHistoryHandler;
+  Future<TransactionSummary> Function({int days})? getTransactionSummaryHandler;
+
+  @override
+  Future<PhotonBalance> getBalance() async {
+    getBalanceCalls += 1;
+    final handler = getBalanceHandler;
+    if (handler != null) {
+      return handler();
+    }
+    throw Exception('No balance handler');
+  }
+
+  @override
+  Future<List<PhotonTransaction>> getTransactionHistory({
+    String? transactionType,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    getTransactionHistoryCalls += 1;
+    final handler = getTransactionHistoryHandler;
+    if (handler != null) {
+      return handler(
+        transactionType: transactionType,
+        limit: limit,
+        offset: offset,
+      );
+    }
+    return [];
+  }
+
+  @override
+  Future<TransactionSummary> getTransactionSummary({int days = 30}) async {
+    getTransactionSummaryCalls += 1;
+    final handler = getTransactionSummaryHandler;
+    if (handler != null) {
+      return handler(days: days);
+    }
+    return TransactionSummary(
+      totalIncome: 0,
+      totalExpense: 0,
+      netChange: 0,
+      transactionCount: 0,
+      byType: const {},
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> transferPhotons({
+    required String recipientId,
+    required int amount,
+    String? message,
+  }) {
+    throw UnimplementedError();
+  }
+}
 
 void main() {
-  late MockPhotonRepository mockRepository;
+  late TestPhotonRepository mockRepository;
   late ProviderContainer container;
 
   setUp(() {
-    mockRepository = MockPhotonRepository();
+    mockRepository = TestPhotonRepository();
     container = ProviderContainer(
       overrides: [
         photonRepositoryProvider.overrideWithValue(mockRepository),
@@ -35,29 +96,28 @@ void main() {
         updatedAt: DateTime(2024, 1, 28),
       );
 
-      when(mockRepository.getBalance())
-          .thenAnswer((_) async => balance);
+      mockRepository.getBalanceHandler = () async => balance;
 
       // Read provider to trigger initialization
-      final state = container.read(photonBalanceProvider);
+      container.read(photonBalanceProvider);
+      await container.read(photonBalanceProvider.notifier).loadBalance();
 
-      // Wait for async operation
-      await Future.delayed(Duration.zero);
+      final state = container.read(photonBalanceProvider);
 
       expect(state.isLoading, isFalse);
       expect(state.balance, balance);
       expect(state.error, isNull);
 
-      verify(mockRepository.getBalance()).called(1);
+      expect(mockRepository.getBalanceCalls, 2);
     });
 
     test('handles load errors gracefully', () async {
-      when(mockRepository.getBalance())
-          .thenThrow(Exception('Network error'));
+      mockRepository.getBalanceHandler = () async {
+        throw Exception('Network error');
+      };
 
       container.read(photonBalanceProvider);
-
-      await Future.delayed(Duration.zero);
+      await container.read(photonBalanceProvider.notifier).loadBalance();
 
       final state = container.read(photonBalanceProvider);
 
@@ -79,18 +139,14 @@ void main() {
         updatedAt: DateTime(2024, 1, 28, 11, 0),
       );
 
-      when(mockRepository.getBalance())
-          .thenAnswer((_) async => initialBalance);
+      mockRepository.getBalanceHandler = () async => initialBalance;
 
       container.read(photonBalanceProvider);
-      await Future.delayed(Duration.zero);
+      await container.read(photonBalanceProvider.notifier).loadBalance();
 
-      when(mockRepository.getBalance())
-          .thenAnswer((_) async => updatedBalance);
+      mockRepository.getBalanceHandler = () async => updatedBalance;
 
       await container.read(photonBalanceProvider.notifier).refreshBalance();
-
-      await Future.delayed(Duration.zero);
 
       final state = container.read(photonBalanceProvider);
 
@@ -121,32 +177,38 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getTransactionHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => transactions);
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return transactions;
+      };
 
       container.read(photonTransactionsProvider);
-
-      await Future.delayed(Duration.zero);
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
 
       final state = container.read(photonTransactionsProvider);
 
       expect(state.isLoading, isFalse);
       expect(state.transactions.length, 2);
       expect(state.transactions[0].amount, 100);
-      expect(state.hasMore, isTrue); // Default behavior
+      expect(state.hasMore, isFalse);
     });
 
     test('loads more transactions when scrolling', () async {
-      final firstPage = [
-        PhotonTransaction(
-          id: 'tx-1',
+      final firstPage = List.generate(
+        20,
+        (index) => PhotonTransaction(
+          id: 'tx-${index + 1}',
           transactionType: PhotonTransactionType.grantAchievement,
           amount: 100,
           balanceBefore: 0,
           balanceAfter: 100,
           createdAt: DateTime(2024, 1, 28),
         ),
-      ];
+      );
 
       final secondPage = [
         PhotonTransaction(
@@ -159,23 +221,28 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getTransactionHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => firstPage);
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        if (offset == 0) {
+          return firstPage;
+        }
+        return secondPage;
+      };
 
       container.read(photonTransactionsProvider);
-      await Future.delayed(Duration.zero);
-
-      when(mockRepository.getTransactionHistory(limit: 20, offset: 1))
-          .thenAnswer((_) async => secondPage);
-
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
       await container.read(photonTransactionsProvider.notifier).loadTransactions();
 
       await Future.delayed(Duration.zero);
 
       final state = container.read(photonTransactionsProvider);
 
-      expect(state.transactions.length, greaterThan(1));
-      expect(state.currentOffset, greaterThan(0));
+      expect(state.transactions.length, 21);
+      expect(state.currentOffset, 21);
     });
 
     test('refresh clears and reloads transactions', () async {
@@ -190,11 +257,17 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getTransactionHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => transactions);
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return transactions;
+      };
 
       container.read(photonTransactionsProvider);
-      await Future.delayed(Duration.zero);
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
 
       final stateBeforeRefresh = container.read(photonTransactionsProvider);
       final txCountBeforeRefresh = stateBeforeRefresh.transactions.length;
@@ -206,16 +279,21 @@ void main() {
       final stateAfterRefresh = container.read(photonTransactionsProvider);
 
       expect(stateAfterRefresh.transactions.length, txCountBeforeRefresh);
-      expect(stateAfterRefresh.currentOffset, 0);
+      expect(stateAfterRefresh.currentOffset, 1);
     });
 
     test('handles empty transaction list', () async {
-      when(mockRepository.getTransactionHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => []);
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return [];
+      };
 
       container.read(photonTransactionsProvider);
-
-      await Future.delayed(Duration.zero);
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
 
       final state = container.read(photonTransactionsProvider);
 
@@ -238,19 +316,18 @@ void main() {
         },
       );
 
-      when(mockRepository.getTransactionSummary(days: 30))
-          .thenAnswer((_) async => summary);
+      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async {
+        return summary;
+      };
 
-      final summaryFuture = container.read(transactionSummaryProvider);
-
-      final result = await summaryFuture;
+      final result = await container.read(transactionSummaryProvider.future);
 
       expect(result.totalIncome, 500);
       expect(result.totalExpense, 150);
       expect(result.netChange, 350);
       expect(result.transactionCount, 10);
 
-      verify(mockRepository.getTransactionSummary(days: 30)).called(1);
+      expect(mockRepository.getTransactionSummaryCalls, 1);
     });
 
     test('caches summary result', () async {
@@ -262,19 +339,19 @@ void main() {
         byType: {},
       );
 
-      when(mockRepository.getTransactionSummary(days: 30))
-          .thenAnswer((_) async => summary);
+      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async {
+        return summary;
+      };
+
+      final sub = container.listen(transactionSummaryProvider, (_, __) {});
 
       // First read
-      container.read(transactionSummaryProvider);
-      await Future.delayed(Duration.zero);
-
+      await container.read(transactionSummaryProvider.future);
       // Second read should use cache
-      container.read(transactionSummaryProvider);
-      await Future.delayed(Duration.zero);
+      await container.read(transactionSummaryProvider.future);
 
-      // Should only call repository once
-      verify(mockRepository.getTransactionSummary(days: 30)).called(1);
+      expect(mockRepository.getTransactionSummaryCalls, 1);
+      sub.close();
     });
   });
 
@@ -360,7 +437,7 @@ void main() {
   });
 
   group('Provider Container Lifecycle', () {
-    test('disposes resources properly', () {
+    test('disposes resources properly', () async {
       final container = ProviderContainer(
         overrides: [
           photonRepositoryProvider.overrideWithValue(mockRepository),
@@ -370,6 +447,8 @@ void main() {
       // Read providers to initialize them
       container.read(photonBalanceProvider);
       container.read(photonTransactionsProvider);
+
+      await Future.delayed(Duration.zero);
 
       // Should not throw
       expect(() => container.dispose(), returnsNormally);

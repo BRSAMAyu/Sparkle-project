@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart';
 
 /// Notification Analytics Screen
@@ -71,7 +72,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildContent(analytics) => SingleChildScrollView(
+  Widget _buildContent(NotificationAnalytics analytics) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: ContentConstraint(
         child: Column(
@@ -99,7 +100,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildSummarySection(summary) => Column(
+  Widget _buildSummarySection(NotificationAnalyticsSummary summary) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -131,7 +132,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -160,7 +161,10 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildTypeDistributionSection(byType) => Column(
+  Widget _buildTypeDistributionSection(
+    Map<String, NotificationTypeStats> byType,
+  ) =>
+      Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -168,7 +172,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        ...byType.entries.map((entry) {
+        ...byType.entries.map((MapEntry<String, NotificationTypeStats> entry) {
           final stats = entry.value;
           return _buildTypeStatCard(
             entry.key == 'system' ? '系统通知' : '干预通知',
@@ -187,7 +191,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -247,7 +251,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildTrendsSection(trends) => Column(
+  Widget _buildTrendsSection(List<NotificationTrendData> trends) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -262,7 +266,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: _buildTrendChart(trends),
@@ -270,12 +274,13 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ],
     );
 
-  Widget _buildTrendChart(trends) {
+  Widget _buildTrendChart(List<NotificationTrendData> trends) {
     if (trends.isEmpty) {
       return const Center(child: Text('暂无趋势数据'));
     }
 
-    final maxValue = trends.map((t) => t.sent).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxValue =
+        trends.map((t) => t.sent).reduce((a, b) => a > b ? a : b).toDouble();
 
     return CustomPaint(
       size: const Size(double.infinity, double.infinity),
@@ -283,7 +288,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildHourlyDistributionSection(distribution) => Column(
+  Widget _buildHourlyDistributionSection(List<int> distribution) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -298,7 +303,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: _buildHourlyChart(distribution),
@@ -329,7 +334,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
               decoration: BoxDecoration(
                 color: index % 6 == 0
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    : Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -348,9 +353,8 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
 
 /// Custom painter for trend chart
 class _TrendChartPainter extends CustomPainter {
-
   _TrendChartPainter(this.trends, this.maxValue);
-  final List trends;
+  final List<NotificationTrendData> trends;
   final double maxValue;
 
   @override
@@ -367,7 +371,7 @@ class _TrendChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final fillPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.2)
+      ..color = Colors.blue.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
 
     final points = <Offset>[];

@@ -84,43 +84,24 @@ class LocalTranslationRepository {
       case TranslationSortOrder.newestFirst:
         final tempRecords = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords.cast<TranslationRecord>().reversed.toList();
+        break;
       case TranslationSortOrder.oldestFirst:
         records = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
+        break;
       case TranslationSortOrder.highestRating:
         final tempRecords3 = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords3.cast<TranslationRecord>().reversed.toList();
+        break;
       case TranslationSortOrder.lowestRating:
         records = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        break;
       case TranslationSortOrder.mostViewed:
         final tempRecords5 = await _collection.where().sortByViewCount().thenByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords5.cast<TranslationRecord>().reversed.toList();
+        break;
     }
 
     return records.map(_toHistoryItem).toList();
-  }
-
-  /// Build query based on filter - returns the collection filter builder
-  dynamic _buildFilterQuery(TranslationFilter filter) {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-
-    switch (filter) {
-      case TranslationFilter.favorites:
-        return _collection
-            .filter()
-            .isFavoritedEqualTo(true);
-      case TranslationFilter.highRating:
-        return _collection
-            .filter()
-            .ratingGreaterThan(4);
-      case TranslationFilter.recent:
-        return _collection
-            .filter()
-            .createdAtGreaterThan(weekAgo);
-      case TranslationFilter.all:
-      default:
-        return _collection.filter();
-    }
   }
 
   /// Search translation history

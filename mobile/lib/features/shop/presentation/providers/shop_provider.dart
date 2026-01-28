@@ -200,8 +200,8 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
     }
   }
 
-  void refresh() {
-    loadPurchaseHistory(refresh: true);
+  Future<void> refresh() async {
+    await loadPurchaseHistory(refresh: true);
   }
 }
 
@@ -289,8 +289,8 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
     }
   }
 
-  void refresh() {
-    loadInventory();
+  Future<void> refresh() async {
+    await loadInventory();
   }
 }
 

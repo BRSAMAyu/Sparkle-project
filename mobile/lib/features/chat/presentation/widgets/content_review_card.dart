@@ -261,9 +261,7 @@ class ContentReviewCard extends StatefulWidget {
 
 class _ContentReviewCardState extends State<ContentReviewCard>
     with TickerProviderStateMixin {
-  late AnimationController _shimmerController;
   late AnimationController _slideInController;
-  late Animation<double> _shimmerAnimation;
   late Animation<Offset> _slideInAnimation;
 
   bool _isExpanded = true;
@@ -271,14 +269,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   @override
   void initState() {
     super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat();
-    _shimmerAnimation = Tween<double>(begin: -2.0, end: 2.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
-
     _slideInController = AnimationController(
       vsync: this,
       duration: SparkleMotion.normal,
@@ -292,7 +282,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
 
   @override
   void dispose() {
-    _shimmerController.dispose();
     _slideInController.dispose();
     super.dispose();
   }
@@ -354,7 +343,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   Widget build(BuildContext context) {
     final color = _getDecisionColor();
     final gradient = _getDecisionGradient();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // 如果已通过且折叠，显示简化版本
     if (widget.collapsed && widget.review.passed) {
@@ -1095,7 +1083,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         : 'failed';
     final newDecision = currentDecision == 'passed' ? 'failed' : 'passed';
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1182,7 +1170,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       '建议不可行',
     ];
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

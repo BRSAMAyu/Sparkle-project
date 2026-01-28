@@ -125,7 +125,7 @@ RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
     Counter,
     'sparkle_response_feedback_ingested_total',
     'Total response feedback ingested',
-    ['type']  # type: up, down
+    ['feedback_type']  # values: up, down
 )
 
 RESPONSE_FEEDBACK_DEDUPE_TOTAL = get_or_create_metric(
@@ -158,6 +158,7 @@ FEEDBACK_TO_EFFECT_SECONDS = get_or_create_metric(
 
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
+    """Decorator to track function execution latency and record metrics."""
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -165,7 +166,7 @@ def track_latency(module, method):
             start_time = time.time()
             span = trace.get_current_span()
             trace_id = format(span.get_span_context().trace_id, '032x') if span else "n/a"
-            
+
             try:
                 result = await func(*args, **kwargs)
                 REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
@@ -179,6 +180,31 @@ def track_latency(module, method):
             finally:
                 latency = time.time() - start_time
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
+
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            start_time = time.time()
+
+            try:
+                result = func(*args, **kwargs)
+                REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
+                return result
+            except Exception as e:
+                from loguru import logger
+                logger.error(f"Error in {module}.{method}: {e}")
+                REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
+                raise
+            finally:
+                latency = time.time() - start_time
+                REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
+
+        # Return async wrapper if func is async, else sync wrapper
+        import asyncio
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+    return decorator
 
 
 # ============ Phase 3: Circuit Breaker & Collaboration Metrics ============

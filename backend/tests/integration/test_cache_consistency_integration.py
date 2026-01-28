@@ -500,7 +500,7 @@ class TestCachePerformance:
         redis_client: redis.Redis
     ):
         """Test concurrent cache access"""
-        async def cache_access worker_id: int:
+        async def cache_access(worker_id: int):
             key = f"test:concurrent:{worker_id}"
             value = {"worker": worker_id, "data": "test"}
             await redis_client.set(key, json.dumps(value), ex=60)

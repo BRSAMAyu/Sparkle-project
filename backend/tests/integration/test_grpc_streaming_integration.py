@@ -58,7 +58,7 @@ async def test_user(db: AsyncSession) -> User:
 
 
 @pytest.fixture
-def grpc_channel():
+async def grpc_channel():
     """Create gRPC channel to Python server"""
     import grpc
     import os

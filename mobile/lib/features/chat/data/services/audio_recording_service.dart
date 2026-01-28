@@ -57,7 +57,7 @@ class AudioRecordingService {
         (message) {
           _handleWebSocketMessage(message, onTranscription, onError, onCompleted);
         },
-        onError: (error) {
+        onError: (Object error) {
           _logger.e('WebSocket error: $error');
           onError('WebSocket连接失败: $error');
           stopRecording();
@@ -85,7 +85,7 @@ class AudioRecordingService {
             _sendAudioData(audioData);
           }
         },
-        onError: (error) {
+        onError: (Object error) {
           _logger.e('Audio stream error: $error');
           onError('音频录制失败: $error');
           stopRecording();

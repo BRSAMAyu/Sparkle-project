@@ -263,11 +263,6 @@ final dayTasksProvider =
   }
 
   // Fetch all tasks for the month and filter by date
-  final taskRepo = ref.read(taskRepositoryProvider);
-  final now = DateTime.now();
-  final startOfMonth = DateTime(now.year, now.month);
-  final endOfMonth = DateTime(now.year, now.month + 1, 0);
-
   // This is a synchronous provider that depends on async data
   // The async task loading is handled by taskCalendarProvider
   // For now, we'll use the cached data from the repository if available

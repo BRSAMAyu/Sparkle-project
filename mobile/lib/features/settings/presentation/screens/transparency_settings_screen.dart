@@ -34,7 +34,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 ),
                 value: prefs.enabled,
                 onChanged: (value) {
-                  ref.read(transparencyPreferencesProvider.notifier).setEnabled(value);
+                  ref.read(transparencyPreferencesNotifierProvider).setEnabled(value);
                 },
               ),
             ),
@@ -60,7 +60,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showTokenUsage,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowTokenUsage(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowTokenUsage(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -72,7 +72,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showAgentSwitching,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowAgentSwitching(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowAgentSwitching(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -84,7 +84,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showReasoningSteps,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowReasoningSteps(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowReasoningSteps(value);
                       },
                     ),
                   ],

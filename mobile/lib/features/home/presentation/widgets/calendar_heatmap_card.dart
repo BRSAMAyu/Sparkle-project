@@ -38,7 +38,6 @@ class CalendarHeatmapCard extends ConsumerWidget {
 
     // Only load if the current month's data hasn't been loaded yet
     // This prevents unnecessary reloads on every rebuild
-    final currentMonthKey = DateTime(now.year, now.month);
     final hasCurrentMonthData = calendarState.taskSummaries.keys.any((date) =>
         date.year == now.year && date.month == now.month,);
     if (!hasCurrentMonthData) {

@@ -44,7 +44,8 @@ class PhotonService:
         self,
         user_id: str,
         amount: int,
-        delete_cache: bool = True
+        delete_cache: bool = True,
+        lock_for_update: bool = True,
     ) -> tuple[int, int, User]:
         """
         内部方法：更新用户光子余额（不提交事务）
@@ -59,6 +60,8 @@ class PhotonService:
         """
         # 获取用户
         query = select(User).where(User.id == user_id)
+        if lock_for_update:
+            query = query.with_for_update()
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()
 
@@ -513,7 +516,7 @@ class PhotonService:
 
 
 # 全局单例获取函数（需要在有 db session 的情况下使用）
-async def get_photon_service(db: AsyncSession) -> PhotonService:
+def get_photon_service(db: AsyncSession) -> PhotonService:
     """
     获取光子积分服务实例
 

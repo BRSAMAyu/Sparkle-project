@@ -55,7 +55,7 @@ class FocusStatsChart extends StatelessWidget {
   }
 }
 
-enum _ChartType { bar, line }
+enum _ChartType { bar }
 
 class _BarChart extends StatelessWidget {
   const _BarChart({

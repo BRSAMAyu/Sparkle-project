@@ -25,7 +25,7 @@ class LeaderboardRepository {
       if (groupId != null) 'group_id': groupId,
     };
 
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<Map<String, dynamic>>(
       '/leaderboards',
       queryParameters: queryParams,
     );
@@ -47,7 +47,7 @@ class LeaderboardRepository {
       if (period != null) 'period': period.value,
     };
 
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<Map<String, dynamic>>(
       '/leaderboards/my-rank',
       queryParameters: queryParams,
     );
@@ -75,7 +75,7 @@ class LeaderboardRepository {
 
   /// Get top three for podium display
   Future<List<LeaderboardEntry>> getTopThree(LeaderboardType type) async {
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<Map<String, dynamic>>(
       '/leaderboards/top-three/${type.value}',
     );
 
@@ -98,7 +98,7 @@ class LeaderboardRepository {
 
   /// Get leaderboard summary
   Future<Map<LeaderboardType, LeaderboardData>> getSummary() async {
-    final response = await _apiClient.get('/leaderboards/summary');
+    final response = await _apiClient.get<Map<String, dynamic>>('/leaderboards/summary');
 
     if (response.data['success'] == true) {
       final data = response.data['data'] as Map<String, dynamic>;
@@ -124,7 +124,7 @@ class LeaderboardRepository {
       if (type != null) 'type': type.value,
     };
 
-    final response = await _apiClient.post(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '/leaderboards/refresh-cache',
       queryParameters: queryParams,
     );

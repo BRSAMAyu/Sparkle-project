@@ -90,7 +90,7 @@ class TranslationDrawer extends ConsumerWidget {
     super.key,
   });
 
-  final Function(TranslationHistoryItem)? onSaveToKnowledge;
+  final void Function(TranslationHistoryItem)? onSaveToKnowledge;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -275,7 +275,7 @@ class TranslationDrawer extends ConsumerWidget {
   }
 
   void _showFullTextDialog(BuildContext context, TranslationHistoryItem item) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${item.sourceLang} → ${item.targetLang}'),
@@ -328,7 +328,7 @@ class TranslationDrawer extends ConsumerWidget {
   }
 
   void _showClearConfirmation(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('清空翻译历史'),

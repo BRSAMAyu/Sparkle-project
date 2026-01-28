@@ -103,8 +103,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Use standard Matrix4 methods to avoid deprecation warnings
     // T * S transformation
     _transformationController.value = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(initialScale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(initialScale, initialScale, 1, 1);
   }
 
   void _recenterForResize({
@@ -123,8 +123,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final ty = newSize.height / 2 - canvasPoint.dy * scale;
 
     _transformationController.value = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(scale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
   }
 
   @override
@@ -467,63 +467,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
-  void _animateToBounds(Rect bounds) {
-    if (bounds.isEmpty) return;
-    final screenSize = MediaQuery.of(context).size;
-    final padded = bounds.inflate(80);
-
-    final targetWidth = padded.width;
-    final targetHeight = padded.height;
-    if (targetWidth <= 0 || targetHeight <= 0) return;
-
-    final scaleX = screenSize.width / targetWidth;
-    final scaleY = screenSize.height / targetHeight;
-    var targetScale = scaleX < scaleY ? scaleX : scaleY;
-    final galaxyState = ref.read(galaxyProvider);
-    final minScale =
-        galaxyState.aggregationLevel == AggregationLevel.universe ? 0.1 : 0.15;
-    targetScale = targetScale.clamp(minScale, 1.5);
-
-    final canvasCenter = galaxyState.canvasCenter;
-    final centeredBounds = padded.shift(Offset(canvasCenter, canvasCenter));
-    final boundsCenter = centeredBounds.center;
-
-    final tx = screenSize.width / 2 - boundsCenter.dx * targetScale;
-    final ty = screenSize.height / 2 - boundsCenter.dy * targetScale;
-
-    final targetMatrix = Matrix4.identity()..setTranslationRaw(tx, ty, 0.0);
-    targetMatrix[0] = targetScale;
-    targetMatrix[5] = targetScale;
-    targetMatrix[10] = 1.0;
-
-    final controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _transientControllers.add(controller);
-
-    final animation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: targetMatrix,
-    ).animate(
-      CurvedAnimation(
-        parent: controller,
-        curve: Curves.easeInOutCubic,
-      ),
-    );
-
-    animation.addListener(() {
-      _transformationController.value = animation.value;
-    });
-
-    controller.forward().whenComplete(() {
-      if (_isDisposing) return;
-      if (_transientControllers.remove(controller)) {
-        controller.dispose();
-      }
-    });
-  }
-
   void _resetToInitialView() {
     final size = MediaQuery.of(context).size;
     if (size.width <= 0 || size.height <= 0) return;
@@ -533,8 +476,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final ty = size.height / 2 - _canvasCenter * targetScale;
 
     final targetMatrix = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(targetScale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(targetScale, targetScale, 1, 1);
 
     final controller = AnimationController(
       vsync: this,
@@ -882,8 +825,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 final tx = size.width / 2 - canvasCenter * targetScale;
                 final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
-                  ..translate(tx, ty)
-                  ..scale(targetScale);
+                  ..translateByDouble(tx, ty, 0, 1)
+                  ..scaleByDouble(targetScale, targetScale, 1, 1);
 
                 final animation = Matrix4Tween(
                   begin: startMatrix,

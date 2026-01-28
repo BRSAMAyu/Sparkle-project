@@ -170,48 +170,6 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _subSection(String title, List<String> items) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePrimaryElevated,
-          borderRadius: DS.borderRadius12,
-          boxShadow: DS.shadowSm,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.textSecondary,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              if (items.isEmpty)
-                Text(
-                  '暂无数据',
-                  style: TextStyle(color: DS.neutral500),
-                )
-              else
-                ...items.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.spacing6),
-                    child: Text(
-                      '• $item',
-                      style: TextStyle(color: DS.textPrimary),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-
   Widget _subSectionList(String title, List<Widget> items) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing16),
       child: DecoratedBox(
@@ -298,24 +256,6 @@ class UserPersonaScreen extends ConsumerWidget {
           ),
       ],
     );
-  }
-
-  List<String> _formatCapabilities(Map<String, dynamic> caps) {
-    if (caps.isEmpty) return [];
-    return caps.entries.map((e) => '${e.key}: ${e.value}').toList();
-  }
-
-  String _formatPattern(Map<String, dynamic> item) {
-    final name = item['name']?.toString() ?? 'pattern';
-    final confidence = item['confidence']?.toString() ?? '';
-    return confidence.isEmpty ? name : '$name (置信度 $confidence)';
-  }
-
-  String _formatFragment(Map<String, dynamic> item) {
-    final content = item['content']?.toString() ?? '';
-    final source = item['source_type']?.toString() ?? '';
-    if (source.isEmpty) return content;
-    return '$content [$source]';
   }
 
   String _formatValue(dynamic value) {

@@ -27,7 +27,6 @@ class BackgroundTaskState {
       case BackgroundTaskFilter.failed:
         return tasks.where((t) => t.isFailed).toList();
       case BackgroundTaskFilter.all:
-      default:
         return tasks;
     }
   }

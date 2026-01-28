@@ -225,8 +225,8 @@ class _TransactionItem extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isIncome
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.orange.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(

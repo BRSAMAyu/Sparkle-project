@@ -22,12 +22,12 @@ class ShopItemCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _getRarityColor(item.rarity).withOpacity(0.5),
+            color: _getRarityColor(item.rarity).withValues(alpha: 0.5),
             width: item.isOwned ? 0 : 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -44,7 +44,7 @@ class ShopItemCard extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: _getRarityColor(item.rarity).withOpacity(0.1),
+                      color: _getRarityColor(item.rarity).withValues(alpha: 0.1),
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(14),
                       ),

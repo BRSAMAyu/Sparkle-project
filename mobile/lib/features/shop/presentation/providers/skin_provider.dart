@@ -107,9 +107,9 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
 
 /// 皮肤Provider
 final skinProvider = StateNotifierProvider<SkinNotifier, Map<String, dynamic>?>((ref) {
-  final themeManager = ref.watch(themeManagerProvider);
-  final shopRepository = ref.watch(shopRepositoryProvider);
-  final authNotifier = ref.watch(authProvider.notifier);
+  final themeManager = ref.watch<ThemeManager>(themeManagerProvider);
+  final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
+  final authNotifier = ref.watch<AuthNotifier>(authProvider.notifier);
 
   return SkinNotifier(
     themeManager,

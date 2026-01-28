@@ -3,11 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
-    show
-        TaskNotificationScheduler,
-        TaskReminderConfig,
-        taskNotificationSchedulerProvider,
-        TaskReminderConfig;
+    show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart' show taskReminderConfigProvider;
 

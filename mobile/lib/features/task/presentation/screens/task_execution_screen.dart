@@ -27,7 +27,6 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
 
 class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
-  bool _isTimerRunning = false;
   bool _showCelebration = false;
   TaskCompletionResult? _completionResult;
 

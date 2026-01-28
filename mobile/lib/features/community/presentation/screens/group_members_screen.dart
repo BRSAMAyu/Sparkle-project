@@ -345,7 +345,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
   }
 
   Widget _buildDefaultAvatar(UserBrief user) => CircleAvatar(
-      backgroundColor: _getFlameColor(user.flameLevel ?? 1),
+      backgroundColor: _getFlameColor(user.flameLevel),
       child: Text(
         user.displayName.substring(0, 1).toUpperCase(),
         style: TextStyle(

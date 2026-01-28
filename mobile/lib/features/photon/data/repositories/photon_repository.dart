@@ -26,19 +26,6 @@ class PhotonRepository {
     throw Exception('Unexpected response format');
   }
 
-  List<dynamic> _unwrapResponseList(dynamic data) {
-    if (data is List) {
-      return data;
-    }
-    if (data is Map<String, dynamic>) {
-      final listData = data['data'];
-      if (listData is List) {
-        return listData;
-      }
-    }
-    throw Exception('Unexpected response format, expected List');
-  }
-
   /// Get photon balance
   /// 获取光子余额
   Future<PhotonBalance> getBalance() async {

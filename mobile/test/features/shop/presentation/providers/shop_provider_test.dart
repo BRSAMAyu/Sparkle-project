@@ -1,21 +1,162 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
-class MockShopRepository extends Mock implements ShopRepository {}
+class TestShopRepository implements ShopRepository {
+  int getShopItemsCalls = 0;
+  int purchaseItemCalls = 0;
+  int getPurchaseHistoryCalls = 0;
+  int getInventoryCalls = 0;
+  int equipItemCalls = 0;
+  int getOwnedItemsCalls = 0;
 
-class MockApiClient extends Mock implements ApiClient {}
+  Future<List<ShopItem>> Function({
+    String? itemType,
+    String? category,
+    String? rarity,
+    bool onlyAvailable,
+  })? getShopItemsHandler;
+  Future<Map<String, dynamic>> Function(String itemId)? purchaseItemHandler;
+  Future<List<ShopPurchase>> Function({int limit, int offset})?
+      getPurchaseHistoryHandler;
+  Future<Map<String, List<InventoryItem>>> Function()? getInventoryHandler;
+  Future<Map<String, dynamic>> Function({
+    required String itemType,
+    String? itemId,
+  })? equipItemHandler;
+  Future<List<String>> Function({String? itemType})? getOwnedItemsHandler;
+
+  @override
+  Future<List<ShopItem>> getShopItems({
+    String? itemType,
+    String? category,
+    String? rarity,
+    bool onlyAvailable = true,
+  }) async {
+    getShopItemsCalls += 1;
+    final handler = getShopItemsHandler;
+    if (handler != null) {
+      return handler(
+        itemType: itemType,
+        category: category,
+        rarity: rarity,
+        onlyAvailable: onlyAvailable,
+      );
+    }
+    return [];
+  }
+
+  @override
+  Future<ShopItem> getShopItemDetail(String itemId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, dynamic>> purchaseItem(String itemId) async {
+    purchaseItemCalls += 1;
+    final handler = purchaseItemHandler;
+    if (handler != null) {
+      return handler(itemId);
+    }
+    return {'success': true};
+  }
+
+  @override
+  Future<List<ShopPurchase>> getPurchaseHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    getPurchaseHistoryCalls += 1;
+    final handler = getPurchaseHistoryHandler;
+    if (handler != null) {
+      return handler(limit: limit, offset: offset);
+    }
+    return [];
+  }
+
+  @override
+  Future<Map<String, List<InventoryItem>>> getInventory() async {
+    getInventoryCalls += 1;
+    final handler = getInventoryHandler;
+    if (handler != null) {
+      return handler();
+    }
+    return {
+      'skins': [],
+      'titles': [],
+      'consumables': [],
+      'boosts': [],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> equipItem({
+    required String itemType,
+    String? itemId,
+  }) async {
+    equipItemCalls += 1;
+    final handler = equipItemHandler;
+    if (handler != null) {
+      return handler(itemType: itemType, itemId: itemId);
+    }
+    return {'success': true};
+  }
+
+  @override
+  Future<List<String>> getOwnedItems({String? itemType}) async {
+    getOwnedItemsCalls += 1;
+    final handler = getOwnedItemsHandler;
+    if (handler != null) {
+      return handler(itemType: itemType);
+    }
+    return [];
+  }
+
+  @override
+  Future<Map<String, dynamic>> useConsumable(String consumableId,
+      {int quantity = 1}) {
+    throw UnimplementedError();
+  }
+}
+
+ShopItem buildShopItem({
+  required String id,
+  required String name,
+  required ShopItemType itemType,
+  String category = 'skins',
+  int pricePhotons = 100,
+  ItemRarity rarity = ItemRarity.common,
+  int sortOrder = 0,
+  bool hasDiscount = false,
+  bool isInStock = true,
+  bool isOwned = false,
+  bool isAvailable = true,
+  bool isLimited = false,
+}) {
+  return ShopItem(
+    id: id,
+    name: name,
+    itemType: itemType,
+    category: category,
+    pricePhotons: pricePhotons,
+    rarity: rarity,
+    sortOrder: sortOrder,
+    hasDiscount: hasDiscount,
+    isInStock: isInStock,
+    isOwned: isOwned,
+    isAvailable: isAvailable,
+    isLimited: isLimited,
+  );
+}
 
 void main() {
-  late MockShopRepository mockRepository;
+  late TestShopRepository mockRepository;
   late ProviderContainer container;
 
   setUp(() {
-    mockRepository = MockShopRepository();
+    mockRepository = TestShopRepository();
     container = ProviderContainer(
       overrides: [
         shopRepositoryProvider.overrideWithValue(mockRepository),
@@ -30,19 +171,14 @@ void main() {
   group('ShopItemsProvider', () {
     test('loads shop items on initialization', () async {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
-        ShopItem(
+        buildShopItem(
           id: 'boost_001',
           name: 'Test Boost',
           itemType: ShopItemType.consumable,
@@ -50,15 +186,17 @@ void main() {
           pricePhotons: 50,
           rarity: ItemRarity.rare,
           sortOrder: 2,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
-      when(mockRepository.getShopItems(
-        onlyAvailable: true,
-      )).thenAnswer((_) async => items);
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
       container.read(shopItemsProvider);
 
@@ -72,24 +210,19 @@ void main() {
       expect(state.itemsByCategory['skin']?.length, 1);
       expect(state.itemsByCategory['consumable']?.length, 1);
 
-      verify(mockRepository.getShopItems(onlyAvailable: true)).called(1);
+      expect(mockRepository.getShopItemsCalls, 1);
     });
 
     test('groups items by category correctly', () async {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Skin 1',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
-        ShopItem(
+        buildShopItem(
           id: 'skin_002',
           name: 'Skin 2',
           itemType: ShopItemType.skin,
@@ -97,27 +230,25 @@ void main() {
           pricePhotons: 200,
           rarity: ItemRarity.rare,
           sortOrder: 2,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
-        ShopItem(
+        buildShopItem(
           id: 'boost_001',
           name: 'Boost',
           itemType: ShopItemType.consumable,
           category: 'boosts',
           pricePhotons: 50,
-          rarity: ItemRarity.common,
           sortOrder: 3,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
-      when(mockRepository.getShopItems(
-        onlyAvailable: true,
-      )).thenAnswer((_) async => items);
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
       container.read(shopItemsProvider);
       await Future.delayed(Duration.zero);
@@ -131,9 +262,14 @@ void main() {
     });
 
     test('handles load errors gracefully', () async {
-      when(mockRepository.getShopItems(
-        onlyAvailable: true,
-      )).thenThrow(Exception('Network error'));
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        throw Exception('Network error');
+      };
 
       container.read(shopItemsProvider);
 
@@ -148,25 +284,27 @@ void main() {
 
     test('purchaseItem updates items and returns success', () async {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
-      when(mockRepository.getShopItems(onlyAvailable: true))
-          .thenAnswer((_) async => items);
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
-      when(mockRepository.purchaseItem('skin_001'))
-          .thenAnswer((_) async => {'success': true});
+      mockRepository.purchaseItemHandler = (itemId) async {
+        return {'success': true};
+      };
 
       // Initial load
       container.read(shopItemsProvider);
@@ -179,30 +317,32 @@ void main() {
       expect(result, isTrue);
 
       // Should refresh items after purchase
-      verify(mockRepository.getShopItems(onlyAvailable: true)).called(2);
+      expect(mockRepository.getShopItemsCalls, 2);
     });
 
     test('purchaseItem handles errors and updates error state', () async {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
-      when(mockRepository.getShopItems(onlyAvailable: true))
-          .thenAnswer((_) async => items);
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
-      when(mockRepository.purchaseItem('skin_001'))
-          .thenThrow(Exception('Insufficient balance'));
+      mockRepository.purchaseItemHandler = (itemId) async {
+        throw Exception('Insufficient balance');
+      };
 
       container.read(shopItemsProvider);
       await Future.delayed(Duration.zero);
@@ -218,38 +358,43 @@ void main() {
 
     test('refresh reloads items', () async {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
-      when(mockRepository.getShopItems(onlyAvailable: true))
-          .thenAnswer((_) async => items);
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
       container.read(shopItemsProvider);
       await Future.delayed(Duration.zero);
 
-      // Clear the calls
-      reset(mockRepository);
-
-      when(mockRepository.getShopItems(onlyAvailable: true))
-          .thenAnswer((_) async => items);
+      mockRepository.getShopItemsCalls = 0;
+      mockRepository.getShopItemsHandler = ({
+        String? itemType,
+        String? category,
+        String? rarity,
+        bool onlyAvailable = true,
+      }) async {
+        return items;
+      };
 
       final notifier = container.read(shopItemsProvider.notifier);
       await notifier.refresh();
 
       await Future.delayed(Duration.zero);
 
-      verify(mockRepository.getShopItems(onlyAvailable: true)).called(1);
+      expect(mockRepository.getShopItemsCalls, 1);
     });
   });
 
@@ -268,34 +413,40 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => purchases);
+      mockRepository.getPurchaseHistoryHandler = ({
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return purchases;
+      };
 
       container.read(purchaseHistoryProvider);
 
-      await Future.delayed(Duration.zero);
+      final notifier = container.read(purchaseHistoryProvider.notifier);
+      await notifier.loadPurchaseHistory();
 
       final state = container.read(purchaseHistoryProvider);
 
       expect(state.isLoading, isFalse);
       expect(state.purchases.length, 1);
       expect(state.purchases[0].itemName, 'Test Skin');
-      expect(state.hasMore, isTrue);
+      expect(state.hasMore, isFalse);
     });
 
     test('loads more history with pagination', () async {
-      final page1 = [
-        ShopPurchase(
-          id: 'purchase-1',
-          itemId: 'skin_001',
-          itemName: 'Skin 1',
+      final page1 = List.generate(
+        20,
+        (index) => ShopPurchase(
+          id: 'purchase-${index + 1}',
+          itemId: 'skin_${index + 1}',
+          itemName: 'Skin ${index + 1}',
           itemType: ShopItemType.skin,
           pricePaid: 100,
           photonBalanceBefore: 500,
           photonBalanceAfter: 400,
           createdAt: DateTime(2024, 1, 28),
         ),
-      ];
+      );
 
       final page2 = [
         ShopPurchase(
@@ -310,33 +461,41 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => page1);
-
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 1))
-          .thenAnswer((_) async => page2);
+      mockRepository.getPurchaseHistoryHandler = ({
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        if (offset == 0) {
+          return page1;
+        }
+        return page2;
+      };
 
       container.read(purchaseHistoryProvider);
-      await Future.delayed(Duration.zero);
-
       final notifier = container.read(purchaseHistoryProvider.notifier);
+      await notifier.loadPurchaseHistory();
+
       await notifier.loadPurchaseHistory();
 
       await Future.delayed(Duration.zero);
 
       final state = container.read(purchaseHistoryProvider);
 
-      expect(state.purchases.length, 2);
-      expect(state.currentOffset, 1);
+      expect(state.purchases.length, 21);
+      expect(state.currentOffset, 21);
     });
 
     test('handles empty purchase history', () async {
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => []);
+      mockRepository.getPurchaseHistoryHandler = ({
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return [];
+      };
 
       container.read(purchaseHistoryProvider);
-
-      await Future.delayed(Duration.zero);
+      final notifier = container.read(purchaseHistoryProvider.notifier);
+      await notifier.loadPurchaseHistory();
 
       final state = container.read(purchaseHistoryProvider);
 
@@ -359,17 +518,25 @@ void main() {
         ),
       ];
 
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => purchases);
+      mockRepository.getPurchaseHistoryHandler = ({
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return purchases;
+      };
 
       container.read(purchaseHistoryProvider);
-      await Future.delayed(Duration.zero);
-
-      reset(mockRepository);
-      when(mockRepository.getPurchaseHistory(limit: 20, offset: 0))
-          .thenAnswer((_) async => purchases);
-
       final notifier = container.read(purchaseHistoryProvider.notifier);
+      await notifier.loadPurchaseHistory();
+
+      mockRepository.getPurchaseHistoryCalls = 0;
+      mockRepository.getPurchaseHistoryHandler = ({
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        return purchases;
+      };
+
       await notifier.refresh();
 
       await Future.delayed(Duration.zero);
@@ -377,13 +544,13 @@ void main() {
       final state = container.read(purchaseHistoryProvider);
 
       expect(state.purchases.length, 1);
-      expect(state.currentOffset, 0);
+      expect(state.currentOffset, 1);
     });
   });
 
   group('InventoryProvider', () {
     test('loads user inventory', () async {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [
           InventoryItem(
             id: 'skin_001',
@@ -400,8 +567,7 @@ void main() {
         'boosts': [],
       };
 
-      when(mockRepository.getInventory())
-          .thenAnswer((_) async => inventory);
+      mockRepository.getInventoryHandler = () async => inventory;
 
       container.read(inventoryProvider);
 
@@ -417,7 +583,7 @@ void main() {
     });
 
     test('equipItem updates inventory', () async {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [
           InventoryItem(
             id: 'skin_001',
@@ -434,13 +600,13 @@ void main() {
         'boosts': [],
       };
 
-      when(mockRepository.getInventory())
-          .thenAnswer((_) async => inventory);
-
-      when(mockRepository.equipItem(
-        itemId: 'skin_001',
-        itemType: 'skin',
-      )).thenAnswer((_) async => {'success': true});
+      mockRepository.getInventoryHandler = () async => inventory;
+      mockRepository.equipItemHandler = ({
+        required String itemType,
+        String? itemId,
+      }) async {
+        return {'success': true};
+      };
 
       container.read(inventoryProvider);
       await Future.delayed(Duration.zero);
@@ -452,24 +618,24 @@ void main() {
       );
 
       expect(result, isTrue);
-      verify(mockRepository.getInventory()).called(2); // Initial + after equip
+      expect(mockRepository.getInventoryCalls, 2); // Initial + after equip
     });
 
     test('handles equip errors gracefully', () async {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [],
         'titles': [],
         'consumables': [],
         'boosts': [],
       };
 
-      when(mockRepository.getInventory())
-          .thenAnswer((_) async => inventory);
-
-      when(mockRepository.equipItem(
-        itemId: 'skin_001',
-        itemType: 'skin',
-      )).thenThrow(Exception('Item not owned'));
+      mockRepository.getInventoryHandler = () async => inventory;
+      mockRepository.equipItemHandler = ({
+        required String itemType,
+        String? itemId,
+      }) async {
+        throw Exception('Item not owned');
+      };
 
       container.read(inventoryProvider);
       await Future.delayed(Duration.zero);
@@ -487,7 +653,7 @@ void main() {
     });
 
     test('provides convenient getters for item categories', () async {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [
           InventoryItem(
             id: 'skin_001',
@@ -523,8 +689,7 @@ void main() {
         'boosts': [],
       };
 
-      when(mockRepository.getInventory())
-          .thenAnswer((_) async => inventory);
+      mockRepository.getInventoryHandler = () async => inventory;
 
       container.read(inventoryProvider);
       await Future.delayed(Duration.zero);
@@ -542,25 +707,25 @@ void main() {
     test('loads owned item IDs', () async {
       final ownedIds = ['skin_001', 'skin_002', 'title_001'];
 
-      when(mockRepository.getOwnedItems())
-          .thenAnswer((_) async => ownedIds);
+      mockRepository.getOwnedItemsHandler = ({String? itemType}) async {
+        return ownedIds;
+      };
 
-      final future = container.read(ownedItemsProvider);
-      final result = await future;
+      final result = await container.read(ownedItemsProvider.future);
 
       expect(result.length, 3);
       expect(result, contains('skin_001'));
       expect(result, contains('title_001'));
 
-      verify(mockRepository.getOwnedItems()).called(1);
+      expect(mockRepository.getOwnedItemsCalls, 1);
     });
 
     test('handles empty owned items', () async {
-      when(mockRepository.getOwnedItems())
-          .thenAnswer((_) async => []);
+      mockRepository.getOwnedItemsHandler = ({String? itemType}) async {
+        return [];
+      };
 
-      final future = container.read(ownedItemsProvider);
-      final result = await future;
+      final result = await container.read(ownedItemsProvider.future);
 
       expect(result, isEmpty);
     });
@@ -569,17 +734,12 @@ void main() {
   group('ShopItemsState', () {
     test('copyWith updates state correctly', () {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
@@ -601,19 +761,14 @@ void main() {
 
     test('getItemsByType filters correctly', () {
       final items = [
-        ShopItem(
+        buildShopItem(
           id: 'skin_001',
           name: 'Skin 1',
           itemType: ShopItemType.skin,
           category: 'skins',
-          pricePhotons: 100,
-          rarity: ItemRarity.common,
           sortOrder: 1,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
-        ShopItem(
+        buildShopItem(
           id: 'boost_001',
           name: 'Boost',
           itemType: ShopItemType.consumable,
@@ -621,9 +776,6 @@ void main() {
           pricePhotons: 50,
           rarity: ItemRarity.rare,
           sortOrder: 2,
-          hasDiscount: false,
-          isInStock: true,
-          isOwned: false,
         ),
       ];
 
@@ -695,7 +847,7 @@ void main() {
 
   group('InventoryState', () {
     test('provides category-based accessors', () {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [
           InventoryItem(
             id: 'skin_001',
@@ -721,7 +873,7 @@ void main() {
     });
 
     test('copyWith preserves inventory structure', () {
-      final inventory = {
+      final inventory = <String, List<InventoryItem>>{
         'skins': [],
         'titles': [],
         'consumables': [],
@@ -738,17 +890,12 @@ void main() {
 
   group('SelectedShopItemProvider', () {
     test('stores selected shop item', () {
-      final item = ShopItem(
+      final item = buildShopItem(
         id: 'skin_001',
         name: 'Test Skin',
         itemType: ShopItemType.skin,
         category: 'skins',
-        pricePhotons: 100,
-        rarity: ItemRarity.common,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       container.read(selectedShopItemProvider.notifier).state = item;
@@ -760,17 +907,12 @@ void main() {
     });
 
     test('can be cleared', () {
-      final item = ShopItem(
+      final item = buildShopItem(
         id: 'skin_001',
         name: 'Test Skin',
         itemType: ShopItemType.skin,
         category: 'skins',
-        pricePhotons: 100,
-        rarity: ItemRarity.common,
         sortOrder: 1,
-        hasDiscount: false,
-        isInStock: true,
-        isOwned: false,
       );
 
       container.read(selectedShopItemProvider.notifier).state = item;
@@ -784,7 +926,7 @@ void main() {
   });
 
   group('Provider Lifecycle', () {
-    test('all providers dispose properly', () {
+    test('all providers dispose properly', () async {
       final testContainer = ProviderContainer(
         overrides: [
           shopRepositoryProvider.overrideWithValue(mockRepository),
@@ -796,6 +938,8 @@ void main() {
       testContainer.read(purchaseHistoryProvider);
       testContainer.read(inventoryProvider);
       testContainer.read(ownedItemsProvider);
+
+      await Future.delayed(Duration.zero);
 
       // Should not throw
       expect(() => testContainer.dispose(), returnsNormally);

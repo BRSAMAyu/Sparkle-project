@@ -47,7 +47,8 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.refresh(systemUpdatesProvider.future);
+        ref.invalidate(systemUpdatesProvider);
+        await ref.read(systemUpdatesProvider.future);
       },
       child: ListView(
         padding: const EdgeInsets.all(DS.spacing16),

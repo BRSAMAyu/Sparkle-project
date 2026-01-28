@@ -71,7 +71,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.translationTranslate,
         data: {
           'text': _inputController.text,

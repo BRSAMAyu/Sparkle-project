@@ -5,6 +5,7 @@ Redis Caching Module
 import asyncio
 import hashlib
 import json
+import time
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from functools import wraps
@@ -23,6 +24,7 @@ class CacheService:
     def __init__(self):
         self.redis: Optional[redis.Redis] = None
         self.default_ttl = 300  # 5 minutes default
+        self._local_cache: dict[str, tuple[Any, Optional[float]]] = {}
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
@@ -92,7 +94,15 @@ class CacheService:
             await self.redis.close()
 
     async def get(self, key: str) -> Any:
-        if not self.redis: return None
+        if not self.redis:
+            cached = self._local_cache.get(key)
+            if cached is None:
+                return None
+            value, expires_at = cached
+            if expires_at is not None and time.time() > expires_at:
+                self._local_cache.pop(key, None)
+                return None
+            return value
         data = await self.redis.get(key)
         if data is None:
             return None
@@ -102,7 +112,13 @@ class CacheService:
             return data
 
     async def set(self, key: str, value: Any, ttl: int = None):
-        if not self.redis: return
+        if not self.redis:
+            expires_at = None
+            ttl_value = ttl or self.default_ttl
+            if ttl_value:
+                expires_at = time.time() + ttl_value
+            self._local_cache[key] = (value, expires_at)
+            return
         dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
         await self.redis.set(key, dumped, ex=ttl or self.default_ttl)
 
@@ -117,7 +133,9 @@ class CacheService:
         return await self.redis.expire(key, ttl)
 
     async def delete(self, key: str):
-        if not self.redis: return
+        if not self.redis:
+            self._local_cache.pop(key, None)
+            return
         await self.redis.delete(key)
     
     async def delete_pattern(self, pattern: str):

@@ -87,6 +87,19 @@ async def setup_shop_items(db_session: AsyncSession) -> list[ShopItem]:
             item_config={"effect_type": "exp_boost"},
             sort_order=2,
         ),
+        ShopItem(
+            id="test_title_001",
+            name="Test Title",
+            description="A test title",
+            item_type="title",
+            category="test_titles",
+            price_photons=80,
+            is_available=True,
+            is_limited=False,
+            rarity="rare",
+            item_config={"text": "测试称号"},
+            sort_order=3,
+        ),
     ]
 
     for item in items:
@@ -484,6 +497,44 @@ async def test_equip_skin_updates_user_profile(
     await db_session.refresh(shop_test_user)
     # Note: This assumes User model has equipped_skin field
     # If not, this test will need adjustment
+
+
+@pytest.mark.asyncio
+async def test_unequip_title_clears_user_profile(
+    db_session: AsyncSession,
+    shop_test_user: User,
+    setup_shop_items: list[ShopItem]
+):
+    """Test that unequipping title clears user profile"""
+    from app.services.shop_service import ShopService
+    from app.services.inventory_service import InventoryService
+
+    shop_service = ShopService(db_session)
+    inventory_service = InventoryService(db_session)
+
+    # Purchase title
+    await shop_service.purchase_item(
+        user_id=str(shop_test_user.id),
+        item_id="test_title_001"
+    )
+
+    # Equip title
+    result = await inventory_service.equip_title(
+        user_id=str(shop_test_user.id),
+        item_id="test_title_001"
+    )
+    assert result["success"] is True
+
+    # Unequip title
+    result = await inventory_service.equip_title(
+        user_id=str(shop_test_user.id),
+        item_id=None
+    )
+    assert result["success"] is True
+    assert result["item_id"] is None
+
+    await db_session.refresh(shop_test_user)
+    assert shop_test_user.equipped_title is None
 
 
 @pytest.mark.asyncio
