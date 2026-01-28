@@ -192,11 +192,20 @@ class TestCollaborationResponse:
         assert response.metadata["workflow"] == "task_decomposition"
         assert response.metadata["participants"] == ["StudyPlanner", "MathExpert", "CodeExpert"]
 
-        # 验证可视化数据
-        assert "visualization" in response.metadata
-        viz_data = response.metadata["visualization"]
-        assert viz_data["workflow_type"] == "task_decomposition"
-        assert len(viz_data["timeline"]) == 2
+        # 验证协作时间线数据 (Schema v1.0)
+        assert "collaboration_timeline" in response.metadata
+        import json
+        timeline_data = json.loads(response.metadata["collaboration_timeline"])
+        assert timeline_data["schema_version"] == "1.0"
+        assert timeline_data["workflow_type"] == "task_decomposition"
+        assert len(timeline_data["steps"]) == 2
+
+        # 验证每个 step 的必需字段
+        for step in timeline_data["steps"]:
+            assert "agent_name" in step
+            assert "action" in step
+            assert "status" in step
+            assert "start_time_ms" in step
 
 
 class TestErrorHandling:

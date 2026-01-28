@@ -636,10 +636,37 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
             execution_time = 0.0
             if hasattr(validated_result, 'metadata') and validated_result.metadata:
                 execution_time = validated_result.metadata.get("execution_time", 0.0)
+            steps = []
+            for event in validated_result.timeline:
+                agent_name = event.get("agent_name") or event.get("agent") or "Agent"
+                action = event.get("action") or ""
+                status = event.get("status") or "completed"
+                start_time_ms = event.get("start_time_ms")
+                if start_time_ms is None and event.get("timestamp") is not None:
+                    start_time_ms = int(float(event.get("timestamp")) * 1000)
+                duration_ms = event.get("duration_ms")
+                output_summary = event.get("output_summary")
+                agent_role = event.get("agent_role")
+                step = {
+                    "agent_name": agent_name,
+                    "action": action,
+                    "status": status,
+                    "start_time_ms": start_time_ms or 0,
+                }
+                if agent_role:
+                    step["agent_role"] = agent_role
+                if duration_ms is not None:
+                    step["duration_ms"] = duration_ms
+                if output_summary:
+                    step["output_summary"] = output_summary
+                if event.get("metadata"):
+                    step["metadata"] = event.get("metadata")
+                steps.append(step)
             collaboration_timeline = {
+                "schema_version": "1.0",
                 "workflow_type": validated_result.workflow_type,
                 "execution_time_ms": int(execution_time * 1000),
-                "steps": validated_result.timeline,
+                "steps": steps,
             }
             await stream_callback(agent_service_pb2.ChatResponse(
                 delta="",

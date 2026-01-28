@@ -146,7 +146,7 @@ class _ZoomControlsState extends State<ZoomControls>
             tooltip: 'Zoom In',
           ),
           SizedBox(
-            height: sliderHeight,
+            height: widget.sliderHeight,
             child: RotatedBox(
               quarterTurns: 3,
               child: SliderTheme(

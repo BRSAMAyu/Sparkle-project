@@ -518,5 +518,7 @@ class _BottomActionBar extends ConsumerWidget {
             ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }

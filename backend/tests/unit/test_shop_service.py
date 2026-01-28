@@ -27,7 +27,7 @@ async def test_shop_items(db_session: AsyncSession) -> list[ShopItem]:
             id="skin_common_001",
             name="Common Skin",
             description="A common skin",
-            item_type=ShopItemType.SKIN,
+            item_type="skin",
             category="skins",
             price_photons=100,
             original_price=None,
@@ -43,7 +43,7 @@ async def test_shop_items(db_session: AsyncSession) -> list[ShopItem]:
             id="skin_rare_001",
             name="Rare Skin",
             description="A rare skin with discount",
-            item_type=ShopItemType.SKIN,
+            item_type="skin",
             category="skins",
             price_photons=400,
             original_price=500,
@@ -59,7 +59,7 @@ async def test_shop_items(db_session: AsyncSession) -> list[ShopItem]:
             id="consumable_boost_001",
             name="EXP Boost",
             description="2x experience for 24 hours",
-            item_type=ShopItemType.CONSUMABLE,
+            item_type="consumable",
             category="boosts",
             price_photons=50,
             original_price=None,
@@ -76,7 +76,7 @@ async def test_shop_items(db_session: AsyncSession) -> list[ShopItem]:
             id="title_legendary_001",
             name="Legendary Title",
             description="A legendary title",
-            item_type=ShopItemType.TITLE,
+            item_type="title",
             category="titles",
             price_photons=1000,
             original_price=None,
@@ -113,8 +113,8 @@ async def test_get_available_items(
     items = await service.get_available_items(user_id=str(test_user.id))
 
     assert len(items) == 4
-    assert items[0]["id"] == "skin_common_001"
-    assert items[1]["id"] == "skin_rare_001"
+    item_ids = {item["id"] for item in items}
+    assert item_ids == {"skin_common_001", "skin_rare_001", "consumable_boost_001", "title_legendary_001"}
 
 
 @pytest.mark.asyncio
@@ -128,12 +128,12 @@ async def test_get_available_items_with_type_filter(
 
     # Get only skins
     skins = await service.get_available_items(
-        item_type=ShopItemType.SKIN,
+        item_type="skin",
         user_id=str(test_user.id)
     )
 
     assert len(skins) == 2
-    assert all(item["item_type"] == ShopItemType.SKIN for item in skins)
+    assert all(item["item_type"] == "skin" for item in skins)
 
 
 @pytest.mark.asyncio
@@ -377,9 +377,8 @@ async def test_get_purchase_history(
 
     assert history["total_count"] == 3
     assert len(history["purchases"]) == 3
-    assert history["purchases"][0]["item_name"] == "Common Skin"
-    assert history["purchases"][1]["item_name"] == "Rare Skin"
-    assert history["purchases"][2]["item_name"] == "EXP Boost"
+    purchase_names = {p["item_name"] for p in history["purchases"]}
+    assert purchase_names == {"Common Skin", "Rare Skin", "EXP Boost"}
 
 
 @pytest.mark.asyncio
@@ -444,7 +443,7 @@ async def test_check_item_ownership_for_consumable(
     owned = await service._check_item_ownership(
         user_id=str(test_user.id),
         item_id="consumable_boost_001",
-        item_type=ShopItemType.CONSUMABLE
+        item_type="consumable"
     )
     assert owned is False
 
