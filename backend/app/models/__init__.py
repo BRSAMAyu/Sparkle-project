@@ -115,6 +115,7 @@ from app.models.review_system import (
 )
 from app.models.plan_execution_record import PlanExecutionRecord
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
+from app.models.shop import ShopItem, ShopPurchase, UserConsumable, PhotonTransactionHistory
 
 __all__ = [
     "BaseModel",
@@ -269,4 +270,8 @@ __all__ = [
     # Notification System
     "NotificationInteraction",
     "NotificationPreferences",
+    "ShopItem",
+    "ShopPurchase",
+    "UserConsumable",
+    "PhotonTransactionHistory",
 ]

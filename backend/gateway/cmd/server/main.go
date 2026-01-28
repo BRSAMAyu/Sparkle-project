@@ -409,7 +409,7 @@ func main() {
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
 
 		// Error Book Routes
-		errorBookHandler.RegisterRoutes(api)
+		errorBookHandler.RegisterRoutes(api, authMiddleware)
 
 		// Community Routes
 		commHandler.RegisterRoutes(api)
