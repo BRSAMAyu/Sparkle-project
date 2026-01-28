@@ -3,7 +3,7 @@
 /// Response model for the /prediction/intent/predict API endpoint
 library;
 
-import 'package:sparkle/features/intent/data/models/intent_entity.dart';
+import 'package:sparkle/features/intent/data/models/intent_data.dart';
 
 /// Intent prediction response from backend API
 class IntentPredictionResponse {

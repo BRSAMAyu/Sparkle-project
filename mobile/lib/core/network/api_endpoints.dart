@@ -298,4 +298,6 @@ class ApiEndpoints {
   // Inventory System
   static const String inventory = '/inventory';
   static const String inventoryEquip = '/inventory/equip';
+  static String inventoryConsumablesUse(String consumableId) =>
+      '/inventory/consumables/$consumableId/use';
 }

@@ -56,9 +56,9 @@ class PhotonTransactionHistory(BaseModel):
     """光子交易历史记录表"""
     __tablename__ = "photon_transaction_history"
 
-    id = Column(GUID(), primary_key=True, server_default=text("gen_random_uuid()"))
+    id = Column(GUID(), primary_key=True)
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    transaction_type = Column(Enum(PhotonTransactionType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
+    transaction_type = Column(String(50), nullable=False, index=True)
     amount = Column(Integer, nullable=False, comment="变动数量（正数为增加，负数为减少）")
     balance_before = Column(Integer, nullable=False, comment="交易前余额")
     balance_after = Column(Integer, nullable=False, comment="交易后余额")
@@ -85,7 +85,7 @@ class ShopItem(BaseModel):
     id = Column(String(50), primary_key=True, comment="物品ID（如：skin_galaxy_001）")
     name = Column(String(100), nullable=False, comment="物品名称")
     description = Column(Text, nullable=True, comment="物品描述")
-    item_type = Column(Enum(ShopItemType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True, comment="物品类型")
+    item_type = Column(String(50), nullable=False, index=True, comment="物品类型")
     category = Column(String(50), nullable=False, comment="分类（如：galaxy_skin、achievement_title等）")
     price_photons = Column(Integer, nullable=False, comment="当前价格（光子）")
     original_price = Column(Integer, nullable=True, comment="原价（用于折扣显示）")
@@ -94,7 +94,7 @@ class ShopItem(BaseModel):
     is_limited = Column(Boolean, nullable=False, default=False, comment="是否限量")
     stock_quantity = Column(Integer, nullable=True, comment="库存数量（限量物品使用）")
     icon_url = Column(String(500), nullable=True, comment="物品图标URL")
-    rarity = Column(Enum(ItemRarity, values_callable=lambda x: [e.value for e in x]), nullable=False, default=ItemRarity.COMMON, comment="物品稀有度")
+    rarity = Column(String(50), nullable=False, default="common", comment="物品稀有度")
     item_config = Column(JSON, nullable=True, comment="物品配置（如皮肤ID、称号文本、消耗品效果等）")
     sort_order = Column(Integer, nullable=False, default=0, comment="排序权重（越大越靠前）")
 
@@ -127,7 +127,7 @@ class ShopPurchase(BaseModel):
     """商城购买记录表"""
     __tablename__ = "shop_purchases"
 
-    id = Column(GUID(), primary_key=True, server_default=text("gen_random_uuid()"))
+    id = Column(GUID(), primary_key=True)
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     item_id = Column(String(50), ForeignKey("shop_items.id", ondelete="RESTRICT"), nullable=False, index=True)
     price_paid = Column(Integer, nullable=False, comment="实际支付价格")
@@ -151,10 +151,10 @@ class UserConsumable(BaseModel):
     """用户消耗品表"""
     __tablename__ = "user_consumables"
 
-    id = Column(GUID(), primary_key=True, server_default=text("gen_random_uuid()"))
+    id = Column(GUID(), primary_key=True)
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     consumable_id = Column(String(50), ForeignKey("shop_items.id", ondelete="RESTRICT"), nullable=False)
-    effect_type = Column(Enum(ConsumableEffectType, values_callable=lambda x: [e.value for e in x]), nullable=False, comment="效果类型")
+    effect_type = Column(String(50), nullable=False, comment="效果类型")
     quantity = Column(Integer, nullable=False, default=1, comment="数量")
     expires_at = Column(DateTime, nullable=True, comment="过期时间（NULL表示永久有效）")
 

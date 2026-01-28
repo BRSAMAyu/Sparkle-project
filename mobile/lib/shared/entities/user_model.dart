@@ -66,7 +66,7 @@ class UserModel {
   final UserStatus status;
   @JsonKey(name: 'schedule_preferences')
   final Map<String, dynamic>? schedulePreferences;
-  @JsonKey(name: 'push_preference')
+  @JsonKey(name: 'push_preferences')
   final PushPreferences? pushPreferences;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;

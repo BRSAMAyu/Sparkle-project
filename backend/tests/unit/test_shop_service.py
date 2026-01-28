@@ -191,12 +191,9 @@ async def test_purchase_item_insufficient_balance(
     shop_service = ShopService(db_session)
     photon_service = PhotonService(db_session)
 
-    # Grant user only 50 photons
-    await photon_service.grant_photons(
-        user_id=str(test_user.id),
-        amount=50,
-        source="test_grant"
-    )
+    # Set user balance to 50 photons directly
+    test_user.photon_balance = 50
+    await db_session.commit()
 
     # Try to purchase item costing 100 photons
     with pytest.raises(ValueError, match="Insufficient photon balance"):
@@ -206,6 +203,7 @@ async def test_purchase_item_insufficient_balance(
         )
 
     # Verify balance was not deducted
+    await db_session.refresh(test_user)
     balance = await photon_service.get_balance(str(test_user.id))
     assert balance == 50
 
@@ -401,11 +399,11 @@ async def test_get_purchase_history_pagination(
         source="test_grant"
     )
 
-    # Make 5 purchases
+    # Make 5 purchases (use consumable since it can be purchased multiple times)
     for _ in range(5):
         await shop_service.purchase_item(
             user_id=str(test_user.id),
-            item_id="skin_common_001"
+            item_id="consumable_boost_001"
         )
 
     # Get first page

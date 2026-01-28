@@ -4,6 +4,7 @@ Photon Service - 处理光子积分的发放、扣除和余额查询
 """
 from typing import Optional, Dict, Any
 from datetime import datetime
+from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, desc
 from loguru import logger
@@ -360,6 +361,7 @@ class PhotonService:
             db_transaction_type = DBPhotonTransactionType.ADMIN_ADJUSTMENT
 
         transaction = PhotonTransactionHistory(
+            id=str(uuid4()),
             user_id=user_id,
             transaction_type=db_transaction_type,
             amount=amount,
@@ -436,7 +438,7 @@ class PhotonService:
         for t in transactions:
             transactions_data.append({
                 "id": str(t.id),
-                "transaction_type": t.transaction_type.value,
+                "transaction_type": t.transaction_type,
                 "amount": t.amount,
                 "balance_before": t.balance_before,
                 "balance_after": t.balance_after,

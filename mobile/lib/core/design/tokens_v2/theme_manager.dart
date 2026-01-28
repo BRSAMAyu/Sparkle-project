@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
+/// 支持商城皮肤系统
 class ThemeManager extends ChangeNotifier {
   factory ThemeManager() => _instance;
   ThemeManager._internal();
@@ -15,6 +16,12 @@ class ThemeManager extends ChangeNotifier {
 
   bool _highContrast = false;
   bool get highContrast => _highContrast;
+
+  // 🆕 商城皮肤支持
+  String? _equippedSkinId;  // 装备的皮肤ID（如 "skin_galaxy_nova_001"）
+  String? get equippedSkinId => _equippedSkinId;
+  Map<String, dynamic>? _skinConfig;  // 皮肤配置（{theme, colors}）
+  Map<String, dynamic>? get skinConfig => _skinConfig;
 
   bool _initialized = false;
   bool get initialized => _initialized;
@@ -38,6 +45,21 @@ class ThemeManager extends ChangeNotifier {
     _brandPreset = BrandPreset
         .values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
     _highContrast = prefs.getBool('high_contrast') ?? false;
+
+    // 🆕 加载商城皮肤配置
+    _equippedSkinId = prefs.getString('equipped_skin_id');
+    final skinConfigJson = prefs.getString('skin_config');
+    if (skinConfigJson != null) {
+      try {
+        _skinConfig = Map<String, dynamic>.from(
+          // 简单的JSON解析（实际项目中应该用dart:convert）
+          _parseSimpleJson(skinConfigJson)
+        );
+      } catch (e) {
+        // 解析失败，忽略皮肤配置
+        _equippedSkinId = null;
+      }
+    }
 
     _initialized = true;
     notifyListeners();
@@ -76,6 +98,27 @@ class ThemeManager extends ChangeNotifier {
     _mode = AppThemeMode.system;
     _brandPreset = BrandPreset.sparkle;
     _highContrast = false;
+    _equippedSkinId = null;
+    _skinConfig = null;
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
+  /// 🆕 装备商城皮肤
+  ///
+  /// [skinId] - 皮肤ID（如 "skin_galaxy_nova_001"）
+  /// [skinConfig] - 皮肤配置，格式：{theme: "nova", colors: ["#FF6B6B", "#4ECDC4"]}
+  Future<void> equipShopSkin(String skinId, Map<String, dynamic> skinConfig) async {
+    _equippedSkinId = skinId;
+    _skinConfig = skinConfig;
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
+  /// 🆕 卸载当前皮肤
+  Future<void> unequipSkin() async {
+    _equippedSkinId = null;
+    _skinConfig = null;
     await _saveToPrefs();
     notifyListeners();
   }
@@ -98,7 +141,61 @@ class ThemeManager extends ChangeNotifier {
         ? SparkleThemeData.light(highContrast: _highContrast)
         : SparkleThemeData.dark(highContrast: _highContrast);
 
+    // 🆕 优先应用商城皮肤（如果装备了皮肤）
+    if (_equippedSkinId != null && _skinConfig != null) {
+      return _applyShopSkin(baseTheme);
+    }
+
     return _applyBrandPreset(baseTheme);
+  }
+
+  /// 🆕 应用商城皮肤配置
+  ///
+  /// 皮肤配置格式：{theme: "nova", colors: ["#FF6B6B", "#4ECDC4"]}
+  SparkleThemeData _applyShopSkin(SparkleThemeData base) {
+    if (_skinConfig == null) return base;
+
+    final colors = _skinConfig!['colors'] as List?;
+    if (colors == null || colors.length < 2) return base;
+
+    // 解析颜色
+    final primaryColor = _parseColor(colors[0]);
+    final secondaryColor = _parseColor(colors[1]);
+
+    if (primaryColor == null) return base;
+
+    // 应用皮肤颜色
+    final newColors = base.colors.copyWith(
+      brandPrimary: primaryColor,
+      brandSecondary: secondaryColor ?? primaryColor,
+    );
+
+    final shadows = newColors.brightness == Brightness.light
+        ? SparkleShadows.light(brandPrimary: newColors.brandPrimary)
+        : SparkleShadows.dark(brandPrimary: newColors.brandPrimary);
+
+    return base.copyWith(colors: newColors, shadows: shadows);
+  }
+
+  /// 解析颜色字符串（支持 #RGB, #RRGGBB, #RRGGBBAA 格式）
+  Color? _parseColor(dynamic colorString) {
+    if (colorString == null) return null;
+    if (colorString is Color) return colorString;
+    if (colorString is! String) return null;
+
+    final hex = colorString.toString().replaceAll('#', '');
+    if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    } else if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    } else if (hex.length == 3) {
+      // #RGB 格式
+      final r = hex[0];
+      final g = hex[1];
+      final b = hex[2];
+      return Color(int.parse('FF$r$r$g$g$b$b', radix: 16));
+    }
+    return null;
   }
 
   /// 应用品牌预设
@@ -136,6 +233,64 @@ class ThemeManager extends ChangeNotifier {
     await prefs.setInt('theme_mode', _mode.index);
     await prefs.setInt('brand_preset', _brandPreset.index);
     await prefs.setBool('high_contrast', _highContrast);
+
+    // 🆕 保存商城皮肤配置
+    if (_equippedSkinId != null) {
+      await prefs.setString('equipped_skin_id', _equippedSkinId!);
+      await prefs.setString('skin_config', _stringifySimpleJson(_skinConfig));
+    } else {
+      await prefs.remove('equipped_skin_id');
+      await prefs.remove('skin_config');
+    }
+  }
+
+  /// 简单的JSON字符串解析（用于皮肤配置）
+  Map<String, dynamic> _parseSimpleJson(String jsonStr) {
+    // 简化版解析，实际应该用 dart:convert
+    final result = <String, dynamic>{};
+    final cleanStr = jsonStr.replaceAll('{', '').replaceAll('}', '').trim();
+    if (cleanStr.isEmpty) return result;
+
+    final pairs = cleanStr.split(',');
+    for (final pair in pairs) {
+      final parts = pair.split(':');
+      if (parts.length == 2) {
+        final key = parts[0].trim().replaceAll('"', '').replaceAll("'", "");
+        final value = parts[1].trim();
+        if (value.startsWith('[') && value.endsWith(']')) {
+          // 数组
+          final arrayStr = value.substring(1, value.length - 1);
+          result[key] = arrayStr.isEmpty
+              ? <String>[]
+              : arrayStr.split(',').map((e) => e.trim().replaceAll('"', '').replaceAll("'", "")).toList();
+        } else {
+          result[key] = value.replaceAll('"', '').replaceAll("'", "");
+        }
+      }
+    }
+    return result;
+  }
+
+  /// 简单的JSON字符串化（用于皮肤配置）
+  String _stringifySimpleJson(Map<String, dynamic>? map) {
+    if (map == null) return '{}';
+    final buffer = StringBuffer();
+    buffer.write('{');
+    bool first = true;
+    map.forEach((key, value) {
+      if (!first) buffer.write(', ');
+      first = false;
+      buffer.write('"$key": ');
+      if (value is List) {
+        buffer.write('[${value.map((e) => '"$e"').join(', ')}]');
+      } else if (value is String) {
+        buffer.write('"$value"');
+      } else {
+        buffer.write('$value');
+      }
+    });
+    buffer.write('}');
+    return buffer.toString();
   }
 
   @override

@@ -512,6 +512,18 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
+	metadata := map[string]interface{}{}
+	for key, value := range resp.Metadata {
+		if key == "collaboration_timeline" {
+			var decoded interface{}
+			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
+				metadata[key] = decoded
+				continue
+			}
+		}
+		metadata[key] = value
+	}
+
 	result := map[string]interface{}{
 		"response_id":    resp.ResponseId,
 		"created_at":     resp.CreatedAt,
@@ -519,7 +531,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
-		"metadata":       resp.Metadata,
+		"metadata":       metadata,
 	}
 
 	// Handle oneof content field

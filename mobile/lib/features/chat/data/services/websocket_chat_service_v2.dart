@@ -118,6 +118,46 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Check if this delta contains collaboration timeline data
+        if (metadata != null) {
+          final collaborationData =
+              metadata['collaboration_timeline'] as Map<String, dynamic>?;
+
+          if (collaborationData != null) {
+            return CollaborationTimelineEvent(
+              collaborationData: collaborationData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+
+          final visualization = metadata['visualization'] as Map<String, dynamic>?;
+          final timeline = visualization?['timeline'] as List<dynamic>?;
+          if (timeline != null && timeline.isNotEmpty) {
+            final workflowType = (metadata['workflow'] as String?) ??
+                (visualization?['workflow_type'] as String?) ??
+                'unknown';
+            final executionTime = metadata['execution_time'];
+            final executionTimeMs = executionTime is num
+                ? (executionTime * 1000).round()
+                : 0;
+
+            return CollaborationTimelineEvent(
+              collaborationData: {
+                'workflow_type': workflowType,
+                'execution_time_ms': executionTimeMs,
+                'steps': timeline,
+              },
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;

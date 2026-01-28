@@ -631,6 +631,23 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         # Store result for generation node
         state.context_data["collaboration_result"] = validated_result
 
+        # Emit collaboration timeline metadata for clients
+        if stream_callback and hasattr(validated_result, 'timeline'):
+            execution_time = 0.0
+            if hasattr(validated_result, 'metadata') and validated_result.metadata:
+                execution_time = validated_result.metadata.get("execution_time", 0.0)
+            collaboration_timeline = {
+                "workflow_type": validated_result.workflow_type,
+                "execution_time_ms": int(execution_time * 1000),
+                "steps": validated_result.timeline,
+            }
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta="",
+                metadata={
+                    "collaboration_timeline": json.dumps(collaboration_timeline, ensure_ascii=False)
+                }
+            ))
+
         # Send collaboration result to client (optional: timeline visualization)
         if stream_callback and hasattr(validated_result, 'timeline'):
             for event in validated_result.timeline:

@@ -4,6 +4,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskReminderConfig;
 
 /// Key for storing 'Enter to Send' preference in SharedPreferences
 const String kEnterToSendKey = 'settings_enter_to_send';
@@ -41,6 +42,117 @@ final pushPreferencesProvider =
     StateNotifierProvider<PushPreferencesNotifier, PushPreferences>(
   (ref) => PushPreferencesNotifier(ref),
 );
+
+/// Provider for task reminder configuration
+final taskReminderConfigProvider =
+    StateNotifierProvider<TaskReminderConfigNotifier, TaskReminderConfig>(
+  (ref) => TaskReminderConfigNotifier(ref),
+);
+
+/// Provider for weekly agenda data
+final weeklyAgendaProvider =
+    StateNotifierProvider<WeeklyAgendaNotifier, Map<String, dynamic>>(
+  (ref) => WeeklyAgendaNotifier(ref),
+);
+
+class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
+  WeeklyAgendaNotifier(this._ref) : super({}) {
+    _loadFromSettings();
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadFromSettings() async {
+    final user = _ref.read(authProvider).user;
+    if (user?.schedulePreferences != null) {
+      state = user!.schedulePreferences!;
+    } else {
+      state = {'grid': List.filled(168, 'relax')};
+    }
+  }
+
+  Future<void> updateAgenda(Map<String, dynamic> data) async {
+    state = data;
+
+    // Save to backend via user preferences
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      // We'll use the push preferences update endpoint with the schedule data
+      final prefs = _ref.read(pushPreferencesProvider);
+      await repo.updatePushPreferences(
+        PushPreferences(
+          enableCuriosity: prefs.enableCuriosity,
+          personaType: prefs.personaType,
+          dailyCap: prefs.dailyCap,
+          activeSlots: prefs.activeSlots,
+          timezone: prefs.timezone,
+        ),
+      );
+    } catch (e) {
+      // Log error but keep optimistic update
+      print('Failed to save weekly agenda: $e');
+    }
+  }
+}
+
+class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
+  TaskReminderConfigNotifier(this._ref)
+      : super(const TaskReminderConfig()) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromSettings();
+      }
+    });
+    _loadFromSettings();
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadFromSettings() async {
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      final settings = await repo.fetchUserSettings();
+      final enabled = settings['task_reminders_enabled'] as bool? ?? true;
+      final times = settings['task_reminder_times'] as List<dynamic>? ?? [1440, 60, 15];
+
+      state = TaskReminderConfig(
+        enabled: enabled,
+        reminders: times.cast<int>(),
+      );
+    } catch (e) {
+      // Keep default state on error
+    }
+  }
+
+  Future<void> updateConfig({
+    bool? enabled,
+    List<int>? reminders,
+  }) async {
+    final prevState = state;
+    final newState = TaskReminderConfig(
+      enabled: enabled ?? prevState.enabled,
+      reminders: reminders ?? prevState.reminders,
+    );
+
+    // Optimistic update
+    state = newState;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      await repo.updateUserSettings({
+        'task_reminders_enabled': newState.enabled,
+        'task_reminder_times': newState.reminders,
+      });
+    } catch (e) {
+      // Revert on error
+      state = prevState;
+      rethrow;
+    }
+  }
+}
 
 class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
   PushPreferencesNotifier(this._ref)
