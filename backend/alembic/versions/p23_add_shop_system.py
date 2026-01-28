@@ -1,6 +1,6 @@
 """add shop system
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: p23_add_shop_system
 Revises: d71e6a4a774f
 Create Date: 2026-01-28 10:00:00.000000
 
@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'p23_add_shop_system'
 down_revision: Union[str, None] = 'd71e6a4a774f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

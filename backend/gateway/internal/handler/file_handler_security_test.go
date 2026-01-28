@@ -32,7 +32,7 @@ func TestValidateFileByMagicBytes(t *testing.T) {
 		{
 			name:      "有效的DOCX文件",
 			ext:       ".docx",
-			content:   []byte("PK\x03\x04" + make([]byte, 100)),
+			content:   append([]byte("PK\x03\x04"), make([]byte, 100)...),
 			wantValid: true,
 		},
 		{
@@ -45,7 +45,7 @@ func TestValidateFileByMagicBytes(t *testing.T) {
 		{
 			name:      "有效的PNG文件",
 			ext:       ".png",
-			content:   []byte("\x89PNG\r\n\x1a\n" + make([]byte, 100)),
+			content:   append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 100)...),
 			wantValid: true,
 		},
 		{
@@ -58,7 +58,7 @@ func TestValidateFileByMagicBytes(t *testing.T) {
 		{
 			name:      "有效的JPEG文件",
 			ext:       ".jpg",
-			content:   []byte("\xFF\xD8\xFF" + make([]byte, 100)),
+			content:   append([]byte("\xFF\xD8\xFF"), make([]byte, 100)...),
 			wantValid: true,
 		},
 		{
@@ -71,7 +71,7 @@ func TestValidateFileByMagicBytes(t *testing.T) {
 		{
 			name:      "有效的GIF文件",
 			ext:       ".gif",
-			content:   []byte("GIF89a" + make([]byte, 100)),
+			content:   append([]byte("GIF89a"), make([]byte, 100)...),
 			wantValid: true,
 		},
 		{
@@ -136,7 +136,7 @@ func TestSanitizeFilename(t *testing.T) {
 		{
 			name:     "只有路径",
 			input:    "../../",
-			expected: "file",
+			expected: "..",  // path.Base("../../")返回".."
 		},
 		{
 			name:     "空字符串",

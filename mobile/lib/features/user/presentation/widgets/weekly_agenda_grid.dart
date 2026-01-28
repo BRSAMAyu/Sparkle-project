@@ -30,7 +30,34 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
   void initState() {
     super.initState();
     _gridState = List.filled(168, AgendaType.relax);
-    // TODO: Parse initialData if provided
+    _parseInitialData();
+  }
+
+  void _parseInitialData() {
+    if (widget.initialData == null) return;
+
+    final data = widget.initialData!;
+    final grid = data['grid'] as List<dynamic>?;
+    if (grid != null && grid.length == 168) {
+      _gridState = grid.map((e) {
+        final typeStr = e as String?;
+        switch (typeStr) {
+          case 'busy':
+            return AgendaType.busy;
+          case 'fragmented':
+            return AgendaType.fragmented;
+          case 'relax':
+          default:
+            return AgendaType.relax;
+        }
+      }).toList();
+    }
+  }
+
+  Map<String, dynamic> _exportData() {
+    return {
+      'grid': _gridState.map((e) => e.name).toList(),
+    };
   }
 
   void _updateCell(int index) {
@@ -40,7 +67,8 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
         setState(() {
           _gridState[index] = _selectedType;
         });
-        // TODO: Call onChanged with structured data
+        // Call onChanged with structured data
+        widget.onChanged(_exportData());
       }
     }
   }

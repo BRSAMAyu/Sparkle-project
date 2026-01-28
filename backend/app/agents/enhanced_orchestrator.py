@@ -12,6 +12,7 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 from loguru import logger
+import json
 from opentelemetry import trace
 
 from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
@@ -269,12 +270,41 @@ class EnhancedOrchestratorAgent(BaseAgent):
 
         将 CollaborationResult 转换为 AgentResponse
         """
-        # 构建可视化数据
-        visualization_data = {
+        execution_time = result.metadata.get("execution_time", 0.0)
+        execution_time_ms = int(execution_time * 1000) if execution_time else 0
+
+        # Normalize timeline to unified schema
+        steps = []
+        for event in result.timeline:
+            agent_name = event.get("agent_name") or event.get("agent") or "Agent"
+            action = event.get("action") or ""
+            status = event.get("status") or "completed"
+            start_time_ms = event.get("start_time_ms")
+            if start_time_ms is None and event.get("timestamp") is not None:
+                start_time_ms = int(float(event.get("timestamp")) * 1000)
+            duration_ms = event.get("duration_ms")
+            output_summary = event.get("output_summary")
+            agent_role = event.get("agent_role")
+            step = {
+                "agent_name": agent_name,
+                "action": action,
+                "status": status,
+                "start_time_ms": start_time_ms or 0,
+            }
+            if agent_role:
+                step["agent_role"] = agent_role
+            if duration_ms is not None:
+                step["duration_ms"] = duration_ms
+            if output_summary:
+                step["output_summary"] = output_summary
+            if event.get("metadata"):
+                step["metadata"] = event.get("metadata")
+            steps.append(step)
+
+        collaboration_timeline = {
             "workflow_type": result.workflow_type,
-            "participants": result.participants,
-            "timeline": result.timeline,
-            "metadata": result.metadata
+            "execution_time_ms": execution_time_ms,
+            "steps": steps,
         }
 
         # 构建 metadata
@@ -291,8 +321,8 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 }
                 for output in result.outputs
             ],
-            "visualization": visualization_data,
-            "execution_time": result.metadata.get("execution_time", 0.0)
+            "collaboration_timeline": json.dumps(collaboration_timeline, ensure_ascii=False),
+            "execution_time": execution_time,
         }
 
         return AgentResponse(

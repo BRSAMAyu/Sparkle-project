@@ -7,8 +7,9 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
         TaskNotificationScheduler,
         TaskReminderConfig,
         taskNotificationSchedulerProvider,
-        taskReminderConfigProvider;
+        TaskReminderConfig;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart' show taskReminderConfigProvider;
 
 /// Screen for configuring task reminder settings
 class TaskReminderSettingsScreen extends ConsumerStatefulWidget {
@@ -127,8 +128,9 @@ class _TaskReminderSettingsScreenState
       ),
       value: config.enabled,
       onChanged: (value) {
-        ref.read(taskReminderConfigProvider.notifier).state =
-            config.copyWith(enabled: value);
+        ref.read(taskReminderConfigProvider.notifier).updateConfig(
+              enabled: value,
+            );
       },
       activeThumbColor: DS.primaryBase,
     );
@@ -164,8 +166,9 @@ class _TaskReminderSettingsScreenState
                     } else {
                       newReminders.remove(minutes);
                     }
-                    ref.read(taskReminderConfigProvider.notifier).state =
-                        config.copyWith(reminders: newReminders);
+                    ref.read(taskReminderConfigProvider.notifier).updateConfig(
+                      reminders: newReminders,
+                    );
                   }
                 : null,
             activeColor: DS.primaryBase,

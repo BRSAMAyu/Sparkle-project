@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/collaboration_timeline.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/prism_behavior_card.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
@@ -33,11 +34,15 @@ class AgentMessageRenderer extends StatelessWidget {
           if (message.widgets != null && message.widgets!.isNotEmpty)
             ...message.widgets!.map((widget) => _buildWidget(context, widget)),
 
-          // 3. 错误提示（如果有）
+          // 3. 多Agent协作时间线（如果有）
+          if (message.agentCollaboration != null)
+            _buildCollaborationTimeline(context, message.agentCollaboration!),
+
+          // 4. 错误提示（如果有）
           if ((message.hasErrors ?? false) && message.errors != null)
             _buildErrorCard(context, message.errors!),
 
-          // 4. 确认操作（如果需要）
+          // 5. 确认操作（如果需要）
           if ((message.requiresConfirmation ?? false) &&
               message.confirmationData != null)
             _buildConfirmationCard(context, message.confirmationData!),
@@ -191,6 +196,48 @@ class AgentMessageRenderer extends StatelessWidget {
           ),
         ),
       );
+
+  Widget _buildCollaborationTimeline(
+    BuildContext context,
+    Map<String, dynamic> collaborationData,
+  ) {
+    try {
+      // Extract workflow type
+      final workflowType = collaborationData['workflow_type'] as String? ?? 'unknown';
+
+      // Extract execution time
+      final executionTimeRaw = collaborationData['execution_time_ms'];
+      final executionTimeMs = executionTimeRaw is num
+          ? executionTimeRaw.toInt()
+          : 0;
+      final executionTime = executionTimeMs / 1000.0;
+
+      // Extract steps
+      final stepsList =
+          (collaborationData['steps'] as List<dynamic>?) ??
+          (collaborationData['timeline'] as List<dynamic>?);
+      final steps = stepsList
+              ?.map((e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      if (steps.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: AgentCollaborationTimeline(
+          steps: steps,
+          workflowType: workflowType,
+          executionTime: executionTime,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error building collaboration timeline: $e');
+      return const SizedBox.shrink();
+    }
+  }
 
   Widget _buildUnknownWidget(WidgetPayload widget) => Card(
         margin: const EdgeInsets.symmetric(vertical: 8),

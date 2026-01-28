@@ -21,6 +21,8 @@ async def get_user_settings(
     return UserSettingsResponse(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
+        task_reminders_enabled=record.task_reminders_enabled,
+        task_reminder_times=record.task_reminder_times,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
@@ -67,6 +69,8 @@ async def update_user_settings(
     return UserSettingsResponse(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
+        task_reminders_enabled=record.task_reminders_enabled,
+        task_reminder_times=record.task_reminder_times,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )

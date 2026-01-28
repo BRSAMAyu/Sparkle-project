@@ -170,6 +170,8 @@ class UserRepository {
       return {
         'transparency_level': 0,
         'system_update_level': 1,
+        'task_reminders_enabled': true,
+        'task_reminder_times': [1440, 60, 15],
       };
     }
     final response = await _apiClient.get<Map<String, dynamic>>('/user/settings');

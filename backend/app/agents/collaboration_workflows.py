@@ -35,6 +35,32 @@ class CollaborationResult:
     confidence: float = 0.9
 
 
+def _build_timeline_step(
+    agent_name: str,
+    action: str,
+    start_time: datetime,
+    *,
+    status: str = "completed",
+    output_summary: Optional[str] = None,
+    agent_role: Optional[str] = None,
+    duration_ms: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Normalize timeline steps to a consistent schema."""
+    step = {
+        "agent_name": agent_name,
+        "action": action,
+        "status": status,
+        "start_time_ms": int((datetime.now() - start_time).total_seconds() * 1000),
+    }
+    if agent_role:
+        step["agent_role"] = agent_role
+    if duration_ms is not None:
+        step["duration_ms"] = duration_ms
+    if output_summary:
+        step["output_summary"] = output_summary
+    return step
+
+
 # ==========================================
 # 工作流 1: 任务分解协作
 # ==========================================
@@ -79,24 +105,28 @@ class TaskDecompositionWorkflow:
         logger.info("[TaskDecomposition] Step 0: Retrieving background knowledge...")
         search_agent = SearchAgent()
         search_response = await search_agent.process(context)
-        timeline.append({
-            "agent": "SearchExpert",
-            "action": "检索背景知识",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": search_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "SearchExpert",
+                "检索背景知识",
+                start_time,
+                output_summary=search_response.response_text[:100] + "...",
+            )
+        )
 
         # Step 1: StudyPlannerAgent 分析整体情况
         logger.info("[TaskDecomposition] Step 1: Analyzing with StudyPlanner...")
         planner = StudyPlannerAgent()
 
         planner_response = await planner.process(context)
-        timeline.append({
-            "agent": "StudyPlanner",
-            "action": "分析学习状态，制定整体计划",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": planner_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "StudyPlanner",
+                "分析学习状态，制定整体计划",
+                start_time,
+                output_summary=planner_response.response_text[:100] + "...",
+            )
+        )
 
         # Step 2: 提取关键信息
         plan_metadata = planner_response.metadata or {}
@@ -148,23 +178,27 @@ class TaskDecompositionWorkflow:
                     continue
 
                 outputs.append(result)
-                timeline.append({
-                    "agent": agent_name,
-                    "action": "生成专项内容",
-                    "timestamp": (datetime.now() - start_time).total_seconds(),
-                    "output_summary": result.response_text[:100] + "..."
-                })
+                timeline.append(
+                    _build_timeline_step(
+                        agent_name,
+                        "生成专项内容",
+                        start_time,
+                        output_summary=result.response_text[:100] + "...",
+                    )
+                )
 
         # Step 4: 整合生成完整计划
         logger.info("[TaskDecomposition] Step 3: Synthesizing final plan...")
         final_response = await self._integrate_plan(planner_response, outputs, context)
 
-        timeline.append({
-            "agent": "Orchestrator",
-            "action": "整合所有专家意见，生成最终计划",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": "完成计划整合"
-        })
+        timeline.append(
+            _build_timeline_step(
+                "Orchestrator",
+                "整合所有专家意见，生成最终计划",
+                start_time,
+                output_summary="完成计划整合",
+            )
+        )
 
         return CollaborationResult(
             workflow_type="task_decomposition",
@@ -292,12 +326,14 @@ class ProgressiveExplorationWorkflow:
             "content": search_response.response_text,
             "reasoning": search_response.reasoning
         })
-        timeline.append({
-            "agent": "SearchExpert",
-            "action": "检索知识证据",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": search_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "SearchExpert",
+                "检索知识证据",
+                start_time,
+                output_summary=search_response.response_text[:100] + "...",
+            )
+        )
 
         # Round 1: MathAgent - 数学推导
         logger.info("[ProgressiveExploration] Round 1: Math analysis...")
@@ -309,12 +345,14 @@ class ProgressiveExplorationWorkflow:
             "content": math_response.response_text,
             "reasoning": math_response.reasoning
         })
-        timeline.append({
-            "agent": "MathExpert",
-            "action": "数学原理推导",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": math_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "MathExpert",
+                "数学原理推导",
+                start_time,
+                output_summary=math_response.response_text[:100] + "...",
+            )
+        )
 
         # Round 2: CodeAgent - 代码实现
         logger.info("[ProgressiveExploration] Round 2: Code implementation...")
@@ -331,12 +369,14 @@ class ProgressiveExplorationWorkflow:
             "content": code_response.response_text,
             "reasoning": code_response.reasoning
         })
-        timeline.append({
-            "agent": "CodeExpert",
-            "action": "代码实现",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": code_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "CodeExpert",
+                "代码实现",
+                start_time,
+                output_summary=code_response.response_text[:100] + "...",
+            )
+        )
 
         # Round 3: ScienceAgent - 生物/物理类比（如果适用）
         if self._needs_scientific_analogy(query):
@@ -354,12 +394,14 @@ class ProgressiveExplorationWorkflow:
                 "content": science_response.response_text,
                 "reasoning": science_response.reasoning
             })
-            timeline.append({
-                "agent": "ScienceExpert",
-                "action": "科学类比",
-                "timestamp": (datetime.now() - start_time).total_seconds(),
-                "output_summary": science_response.response_text[:100] + "..."
-            })
+            timeline.append(
+                _build_timeline_step(
+                    "ScienceExpert",
+                    "科学类比",
+                    start_time,
+                    output_summary=science_response.response_text[:100] + "...",
+                )
+            )
 
         # Round 4: WritingAgent - 学习笔记
         logger.info("[ProgressiveExploration] Round 4: Study notes generation...")
@@ -371,12 +413,14 @@ class ProgressiveExplorationWorkflow:
         writing_agent = WritingAgent()
         writing_response = await writing_agent.process(writing_context)
         outputs.append(writing_response)
-        timeline.append({
-            "agent": "WritingExpert",
-            "action": "生成学习笔记",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": writing_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "WritingExpert",
+                "生成学习笔记",
+                start_time,
+                output_summary=writing_response.response_text[:100] + "...",
+            )
+        )
 
         # Round 5: StudyPlannerAgent - 复习安排
         logger.info("[ProgressiveExploration] Round 5: Review scheduling...")
@@ -387,12 +431,14 @@ class ProgressiveExplorationWorkflow:
         planner = StudyPlannerAgent()
         planner_response = await planner.process(planner_context)
         outputs.append(planner_response)
-        timeline.append({
-            "agent": "StudyPlanner",
-            "action": "安排复习计划",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": planner_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "StudyPlanner",
+                "安排复习计划",
+                start_time,
+                output_summary=planner_response.response_text[:100] + "...",
+            )
+        )
 
         # 整合响应
         final_response = self._format_exploration_summary(conversation_history, planner_response)
@@ -492,24 +538,28 @@ class ErrorDiagnosisWorkflow:
         )
         solver_response = await solver.process(solver_context)
         outputs.append(solver_response)
-        timeline.append({
-            "agent": "ProblemSolver",
-            "action": "分析错误原因",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": solver_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "ProblemSolver",
+                "分析错误原因",
+                start_time,
+                output_summary=solver_response.response_text[:100] + "...",
+            )
+        )
 
         # Step 1.5: SearchAgent 补充检索证据
         logger.info("[ErrorDiagnosis] Step 1.5: Retrieving supporting knowledge...")
         search_agent = SearchAgent()
         search_response = await search_agent.process(context)
         outputs.append(search_response)
-        timeline.append({
-            "agent": "SearchExpert",
-            "action": "检索支撑知识",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": search_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "SearchExpert",
+                "检索支撑知识",
+                start_time,
+                output_summary=search_response.response_text[:100] + "...",
+            )
+        )
 
         # Step 2: 识别薄弱知识点（从 metadata 中提取）
         solver_metadata = solver_response.metadata or {}
@@ -527,12 +577,14 @@ class ErrorDiagnosisWorkflow:
         )
         planner_response = await planner.process(planner_context)
         outputs.append(planner_response)
-        timeline.append({
-            "agent": "StudyPlanner",
-            "action": "制定复习计划",
-            "timestamp": (datetime.now() - start_time).total_seconds(),
-            "output_summary": planner_response.response_text[:100] + "..."
-        })
+        timeline.append(
+            _build_timeline_step(
+                "StudyPlanner",
+                "制定复习计划",
+                start_time,
+                output_summary=planner_response.response_text[:100] + "...",
+            )
+        )
 
         # Step 4: 生成类似练习题
         logger.info("[ErrorDiagnosis] Step 3: Generating practice problems...")
@@ -558,12 +610,14 @@ class ErrorDiagnosisWorkflow:
 
         if practice_response:
             outputs.append(practice_response)
-            timeline.append({
-                "agent": "PracticeGenerator",
-                "action": "生成练习题",
-                "timestamp": (datetime.now() - start_time).total_seconds(),
-                "output_summary": practice_response.response_text[:100] + "..."
-            })
+            timeline.append(
+                _build_timeline_step(
+                    "PracticeGenerator",
+                    "生成练习题",
+                    start_time,
+                    output_summary=practice_response.response_text[:100] + "...",
+                )
+            )
 
         # 整合诊断报告
         final_response = self._format_diagnosis_report(

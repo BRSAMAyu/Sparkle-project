@@ -4,6 +4,7 @@ Shop Service - 商城核心业务逻辑
 """
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import selectinload
@@ -130,7 +131,7 @@ class ShopService:
             是否已拥有
         """
         # 对于消耗品，检查背包中是否有库存
-        if item_type in [ShopItemType.CONSUMABLE, ShopItemType.BOOST]:
+        if item_type in ["consumable", "boost"]:
             query = select(UserConsumable).where(
                 and_(
                     UserConsumable.user_id == user_id,
@@ -143,7 +144,7 @@ class ShopService:
             return consumable is not None
 
         # 对于皮肤和称号，检查购买记录（修复bug：之前永远返回False）
-        if item_type in [ShopItemType.SKIN, ShopItemType.TITLE]:
+        if item_type in ["skin", "title"]:
             query = select(ShopPurchase).where(
                 and_(
                     ShopPurchase.user_id == user_id,
@@ -185,7 +186,29 @@ class ShopService:
             ValueError: 物品不存在、不可购买、库存不足、余额不足等
         """
         try:
-            # 1. 查询物品（加行锁防止并发超卖）
+            # 0. 先查询物品基本信息（不加锁）
+            basic_query = select(ShopItem).where(
+                and_(
+                    ShopItem.id == item_id,
+                    ShopItem.is_available == True
+                )
+            )
+            basic_result = await self.db.execute(basic_query)
+            basic_item = basic_result.scalar_one_or_none()
+
+            if not basic_item:
+                raise ValueError(f"Item {item_id} not found or not available")
+
+            # 1. 检查余额（在行锁之前检查，避免死锁）
+            balance_before = await self.photon_service.get_balance(user_id)
+            actual_price = basic_item.price_photons
+
+            if balance_before < actual_price:
+                raise ValueError(
+                    f"Insufficient photon balance: {balance_before} < {actual_price}"
+                )
+
+            # 2. 查询物品（加行锁防止并发超卖）
             query = select(ShopItem).where(
                 and_(
                     ShopItem.id == item_id,
@@ -199,32 +222,22 @@ class ShopService:
             if not item:
                 raise ValueError(f"Item {item_id} not found or not available")
 
-            # 2. 检查库存
+            # 3. 检查库存
             if item.is_limited and item.stock_quantity <= 0:
                 raise ValueError(f"Item {item_id} is out of stock")
 
-            # 3. 检查是否已拥有（非消耗品）
-            if item.item_type not in [ShopItemType.CONSUMABLE, ShopItemType.BOOST]:
+            # 4. 检查是否已拥有（非消耗品）
+            if item.item_type not in ["consumable", "boost"]:
                 already_owned = await self._check_item_ownership(user_id, item_id, item.item_type)
                 if already_owned:
                     raise ValueError(f"User already owns item {item_id}")
 
-            # 4. 计算实际价格
-            actual_price = item.price_photons
-
-            # 5. 检查余额并扣除光子
-            balance_before = await self.photon_service.get_balance(user_id)
-            if balance_before < actual_price:
-                raise ValueError(
-                    f"Insufficient photon balance: {balance_before} < {actual_price}"
-                )
-
-            # 扣除光子（使用内部方法，不提交事务）
+            # 5. 扣除光子（使用内部方法，不提交事务）
             old_balance, new_balance, user = await self.photon_service._update_balance(
                 user_id, -actual_price, delete_cache=False
             )
 
-            # 5.5 记录交易历史（修复bug：购买未记录交易）
+            # 6. 记录交易历史（修复bug：购买未记录交易）
             await self.photon_service.record_transaction(
                 user_id=user_id,
                 transaction_type="purchase",
@@ -235,8 +248,8 @@ class ShopService:
                 related_item_id=item_id,
                 extra_data={
                     "item_name": item.name,
-                    "item_type": item.item_type.value,
-                    "item_rarity": item.rarity.value
+                    "item_type": item.item_type,
+                    "item_rarity": item.rarity
                 }
             )
 
@@ -250,6 +263,7 @@ class ShopService:
 
             # 8. 创建购买记录
             purchase = ShopPurchase(
+                id=str(uuid4()),
                 user_id=user_id,
                 item_id=item_id,
                 price_paid=actual_price,
@@ -317,7 +331,7 @@ class ShopService:
             item: 物品对象
         """
         # 消耗品类型：添加到 user_consumables 表
-        if item.item_type in [ShopItemType.CONSUMABLE, ShopItemType.BOOST]:
+        if item.item_type in ["consumable", "boost"]:
             # 检查是否已有该消耗品
             query = select(UserConsumable).where(
                 and_(
@@ -337,16 +351,17 @@ class ShopService:
                 effect_type = item.item_config.get("effect_type") if item.item_config else None
 
                 consumable = UserConsumable(
+                    id=str(uuid4()),
                     user_id=user_id,
                     consumable_id=item.id,
-                    effect_type=ConsumableEffectType(effect_type) if effect_type else ConsumableEffectType.EXP_BOOST,
+                    effect_type=effect_type if effect_type else "exp_boost",
                     quantity=1,
                     expires_at=item.item_config.get("expires_at") if item.item_config else None
                 )
                 self.db.add(consumable)
 
         # 皮肤类型：更新用户表的 equipped_skin 字段
-        elif item.item_type == ShopItemType.SKIN:
+        elif item.item_type == "skin":
             user_query = select(User).where(User.id == user_id)
             result = await self.db.execute(user_query)
             user = result.scalar_one_or_none()
@@ -355,7 +370,7 @@ class ShopService:
                 # TODO: 实现 skin 库存管理（如 user_skins 表）
 
         # 称号类型：更新用户表的 equipped_title 字段
-        elif item.item_type == ShopItemType.TITLE:
+        elif item.item_type == "title":
             user_query = select(User).where(User.id == user_id)
             result = await self.db.execute(user_query)
             user = result.scalar_one_or_none()

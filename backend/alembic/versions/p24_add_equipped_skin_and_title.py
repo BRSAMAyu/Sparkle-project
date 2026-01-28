@@ -1,7 +1,7 @@
 """add equipped_skin and equipped_title to users
 
 Revision ID: p24_add_equipped_fields
-Revises: a1b2c3d4e5f6
+Revises: p23_add_shop_system
 Create Date: 2026-01-28 12:00:00.000000
 
 Migration Contract:
@@ -20,7 +20,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'p24_add_equipped_fields'
-down_revision: Union[str, None] = 'a1b2c3d4e5f6'
+down_revision: Union[str, None] = 'p23_add_shop_system'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

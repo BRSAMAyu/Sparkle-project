@@ -28,6 +28,10 @@ from app.models.community import (  # noqa: F401
     Group, GroupMember, GroupMessage, PrivateMessage,
     Friendship, GroupType, GroupRole
 )
+from app.models.shop import (  # noqa: F401
+    ShopItem, ShopPurchase, UserConsumable,
+    PhotonTransactionType, ShopItemType, ItemRarity, ConsumableEffectType
+)
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -51,3 +55,80 @@ async def db_session_fixture():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
+
+
+@pytest_asyncio.fixture(name="test_user")
+async def test_user_fixture(db_session: AsyncSession) -> User:
+    """Create a test user"""
+    user = User(
+        username="testuser",
+        email="test@example.com",
+        hashed_password="hashed",
+        photon_balance=0
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture(name="test_shop_items")
+async def test_shop_items_fixture(db_session: AsyncSession) -> list[ShopItem]:
+    """Create test shop items"""
+    items = [
+        ShopItem(
+            id="skin_common_001",
+            name="Common Skin",
+            description="A common skin",
+            item_type=ShopItemType.SKIN,
+            category="galaxy_skin",
+            price_photons=100,
+            rarity=ItemRarity.COMMON,
+            is_available=True,
+            is_limited=False,
+            sort_order=10,
+        ),
+        ShopItem(
+            id="skin_rare_001",
+            name="Rare Skin",
+            description="A rare skin",
+            item_type=ShopItemType.SKIN,
+            category="galaxy_skin",
+            price_photons=250,
+            rarity=ItemRarity.RARE,
+            is_available=True,
+            is_limited=False,
+            sort_order=5,
+        ),
+        ShopItem(
+            id="consumable_boost_001",
+            name="EXP Boost",
+            description="Double experience for 1 hour",
+            item_type=ShopItemType.CONSUMABLE,
+            category="exp_boost",
+            price_photons=150,
+            rarity=ItemRarity.RARE,
+            is_available=True,
+            is_limited=True,
+            stock_quantity=10,
+            sort_order=3,
+            item_config={"effect_type": "exp_boost", "duration_hours": 1, "multiplier": 2},
+        ),
+        ShopItem(
+            id="title_legendary_001",
+            name="Legendary Title",
+            description="A legendary title",
+            item_type=ShopItemType.TITLE,
+            category="achievement_title",
+            price_photons=500,
+            rarity=ItemRarity.LEGENDARY,
+            is_available=True,
+            is_limited=False,
+            sort_order=1,
+            item_config={"text": "Legendary Learner", "color": "#FFD700"},
+        ),
+    ]
+    for item in items:
+        db_session.add(item)
+    await db_session.commit()
+    return items

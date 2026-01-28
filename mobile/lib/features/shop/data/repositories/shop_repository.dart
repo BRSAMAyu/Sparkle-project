@@ -195,14 +195,11 @@ class ShopRepository {
 
   /// Equip item (skin or title)
   /// 装备物品
-  Future<Map<String, dynamic>> equipItem({
-    required String itemId,
-    required String itemType,
-  }) async {
+  Future<Map<String, dynamic>> equipItem(String itemType, String? itemId) async {
     try {
       final requestData = <String, dynamic>{
-        'item_id': itemId,
         'item_type': itemType,
+        if (itemId != null) 'item_id': itemId,
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -251,18 +248,14 @@ class ShopRepository {
 
   /// Use consumable
   /// 使用消耗品
-  Future<Map<String, dynamic>> useConsumable({
-    required String consumableId,
-    int quantity = 1,
-  }) async {
+  Future<Map<String, dynamic>> useConsumable(String consumableId, {int quantity = 1}) async {
     try {
       final requestData = <String, dynamic>{
-        'consumable_id': consumableId,
         'quantity': quantity,
       };
 
       final response = await _apiClient.post<Map<String, dynamic>>(
-        '${ApiEndpoints.inventory}/consumables/use',
+        ApiEndpoints.inventoryConsumablesUse(consumableId),
         data: requestData,
       );
 

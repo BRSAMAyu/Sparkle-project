@@ -265,7 +265,9 @@ class _PlanProgressTab extends StatelessWidget {
               ],
             ),
           ),
-        ),
+        );
+      },
+    ),
         const SizedBox(height: DS.spacing24),
         const _SectionHeader(title: '任务类型分布'),
         const SizedBox(height: DS.spacing12),
@@ -337,7 +339,9 @@ class _PlanProgressTab extends StatelessWidget {
               ),
             ),
           ),
-        ),
+        );
+      },
+    ),
         const SizedBox(height: DS.spacing24),
         const _SectionHeader(title: '每日完成趋势'),
         const SizedBox(height: DS.spacing12),
@@ -409,6 +413,8 @@ class _PlanProgressTab extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    ),
         ],
       ),
     );

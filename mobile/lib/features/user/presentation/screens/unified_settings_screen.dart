@@ -141,8 +141,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             WeeklyAgendaGrid(
+              initialData: ref.watch(weeklyAgendaProvider),
               onChanged: (data) {
-                // Handle updates
+                ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
               },
             ),
             const SizedBox(height: DS.spacing32),
