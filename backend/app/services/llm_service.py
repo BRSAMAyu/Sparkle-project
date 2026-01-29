@@ -17,6 +17,8 @@ from app.core.llm_router import LLMSelection, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
+from app.services.llm.fallback import FallbackReason, llm_fallback_manager
+from app.services.llm.concurrency import llm_concurrency
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -364,7 +366,7 @@ class LLMService:
         **kwargs
     ) -> str:
         """
-        Send a chat request to the LLM.
+        Send a chat request to the LLM with automatic fallback support.
         """
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
@@ -387,24 +389,77 @@ class LLMService:
 
             logger.debug(f"Sending chat request to model: {model}")
 
+            # 使用回退管理器执行请求
+            async def _call_with_selection(selection: LLMSelection) -> str:
+                # 获取 provider 名称用于并发控制
+                provider_name = selection.config.provider.value
+
+                try:
+                    async with llm_concurrency.acquire(provider_name):
+                        response = await self.provider.chat(
+                            messages,
+                            model=selection.config.model_name,
+                            temperature=selection.config.temperature,
+                            **kwargs
+                        )
+                        return response
+                except Exception as e:
+                    # 让回退管理器判断是否需要重试
+                    reason = llm_fallback_manager._detect_fallback_reason(e)
+                    if reason:
+                        logger.warning(
+                            f"[LLM] Request to {selection.config.model_name} failed: "
+                            f"reason={reason.value}, will attempt fallback"
+                        )
+                    raise e
+
             try:
-                # Circuit Breaker Check
+                # 检查熔断器
                 await circuit_breaker_service.check("primary_llm")
 
-                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                # 使用回退管理器执行
+                if self._current_selection:
+                    response = await llm_fallback_manager.execute_with_fallback(
+                        self._current_selection,
+                        _call_with_selection,
+                        operation_type="chat",
+                    )
 
-                # Record Success
-                await circuit_breaker_service.record_success("primary_llm")
-                return response
+                    # 记录成功
+                    await circuit_breaker_service.record_success("primary_llm")
+                    return response
+                else:
+                    # 没有当前选择，直接调用
+                    response = await _call_with_selection(
+                        type('obj', (object,), {'config': type('obj', (object,), {
+                            'model_name': model,
+                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url(), 'temperature': temperature})
+                        })})
+                    )
+                    await circuit_breaker_service.record_success("primary_llm")
+                    return response
+
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                # Optional: Return a degraded response if possible, or re-raise
                 raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
             except Exception as e:
-                # Record Failure
                 await circuit_breaker_service.record_failure("primary_llm")
-                logger.error(f"LLM Chat Error (Circuit Breaker recording): {e}")
+                logger.error(f"LLM Chat Error: {e}")
                 raise e
+
+    def _get_provider_name_from_url(self) -> str:
+        """从 provider 获取提供商名称"""
+        if hasattr(self.provider, 'base_url'):
+            url_lower = self.provider.base_url.lower()
+            if "bigmodel" in url_lower or "zhipu" in url_lower:
+                return "zhipu"
+            elif "deepseek" in url_lower:
+                return "deepseek"
+            elif "xiaomi" in url_lower or "mimo" in url_lower:
+                return "xiaomi"
+            elif "dashscope" in url_lower or "aliyun" in url_lower:
+                return "dashscope"
+        return "default"
 
     async def reason(
         self,
@@ -510,7 +565,7 @@ class LLMService:
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
-        Stream chat response from the LLM.
+        Stream chat response from the LLM with automatic fallback support.
         """
         with tracer.start_as_current_span("llm_stream_chat") as span:
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
@@ -553,20 +608,110 @@ class LLMService:
             chunk_count = 0
             logger.info(f"[LLM] stream_chat START: model={model}, clear_thinking={self._extra_body}")
 
-            stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
-            if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
-                stream = await stream
-            if not hasattr(stream, "__aiter__"):
-                raise TypeError("stream_chat must return an async iterator")
+            # 定义流式调用函数
+            async def _stream_with_selection(selection: LLMSelection) -> AsyncGenerator[str, None]:
+                provider_name = selection.config.provider.value
+                async with llm_concurrency.acquire(provider_name):
+                    stream = self.provider.stream_chat(
+                        messages,
+                        model=selection.config.model_name,
+                        temperature=selection.config.temperature,
+                        **kwargs
+                    )
+                    if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
+                        stream = await stream
+                    if not hasattr(stream, "__aiter__"):
+                        raise TypeError("stream_chat must return an async iterator")
+
+                    async for chunk in stream:
+                        yield chunk
 
             try:
-                async for chunk in stream:
-                    chunk_count += 1
-                    if first_chunk_time is None:
-                        first_chunk_time = _time.perf_counter()
-                        ttfc = (first_chunk_time - start_time) * 1000
-                        logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={model}, ttfc={ttfc:.0f}ms")
-                    yield chunk
+                await circuit_breaker_service.check("primary_llm")
+
+                # 流式回退处理（只在首次连接前）
+                if self._current_selection:
+                    # 使用回退管理器的流式方法
+                    last_error = None
+                    tried_models = set()
+
+                    # 尝试原始模型
+                    for attempt in range(llm_fallback_manager.max_fallback_attempts):
+                        selection = self._current_selection
+
+                        # 如果不是第一次尝试，获取回退候选
+                        if attempt > 0:
+                            candidates = llm_fallback_manager._get_fallback_candidates(
+                                self._current_selection,
+                                tried_models,
+                            )
+                            if not candidates:
+                                break
+                            selection = candidates[0]
+                            tried_models.add(selection.config.model_name)
+                            logger.info(f"[LLM] Fallback attempt {attempt}: trying {selection.config.model_name}")
+
+                        try:
+                            async for chunk in _stream_with_selection(selection):
+                                chunk_count += 1
+                                if first_chunk_time is None:
+                                    first_chunk_time = _time.perf_counter()
+                                    ttfc = (first_chunk_time - start_time) * 1000
+                                    logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={selection.config.model_name}, ttfc={ttfc:.0f}ms")
+                                yield chunk
+
+                            # 成功完成流式传输
+                            await circuit_breaker_service.record_success("primary_llm")
+
+                            # 记录回退成功
+                            if attempt > 0:
+                                logger.success(
+                                    f"[LLM] Stream fallback SUCCESS: "
+                                    f"final_model={selection.config.model_name}"
+                                )
+                            return  # 退出函数
+
+                        except Exception as e:
+                            last_error = e
+                            reason = llm_fallback_manager._detect_fallback_reason(e)
+                            if reason:
+                                logger.warning(
+                                    f"[LLM] Stream attempt {attempt + 1} failed: "
+                                    f"model={selection.config.model_name}, reason={reason.value}"
+                                )
+                                model_key = llm_fallback_manager._get_model_key_from_selection(selection)
+                                await llm_fallback_manager.health_tracker.record_failure(model_key, reason)
+                                tried_models.add(model_key)
+                                # 短暂延迟后重试
+                                await asyncio.sleep(llm_fallback_manager._calculate_backoff_delay(attempt))
+                            else:
+                                # 非回退类型错误，直接抛出
+                                raise e
+
+                    # 所有尝试都失败
+                    await circuit_breaker_service.record_failure("primary_llm")
+                    if last_error:
+                        raise last_error
+                    raise HTTPException(status_code=503, detail="All LLM models unavailable")
+
+                else:
+                    # 没有当前选择，直接调用
+                    async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                        chunk_count += 1
+                        if first_chunk_time is None:
+                            first_chunk_time = _time.perf_counter()
+                            ttfc = (first_chunk_time - start_time) * 1000
+                            logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={model}, ttfc={ttfc:.0f}ms")
+                        yield chunk
+                    await circuit_breaker_service.record_success("primary_llm")
+
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Stream Chat Error: {e}")
+                raise e
             finally:
                 elapsed = (_time.perf_counter() - start_time) * 1000
                 logger.info(f"[LLM] stream_chat END: model={model}, elapsed={elapsed:.0f}ms, chunks={chunk_count}")

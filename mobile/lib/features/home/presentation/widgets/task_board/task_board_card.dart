@@ -28,16 +28,21 @@ class TaskBoardCard extends ConsumerWidget {
           children: [
             // Header with title and view switcher
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '任务看板',
-                  style: context.sparkleTypography.titleLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: DS.textPrimary,
+                Flexible(
+                  child: Text(
+                    '任务看板',
+                    style: context.sparkleTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: DS.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const TaskViewSwitcher(),
+                const SizedBox(width: DS.spacing12),
+                const Flexible(
+                  child: TaskViewSwitcher(),
+                ),
               ],
             ),
             const SizedBox(height: DS.spacing12),

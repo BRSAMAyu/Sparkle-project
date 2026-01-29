@@ -186,10 +186,31 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return;
     }
-    await _apiClient.post<Map<String, dynamic>>(
+    // Use PUT for idempotent update operation
+    await _apiClient.put<Map<String, dynamic>>(
       '/user/settings',
       data: payload,
     );
+  }
+
+  /// Update weekly schedule preferences (time slots grid)
+  Future<UserModel> updateSchedulePreferences(Map<String, dynamic> scheduleData) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoUser; // Mock update
+    }
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/users/me/schedule-preferences',
+        data: scheduleData,
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Failed to update schedule preferences');
+      }
+      return UserModel.fromJson(payload);
+    } catch (e) {
+      rethrow;
+    }
   }
 }
 
