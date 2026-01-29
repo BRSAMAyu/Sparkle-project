@@ -122,6 +122,10 @@ class _TaskDetailView extends ConsumerWidget {
   }
 
   Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
         flexibleSpace: FlexibleSpaceBar(

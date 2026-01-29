@@ -18,6 +18,10 @@ class FriendsScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
           title: Text(l10n.community),
           bottom: TabBar(
             tabs: [

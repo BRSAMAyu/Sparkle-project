@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
@@ -61,6 +62,10 @@ class _LearningForecastScreenState
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text('学习预测洞察', style: TextStyle(color: DS.brandPrimary)),

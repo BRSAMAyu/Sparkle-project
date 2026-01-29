@@ -632,12 +632,6 @@ abstract class AppLocalizations {
   /// **'保持专注，你正在状态！'**
   String get aiNudgeFocus;
 
-  /// No description provided for @qwen3CognitiveStatus.
-  ///
-  /// In zh, this message translates to:
-  /// **'Qwen3 认知状态'**
-  String get qwen3CognitiveStatus;
-
   /// No description provided for @winStreak.
   ///
   /// In zh, this message translates to:

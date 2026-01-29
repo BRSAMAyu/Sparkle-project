@@ -50,6 +50,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: DS.primaryGradient,

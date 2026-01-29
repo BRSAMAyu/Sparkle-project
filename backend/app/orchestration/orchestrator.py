@@ -2093,7 +2093,7 @@ class ChatOrchestrator:
                     try:
                         from app.services.decision_record_service import DecisionRecordService
 
-                        if active_db:
+                        if active_db is not None:
                             decision_service = DecisionRecordService(active_db)
                             await decision_service.record_decision(
                                 user_id=uuid.UUID(str(user_id)),
