@@ -51,7 +51,9 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserModel user) => SizedBox(
+  Widget _buildHeader(BuildContext context, UserModel user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
         height: 320,
         child: Stack(
           children: [
@@ -123,12 +125,15 @@ class ProfileScreen extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.local_fire_department_rounded,
-                                        color: DS.brandPrimaryConst, size: 16,),
+                                        color: isDark ? Colors.white : DS.brandPrimaryConst,
+                                        size: 16,),
                                     const SizedBox(width: DS.xs),
                                     Text(
                                       'Lv.${user.flameLevel}',
                                       style: TextStyle(
-                                        color: DS.brandPrimaryConst,
+                                        color: isDark
+                                            ? Colors.white
+                                            : DS.brandPrimaryConst,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -136,7 +141,9 @@ class ProfileScreen extends ConsumerWidget {
                                     Text(
                                       'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                       style: TextStyle(
-                                        color: DS.textSecondary,
+                                        color: isDark
+                                            ? Colors.white70
+                                            : DS.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -155,6 +162,7 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       );
+  }
 
   Widget _buildSettingsSection(
           BuildContext context, WidgetRef ref, AppLocalizations l10n,) =>
@@ -169,7 +177,7 @@ class ProfileScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: Icons.person_outline_rounded,
-              title: l10n.nickname,
+              title: '个人资料',
               gradient: DS.primaryGradient,
               onTap: () {
                 Navigator.of(context).push(

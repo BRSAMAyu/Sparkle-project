@@ -161,7 +161,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
       );
 
-  Widget _buildViewSwitcher() => Container(
+  Widget _buildViewSwitcher() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         width: double.infinity,
         child: SegmentedButton<CalendarViewMode>(
@@ -183,15 +185,25 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 if (states.contains(WidgetState.selected)) {
                   return DS.primaryBase;
                 }
-                return DS.brandPrimary10;
+                return isDark ? DS.surfaceTertiary : DS.brandPrimary10;
               },
             ),
-            foregroundColor: WidgetStateProperty.all(DS.brandPrimary),
+            foregroundColor: WidgetStateProperty.resolveWith<Color>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return isDark ? DS.textSecondary : DS.brandPrimary;
+              },
+            ),
           ),
         ),
       );
+  }
 
-  Widget _buildYearView() => LayoutBuilder(
+  Widget _buildYearView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return LayoutBuilder(
         builder: (context, constraints) {
           // Responsive columns: 3 on mobile, 4 on tablet/desktop
           final crossAxisCount = context.isMobile ? 3 : 4;
@@ -222,11 +234,18 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: isCurrentMonth
-                        ? DS.primaryBase.withAlpha(30)
-                        : DS.brandPrimary.withAlpha(5),
+                        ? isDark
+                            ? DS.surfaceTertiary
+                            : DS.primaryBase.withAlpha(30)
+                        : isDark
+                            ? DS.surfaceSecondary
+                            : DS.neutral100,
                     borderRadius: BorderRadius.circular(8),
                     border: isCurrentMonth
-                        ? Border.all(color: DS.primaryBase.withAlpha(100))
+                        ? Border.all(
+                            color: isDark ? DS.textSecondary : DS.primaryBase,
+                            width: 1.5,
+                          )
                         : null,
                   ),
                   child: Column(
@@ -240,8 +259,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: isCurrentMonth
-                                ? DS.primaryBase
-                                : DS.brandPrimary70,
+                                ? DS.textPrimary
+                                : DS.textSecondary,
                           ),
                         ),
                       ),
@@ -257,10 +276,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           );
         },
       );
+  }
 
   Widget _buildMiniMonthGrid(DateTime monthDate) {
     final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
     final firstWeekday = DateTime(monthDate.year, monthDate.month).weekday;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Actually DateTime.weekday: Mon=1, Sun=7.
     // Let's assume Mon start for consistency with TableCalendar default.
     // If Mon start, offset for Mon(1) is 0. offset for Sun(7) is 6.
@@ -279,12 +300,21 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             // Days
             ...List.generate(daysInMonth, (i) {
               final day = i + 1;
+              final now = DateTime.now();
+              final isToday = day == now.day &&
+                  monthDate.month == now.month &&
+                  monthDate.year == now.year;
               return Center(
                 child: Text(
                   '$day',
                   style: TextStyle(
                     fontSize: 8,
-                    color: DS.brandPrimary38Const,
+                    color: isToday
+                        ? DS.primaryBase
+                        : isDark
+                            ? DS.textSecondary
+                            : DS.textPrimary,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               );
@@ -389,12 +419,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
               // Determine color based on task status
               Color markerColor;
+              Color textColor;
               if (taskSummary.overdue > 0) {
                 markerColor = const Color(0xFFFF5252); // Red for overdue
+                textColor = Colors.white;
               } else if (isToday) {
                 markerColor = const Color(0xFF2196F3); // Blue for today
+                textColor = Colors.white;
               } else {
                 markerColor = const Color(0xFF757575); // Gray for future
+                textColor = Colors.white;
               }
 
               // Add dot or number badge
@@ -417,7 +451,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       child: Text(
                         '${taskSummary.total}',
                         style: TextStyle(
-                          color: DS.brandPrimaryConst,
+                          color: textColor,
                           fontSize: 8,
                           fontWeight: FontWeight.bold,
                         ),
@@ -499,7 +533,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           Text(
             '${day.day}',
             style: TextStyle(
-              color: isSelected || isToday ? DS.brandPrimary : DS.brandPrimary,
+              color: isSelected
+                  ? Colors.white
+                  : isToday
+                      ? DS.primaryBase
+                      : DS.textPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -509,7 +547,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               style: TextStyle(
                 fontSize: 9,
                 color: isSelected
-                    ? DS.brandPrimary
+                    ? Colors.white70
                     : DS.warningAccent, // Orange for festivals
                 fontWeight: FontWeight.bold,
               ),
@@ -521,7 +559,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               lunarData.displayString,
               style: TextStyle(
                 fontSize: 9,
-                color: isSelected ? DS.brandPrimary70 : DS.brandPrimary38,
+                color: isSelected ? Colors.white60 : DS.textSecondary,
               ),
             ),
         ],

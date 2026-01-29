@@ -145,16 +145,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: DS.brandPrimary,
-                      foregroundColor: DS.brandPrimary,
+                      foregroundColor: Colors.white,
                     ),
                     onPressed: authState.isLoading ? null : _submit,
                     child: authState.isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: DS.brandPrimaryConst,
+                              color: Colors.white,
                             ),
                           )
                         : Text(l10n.login),

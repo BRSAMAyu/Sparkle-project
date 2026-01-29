@@ -42,41 +42,49 @@ class ExpandedToolbarSection extends ConsumerWidget {
             crossAxisSpacing: DS.spacing12,
             children: const [
               _ToolButton(
+                key: ValueKey('tool_focus_mode'),
                 icon: Icons.center_focus_strong_rounded,
                 label: '专注模式',
                 route: '/focus',
               ),
               _ToolButton(
+                key: ValueKey('tool_pomodoro'),
                 icon: Icons.timer_rounded,
                 label: '番茄钟',
                 route: '/focus',
               ),
               _ToolButton(
+                key: ValueKey('tool_quick_note'),
                 icon: Icons.edit_note_rounded,
                 label: '闪念笔记',
                 route: '/memory',
               ),
               _ToolButton(
+                key: ValueKey('tool_error_book'),
                 icon: Icons.assignment_late_rounded,
                 label: '错题本',
                 route: '/errors',
               ),
               _ToolButton(
+                key: ValueKey('tool_cognitive'),
                 icon: Icons.psychology_rounded,
                 label: '认知模式',
                 route: '/cognitive/patterns',
               ),
               _ToolButton(
+                key: ValueKey('tool_curiosity'),
                 icon: Icons.lightbulb_rounded,
                 label: '好奇心胶囊',
                 route: '/curiosity-capsule',
               ),
               _ToolButton(
+                key: ValueKey('tool_review'),
                 icon: Icons.event_note_rounded,
                 label: '复习计划',
                 route: '/review',
               ),
               _ToolButton(
+                key: ValueKey('tool_forecast'),
                 icon: Icons.show_chart_rounded,
                 label: '学习预测',
                 route: '/learning/forecast',
@@ -91,6 +99,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.route,
@@ -101,10 +110,13 @@ class _ToolButton extends StatelessWidget {
   final String route;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return InkWell(
       onTap: () => context.push(route),
       borderRadius: DS.borderRadius16,
       child: MaterialStyler(
+        key: ValueKey('tool_button_${label}_$brightness'),
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius16,
         padding: const EdgeInsets.all(DS.spacing12),
@@ -139,4 +151,5 @@ class _ToolButton extends StatelessWidget {
         ),
       ),
     );
+  }
 }

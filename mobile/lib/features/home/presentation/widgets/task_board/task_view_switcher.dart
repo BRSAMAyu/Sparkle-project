@@ -13,6 +13,7 @@ class TaskViewSwitcher extends ConsumerWidget {
     final boardState = ref.watch(taskBoardProvider);
     final currentView = boardState.currentView;
     final isMobile = ResponsiveSystem.isMobile(context);
+    final brightness = Theme.of(context).brightness;
 
     // Responsive sizing
     final height = isMobile ? 36.0 : 42.0;
@@ -21,6 +22,7 @@ class TaskViewSwitcher extends ConsumerWidget {
     final horizontalPadding = isMobile ? DS.spacing12 : DS.spacing16;
 
     return MaterialStyler(
+      key: ValueKey('task_view_switcher_$brightness'),
       material: AppMaterials.neoGlass.copyWith(
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0.5),
       ),
@@ -39,6 +41,7 @@ class TaskViewSwitcher extends ConsumerWidget {
                 final isSelected = currentView == mode;
                 return Expanded(
                   child: _ViewTab(
+                    key: ValueKey('view_tab_${mode.name}_$brightness'),
                     mode: mode,
                     isSelected: isSelected,
                     height: height,
@@ -61,6 +64,7 @@ class TaskViewSwitcher extends ConsumerWidget {
               children: TaskViewMode.values.map((mode) {
                 final isSelected = currentView == mode;
                 return _ViewTab(
+                  key: ValueKey('view_tab_${mode.name}_$brightness'),
                   mode: mode,
                   isSelected: isSelected,
                   height: height,
@@ -81,6 +85,7 @@ class TaskViewSwitcher extends ConsumerWidget {
 
 class _ViewTab extends StatelessWidget {
   const _ViewTab({
+    super.key,
     required this.mode,
     required this.isSelected,
     required this.height,
@@ -99,12 +104,19 @@ class _ViewTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => AnimatedContainer(
+  Widget build(BuildContext context) {
+    // Get colors dynamically based on current theme
+    final selectedColor = DS.brandPrimary;
+    final unselectedColor = Colors.transparent;
+    final selectedTextColor = DS.onBrandPrimary;
+    final unselectedTextColor = DS.textSecondary;
+
+    return AnimatedContainer(
       duration: DS.quick,
       curve: DS.curveEaseOut,
       height: height,
       decoration: BoxDecoration(
-        color: isSelected ? DS.brandPrimary : Colors.transparent,
+        color: isSelected ? selectedColor : unselectedColor,
         borderRadius: DS.borderRadius12,
       ),
       child: InkWell(
@@ -119,13 +131,13 @@ class _ViewTab extends StatelessWidget {
               Icon(
                 _getIcon(mode),
                 size: iconSize,
-                color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
+                color: isSelected ? selectedTextColor : unselectedTextColor,
               ),
               const SizedBox(width: DS.spacing6),
               Text(
                 _getLabel(mode),
                 style: context.sparkleTypography.labelLarge.copyWith(
-                  color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
+                  color: isSelected ? selectedTextColor : unselectedTextColor,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontSize: fontSize,
                 ),
@@ -137,6 +149,7 @@ class _ViewTab extends StatelessWidget {
         ),
       ),
     );
+  }
 
   IconData _getIcon(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Icons.calendar_today_rounded,
