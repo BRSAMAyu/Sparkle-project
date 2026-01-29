@@ -22,7 +22,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(chatModeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (currentMode.apiValue == 'standard') {
       return AnimatedSwitcher(
@@ -31,7 +30,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
         switchOutCurve: AnimationSystem.smooth,
         child: _UnselectedPill(
           key: const ValueKey('mode-pill-unselected'),
-          isDark: isDark,
           onTap: () => _showModeSelector(context, ref),
         ),
       );
@@ -44,7 +42,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
       child: _SelectedPill(
         key: ValueKey('mode-pill-${currentMode.apiValue}'),
         mode: currentMode,
-        isDark: isDark,
         onTap: () => _showModeSelector(context, ref),
       ),
     );
@@ -73,10 +70,9 @@ class ChatModeSelectorPill extends ConsumerWidget {
 
 class _UnselectedPill extends StatelessWidget {
   const _UnselectedPill({
-    required this.isDark, required this.onTap, super.key,
+    required this.onTap, super.key,
   });
 
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
@@ -86,7 +82,8 @@ class _UnselectedPill extends StatelessWidget {
         onTap: onTap,
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
-            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+            // Use surfaceTertiary for consistent theming with Dashboard
+            backgroundColor: DS.surfaceTertiary,
           ),
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.symmetric(
@@ -99,13 +96,13 @@ class _UnselectedPill extends StatelessWidget {
               Icon(
                 Icons.auto_awesome,
                 size: DS.iconSizeSm,
-                color: DS.neutral500,
+                color: DS.textSecondary,
               ),
               const SizedBox(width: DS.spacing6),
               Text(
                 '选择模式',
                 style: TextStyle(
-                  color: DS.neutral600,
+                  color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
                 ),
@@ -114,7 +111,7 @@ class _UnselectedPill extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: DS.iconSizeSm,
-                color: DS.neutral500,
+                color: DS.textSecondary,
               ),
             ],
           ),
@@ -125,11 +122,10 @@ class _UnselectedPill extends StatelessWidget {
 
 class _SelectedPill extends StatelessWidget {
   const _SelectedPill({
-    required this.mode, required this.isDark, required this.onTap, super.key,
+    required this.mode, required this.onTap, super.key,
   });
 
   final ChatMode mode;
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
@@ -164,7 +160,7 @@ class _SelectedPill extends StatelessWidget {
               Text(
                 mode.label,
                 style: TextStyle(
-                  color: isDark ? DS.textPrimary : DS.neutral900,
+                  color: DS.textPrimary,
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
                 ),
@@ -175,7 +171,7 @@ class _SelectedPill extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: DS.iconSizeSm,
-                color: DS.neutral500,
+                color: DS.textSecondary,
               ),
             ],
           ),

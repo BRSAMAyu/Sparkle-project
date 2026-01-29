@@ -101,7 +101,8 @@ class _UnselectedPill extends StatelessWidget {
         onTap: onTap,
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
-            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+            // Use surfaceTertiary to match Dashboard ceramic cards
+            backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
           ),
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.symmetric(

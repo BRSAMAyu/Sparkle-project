@@ -643,7 +643,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return MarkdownStyleSheet(
         p: TextStyle(
             color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
@@ -656,18 +655,17 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         code: TextStyle(
             backgroundColor: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-                : (isDark ? DS.neutral800 : context.sparkleColors.surfaceTertiary),
+                : DS.surfaceTertiary,
             fontFamily: 'monospace',
             fontSize: 14,
-            color:
-                isUser ? DS.chatBubbleUserText : context.sparkleColors.brandSecondary,),
+            color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,),
         codeblockDecoration: BoxDecoration(
             color: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-                : (isDark ? DS.neutral800 : context.sparkleColors.surfaceTertiary),
+                : DS.surfaceTertiary,
             borderRadius: BorderRadius.circular(12),),
         a: TextStyle(
-            color: isUser ? DS.chatBubbleUserText : context.sparkleColors.brandPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
             decoration: TextDecoration.underline,),
       );
     }

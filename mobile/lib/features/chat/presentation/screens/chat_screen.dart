@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
@@ -129,7 +128,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   'AI学习助手',
                   style: TextStyle(
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
+                    color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                     fontSize: DS.fontSizeBase,
                   ),
@@ -137,7 +136,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   '随时为你解答',
                   style: TextStyle(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                    color: DS.textSecondary,
                     fontSize: DS.fontSizeXs,
                   ),
                 ),
@@ -147,13 +146,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.history,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
+            icon: Icon(Icons.history, color: DS.textSecondary),
             onPressed: () => _showHistoryBottomSheet(context),
           ),
           IconButton(
-            icon: Icon(Icons.add_comment_outlined,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
+            icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
             tooltip: 'New Chat',
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
           ),
@@ -161,10 +158,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
+          // Use three-layer gradient matching Dashboard WeatherHeader style
           gradient: isDark
-              ? DS.deepSpaceGradient
+              ? LinearGradient(
+                  colors: [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
               : LinearGradient(
-                  colors: [DS.neutral50, DS.neutral100],
+                  colors: [DS.neutral50, DS.neutral100, DS.neutral200],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -387,7 +389,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             maxChildSize: maxChildSize,
             builder: (context, scrollController) => DecoratedBox(
               decoration: BoxDecoration(
-                color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
+                // Use surfaceSecondary to match Dashboard ceramic cards
+                color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(24)),
               ),
@@ -400,7 +403,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       height: 4,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? DS.neutral700 : DS.neutral300,
+                        color: DS.surfaceTertiary,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -415,7 +418,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? DS.brandPrimary : DS.neutral900,
+                              color: DS.textPrimary,
                             ),
                           ),
                         ],
@@ -483,9 +486,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   decoration: BoxDecoration(
                                     color: isCurrent
                                         ? DS.primaryBase.withValues(alpha: 0.1)
-                                        : (isDark
-                                            ? DS.neutral800
-                                            : DS.neutral100),
+                                        : DS.surfaceTertiary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -493,14 +494,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     size: 18,
                                     color: isCurrent
                                         ? DS.primaryBase
-                                        : DS.neutral500,
+                                        : DS.textSecondary,
                                   ),
                                 ),
                                 title: Text(
                                   (session['title'] as String?) ?? '未命名会话',
                                   style: TextStyle(
-                                    color:
-                                        isDark ? DS.brandPrimary : DS.neutral900,
+                                    color: DS.textPrimary,
                                     fontWeight: isCurrent
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -545,7 +545,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.xxl),
@@ -565,14 +564,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
+                    color: DS.textPrimary,
                   ),
             ),
             const SizedBox(height: DS.sm),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                    color: DS.textSecondary,
                   ),
             ),
             const SizedBox(height: 40),
@@ -764,12 +763,10 @@ class _QuickActionChipState extends State<_QuickActionChip> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Fix: Use neutral background for light mode instead of brandPrimary (orange)
-    final backgroundColor = isDark ? DS.neutral800 : DS.neutral100;
-    // Use contrast-safe text color
-    final labelColor = isDark ? DS.textPrimary : DS.neutral900;
+    // Use surfaceTertiary background for consistent theming
+    final backgroundColor = DS.surfaceTertiary;
+    // Use textPrimary for proper contrast in both modes
+    final labelColor = DS.textPrimary;
     final horizontalPadding = widget.isNarrow ? 12.0 : DS.spacing16;
 
     return GestureDetector(
@@ -844,11 +841,9 @@ class _StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final textColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    );
+    // Use surfaceSecondary to match Dashboard ceramic cards
+    final bubbleColor = isDark ? DS.surfaceSecondary : DS.brandPrimary;
+    final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -962,11 +957,11 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final dotColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    ).withValues(alpha: 0.7);
+    // Use surfaceSecondary to match Dashboard ceramic cards
+    final bubbleColor = isDark ? DS.surfaceSecondary : DS.brandPrimary;
+    final dotColor = isDark
+        ? DS.textPrimary.withValues(alpha: 0.7)
+        : DS.onBrandPrimary.withValues(alpha: 0.7);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(

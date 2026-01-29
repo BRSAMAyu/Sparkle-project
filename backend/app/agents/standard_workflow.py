@@ -217,8 +217,28 @@ Ask about their available time and current tasks if needed.
     user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])
 
+    # 检查是否使用思考模式，如果是则发送状态更新
+    # 这会让前端显示"思考中"提示
+    try:
+        current_llm = llm_service.__class__
+        # 创建临时实例来检查思考模式
+        temp_llm = current_llm(agent_role=state.context_data.get("agent_role", "generation"), enable_dynamic_routing=True)
+        is_thinking = temp_llm.is_thinking_mode()
+
+        if is_thinking and stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details="正在深度思考中，请稍候...",
+                    current_agent_name="Sparkle AI"
+                )
+            ))
+    except Exception as e:
+        logger.warning(f"Failed to check thinking mode: {e}")
+
     full_response = ""
     tool_calls = []
+    first_chunk_sent = False  # Track first chunk for status transition
 
     # We assume llm_service is available globally
     async for chunk in llm_service.chat_stream_with_tools(
@@ -230,9 +250,21 @@ Ask about their available time and current tasks if needed.
         if chunk.type == "text":
             full_response += chunk.content
             if stream_callback:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=chunk.content
-                ))
+                # Send GENERATING status with first chunk to transition from THINKING
+                if not first_chunk_sent:
+                    first_chunk_sent = True
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=chunk.content,
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.GENERATING,
+                            details="正在生成回复...",
+                            current_agent_name="Sparkle AI"
+                        )
+                    ))
+                else:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=chunk.content
+                    ))
         elif chunk.type == "tool_call_end":
             tool_calls.append(chunk)
             if stream_callback:

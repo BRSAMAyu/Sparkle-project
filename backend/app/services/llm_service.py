@@ -945,6 +945,15 @@ class LLMService:
         except (TypeError, ValueError):
             return default
 
+    def is_thinking_mode(self) -> bool:
+        """
+        检查当前模型是否启用了思考模式 (clear_thinking=False)
+
+        Returns:
+            True 如果使用思考模式，False 否则
+        """
+        return self._extra_body is not None and self._extra_body.get("clear_thinking") is False
+
     async def generate_push_content(
         self,
         user_nickname: str,
