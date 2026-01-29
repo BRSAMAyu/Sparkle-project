@@ -13,7 +13,7 @@ This test requires:
 import pytest
 import asyncio
 import json
-from typing import AsyncGenerator, List, Dict, Any
+from typing import List, Dict, Any
 from datetime import datetime
 import websockets
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,59 +22,15 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.models.user import User
 from app.models.plan import Plan, PlanStage, PlanType
-from app.core.security import create_access_token
 
 
 # ============================================================
-# Test Fixtures
+# Test Fixtures (moved to conftest.py)
 # ============================================================
-
-@pytest.fixture
-async def test_user(db_session: AsyncSession) -> User:
-    """Create a test user for WebSocket authentication"""
-    from app.services.user_service import user_service
-
-    user_data = {
-        "username": "websocket_test_user",
-        "email": "websocket_test@example.com",
-        "nickname": "WebSocket Test User",
-        "hashed_password": "test_password"
-    }
-
-    # Try to get existing user
-    result = await db_session.execute(
-        select(User).where(User.email == user_data["email"])
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        # Create new user
-        user = User(**user_data)
-        db_session.add(user)
-        await db_session.commit()
-        await db_session.refresh(user)
-
-    yield user
-
-    # Cleanup
-    await db_session.delete(user)
-    await db_session.commit()
-
-
-@pytest.fixture
-def auth_headers(test_user: User) -> Dict[str, str]:
-    """Generate authentication headers for WebSocket connection"""
-    token = create_access_token(data={"sub": str(test_user.id)})
-    return {"Authorization": f"Bearer {token}"}
-
-
-@pytest.fixture
-async def websocket_url() -> str:
-    """Get WebSocket URL from environment"""
-    import os
-    gateway_host = os.getenv("GATEWAY_HOST", "localhost")
-    gateway_port = os.getenv("GATEWAY_PORT", "8080")
-    return f"ws://{gateway_host}:{gateway_port}/ws/chat"
+# - db_session: Uses real PostgreSQL database
+# - test_user: Creates test user in PostgreSQL
+# - auth_headers: JWT token for test user
+# - websocket_url: WebSocket connection URL
 
 
 # ============================================================

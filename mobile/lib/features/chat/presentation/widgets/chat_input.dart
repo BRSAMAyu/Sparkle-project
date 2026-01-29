@@ -164,7 +164,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       child: IconButton(
                         icon: Icon(
                           Icons.add_circle_outline_rounded,
-                          color: isDark ? DS.neutral400 : DS.neutral600,
+                          color: DS.textSecondary,
                         ),
                         iconSize: attachmentIconSize,
                         onPressed: widget.enabled ? _showAttachmentSheet : null,
@@ -204,10 +204,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       final canSend = widget.enabled && !_isSending && hasText;
                       return DecoratedBox(
                         decoration: BoxDecoration(
-                          color: isDark ? DS.neutral800 : DS.neutral100,
+                          // Use surfaceTertiary for consistent theming
+                          color: DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? DS.neutral700 : DS.neutral300,
+                            color: DS.surfaceTertiary,
                           ),
                         ),
                         child: TextField(
@@ -222,7 +223,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           decoration: InputDecoration(
                             hintText: widget.hintText ?? 'Type a message...',
                             hintStyle: TextStyle(
-                              color: isDark ? DS.neutral400 : DS.neutral500,
+                              color: DS.textSecondary,
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,
@@ -263,9 +264,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           height: 48,
                           decoration: BoxDecoration(
                             gradient: canSend ? DS.primaryGradient : null,
-                            color: canSend
-                                ? null
-                                : (isDark ? DS.neutral800 : DS.neutral200),
+                            color: canSend ? null : DS.surfaceTertiary,
                             shape: BoxShape.circle,
                             boxShadow: canSend
                                 ? [
@@ -291,9 +290,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     Icons.arrow_upward_rounded,
                                     color: canSend
                                         ? DS.brandPrimary
-                                        : (isDark
-                                            ? DS.brandPrimary30
-                                            : DS.brandPrimary38),
+                                        : DS.textSecondary,
                                     size: 24,
                                   ),
                           ),
@@ -315,6 +312,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
+          // Use surfaceSecondary for dark mode to match Dashboard ceramic cards
           color: isDark ? DS.surfaceSecondary : DS.brandPrimary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border(
@@ -342,7 +340,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     overflow: TextOverflow.fade,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: isDark ? DS.neutral400 : DS.neutral600,
+                      color: DS.textSecondary,
                     ),
                   ),
                 ],
@@ -355,7 +353,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 icon: Icon(
                   Icons.close_rounded,
                   size: DS.iconSizeSm,
-                  color: DS.neutral600,
+                  color: DS.textSecondary,
                 ),
                 onPressed: widget.onCancelQuote,
                 padding: EdgeInsets.zero,
