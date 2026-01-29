@@ -90,9 +90,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
+                    (isDark ? DS.surfaceAmbient : DS.surfacePrimary)
                         .withValues(alpha: 0.9),
-                    (isDark ? DS.deepSpaceEnd : DS.neutral50)
+                    (isDark ? DS.surfacePrimary : DS.neutral50)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
@@ -191,9 +191,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           : ListView.builder(
                               controller: _scrollController,
                               reverse: true,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 20.0,
+                              padding: EdgeInsets.only(
+                                left: 16.0,
+                                right: 16.0,
+                                top: 20.0,
+                                bottom: _calculateBottomPadding(context, chatState),
                               ),
                               cacheExtent: 600,
                               itemCount: chatState.listItemCount,
@@ -345,51 +347,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                         ),
                       ),
-                    if (transparentMode)
-                      TransparencyPanel(
-                        status: chatState.aiStatus,
-                        details: chatState.aiStatusDetails,
-                        promptTokens: chatState.lastPromptTokens,
-                        completionTokens: chatState.lastCompletionTokens,
-                        totalTokens: chatState.lastTotalTokens,
-                        currentAgentName: chatState.currentAgentName,
-                        activeAgentType: chatState.activeAgentType,
-                        activeTools: chatState.activeTools,
-                        dailyTokens: chatState.dailyTokens,
-                        dailyTokenLimit: chatState.dailyTokenLimit,
-                        dailyCostMicroUsd: chatState.dailyCostMicroUsd,
-                        transparencyData: chatState.transparencyData,
-                        currentStepIndex: chatState.currentStepIndex,
-                      ),
-                    if (transparentMode)
-                      const SizedBox(height: DS.spacing12),
-                    const PlanSelectorPill(),
-                    const ChatModeSelectorPill(),
-                    const IntentPredictionBar(showIdle: false),
-                    ChatInput(
-                      enabled: !chatState.isSending,
-                      onTextChanged: (text) {
-                        ref
-                            .read(intentPredictionProvider.notifier)
-                            .onInputChanged(text);
+                    // Bottom input area - wrapped to prevent overflow
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return _buildBottomInputArea(context, chatState, constraints);
                       },
-                      onFileUploaded: (StoredFile file) {
-                        if (file.status != 'processed') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('文件处理中，完成后可用于对话')),
-                          );
-                          return;
-                        }
-                        ref.read(chatProvider.notifier).addAttachment(file);
-                      },
-                      onSend: (text, {replyToId}) => unawaited(
-                        ref.read(chatProvider.notifier).sendMessage(text),
-                      ),
                     ),
-                    if (chatState.graphragTrace != null)
-                      GraphRAGVisualizer(
-                        trace: chatState.graphragTrace,
-                      ),
                   ],
                 ),
               ),
@@ -671,6 +634,108 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  /// Calculate bottom padding for ListView to prevent messages being hidden
+  /// behind fixed components at the bottom.
+  double _calculateBottomPadding(BuildContext context, ChatState chatState) {
+    // Base padding
+    double padding = 20.0;
+
+    // PlanSelectorPill height
+    padding += 48.0;
+
+    // ChatModeSelectorPill height
+    padding += 40.0;
+
+    // IntentPredictionBar height (when visible)
+    if (chatState.aiStatus != null) {
+      padding += 44.0;
+    }
+
+    // ChatInput base height (can expand with multiline)
+    padding += 72.0;
+
+    // TransparencyPanel (conditional)
+    if (ref.watch(transparentModeProvider)) {
+      padding += 120.0; // Approximate height
+    }
+
+    // SafeArea bottom padding
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    padding += bottomPadding.clamp(0.0, 34.0);
+
+    return padding;
+  }
+
+  /// Build the bottom input area with proper overflow handling.
+  /// Uses SingleChildScrollView to prevent overflow when components expand.
+  Widget _buildBottomInputArea(
+    BuildContext context,
+    ChatState chatState,
+    BoxConstraints constraints,
+  ) {
+    final transparentMode = ref.watch(transparentModeProvider);
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (transparentMode)
+            Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              child: TransparencyPanel(
+                status: chatState.aiStatus,
+                details: chatState.aiStatusDetails,
+                promptTokens: chatState.lastPromptTokens,
+                completionTokens: chatState.lastCompletionTokens,
+                totalTokens: chatState.lastTotalTokens,
+                currentAgentName: chatState.currentAgentName,
+                activeAgentType: chatState.activeAgentType,
+                activeTools: chatState.activeTools,
+                dailyTokens: chatState.dailyTokens,
+                dailyTokenLimit: chatState.dailyTokenLimit,
+                dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                transparencyData: chatState.transparencyData,
+                currentStepIndex: chatState.currentStepIndex,
+              ),
+            ),
+          const PlanSelectorPill(),
+          const ChatModeSelectorPill(),
+          const IntentPredictionBar(showIdle: false),
+          ChatInput(
+            enabled: !chatState.isSending,
+            onTextChanged: (text) {
+              ref
+                  .read(intentPredictionProvider.notifier)
+                  .onInputChanged(text);
+            },
+            onFileUploaded: (StoredFile file) {
+              if (file.status != 'processed') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('文件处理中，完成后可用于对话')),
+                );
+                return;
+              }
+              ref.read(chatProvider.notifier).addAttachment(file);
+            },
+            onSend: (text, {replyToId}) => unawaited(
+              ref.read(chatProvider.notifier).sendMessage(text),
+            ),
+          ),
+          if (chatState.graphragTrace != null)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing8),
+              child: GraphRAGVisualizer(
+                trace: chatState.graphragTrace,
+              ),
+            ),
+          // Bottom safe area padding
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }

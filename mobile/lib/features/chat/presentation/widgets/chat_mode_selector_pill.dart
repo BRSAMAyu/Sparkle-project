@@ -164,7 +164,7 @@ class _SelectedPill extends StatelessWidget {
               Text(
                 mode.label,
                 style: TextStyle(
-                  color: isDark ? DS.neutral100 : DS.neutral900,
+                  color: isDark ? DS.textPrimary : DS.neutral900,
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
                 ),
