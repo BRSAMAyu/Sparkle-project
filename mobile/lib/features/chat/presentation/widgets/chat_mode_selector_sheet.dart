@@ -19,7 +19,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
+        color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(24),
         ),
@@ -58,7 +58,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                   ),
                   const Spacer(),
@@ -148,7 +148,7 @@ class _ModeListTile extends StatelessWidget {
                       fontSize: DS.fontSizeBase,
                       fontWeight:
                           isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                   ),
                   const SizedBox(height: 4),

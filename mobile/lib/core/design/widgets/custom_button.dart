@@ -256,6 +256,10 @@ class _CustomButtonState extends State<CustomButton>
   Widget _buildPrimaryButton(BuildContext context, bool isDisabled) {
     final gradient = widget.customGradient ?? DS.primaryGradient;
 
+    // 当使用自定义渐变时，使用白色文字以确保对比度
+    // 因为大多数自定义渐变（warning/error等）都较深，白色文字更清晰
+    final useWhiteText = widget.customGradient != null;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isDisabled ? null : gradient,
@@ -275,8 +279,8 @@ class _CustomButtonState extends State<CustomButton>
                   : DS.spacing24,
             ),
             child: _buildButtonRow(
-              iconColor: DS.brandPrimary,
-              textColor: DS.brandPrimary,
+              iconColor: useWhiteText ? Colors.white : DS.brandPrimary,
+              textColor: useWhiteText ? Colors.white : DS.brandPrimary,
               isDisabled: isDisabled,
             ),
           ),

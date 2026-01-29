@@ -277,6 +277,7 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfaceAmbient => _theme.colors.surfaceAmbient;
   static Color get surfacePrimaryElevated => _blend(
         surfacePrimary,
         surfaceTertiary,
@@ -362,12 +363,10 @@ class DS {
   static Color get successConst => success;
 
   // Special surfaces and accents
-  static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
-  static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
-  static Color get deepSpaceSurface =>
-      _blend(surfacePrimary, deepSpaceStart, 0.6);
+  // Deep space colors use surfaceAmbient and surfacePrimary for proper dark mode support
+  static Color get deepSpaceStart => _isDark ? _theme.colors.surfaceAmbient : _blend(neutral50, brandPrimary, 0.28);
+  static Color get deepSpaceEnd => _isDark ? _theme.colors.surfacePrimary : _blend(neutral100, brandSecondary, 0.24);
+  static Color get deepSpaceSurface => _isDark ? _theme.colors.surfacePrimary : _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
       surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
   static Color get glassBorder =>

@@ -140,7 +140,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
     final attachmentPadding = isNarrow ? 4.0 : 8.0;
 
-    return SafeArea(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -212,7 +213,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
-                          maxLines: 5,
+                          maxLines: 4,
                           minLines: 1,
                           enabled: canSend,
                           textInputAction: enterToSend
@@ -314,7 +315,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark ? DS.neutral800 : DS.brandPrimary200,
+          color: isDark ? DS.surfaceSecondary : DS.brandPrimary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border(
             left: BorderSide(color: DS.brandPrimaryConst, width: 4),

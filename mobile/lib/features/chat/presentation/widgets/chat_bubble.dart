@@ -636,14 +636,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                           fontWeight: FontWeight.bold,
                           color: isUser
                               ? DS.onBrandPrimary
-                              : DS.onBrandPrimary,),),),
+                              : Colors.white,),),),
         ),
       ),
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
-      MarkdownStyleSheet(
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return MarkdownStyleSheet(
         p: TextStyle(
             color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
@@ -655,7 +656,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         code: TextStyle(
             backgroundColor: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-                : context.sparkleColors.surfaceTertiary,
+                : (isDark ? DS.neutral800 : context.sparkleColors.surfaceTertiary),
             fontFamily: 'monospace',
             fontSize: 14,
             color:
@@ -663,14 +664,13 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         codeblockDecoration: BoxDecoration(
             color: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-                : context.sparkleColors.surfaceTertiary,
+                : (isDark ? DS.neutral800 : context.sparkleColors.surfaceTertiary),
             borderRadius: BorderRadius.circular(12),),
         a: TextStyle(
             color: isUser ? DS.chatBubbleUserText : context.sparkleColors.brandPrimary,
             decoration: TextDecoration.underline,),
       );
-
-
+    }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
