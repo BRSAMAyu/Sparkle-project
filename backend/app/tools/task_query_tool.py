@@ -6,24 +6,27 @@ Tools:
 - QueryPlanTasksTool: Query tasks with filters (status, type, limit)
 - ModifyPlanTaskTool: Modify task properties (title, status, priority, guide_content)
 """
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
+
+from app.models.plan import Plan
+from app.models.task import Task
+from app.models.task import TaskStatus as ModelTaskStatus
+from app.models.task import TaskType as ModelTaskType
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+from app.schemas.task import TaskUpdate
+from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import (
-    QueryPlanTasksParams,
-    ModifyPlanTaskParams,
-    TaskStatusFilter,
     GetTaskDetailsParams,
+    ModifyPlanTaskParams,
     QueryAllTasksParams,
+    QueryPlanTasksParams,
+    TaskStatusFilter,
 )
-from app.models.task import Task, TaskStatus as ModelTaskStatus, TaskType as ModelTaskType
-from app.models.plan import Plan
-from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink, TaskResourceType
-from app.services.task_service import TaskService
-from app.schemas.task import TaskUpdate
 
 
 class QueryPlanTasksTool(BaseTool):
@@ -45,7 +48,7 @@ class QueryPlanTasksTool(BaseTool):
         params: QueryPlanTasksParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -155,7 +158,7 @@ class ModifyPlanTaskTool(BaseTool):
         params: ModifyPlanTaskParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -269,7 +272,7 @@ class GetTaskDetailsTool(BaseTool):
         params: GetTaskDetailsParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -557,7 +560,7 @@ class QueryAllTasksTool(BaseTool):
         params: QueryAllTasksParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -573,7 +576,7 @@ class QueryAllTasksTool(BaseTool):
             # Filter by plan status if needed
             if not params.include_inactive_plans:
                 plan_query = plan_query.where(
-                    Plan.is_active == True
+                    Plan.is_active
                 )
 
             plan_query = plan_query.order_by(Plan.updated_at.desc())

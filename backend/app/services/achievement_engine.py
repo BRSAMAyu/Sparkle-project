@@ -2,21 +2,26 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
-from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, update, func, or_
-from loguru import logger
+from datetime import date, datetime, timedelta
+from typing import Any
 
-from app.models.achievement import (
-    Achievement, UserAchievement, UserStreakStats,
-    AchievementRarity, AchievementType, SparkContract,
-    GalaxySkin, UserGalaxySkin, UserTitle, ContractStatus, VisualEffectType
-)
-from app.models.user import User
-from app.models.galaxy import UserNodeStatus, KnowledgeNode, StudyRecord
-from app.core.cache import cache_service
+from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.achievement import (
+    Achievement,
+    AchievementRarity,
+    ContractStatus,
+    SparkContract,
+    UserAchievement,
+    UserGalaxySkin,
+    UserStreakStats,
+    UserTitle,
+)
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
 
 class AchievementEvent:
@@ -50,7 +55,7 @@ class AchievementEngine:
     """成就引擎 - 核心服务"""
 
     # 成就定义缓存（内存缓存）
-    _achievement_cache: Dict[str, Achievement] = {}
+    _achievement_cache: dict[str, Achievement] = {}
     _cache_last_update: datetime = None
     _cache_ttl = timedelta(minutes=5)
 
@@ -70,12 +75,12 @@ class AchievementEngine:
         self._achievement_cache = {a.id: a for a in achievements}
         self._cache_last_update = now
 
-    async def _get_achievement(self, achievement_id: str) -> Optional[Achievement]:
+    async def _get_achievement(self, achievement_id: str) -> Achievement | None:
         """获取成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return self._achievement_cache.get(achievement_id)
 
-    async def _get_all_achievements(self) -> List[Achievement]:
+    async def _get_all_achievements(self) -> list[Achievement]:
         """获取所有成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return list(self._achievement_cache.values())
@@ -85,7 +90,7 @@ class AchievementEngine:
         user_id: str,
         event_type: str,
         **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         处理用户事件，检查并解锁成就
 
@@ -159,7 +164,7 @@ class AchievementEngine:
 
         return unlocked
 
-    async def _get_relevant_achievements(self, event_type: str) -> List[Achievement]:
+    async def _get_relevant_achievements(self, event_type: str) -> list[Achievement]:
         """获取与事件类型相关的成就"""
         all_achievements = await self._get_all_achievements()
 
@@ -279,7 +284,7 @@ class AchievementEngine:
                 query = select(func.count()).select_from(UserNodeStatus).where(
                     and_(
                         UserNodeStatus.user_id == user_id,
-                        UserNodeStatus.is_unlocked == True
+                        UserNodeStatus.is_unlocked
                     )
                 )
                 result = await self.db.execute(query)
@@ -310,7 +315,7 @@ class AchievementEngine:
                     and_(
                         UserNodeStatus.user_id == user_id,
                         KnowledgeNode.sector_code == sector,
-                        UserNodeStatus.is_unlocked == True
+                        UserNodeStatus.is_unlocked
                     )
                 )
                 result = await self.db.execute(query)
@@ -341,7 +346,7 @@ class AchievementEngine:
             # 深夜学习（隐藏成就）
             case "NIGHT_OWL_STUDY":
                 hour = datetime.utcnow().hour
-                if 23 <= hour or hour <= 5:
+                if hour >= 23 or hour <= 5:
                     # 检查累计次数
                     cache_key = f"night_owl:{user_id}"
                     count = await cache_service.get(cache_key) or 0
@@ -372,7 +377,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False  # 已归档（完成/放弃）
+                        not Plan.is_active  # 已归档（完成/放弃）
                     )
                 )
                 result = await self.db.execute(query)
@@ -388,7 +393,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False,
+                        not Plan.is_active,
                         Plan.progress >= 1.0
                     )
                 )
@@ -406,7 +411,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False
+                        not Plan.is_active
                     )
                 ).order_by(Plan.updated_at.desc())
 
@@ -440,7 +445,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False,
+                        not Plan.is_active,
                         Plan.progress >= 1.0,
                         Plan.target_date.isnot(None)
                     )
@@ -499,7 +504,7 @@ class AchievementEngine:
         self,
         user_id: str,
         achievement: Achievement
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """解锁成就"""
         now = datetime.utcnow()
 
@@ -658,7 +663,7 @@ class AchievementEngine:
             self.db.add(user_skin)
             await self.db.flush()
 
-    async def _notify_unlocks(self, user_id: str, unlocked: List[Dict]):
+    async def _notify_unlocks(self, user_id: str, unlocked: list[dict]):
         """发送成就解锁通知"""
         from app.core.websocket import get_ws_manager
 
@@ -781,10 +786,10 @@ class AchievementEngine:
     async def get_user_achievements(
         self,
         user_id: str,
-        category: Optional[str] = None,
-        rarity: Optional[AchievementRarity] = None,
+        category: str | None = None,
+        rarity: AchievementRarity | None = None,
         include_hidden: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """获取用户成就列表"""
         all_achievements = await self._get_all_achievements()
 
@@ -814,7 +819,7 @@ class AchievementEngine:
         user_progress = {ua.achievement_id: ua for ua in result.scalars().all()}
 
         # 组装结果
-        from app.schemas.achievement import AchievementDetail, UserAchievementDetail, AchievementWithProgress
+        from app.schemas.achievement import AchievementDetail, AchievementWithProgress, UserAchievementDetail
 
         result_list = []
         for achievement in filtered:
@@ -855,14 +860,14 @@ class AchievementEngine:
             }
         }
 
-    async def get_achievement_map(self, user_id: str) -> Dict[str, Any]:
+    async def get_achievement_map(self, user_id: str) -> dict[str, Any]:
         """获取成就地图数据"""
         all_achievements = await self._get_all_achievements()
 
         # 按类别分组获取位置
         categories = {}
         positions = {}
-        x, y = 0, 0
+        _x, _y = 0, 0
         row_width = 5
 
         for achievement in all_achievements:
@@ -928,14 +933,14 @@ class AchievementEngine:
             "categories": category_info
         }
 
-    async def get_streak_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_streak_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
 
         from app.schemas.achievement import StreakStatsResponse
         return StreakStatsResponse.model_validate(stats).model_dump()
 
-    async def get_achievement_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_achievement_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户成就统计"""
         all_achievements = await self._get_all_achievements()
 
@@ -949,10 +954,10 @@ class AchievementEngine:
         result = await self.db.execute(query)
         unlocked = result.scalars().all()
 
-        unlocked_ids = {ua.achievement_id for ua in unlocked}
+        {ua.achievement_id for ua in unlocked}
 
         # 按稀有度统计
-        rarity_count = {r: 0 for r in AchievementRarity}
+        rarity_count = dict.fromkeys(AchievementRarity, 0)
         hidden_count = 0
 
         for ua in unlocked:
@@ -1004,7 +1009,7 @@ class AchievementEngine:
         achievement: Achievement,
         old_progress: float,
         new_progress: float
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         检查进度里程碑（每25%进度）
 
@@ -1031,7 +1036,7 @@ class AchievementEngine:
         self,
         user_id: str,
         unlock_count: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         处理成就连击检测
 
@@ -1056,7 +1061,7 @@ class AchievementEngine:
             }
         return None
 
-    async def _notify_milestones(self, user_id: str, milestones: List[Dict[str, Any]]):
+    async def _notify_milestones(self, user_id: str, milestones: list[dict[str, Any]]):
         """发送里程碑通知"""
         from app.core.websocket import get_ws_manager
 
@@ -1081,7 +1086,7 @@ class AchievementEngine:
         self,
         user_id: str,
         db: AsyncSession
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         检查今日首胜奖励
 
@@ -1117,8 +1122,8 @@ class AchievementEngine:
         self,
         user_id: str,
         threshold: float = 0.8,
-        category: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        category: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         获取接近解锁的成就（用于临界提示）
 
@@ -1204,7 +1209,7 @@ class ContractService:
         await self.db.refresh(contract)
         return contract
 
-    async def _get_active_contract(self, user_id: str) -> Optional[SparkContract]:
+    async def _get_active_contract(self, user_id: str) -> SparkContract | None:
         """获取活跃契约"""
         query = select(SparkContract).where(
             and_(
@@ -1215,7 +1220,7 @@ class ContractService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def check_contract_status(self, user_id: str) -> Optional[Dict]:
+    async def check_contract_status(self, user_id: str) -> dict | None:
         """检查契约状态"""
         contract = await self._get_active_contract(user_id)
         if not contract:

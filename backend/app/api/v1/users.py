@@ -1,17 +1,26 @@
 import os
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
-from app.db.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.models.user import User, PushPreference
-from app.schemas.user import UserPreferences, UserProfile, UserUpdate, PasswordChange, PushPreferenceUpdate, PushPreferenceResponse
-from app.core.security import verify_password, get_password_hash
 from app.config import settings
-from app.utils.helpers import save_upload_file
-from app.services.personalization.preference_service import PreferenceService
 from app.core.cache import cache_service
+from app.core.security import get_password_hash, verify_password
+from app.db.session import get_db
+from app.models.user import PushPreference, User
+from app.schemas.user import (
+    PasswordChange,
+    PushPreferenceResponse,
+    PushPreferenceUpdate,
+    UserPreferences,
+    UserProfile,
+    UserUpdate,
+)
+from app.services.personalization.preference_service import PreferenceService
+from app.utils.helpers import save_upload_file
 
 router = APIRouter()
 
@@ -152,7 +161,7 @@ async def update_avatar(
     # Create upload directory if not exists
     upload_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
     os.makedirs(upload_dir, exist_ok=True)
-    
+
     # Generate unique filename
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename")
@@ -161,10 +170,10 @@ async def update_avatar(
     allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
     if file_extension not in allowed_extensions:
         raise HTTPException(status_code=400, detail="Invalid image format")
-        
+
     filename = f"{current_user.id}_{uuid4().hex}{file_extension}"
     file_path = os.path.join(upload_dir, filename)
-    
+
     # Save file
     await save_upload_file(
         file,
@@ -173,11 +182,11 @@ async def update_avatar(
         allowed_extensions=allowed_extensions,
         allowed_content_types=allowed_types,
     )
-    
+
     # Update user avatar_url
     # In a real app, this should be a full URL
     current_user.avatar_url = f"/uploads/avatars/{filename}"
-    
+
     db.add(current_user)
     await db.commit()
     await db.refresh(current_user)
@@ -232,9 +241,9 @@ async def change_password(
     """
     if not verify_password(obj_in.old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect old password")
-    
+
     current_user.hashed_password = get_password_hash(obj_in.new_password)
-    
+
     db.add(current_user)
     await db.commit()
     return {"detail": "Password updated successfully"}

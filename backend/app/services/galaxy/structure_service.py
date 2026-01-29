@@ -1,13 +1,14 @@
-from uuid import UUID
-from typing import Optional, List
 from datetime import datetime
-from sqlalchemy import select, and_, or_
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
-from app.models.galaxy import KnowledgeNode, UserNodeStatus, NodeRelation
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
-from app.schemas.galaxy import NodeWithStatus, GalaxyGraphResponse, NodeRelationInfo
+from app.schemas.galaxy import GalaxyGraphResponse
+
 
 class GraphStructureService:
     def __init__(self, db: AsyncSession):
@@ -18,11 +19,13 @@ class GraphStructureService:
         user_id: UUID,
         title: str,
         summary: str,
-        subject_id: Optional[int] = None,
-        tags: List[str] = [],
-        parent_node_id: Optional[UUID] = None
+        subject_id: int | None = None,
+        tags: list[str] = None,
+        parent_node_id: UUID | None = None
     ) -> KnowledgeNode:
         """Create a new knowledge node (Structure)"""
+        if tags is None:
+            tags = []
         node = KnowledgeNode(
             name=title,
             description=summary,
@@ -45,7 +48,7 @@ class GraphStructureService:
             first_unlock_at=datetime.utcnow()
         )
         self.db.add(status)
-        
+
         await self.db.commit()
         await self.db.refresh(node)
         return node
@@ -69,7 +72,7 @@ class GraphStructureService:
         await self.db.refresh(edge)
         return edge
 
-    async def get_node_with_context(self, node_id: UUID) -> Optional[KnowledgeNode]:
+    async def get_node_with_context(self, node_id: UUID) -> KnowledgeNode | None:
         """Get node with parent and subject loaded"""
         stmt = (
             select(KnowledgeNode)
@@ -83,7 +86,7 @@ class GraphStructureService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> List[KnowledgeNode]:
+    async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> list[KnowledgeNode]:
         """Get connected neighbor nodes (undirected)"""
         # Find edges where node is source or target
         stmt = (
@@ -98,42 +101,41 @@ class GraphStructureService:
         )
         result = await self.db.execute(stmt)
         relations = result.scalars().all()
-        
+
         neighbor_ids = []
         for rel in relations:
             if rel.source_node_id == node_id:
                 neighbor_ids.append(rel.target_node_id)
             else:
                 neighbor_ids.append(rel.source_node_id)
-        
+
         if not neighbor_ids:
             return []
-            
+
         nodes_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(neighbor_ids))
         nodes_result = await self.db.execute(nodes_stmt)
         return list(nodes_result.scalars().all())
 
-    async def update_node_positions(self, updates: List[dict]) -> int:
+    async def update_node_positions(self, updates: list[dict]) -> int:
         """
         Batch update node positions.
         updates: list of {'id': UUID, 'x': float, 'y': float}
         """
         # SQLAlchemy 2.0 bulk update
         from sqlalchemy import update
-        
-        count = 0
+
         # Process in chunks if needed, but for now simple loop or bulk
         # Since updates are individual per ID, using mappings is best
-        
+
         # Transform to list of dicts for update
         update_data = [
             {'id': item['id'], 'position_x': item['x'], 'position_y': item['y']}
             for item in updates
         ]
-        
+
         if not update_data:
             return 0
-            
+
         await self.db.execute(
             update(KnowledgeNode),
             update_data
@@ -142,13 +144,13 @@ class GraphStructureService:
         return len(update_data)
 
     async def get_nodes_in_bounds(
-        self, 
-        min_x: float, 
-        max_x: float, 
-        min_y: float, 
+        self,
+        min_x: float,
+        max_x: float,
+        min_y: float,
         max_y: float,
         limit: int = 1000
-    ) -> List[KnowledgeNode]:
+    ) -> list[KnowledgeNode]:
         """Get nodes within a bounding box (Viewport Query)"""
         stmt = (
             select(KnowledgeNode)
@@ -168,7 +170,7 @@ class GraphStructureService:
     async def get_graph_view(
         self,
         user_id: UUID,
-        sector_code: Optional[str] = None,
+        sector_code: str | None = None,
         include_locked: bool = True,
         zoom_level: float = 1.0
     ) -> GalaxyGraphResponse:
@@ -188,14 +190,14 @@ class GraphStructureService:
 
         if sector_code:
             query = query.where(Subject.sector_code == sector_code)
-        
+
         # LOD Filtering
         if zoom_level < 0.5:
             query = query.where(
                 or_(
                     KnowledgeNode.importance_level >= 3,
-                    KnowledgeNode.is_seed == True,
-                    UserNodeStatus.is_unlocked == True 
+                    KnowledgeNode.is_seed,
+                    UserNodeStatus.is_unlocked
                 )
             )
 
@@ -223,7 +225,7 @@ class GraphStructureService:
 
         # Note: stats are calculated in StatsService, here we return partial or delegate
         # Since we are splitting, this method returns the structural part.
-        # However, GalaxyGraphResponse includes user_stats. 
+        # However, GalaxyGraphResponse includes user_stats.
         # We will handle the composition in the Facade.
-        
+
         return nodes_with_status, relations

@@ -4,9 +4,10 @@ Sufficiency Checker
 
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
-from typing import Dict, Any, List, Optional, Literal
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Literal
+
 from loguru import logger
 
 
@@ -21,10 +22,10 @@ class SufficiencyStatus(str, Enum):
 class SufficiencyCheckResult:
     """信息充分性检查结果"""
     status: SufficiencyStatus
-    clarification_questions: List[str] = field(default_factory=list)
-    confirmation_message: Optional[str] = None
+    clarification_questions: list[str] = field(default_factory=list)
+    confirmation_message: str | None = None
     recommended_action: Literal["proceed", "ask", "confirm"] = "proceed"
-    missing_fields: List[str] = field(default_factory=list)
+    missing_fields: list[str] = field(default_factory=list)
 
 
 class SufficiencyChecker:
@@ -94,8 +95,8 @@ class SufficiencyChecker:
     async def check(
         self,
         intent: str,
-        extracted_entities: Dict[str, Any],
-        conversation_context: List[Dict[str, Any]],
+        extracted_entities: dict[str, Any],
+        conversation_context: list[dict[str, Any]],
     ) -> SufficiencyCheckResult:
         """
         检查是否有足够信息执行意图
@@ -115,7 +116,7 @@ class SufficiencyChecker:
 
         required_fields = requirements.get("required", [])
         clarify_fields = requirements.get("clarify_if_missing", [])
-        can_infer_fields = requirements.get("can_infer", [])
+        requirements.get("can_infer", [])
 
         result = SufficiencyCheckResult(status=SufficiencyStatus.SUFFICIENT)
 
@@ -160,23 +161,21 @@ class SufficiencyChecker:
 
         return result
 
-    def _has_field_value(self, field: str, entities: Dict[str, Any]) -> bool:
+    def _has_field_value(self, field: str, entities: dict[str, Any]) -> bool:
         """检查字段是否有有效值"""
         value = entities.get(field)
         if value is None:
             return False
         if isinstance(value, str) and not value.strip():
             return False
-        if isinstance(value, list) and len(value) == 0:
-            return False
-        return True
+        return not (isinstance(value, list) and len(value) == 0)
 
     def _infer_from_context(
         self,
         field: str,
         intent: str,
-        context: List[Dict[str, Any]],
-    ) -> Optional[Any]:
+        context: list[dict[str, Any]],
+    ) -> Any | None:
         """从对话上下文推断字段值"""
         if not context:
             return None
@@ -208,7 +207,7 @@ class SufficiencyChecker:
     def _requires_confirmation(
         self,
         intent: str,
-        entities: Dict[str, Any],
+        entities: dict[str, Any],
     ) -> bool:
         """检查是否需要用户确认"""
         # 高风险操作需要确认
@@ -235,7 +234,7 @@ class SufficiencyChecker:
         self,
         field: str,
         intent: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """生成澄清问题"""
         QUESTIONS = {
             "task_title": "请问您想创建什么任务？",
@@ -259,7 +258,7 @@ class SufficiencyChecker:
     def _generate_confirmation_message(
         self,
         intent: str,
-        entities: Dict[str, Any],
+        entities: dict[str, Any],
     ) -> str:
         """生成确认消息"""
         if intent == "delete_task":

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
 
 @dataclass(frozen=True)
@@ -9,7 +8,7 @@ class RagStrategy:
     enable_graph: bool
     use_reranker: bool
     short_query_max_len: int
-    trigger_keywords: List[str]
+    trigger_keywords: list[str]
 
 
 DEFAULT_STRATEGY = RagStrategy(
@@ -21,7 +20,7 @@ DEFAULT_STRATEGY = RagStrategy(
     trigger_keywords=[],
 )
 
-STRATEGIES: Dict[str, RagStrategy] = {
+STRATEGIES: dict[str, RagStrategy] = {
     "analytical": RagStrategy(
         name="analytical",
         enable_hyde=True,

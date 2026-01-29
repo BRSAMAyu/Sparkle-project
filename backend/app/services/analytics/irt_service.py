@@ -1,6 +1,5 @@
 import math
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -27,8 +26,8 @@ class IRTService:
         user_id: UUID,
         question_id: UUID,
         correct: bool,
-        subject_id: Optional[str] = None
-    ) -> Optional[UserIRTAbility]:
+        subject_id: str | None = None
+    ) -> UserIRTAbility | None:
         item = await self._get_item_params(question_id, subject_id)
         ability = await self._get_or_create_ability(user_id, subject_id)
 
@@ -40,7 +39,7 @@ class IRTService:
         await self.db.refresh(ability)
         return ability
 
-    async def _get_item_params(self, question_id: UUID, subject_id: Optional[str]) -> IRTItemParameter:
+    async def _get_item_params(self, question_id: UUID, subject_id: str | None) -> IRTItemParameter:
         stmt = select(IRTItemParameter).where(IRTItemParameter.question_id == question_id)
         result = await self.db.execute(stmt)
         item = result.scalar_one_or_none()
@@ -59,7 +58,7 @@ class IRTService:
         await self.db.refresh(item)
         return item
 
-    async def _get_or_create_ability(self, user_id: UUID, subject_id: Optional[str]) -> UserIRTAbility:
+    async def _get_or_create_ability(self, user_id: UUID, subject_id: str | None) -> UserIRTAbility:
         stmt = select(UserIRTAbility).where(
             UserIRTAbility.user_id == user_id,
             UserIRTAbility.subject_id == subject_id

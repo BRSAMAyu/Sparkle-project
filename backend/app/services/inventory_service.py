@@ -2,17 +2,15 @@
 Inventory Service - 物品管理服务
 处理用户物品查询、装备物品、消耗品使用等
 """
-from typing import Optional, Dict, Any, List
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
-from sqlalchemy.orm import selectinload
-from loguru import logger
+from typing import Any
 
-from app.models.shop import (
-    ShopItem, ShopPurchase, UserConsumable,
-    ShopItemType, ItemRarity, ConsumableEffectType
-)
+from loguru import logger
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.shop import ConsumableEffectType, ShopItem, ShopItemType, ShopPurchase, UserConsumable
 from app.models.user import User
 
 
@@ -33,7 +31,7 @@ class InventoryService:
     async def get_user_inventory(
         self,
         user_id: str
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         获取用户物品背包（按类型分组）
 
@@ -165,7 +163,7 @@ class InventoryService:
 
         return inventory
 
-    async def _get_shop_item(self, item_id: str) -> Optional[ShopItem]:
+    async def _get_shop_item(self, item_id: str) -> ShopItem | None:
         """获取商城物品"""
         query = select(ShopItem).where(ShopItem.id == item_id)
         result = await self.db.execute(query)
@@ -174,8 +172,8 @@ class InventoryService:
     async def equip_skin(
         self,
         user_id: str,
-        item_id: Optional[str]
-    ) -> Dict[str, Any]:
+        item_id: str | None
+    ) -> dict[str, Any]:
         """
         装备皮肤
 
@@ -239,8 +237,8 @@ class InventoryService:
     async def equip_title(
         self,
         user_id: str,
-        item_id: Optional[str]
-    ) -> Dict[str, Any]:
+        item_id: str | None
+    ) -> dict[str, Any]:
         """
         装备称号
 
@@ -333,8 +331,8 @@ class InventoryService:
     async def get_owned_items(
         self,
         user_id: str,
-        item_type: Optional[ShopItemType] = None
-    ) -> List[str]:
+        item_type: ShopItemType | None = None
+    ) -> list[str]:
         """
         查询用户已拥有的物品ID列表
 
@@ -362,7 +360,7 @@ class InventoryService:
         user_id: str,
         consumable_id: str,
         quantity: int = 1
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         使用消耗品
 
@@ -437,7 +435,7 @@ class InventoryService:
         user_id: str,
         consumable: UserConsumable,
         quantity: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         应用消耗品效果
 

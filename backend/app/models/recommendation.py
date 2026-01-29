@@ -4,13 +4,13 @@ Recommendation System Models
 
 用于协同过滤推荐的用户相似度、物品相似度、交互记录等
 """
-from datetime import datetime
-from typing import Optional
-from sqlalchemy import Column, String, Integer, Float, Boolean, JSON, ForeignKey, DateTime, Index, UUID as SQLUUID
-from sqlalchemy.orm import relationship
 import enum
+from datetime import datetime
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 
 class InteractionType(str, enum.Enum):

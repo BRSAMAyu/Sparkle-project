@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
 from app.core.business_metrics import MEMORY_SETTINGS_UPDATE_TOTAL
 from app.models.user_memory_settings import UserMemorySettings
 
-
-DEFAULT_SETTINGS: Dict[str, Any] = {
+DEFAULT_SETTINGS: dict[str, Any] = {
     "enabled": True,
     "allow_preferences": True,
     "allow_goals": True,
@@ -39,7 +38,7 @@ class MemorySettingsService:
     async def update_settings(
         self,
         user_id: UUID,
-        updates: Dict[str, Any],
+        updates: dict[str, Any],
     ) -> UserMemorySettings:
         record = await self.get_or_create(user_id)
         before = _snapshot(record)
@@ -62,7 +61,7 @@ class MemorySettingsService:
             )
         return record
 
-    async def _get_settings(self, user_id: UUID) -> Optional[UserMemorySettings]:
+    async def _get_settings(self, user_id: UUID) -> UserMemorySettings | None:
         result = await self.db.execute(
             select(UserMemorySettings).where(
                 UserMemorySettings.user_id == user_id,
@@ -72,7 +71,7 @@ class MemorySettingsService:
         return result.scalar_one_or_none()
 
 
-def _snapshot(record: UserMemorySettings) -> Dict[str, Any]:
+def _snapshot(record: UserMemorySettings) -> dict[str, Any]:
     return {
         "enabled": record.enabled,
         "allow_preferences": record.allow_preferences,
@@ -84,8 +83,8 @@ def _snapshot(record: UserMemorySettings) -> Dict[str, Any]:
     }
 
 
-def _diff_snapshot(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
-    diff: Dict[str, Any] = {}
+def _diff_snapshot(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    diff: dict[str, Any] = {}
     for key, value in after.items():
         if before.get(key) != value:
             if key in {"blocked_pref_keys", "blocked_sources"}:

@@ -11,13 +11,13 @@ LLM Factory - LangGraph 兼容的模型工厂
     llm = LLMFactory.get_llm_for_task(TaskType.DEEP_REASONING)  # 按任务选择
 """
 
-from typing import Optional, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 from langchain_openai import ChatOpenAI
 
 from app.config import settings
-from app.core.llm_router import llm_router, LLMSelection
 from app.core.agent_profiles import AgentRole, TaskType
-
+from app.core.llm_router import llm_router
 
 if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
@@ -37,8 +37,8 @@ class LLMFactory:
     @staticmethod
     def get_llm(
         agent_role: str,
-        override_model: Optional[str] = None,
-        task_type: Optional[TaskType] = None,
+        override_model: str | None = None,
+        task_type: TaskType | None = None,
     ) -> BaseChatModel:
         """
         根据 Agent 角色获取 LangChain ChatModel

@@ -1,11 +1,11 @@
 """Plan Schemas - Plan creation, update, query, etc."""
-from typing import Optional
-from pydantic import BaseModel, Field
-from uuid import UUID
 from datetime import date
+from uuid import UUID
 
+from pydantic import BaseModel, Field
+
+from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.schemas.common import BaseSchema
-from app.models.plan import PlanType, PlanPriority, PlanStage
 
 # ========== Request Schemas ==========
 
@@ -13,24 +13,24 @@ class PlanCreate(BaseModel):
     """Create plan"""
     name: str = Field(min_length=1, max_length=255, description="Plan name")
     type: PlanType = Field(description="Plan type")
-    description: Optional[str] = Field(default=None, description="Plan description")
-    subject: Optional[str] = Field(default=None, max_length=100, description="Subject/Course")
-    target_date: Optional[date] = Field(default=None, description="Target date (for sprint plans)")
+    description: str | None = Field(default=None, description="Plan description")
+    subject: str | None = Field(default=None, max_length=100, description="Subject/Course")
+    target_date: date | None = Field(default=None, description="Target date (for sprint plans)")
     daily_available_minutes: int = Field(default=60, ge=1, description="Daily available minutes")
-    total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
-    priority: Optional[PlanPriority] = Field(default=PlanPriority.NORMAL, description="Plan priority")
-    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
+    total_estimated_hours: float | None = Field(default=None, ge=0, description="Total estimated hours")
+    priority: PlanPriority | None = Field(default=PlanPriority.NORMAL, description="Plan priority")
+    plan_stage: PlanStage | None = Field(default=None, description="Plan stage")
 
 class PlanUpdate(BaseModel):
     """Update plan"""
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255, description="Plan name")
-    description: Optional[str] = Field(default=None, description="Plan description")
-    target_date: Optional[date] = Field(default=None, description="Target date")
-    daily_available_minutes: Optional[int] = Field(default=None, ge=1, description="Daily available minutes")
-    total_estimated_hours: Optional[float] = Field(default=None, ge=0, description="Total estimated hours")
-    is_active: Optional[bool] = Field(default=None, description="Is active")
-    priority: Optional[PlanPriority] = Field(default=None, description="Plan priority")
-    plan_stage: Optional[PlanStage] = Field(default=None, description="Plan stage")
+    name: str | None = Field(default=None, min_length=1, max_length=255, description="Plan name")
+    description: str | None = Field(default=None, description="Plan description")
+    target_date: date | None = Field(default=None, description="Target date")
+    daily_available_minutes: int | None = Field(default=None, ge=1, description="Daily available minutes")
+    total_estimated_hours: float | None = Field(default=None, ge=0, description="Total estimated hours")
+    is_active: bool | None = Field(default=None, description="Is active")
+    priority: PlanPriority | None = Field(default=None, description="Plan priority")
+    plan_stage: PlanStage | None = Field(default=None, description="Plan stage")
 
 class PlanActivate(BaseModel):
     """Activate plan"""
@@ -39,7 +39,7 @@ class PlanActivate(BaseModel):
 class GenerateTasksRequest(BaseModel):
     """Generate tasks request"""
     plan_id: UUID = Field(description="Plan ID")
-    ai_context: Optional[str] = Field(default=None, description="AI context for task generation")
+    ai_context: str | None = Field(default=None, description="AI context for task generation")
 
 # ========== Response Schemas ==========
 
@@ -47,8 +47,8 @@ class PlanBase(BaseSchema):
     """Plan basic information"""
     name: str = Field(description="Plan name")
     type: PlanType = Field(description="Plan type")
-    subject: Optional[str] = Field(description="Subject/Course")
-    target_date: Optional[date] = Field(description="Target date")
+    subject: str | None = Field(description="Subject/Course")
+    target_date: date | None = Field(description="Target date")
     progress: float = Field(description="Progress percentage")
     is_active: bool = Field(description="Is active")
     priority: PlanPriority = Field(description="Plan priority")
@@ -58,9 +58,9 @@ class PlanBase(BaseSchema):
 class PlanDetail(PlanBase):
     """Plan detailed information"""
     user_id: UUID = Field(description="User ID")
-    description: Optional[str] = Field(description="Plan description")
+    description: str | None = Field(description="Plan description")
     daily_available_minutes: int = Field(description="Daily available minutes")
-    total_estimated_hours: Optional[float] = Field(description="Total estimated hours")
+    total_estimated_hours: float | None = Field(description="Total estimated hours")
     mastery_level: float = Field(description="Mastery level")
     task_count: int = Field(default=0, description="Total tasks")
     completed_task_count: int = Field(default=0, description="Completed tasks")
@@ -94,7 +94,7 @@ class PlanQuotaStatus(BaseModel):
     limit: int = Field(description="Quota limit")
     remaining: int = Field(description="Remaining quota (-1 if unlimited)")
     is_unlimited: bool = Field(description="Is unlimited quota")
-    primary_plan_id: Optional[UUID] = Field(default=None, description="Current primary plan ID")
+    primary_plan_id: UUID | None = Field(default=None, description="Current primary plan ID")
 
     class Config:
         from_attributes = True

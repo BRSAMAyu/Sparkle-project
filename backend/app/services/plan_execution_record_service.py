@@ -3,11 +3,12 @@ PlanExecutionRecordService - 方案执行记录持久化服务
 
 负责将验证结果保存到数据库，并支持后续查询分析
 """
-from typing import List, Optional, Dict, Any
-from uuid import UUID
 from datetime import datetime, timedelta
+from typing import Any
+from uuid import UUID
+
 from loguru import logger
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan_execution_record import PlanExecutionRecord
@@ -25,9 +26,9 @@ class PlanExecutionRecordService:
         user_id: UUID,
         validation_status: str,
         quality_score: float,
-        criteria_results: Dict[str, Any],
-        tool_summary: Dict[str, int],
-        issues: List[str],
+        criteria_results: dict[str, Any],
+        tool_summary: dict[str, int],
+        issues: list[str],
     ) -> PlanExecutionRecord:
         """
         创建执行记录
@@ -67,7 +68,7 @@ class PlanExecutionRecordService:
 
         return record
 
-    async def get_record_by_id(self, record_id: UUID) -> Optional[PlanExecutionRecord]:
+    async def get_record_by_id(self, record_id: UUID) -> PlanExecutionRecord | None:
         """获取单个记录"""
         result = await self.db.execute(
             select(PlanExecutionRecord).where(PlanExecutionRecord.id == record_id)
@@ -76,7 +77,7 @@ class PlanExecutionRecordService:
 
     async def get_records_by_plan(
         self, plan_id: UUID, limit: int = 20
-    ) -> List[PlanExecutionRecord]:
+    ) -> list[PlanExecutionRecord]:
         """获取方案的所有执行记录"""
         result = await self.db.execute(
             select(PlanExecutionRecord)
@@ -88,7 +89,7 @@ class PlanExecutionRecordService:
 
     async def get_records_by_user(
         self, user_id: UUID, days: int = 30, limit: int = 100
-    ) -> List[PlanExecutionRecord]:
+    ) -> list[PlanExecutionRecord]:
         """获取用户的执行记录"""
         cutoff = datetime.utcnow() - timedelta(days=days)
 
@@ -107,7 +108,7 @@ class PlanExecutionRecordService:
 
     async def get_user_execution_stats(
         self, user_id: UUID, days: int = 30
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取用户执行统计
 
@@ -162,7 +163,7 @@ class PlanExecutionRecordService:
 
     async def get_plan_execution_stats(
         self, plan_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取方案执行统计
 
@@ -205,8 +206,8 @@ class PlanExecutionRecordService:
         self,
         record_id: UUID,
         satisfaction: int,
-        feedback: Optional[str] = None,
-    ) -> Optional[PlanExecutionRecord]:
+        feedback: str | None = None,
+    ) -> PlanExecutionRecord | None:
         """
         更新用户反馈
 
@@ -237,7 +238,7 @@ class PlanExecutionRecordService:
 
     async def mark_applied_to_learning(
         self, record_id: UUID
-    ) -> Optional[PlanExecutionRecord]:
+    ) -> PlanExecutionRecord | None:
         """
         标记记录已应用到学习系统
 
@@ -260,7 +261,7 @@ class PlanExecutionRecordService:
 
     async def get_unapplied_records(
         self, limit: int = 100
-    ) -> List[PlanExecutionRecord]:
+    ) -> list[PlanExecutionRecord]:
         """
         获取未应用到学习系统的记录
 
@@ -274,7 +275,7 @@ class PlanExecutionRecordService:
         """
         result = await self.db.execute(
             select(PlanExecutionRecord)
-            .where(PlanExecutionRecord.applied_to_learning == False)
+            .where(not PlanExecutionRecord.applied_to_learning)
             .order_by(PlanExecutionRecord.created_at.asc())
             .limit(limit)
         )
@@ -282,7 +283,7 @@ class PlanExecutionRecordService:
 
     async def get_quality_trend(
         self, user_id: UUID, days: int = 30
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取质量趋势数据
 
@@ -308,7 +309,7 @@ class PlanExecutionRecordService:
         records = list(result.scalars().all())
 
         # 按日期分组
-        daily_stats: Dict[str, List[PlanExecutionRecord]] = {}
+        daily_stats: dict[str, list[PlanExecutionRecord]] = {}
         for record in records:
             date_key = record.created_at.strftime("%Y-%m-%d")
             if date_key not in daily_stats:

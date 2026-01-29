@@ -4,19 +4,16 @@ Enhanced Educational Agents - 教育导向的增强智能体
 基于 Sparkle 的知识星图、遗忘曲线和任务系统，提供深度个性化的学习支持
 """
 
-import asyncio
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
-from uuid import UUID
-from enum import Enum
-from loguru import logger
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
-from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
+from loguru import logger
+
 from app.services.llm_service import llm_service
-from app.services.galaxy_service import GalaxyService
-from app.services.task_service import TaskService
-from app.services.decay_service import DecayService
+
+from .base_agent import AgentContext, AgentResponse, BaseAgent
 
 
 # ==========================================
@@ -44,22 +41,22 @@ class EnhancedAgentContext(AgentContext):
     - 学习行为模式
     """
     # 知识星图数据
-    knowledge_graph: Optional[Dict[str, Any]] = None
-    mastery_levels: Optional[Dict[str, float]] = None
-    weak_concepts: Optional[List[str]] = None
+    knowledge_graph: dict[str, Any] | None = None
+    mastery_levels: dict[str, float] | None = None
+    weak_concepts: list[str] | None = None
 
     # 遗忘曲线数据
-    forgetting_risks: Optional[List[Dict[str, Any]]] = None
-    last_review_times: Optional[Dict[str, datetime]] = None
+    forgetting_risks: list[dict[str, Any]] | None = None
+    last_review_times: dict[str, datetime] | None = None
 
     # 任务和计划
-    active_tasks: Optional[List[Dict[str, Any]]] = None
-    active_plans: Optional[List[Dict[str, Any]]] = None
+    active_tasks: list[dict[str, Any]] | None = None
+    active_plans: list[dict[str, Any]] | None = None
 
     # 学习行为
-    study_time_preference: Optional[str] = None
-    learning_style: Optional[str] = None
-    common_errors: Optional[List[str]] = None
+    study_time_preference: str | None = None
+    learning_style: str | None = None
+    common_errors: list[str] | None = None
 
 
 # ==========================================
@@ -219,7 +216,7 @@ class StudyPlannerAgent(BaseAgent):
     async def _analyze_learning_status(
         self,
         context: EnhancedAgentContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """分析用户学习状态"""
 
         # 计算整体掌握度
@@ -250,8 +247,8 @@ class StudyPlannerAgent(BaseAgent):
     async def _generate_study_plan(
         self,
         context: EnhancedAgentContext,
-        learning_status: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        learning_status: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         生成个性化学习计划
 
@@ -459,7 +456,7 @@ class ProblemSolverAgent(BaseAgent):
         self,
         query: str,
         context: EnhancedAgentContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """分析问题类型和涉及的知识点"""
 
         # 简单关键词匹配（实际应使用 NLP 或 LLM）
@@ -468,7 +465,7 @@ class ProblemSolverAgent(BaseAgent):
 
         # 从知识星图中查找相关概念
         related_concepts = []
-        for concept in (context.mastery_levels or {}).keys():
+        for concept in (context.mastery_levels or {}):
             if any(kw in query for kw in concept.split("-")):
                 related_concepts.append(concept)
 
@@ -488,9 +485,9 @@ class ProblemSolverAgent(BaseAgent):
     async def _generate_socratic_response(
         self,
         query: str,
-        problem_analysis: Dict[str, Any],
+        problem_analysis: dict[str, Any],
         context: EnhancedAgentContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         生成苏格拉底式回答
 

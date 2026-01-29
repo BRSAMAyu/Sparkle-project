@@ -2,12 +2,11 @@
 Plan Service
 Handle plan business logic
 """
-from typing import Optional, List
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
 
 from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.task import Task, TaskStatus
@@ -18,7 +17,7 @@ class PlanService:
     @staticmethod
     async def get_by_id(
         db: AsyncSession, plan_id: UUID, user_id: UUID
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         query = select(Plan).where(
             and_(Plan.id == plan_id, Plan.user_id == user_id)
         )
@@ -102,10 +101,10 @@ class PlanService:
     @staticmethod
     async def list_active(
         db: AsyncSession, user_id: UUID, limit: int = 5
-    ) -> List[Plan]:
+    ) -> list[Plan]:
         query = (
             select(Plan)
-            .where(and_(Plan.user_id == user_id, Plan.is_active == True))
+            .where(and_(Plan.user_id == user_id, Plan.is_active))
             .order_by(desc(Plan.created_at))
             .limit(limit)
         )
@@ -115,7 +114,7 @@ class PlanService:
     @staticmethod
     async def update_progress(
         db: AsyncSession, plan_id: UUID, user_id: UUID
-    ) -> Optional[float]:
+    ) -> float | None:
         """
         Calculate and update plan progress based on task completion ratio.
 
@@ -143,10 +142,7 @@ class PlanService:
         completed_tasks = completed_result.scalar_one()
 
         # Calculate progress ratio
-        if total_tasks > 0:
-            new_progress = completed_tasks / total_tasks
-        else:
-            new_progress = 0.0
+        new_progress = completed_tasks / total_tasks if total_tasks > 0 else 0.0
 
         # Update plan progress
         plan.progress = new_progress
@@ -162,7 +158,7 @@ class PlanService:
         plan_id: UUID,
         user_id: UUID,
         redis_client=None
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """
         归档计划
 
@@ -210,7 +206,7 @@ class PlanService:
         user_id: UUID,
         skip_quota_check: bool = False,
         redis_client=None
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """
         恢复归档的计划
 
@@ -234,7 +230,7 @@ class PlanService:
             and_(
                 Plan.id == plan_id,
                 Plan.user_id == user_id,
-                Plan.is_active == False
+                not Plan.is_active
             )
         )
         result = await db.execute(query)
@@ -268,7 +264,7 @@ class PlanService:
         plan_id: UUID,
         user_id: UUID,
         priority: PlanPriority
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """
         更新计划优先级
 
@@ -297,7 +293,7 @@ class PlanService:
     async def get_primary(
         db: AsyncSession,
         user_id: UUID
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """
         获取用户的主计划
 
@@ -311,8 +307,8 @@ class PlanService:
         query = select(Plan).where(
             and_(
                 Plan.user_id == user_id,
-                Plan.is_active == True,
-                Plan.is_primary == True
+                Plan.is_active,
+                Plan.is_primary
             )
         )
         result = await db.execute(query)
@@ -323,7 +319,7 @@ class PlanService:
         db: AsyncSession,
         user_id: UUID,
         limit: int = 20
-    ) -> List[Plan]:
+    ) -> list[Plan]:
         """
         获取归档的计划列表
 
@@ -337,7 +333,7 @@ class PlanService:
         """
         query = (
             select(Plan)
-            .where(and_(Plan.user_id == user_id, Plan.is_active == False))
+            .where(and_(Plan.user_id == user_id, not Plan.is_active))
             .order_by(desc(Plan.updated_at))
             .limit(limit)
         )

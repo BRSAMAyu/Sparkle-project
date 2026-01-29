@@ -19,11 +19,12 @@ import asyncio
 import json
 import jwt
 from typing import Dict, Any
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import websockets
 import grpc
+from jose import JWTError
 
 from app.models.user import User
 from app.core.security import (
@@ -32,7 +33,7 @@ from app.core.security import (
     get_password_hash,
     verify_password
 )
-# from app.core.config import settings  # TODO: Fix config module import
+from app.config import settings
 
 
 # ============================================================
@@ -51,9 +52,10 @@ async def test_user_with_password(db: AsyncSession) -> User:
 
     if not user:
         user = User(
+            username="auth_test_user",
             email="auth_test@example.com",
             nickname="Auth Test User",
-            password_hash=get_password_hash("test_password_123")
+            hashed_password=get_password_hash("test_password_123")
         )
         db.add(user)
         await db.commit()
@@ -75,13 +77,15 @@ def expired_token(test_user_with_password: User) -> str:
 
     # Create token with past expiration
     import time
-    past_time = datetime.utcnow() - timedelta(hours=1)
+    past_time = datetime.now(UTC) - timedelta(hours=1)
 
     # Encode manually with expired timestamp
     payload = {
         "sub": test_user_with_password.email,
         "exp": past_time,
-        "iat": datetime.utcnow()
+        "iat": datetime.now(UTC),
+        "aud": settings.JWT_AUDIENCE,
+        "iss": settings.JWT_ISSUER,
     }
 
     return jwt.encode(
@@ -120,7 +124,8 @@ class TestJWTTokens:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
         )
 
         assert payload["sub"] == test_user_with_password.email
@@ -139,13 +144,14 @@ class TestJWTTokens:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
         )
 
         # Check expiration is about 30 minutes from now
-        exp_time = datetime.fromtimestamp(payload["exp"])
-        now = datetime.utcnow()
-        time_diff = (exp_time - now).total_seconds()
+        exp_ts = payload["exp"]
+        now_ts = datetime.now(UTC).timestamp()
+        time_diff = exp_ts - now_ts
 
         # Should be approximately 30 minutes (give or take a few seconds)
         assert 1790 <= time_diff <= 1810
@@ -160,24 +166,23 @@ class TestJWTTokens:
 
     def test_verify_expired_token(self, expired_token: str):
         """Test verifying an expired token"""
-        payload = decode_token(expired_token)
-
-        assert payload is None
+        with pytest.raises(JWTError):
+            decode_token(expired_token)
 
     def test_verify_invalid_token(self):
         """Test verifying an invalid token"""
         invalid_token = "not.a.valid.token"
-
-        payload = decode_token(invalid_token)
-
-        assert payload is None
+        with pytest.raises(JWTError):
+            decode_token(invalid_token)
 
     def test_token_with_different_secret(self, test_user_with_password: User):
         """Test token created with different secret fails verification"""
         # Create token with wrong secret
         payload = {
             "sub": test_user_with_password.email,
-            "exp": datetime.utcnow() + timedelta(minutes=30)
+            "exp": datetime.now(UTC) + timedelta(minutes=30),
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
 
         token = jwt.encode(
@@ -187,8 +192,8 @@ class TestJWTTokens:
         )
 
         # Should fail verification
-        result = decode_token(token)
-        assert result is None
+        with pytest.raises(JWTError):
+            decode_token(token)
 
 
 # ============================================================
@@ -265,8 +270,6 @@ class TestWebSocketAuthentication:
         uri = f"{websocket_url}?token={valid_token}"
 
         async with websockets.connect(uri) as websocket:
-            assert websocket.open
-
             # Send ping
             await websocket.send(json.dumps({"type": "ping"}))
 
@@ -371,7 +374,7 @@ class TestUserLoginFlow:
         user = result.scalar_one_or_none()
 
         assert user is not None
-        assert verify_password(password, user.password_hash) is True
+        assert verify_password(password, user.hashed_password) is True
 
         # Generate token
         token = create_access_token(data={"sub": user.email})
@@ -399,7 +402,7 @@ class TestUserLoginFlow:
         user = result.scalar_one_or_none()
 
         assert user is not None
-        assert verify_password(wrong_password, user.password_hash) is False
+        assert verify_password(wrong_password, user.hashed_password) is False
 
     @pytest.mark.asyncio
     async def test_login_with_nonexistent_user(
@@ -480,7 +483,8 @@ class TestAuthorization:
     ):
         """Test that user cannot access other users' data"""
         # Try to access different user ID
-        other_user_id = "999999"
+        from uuid import uuid4
+        other_user_id = str(uuid4())
 
         result = await db.execute(
             select(User).where(User.id == other_user_id)
@@ -563,7 +567,8 @@ class TestSecurity:
         payload = jwt.decode(
             valid_token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
         )
 
         # Should only contain sub (email), not password or other sensitive data

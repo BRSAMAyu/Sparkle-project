@@ -4,17 +4,16 @@ Chat Service - 管理用户对话和 LLM 交互
 """
 import json
 import uuid
-import asyncio
-from typing import AsyncGenerator, Optional, Dict, Any, List
+from collections.abc import AsyncGenerator
+from typing import Any
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+
 from loguru import logger
-from datetime import datetime
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage, MessageRole
-from app.models.user import User
-from app.services.llm.parser import LLMResponseParser, LLMResponse
+from app.services.llm.parser import LLMResponseParser
 from app.services.llm_service import llm_service
 
 SYSTEM_PROMPT = """你是一个名为 Sparkle (星火) 的 AI 学习助手。
@@ -29,8 +28,8 @@ SYSTEM_PROMPT = """你是一个名为 Sparkle (星火) 的 AI 学习助手。
 class ChatService:
     def __init__(self):
         self.parser = LLMResponseParser()
-    
-    async def _get_chat_history(self, db: AsyncSession, session_id: UUID, limit: int = 10) -> List[Dict[str, str]]:
+
+    async def _get_chat_history(self, db: AsyncSession, session_id: UUID, limit: int = 10) -> list[dict[str, str]]:
         """获取最近的对话历史"""
         stmt = (
             select(ChatMessage)
@@ -40,7 +39,7 @@ class ChatService:
         )
         result = await db.execute(stmt)
         messages = result.scalars().all()
-        
+
         # 转换为 LLM 格式 (反转顺序，因为是从新到旧查的)
         history = []
         for msg in reversed(messages):
@@ -58,16 +57,16 @@ class ChatService:
         db: AsyncSession,
         user_id: UUID,
         content: str,
-        session_id: Optional[UUID] = None,
-        task_id: Optional[UUID] = None,
-        message_id: Optional[str] = None,
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+        session_id: UUID | None = None,
+        task_id: UUID | None = None,
+        message_id: str | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """
         流式对话核心逻辑
         """
         if not session_id:
             session_id = uuid.uuid4()
-            
+
         # 1. 保存用户消息
         # 如果 message_id 已存在，这里可能会报错，但在 Service 层我们假设它是唯一的或由上层处理
         user_message_id = message_id or str(uuid.uuid4())
@@ -81,21 +80,21 @@ class ChatService:
         )
         db.add(user_message)
         await db.commit()
-        
+
         # 2. 构建 LLM Prompt
         history = await self._get_chat_history(db, session_id, limit=10)
         # 确保当前消息在最后 (虽然保存了，但刚才查出来可能不包含它，或者包含它。
         # _get_chat_history 查的是 DB，我们刚刚 commit 了，所以应该包含。
         # 为了稳妥，我们手动构建 messages 列表)
-        
+
         # 重新构建 messages：System + History (Exclude current if fetched) + Current (if not in fetched)
         # 简单起见：History 包含了刚刚保存的 User Message
-        
+
         messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
-        
+
         # 3. 调用 LLM
         full_response_text = ""
-        
+
         try:
             async for chunk in llm_service.stream_chat(messages):
                 full_response_text += chunk
@@ -114,7 +113,7 @@ class ChatService:
         # 4. 解析响应
         logger.debug("LLM response received (length=%d)", len(full_response_text))
         llm_response = self.parser.parse(full_response_text)
-        
+
         # 5. 处理解析结果
         if llm_response.parse_degraded:
             yield {
@@ -132,7 +131,7 @@ class ChatService:
                 })
             }
             # TODO: 异步执行 Actions (JobService) 或前端确认后执行
-            
+
         # 6. 保存 Assistant 消息
         assistant_message = ChatMessage(
             user_id=user_id,
@@ -146,7 +145,7 @@ class ChatService:
         )
         db.add(assistant_message)
         await db.commit()
-        
+
         # 7. 结束
         yield {
             "event": "done",

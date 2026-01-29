@@ -3,9 +3,10 @@ Tool Execution Fallback Strategies - 工具执行降级策略
 
 P1 Improvement: Provides multi-level fallback strategies when tool execution fails.
 """
-from typing import Optional, Dict, Any
-from loguru import logger
 import json
+from typing import Any
+
+from loguru import logger
 
 
 class ToolExecutionFallback:
@@ -34,7 +35,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-        stream_callback: Optional[Any] = None,
+        stream_callback: Any | None = None,
     ) -> str:
         """处理工具调用失败，返回降级响应
 
@@ -79,7 +80,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Prism 工具降级：返回基于对话历史的简单分析"""
         try:
             # 从 Redis 缓存中获取用户的基本统计信息
@@ -129,7 +130,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-    ) -> Optional[str]:
+    ) -> str | None:
         """翻译工具降级：提示用户使用其他方式"""
         return """抱歉，翻译服务暂时不可用。
 
@@ -147,7 +148,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-    ) -> Optional[str]:
+    ) -> str | None:
         """专注时段建议降级：提供通用建议"""
         return """抱歉，专注时段建议服务暂时不可用。
 
@@ -166,7 +167,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-    ) -> Optional[str]:
+    ) -> str | None:
         """任务创建降级：提供手动创建指引"""
         return """抱歉，自动创建任务功能暂时不可用。
 
@@ -184,7 +185,7 @@ class ToolExecutionFallback:
         user_id: str,
         db_session: Any,
         redis_client: Any,
-    ) -> Optional[str]:
+    ) -> str | None:
         """计划创建降级：提供手动创建指引"""
         return """抱歉，自动创建计划功能暂时不可用。
 
@@ -221,7 +222,7 @@ class FallbackToolResult:
         tool_name: str,
         fallback_message: str,
         original_error: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """创建降级工具结果
 
         Args:

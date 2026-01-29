@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ func TestPlanReviewE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
 	}
+	requireE2EEnabled(t)
 
 	// Setup test environment
 	// This requires:
@@ -228,6 +230,7 @@ func TestPlanReviewRejectionFlow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
 	}
+	requireE2EEnabled(t)
 
 	t.Run("RejectPlanReview", func(t *testing.T) {
 		wsConn := setupWebSocketConnection(t, "test-token")
@@ -309,6 +312,12 @@ func setupWebSocketTestServer(t *testing.T) string {
 	return "ws://localhost:8080/ws/chat"
 }
 
+func requireE2EEnabled(t *testing.T) {
+	if os.Getenv("SPARKLE_E2E_WS") != "1" {
+		t.Skip("Skipping WebSocket E2E test; set SPARKLE_E2E_WS=1 to enable")
+	}
+}
+
 func setupWebSocketConnection(t *testing.T, token string) *websocket.Conn {
 	wsURL := setupWebSocketTestServer(t)
 	wsConn, resp, err := websocket.DefaultDialer.Dial(wsURL+"?token="+token, nil)
@@ -350,6 +359,7 @@ func TestPlanReviewIntegrationWithGRPC(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	requireE2EEnabled(t)
 
 	t.Run("SubmitPlanReviewViaGRPC", func(t *testing.T) {
 		// This test requires a running gRPC server

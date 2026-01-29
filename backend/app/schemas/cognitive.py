@@ -2,31 +2,31 @@
 Cognitive Prism Schemas
 认知棱镜相关 Schema
 """
-from typing import List, Optional, Dict
-from uuid import UUID
-from pydantic import BaseModel, Field
 from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 from app.models.cognitive import AnalysisStatus
 
-# ========== Request Schemas ========== 
+# ========== Request Schemas ==========
 
 class CognitiveFragmentCreate(BaseModel):
-    id: Optional[UUID] = None # Front-end can provide UUID to avoid duplicates
+    id: UUID | None = None # Front-end can provide UUID to avoid duplicates
     content: str = Field(..., min_length=1)
     source_type: str = Field(..., description="capsule, interceptor, behavior")
-    
+
     # Optional metadata
     resource_type: str = "text"
-    resource_url: Optional[str] = None
-    context_tags: Optional[Dict] = None
-    error_tags: Optional[List[str]] = None
+    resource_url: str | None = None
+    context_tags: dict | None = None
+    error_tags: list[str] | None = None
     severity: int = Field(1, ge=1, le=5)
-    task_id: Optional[UUID] = None
-    source_event_id: Optional[str] = None
-    persona_version: Optional[str] = None
+    task_id: UUID | None = None
+    source_event_id: str | None = None
+    persona_version: str | None = None
 
-# ========== Response Schemas ========== 
+# ========== Response Schemas ==========
 
 class CognitiveFragmentResponse(BaseModel):
     id: UUID
@@ -34,16 +34,16 @@ class CognitiveFragmentResponse(BaseModel):
     content: str
     source_type: str
     resource_type: str
-    resource_url: Optional[str]
-    context_tags: Optional[Dict]
-    error_tags: Optional[List[str]]
+    resource_url: str | None
+    context_tags: dict | None
+    error_tags: list[str] | None
     severity: int
-    sentiment: Optional[str]
+    sentiment: str | None
     analysis_status: AnalysisStatus
-    error_message: Optional[str]
-    task_id: Optional[UUID]
-    source_event_id: Optional[str]
-    persona_version: Optional[str]
+    error_message: str | None
+    task_id: UUID | None
+    source_event_id: str | None
+    persona_version: str | None
     created_at: datetime
 
     class Config:
@@ -59,9 +59,9 @@ class BehaviorPatternResponse(BaseModel):
     user_id: UUID
     pattern_name: str
     pattern_type: str
-    description: Optional[str]
-    solution_text: Optional[str]
-    evidence_ids: Optional[List[UUID]]
+    description: str | None
+    solution_text: str | None
+    evidence_ids: list[UUID] | None
     confidence_score: float
     frequency: int
     is_archived: bool

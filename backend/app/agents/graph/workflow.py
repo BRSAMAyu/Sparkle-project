@@ -1,28 +1,28 @@
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
-from app.agents.graph.state import SparkleState
-from app.agents.graph.nodes.router import router_node
-from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
-from app.agents.graph.nodes.exam_oracle import exam_oracle_node
-from app.agents.graph.nodes.time_tutor import time_tutor_node
-from app.agents.graph.nodes.registry_tools import (
-    query_knowledge,
-    create_knowledge_node,
-    link_nodes,
-    create_plan,
-    generate_tasks_for_plan,
-    create_task,
-    batch_create_tasks,
-    suggest_focus_session,
-)
 # Phase 3: Import collaboration nodes
 from app.agents.graph.nodes.collaboration import (
-    collaboration_node,
     collaboration_aggregator_node,
+    collaboration_node,
 )
+from app.agents.graph.nodes.exam_oracle import exam_oracle_node
+from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
+from app.agents.graph.nodes.registry_tools import (
+    batch_create_tasks,
+    create_knowledge_node,
+    create_plan,
+    create_task,
+    generate_tasks_for_plan,
+    link_nodes,
+    query_knowledge,
+    suggest_focus_session,
+)
+from app.agents.graph.nodes.router import router_node
+from app.agents.graph.nodes.time_tutor import time_tutor_node
+from app.agents.graph.state import SparkleState
 
 # --- 1. 条件边逻辑 (Conditional Edges) ---
 

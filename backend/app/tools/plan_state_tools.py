@@ -10,14 +10,14 @@ Usage:
     These tools are registered in the ToolRegistry and can be invoked by the LLM
     through function calling.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
-from app.tools.base import BaseTool, ToolCategory, ToolResult
 from app.services.plan_state_service import PlanStateService
 from app.services.task_state_sync import TaskStateSyncService
-
+from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 # ============================================
 # Parameter Schemas
@@ -78,7 +78,7 @@ class GetPlanStateTool(BaseTool):
         params: GetPlanStateParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             plan_id = UUID(params.plan_id)
@@ -158,7 +158,7 @@ class GetTaskSummaryTool(BaseTool):
         params: GetTaskSummaryParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             plan_id = UUID(params.plan_id)
@@ -215,7 +215,7 @@ class GetTaskDetailTool(BaseTool):
         params: GetTaskDetailParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             task_id = UUID(params.task_id)

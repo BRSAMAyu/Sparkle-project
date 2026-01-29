@@ -1,13 +1,14 @@
 import datetime
+from collections.abc import Iterable as _Iterable
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
-from google.protobuf import struct_pb2 as _struct_pb2
-from google.protobuf.internal import containers as _containers
-from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable, Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from google.protobuf import struct_pb2 as _struct_pb2
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -114,7 +115,7 @@ class ChatRequest(_message.Message):
     file_ids: _containers.RepeatedScalarFieldContainer[str]
     include_references: bool
     active_tools: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., message: _Optional[str] = ..., tool_result: _Optional[_Union[ToolResult, _Mapping]] = ..., user_profile: _Optional[_Union[UserProfile, _Mapping]] = ..., extra_context: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., history: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., config: _Optional[_Union[ChatConfig, _Mapping]] = ..., request_id: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., include_references: bool = ..., active_tools: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., session_id: str | None = ..., message: str | None = ..., tool_result: ToolResult | _Mapping | None = ..., user_profile: UserProfile | _Mapping | None = ..., extra_context: _struct_pb2.Struct | _Mapping | None = ..., history: _Iterable[ChatMessage | _Mapping] | None = ..., config: ChatConfig | _Mapping | None = ..., request_id: str | None = ..., file_ids: _Iterable[str] | None = ..., include_references: bool = ..., active_tools: _Iterable[str] | None = ...) -> None: ...
 
 class UserProfile(_message.Message):
     __slots__ = ("nickname", "timezone", "language", "is_pro", "preferences", "extra_context", "level", "avatar_url")
@@ -124,7 +125,7 @@ class UserProfile(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     NICKNAME_FIELD_NUMBER: _ClassVar[int]
     TIMEZONE_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
@@ -141,13 +142,13 @@ class UserProfile(_message.Message):
     extra_context: str
     level: int
     avatar_url: str
-    def __init__(self, nickname: _Optional[str] = ..., timezone: _Optional[str] = ..., language: _Optional[str] = ..., is_pro: bool = ..., preferences: _Optional[_Mapping[str, str]] = ..., extra_context: _Optional[str] = ..., level: _Optional[int] = ..., avatar_url: _Optional[str] = ...) -> None: ...
+    def __init__(self, nickname: str | None = ..., timezone: str | None = ..., language: str | None = ..., is_pro: bool = ..., preferences: _Mapping[str, str] | None = ..., extra_context: str | None = ..., level: int | None = ..., avatar_url: str | None = ...) -> None: ...
 
 class ProfileRequest(_message.Message):
     __slots__ = ("user_id",)
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
-    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ...) -> None: ...
 
 class WeeklyReportRequest(_message.Message):
     __slots__ = ("user_id", "week_id")
@@ -155,7 +156,7 @@ class WeeklyReportRequest(_message.Message):
     WEEK_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     week_id: str
-    def __init__(self, user_id: _Optional[str] = ..., week_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., week_id: str | None = ...) -> None: ...
 
 class WeeklyReport(_message.Message):
     __slots__ = ("summary", "tasks_completed")
@@ -163,7 +164,7 @@ class WeeklyReport(_message.Message):
     TASKS_COMPLETED_FIELD_NUMBER: _ClassVar[int]
     summary: str
     tasks_completed: int
-    def __init__(self, summary: _Optional[str] = ..., tasks_completed: _Optional[int] = ...) -> None: ...
+    def __init__(self, summary: str | None = ..., tasks_completed: int | None = ...) -> None: ...
 
 class ToolResult(_message.Message):
     __slots__ = ("tool_call_id", "tool_name", "result_json", "is_error", "error_message")
@@ -177,7 +178,7 @@ class ToolResult(_message.Message):
     result_json: str
     is_error: bool
     error_message: str
-    def __init__(self, tool_call_id: _Optional[str] = ..., tool_name: _Optional[str] = ..., result_json: _Optional[str] = ..., is_error: bool = ..., error_message: _Optional[str] = ...) -> None: ...
+    def __init__(self, tool_call_id: str | None = ..., tool_name: str | None = ..., result_json: str | None = ..., is_error: bool = ..., error_message: str | None = ...) -> None: ...
 
 class ChatConfig(_message.Message):
     __slots__ = ("model", "temperature", "max_tokens", "tools_enabled")
@@ -189,7 +190,7 @@ class ChatConfig(_message.Message):
     temperature: float
     max_tokens: int
     tools_enabled: bool
-    def __init__(self, model: _Optional[str] = ..., temperature: _Optional[float] = ..., max_tokens: _Optional[int] = ..., tools_enabled: bool = ...) -> None: ...
+    def __init__(self, model: str | None = ..., temperature: float | None = ..., max_tokens: int | None = ..., tools_enabled: bool = ...) -> None: ...
 
 class ChatMessage(_message.Message):
     __slots__ = ("role", "content", "name", "tool_call_id", "metadata")
@@ -199,7 +200,7 @@ class ChatMessage(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     ROLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -210,7 +211,7 @@ class ChatMessage(_message.Message):
     name: str
     tool_call_id: str
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, role: str | None = ..., content: str | None = ..., name: str | None = ..., tool_call_id: str | None = ..., metadata: _Mapping[str, str] | None = ...) -> None: ...
 
 class ChatResponse(_message.Message):
     __slots__ = ("response_id", "created_at", "request_id", "trace_id", "workflow_id", "prompt_version", "metadata", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp")
@@ -220,7 +221,7 @@ class ChatResponse(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
@@ -257,7 +258,7 @@ class ChatResponse(_message.Message):
     intervention: InterventionPayload
     finish_reason: FinishReason
     timestamp: int
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(self, response_id: str | None = ..., created_at: int | None = ..., request_id: str | None = ..., trace_id: str | None = ..., workflow_id: str | None = ..., prompt_version: str | None = ..., metadata: _Mapping[str, str] | None = ..., delta: str | None = ..., tool_call: ToolCall | _Mapping | None = ..., status_update: AgentStatus | _Mapping | None = ..., full_text: str | None = ..., error: Error | _Mapping | None = ..., usage: Usage | _Mapping | None = ..., citations: CitationBlock | _Mapping | None = ..., tool_result: ToolResultPayload | _Mapping | None = ..., intervention: InterventionPayload | _Mapping | None = ..., finish_reason: FinishReason | str | None = ..., timestamp: int | None = ...) -> None: ...
 
 class ResponseFeedbackRequest(_message.Message):
     __slots__ = ("user_id", "response_id", "trace_id", "feedback_type", "reasons", "free_text", "workflow_id", "prompt_version", "meta")
@@ -267,7 +268,7 @@ class ResponseFeedbackRequest(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -286,7 +287,7 @@ class ResponseFeedbackRequest(_message.Message):
     workflow_id: str
     prompt_version: str
     meta: _containers.ScalarMap[str, str]
-    def __init__(self, user_id: _Optional[str] = ..., response_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., feedback_type: _Optional[_Union[FeedbackType, str]] = ..., reasons: _Optional[_Iterable[_Union[FeedbackReason, str]]] = ..., free_text: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., meta: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., response_id: str | None = ..., trace_id: str | None = ..., feedback_type: FeedbackType | str | None = ..., reasons: _Iterable[FeedbackReason | str] | None = ..., free_text: str | None = ..., workflow_id: str | None = ..., prompt_version: str | None = ..., meta: _Mapping[str, str] | None = ...) -> None: ...
 
 class ResponseFeedbackResponse(_message.Message):
     __slots__ = ("success", "message", "response_id")
@@ -296,13 +297,13 @@ class ResponseFeedbackResponse(_message.Message):
     success: bool
     message: str
     response_id: str
-    def __init__(self, success: bool = ..., message: _Optional[str] = ..., response_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, success: bool = ..., message: str | None = ..., response_id: str | None = ...) -> None: ...
 
 class CitationBlock(_message.Message):
     __slots__ = ("citations",)
     CITATIONS_FIELD_NUMBER: _ClassVar[int]
     citations: _containers.RepeatedCompositeFieldContainer[Citation]
-    def __init__(self, citations: _Optional[_Iterable[_Union[Citation, _Mapping]]] = ...) -> None: ...
+    def __init__(self, citations: _Iterable[Citation | _Mapping] | None = ...) -> None: ...
 
 class Citation(_message.Message):
     __slots__ = ("id", "title", "content", "source_type", "url", "score", "file_id", "page_number", "chunk_index", "section_title")
@@ -326,7 +327,7 @@ class Citation(_message.Message):
     page_number: int
     chunk_index: int
     section_title: str
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., source_type: _Optional[str] = ..., url: _Optional[str] = ..., score: _Optional[float] = ..., file_id: _Optional[str] = ..., page_number: _Optional[int] = ..., chunk_index: _Optional[int] = ..., section_title: _Optional[str] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., title: str | None = ..., content: str | None = ..., source_type: str | None = ..., url: str | None = ..., score: float | None = ..., file_id: str | None = ..., page_number: int | None = ..., chunk_index: int | None = ..., section_title: str | None = ...) -> None: ...
 
 class ToolCall(_message.Message):
     __slots__ = ("id", "name", "arguments")
@@ -336,7 +337,7 @@ class ToolCall(_message.Message):
     id: str
     name: str
     arguments: str
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., name: str | None = ..., arguments: str | None = ...) -> None: ...
 
 class ToolResultPayload(_message.Message):
     __slots__ = ("tool_name", "success", "data", "error_message", "suggestion", "widget_type", "widget_data", "tool_call_id")
@@ -356,7 +357,7 @@ class ToolResultPayload(_message.Message):
     widget_type: str
     widget_data: _struct_pb2.Struct
     tool_call_id: str
-    def __init__(self, tool_name: _Optional[str] = ..., success: bool = ..., data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., error_message: _Optional[str] = ..., suggestion: _Optional[str] = ..., widget_type: _Optional[str] = ..., widget_data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., tool_call_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, tool_name: str | None = ..., success: bool = ..., data: _struct_pb2.Struct | _Mapping | None = ..., error_message: str | None = ..., suggestion: str | None = ..., widget_type: str | None = ..., widget_data: _struct_pb2.Struct | _Mapping | None = ..., tool_call_id: str | None = ...) -> None: ...
 
 class EvidenceRef(_message.Message):
     __slots__ = ("type", "id", "schema_version", "user_deleted")
@@ -368,7 +369,7 @@ class EvidenceRef(_message.Message):
     id: str
     schema_version: str
     user_deleted: bool
-    def __init__(self, type: _Optional[str] = ..., id: _Optional[str] = ..., schema_version: _Optional[str] = ..., user_deleted: bool = ...) -> None: ...
+    def __init__(self, type: str | None = ..., id: str | None = ..., schema_version: str | None = ..., user_deleted: bool = ...) -> None: ...
 
 class CoolDownPolicy(_message.Message):
     __slots__ = ("policy", "until_ms")
@@ -376,7 +377,7 @@ class CoolDownPolicy(_message.Message):
     UNTIL_MS_FIELD_NUMBER: _ClassVar[int]
     policy: str
     until_ms: int
-    def __init__(self, policy: _Optional[str] = ..., until_ms: _Optional[int] = ...) -> None: ...
+    def __init__(self, policy: str | None = ..., until_ms: int | None = ...) -> None: ...
 
 class InterventionReason(_message.Message):
     __slots__ = ("trigger_event_id", "explanation_text", "confidence", "evidence_refs", "decision_trace")
@@ -390,7 +391,7 @@ class InterventionReason(_message.Message):
     confidence: float
     evidence_refs: _containers.RepeatedCompositeFieldContainer[EvidenceRef]
     decision_trace: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, trigger_event_id: _Optional[str] = ..., explanation_text: _Optional[str] = ..., confidence: _Optional[float] = ..., evidence_refs: _Optional[_Iterable[_Union[EvidenceRef, _Mapping]]] = ..., decision_trace: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, trigger_event_id: str | None = ..., explanation_text: str | None = ..., confidence: float | None = ..., evidence_refs: _Iterable[EvidenceRef | _Mapping] | None = ..., decision_trace: _Iterable[str] | None = ...) -> None: ...
 
 class InterventionRequest(_message.Message):
     __slots__ = ("id", "dedupe_key", "topic", "created_at_ms", "expires_at_ms", "is_retractable", "supersedes_id", "schema_version", "policy_version", "model_version", "reason", "level", "on_reject", "content")
@@ -422,13 +423,13 @@ class InterventionRequest(_message.Message):
     level: InterventionLevel
     on_reject: CoolDownPolicy
     content: _struct_pb2.Struct
-    def __init__(self, id: _Optional[str] = ..., dedupe_key: _Optional[str] = ..., topic: _Optional[str] = ..., created_at_ms: _Optional[int] = ..., expires_at_ms: _Optional[int] = ..., is_retractable: bool = ..., supersedes_id: _Optional[str] = ..., schema_version: _Optional[str] = ..., policy_version: _Optional[str] = ..., model_version: _Optional[str] = ..., reason: _Optional[_Union[InterventionReason, _Mapping]] = ..., level: _Optional[_Union[InterventionLevel, str]] = ..., on_reject: _Optional[_Union[CoolDownPolicy, _Mapping]] = ..., content: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., dedupe_key: str | None = ..., topic: str | None = ..., created_at_ms: int | None = ..., expires_at_ms: int | None = ..., is_retractable: bool = ..., supersedes_id: str | None = ..., schema_version: str | None = ..., policy_version: str | None = ..., model_version: str | None = ..., reason: InterventionReason | _Mapping | None = ..., level: InterventionLevel | str | None = ..., on_reject: CoolDownPolicy | _Mapping | None = ..., content: _struct_pb2.Struct | _Mapping | None = ...) -> None: ...
 
 class InterventionPayload(_message.Message):
     __slots__ = ("request",)
     REQUEST_FIELD_NUMBER: _ClassVar[int]
     request: InterventionRequest
-    def __init__(self, request: _Optional[_Union[InterventionRequest, _Mapping]] = ...) -> None: ...
+    def __init__(self, request: InterventionRequest | _Mapping | None = ...) -> None: ...
 
 class AgentStatus(_message.Message):
     __slots__ = ("state", "details", "current_agent_name", "active_agent")
@@ -452,7 +453,7 @@ class AgentStatus(_message.Message):
     details: str
     current_agent_name: str
     active_agent: AgentType
-    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ..., active_agent: _Optional[_Union[AgentType, str]] = ...) -> None: ...
+    def __init__(self, state: AgentStatus.State | str | None = ..., details: str | None = ..., current_agent_name: str | None = ..., active_agent: AgentType | str | None = ...) -> None: ...
 
 class Error(_message.Message):
     __slots__ = ("code", "message", "retryable", "details")
@@ -462,7 +463,7 @@ class Error(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     CODE_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     RETRYABLE_FIELD_NUMBER: _ClassVar[int]
@@ -471,7 +472,7 @@ class Error(_message.Message):
     message: str
     retryable: bool
     details: _containers.ScalarMap[str, str]
-    def __init__(self, code: _Optional[str] = ..., message: _Optional[str] = ..., retryable: bool = ..., details: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, code: str | None = ..., message: str | None = ..., retryable: bool = ..., details: _Mapping[str, str] | None = ...) -> None: ...
 
 class Usage(_message.Message):
     __slots__ = ("prompt_tokens", "completion_tokens", "total_tokens", "cost_micro_usd")
@@ -483,7 +484,7 @@ class Usage(_message.Message):
     completion_tokens: int
     total_tokens: int
     cost_micro_usd: int
-    def __init__(self, prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., total_tokens: _Optional[int] = ..., cost_micro_usd: _Optional[int] = ...) -> None: ...
+    def __init__(self, prompt_tokens: int | None = ..., completion_tokens: int | None = ..., total_tokens: int | None = ..., cost_micro_usd: int | None = ...) -> None: ...
 
 class MemoryQuery(_message.Message):
     __slots__ = ("user_id", "query_text", "limit", "min_score", "filter", "hybrid_alpha")
@@ -499,7 +500,7 @@ class MemoryQuery(_message.Message):
     min_score: float
     filter: MemoryFilter
     hybrid_alpha: float
-    def __init__(self, user_id: _Optional[str] = ..., query_text: _Optional[str] = ..., limit: _Optional[int] = ..., min_score: _Optional[float] = ..., filter: _Optional[_Union[MemoryFilter, _Mapping]] = ..., hybrid_alpha: _Optional[float] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., query_text: str | None = ..., limit: int | None = ..., min_score: float | None = ..., filter: MemoryFilter | _Mapping | None = ..., hybrid_alpha: float | None = ...) -> None: ...
 
 class MemoryFilter(_message.Message):
     __slots__ = ("tags", "start_time", "end_time", "source_types")
@@ -511,7 +512,7 @@ class MemoryFilter(_message.Message):
     start_time: _timestamp_pb2.Timestamp
     end_time: _timestamp_pb2.Timestamp
     source_types: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, tags: _Optional[_Iterable[str]] = ..., start_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., source_types: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, tags: _Iterable[str] | None = ..., start_time: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., end_time: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., source_types: _Iterable[str] | None = ...) -> None: ...
 
 class MemoryResult(_message.Message):
     __slots__ = ("items", "total_found")
@@ -519,7 +520,7 @@ class MemoryResult(_message.Message):
     TOTAL_FOUND_FIELD_NUMBER: _ClassVar[int]
     items: _containers.RepeatedCompositeFieldContainer[MemoryItem]
     total_found: int
-    def __init__(self, items: _Optional[_Iterable[_Union[MemoryItem, _Mapping]]] = ..., total_found: _Optional[int] = ...) -> None: ...
+    def __init__(self, items: _Iterable[MemoryItem | _Mapping] | None = ..., total_found: int | None = ...) -> None: ...
 
 class MemoryItem(_message.Message):
     __slots__ = ("id", "content", "score", "created_at", "metadata")
@@ -529,7 +530,7 @@ class MemoryItem(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SCORE_FIELD_NUMBER: _ClassVar[int]
@@ -540,4 +541,4 @@ class MemoryItem(_message.Message):
     score: float
     created_at: _timestamp_pb2.Timestamp
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, id: _Optional[str] = ..., content: _Optional[str] = ..., score: _Optional[float] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., content: str | None = ..., score: float | None = ..., created_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., metadata: _Mapping[str, str] | None = ...) -> None: ...

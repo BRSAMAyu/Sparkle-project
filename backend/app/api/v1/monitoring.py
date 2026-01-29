@@ -3,15 +3,16 @@ WebSocket Monitoring API
 Provides endpoints for monitoring WebSocket connection status and health.
 Also includes device token management for push notifications.
 """
-from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import Dict, Any, Optional, List
+from datetime import UTC
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from app.api.deps import get_current_user, get_db
-from app.core.websocket import manager
-from app.models.user import User
-from app.db.session import AsyncSessionLocal
 from sqlalchemy import select
-from app.models.user import UserDevice
+
+from app.api.deps import get_current_user
+from app.core.websocket import manager
+from app.db.session import AsyncSessionLocal
+from app.models.user import User, UserDevice
 
 router = APIRouter()
 
@@ -24,9 +25,9 @@ class DeviceRegisterRequest(BaseModel):
     push_token: str
     platform: str  # ios, android, web
     token_type: str = "fcm"  # fcm, apns, huawei
-    device_name: Optional[str] = None
-    app_version: Optional[str] = None
-    os_version: Optional[str] = None
+    device_name: str | None = None
+    app_version: str | None = None
+    os_version: str | None = None
 
 
 class DeviceInfo(BaseModel):
@@ -35,20 +36,20 @@ class DeviceInfo(BaseModel):
     device_id: str
     platform: str
     token_type: str
-    device_name: Optional[str]
-    app_version: Optional[str]
-    os_version: Optional[str]
+    device_name: str | None
+    app_version: str | None
+    os_version: str | None
     is_active: bool
     last_used_at: str
 
 
 class DeviceListResponse(BaseModel):
     """设备列表响应"""
-    devices: List[DeviceInfo]
+    devices: list[DeviceInfo]
     total: int
 
 
-@router.get("/ws/stats")
+@router.get("/stats")
 async def websocket_stats(current_user: User = Depends(get_current_user)):
     """
     Get WebSocket statistics.
@@ -79,7 +80,7 @@ async def websocket_stats(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
 
-@router.get("/ws/health")
+@router.get("/health")
 async def websocket_health():
     """
     Simple health check endpoint for WebSocket service.
@@ -103,7 +104,7 @@ async def websocket_health():
         }
 
 
-@router.get("/ws/online/{user_id}")
+@router.get("/online/{user_id}")
 async def check_user_online(
     user_id: str,
     current_user: User = Depends(get_current_user)
@@ -140,7 +141,7 @@ async def record_message_ack(
         raise HTTPException(status_code=500, detail=f"Failed to record ACK: {str(e)}")
 
 
-@router.get("/ws/metrics")
+@router.get("/metrics")
 async def websocket_metrics(current_user: User = Depends(get_current_user)):
     """
     Get detailed WebSocket metrics.
@@ -194,8 +195,8 @@ async def register_device(
             )
             device = result.scalar_one_or_none()
 
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc)
+            from datetime import datetime
+            now = datetime.now(UTC)
 
             if device:
                 # 更新现有设备
@@ -266,7 +267,7 @@ async def list_my_devices(
                 UserDevice.user_id == str(current_user.id)
             )
             if active_only:
-                query = query.where(UserDevice.is_active == True)
+                query = query.where(UserDevice.is_active)
 
             query = query.order_by(UserDevice.last_used_at.desc())
 

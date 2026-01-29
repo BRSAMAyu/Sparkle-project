@@ -1,6 +1,6 @@
-from typing import List, Any, Optional, Tuple
 import asyncio
 from http import HTTPStatus
+from typing import Any
 
 import dashscope
 import httpx
@@ -28,7 +28,7 @@ class RerankService:
         self.siliconflow_base_url = settings.SILICONFLOW_BASE_URL
         self.siliconflow_model = settings.SILICONFLOW_RERANK_MODEL or settings.RERANK_MODEL
 
-    def reciprocal_rank_fusion(self, search_results_list: List[List[Any]], k: int = 60) -> List[tuple]:
+    def reciprocal_rank_fusion(self, search_results_list: list[list[Any]], k: int = 60) -> list[tuple]:
         """
         RRF (Reciprocal Rank Fusion) algorithm.
         search_results_list: List of result lists (e.g. [vector_results, keyword_results])
@@ -37,22 +37,19 @@ class RerankService:
         """
         scores = {} # item_id -> score
         items = {} # item_id -> item object
-        
+
         for results in search_results_list:
             for rank, item in enumerate(results):
                 # We assume item has an 'id' attribute or key
                 # Handle dict or object
-                if isinstance(item, dict):
-                    item_id = str(item.get("id"))
-                else:
-                    item_id = str(item.id)
-                    
+                item_id = str(item.get("id")) if isinstance(item, dict) else str(item.id)
+
                 if item_id not in scores:
                     scores[item_id] = 0.0
                     items[item_id] = item
-                
+
                 scores[item_id] += 1.0 / (k + rank + 1)
-        
+
         # Sort by score desc
         sorted_results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         return [(items[item_id], score) for item_id, score in sorted_results]
@@ -60,10 +57,10 @@ class RerankService:
     async def rerank(
         self,
         query: str,
-        candidates: List[Any],
+        candidates: list[Any],
         top_k: int = 5,
-        instruct: Optional[str] = None,
-    ) -> List[Any]:
+        instruct: str | None = None,
+    ) -> list[Any]:
         """
         Rerank candidates based on query using remote API.
 
@@ -96,9 +93,9 @@ class RerankService:
             logger.error(f"Error during reranking: {e}")
             return candidates[:top_k]
 
-    def _extract_documents(self, candidates: List[Any]) -> Tuple[List[str], List[Any]]:
-        documents: List[str] = []
-        valid_candidates: List[Any] = []
+    def _extract_documents(self, candidates: list[Any]) -> tuple[list[str], list[Any]]:
+        documents: list[str] = []
+        valid_candidates: list[Any] = []
 
         for c in candidates:
             if isinstance(c, dict):
@@ -115,10 +112,10 @@ class RerankService:
     async def _dashscope_rerank(
         self,
         query: str,
-        documents: List[str],
+        documents: list[str],
         top_k: int,
-        instruct: Optional[str] = None,
-    ) -> List[int]:
+        instruct: str | None = None,
+    ) -> list[int]:
         def _call():
             dashscope.api_key = self.dashscope_api_key
             if self.dashscope_base_url:
@@ -147,10 +144,10 @@ class RerankService:
     async def _siliconflow_rerank(
         self,
         query: str,
-        documents: List[str],
+        documents: list[str],
         top_k: int,
-        instruct: Optional[str] = None,
-    ) -> List[int]:
+        instruct: str | None = None,
+    ) -> list[int]:
         # SiliconFlow rerank endpoint: {base_url}/rerank
         # With default base_url=https://api.siliconflow.cn/v1, this produces:
         # https://api.siliconflow.cn/v1/rerank

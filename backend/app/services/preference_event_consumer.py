@@ -5,18 +5,17 @@ import asyncio
 import json
 import time
 from uuid import UUID
-from typing import Dict
 
 from loguru import logger
 
-from app.services.user_service import UserService
 from app.core.metrics import (
-    PREFERENCE_EVENT_E2E_LATENCY,
-    PREFERENCE_EVENT_CONSUME_LAG,
-    PREFERENCE_EVENT_STREAM_LENGTH,
     CACHE_INVALIDATION_LATENCY,
-    PREFERENCE_EVENT_ERRORS_TOTAL
+    PREFERENCE_EVENT_CONSUME_LAG,
+    PREFERENCE_EVENT_E2E_LATENCY,
+    PREFERENCE_EVENT_ERRORS_TOTAL,
+    PREFERENCE_EVENT_STREAM_LENGTH,
 )
+from app.services.user_service import UserService
 
 
 class PreferenceEventConsumer:

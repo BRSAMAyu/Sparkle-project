@@ -2,10 +2,10 @@
 Semantic Memory Models
 Phase 2: Strategy nodes and evidence links.
 """
-from sqlalchemy import Column, String, Float, JSON, ForeignKey
+from sqlalchemy import JSON, Column, Float, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class StrategyNode(BaseModel):

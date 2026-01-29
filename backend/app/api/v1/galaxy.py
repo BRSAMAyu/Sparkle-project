@@ -2,35 +2,34 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
-from typing import Optional, List
-from uuid import UUID
 from datetime import datetime
+from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
-from app.services.galaxy_service import GalaxyService
-from app.services.decay_service import DecayService
-from app.services.knowledge_integration_service import KnowledgeIntegrationService
+from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.schemas.galaxy import (
-    GalaxyGraphResponse,
-    SparkRequest,
-    SparkResult,
-    SearchRequest,
-    SearchResponse,
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
-    ReviewSuggestionsResponse,
-    ReviewSuggestion,
+    GalaxyGraphResponse,
     NodeDetailResponse,
-    SectorCode
+    NodeRelationInfo,
+    ReviewSuggestion,
+    ReviewSuggestionsResponse,
+    SearchRequest,
+    SearchResponse,
+    SectorCode,
+    SparkRequest,
+    SparkResult,
 )
-from app.models.galaxy import KnowledgeNode, UserNodeStatus, NodeRelation
-from app.schemas.galaxy import NodeRelationInfo
-from sqlalchemy import select, and_
-
+from app.services.decay_service import DecayService
+from app.services.galaxy_service import GalaxyService
+from app.services.knowledge_integration_service import KnowledgeIntegrationService
 
 router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
 
@@ -76,13 +75,13 @@ async def sync_node_mastery(
         reason=request.reason,
         version=request.version
     )
-    
+
     if not result.get("success"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=result.get("reason", "conflict")
         )
-        
+
     return result
 
 # ==========================================
@@ -90,7 +89,7 @@ async def sync_node_mastery(
 # ==========================================
 @router.get("/graph", response_model=GalaxyGraphResponse)
 async def get_galaxy_graph(
-    sector_code: Optional[str] = Query(None, description="筛选特定星域"),
+    sector_code: str | None = Query(None, description="筛选特定星域"),
     include_locked: bool = Query(True, description="是否包含未解锁节点"),
     zoom_level: float = Query(1.0, description="缩放级别 (LOD控制)"),
     user_id: str = Depends(get_current_user_id),
@@ -300,10 +299,10 @@ async def predict_next_node(
     基于用户的学习历史和知识图谱结构，推荐下一个最值得学习的节点。
     """
     node_with_status = await galaxy_service.predict_next_node(UUID(user_id))
-    
+
     if not node_with_status:
         return None
-        
+
     # 获取关系以便前端渲染连接线
     relations_query = select(NodeRelation).where(
         or_(
@@ -313,7 +312,7 @@ async def predict_next_node(
     )
     relations_result = await db.execute(relations_query)
     relations = relations_result.scalars().all()
-    
+
     return NodeDetailResponse(
         node=node_with_status,
         relations=[
@@ -363,7 +362,8 @@ async def galaxy_events_stream(
     - evidence_pack: RAG 证据
     """
     from fastapi.responses import StreamingResponse
-    from app.core.sse import sse_manager, event_generator
+
+    from app.core.sse import event_generator, sse_manager
 
     # 支持断点续传
     last_event_id = request.headers.get("Last-Event-ID")
@@ -399,11 +399,11 @@ class CreateVocabularyNodeRequest(BaseModel):
     source_text: str = Field(..., description="原始文本 (e.g., 'polymorphism')")
     translation: str = Field(..., description="译文 (e.g., '多态性')")
     context: str = Field(..., description="上下文场景")
-    source_url: Optional[str] = Field(default=None, description="来源URL")
-    source_document_id: Optional[str] = Field(default=None, description="来源文档ID")
+    source_url: str | None = Field(default=None, description="来源URL")
+    source_document_id: str | None = Field(default=None, description="来源文档ID")
     language: str = Field(default="en", description="源语言 (en, zh)")
-    domain: Optional[str] = Field(default=None, description="领域 (cs, math, business)")
-    subject_id: Optional[int] = Field(default=None, description="关联科目ID")
+    domain: str | None = Field(default=None, description="领域 (cs, math, business)")
+    subject_id: int | None = Field(default=None, description="关联科目ID")
 
 
 class VocabularyNodeResponse(BaseModel):
@@ -488,9 +488,9 @@ async def delete_draft_node(
 
 class UpdateNodeContentRequest(BaseModel):
     """Request model for updating node content"""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    keywords: Optional[List[str]] = None
+    name: str | None = None
+    description: str | None = None
+    keywords: list[str] | None = None
 
 
 @router.patch("/node/{node_id}/content")
@@ -567,24 +567,24 @@ async def get_nodes_in_viewport(
     # We might need to fetch status for these nodes too.
     # For efficiency, we just return the nodes and let frontend handle status or fetch status in batch.
     # But GalaxyGraphResponse expects NodeWithStatus.
-    
+
     # Quick fix: fetch status for these nodes
     # Ideally structure service should return NodeWithStatus if we modify get_nodes_in_bounds to do join.
     # For MVP of this feature, let's map what we have.
-    
+
     # We can reuse get_galaxy_graph logic but restricted by IDs if we had get_nodes_by_ids.
     # Or just return raw nodes data in a specific response model.
     # Reusing GalaxyGraphResponse for consistency.
-    
+
     # Construct minimal response
-    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo, NodeWithStatus
-    
+    from app.schemas.galaxy import NodeWithStatus
+
     mapped_nodes = []
     for node in nodes:
         # TODO: Fetch real status efficiently (bulk query)
-        status = UserNodeStatus(mastery_score=0, is_unlocked=False) 
+        status = UserNodeStatus(mastery_score=0, is_unlocked=False)
         mapped_nodes.append(NodeWithStatus.from_models(node, status))
-        
+
     return GalaxyGraphResponse(
         nodes=mapped_nodes,
         relations=[], # Do not fetch relations for viewport query to save bandwidth? Or maybe local relations.

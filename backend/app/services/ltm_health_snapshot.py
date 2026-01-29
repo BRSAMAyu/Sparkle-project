@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import CONTEXT_PACK_BUILD, CONTEXT_PACK_OVER_BUDGET
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
+from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 
 
 class LtmHealthSnapshotService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def compute_snapshot(self) -> Dict[str, Any]:
+    async def compute_snapshot(self) -> dict[str, Any]:
         evidence_missing_rate = {}
         avg_evidence_score = {}
         avg_correction_count = {}
@@ -71,7 +71,7 @@ class LtmHealthSnapshotService:
             total += metric_obj._value.get()  # type: ignore[attr-defined]
         return total
 
-    async def _top_corrected_items(self) -> List[Dict[str, Any]]:
+    async def _top_corrected_items(self) -> list[dict[str, Any]]:
         result = await self.db.execute(
             select(
                 MemoryCorrection.memory_type,
@@ -83,7 +83,7 @@ class LtmHealthSnapshotService:
             .limit(5)
         )
         rows = result.all()
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         for memory_type, memory_id, count in rows:
             reasons_result = await self.db.execute(
                 select(
@@ -109,7 +109,7 @@ class LtmHealthSnapshotService:
             )
         return items
 
-    def _job_runs_summary(self) -> Dict[str, int]:
+    def _job_runs_summary(self) -> dict[str, int]:
         from app.services.memory_jobs import MemoryJobsService
 
         history = MemoryJobsService.get_history()

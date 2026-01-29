@@ -5,11 +5,11 @@ ChatMessage Model - 用户与AI的对话记录
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean, Float
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
-from sqlalchemy import DateTime
+from app.models.base import GUID, BaseModel
 
 
 class MessageRole(str, enum.Enum):
@@ -63,7 +63,7 @@ class ChatMessage(BaseModel):
     actions = Column(JSON, nullable=True)  # AI执行的动作列表
     # 🆕 v2.1: 解析降级标记
     parse_degraded = Column(Boolean, default=False)
-    
+
     tokens_used = Column(Integer, nullable=True)
     model_name = Column(String(100), nullable=True)
 

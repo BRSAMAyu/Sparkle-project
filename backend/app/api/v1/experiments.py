@@ -9,26 +9,24 @@ RESTful API endpoints for managing A/B test experiments including:
 - Statistical analysis
 - Metric recording
 """
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel, Field
 from datetime import datetime
-from loguru import logger
 
-from app.api.deps import get_db, get_current_user
-from app.models.user import User
-from app.models.experiment import (
-    ABExperiment,
-    ABExperimentVariant,
-    ABExperimentMetric,
-    ABExperimentAssignment,
-    ExperimentStatus,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user, get_db
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
 from app.learning.statistics import ABTestStatistics
-
+from app.models.experiment import (
+    ABExperiment,
+    ABExperimentMetric,
+    ABExperimentVariant,
+    ExperimentStatus,
+)
+from app.models.user import User
 
 router = APIRouter(tags=["experiments"])
 
@@ -39,29 +37,29 @@ class VariantConfig(BaseModel):
     name: str = Field(..., description="Variant name")
     is_control: bool = Field(False, description="Whether this is the control variant")
     weight: float = Field(1.0, description="Allocation weight")
-    description: Optional[str] = Field(None, description="Variant description")
-    prompt_version: Optional[str] = Field(None, description="Prompt version identifier")
-    configuration: Optional[dict] = Field(None, description="Variant configuration (JSON)")
+    description: str | None = Field(None, description="Variant description")
+    prompt_version: str | None = Field(None, description="Prompt version identifier")
+    configuration: dict | None = Field(None, description="Variant configuration (JSON)")
 
 
 class CreateExperimentRequest(BaseModel):
     """Request to create a new experiment"""
     name: str = Field(..., max_length=200, description="Experiment name")
-    description: Optional[str] = Field(None, description="Experiment description")
+    description: str | None = Field(None, description="Experiment description")
     hypothesis: str = Field(..., description="Research hypothesis")
-    variants: List[VariantConfig] = Field(
+    variants: list[VariantConfig] = Field(
         ...,
         min_items=2,
         description="Experiment variants (at least 2: control + treatment)",
     )
-    metrics: List[str] = Field(
+    metrics: list[str] = Field(
         default=["success", "latency"],
         description="Metrics to track",
     )
-    sample_size_target: Optional[int] = Field(None, description="Target sample size")
+    sample_size_target: int | None = Field(None, description="Target sample size")
     significance_level: float = Field(0.05, description="Significance level (alpha)")
     power: float = Field(0.8, description="Statistical power")
-    minimum_detectable_effect: Optional[float] = Field(
+    minimum_detectable_effect: float | None = Field(
         None,
         description="Minimum detectable effect (relative)",
     )
@@ -69,15 +67,15 @@ class CreateExperimentRequest(BaseModel):
 
 class UpdateExperimentRequest(BaseModel):
     """Request to update an experiment"""
-    name: Optional[str] = Field(None, max_length=200)
-    description: Optional[str] = None
-    hypothesis: Optional[str] = None
+    name: str | None = Field(None, max_length=200)
+    description: str | None = None
+    hypothesis: str | None = None
 
 
 class CompleteExperimentRequest(BaseModel):
     """Request to complete an experiment"""
     conclusion: str = Field(..., description="Experiment conclusion")
-    winning_variant_id: Optional[str] = Field(None, description="ID of winning variant")
+    winning_variant_id: str | None = Field(None, description="ID of winning variant")
 
 
 class RecordMetricRequest(BaseModel):
@@ -85,19 +83,19 @@ class RecordMetricRequest(BaseModel):
     metric_name: str = Field(..., description="Metric name")
     metric_value: float = Field(..., description="Metric value")
     metric_type: str = Field(..., description="Metric type: success, latency, engagement, etc.")
-    context_data: Optional[dict] = Field(None, description="Additional context")
+    context_data: dict | None = Field(None, description="Additional context")
 
 
 class VariantResponse(BaseModel):
     """Variant response"""
     id: str
     variant_name: str
-    description: Optional[str]
+    description: str | None
     is_control: bool
     allocation_weight: float
     traffic_allocation_percentage: float
-    prompt_version: Optional[str]
-    configuration: Optional[dict]
+    prompt_version: str | None
+    configuration: dict | None
 
     class Config:
         from_attributes = True
@@ -107,21 +105,21 @@ class ExperimentResponse(BaseModel):
     """Experiment response"""
     id: str
     name: str
-    description: Optional[str]
+    description: str | None
     hypothesis: str
     status: str
-    created_by: Optional[str]
-    sample_size_target: Optional[int]
+    created_by: str | None
+    sample_size_target: int | None
     significance_level: float
     power: float
-    minimum_detectable_effect: Optional[float]
-    start_date: Optional[datetime]
-    end_date: Optional[datetime]
-    conclusion: Optional[str]
-    winning_variant_id: Optional[str]
+    minimum_detectable_effect: float | None
+    start_date: datetime | None
+    end_date: datetime | None
+    conclusion: str | None
+    winning_variant_id: str | None
     created_at: datetime
     updated_at: datetime
-    variants: List[VariantResponse] = []
+    variants: list[VariantResponse] = []
 
     class Config:
         from_attributes = True
@@ -132,11 +130,11 @@ class ExperimentStatsResponse(BaseModel):
     experiment_id: str
     experiment_name: str
     status: str
-    start_date: Optional[str]
-    sample_size_target: Optional[int]
+    start_date: str | None
+    sample_size_target: int | None
     sample_size_collected: int
     completion_percentage: float
-    variants: List[dict]
+    variants: list[dict]
 
 
 # Endpoints
@@ -206,9 +204,9 @@ async def create_experiment(
     return experiment
 
 
-@router.get("/", response_model=List[ExperimentResponse])
+@router.get("/", response_model=list[ExperimentResponse])
 async def list_experiments(
-    status: Optional[str] = Query(None, description="Filter by status"),
+    status: str | None = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),

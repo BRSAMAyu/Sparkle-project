@@ -2,15 +2,16 @@
 学科标准模型
 Subject Model - 用于规范化错误档案中的学科分类
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, Integer, JSON, DateTime, Float
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String
 
 from app.db.session import Base
 
 
 def utc_now():
     """返回当前 UTC 时间 (timezone-aware)"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Subject(Base):

@@ -13,16 +13,14 @@ LLM Router - 统一的LLM客户端获取入口
 - 可降级：主模型失败时自动降级
 """
 
-from typing import Optional, Dict, Any, Literal, Union, List
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
+
 from loguru import logger
 
 from app.config import settings
-from app.core.agent_profiles import (
-    AgentProfile, AgentRole, TaskType, ModelTier,
-    agent_profile_registry, TASK_TO_AGENT_PROFILE
-)
+from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 
 
 class ModelProvider(str, Enum):
@@ -42,9 +40,9 @@ class ModelConfig:
     base_url: str
     api_key: str
     temperature: float = 0.7
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
     # GLM 特有参数
-    clear_thinking: Optional[bool] = None  # False=保留式思考(适合Coding/Agent), True=None=默认
+    clear_thinking: bool | None = None  # False=保留式思考(适合Coding/Agent), True=None=默认
     # 成本/性能指标
     tier: ModelTier = ModelTier.STANDARD
     cost_per_1k_tokens: float = 0.001
@@ -56,7 +54,7 @@ class LLMSelection:
     """LLM选择结果（可观测）"""
     config: ModelConfig
     agent_role: AgentRole
-    task_type: Optional[TaskType]
+    task_type: TaskType | None
     reason: str  # 选择此模型的原因
     is_fallback: bool = False
 
@@ -70,11 +68,11 @@ class LLMRouter:
     """
 
     def __init__(self):
-        self._available_models: Dict[str, ModelConfig] = {}
-        self._tier_mapping: Dict[ModelTier, List[str]] = {}
+        self._available_models: dict[str, ModelConfig] = {}
+        self._tier_mapping: dict[ModelTier, list[str]] = {}
         self._load_model_configs()
 
-    def register_model_configs(self, configs: Dict[str, ModelConfig], tier_mapping: Optional[Dict[ModelTier, List[str]]] = None):
+    def register_model_configs(self, configs: dict[str, ModelConfig], tier_mapping: dict[ModelTier, list[str]] | None = None):
         """
         运行时注册/更新模型配置。
 
@@ -261,11 +259,34 @@ class LLMRouter:
             ModelTier.REASONING: ["zhipu_reason", "deepseek_reason", "dashscope_reason"],
             ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
         }
+        self._override_tier_mapping_from_env()
 
         # 注册到agent_profile_registry
         agent_profile_registry.register_model_configs(configs)
 
         logger.info(f"LLMRouter initialized with {len(configs)} model configs")
+
+    def _override_tier_mapping_from_env(self):
+        """允许通过 .env 覆盖 tier 映射（逗号分隔模型key）"""
+        overrides = {
+            ModelTier.FREE_FAST: settings.LLM_TIER_FREE_FAST,
+            ModelTier.FREE_REASONING: settings.LLM_TIER_FREE_REASONING,
+            ModelTier.FAST: settings.LLM_TIER_FAST,
+            ModelTier.STANDARD: settings.LLM_TIER_STANDARD,
+            ModelTier.REASONING: settings.LLM_TIER_REASONING,
+            ModelTier.SPECIALIST: settings.LLM_TIER_SPECIALIST,
+        }
+
+        for tier, raw_value in overrides.items():
+            if not raw_value:
+                continue
+            candidates = [item.strip() for item in raw_value.split(",") if item.strip()]
+            valid_candidates = [item for item in candidates if item in self._available_models]
+            if not valid_candidates:
+                logger.warning(f"LLM tier override ignored for {tier.value}: no valid model keys in {candidates}")
+                continue
+            self._tier_mapping[tier] = valid_candidates
+            logger.info(f"LLM tier override applied for {tier.value}: {valid_candidates}")
 
     # ============================================
     # 核心选择逻辑
@@ -273,9 +294,9 @@ class LLMRouter:
 
     def select_model(
         self,
-        agent_role: Union[AgentRole, str, Any],
-        task_type: Optional[Union[TaskType, str, Any]] = None,
-        force_tier: Optional[ModelTier] = None,
+        agent_role: AgentRole | str | Any,
+        task_type: TaskType | str | Any | None = None,
+        force_tier: ModelTier | None = None,
     ) -> LLMSelection:
         """
         选择最合适的模型
@@ -332,8 +353,8 @@ class LLMRouter:
     def select_specific_model(
         self,
         model_key: str,
-        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
-        task_type: Optional[Union[TaskType, str, Any]] = None,
+        agent_role: AgentRole | str | Any = AgentRole.GENERATION,
+        task_type: TaskType | str | Any | None = None,
     ) -> LLMSelection:
         """
         直接按已注册模型key选择（用于调试或手动指定）。
@@ -348,7 +369,7 @@ class LLMRouter:
         self,
         config: ModelConfig,
         agent_role: AgentRole,
-        task_type: Optional[TaskType],
+        task_type: TaskType | None,
         reason: str,
     ) -> LLMSelection:
         """创建LLMSelection对象"""
@@ -360,7 +381,7 @@ class LLMRouter:
         )
 
     @staticmethod
-    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+    def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
         if isinstance(agent_role, AgentRole):
             return agent_role
         if isinstance(agent_role, str):
@@ -397,7 +418,7 @@ class LLMRouter:
         return AgentRole.GENERATION
 
     @staticmethod
-    def _normalize_task_type(task_type: Optional[Union[TaskType, str, Any]]) -> Optional[TaskType]:
+    def _normalize_task_type(task_type: TaskType | str | Any | None) -> TaskType | None:
         if task_type is None:
             return None
         if isinstance(task_type, TaskType):
@@ -473,7 +494,7 @@ class LLMRouter:
     # 兼容接口
     # ============================================
 
-    def get_openai_client_kwargs(self, selection: LLMSelection) -> Dict[str, Any]:
+    def get_openai_client_kwargs(self, selection: LLMSelection) -> dict[str, Any]:
         """
         获取用于创建 OpenAI 兼容客户端的参数
 
@@ -498,7 +519,7 @@ class LLMRouter:
 
         return kwargs
 
-    def get_langchain_client_kwargs(self, selection: LLMSelection) -> Dict[str, Any]:
+    def get_langchain_client_kwargs(self, selection: LLMSelection) -> dict[str, Any]:
         """获取用于创建 LangChain ChatOpenAI 的参数"""
         return self.get_openai_client_kwargs(selection)
 
@@ -515,8 +536,8 @@ llm_router = LLMRouter()
 # ============================================
 
 def select_model_for_agent(
-    agent_role: Union[AgentRole, str],
-    task_type: Optional[TaskType] = None,
+    agent_role: AgentRole | str,
+    task_type: TaskType | None = None,
 ) -> LLMSelection:
     """为Agent选择模型的便捷函数"""
     return llm_router.select_model(agent_role, task_type)

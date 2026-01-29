@@ -1,8 +1,8 @@
-from typing import Optional
-from uuid import UUID
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.compliance import LegalHold
 
@@ -14,12 +14,12 @@ class LegalHoldService:
     async def is_hold_active(self, user_id: UUID) -> bool:
         stmt = select(LegalHold).where(
             LegalHold.user_id == user_id,
-            LegalHold.is_active == True
+            LegalHold.is_active
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def create_hold(self, user_id: UUID, admin_id: UUID, case_ref: str, reason: Optional[str] = None) -> LegalHold:
+    async def create_hold(self, user_id: UUID, admin_id: UUID, case_ref: str, reason: str | None = None) -> LegalHold:
         hold = LegalHold(
             user_id=user_id,
             admin_id=admin_id,

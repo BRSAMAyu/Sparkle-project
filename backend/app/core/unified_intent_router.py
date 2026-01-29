@@ -8,10 +8,11 @@ Unified Intent Router - 统一意图路由系统
 
 替代原 IntentRouter (17行简单版本)，提供智能路由能力。
 """
-from typing import Dict, Any, List, Optional, Tuple
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
 
 from app.services.llm_service import LLMService
@@ -42,18 +43,18 @@ class UnifiedIntentType(str, Enum):
 class IntentRoutingResult:
     """统一路由结果"""
     primary_intent: UnifiedIntentType
-    sub_intents: List[Dict[str, Any]] = field(default_factory=list)
+    sub_intents: list[dict[str, Any]] = field(default_factory=list)
     confidence: float = 0.5
     routing_layer: str = "unknown"  # "explicit", "rule", "llm"
     execution_mode: str = "direct"  # "direct", "langgraph", "hybrid"
-    context_signals: Dict[str, Any] = field(default_factory=dict)
+    context_signals: dict[str, Any] = field(default_factory=dict)
 
     # 上下文感知
-    conversation_context: Optional[str] = None
-    active_plan_id: Optional[UUID] = None
-    recent_intents: List[str] = field(default_factory=list)
+    conversation_context: str | None = None
+    active_plan_id: UUID | None = None
+    recent_intents: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "primary_intent": self.primary_intent.value,
@@ -74,7 +75,7 @@ class IntentPattern:
         self,
         keywords: set,
         weight: float = 0.7,
-        context_hints: Optional[set] = None
+        context_hints: set | None = None
     ):
         self.keywords = keywords
         self.weight = weight
@@ -175,7 +176,7 @@ class UnifiedIntentRouter:
     def __init__(
         self,
         redis_client=None,
-        llm_service: Optional[LLMService] = None,
+        llm_service: LLMService | None = None,
         context_window_size: int = 5
     ):
         """
@@ -194,8 +195,8 @@ class UnifiedIntentRouter:
         message: str,
         user_id: str,
         session_id: str,
-        payload: Optional[Dict[str, Any]] = None,
-        conversation_history: Optional[List[Dict]] = None
+        payload: dict[str, Any] | None = None,
+        conversation_history: list[dict] | None = None
     ) -> IntentRoutingResult:
         """
         主路由方法 - 三层级联
@@ -242,7 +243,7 @@ class UnifiedIntentRouter:
 
         return llm_result
 
-    def _check_explicit_intent(self, payload: Dict[str, Any]) -> Optional[IntentRoutingResult]:
+    def _check_explicit_intent(self, payload: dict[str, Any]) -> IntentRoutingResult | None:
         """
         Layer 1: 检查显式声明的意图
 
@@ -295,7 +296,7 @@ class UnifiedIntentRouter:
         使用 IntentPattern 进行加权匹配
         """
         scores = {}
-        msg_lower = message.lower()
+        message.lower()
 
         # 使用意图模式进行匹配
         for intent_type, pattern in self.INTENT_PATTERNS.items():
@@ -339,7 +340,7 @@ class UnifiedIntentRouter:
     async def _llm_classify(
         self,
         message: str,
-        conversation_history: List[Dict],
+        conversation_history: list[dict],
         rule_hints: IntentRoutingResult
     ) -> IntentRoutingResult:
         """
@@ -451,7 +452,7 @@ class UnifiedIntentRouter:
             rule_hints.routing_layer = "llm_fallback"
             return rule_hints
 
-    def _build_context_string(self, conversation_history: List[Dict]) -> str:
+    def _build_context_string(self, conversation_history: list[dict]) -> str:
         """构建上下文字符串"""
         if not conversation_history:
             return ""

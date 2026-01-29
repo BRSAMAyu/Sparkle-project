@@ -8,28 +8,21 @@ Enhanced Orchestrator Agent - 增强版协调者
 4. OpenTelemetry 追踪
 """
 
-import asyncio
-from typing import List, Dict, Any, Optional
-from uuid import UUID
-from loguru import logger
 import json
+
+from loguru import logger
 from opentelemetry import trace
 
-from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
-from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
-from .search_agent import SearchAgent
-from .enhanced_agents import (
-    StudyPlannerAgent,
-    ProblemSolverAgent,
-    EnhancedAgentContext,
-    EnhancedAgentRole
-)
+from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
 from .collaboration_workflows import (
-    TaskDecompositionWorkflow,
-    ProgressiveExplorationWorkflow,
+    CollaborationResult,
     ErrorDiagnosisWorkflow,
-    CollaborationResult
+    ProgressiveExplorationWorkflow,
+    TaskDecompositionWorkflow,
 )
+from .enhanced_agents import EnhancedAgentContext, ProblemSolverAgent, StudyPlannerAgent
+from .search_agent import SearchAgent
+from .specialist_agents import CodeAgent, MathAgent, ScienceAgent, WritingAgent
 
 tracer = trace.get_tracer(__name__)
 
@@ -60,7 +53,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
         ]
 
         # 初始化所有智能体
-        self.specialist_agents: List[BaseAgent] = [
+        self.specialist_agents: list[BaseAgent] = [
             # 增强版智能体
             StudyPlannerAgent(),
             ProblemSolverAgent(),
@@ -404,7 +397,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
     async def _synthesize_responses(
         self,
         context: EnhancedAgentContext,
-        responses: List[AgentResponse]
+        responses: list[AgentResponse]
     ) -> AgentResponse:
         """整合多个智能体的响应"""
 

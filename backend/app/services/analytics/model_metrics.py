@@ -1,5 +1,6 @@
-from app.core.metrics import get_or_create_metric
 from prometheus_client import Gauge
+
+from app.core.metrics import get_or_create_metric
 
 BKT_AUC = get_or_create_metric(
     Gauge,

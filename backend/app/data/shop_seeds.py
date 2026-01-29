@@ -8,13 +8,11 @@ Shop Seed Data - 初始商城物品数据
 - 消耗品（经验加成、光子加成等）
 - 加成道具（连击冻结、提示解锁等）
 """
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.shop import (
-    ShopItem, ShopItemType, ItemRarity
-)
+from app.models.shop import ItemRarity, ShopItem, ShopItemType
 
 
 async def seed_shop_items(db: AsyncSession) -> None:

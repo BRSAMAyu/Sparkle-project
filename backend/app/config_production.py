@@ -9,10 +9,10 @@
 5. ✅ 配置分组 (核心、性能、安全)
 """
 
-from typing import Optional, List, Dict, Any
-from pydantic import BaseSettings, Field, validator, PostgresDsn, RedisDsn
+from typing import Any
+
 from loguru import logger
-import os
+from pydantic import BaseSettings, Field, PostgresDsn, RedisDsn, validator
 
 
 class ProductionSettings(BaseSettings):
@@ -36,7 +36,7 @@ class ProductionSettings(BaseSettings):
     GATEWAY_PORT: int = Field(default=8080, env="GATEWAY_PORT")
     GATEWAY_URL: str = Field(default="http://localhost:8080", env="GATEWAY_URL")
 
-    BACKEND_CORS_ORIGINS: List[str] = Field(
+    BACKEND_CORS_ORIGINS: list[str] = Field(
         default=["*"],
         env="BACKEND_CORS_ORIGINS"
     )
@@ -111,7 +111,7 @@ class ProductionSettings(BaseSettings):
     # ==================== 日志配置 ====================
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     LOG_FORMAT: str = Field(default="json", env="LOG_FORMAT")  # json or text
-    LOG_FILE: Optional[str] = Field(default=None, env="LOG_FILE")
+    LOG_FILE: str | None = Field(default=None, env="LOG_FILE")
     LOG_RETENTION_DAYS: int = Field(default=7, env="LOG_RETENTION_DAYS")
 
     # ==================== 监控配置 ====================
@@ -160,7 +160,7 @@ class ProductionSettings(BaseSettings):
         return v
 
     # ==================== 配置验证 ====================
-    def validate_all(self) -> Dict[str, Any]:
+    def validate_all(self) -> dict[str, Any]:
         """
         验证所有配置并返回报告
 
@@ -171,9 +171,8 @@ class ProductionSettings(BaseSettings):
         warnings = []
 
         # 检查生产环境关键配置
-        if not self.DEBUG:
-            if self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
-                errors.append("SECRET_KEY must be changed in production")
+        if not self.DEBUG and self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
+            errors.append("SECRET_KEY must be changed in production")
 
         # 检查性能配置合理性
         if self.MAX_CONCURRENT_SESSIONS > 1000:
@@ -205,7 +204,7 @@ class ProductionSettings(BaseSettings):
 
         return result
 
-    def get_safe_config(self) -> Dict[str, Any]:
+    def get_safe_config(self) -> dict[str, Any]:
         """
         获取脱敏后的配置（用于日志输出）
 
@@ -243,7 +242,7 @@ class ProductionSettings(BaseSettings):
 
 
 # 单例实例
-_settings: Optional[ProductionSettings] = None
+_settings: ProductionSettings | None = None
 
 
 def get_settings() -> ProductionSettings:

@@ -14,6 +14,7 @@ Shop System Acceptance Tests
 import asyncio
 import sys
 from pathlib import Path
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -37,7 +38,7 @@ test_results = {
 }
 
 
-def test_result(name: str, passed: bool, message: str = ""):
+def record_result(name: str, passed: bool, message: str = ""):
     """记录测试结果"""
     if passed:
         test_results["passed"].append(name)
@@ -45,6 +46,12 @@ def test_result(name: str, passed: bool, message: str = ""):
     else:
         test_results["failed"].append((name, message))
         logger.error(f"❌ {name}: {message}")
+
+
+@pytest.fixture
+async def shop_test_user(db: AsyncSession) -> dict:
+    """Provide test user data for shop acceptance."""
+    return await setup_test_data(db)
 
 
 async def setup_test_data(db: AsyncSession) -> dict:
@@ -120,13 +127,13 @@ async def test_1_database_tables(db: AsyncSession):
         try:
             result = await db.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
             count = result.scalar()
-            test_result(
+            record_result(
                 f"表 {table_name} 存在性",
                 True,
                 f"{description} - {count}条记录"
             )
         except Exception as e:
-            test_result(
+            record_result(
                 f"表 {table_name} 存在性",
                 False,
                 str(e)
@@ -142,7 +149,7 @@ async def test_2_shop_items_inventory(db: AsyncSession):
     # 检查总物品数
     result = await db.execute(select(func.count(ShopItem.id)))
     total_count = result.scalar()
-    test_result(
+    record_result(
         "商城物品总数",
         total_count >= 15,
         f"预期≥15件，实际{total_count}件"
@@ -161,7 +168,7 @@ async def test_2_shop_items_inventory(db: AsyncSession):
             .where(ShopItem.item_type == item_type_value)
         )
         count = result.scalar()
-        test_result(
+        record_result(
             f"{item_type_name}类物品",
             count > 0,
             f"{count}件"
@@ -173,7 +180,7 @@ async def test_2_shop_items_inventory(db: AsyncSession):
         .where(ShopItem.is_available == True)
     )
     available_count = result.scalar()
-    test_result(
+    record_result(
         "可购买物品",
         available_count >= 10,
         f"{available_count}件可用"
@@ -193,17 +200,18 @@ async def test_2_shop_items_inventory(db: AsyncSession):
         logger.info(f"  - {item.name} ({item.rarity.value}) - {item.price_photons}光子")
 
 
-async def test_3_photon_balance(db: AsyncSession, user_id: str):
+async def test_3_photon_balance(db: AsyncSession, shop_test_user: dict):
     """测试3: 光子余额查询"""
     logger.info("\n" + "="*60)
     logger.info("测试3: 光子余额系统")
     logger.info("="*60)
 
     photon_service = PhotonService(db)
+    user_id = shop_test_user["user_id"]
 
     # 查询余额
     balance = await photon_service.get_balance(user_id)
-    test_result(
+    record_result(
         "查询用户余额",
         balance >= 0,
         f"{balance}光子"
@@ -211,7 +219,7 @@ async def test_3_photon_balance(db: AsyncSession, user_id: str):
 
     # 测试余额充足性检查
     has_enough = await photon_service.has_sufficient(user_id, 100)
-    test_result(
+    record_result(
         "余额充足性检查",
         has_enough,
         "可以支付100光子"
@@ -219,20 +227,21 @@ async def test_3_photon_balance(db: AsyncSession, user_id: str):
 
     # 测试余额不足检查
     has_too_much = await photon_service.has_sufficient(user_id, 999999)
-    test_result(
+    record_result(
         "余额不足检查",
         not has_too_much,
         "正确识别999999光子不足"
     )
 
 
-async def test_4_purchase_success(db: AsyncSession, user_id: str):
+async def test_4_purchase_success(db: AsyncSession, shop_test_user: dict):
     """测试4: 购买成功流程"""
     logger.info("\n" + "="*60)
     logger.info("测试4: 购买成功流程")
     logger.info("="*60)
 
     shop_service = ShopService(db)
+    user_id = shop_test_user["user_id"]
     photon_service = PhotonService(db)
 
     # 获取初始余额
@@ -249,19 +258,19 @@ async def test_4_purchase_success(db: AsyncSession, user_id: str):
         balance_after = result["balance_after"]
         price_paid = result["price_paid"]
 
-        test_result(
+        record_result(
             "购买物品 - 交易成功",
             result["success"] == True,
             f"购买成功，支付{price_paid}光子"
         )
 
-        test_result(
+        record_result(
             "购买物品 - 余额扣除正确",
             balance_after == balance_before - price_paid,
             f"{balance_before} - {price_paid} = {balance_after}"
         )
 
-        test_result(
+        record_result(
             "购买物品 - 返回数据完整",
             all(key in result for key in ["purchase_id", "item_id", "item_name", "price_paid"]),
             "包含所有必要字段"
@@ -275,7 +284,7 @@ async def test_4_purchase_success(db: AsyncSession, user_id: str):
         )
         purchase = purchase_result.scalar_one_or_none()
 
-        test_result(
+        record_result(
             "购买记录 - 已保存",
             purchase is not None,
             f"购买记录ID: {purchase.id if purchase else 'N/A'}"
@@ -287,7 +296,7 @@ async def test_4_purchase_success(db: AsyncSession, user_id: str):
             .where(ShopPurchase.user_id == user_id)
         )
         purchase_count = history_result.scalar()
-        test_result(
+        record_result(
             "交易历史 - 已记录",
             purchase_count > 0,
             f"用户有{purchase_count}条交易记录"
@@ -296,7 +305,7 @@ async def test_4_purchase_success(db: AsyncSession, user_id: str):
         return result
 
     except Exception as e:
-        test_result(
+        record_result(
             "购买流程",
             False,
             f"异常: {str(e)}"
@@ -304,13 +313,14 @@ async def test_4_purchase_success(db: AsyncSession, user_id: str):
         return None
 
 
-async def test_5_purchase_insufficient_funds(db: AsyncSession, user_id: str):
+async def test_5_purchase_insufficient_funds(db: AsyncSession, shop_test_user: dict):
     """测试5: 购买失败 - 余额不足"""
     logger.info("\n" + "="*60)
     logger.info("测试5: 购买失败场景")
     logger.info("="*60)
 
     shop_service = ShopService(db)
+    user_id = shop_test_user["user_id"]
 
     # 尝试购买昂贵物品（传说皮肤 - 3000光子）
     try:
@@ -319,7 +329,7 @@ async def test_5_purchase_insufficient_funds(db: AsyncSession, user_id: str):
             item_id="skin_galaxy_legend_001"
         )
 
-        test_result(
+        record_result(
             "余额不足 - 应该失败",
             False,
             "错误：应该抛出余额不足异常"
@@ -327,32 +337,33 @@ async def test_5_purchase_insufficient_funds(db: AsyncSession, user_id: str):
 
     except ValueError as e:
         if "Insufficient photon balance" in str(e):
-            test_result(
+            record_result(
                 "余额不足 - 正确拒绝",
                 True,
                 f"正确拒绝购买: {str(e)[:80]}..."
             )
         else:
-            test_result(
+            record_result(
                 "余额不足 - 错误类型",
                 False,
                 f"错误的异常消息: {str(e)}"
             )
     except Exception as e:
-        test_result(
+        record_result(
             "余额不足 - 异常处理",
             False,
             f"未预期的异常: {type(e).__name__}"
         )
 
 
-async def test_6_transaction_history(db: AsyncSession, user_id: str):
+async def test_6_transaction_history(db: AsyncSession, shop_test_user: dict):
     """测试6: 交易历史完整性"""
     logger.info("\n" + "="*60)
     logger.info("测试6: 交易历史记录")
     logger.info("="*60)
 
     photon_service = PhotonService(db)
+    user_id = shop_test_user["user_id"]
 
     # 查询交易历史
     history = await photon_service.get_transaction_history(
@@ -360,7 +371,7 @@ async def test_6_transaction_history(db: AsyncSession, user_id: str):
         limit=10
     )
 
-    test_result(
+    record_result(
         "交易历史查询",
         len(history["transactions"]) >= 0,
         f"查询到{len(history['transactions'])}条记录"
@@ -374,7 +385,7 @@ async def test_6_transaction_history(db: AsyncSession, user_id: str):
             "balance_before", "balance_after", "created_at"
         ]
 
-        test_result(
+        record_result(
             "交易历史 - 字段完整",
             all(field in first_transaction for field in required_fields),
             f"包含所有必要字段: {', '.join(required_fields)}"
@@ -387,20 +398,21 @@ async def test_6_transaction_history(db: AsyncSession, user_id: str):
 
     # 测试交易汇总
     summary = await photon_service.get_transaction_summary(user_id, days=30)
-    test_result(
+    record_result(
         "交易汇总统计",
         "transaction_count" in summary,
         f"{summary['transaction_count']}笔交易"
     )
 
 
-async def test_7_duplicate_purchase_prevention(db: AsyncSession, user_id: str):
+async def test_7_duplicate_purchase_prevention(db: AsyncSession, shop_test_user: dict):
     """测试7: 重复购买防护（皮肤/称号）"""
     logger.info("\n" + "="*60)
     logger.info("测试7: 重复购买防护")
     logger.info("="*60)
 
     shop_service = ShopService(db)
+    user_id = shop_test_user["user_id"]
 
     # 先给用户足够光子购买皮肤
     photon_service = PhotonService(db)
@@ -418,13 +430,13 @@ async def test_7_duplicate_purchase_prevention(db: AsyncSession, user_id: str):
             user_id=user_id,
             item_id="skin_galaxy_nova_001"
         )
-        test_result(
+        record_result(
             "首次购买皮肤",
             result1["success"] == True,
             "首次购买成功"
         )
     except Exception as e:
-        test_result("首次购买皮肤", False, str(e))
+        record_result("首次购买皮肤", False, str(e))
         return
 
     # 第二次购买同一皮肤（应该被阻止）
@@ -434,7 +446,7 @@ async def test_7_duplicate_purchase_prevention(db: AsyncSession, user_id: str):
             item_id="skin_galaxy_nova_001"
         )
 
-        test_result(
+        record_result(
             "重复购买防护",
             False,
             "错误：应该拒绝重复购买"
@@ -442,19 +454,19 @@ async def test_7_duplicate_purchase_prevention(db: AsyncSession, user_id: str):
 
     except ValueError as e:
         if "already owns" in str(e).lower():
-            test_result(
+            record_result(
                 "重复购买防护 - 正确拦截",
                 True,
                 f"正确阻止重复购买: {str(e)[:80]}..."
             )
         else:
-            test_result(
+            record_result(
                 "重复购买防护 - 部分正确",
                 False,
                 f"被拦截但消息不准确: {str(e)[:80]}..."
             )
     except Exception as e:
-        test_result(
+        record_result(
             "重复购买防护",
             False,
             f"未预期的异常: {type(e).__name__}: {str(e)[:80]}"

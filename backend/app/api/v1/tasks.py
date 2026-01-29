@@ -1,45 +1,52 @@
 """
 Tasks API Endpoints
 """
-from typing import Dict, Any, List, Optional
+from datetime import date
+from typing import Any
 from uuid import UUID
-from datetime import datetime, date
-from fastapi import APIRouter, Depends, HTTPException, Path, Header, Query, Body
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, desc, func
-from loguru import logger
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from loguru import logger
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
 from app.core.cache import cache_service
-from app.models.user import User
+from app.core.exceptions import NotFoundError
+from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import User
 from app.schemas.task import (
-    TaskCreate, TaskUpdate, TaskDetail, TaskCompleteRequest,
-    TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse,
-    TaskRecommendationResponse
+    TaskAbandon,
+    TaskCompleteRequest,
+    TaskCreate,
+    TaskDetail,
+    TaskRecommendationResponse,
+    TaskSuggestionRequest,
+    TaskSuggestionResponse,
+    TaskUpdate,
 )
 from app.schemas.task_feedback import (
-    TaskFeedbackCreate, TaskFeedbackResponse, TaskFeedbackStats,
-    NextActionSelectionCreate, TaskFeedbackSubmitResponse
+    NextActionSelectionCreate,
+    TaskFeedbackCreate,
+    TaskFeedbackResponse,
+    TaskFeedbackSubmitResponse,
 )
-from app.services.task_guide_service import task_guide_service
-from app.services.task_service import TaskService
 from app.services.feedback_service import feedback_service
 from app.services.intelligent_task_service import IntelligentTaskService
-
-from app.core.exceptions import NotFoundError, AuthorizationError
+from app.services.task_guide_service import task_guide_service
+from app.services.task_service import TaskService
 
 router = APIRouter()
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def list_tasks(
-    status: Optional[TaskStatus] = Query(None, description="Filter by status"),
-    type: Optional[TaskType] = Query(None, description="Filter by type"),
-    plan_id: Optional[UUID] = Query(None, description="Filter by plan ID"),
-    tags: Optional[List[str]] = Query(None, description="Filter by tags"),
-    due_date_start: Optional[date] = Query(None, description="Filter by due date start (inclusive)"),
-    due_date_end: Optional[date] = Query(None, description="Filter by due date end (inclusive)"),
+    status: TaskStatus | None = Query(None, description="Filter by status"),
+    type: TaskType | None = Query(None, description="Filter by type"),
+    plan_id: UUID | None = Query(None, description="Filter by plan ID"),
+    tags: list[str] | None = Query(None, description="Filter by tags"),
+    due_date_start: date | None = Query(None, description="Filter by due date start (inclusive)"),
+    due_date_end: date | None = Query(None, description="Filter by due date end (inclusive)"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     current_user: User = Depends(get_current_user),
@@ -49,7 +56,7 @@ async def list_tasks(
     List tasks with filtering and pagination
     """
     query = select(Task).where(Task.user_id == current_user.id)
-    
+
     # Filters
     if status:
         query = query.where(Task.status == status)
@@ -66,16 +73,16 @@ async def list_tasks(
 
     # Order by created_at desc
     query = query.order_by(desc(Task.created_at))
-    
+
     # Pagination
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
     total = total_result.scalar_one()
-    
+
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     tasks = result.scalars().all()
-    
+
     return {
         "data": [TaskDetail.model_validate(t) for t in tasks],
         "meta": {
@@ -86,7 +93,7 @@ async def list_tasks(
         }
     }
 
-@router.post("", response_model=Dict[str, Any])
+@router.post("", response_model=dict[str, Any])
 async def create_task(
     task_in: TaskCreate,
     generate_guide: bool = Query(False, description="Whether to auto-generate guide"),
@@ -134,9 +141,9 @@ async def get_task_suggestions(
     service = IntelligentTaskService(db)
     return await service.get_suggestions(current_user.id, request.input_text)
 
-@router.get("/recommendations/micro", response_model=List[TaskRecommendationResponse])
+@router.get("/recommendations/micro", response_model=list[TaskRecommendationResponse])
 async def get_micro_task_recommendations(
-    context: Optional[str] = Query(None, description="上下文: commute, lunch, evening"),
+    context: str | None = Query(None, description="上下文: commute, lunch, evening"),
     limit: int = Query(3, ge=1, le=10),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -159,7 +166,7 @@ async def get_micro_task_recommendations(
     micro_tasks = [r for r in recommendations if r.estimated_minutes <= 15]
     return [TaskRecommendationResponse(**r.__dict__) for r in micro_tasks[:limit]]
 
-@router.get("/{task_id}", response_model=Dict[str, Any])
+@router.get("/{task_id}", response_model=dict[str, Any])
 async def get_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -171,10 +178,10 @@ async def get_task(
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
-        
+
     return {"data": TaskDetail.model_validate(task)}
 
-@router.put("/{task_id}", response_model=Dict[str, Any])
+@router.put("/{task_id}", response_model=dict[str, Any])
 async def update_task(
     task_in: TaskUpdate,
     task_id: UUID = Path(..., description="Task ID"),
@@ -187,14 +194,14 @@ async def update_task(
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
-        
+
     update_data = task_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(task, field, value)
-        
+
     await db.commit()
     await db.refresh(task)
-    
+
     return {"data": TaskDetail.model_validate(task)}
 
 @router.delete("/{task_id}")
@@ -209,13 +216,13 @@ async def delete_task(
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
-        
+
     await db.delete(task)
     await db.commit()
-    
+
     return {"success": True}
 
-@router.post("/{task_id}/start", response_model=Dict[str, Any])
+@router.post("/{task_id}/start", response_model=dict[str, Any])
 async def start_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -234,7 +241,7 @@ async def start_task(
 
     return {"data": TaskDetail.model_validate(task)}
 
-@router.post("/{task_id}/abandon", response_model=Dict[str, Any])
+@router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
     request: TaskAbandon,
     task_id: UUID = Path(..., description="Task ID"),
@@ -257,7 +264,7 @@ async def abandon_task(
 
     return {"data": TaskDetail.model_validate(task)}
 
-@router.post("/{task_id}/complete", response_model=Dict[str, Any])
+@router.post("/{task_id}/complete", response_model=dict[str, Any])
 async def complete_task(
     request: TaskCompleteRequest,
     task_id: UUID = Path(..., description="Task ID"),
@@ -323,10 +330,10 @@ async def complete_task(
     galaxy_update = None
     if task.knowledge_node_id:
         try:
-            from app.services.galaxy_service import GalaxyService
             from app.models.knowledge import UserNodeStatus
+            from app.services.galaxy_service import GalaxyService
 
-            galaxy_service = GalaxyService(db)
+            GalaxyService(db)
             node_status = await db.execute(
                 select(UserNodeStatus).where(
                     UserNodeStatus.user_id == current_user.id,
@@ -409,7 +416,7 @@ async def complete_task(
         "retry_token": x_idempotency_key or "generated-token"
     }
 
-@router.post("/confirm-batch/{tool_result_id}", response_model=Dict[str, Any])
+@router.post("/confirm-batch/{tool_result_id}", response_model=dict[str, Any])
 async def confirm_generated_tasks(
     tool_result_id: str = Path(..., description="Tool result ID"),
     current_user: User = Depends(get_current_user),
@@ -477,7 +484,7 @@ async def submit_task_feedback(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{task_id}/feedback", response_model=Dict[str, Any])
+@router.get("/{task_id}/feedback", response_model=dict[str, Any])
 async def get_task_feedback(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -505,7 +512,7 @@ async def get_task_feedback(
     }
 
 
-@router.get("/feedback/stats", response_model=Dict[str, Any])
+@router.get("/feedback/stats", response_model=dict[str, Any])
 async def get_user_feedback_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -537,7 +544,7 @@ async def get_user_feedback_stats(
     }
 
 
-@router.post("/{task_id}/next-action-selection", response_model=Dict[str, Any])
+@router.post("/{task_id}/next-action-selection", response_model=dict[str, Any])
 async def record_next_action_selection(
     selection_in: NextActionSelectionCreate,
     task_id: UUID = Path(..., description="Task ID"),

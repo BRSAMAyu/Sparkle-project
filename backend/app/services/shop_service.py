@@ -2,20 +2,18 @@
 Shop Service - 商城核心业务逻辑
 处理商城物品查询、购买流程、物品发放等
 """
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
-from sqlalchemy.orm import selectinload
-from loguru import logger
 
-from app.models.shop import (
-    ShopItem, ShopPurchase, UserConsumable,
-    ShopItemType, ItemRarity, ConsumableEffectType
-)
+from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models.shop import ItemRarity, ShopItem, ShopItemType, ShopPurchase, UserConsumable
 from app.models.user import User
-from app.services.photon_service import PhotonService, PhotonTransactionType
+from app.services.photon_service import PhotonService
 
 
 class ShopService:
@@ -35,12 +33,12 @@ class ShopService:
 
     async def get_available_items(
         self,
-        item_type: Optional[ShopItemType] = None,
-        category: Optional[str] = None,
-        rarity: Optional[ItemRarity] = None,
+        item_type: ShopItemType | None = None,
+        category: str | None = None,
+        rarity: ItemRarity | None = None,
         only_available: bool = True,
-        user_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        user_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         获取商城物品列表
 
@@ -58,7 +56,7 @@ class ShopService:
         query = select(ShopItem)
 
         if only_available:
-            query = query.where(ShopItem.is_available == True)
+            query = query.where(ShopItem.is_available)
 
         if item_type:
             query = query.where(ShopItem.item_type == item_type)
@@ -161,7 +159,7 @@ class ShopService:
         self,
         user_id: str,
         item_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         购买物品（事务性处理）
 
@@ -196,7 +194,7 @@ class ShopService:
                 query = select(ShopItem).where(
                     and_(
                         ShopItem.id == item_id,
-                        ShopItem.is_available == True
+                        ShopItem.is_available
                     )
                 ).with_for_update()  # 行锁
 
@@ -260,8 +258,8 @@ class ShopService:
                 await self.db.flush()
 
             # 9. 删除缓存（事务提交后）
-            from app.core.cache import cache_service
             from app.config import settings
+            from app.core.cache import cache_service
             cache_key = f"{settings.APP_NAME}:photon:balance:{user_id}"
             await cache_service.delete(cache_key)
 
@@ -369,7 +367,7 @@ class ShopService:
         user_id: str,
         limit: int = 20,
         offset: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         查询用户购买历史
 
@@ -422,7 +420,7 @@ class ShopService:
             "offset": offset
         }
 
-    async def get_item_by_id(self, item_id: str) -> Optional[ShopItem]:
+    async def get_item_by_id(self, item_id: str) -> ShopItem | None:
         """
         根据 ID 获取物品详情
 

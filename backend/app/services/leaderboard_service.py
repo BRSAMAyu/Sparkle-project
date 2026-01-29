@@ -11,32 +11,27 @@ Leaderboard Service
 - STREAK: 连胜排行榜
 - GROUP_FLAME: 群组火苗榜
 """
-from typing import List, Dict, Any, Optional, Tuple
+from datetime import date, datetime, timedelta
+from typing import Any
 from uuid import UUID
-from datetime import datetime, timedelta, date
-from loguru import logger
 
+from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc, case, literal_column
+from sqlalchemy.orm import selectinload
 
-from app.schemas.leaderboard import (
-    LeaderboardType,
-    LeaderboardPeriod,
-    LeaderboardEntry,
-    GroupLeaderboardEntry,
-    LeaderboardResponse,
-    GroupLeaderboardResponse,
-    LeaderboardRequest,
-    MyRankResponse,
-    LeaderboardSummary
-)
+from app.models.achievement import UserAchievement, UserStreakStats
+from app.models.community import Friendship, FriendshipStatus, Group, GroupMember
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user import User
-from app.models.community import (
-    Friendship, FriendshipStatus,
-    Group, GroupMember, GroupType
+from app.schemas.leaderboard import (
+    LeaderboardEntry,
+    LeaderboardPeriod,
+    LeaderboardRequest,
+    LeaderboardResponse,
+    LeaderboardSummary,
+    LeaderboardType,
+    MyRankResponse,
 )
-from app.models.achievement import UserStreakStats, UserAchievement
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
 
 
 class LeaderboardService:
@@ -220,7 +215,7 @@ class LeaderboardService:
         ).outerjoin(
             UserStreakStats, UserStreakStats.user_id == User.id
         ).where(
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter()
         ).group_by(User.id, UserStreakStats.longest_streak, UserStreakStats.total_checkin_days)
 
@@ -331,7 +326,7 @@ class LeaderboardService:
             UserStreakStats, UserStreakStats.user_id == User.id
         ).where(
             User.id.in_(friend_ids),
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter()
         ).group_by(User.id, UserStreakStats.current_streak)
 
@@ -415,7 +410,7 @@ class LeaderboardService:
         # 基于火焰贡献值排序
         query = select(User).where(
             User.id.in_(member_ids),
-            User.is_active == True
+            User.is_active
         ).options(
             selectinload(GroupMember)  # 需要加载成员信息获取 flame_contribution
         )
@@ -494,7 +489,7 @@ class LeaderboardService:
         ).where(
             KnowledgeNode.subject_id == subject_id,
             UserNodeStatus.mastery_score >= 50,
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter()
         ).group_by(User.id)
 
@@ -571,7 +566,7 @@ class LeaderboardService:
         ).join(
             UserNodeStatus, UserNodeStatus.user_id == User.id
         ).where(
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter(),
             UserNodeStatus.last_study_at >= week_start,
             UserNodeStatus.last_study_at < week_end
@@ -638,7 +633,7 @@ class LeaderboardService:
         ).join(
             UserStreakStats, UserStreakStats.user_id == User.id
         ).where(
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter(),
             UserStreakStats.current_streak > 0
         ).order_by(desc(UserStreakStats.current_streak))
@@ -704,7 +699,7 @@ class LeaderboardService:
             User.avatar_url,
             User.photon_balance
         ).where(
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter(),
             User.photon_balance.isnot(None),
             User.photon_balance > 0
@@ -781,7 +776,7 @@ class LeaderboardService:
         ).join(
             PhotonTransactionHistory, PhotonTransactionHistory.user_id == User.id
         ).where(
-            User.is_active == True,
+            User.is_active,
             User.not_deleted_filter(),
             PhotonTransactionHistory.created_at >= week_start
         ).group_by(
@@ -843,7 +838,7 @@ class LeaderboardService:
 
     # ==================== 辅助方法 ====================
 
-    def _get_badge_for_rank(self, rank: int) -> Optional[str]:
+    def _get_badge_for_rank(self, rank: int) -> str | None:
         """获取排名徽章"""
         if rank == 1:
             return "🥇"
@@ -853,7 +848,7 @@ class LeaderboardService:
             return "🥉"
         return None
 
-    async def _get_my_stats(self, user_id: UUID) -> Dict[str, Any]:
+    async def _get_my_stats(self, user_id: UUID) -> dict[str, Any]:
         """获取我的统计信息"""
         # 获取知识点数
         nodes_query = select(func.count(UserNodeStatus.id)).where(

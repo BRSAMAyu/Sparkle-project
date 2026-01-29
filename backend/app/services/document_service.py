@@ -2,34 +2,38 @@ import asyncio
 import os
 import re
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
+from typing import Any
 from uuid import UUID
+
 from fastapi import HTTPException
-from app.core.ingestion.ingestion_service import ingestion_service
 from loguru import logger
-from app.core.cache import cache_service
+
 from app.config import settings
-from app.config.phase5_config import phase5_config, get_quality_threshold_for_doc_type
+from app.config.phase5_config import get_quality_threshold_for_doc_type, phase5_config
+from app.core.cache import cache_service
+from app.core.ingestion.ingestion_service import ingestion_service
+from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode
 
 
 @dataclass
 class VectorChunk:
     content: str
-    page_numbers: List[int]  # Changed to list
-    section_title: Optional[str]
-    metadata: Dict = field(default_factory=dict)
-    ocr_confidence: Optional[float] = None  # 0.0-1.0, None if not from OCR
+    page_numbers: list[int]  # Changed to list
+    section_title: str | None
+    metadata: dict = field(default_factory=dict)
+    ocr_confidence: float | None = None  # 0.0-1.0, None if not from OCR
 
 @dataclass
 class QualityResult:
     passed: bool
     score: float
-    issues: List[str]
+    issues: list[str]
 
 class DocumentService:
     # ... existing methods ...
 
-    def _detect_document_type(self, chunks: List[VectorChunk]) -> str:
+    def _detect_document_type(self, chunks: list[VectorChunk]) -> str:
         """
         检测文档类型
         Returns: "academic" | "invoice" | "general" | "code"
@@ -60,7 +64,7 @@ class DocumentService:
         else:
             return "general"
 
-    def _check_garbled_content(self, text: str, doc_type: str) -> tuple[float, List[str]]:
+    def _check_garbled_content(self, text: str, doc_type: str) -> tuple[float, list[str]]:
         """
         检查乱码内容
         Returns: (garbled_ratio, issues)
@@ -115,7 +119,7 @@ class DocumentService:
 
         return garbled_ratio, issues
 
-    def _check_language_consistency(self, text: str) -> tuple[float, List[str]]:
+    def _check_language_consistency(self, text: str) -> tuple[float, list[str]]:
         """
         检查语言一致性（针对中文文档）
         Returns: (consistency_score, issues)
@@ -150,7 +154,7 @@ class DocumentService:
 
         return 1.0, []
 
-    def _check_content_structure(self, chunks: List[VectorChunk]) -> tuple[float, List[str]]:
+    def _check_content_structure(self, chunks: list[VectorChunk]) -> tuple[float, list[str]]:
         """
         检查内容结构完整性
         Returns: (structure_score, issues)
@@ -162,7 +166,7 @@ class DocumentService:
 
         # 1. 检查切片长度分布
         chunk_lengths = [len(c.content) for c in chunks]
-        avg_length = sum(chunk_lengths) / len(chunk_lengths)
+        sum(chunk_lengths) / len(chunk_lengths)
 
         # 过短的切片（可能是表格碎片或解析错误）
         very_short_chunks = sum(1 for length in chunk_lengths if length < 50)
@@ -194,7 +198,7 @@ class DocumentService:
 
         return max(structure_score, 0.0), issues
 
-    def _check_ocr_confidence(self, chunks: List[VectorChunk]) -> tuple[float, List[str]]:
+    def _check_ocr_confidence(self, chunks: list[VectorChunk]) -> tuple[float, list[str]]:
         """
         检查 OCR 置信度
         Returns: (avg_confidence, issues)
@@ -234,8 +238,8 @@ class DocumentService:
 
     def check_quality(
         self,
-        chunks: List[VectorChunk],
-        doc_type: Optional[str] = None
+        chunks: list[VectorChunk],
+        doc_type: str | None = None
     ) -> QualityResult:
         """
         改进的文档质量检测
@@ -357,7 +361,7 @@ class DocumentService:
             issues=issues if not passed else []
         )
 
-    def _categorize_issues(self, issues: List[str]) -> List[str]:
+    def _categorize_issues(self, issues: list[str]) -> list[str]:
         """将问题列表分类为指标标签"""
         categories = []
         issue_text = " ".join(issues).lower()
@@ -381,17 +385,17 @@ class DocumentService:
         passed: bool,
         score: float,
         garbled_ratio: float,
-        ocr_confidence: Optional[float],
-        issue_types: List[str]
+        ocr_confidence: float | None,
+        issue_types: list[str]
     ) -> None:
         """上报文档质量指标到 Prometheus"""
         try:
             from app.core.metrics import (
-                DOC_QUALITY_CHECK_COUNT,
-                DOC_QUALITY_SCORE,
                 DOC_GARBLED_RATIO,
                 DOC_OCR_CONFIDENCE,
-                DOC_QUALITY_ISSUES
+                DOC_QUALITY_CHECK_COUNT,
+                DOC_QUALITY_ISSUES,
+                DOC_QUALITY_SCORE,
             )
 
             # 1. 检测计数
@@ -418,10 +422,10 @@ class DocumentService:
         except Exception as e:
             logger.warning(f"Failed to report quality metrics: {e}")
 
-    async def draft_knowledge_nodes(self, db_session, file_id: UUID, user_id: UUID, chunks: List[VectorChunk]):
+    async def draft_knowledge_nodes(self, db_session, file_id: UUID, user_id: UUID, chunks: list[VectorChunk]):
         """
         Create draft knowledge nodes from document chunks.
-        Strategy: 
+        Strategy:
         - One root node for the Document.
         - Child nodes for identified sections (if any).
         """
@@ -443,7 +447,7 @@ class DocumentService:
         )
         db_session.add(root_node)
         await db_session.flush() # Get ID
-        
+
         # 3. Create Section Nodes (Simple Heuristic)
         # Group chunks by section_title
         sections = {}
@@ -452,13 +456,13 @@ class DocumentService:
             if title not in sections:
                 sections[title] = []
             sections[title].append(i) # Store chunk index/ref
-            
+
         for title, chunk_indices in sections.items():
             if title == "General" and len(sections) == 1:
                 # If only General, link chunks to root
                 root_node.chunk_refs = chunk_indices
                 continue
-                
+
             # Create child node
             child = KnowledgeNode(
                 name=title[:50], # Truncate long titles
@@ -470,7 +474,7 @@ class DocumentService:
                 is_seed=False
             )
             db_session.add(child)
-            
+
         await db_session.commit()
         logger.info(f"Drafted knowledge nodes for file {file_id}")
 
@@ -486,7 +490,7 @@ class DocumentService:
     async def update_progress(self, task_id: str, status: str, percent: int, result: Any = None):
         """Helper to update task status in Redis"""
         if not task_id: return
-        
+
         data = {
             "status": status,
             "percent": percent,
@@ -496,7 +500,7 @@ class DocumentService:
         # Save for 1 hour
         await cache_service.set(f"task:{task_id}", data, ttl=3600)
 
-    async def clean_and_summarize(self, file_path: str, task_id: str = None, options: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def clean_and_summarize(self, file_path: str, task_id: str = None, options: dict[str, Any] = None) -> dict[str, Any]:
         """
         Main entry point for "Document Cleaning".
         Returns a structured summary designed for both UI display and Agent context.
@@ -505,7 +509,7 @@ class DocumentService:
         only compressed summaries are returned.
         """
         options = options or {}
-        enable_ocr = options.get("enable_ocr", True)
+        options.get("enable_ocr", True)
         # Note: IngestionService currently auto-detects OCR need. We could pass this flag down if we refactor IngestionService further.
 
         # 定义10MB大小限制（字节）
@@ -530,7 +534,6 @@ class DocumentService:
             await self.update_progress(task_id, "Analyzing structure...", 30)
 
             # 2. Reconstruct Text & Check Size
-            formatted_chunks = []
             total_chars = 0
             current_section = []
             sections = []
@@ -624,7 +627,7 @@ class DocumentService:
                     "compressed_size_bytes": compressed_size,
                     "section_count": len(sections),
                     "truncated": True,
-                    "message": f"Document exceeds 10MB limit. Only compressed summary is available."
+                    "message": "Document exceeds 10MB limit. Only compressed summary is available."
                 }
                 await self.update_progress(task_id, "Completed", 100, result)
                 return result
@@ -635,7 +638,7 @@ class DocumentService:
             return {"status": "error", "error": str(e)}
 
 
-def _resolve_allowed_path(file_path: str) -> Optional[str]:
+def _resolve_allowed_path(file_path: str) -> str | None:
     """
     安全地解析文件路径，防止路径穿越攻击。
 
@@ -691,8 +694,9 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
         """Single-shot summary for small files."""
         try:
             try:
-                from app.agents.graph.llm_factory import LLMFactory
                 from langchain_core.prompts import ChatPromptTemplate
+
+                from app.agents.graph.llm_factory import LLMFactory
             except ImportError as exc:
                 raise HTTPException(
                     status_code=501,
@@ -709,12 +713,12 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
         except Exception as e:
             return f"Summary generation failed: {e}"
 
-    async def _run_map_reduce(self, sections: List[str], task_id: str = None) -> str:
+    async def _run_map_reduce(self, sections: list[str], task_id: str = None) -> str:
         """Execute parallel chunk summarization."""
         sem = asyncio.Semaphore(5)
         total = len(sections)
         completed = 0
-        
+
         async def throttled_extract(i, sec):
             nonlocal completed
             async with sem:
@@ -725,18 +729,19 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
                     progress = 50 + int((completed / total) * 40)
                     await self.update_progress(task_id, f"Analyzing section {completed}/{total}...", progress)
                 return res
-        
+
         summaries = await asyncio.gather(*[
             throttled_extract(i, sec) for i, sec in enumerate(sections)
         ])
-        
+
         return "# 📂 Document Structure (Compressed)\n\n" + "\n\n".join(summaries)
 
     async def _extract_section_summary(self, index: int, text: str) -> str:
         try:
             try:
-                from app.agents.graph.llm_factory import LLMFactory
                 from langchain_core.prompts import ChatPromptTemplate
+
+                from app.agents.graph.llm_factory import LLMFactory
             except ImportError as exc:
                 raise HTTPException(
                     status_code=501,
@@ -752,7 +757,7 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
                 - **Concepts**: [Tags]
                 - **Summary**: [Content]
                 - **Exam Hints**: [Hints]
-                
+
                 Text:
                 {text[:15000]}
                 """)
@@ -767,7 +772,7 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
         file_path: str,
         chunk_size: int = 1200,
         chunk_overlap: int = 200,
-    ) -> List[VectorChunk]:
+    ) -> list[VectorChunk]:
         """
         Extract document chunks suitable for vectorization.
         """
@@ -789,7 +794,7 @@ def _resolve_allowed_path(file_path: str) -> Optional[str]:
             separators=["\n\n", "\n", ". ", " ", ""],
         )
 
-        results: List[VectorChunk] = []
+        results: list[VectorChunk] = []
         for chunk in chunks:
             text = (chunk.text or "").strip()
             if not text:

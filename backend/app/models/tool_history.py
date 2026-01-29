@@ -2,13 +2,12 @@
 User Tool History Model - 用户工具执行历史记录
 用于追踪工具执行的成功率、性能指标和偏好学习
 """
-from datetime import datetime
 import uuid
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index, ForeignKey, Float, func
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import JSON
-from sqlalchemy.orm import relationship
-from app.models.base import Base, GUID
+from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, func
+
+from app.models.base import GUID, Base
 
 
 class UserToolHistory(Base):

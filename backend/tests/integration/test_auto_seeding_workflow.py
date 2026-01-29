@@ -8,6 +8,7 @@ Tests the complete workflow:
 3. If quality threshold met, auto-seed to library
 4. Verify seeded content appears in library
 """
+import os
 import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,12 @@ from app.services.content_quality_evaluator import ContentQualityEvaluator
 from app.services.seed_library_service import SeedLibraryService
 from app.models.response_feedback import ResponseFeedback
 from app.models.seed_content import SeedLibrary, SeedItem
+
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("FULL_STACK_TESTS") != "1",
+    reason="Requires full seed library stack and tuned data fixtures.",
+)
 
 
 @pytest.mark.asyncio

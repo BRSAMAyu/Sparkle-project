@@ -1,6 +1,11 @@
+import os
+import pytest
 import pytest_asyncio
+import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
+from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 from app.models.base import Base
 from app.models.plan import Plan  # noqa: F401
@@ -55,6 +60,11 @@ async def db_session_fixture():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
+
+
+@pytest_asyncio.fixture(name="db")
+async def db_fixture(db_session: AsyncSession) -> AsyncSession:
+    return db_session
 
 
 @pytest_asyncio.fixture(name="test_user")
@@ -132,3 +142,32 @@ async def test_shop_items_fixture(db_session: AsyncSession) -> list[ShopItem]:
         db_session.add(item)
     await db_session.commit()
     return items
+
+
+@pytest_asyncio.fixture(name="redis_client")
+async def redis_client_fixture():
+    """Create Redis client for integration tests."""
+    redis_url = os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0")
+    password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
+    client = redis.from_url(
+        redis_url,
+        encoding="utf-8",
+        decode_responses=True,
+        password=password,
+    )
+
+    yield client
+
+    await client.flushdb()
+    if hasattr(client, "aclose"):
+        await client.aclose()
+    else:
+        await client.close()
+
+
+def pytest_collection_modifyitems(config, items):
+    perf_enabled = os.getenv("PERF_TESTS") == "1"
+    for item in items:
+        nodeid = item.nodeid
+        if "tests/benchmark/" in nodeid and not perf_enabled:
+            item.add_marker(pytest.mark.skip(reason="PERF_TESTS=1 required"))

@@ -1,40 +1,37 @@
-from typing import Dict, Any, AsyncGenerator, Optional, List
-from loguru import logger
 import json
-import uuid
-import asyncio
 import re
 import time
+import uuid
+from typing import Any
 
-from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
-from app.services.llm_service import llm_service
-from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
-from app.services.knowledge_service import KnowledgeService
-from app.orchestration.prompts import build_system_prompt
-from app.orchestration.executor import ToolExecutor
-from app.gen.agent.v1 import agent_service_pb2
 from google.protobuf import struct_pb2
+from loguru import logger
+
 from app.agents.collaboration_workflows import (
-    TaskDecompositionWorkflow,
+    ErrorDiagnosisWorkflow,
     ProgressiveExplorationWorkflow,
-    ErrorDiagnosisWorkflow
+    TaskDecompositionWorkflow,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
-from app.core.pending_actions import pending_actions_store
-from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 
 # Phase 1: Review System
 from app.agents.graph.nodes.review_nodes import (
-    generation_review_node,
     execution_review_node,
+    generation_review_node,
     reflection_node,
-    route_after_generation_review,
-    route_after_reflection,
-    route_after_execution_review,
 )
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
+from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
+from app.core.pending_actions import pending_actions_store
+from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.prompts import build_system_prompt
+from app.orchestration.statechart_engine import StateGraph, WorkflowState
+from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+from app.services.knowledge_service import KnowledgeService
+from app.services.llm_service import llm_service
 
 # ==========================================
 # Nodes
@@ -216,13 +213,13 @@ Ask about their available time and current tasks if needed.
     document_context = state.context_data.get("document_context") or ""
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
-    
+
     user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])
-    
+
     full_response = ""
     tool_calls = []
-    
+
     # We assume llm_service is available globally
     async for chunk in llm_service.chat_stream_with_tools(
         system_prompt=system_prompt,
@@ -262,7 +259,7 @@ Ask about their available time and current tasks if needed.
         state.next_step = "tool_execution"
     else:
         state.next_step = "__end__"
-        
+
     return state
 
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
@@ -291,7 +288,6 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # Use snapshot for validation if available
         validator = state.context_data.get("grounding_validator")
         if validator:
-            from app.orchestration.schemas import ValidationResult
             # Re-validate with snapshot (business rules check)
             validation_result = await validator.validate_plan(executable_plan, snapshot)
 
@@ -387,7 +383,6 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 return tc.full_arguments
             elif isinstance(tc.full_arguments, str):
                 try:
-                    import json
                     return {"_raw_json": tc.full_arguments}
                 except:
                     return {"_raw": tc.full_arguments}
@@ -492,7 +487,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 # Intent Classification & Tool Planning
 # ==========================================
 
-def detect_exam_urgency(text: str) -> Optional[int]:
+def detect_exam_urgency(text: str) -> int | None:
     """Return days until exam, or None if no exam urgency detected."""
     text_lower = text.lower()
     exam_keywords = ["考试", "考研", "期末", "测验", "quiz", "midterm", "final", "exam", "test", "考"]
@@ -521,7 +516,7 @@ def detect_exam_urgency(text: str) -> Optional[int]:
     return None
 
 
-def _classify_user_intent(message: str) -> Optional[str]:
+def _classify_user_intent(message: str) -> str | None:
     """Classify user intent from message for multi-step tool planning."""
     message_lower = message.lower()
 
@@ -546,7 +541,7 @@ def _classify_user_intent(message: str) -> Optional[str]:
     return None
 
 
-def _should_use_collaboration(message: str, intent: Optional[str]) -> bool:
+def _should_use_collaboration(message: str, intent: str | None) -> bool:
     """Determine if collaboration workflow should be triggered."""
     if not intent:
         return False
@@ -1029,7 +1024,7 @@ async def _execute_single_tool(
     db_session,
     executor,
     state: WorkflowState,
-    compensation_call: Optional[Dict[str, Any]] = None,
+    compensation_call: dict[str, Any] | None = None,
     tool_index: int = 0,
     total_tools: int = 1,
 ) -> None:
@@ -1178,8 +1173,9 @@ async def _write_feedback(
     if not redis_client or not start_time:
         return
 
-    from app.orchestration.schemas import FeedbackPayload
     from dataclasses import asdict
+
+    from app.orchestration.schemas import FeedbackPayload
 
     duration_seconds = time.time() - start_time
 
@@ -1228,7 +1224,7 @@ async def _write_feedback(
     TASK_LOOP_COMPLETED.labels(source="standard_workflow").inc()
 
 
-def _serialize_tool_calls(tool_calls: List[Any]) -> List[Dict[str, Any]]:
+def _serialize_tool_calls(tool_calls: list[Any]) -> list[dict[str, Any]]:
     payload = []
     for tool_call in tool_calls:
         payload.append({
@@ -1245,9 +1241,9 @@ async def _queue_hitl_action(
     user_id: str,
     reason: str,
     description: str,
-    tool_calls: List[Any],
-    plan_id: Optional[str] = None,
-    snapshot_id: Optional[str] = None
+    tool_calls: list[Any],
+    plan_id: str | None = None,
+    snapshot_id: str | None = None
 ) -> str:
     action_id = await pending_actions_store.save(
         tool_name="__plan__",

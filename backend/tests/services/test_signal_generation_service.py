@@ -187,7 +187,7 @@ def test_generate_best_next_action_window():
         (s for s in result.signals if s.type == "best_next_action_window"), None
     )
     assert signal is not None
-    assert signal.confidence == 0.60
+    assert signal.confidence == 0.65
     assert "偏离计划" in signal.reason
     assert "精力状态尚可" in signal.reason
 

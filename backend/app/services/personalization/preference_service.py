@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_preferences import UserPreferencesCenter

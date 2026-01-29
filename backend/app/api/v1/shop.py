@@ -2,33 +2,29 @@
 Shop API Endpoints
 商城系统 API 端点
 """
-from typing import Dict, Any, Optional
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from typing import Any
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.models.shop import ItemRarity, ShopItemType
 from app.models.user import User
-from app.models.shop import ShopItemType, ItemRarity
 from app.schemas.shop import (
-    ShopItemListResponse,
-    ShopItemDetailResponse,
     PurchaseRequest,
-    PurchaseResponse,
-    PurchaseHistoryResponse,
 )
 from app.services.shop_service import get_shop_service
 
 router = APIRouter()
 
 
-@router.get("/items", response_model=Dict[str, Any])
+@router.get("/items", response_model=dict[str, Any])
 async def get_shop_items(
-    item_type: Optional[ShopItemType] = Query(None, description="Filter by item type"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-    rarity: Optional[ItemRarity] = Query(None, description="Filter by rarity"),
+    item_type: ShopItemType | None = Query(None, description="Filter by item type"),
+    category: str | None = Query(None, description="Filter by category"),
+    rarity: ItemRarity | None = Query(None, description="Filter by rarity"),
     only_available: bool = Query(True, description="Show only available items"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -61,7 +57,7 @@ async def get_shop_items(
     }
 
 
-@router.get("/items/{item_id}", response_model=Dict[str, Any])
+@router.get("/items/{item_id}", response_model=dict[str, Any])
 async def get_shop_item_detail(
     item_id: str = Path(..., description="Item ID"),
     current_user: User = Depends(get_current_user),
@@ -107,7 +103,7 @@ async def get_shop_item_detail(
     }
 
 
-@router.post("/purchase", response_model=Dict[str, Any])
+@router.post("/purchase", response_model=dict[str, Any])
 async def purchase_item(
     request: PurchaseRequest,
     current_user: User = Depends(get_current_user),
@@ -144,7 +140,7 @@ async def purchase_item(
         raise HTTPException(status_code=500, detail="Failed to complete purchase")
 
 
-@router.get("/purchases", response_model=Dict[str, Any])
+@router.get("/purchases", response_model=dict[str, Any])
 async def get_purchase_history(
     limit: int = Query(20, ge=1, le=100, description="Number of items to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),

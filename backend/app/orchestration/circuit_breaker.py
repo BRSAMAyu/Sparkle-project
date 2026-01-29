@@ -6,13 +6,12 @@ Responsibilities:
 2. Trip to direct mode when failure rate exceeds threshold
 3. Auto-recovery mechanism (half-open state)
 """
-from typing import Optional, Dict, Any
-from loguru import logger
-from dataclasses import dataclass, field
+import json
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-import asyncio
-import json
+
+from loguru import logger
 
 from app.orchestration.schemas import CircuitBreakerState
 
@@ -47,7 +46,7 @@ class CircuitBreaker:
     def __init__(
         self,
         name: str,
-        config: Optional[CircuitBreakerConfig] = None,
+        config: CircuitBreakerConfig | None = None,
         redis_client=None
     ):
         self.name = name
@@ -58,7 +57,7 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._failure_count = 0
         self._success_count = 0
-        self._last_failure_time: Optional[datetime] = None
+        self._last_failure_time: datetime | None = None
         self._last_state_change = datetime.utcnow()
         self._opened_count = 0
 
@@ -116,7 +115,7 @@ class CircuitBreaker:
             opened_count=self._opened_count
         )
 
-    async def allow_request(self) -> tuple[bool, Optional[str]]:
+    async def allow_request(self) -> tuple[bool, str | None]:
         """Check if request is allowed
 
         Returns:
@@ -140,10 +139,9 @@ class CircuitBreaker:
         self._trim_window()
 
         # HALF_OPEN state: consecutive success reaches threshold -> CLOSED
-        if self._state == CircuitState.HALF_OPEN:
-            if self._success_count >= self.config.success_threshold:
-                await self._transition_to(CircuitState.CLOSED, "success_threshold_reached")
-                logger.info(f"CircuitBreaker '{self.name}' recovered to CLOSED")
+        if self._state == CircuitState.HALF_OPEN and self._success_count >= self.config.success_threshold:
+            await self._transition_to(CircuitState.CLOSED, "success_threshold_reached")
+            logger.info(f"CircuitBreaker '{self.name}' recovered to CLOSED")
 
         # CLOSED state: reset failure count
         if self._state == CircuitState.CLOSED:
@@ -151,7 +149,7 @@ class CircuitBreaker:
 
         await self.save_state()
 
-    async def on_failure(self, error: Optional[str] = None):
+    async def on_failure(self, error: str | None = None):
         """Record failure"""
         self._failure_count += 1
         self._last_failure_time = datetime.utcnow()
@@ -271,17 +269,17 @@ class CircuitBreakerRegistry:
     """Circuit breaker registry"""
 
     def __init__(self):
-        self._breakers: Dict[str, CircuitBreaker] = {}
+        self._breakers: dict[str, CircuitBreaker] = {}
 
     def register(self, breaker: CircuitBreaker):
         """Register a circuit breaker"""
         self._breakers[breaker.name] = breaker
 
-    def get(self, name: str) -> Optional[CircuitBreaker]:
+    def get(self, name: str) -> CircuitBreaker | None:
         """Get circuit breaker by name"""
         return self._breakers.get(name)
 
-    def get_all_states(self) -> Dict[str, CircuitBreakerState]:
+    def get_all_states(self) -> dict[str, CircuitBreakerState]:
         """Get all circuit breaker states"""
         return {
             name: breaker.get_state()

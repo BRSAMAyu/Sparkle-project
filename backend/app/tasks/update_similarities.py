@@ -4,24 +4,21 @@ User Similarity Update Tasks
 
 每日定时任务，计算用户相似度并缓存
 """
-from typing import Set, Dict, Tuple, List
-from uuid import UUID
-from datetime import datetime, timedelta
-from loguru import logger
 from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import Any
+from uuid import UUID
 
 from celery import shared_task
+from celery.schedules import crontab
+from loguru import logger
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, or_, delete
 
 from app.db.session import get_db_context
-from app.models.recommendation import (
-    UserSimilarity,
-    UserItemInteraction,
-    UserLearningProfile
-)
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.recommendation import UserItemInteraction, UserLearningProfile, UserSimilarity
 from app.models.user import User
-from app.models.galaxy import KnowledgeNode
 
 
 @shared_task(name="tasks.update_all_user_similarities")
@@ -126,7 +123,7 @@ async def _update_all_similarities(db: AsyncSession) -> int:
     active_since = datetime.utcnow() - timedelta(days=30)
 
     active_users_query = select(User.id).where(
-        User.is_active == True,
+        User.is_active,
         User.not_deleted_filter(),
         User.last_login_at >= active_since
     )
@@ -225,7 +222,7 @@ async def _update_learning_profiles(db: AsyncSession) -> int:
     """更新用户学习画像"""
     # 获取所有用户
     users_query = select(User.id).where(
-        User.is_active == True,
+        User.is_active,
         User.not_deleted_filter()
     )
     result = await db.execute(users_query)
@@ -366,8 +363,8 @@ async def _delete_expired_similarities(db: AsyncSession, current_version: int) -
 
 async def _get_user_item_sets(
     db: AsyncSession,
-    user_ids: List[UUID]
-) -> Dict[UUID, Set[UUID]]:
+    user_ids: list[UUID]
+) -> dict[UUID, set[UUID]]:
     """获取用户学习的物品集合"""
     query = select(
         UserItemInteraction.user_id,
@@ -389,9 +386,9 @@ async def _get_user_item_sets(
 
 async def _get_item_user_sets(
     db: AsyncSession,
-    item_ids: List[UUID],
+    item_ids: list[UUID],
     item_type: str
-) -> Dict[UUID, Set[UUID]]:
+) -> dict[UUID, set[UUID]]:
     """获取物品的学习用户集合"""
     query = select(
         UserItemInteraction.item_id,
@@ -415,8 +412,8 @@ async def _get_common_subjects(
     db: AsyncSession,
     user_id_1: UUID,
     user_id_2: UUID,
-    common_items: Set[UUID]
-) -> List[str]:
+    common_items: set[UUID]
+) -> list[str]:
     """获取共同学科"""
     if not common_items:
         return []
@@ -443,7 +440,7 @@ async def _get_common_subjects(
 async def _get_user_learning_stats(
     db: AsyncSession,
     user_id: UUID
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """获取用户学习统计"""
     # 统计各学科的学习数量
     subject_query = select(

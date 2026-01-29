@@ -2,22 +2,25 @@
 Task Service
 Handle task business logic
 """
-from typing import Optional, List, Tuple
-from uuid import UUID
-from datetime import datetime
-import asyncio
 import json
 import time
 import uuid
+from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
+from google.protobuf import json_format
+from google.api import annotations_pb2  # noqa: F401
 from loguru import logger
+from sqlalchemy import and_, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import Task, TaskStatus
-from app.schemas.task import TaskCreate, TaskUpdate
-from app.schemas.task import TaskListQuery
 from app.core.cache import cache_service
+from app.gen.sparkle.inference.v1 import inference_pb2
+from app.gen.sparkle.signals.v1 import signals_pb2
+from app.models.task import Task, TaskStatus
+from app.schemas.task import TaskCreate, TaskListQuery, TaskUpdate
+from app.services.gateway_client import GatewayClient
+from app.services.llm_dispatcher import LLMDispatcher
 from app.services.personalization import get_personalization_engine
 
 
@@ -25,7 +28,7 @@ class TaskService:
     @staticmethod
     async def get_by_id(
         db: AsyncSession, task_id: UUID, user_id: UUID
-    ) -> Optional[Task]:
+    ) -> Task | None:
         """Get task by ID and verify user ownership"""
         query = select(Task).where(
             and_(Task.id == task_id, Task.user_id == user_id)
@@ -165,7 +168,7 @@ class TaskService:
     @staticmethod
     async def complete_task(
         db: AsyncSession, task_id: UUID, user_id: UUID,
-        actual_minutes: int, note: Optional[str] = None
+        actual_minutes: int, note: str | None = None
     ) -> Task:
         """
         Complete task by ID - publishes task.completed event
@@ -198,7 +201,7 @@ class TaskService:
 
     @staticmethod
     async def complete(
-        db: AsyncSession, db_obj: Task, actual_minutes: int, note: Optional[str] = None
+        db: AsyncSession, db_obj: Task, actual_minutes: int, note: str | None = None
     ) -> Task:
         """Complete task and update plan progress if task belongs to a plan"""
         db_obj.status = TaskStatus.COMPLETED
@@ -255,7 +258,7 @@ class TaskService:
                 logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
         # Publish task completion event for cognitive analysis
-        from app.core.event_bus import event_bus, TaskCompleted
+        from app.core.event_bus import TaskCompleted, event_bus
 
         estimated = db_obj.estimated_minutes or 0
         completion_rate = actual_minutes / estimated if estimated > 0 else 1.0
@@ -285,13 +288,10 @@ class TaskService:
         return max(1, min(5, int(mapped)))
 
     @staticmethod
-    def _build_task_summary(task: Task, actual_minutes: int, note: Optional[str]) -> dict:
+    def _build_task_summary(task: Task, actual_minutes: int, note: str | None) -> dict:
         estimated = task.estimated_minutes or 0
         delta = actual_minutes - estimated
-        if delta == 0:
-            delta_label = "0min"
-        else:
-            delta_label = f"{'+' if delta > 0 else ''}{delta}min"
+        delta_label = "0min" if delta == 0 else f"{'+' if delta > 0 else ''}{delta}min"
 
         sentiment = TaskService._infer_sentiment(note)
 
@@ -305,7 +305,7 @@ class TaskService:
         }
 
     @staticmethod
-    def _infer_sentiment(note: Optional[str]) -> str:
+    def _infer_sentiment(note: str | None) -> str:
         if not note:
             return "neutral"
         lowered = note.lower()
@@ -319,7 +319,7 @@ class TaskService:
 
     @staticmethod
     async def abandon(
-        db: AsyncSession, db_obj: Task, reason: Optional[str] = None
+        db: AsyncSession, db_obj: Task, reason: str | None = None
     ) -> Task:
         """Abandon task"""
         db_obj.status = TaskStatus.ABANDONED
@@ -341,7 +341,7 @@ class TaskService:
                 logger.warning(f"Failed to sync task abandonment with plan state: {e}")
 
         # Publish task abandonment event for cognitive analysis
-        from app.core.event_bus import event_bus, TaskAbandoned
+        from app.core.event_bus import TaskAbandoned, event_bus
 
         time_spent = None
         if db_obj.started_at:
@@ -362,7 +362,7 @@ class TaskService:
     @staticmethod
     async def abandon_task(
         db: AsyncSession, task_id: UUID, user_id: UUID,
-        reason: Optional[str] = None
+        reason: str | None = None
     ) -> Task:
         """
         Abandon task by ID - publishes task.abandoned event
@@ -394,7 +394,7 @@ class TaskService:
     @staticmethod
     async def confirm_tasks_by_tool_result(
         db: AsyncSession, tool_result_id: str, user_id: UUID
-    ) -> List[Task]:
+    ) -> list[Task]:
         """
         Confirm all tasks associated with a specific tool_result_id.
         Changes status from PENDING to IN_PROGRESS.
@@ -436,10 +436,10 @@ class TaskService:
         db: AsyncSession,
         user_id: UUID,
         query_params: TaskListQuery
-    ) -> Tuple[List[Task], int]:
+    ) -> tuple[list[Task], int]:
         """Get tasks with filtering and pagination"""
         query = select(Task).where(Task.user_id == user_id)
-        
+
         # Apply filters
         if query_params.status:
             query = query.where(Task.status == query_params.status)
@@ -447,21 +447,21 @@ class TaskService:
             query = query.where(Task.type == query_params.type)
         if query_params.plan_id:
             query = query.where(Task.plan_id == query_params.plan_id)
-        
+
         # Count total (before pagination)
         # Note: simplistic count
         # For better performance on large tables, consider separate count query
-        
+
         # Apply sorting (default by created_at desc)
         query = query.order_by(desc(Task.created_at))
-        
+
         # Apply pagination
         offset = (query_params.page - 1) * query_params.page_size
         query = query.offset(offset).limit(query_params.page_size)
-        
+
         result = await db.execute(query)
         tasks = result.scalars().all()
-        
+
         return tasks, len(tasks) # This count is wrong for total pages, but for now simple return
 
     @staticmethod

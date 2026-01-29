@@ -8,21 +8,20 @@ This module extends the existing Redis-based framework with:
 - Experiment lifecycle management
 - Statistical analysis integration
 """
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
 import hashlib
+from datetime import datetime
+
 from loguru import logger
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
 
 from app.models.experiment import (
     ABExperiment,
-    ABExperimentVariant,
-    ABExperimentMetric,
     ABExperimentAssignment,
+    ABExperimentMetric,
+    ABExperimentVariant,
     ExperimentStatus,
-    MetricType,
 )
 
 
@@ -44,13 +43,13 @@ class ABTestFrameworkEnhanced:
         name: str,
         description: str,
         hypothesis: str,
-        variants: List[Dict],
-        metrics: List[str],
+        variants: list[dict],
+        metrics: list[str],
         created_by: str,
-        sample_size_target: Optional[int] = None,
+        sample_size_target: int | None = None,
         significance_level: float = 0.05,
         power: float = 0.8,
-        minimum_detectable_effect: Optional[float] = None,
+        minimum_detectable_effect: float | None = None,
     ) -> ABExperiment:
         """
         Create a new A/B test experiment with database persistence.
@@ -174,7 +173,7 @@ class ABTestFrameworkEnhanced:
         self,
         experiment_id: str,
         conclusion: str,
-        winning_variant_id: Optional[str] = None,
+        winning_variant_id: str | None = None,
     ) -> ABExperiment:
         """
         Complete an experiment with results.
@@ -209,7 +208,7 @@ class ABTestFrameworkEnhanced:
         self,
         experiment_id: str,
         user_id: str,
-    ) -> Tuple[ABExperimentVariant, bool]:
+    ) -> tuple[ABExperimentVariant, bool]:
         """
         Assign user to a variant (deterministic).
 
@@ -226,7 +225,7 @@ class ABTestFrameworkEnhanced:
                 and_(
                     ABExperimentAssignment.experiment_id == experiment_id,
                     ABExperimentAssignment.user_id == user_id,
-                    ABExperimentAssignment.is_excluded == False,
+                    not ABExperimentAssignment.is_excluded,
                 )
             )
         )
@@ -249,7 +248,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"No variants found for experiment {experiment_id}")
 
         # Deterministic assignment based on hash
-        digest = hashlib.sha256(f"{user_id}:{experiment_id}".encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(f"{user_id}:{experiment_id}".encode()).hexdigest()
         hash_val = int(digest, 16) % 10000
         cumulative = 0
 
@@ -285,8 +284,8 @@ class ABTestFrameworkEnhanced:
         metric_name: str,
         metric_value: float,
         metric_type: str,
-        user_id: Optional[str] = None,
-        context_data: Optional[Dict] = None,
+        user_id: str | None = None,
+        context_data: dict | None = None,
     ):
         """
         Record a metric for an experiment variant.
@@ -318,7 +317,7 @@ class ABTestFrameworkEnhanced:
             f"Recorded metric {metric_name}={metric_value} for variant {variant_id}"
         )
 
-    async def get_experiment_stats(self, experiment_id: str) -> Dict:
+    async def get_experiment_stats(self, experiment_id: str) -> dict:
         """
         Get aggregate statistics for an experiment.
 
@@ -399,11 +398,11 @@ class ABTestFrameworkEnhanced:
 
     async def list_experiments(
         self,
-        status: Optional[ExperimentStatus] = None,
-        created_by: Optional[str] = None,
+        status: ExperimentStatus | None = None,
+        created_by: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[ABExperiment]:
+    ) -> list[ABExperiment]:
         """
         List experiments with optional filtering.
 
@@ -429,7 +428,7 @@ class ABTestFrameworkEnhanced:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def _cache_experiment_config(self, experiment: ABExperiment, variants: List[Dict]):
+    async def _cache_experiment_config(self, experiment: ABExperiment, variants: list[dict]):
         """Cache experiment config in Redis for fast access."""
         import json
 

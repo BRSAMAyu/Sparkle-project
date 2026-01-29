@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Dict, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,7 +20,7 @@ class BehaviorPatternDecayService:
         window_days: int = 30,
         decay_factor: float = 0.9,
         min_confidence: float = 0.35,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         if not settings.ENABLE_BEHAVIOR_DECAY:
             return {"updated": 0, "archived": 0}
 
@@ -30,7 +29,7 @@ class BehaviorPatternDecayService:
         result = await self.db.execute(
             select(BehaviorPattern).where(
                 BehaviorPattern.user_id == user_id,
-                BehaviorPattern.is_archived == False,
+                not BehaviorPattern.is_archived,
             )
         )
         patterns = result.scalars().all()
@@ -45,10 +44,9 @@ class BehaviorPatternDecayService:
                 continue
             pattern.confidence_score = float(pattern.confidence_score or 0.0) * decay_factor
             pattern.last_decay_at = datetime.utcnow()
-            if pattern.confidence_score < min_confidence:
-                if not pattern.is_archived:
-                    pattern.is_archived = True
-                    archived += 1
+            if pattern.confidence_score < min_confidence and not pattern.is_archived:
+                pattern.is_archived = True
+                archived += 1
             updated += 1
 
         if updated:

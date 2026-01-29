@@ -14,6 +14,7 @@ Defines core data structures for:
 - PlanFeedback: Plan feedback entry (Phase 4)
 """
 from dataclasses import dataclass, field
+from enum import Enum
 
 # ============ Phase 4: Plan Version Constants ============
 
@@ -26,9 +27,9 @@ MAX_REPLAN_ATTEMPTS = 2  # Maximum replan attempts before giving up
 REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
 REPLAN_MAX_PER_WINDOW = 3  # max replans per window
 
-from typing import Dict, Any, List, Optional, Literal, Set, TYPE_CHECKING
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Literal
 
 
 @dataclass
@@ -41,7 +42,15 @@ class RouteDecision:
     reason: str
     risk_level: Literal["low", "medium", "high"]
     confidence: float = 0.5
-    context_version: Optional[str] = None
+    context_version: str | None = None
+
+
+class OrchestratorState(str, Enum):
+    IDLE = "idle"
+    PLANNING = "planning"
+    TOOL_EXECUTION = "tool_execution"
+    LLM_INFERENCE = "llm_inference"
+    COMPLETED = "completed"
 
 
 @dataclass
@@ -52,13 +61,13 @@ class ToolCallSpec:
     """
     id: str
     name: str
-    params: Dict[str, Any]
+    params: dict[str, Any]
     timeout_ms: int = 10000
     priority: Literal["high", "normal", "low"] = "normal"
     allow_retry: bool = True
     max_retries: int = 2
     point_of_no_return: bool = False
-    compensation_call: Optional[Dict[str, Any]] = None
+    compensation_call: dict[str, Any] | None = None
 
 
 @dataclass
@@ -82,27 +91,27 @@ class ExecutablePlan:
     rationale: str = ""
 
     # Phase 3: Multi-Agent Collaboration metadata
-    agents_involved: List[str] = field(default_factory=list)  # NEW
+    agents_involved: list[str] = field(default_factory=list)  # NEW
     collaboration_mode: Literal["single", "sequential", "parallel"] = "single"  # NEW
-    collaboration_order: List[Dict[str, str]] = field(default_factory=list)  # NEW
+    collaboration_order: list[dict[str, str]] = field(default_factory=list)  # NEW
 
-    risk_flags: List[str] = field(default_factory=list)
-    tool_calls: List[ToolCallSpec] = field(default_factory=list)
+    risk_flags: list[str] = field(default_factory=list)
+    tool_calls: list[ToolCallSpec] = field(default_factory=list)
 
-    fallback_strategy: Dict[str, str] = field(default_factory=lambda: {
+    fallback_strategy: dict[str, str] = field(default_factory=lambda: {
         "on_validation_fail": "abort",  # Phase 2: also supports "replan"
         "on_execution_fail": "skip",
         "on_version_conflict": "replan"  # Phase 2: version conflict handling
     })
-    success_criteria: Dict[str, Any] = field(default_factory=dict)
+    success_criteria: dict[str, Any] = field(default_factory=dict)
 
     # Phase 3: Circuit breaker metadata
-    circuit_breaker_status: Optional[Dict[str, str]] = None  # NEW
+    circuit_breaker_status: dict[str, str] | None = None  # NEW
 
     # Phase 4: PlanState version at planning time
     plan_version: int = 1  # NEW: PlanState.version when plan was created
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "schema_version": self.schema_version,
@@ -148,12 +157,12 @@ class StateSnapshot:
     user_id: str = ""
     session_id: str = ""
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    context_versions: Dict[str, str] = field(default_factory=dict)
-    active_focus_id: Optional[str] = None
+    context_versions: dict[str, str] = field(default_factory=dict)
+    active_focus_id: str | None = None
     pending_tasks_count: int = 0
     user_quota_remaining: int = 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "snapshot_id": self.snapshot_id,
@@ -181,17 +190,17 @@ class FeedbackPayload:
     context_version: str = ""
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     feedback_type: Literal["explicit", "implicit"] = "implicit"
-    rating: Optional[int] = None
-    comment: Optional[str] = None
-    completion: Dict[str, Any] = field(default_factory=lambda: {
+    rating: int | None = None
+    comment: str | None = None
+    completion: dict[str, Any] = field(default_factory=lambda: {
         "status": "completed",
         "duration_seconds": 0,
         "attempts": 1
     })
-    signals: Dict[str, bool] = field(default_factory=dict)
-    predictive_hints: Dict[str, str] = field(default_factory=dict)
+    signals: dict[str, bool] = field(default_factory=dict)
+    predictive_hints: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             "schema_version": self.schema_version,
@@ -217,8 +226,8 @@ class ValidationResult:
     GroundingValidator 的输出
     """
     is_valid: bool
-    failure_reason: Optional[str] = None
-    risk_flags: List[str] = None
+    failure_reason: str | None = None
+    risk_flags: list[str] = None
     requires_confirmation: bool = False
     requires_hitl: bool = False
 
@@ -236,7 +245,7 @@ class CircuitBreakerState:
     state: Literal["closed", "open", "half_open"]  # closed=正常, open=熔断, half_open=试探
     failure_count: int = 0
     success_count: int = 0
-    last_failure_time: Optional[str] = None
+    last_failure_time: str | None = None
     last_state_change: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     opened_count: int = 0  # 累计熔断次数
 
@@ -254,14 +263,14 @@ class ShadowPrediction:
 
     # 预测内容
     predicted_mode: str = ""  # 预测的最佳执行模式
-    predicted_agents: List[str] = field(default_factory=list)
-    predicted_tools: List[str] = field(default_factory=list)
+    predicted_agents: list[str] = field(default_factory=list)
+    predicted_tools: list[str] = field(default_factory=list)
     confidence: float = 0.0
 
     # 实际结果（用于对比）
     actual_mode: str = ""
-    actual_agents: List[str] = field(default_factory=list)
-    actual_tools: List[str] = field(default_factory=list)
+    actual_agents: list[str] = field(default_factory=list)
+    actual_tools: list[str] = field(default_factory=list)
 
     # 预测准确性
     is_correct: bool = False
@@ -287,7 +296,7 @@ class ObservabilityEvent:
     plan_id: str = ""
 
     # 事件详情
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 # ============ Phase 4: Plan Feedback ============
@@ -304,16 +313,16 @@ class PlanFeedback:
     decision: Literal["accept", "reject", "supplement"] = "accept"
     priority: Literal["high", "normal"] = "normal"
     source: Literal["reviewer", "user"] = "reviewer"
-    related_plan_id: Optional[str] = None
-    related_task_id: Optional[str] = None
+    related_plan_id: str | None = None
+    related_task_id: str | None = None
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
     # Review-specific fields
-    review_id: Optional[str] = None
-    review_decision: Optional[str] = None  # APPROVED, REJECTED, etc.
-    review_comments: List[Dict[str, Any]] = field(default_factory=list)
+    review_id: str | None = None
+    review_decision: str | None = None  # APPROVED, REJECTED, etc.
+    review_comments: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "feedback_id": self.feedback_id,
             "feedback_type": self.feedback_type,

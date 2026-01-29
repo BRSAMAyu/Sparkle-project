@@ -1,38 +1,38 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.intervention import EvidenceRef
 
 
 class EventIngestItem(BaseModel):
-    event_id: Optional[str] = None
+    event_id: str | None = None
     event_type: str = Field(..., min_length=1, max_length=120)
     schema_version: str = Field(..., min_length=1, max_length=50)
     source: str = Field(..., min_length=1, max_length=50)
-    ts_ms: Optional[int] = None
-    entities: Optional[Dict[str, Any]] = None
-    payload: Optional[Dict[str, Any]] = None
-    user_id: Optional[UUID] = None
+    ts_ms: int | None = None
+    entities: dict[str, Any] | None = None
+    payload: dict[str, Any] | None = None
+    user_id: UUID | None = None
 
 
 class EventIngestRequest(BaseModel):
-    events: List[EventIngestItem] = Field(..., min_length=1, max_length=200)
+    events: list[EventIngestItem] = Field(..., min_length=1, max_length=200)
 
 
 class EventIngestResult(BaseModel):
     event_id: str
     status: str
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class EventIngestResponse(BaseModel):
     accepted: int
     deduped: int
     failed: int
-    results: List[EventIngestResult]
+    results: list[EventIngestResult]
 
 
 class EventDetailResponse(BaseModel):
@@ -42,8 +42,8 @@ class EventDetailResponse(BaseModel):
     schema_version: str
     source: str
     ts_ms: int
-    entities: Optional[Dict[str, Any]] = None
-    payload: Optional[Dict[str, Any]] = None
+    entities: dict[str, Any] | None = None
+    payload: dict[str, Any] | None = None
     deleted: bool
     created_at: datetime
 
@@ -51,7 +51,7 @@ class EventDetailResponse(BaseModel):
 
 
 class EvidenceResolveRequest(BaseModel):
-    items: List[EvidenceRef]
+    items: list[EvidenceRef]
 
 
 class UserStateSummary(BaseModel):
@@ -64,8 +64,8 @@ class UserStateSummary(BaseModel):
     strain_index: float
     focus_mode: bool
     sprint_mode: bool
-    time_context: Optional[Dict[str, Any]] = None
-    derived_event_ids: Optional[List[str]] = None
+    time_context: dict[str, Any] | None = None
+    derived_event_ids: list[str] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -74,18 +74,18 @@ class EvidenceResolveItem(BaseModel):
     type: str
     id: str
     status: str
-    event: Optional[EventDetailResponse] = None
-    state: Optional[UserStateSummary] = None
-    error: Optional[Dict[str, Any]] = None
-    concept: Optional[Dict[str, Any]] = None
-    strategy: Optional[Dict[str, Any]] = None
-    task: Optional[Dict[str, Any]] = None
-    summary: Optional[Dict[str, Any]] = None
-    redaction_reason: Optional[str] = None
+    event: EventDetailResponse | None = None
+    state: UserStateSummary | None = None
+    error: dict[str, Any] | None = None
+    concept: dict[str, Any] | None = None
+    strategy: dict[str, Any] | None = None
+    task: dict[str, Any] | None = None
+    summary: dict[str, Any] | None = None
+    redaction_reason: str | None = None
 
 
 class EvidenceResolveResponse(BaseModel):
-    resolved: List[EvidenceResolveItem]
+    resolved: list[EvidenceResolveItem]
 
 
 class EventDeleteResponse(BaseModel):

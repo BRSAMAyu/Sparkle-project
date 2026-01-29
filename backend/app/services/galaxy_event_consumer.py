@@ -2,14 +2,13 @@
 Galaxy 事件消费者 - 处理错题创建事件
 """
 import asyncio
-from uuid import UUID
 from datetime import datetime
+
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
-from app.services.galaxy_service import GalaxyService
 from app.db.session import AsyncSessionLocal
+from app.services.galaxy_service import GalaxyService
 
 
 class GalaxyEventConsumer:

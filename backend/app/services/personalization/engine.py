@@ -1,7 +1,6 @@
 """
 Personalization Engine - 偏好到策略的映射中心
 """
-from typing import Optional, Dict
 from uuid import UUID
 
 from .preference_service import PreferenceService
@@ -26,8 +25,8 @@ class PersonalizationEngine:
     async def get_llm_profile(
         self,
         user_id: UUID,
-        session_context: Optional[Dict] = None,
-        override_preferences: Optional[Dict] = None,
+        session_context: dict | None = None,
+        override_preferences: dict | None = None,
     ) -> LLMProfile:
         """生成 AI 系统策略配置"""
         prefs = await self.pref_service.get_preferences(user_id)
@@ -88,7 +87,7 @@ class PersonalizationEngine:
     async def get_push_policy_profile(
         self,
         user_id: UUID,
-        override_preferences: Optional[Dict] = None,
+        override_preferences: dict | None = None,
     ) -> PushPolicyProfile:
         """生成推送系统策略配置"""
         prefs = await self.pref_service.get_preferences(user_id)
@@ -144,7 +143,7 @@ class PersonalizationEngine:
     async def get_task_plan_profile(
         self,
         user_id: UUID,
-        override_preferences: Optional[Dict] = None,
+        override_preferences: dict | None = None,
     ) -> TaskPlanProfile:
         """生成任务规划策略配置"""
         prefs = await self.pref_service.get_preferences(user_id)
@@ -193,7 +192,7 @@ class PersonalizationEngine:
         return personas.get(persona, personas["coach"])
 
     @staticmethod
-    def _slot_to_minutes(slot: Dict, min_key: str, fallback_key: str, default: int) -> int:
+    def _slot_to_minutes(slot: dict, min_key: str, fallback_key: str, default: int) -> int:
         value = slot.get(min_key)
         if value is None:
             value = slot.get(fallback_key, default)

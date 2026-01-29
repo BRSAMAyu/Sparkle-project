@@ -2,10 +2,9 @@
 Group file service
 群组文件服务
 """
-from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,7 +17,7 @@ class GroupFileService:
     """群文件服务"""
 
     @staticmethod
-    def _allowed_roles(role: GroupRole) -> List[GroupRole]:
+    def _allowed_roles(role: GroupRole) -> list[GroupRole]:
         if role == GroupRole.OWNER:
             return [GroupRole.MEMBER, GroupRole.ADMIN, GroupRole.OWNER]
         if role == GroupRole.ADMIN:
@@ -50,12 +49,12 @@ class GroupFileService:
         group_id: UUID,
         user_id: UUID,
         file_id: UUID,
-        category: Optional[str],
-        tags: Optional[List[str]],
+        category: str | None,
+        tags: list[str] | None,
         view_role: GroupRole,
         download_role: GroupRole,
         manage_role: GroupRole,
-    ) -> Tuple[GroupFile, StoredFile]:
+    ) -> tuple[GroupFile, StoredFile]:
         await GroupFileService._require_member(db, group_id, user_id)
 
         result = await db.execute(
@@ -119,10 +118,10 @@ class GroupFileService:
         db: AsyncSession,
         group_id: UUID,
         user_id: UUID,
-        category: Optional[str],
+        category: str | None,
         limit: int,
         offset: int,
-    ) -> Tuple[List[GroupFile], GroupRole]:
+    ) -> tuple[list[GroupFile], GroupRole]:
         member = await GroupFileService._require_member(db, group_id, user_id)
         allowed_roles = GroupFileService._allowed_roles(member.role)
 
@@ -184,7 +183,7 @@ class GroupFileService:
         db: AsyncSession,
         group_id: UUID,
         user_id: UUID,
-    ) -> List[Tuple[Optional[str], int]]:
+    ) -> list[tuple[str | None, int]]:
         member = await GroupFileService._require_member(db, group_id, user_id)
         allowed_roles = GroupFileService._allowed_roles(member.role)
 

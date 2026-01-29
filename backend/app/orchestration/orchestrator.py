@@ -1,83 +1,75 @@
-import json
 import asyncio
+import contextlib
+import json
 import time
-from typing import AsyncGenerator, List, Dict, Optional, Any
-from loguru import logger
-from datetime import datetime
 import uuid
+from collections.abc import AsyncGenerator
+from datetime import datetime
+from typing import Any
 
-from google.protobuf.json_format import MessageToDict
 from google.protobuf import struct_pb2
-
+from google.protobuf.json_format import MessageToDict
+from loguru import logger
+from opentelemetry import trace
+from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.llm_service import llm_service
-from app.services.system_update_service import SystemUpdateService
-from app.services.knowledge_service import KnowledgeService
-from app.services.galaxy_service import GalaxyService
-from app.services.user_service import UserService
-from app.services.focus_service import focus_service
-from app.models.task import Task, TaskStatus as ModelTaskStatus
-from app.models.plan import Plan
-from sqlalchemy import select, and_, desc, asc, func
-from app.orchestration.prompts import build_system_prompt
-from app.orchestration.executor import ToolExecutor
-from app.orchestration.state_manager import SessionStateManager, FSMState
-from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-from app.orchestration.validator import RequestValidator, ValidationResult
-from app.orchestration.composer import ResponseComposer
-from app.orchestration.context_pruner import ContextPruner
-from app.orchestration.token_tracker import TokenTracker
-from app.routing.tool_preference_router import ToolPreferenceRouter
-from app.gen.agent.v1 import agent_service_pb2
-from app.config import settings
-from app.core.metrics import (
-    REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE, TOOL_EXECUTION_COUNT, ACTIVE_SESSIONS
-)
-from app.core.business_metrics import (
-    COLLABORATION_SUCCESS,
-    COLLABORATION_LATENCY,
-    HITL_REQUESTED
-)
-from app.core.pending_actions import pending_actions_store
-from app.orchestration.statechart_engine import WorkflowState, StateGraph
+
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
+from app.config import settings
+from app.core.business_metrics import COLLABORATION_LATENCY, COLLABORATION_SUCCESS, HITL_REQUESTED
+from app.core.metrics import ACTIVE_SESSIONS, REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE
+from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
-from app.core.celery_app import schedule_long_task
-from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
-from opentelemetry import trace
+from app.gen.agent.v1 import agent_service_pb2
+from app.models.plan import Plan
+from app.models.task import Task
+from app.models.task import TaskStatus as ModelTaskStatus
+
+# Phase 3: Circuit Breaker, Observability, Shadow Mode
+from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
+from app.orchestration.composer import ResponseComposer
+from app.orchestration.context_pruner import ContextPruner
+from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.lang_graph_planner import LangGraphPlanner
+
+# Multi-Agent Mode Support
+from app.orchestration.multi_agent_adapter import CHAT_MODE_STANDARD, execute_multi_agent_workflow
+from app.orchestration.observability_logger import observability_logger
+from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.request_router import RequestRouter
-from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.schemas import (
-    ExecutablePlan, FeedbackPayload, StateSnapshot,
-    VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
     MAX_REPLAN_ATTEMPTS,
-    REPLAN_RATE_LIMIT_WINDOW,
     REPLAN_MAX_PER_WINDOW,
+    REPLAN_RATE_LIMIT_WINDOW,
+    VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
+    ExecutablePlan,
 )
-from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
-
-# Phase 3: Circuit Breaker, Observability, Shadow Mode
-from app.orchestration.circuit_breaker import (
-    CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
-)
-# Multi-Agent Mode Support
-from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, CHAT_MODE_STANDARD
-from app.orchestration.observability_logger import observability_logger
-from app.services.shadow_prediction_service import shadow_prediction_service
+from app.orchestration.statechart_engine import WorkflowState
 
 # Phase 4: Sufficiency Checking
-from app.orchestration.sufficiency_checker import sufficiency_checker, SufficiencyStatus
+from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
+from app.orchestration.token_tracker import TokenTracker
 
 # Phase 5: Plan Execution Validation
 from app.orchestration.tool_result_extractor import ToolResultExtractor
-from app.services.plan_execution_validator import PlanExecutionValidator
+from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
+from app.orchestration.validator import RequestValidator
+from app.routing.tool_preference_router import ToolPreferenceRouter
+from app.services.focus_service import focus_service
+from app.services.llm_service import llm_service
 from app.services.plan_execution_record_service import PlanExecutionRecordService
-from app.orchestration.transparency_data_generator import TransparencyDataGenerator, StepType
+from app.services.plan_execution_validator import PlanExecutionValidator
+from app.services.shadow_prediction_service import shadow_prediction_service
+from app.services.system_update_service import SystemUpdateService
+from app.services.user_service import UserService
 
 # FSM States
 STATE_INIT = "INIT"
@@ -156,7 +148,7 @@ class ChatOrchestrator:
     6. Response composition
     """
 
-    def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None, user_id: Optional[str] = None):
+    def __init__(self, db_session: AsyncSession | None = None, redis_client=None, user_id: str | None = None):
         if redis_client is None:
             logger.error("ChatOrchestrator requires Redis, but no redis_client was provided")
             raise ValueError("redis_client is required for ChatOrchestrator")
@@ -191,13 +183,13 @@ class ChatOrchestrator:
 
         # Initialize State Graph
         self.graph = create_standard_chat_graph()
-        
+
         # Connect Checkpointer
         self.graph.checkpointer = RedisCheckpointer(redis_client)
-        
+
         # Connect Visualizer and Tracer
-        from app.visualization.realtime_visualizer import visualizer
         from app.visualization.execution_tracer import ExecutionTracer
+        from app.visualization.realtime_visualizer import visualizer
 
         self.tracer = ExecutionTracer(redis_client)
 
@@ -260,9 +252,9 @@ class ChatOrchestrator:
         # Ensure tools are registered
         self._ensure_tools_registered()
 
-    async def _emit_system_updates(self, user_id: str) -> List[agent_service_pb2.ChatResponse]:
+    async def _emit_system_updates(self, user_id: str) -> list[agent_service_pb2.ChatResponse]:
         updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
-        responses: List[agent_service_pb2.ChatResponse] = []
+        responses: list[agent_service_pb2.ChatResponse] = []
         for update in updates:
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
@@ -302,7 +294,7 @@ class ChatOrchestrator:
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
 
-    def _infer_domain_for_tool(self, tool_name: str) -> Optional[str]:
+    def _infer_domain_for_tool(self, tool_name: str) -> str | None:
         tool_lower = tool_name.lower()
         if "task" in tool_lower:
             return "tasks"
@@ -336,23 +328,23 @@ class ChatOrchestrator:
             )
         logger.info(f"Session {session_id} State: {state} ({details})")
 
-    async def _check_idempotency(self, session_id: str, request_id: str) -> Optional[Dict[str, Any]]:
+    async def _check_idempotency(self, session_id: str, request_id: str) -> dict[str, Any] | None:
         """
         Check if request was already processed
-        
+
         Returns:
             Optional[Dict]: Cached response if duplicate, None otherwise
         """
         if not self.state_manager:
             return None
-        
+
         return await self.state_manager.get_cached_response(session_id, request_id)
 
     async def _acquire_session_lock(self, session_id: str, request_id: str) -> bool:
         """Acquire distributed lock for session"""
         if not self.state_manager:
             return True
-        
+
         return await self.state_manager.acquire_lock(session_id, request_id)
 
     async def _release_session_lock(self, session_id: str, request_id: str):
@@ -360,7 +352,7 @@ class ChatOrchestrator:
         if self.state_manager:
             await self.state_manager.release_lock(session_id, request_id)
 
-    async def _cache_response(self, session_id: str, request_id: str, response_data: Dict[str, Any]):
+    async def _cache_response(self, session_id: str, request_id: str, response_data: dict[str, Any]):
         """Cache response for idempotency"""
         if self.state_manager:
             await self.state_manager.cache_response(session_id, request_id, response_data)
@@ -421,7 +413,7 @@ class ChatOrchestrator:
 
         return "\n".join(lines)
 
-    async def _load_context_versions(self, user_id: str) -> Dict[str, str]:
+    async def _load_context_versions(self, user_id: str) -> dict[str, str]:
         if not self.redis:
             return {}
         key = f"{CONTEXT_VERSION_KEY_PREFIX}{user_id}"
@@ -436,7 +428,7 @@ class ChatOrchestrator:
             logger.warning(f"Failed to load context versions: {e}")
         return {}
 
-    async def _save_context_versions(self, user_id: str, versions: Dict[str, str]) -> None:
+    async def _save_context_versions(self, user_id: str, versions: dict[str, str]) -> None:
         if not self.redis:
             return
         key = f"{CONTEXT_VERSION_KEY_PREFIX}{user_id}"
@@ -449,14 +441,14 @@ class ChatOrchestrator:
     async def _self_heal_versions(
         self,
         user_id: str,
-        overlay_versions: Dict[str, str],
-        db_session: Optional[AsyncSession],
+        overlay_versions: dict[str, str],
+        db_session: AsyncSession | None,
     ) -> None:
         if not overlay_versions or not user_id:
             return
 
         previous = await self._load_context_versions(user_id)
-        healed: List[str] = []
+        healed: list[str] = []
 
         for domain in REALTIME_VERSION_DOMAINS:
             new_v = overlay_versions.get(domain)
@@ -477,7 +469,7 @@ class ChatOrchestrator:
             await self._save_context_versions(user_id, previous)
             logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
 
-    async def _check_replan_rate_limit(self, plan_id: Optional[uuid.UUID]) -> tuple[bool, int]:
+    async def _check_replan_rate_limit(self, plan_id: uuid.UUID | None) -> tuple[bool, int]:
         """Check replan rate limit to prevent excessive replanning
 
         Args:
@@ -499,7 +491,7 @@ class ChatOrchestrator:
             logger.warning(f"Failed to check replan rate limit: {e}")
             return True, 0
 
-    def _merge_user_contexts(self, local_context: Dict[str, Any], grpc_context: Dict[str, Any]) -> Dict[str, Any]:
+    def _merge_user_contexts(self, local_context: dict[str, Any], grpc_context: dict[str, Any]) -> dict[str, Any]:
         """
         P0: Merge user context from Go Gateway (gRPC) with local context (Python).
         Prioritizes gRPC context as it's more recent (fetched at request time).
@@ -528,7 +520,7 @@ class ChatOrchestrator:
         logger.debug(f"Merged context keys: {list(merged.keys())}")
         return merged
 
-    async def _get_task_status_summary(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+    async def _get_task_status_summary(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """Get summary of all tasks for user across all plans."""
         try:
             # Pending count
@@ -539,7 +531,7 @@ class ChatOrchestrator:
                 )
             )
             pending = result.scalar() or 0
-            
+
             # In progress count
             result = await db_session.execute(
                 select(func.count(Task.id)).where(
@@ -548,7 +540,7 @@ class ChatOrchestrator:
                 )
             )
             in_progress = result.scalar() or 0
-            
+
             # Overdue count (pending/in_progress and due_date < now)
             result = await db_session.execute(
                 select(func.count(Task.id)).where(
@@ -558,7 +550,7 @@ class ChatOrchestrator:
                 )
             )
             overdue = result.scalar() or 0
-            
+
             return {
                 "pending": pending,
                 "in_progress": in_progress,
@@ -568,14 +560,15 @@ class ChatOrchestrator:
             logger.warning(f"Failed to get task status summary: {e}")
             return {"pending": 0, "in_progress": 0, "overdue": 0}
 
-    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """获取认知模式摘要，注入 LLM 上下文
 
         当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
         """
         try:
-            from app.services.cognitive_service import CognitiveService
             from uuid import UUID
+
+            from app.services.cognitive_service import CognitiveService
 
             cognitive = CognitiveService(db_session)
             patterns = await cognitive.get_user_patterns(UUID(user_id), min_confidence=0.6)
@@ -597,7 +590,7 @@ class ChatOrchestrator:
 
         return {"has_cognitive_patterns": False}
 
-    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """
         Build comprehensive user context from UserService
 
@@ -635,15 +628,15 @@ class ChatOrchestrator:
                 logger.warning(f"Failed to build LLM profile: {e}")
 
             # --- Use ContextOrchestrator (P4) ---
-            from app.core.context_manager import ContextOrchestrator, CognitiveContext
-            
+            from app.core.context_manager import ContextOrchestrator
+
             context_orchestrator = ContextOrchestrator(db_session, self.redis)
             # Fetch aggregated context (cached)
             cognitive_context = await context_orchestrator.get_user_context(user_id)
-            
+
             # Map CognitiveContext to legacy dict format for backward compatibility
             # In future, we should use CognitiveContext object directly in prompt builder
-            
+
             user_context_data = None
             if cognitive_context:
                 # Use data from new orchestrator
@@ -651,7 +644,7 @@ class ChatOrchestrator:
                     "user_id": user_id,
                     "nickname": "同学",
                 }
-                
+
                 # Fetch active plans manually if not in cognitive context yet
                 # Active plans (latest 3)
                 plans_stmt = (
@@ -659,7 +652,7 @@ class ChatOrchestrator:
                     .where(
                         and_(
                             Plan.user_id == uuid.UUID(user_id),
-                            Plan.is_active == True
+                            Plan.is_active
                         )
                     )
                     .order_by(desc(Plan.created_at))
@@ -698,17 +691,17 @@ class ChatOrchestrator:
                     # 认知棱镜数据
                     "cognitive_insights": cognitive_insights
                 }
-            
+
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
             logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
-            
+
             # ... Legacy Logic ...
             user_context = base_user_context
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
 
             if user_context:
                 user_context_data = user_context.model_dump()
-            
+
             # Next actions (top pending tasks)
             tasks_stmt = (
                 select(Task)
@@ -740,7 +733,7 @@ class ChatOrchestrator:
                 .where(
                     and_(
                         Plan.user_id == uuid.UUID(user_id),
-                        Plan.is_active == True
+                        Plan.is_active
                     )
                 )
                 .order_by(desc(Plan.created_at))
@@ -803,7 +796,7 @@ class ChatOrchestrator:
                 "llm_profile": None,
             }
 
-    async def _build_conversation_context(self, session_id: str, user_id: str) -> Dict[str, Any]:
+    async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
         """
         Build conversation context with ContextPruner
 
@@ -832,7 +825,7 @@ class ChatOrchestrator:
             logger.error(f"Failed to prune conversation history: {e}")
             return {"messages": [], "summary": None}
 
-    def _log_context_injection(self, user_id: str, context: Optional[Dict[str, Any]]) -> None:
+    def _log_context_injection(self, user_id: str, context: dict[str, Any] | None) -> None:
         """Log context injection details for observability."""
         if not context or not isinstance(context, dict):
             logger.info("Context injection for user {}: empty", user_id)
@@ -860,7 +853,7 @@ class ChatOrchestrator:
             last_activity
         )
 
-    async def _get_tools_schema(self) -> List[Dict[str, Any]]:
+    async def _get_tools_schema(self) -> list[dict[str, Any]]:
         """Get tools from dynamic registry"""
         try:
             return dynamic_tool_registry.get_openai_tools_schema()
@@ -871,14 +864,14 @@ class ChatOrchestrator:
     async def process_stream(
         self,
         request: agent_service_pb2.ChatRequest,
-        db_session: Optional[AsyncSession] = None,
-        context_data: Optional[Dict[str, Any]] = None
+        db_session: AsyncSession | None = None,
+        context_data: dict[str, Any] | None = None
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
         Process the incoming chat request with enhanced features
         """
         tracer = trace.get_tracer(__name__)
-        
+
         # Start Root Span
         with tracer.start_as_current_span("orchestrator.process_stream") as span:
             span.set_attribute("session_id", request.session_id)
@@ -894,10 +887,10 @@ class ChatOrchestrator:
             response_id = str(uuid.uuid4())
             workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
             prompt_version = (context_data or {}).get("prompt_version", "v1")
-            
+
             # Use provided session or instance session
             active_db = db_session or self.db_session
-            
+
             # Step 0: Request Validation (with quota check)
             with tracer.start_as_current_span("orchestrator.validate_request"):
                 if self.validator:
@@ -940,7 +933,7 @@ class ChatOrchestrator:
             # Step 2: Acquire Distributed Lock
             with tracer.start_as_current_span("redis.acquire_lock"):
                 lock_acquired = await self._acquire_session_lock(session_id, request_id)
-            
+
             if not lock_acquired:
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,
@@ -957,7 +950,7 @@ class ChatOrchestrator:
 
             total_prompt_tokens = 0
             total_completion_tokens = 0
-            transparency_generator: Optional[TransparencyDataGenerator] = None
+            transparency_generator: TransparencyDataGenerator | None = None
 
             try:
                 # Step 3: Initialize Workflow State
@@ -1001,10 +994,8 @@ class ChatOrchestrator:
                 # Extract plan_id from extra_context for PlanScope
                 plan_id = None
                 if grpc_context and "plan_id" in grpc_context:
-                    try:
+                    with contextlib.suppress(ValueError, AttributeError):
                         plan_id = uuid.UUID(grpc_context["plan_id"])
-                    except (ValueError, AttributeError):
-                        pass
 
                 # P0: Auto-switch plan based on task context if no plan_id provided
                 plan_switched = False
@@ -1203,7 +1194,7 @@ class ChatOrchestrator:
 
                         except Exception as e:
                             logger.warning(f"Sufficiency check failed, continuing: {e}")
-                
+
                 # Initialize transparency tracking (guarded by global settings).
                 transparency_enabled = bool(
                     settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
@@ -1213,7 +1204,7 @@ class ChatOrchestrator:
                     enabled=transparency_enabled,
                 )
 
-                async def emit_transparency_event(event: Optional[Dict[str, Any]]) -> None:
+                async def emit_transparency_event(event: dict[str, Any] | None) -> None:
                     if not event:
                         return
                     try:
@@ -1268,7 +1259,7 @@ class ChatOrchestrator:
                 # Inject Dependencies
                 if active_db:
                     state.context_data["db_session"] = active_db
-                
+
                 state.context_data.update({
                     "user_id": user_id,
                     "session_id": session_id,
@@ -1457,7 +1448,7 @@ class ChatOrchestrator:
                         # 如果触发了信息收集，继续正常流程（不中断）
                         # 用户回复后会再次进入流程，此时信息会更充足
                         if info_collection_triggered:
-                            logger.info(f"Information collection triggered, continuing with planning")
+                            logger.info("Information collection triggered, continuing with planning")
 
                     except Exception as e:
                         logger.warning(f"Information collection check failed: {e}")
@@ -1478,7 +1469,7 @@ class ChatOrchestrator:
                         )
                         # Degrade to direct mode
                         await stream_callback(agent_service_pb2.ChatResponse(
-                            delta=f"\n\n⚠️ 智能规划暂时不可用，使用标准模式"
+                            delta="\n\n⚠️ 智能规划暂时不可用，使用标准模式"
                         ))
                         route_decision.execution_mode = "direct"
                     else:
@@ -1597,7 +1588,7 @@ class ChatOrchestrator:
                                 elif executable_plan.confidence < 0.7 and not replan_attempted:
                                     # Low confidence + conflict → Discard plan
                                     await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta=f"\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
+                                        delta="\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
                                     ))
                                     # === Phase 3: Log validation failure ===
                                     await self.observability.log_validation_failed(
@@ -1685,8 +1676,8 @@ class ChatOrchestrator:
 
                             # === Phase 4: Plan version conflict check before execution ===
                             if plan_id and hasattr(executable_plan, 'plan_version'):
-                                from app.services.plan_state_service import PlanStateService
                                 from app.services.plan_feedback_service import get_plan_feedback_service
+                                from app.services.plan_state_service import PlanStateService
 
                                 plan_state_service = PlanStateService(active_db, self.redis)
                                 feedback_service = get_plan_feedback_service(active_db, self.redis)
@@ -1695,7 +1686,7 @@ class ChatOrchestrator:
                                 rate_allowed, rate_count = await self._check_replan_rate_limit(plan_id)
                                 if not rate_allowed:
                                     await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta=f"\n\n⚠️ 计划重规划过于频繁，请稍后再试。"
+                                        delta="\n\n⚠️ 计划重规划过于频繁，请稍后再试。"
                                     ))
                                     return
 
@@ -1778,7 +1769,7 @@ class ChatOrchestrator:
                                         # High confidence: auto replan
                                         if replan_attempt == 0:
                                             await stream_callback(agent_service_pb2.ChatResponse(
-                                                delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                                delta="\n\n⚠️ 检测到状态变更，正在重新规划..."
                                             ))
 
                                         # Create new snapshot and replan
@@ -1972,20 +1963,20 @@ class ChatOrchestrator:
 
                 # Launch Graph Execution in Background (Managed)
                 logger.info("🚀 Launching StateGraph Execution")
-                
+
                 with tracer.start_as_current_span("agent_graph.invoke"):
                     graph_task = await task_manager.spawn(
                         self.graph.invoke(state),
                         task_name="orchestrator_graph",
                         user_id=str(user_id)
                     )
-                    
+
                     # Stream from queue
                     while not graph_task.done() or not queue.empty():
                         try:
                             # Wait for next item with timeout to check task status
                             item = await asyncio.wait_for(queue.get(), timeout=0.1)
-                            
+
                             # Track token usage if present
                             if item.HasField("usage"):
                                 total_prompt_tokens = item.usage.prompt_tokens
@@ -1997,19 +1988,19 @@ class ChatOrchestrator:
 
                             yield item
                             queue.task_done()
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             if graph_task.done():
                                 break
-            
+
                 # Check for exceptions
                 if graph_task.done():
                     exc = graph_task.exception()
                     if exc:
                         raise exc
-                    
+
                     # Get final state
                     final_state = graph_task.result()
-                    
+
                     # Get full response from state history
                     full_response = ""
                     # Find the last assistant message
@@ -2017,11 +2008,11 @@ class ChatOrchestrator:
                         if msg["role"] == "assistant":
                             full_response = msg["content"]
                             break
-                    
+
                     # Compose Final Response (Idempotency Cache)
                     # Note: Tool results are already in history, but ResponseComposer might need them separate.
                     # For now, we trust full_response is sufficient or we can extract from context.
-                    
+
                     llm_profile_meta = {}
                     if isinstance(user_context_payload, dict):
                         llm_profile_meta = user_context_payload.get("llm_profile") or {}
@@ -2102,24 +2093,25 @@ class ChatOrchestrator:
                     try:
                         from app.services.decision_record_service import DecisionRecordService
 
-                        decision_service = DecisionRecordService(self.db_session)
-                        await decision_service.record_decision(
-                            user_id=uuid.UUID(str(user_id)),
-                            module="ai",
-                            action="generate_response",
-                            preference_version=(user_context_payload or {}).get("preference_version", 0),
-                            preferences_snapshot={
-                                "verbosity": llm_profile_meta.get("verbosity_target"),
-                                "temperature": llm_profile_meta.get("temperature"),
-                                "tone": llm_profile_meta.get("tone"),
-                            },
-                            outcome=f"Generated response with {len(full_response)} chars",
-                        )
+                        if active_db:
+                            decision_service = DecisionRecordService(active_db)
+                            await decision_service.record_decision(
+                                user_id=uuid.UUID(str(user_id)),
+                                module="ai",
+                                action="generate_response",
+                                preference_version=(user_context_payload or {}).get("preference_version", 0),
+                                preferences_snapshot={
+                                    "verbosity": llm_profile_meta.get("verbosity_target"),
+                                    "temperature": llm_profile_meta.get("temperature"),
+                                    "tone": llm_profile_meta.get("tone"),
+                                },
+                                outcome=f"Generated response with {len(full_response)} chars",
+                            )
                     except Exception as e:
                         logger.warning(f"Failed to record decision: {e}")
                     with tracer.start_as_current_span("orchestrator.cache_response"):
                         await self._cache_response(session_id, request_id, final_response_data)
-                    
+
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.
                     if transparency_generator is not None and "emit_transparency_event" in locals():
@@ -2140,7 +2132,7 @@ class ChatOrchestrator:
                     )
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-                
+
                 COLLABORATION_SUCCESS.labels(
                     workflow_type="standard_chat",
                     agents_used="orchestrator",
@@ -2149,7 +2141,7 @@ class ChatOrchestrator:
 
             except Exception as e:
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
-                
+
                 COLLABORATION_SUCCESS.labels(
                     workflow_type="standard_chat",
                     agents_used="orchestrator",
@@ -2170,13 +2162,13 @@ class ChatOrchestrator:
                     ),
                     finish_reason=agent_service_pb2.ERROR
                 )
-            
+
             finally:
                 ACTIVE_SESSIONS.dec()
                 latency = time.time() - start_time
                 REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
                 COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
-                
+
                 # Always release lock
                 await self._release_session_lock(session_id, request_id)
 
@@ -2266,9 +2258,9 @@ class ChatOrchestrator:
 
     async def _is_information_sufficient(
         self,
-        collected_info: Dict[str, Any],
+        collected_info: dict[str, Any],
         snapshot
-    ) -> tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         使用LLM判断当前收集的信息是否充足
 
@@ -2325,8 +2317,8 @@ class ChatOrchestrator:
 
     async def _generate_clarifying_question(
         self,
-        missing_aspects: List[str],
-        collected_info: Dict[str, Any]
+        missing_aspects: list[str],
+        collected_info: dict[str, Any]
     ) -> str:
         """
         生成追问
@@ -2367,7 +2359,7 @@ class ChatOrchestrator:
 
     async def _synthesize_collected_info(
         self,
-        collected_info: Dict[str, Any]
+        collected_info: dict[str, Any]
     ) -> str:
         """
         提炼收集的信息为总结
@@ -2407,7 +2399,7 @@ class ChatOrchestrator:
     async def _update_state_with_collected_info(
         self,
         session_id: str,
-        collected_info: Dict[str, Any],
+        collected_info: dict[str, Any],
         summary: str
     ):
         """
@@ -2563,3 +2555,7 @@ class ChatOrchestrator:
             logger.warning(f"Failed to set info collection flag: {e}")
 
         return True
+
+
+# Backwards-compatible alias for benchmarks/tests
+Orchestrator = ChatOrchestrator

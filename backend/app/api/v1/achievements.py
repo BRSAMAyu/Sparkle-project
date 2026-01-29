@@ -2,37 +2,29 @@
 Achievements API Endpoints
 成就系统 API 端点
 """
-from typing import Dict, Any, Optional
-from uuid import UUID
+from datetime import datetime
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.db.session import get_db
 from app.models.achievement import AchievementRarity
+from app.models.user import User
 from app.schemas.achievement import (
-    AchievementListResponse,
-    AchievementMapResponse,
-    StreakStatsResponse,
     ContractCreateRequest,
     ContractResponse,
-    ContractCheckResponse,
-    GalaxySkinListResponse,
-    TitleListResponse,
-    AchievementStatsResponse,
-    AchievementUnlockEvent,
 )
-from app.services.achievement_engine import AchievementEngine, ContractService, AchievementEvent
+from app.services.achievement_engine import AchievementEngine, ContractService
 
 router = APIRouter()
 
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def list_achievements(
-    category: Optional[str] = Query(None, description="Filter by category"),
-    rarity: Optional[AchievementRarity] = Query(None, description="Filter by rarity"),
+    category: str | None = Query(None, description="Filter by category"),
+    rarity: AchievementRarity | None = Query(None, description="Filter by rarity"),
     include_hidden: bool = Query(False, description="Include hidden achievements"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -52,7 +44,7 @@ async def list_achievements(
     return result
 
 
-@router.get("/stats", response_model=Dict[str, Any])
+@router.get("/stats", response_model=dict[str, Any])
 async def get_achievement_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -67,7 +59,7 @@ async def get_achievement_stats(
     return stats
 
 
-@router.get("/map", response_model=Dict[str, Any])
+@router.get("/map", response_model=dict[str, Any])
 async def get_achievement_map(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -81,7 +73,7 @@ async def get_achievement_map(
     return await engine.get_achievement_map(current_user.id)
 
 
-@router.get("/streak", response_model=Dict[str, Any])
+@router.get("/streak", response_model=dict[str, Any])
 async def get_streak_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -95,7 +87,7 @@ async def get_streak_stats(
     return await engine.get_streak_stats(current_user.id)
 
 
-@router.get("/achievements/{achievement_id}", response_model=Dict[str, Any])
+@router.get("/achievements/{achievement_id}", response_model=dict[str, Any])
 async def get_achievement_detail(
     achievement_id: str = Path(..., description="Achievement ID"),
     current_user: User = Depends(get_current_user),
@@ -121,7 +113,7 @@ async def get_achievement_detail(
     }
 
 
-@router.post("/achievements/{achievement_id}/share", response_model=Dict[str, Any])
+@router.post("/achievements/{achievement_id}/share", response_model=dict[str, Any])
 async def share_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
     current_user: User = Depends(get_current_user),
@@ -152,7 +144,7 @@ async def share_achievement(
     }
 
 
-@router.post("/achievements/{achievement_id}/pin", response_model=Dict[str, Any])
+@router.post("/achievements/{achievement_id}/pin", response_model=dict[str, Any])
 async def pin_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
     pinned: bool = Query(..., description="Pin state"),
@@ -164,8 +156,9 @@ async def pin_achievement(
 
     Updates the pinned state of an achievement.
     """
+    from sqlalchemy import and_, select
+
     from app.models.achievement import UserAchievement
-    from sqlalchemy import select, and_
 
     query = select(UserAchievement).where(
         and_(
@@ -188,7 +181,7 @@ async def pin_achievement(
     }
 
 
-@router.get("/contracts", response_model=Dict[str, Any])
+@router.get("/contracts", response_model=dict[str, Any])
 async def get_contract_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -210,7 +203,7 @@ async def get_contract_status(
     }
 
 
-@router.post("/contracts", response_model=Dict[str, Any])
+@router.post("/contracts", response_model=dict[str, Any])
 async def create_contract(
     request: ContractCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -238,7 +231,7 @@ async def create_contract(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/contracts", response_model=Dict[str, Any])
+@router.delete("/contracts", response_model=dict[str, Any])
 async def cancel_contract(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -248,8 +241,9 @@ async def cancel_contract(
 
     Cancels active contract (forfeits staked photons).
     """
-    from app.models.achievement import SparkContract, ContractStatus
-    from sqlalchemy import select, and_
+    from sqlalchemy import and_, select
+
+    from app.models.achievement import ContractStatus, SparkContract
 
     query = select(SparkContract).where(
         and_(
@@ -276,7 +270,7 @@ async def cancel_contract(
     }
 
 
-@router.get("/skins", response_model=Dict[str, Any])
+@router.get("/skins", response_model=dict[str, Any])
 async def list_galaxy_skins(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -286,8 +280,9 @@ async def list_galaxy_skins(
 
     Returns all galaxy skins with unlock status.
     """
-    from app.models.achievement import GalaxySkin, UserGalaxySkin
     from sqlalchemy import select
+
+    from app.models.achievement import GalaxySkin, UserGalaxySkin
 
     # 获取所有皮肤
     query = select(GalaxySkin).order_by(GalaxySkin.sort_order)
@@ -326,7 +321,7 @@ async def list_galaxy_skins(
     }
 
 
-@router.post("/skins/{skin_id}/equip", response_model=Dict[str, Any])
+@router.post("/skins/{skin_id}/equip", response_model=dict[str, Any])
 async def equip_galaxy_skin(
     skin_id: str = Path(..., description="Skin ID"),
     current_user: User = Depends(get_current_user),
@@ -337,8 +332,9 @@ async def equip_galaxy_skin(
 
     Equips a galaxy skin.
     """
+    from sqlalchemy import and_, select, update
+
     from app.models.achievement import UserGalaxySkin
-    from sqlalchemy import select, and_, update
 
     # 检查皮肤是否已解锁
     query = select(UserGalaxySkin).where(
@@ -370,7 +366,7 @@ async def equip_galaxy_skin(
     }
 
 
-@router.get("/titles", response_model=Dict[str, Any])
+@router.get("/titles", response_model=dict[str, Any])
 async def list_user_titles(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -380,8 +376,9 @@ async def list_user_titles(
 
     Returns all user titles with equip status.
     """
-    from app.models.achievement import UserTitle
     from sqlalchemy import select
+
+    from app.models.achievement import UserTitle
 
     query = select(UserTitle).where(
         UserTitle.user_id == current_user.id
@@ -399,7 +396,7 @@ async def list_user_titles(
     }
 
 
-@router.post("/titles/{title_id}/equip", response_model=Dict[str, Any])
+@router.post("/titles/{title_id}/equip", response_model=dict[str, Any])
 async def equip_title(
     title_id: str = Path(..., description="Title ID"),
     current_user: User = Depends(get_current_user),
@@ -410,8 +407,9 @@ async def equip_title(
 
     Equips a user title.
     """
+    from sqlalchemy import and_, select, update
+
     from app.models.achievement import UserTitle
-    from sqlalchemy import select, and_, update
 
     # 检查称号是否存在
     query = select(UserTitle).where(
@@ -445,10 +443,10 @@ async def equip_title(
 
 # ========== Internal Event Endpoint ==========
 
-@router.post("/events/process", response_model=Dict[str, Any])
+@router.post("/events/process", response_model=dict[str, Any])
 async def process_achievement_event(
     event_type: str = Query(..., description="Event type"),
-    event_data: Optional[Dict[str, Any]] = None,
+    event_data: dict[str, Any] | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -477,9 +475,9 @@ async def process_achievement_event(
 
 # ========== Enhancement Endpoints ==========
 
-@router.get("/close-to-unlock", response_model=Dict[str, Any])
+@router.get("/close-to-unlock", response_model=dict[str, Any])
 async def get_close_to_unlock_achievements(
-    category: Optional[str] = Query(None, description="Filter by category (e.g., 'sprint')"),
+    category: str | None = Query(None, description="Filter by category (e.g., 'sprint')"),
     threshold: float = Query(0.8, description="Progress threshold (0.0-1.0)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)

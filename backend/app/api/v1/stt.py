@@ -2,16 +2,15 @@
 STT (Speech to Text) API
 语音转文字服务
 """
-from typing import Any
-from fastapi import APIRouter, UploadFile, File, WebSocket, Form, Depends, HTTPException, status
-from typing import Optional
-from app.services.stt_service import stt_service
 import os
 import uuid
-from app.config import settings
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile, WebSocket, status
+
 from app.api.deps import get_current_user
 from app.config import settings
 from app.core.security import decode_token
+from app.services.stt_service import stt_service
 from app.utils.helpers import save_upload_file
 
 router = APIRouter()
@@ -29,7 +28,7 @@ async def transcribe_audio(
     file_id = str(uuid.uuid4())
     ext = os.path.splitext(file.filename)[1] if file.filename else ".tmp"
     temp_path = os.path.join(settings.UPLOAD_DIR, f"{file_id}{ext}")
-    
+
     try:
         await save_upload_file(
             file,
@@ -46,17 +45,17 @@ async def transcribe_audio(
                 "audio/x-m4a",
             },
         )
-            
+
         # Transcribe
         result = await stt_service.transcribe_file(temp_path, language=language)
-        
+
         # Post-process (Enhance)
         if not result["error"] and result["text"]:
             enhanced = await stt_service.enhance_transcript(result["text"])
             result["enhanced_text"] = enhanced
-            
+
         return result
-        
+
     finally:
         # Cleanup
         if os.path.exists(temp_path):
@@ -81,7 +80,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await stt_service.handle_websocket_stream(websocket)
 
 
-def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
+def _extract_ws_token(websocket: WebSocket) -> str | None:
     auth_header = websocket.headers.get("authorization")
     if auth_header:
         parts = auth_header.split()

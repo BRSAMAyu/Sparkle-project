@@ -4,14 +4,14 @@ Content Quality Evaluator
 
 Automatically evaluates response quality to determine if it should be added to the seed library.
 """
-from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, case
+from typing import Any
+
 from loguru import logger
+from sqlalchemy import case, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.response_feedback import ResponseFeedback
-from app.models.seed_content import SeedLibrary, SeedItem, LibraryVisibility
 
 
 class ContentQualityEvaluator:
@@ -23,7 +23,7 @@ class ContentQualityEvaluator:
     async def evaluate_response_quality(
         self,
         response_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         评估回答质量
 
@@ -163,7 +163,7 @@ class ContentQualityEvaluator:
         min_feedback_count: int = 3,
         days_back: int = 30,
         limit: int = 50,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         查找候选入库的回复
 
@@ -180,7 +180,6 @@ class ContentQualityEvaluator:
 
         # Find responses with sufficient feedback
         # Group by response_id and count
-        from sqlalchemy import label
 
         feedback_count_subq = (
             select(
@@ -188,7 +187,7 @@ class ContentQualityEvaluator:
                 func.count(ResponseFeedback.id).label('feedback_count'),
                 func.sum(
                     case(
-                        (ResponseFeedback.is_positive == True, 1),
+                        (ResponseFeedback.is_positive, 1),
                         else_=0,
                     )
                 ).label('positive_count'),
@@ -232,8 +231,8 @@ class ContentQualityEvaluator:
     async def auto_seed_to_library(
         self,
         response_id: str,
-        target_library_id: Optional[str] = None,
-    ) -> Optional[str]:
+        target_library_id: str | None = None,
+    ) -> str | None:
         """
         自动将高质量回复添加到种子库
 

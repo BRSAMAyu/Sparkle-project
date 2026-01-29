@@ -1,27 +1,28 @@
 import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
 from uuid import UUID
+
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, and_
 
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.task import Task
+from app.models.user import User
 from app.services.llm_service import llm_service
 
-from app.models.user import User
 
 class FocusService:
     @staticmethod
     async def log_session(
         db: AsyncSession,
         user_id: UUID,
-        task_id: Optional[UUID],
+        task_id: UUID | None,
         start_time: datetime.datetime,
         end_time: datetime.datetime,
         duration_minutes: int,
         focus_type: FocusType = FocusType.POMODORO,
         status: FocusStatus = FocusStatus.COMPLETED
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Log a completed focus session and award flame points"""
         session = FocusSession(
             user_id=user_id,
@@ -33,33 +34,33 @@ class FocusService:
             status=status
         )
         db.add(session)
-        
+
         # Calculate Rewards
         flame_earned = 0
         leveled_up = False
         new_level = 0
-        
+
         if status == FocusStatus.COMPLETED:
-            # Base logic: 1 minute = 1 point. 
+            # Base logic: 1 minute = 1 point.
             # 100 points = 1.0 brightness = 1 level up.
             points = duration_minutes
             flame_earned = points
-            
+
             user = await db.get(User, user_id)
             if user:
                 # Add brightness (0.01 per minute)
                 increment = points / 100.0
                 user.flame_brightness += increment
-                
+
                 # Check Level Up
                 if user.flame_brightness >= 1.0:
                     levels_gained = int(user.flame_brightness)
                     user.flame_level += levels_gained
                     user.flame_brightness -= levels_gained
                     leveled_up = True
-                
+
                 new_level = user.flame_level
-                
+
             # Update Task Stats
             if task_id:
                 task = await db.get(Task, task_id)
@@ -80,7 +81,7 @@ class FocusService:
             hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
             event_type = AchievementEvent.STUDY_MINUTES_ACCUMULATED
 
-            if 23 <= hour or hour <= 5:
+            if hour >= 23 or hour <= 5:
                 # Night study special event
                 event_type = AchievementEvent.NIGHT_STUDY
             elif 5 <= hour <= 8:
@@ -116,10 +117,10 @@ class FocusService:
     async def get_today_stats(
         db: AsyncSession,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get focus stats for today"""
         today_start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        
+
         # Total duration
         stmt_duration = select(func.sum(FocusSession.duration_minutes)).where(
             FocusSession.user_id == user_id,
@@ -128,7 +129,7 @@ class FocusService:
         )
         result_duration = await db.execute(stmt_duration)
         total_minutes = result_duration.scalar() or 0
-        
+
         # Count sessions
         stmt_count = select(func.count(FocusSession.id)).where(
             FocusSession.user_id == user_id,
@@ -137,7 +138,7 @@ class FocusService:
         )
         result_count = await db.execute(stmt_count)
         pomodoro_count = result_count.scalar() or 0
-        
+
         return {
             "total_minutes": total_minutes,
             "pomodoro_count": pomodoro_count,
@@ -155,7 +156,7 @@ class FocusService:
         system_prompt = """
         You are a Socratic tutor and coach.
         The user is working on a task and feels stuck or needs direction.
-        
+
         Goal: Provide "Methodological Guidance" - do NOT give the direct answer.
         1. Analyze the user's input and task.
         2. Suggest a framework, a mental model, or a step-by-step approach to solve it.
@@ -163,19 +164,19 @@ class FocusService:
         4. Keep it concise (under 150 words).
         5. Tone: Encouraging, Insightful, Professional.
         """
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Task: {task_context}\n\nUser Question/Context: {user_input}"}
         ]
-        
+
         return await llm_service.chat(messages, temperature=0.7)
 
     @staticmethod
     async def breakdown_task_via_llm(
         task_title: str,
         task_description: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Break down a task into subtasks using LLM.
         Returns JSON list of subtasks.
@@ -183,17 +184,17 @@ class FocusService:
         system_prompt = """
         You are an expert Project Manager.
         Task: Break down the given task into 3-5 concrete, actionable subtasks.
-        
+
         Output Format: JSON Array ONLY.
         Example: [{"title": "Step 1", "minutes": 25}, {"title": "Step 2", "minutes": 15}]
-        
+
         Constraints:
         1. Subtasks should be small enough (15-45 mins).
         2. Titles should be action-oriented.
         """
-        
+
         prompt = f"Task: {task_title}\nDescription: {task_description}"
-        
+
         return await llm_service.chat_json(
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -205,7 +206,7 @@ class FocusService:
     async def get_weekly_stats(
         db: AsyncSession,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get focus stats for the current week (Monday to Sunday)"""
         now = datetime.datetime.now()
         week_start = (now - datetime.timedelta(days=now.weekday())).replace(
@@ -267,7 +268,7 @@ class FocusService:
     async def get_monthly_stats(
         db: AsyncSession,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get focus stats for the current month"""
         now = datetime.datetime.now()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -336,7 +337,7 @@ class FocusService:
         user_id: UUID,
         limit: int = 20,
         offset: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get paginated session history"""
         # Get total count
         count_stmt = select(func.count(FocusSession.id)).where(
@@ -385,7 +386,7 @@ class FocusService:
         db: AsyncSession,
         user_id: UUID,
         days: int = 90
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Get heatmap data for the last N days"""
         end_date = datetime.datetime.now()
         start_date = end_date - datetime.timedelta(days=days)

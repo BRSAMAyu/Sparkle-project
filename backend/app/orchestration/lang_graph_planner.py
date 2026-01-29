@@ -7,14 +7,15 @@ Responsibilities:
 3. Support re-plan mechanism for version conflicts
 4. Support multi-agent collaboration output (Phase 3)
 """
-from typing import Optional, Dict, Any, List
-from loguru import logger
-from langchain_core.messages import HumanMessage, AIMessage
 import uuid
+from typing import Any
 
-from app.orchestration.schemas import ExecutablePlan, ToolCallSpec, StateSnapshot
+from langchain_core.messages import AIMessage, HumanMessage
+from loguru import logger
+
 from app.agents.graph.state import SparkleState
 from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.orchestration.schemas import ExecutablePlan, StateSnapshot, ToolCallSpec
 
 
 class LangGraphPlanner:
@@ -45,8 +46,8 @@ class LangGraphPlanner:
         snapshot: StateSnapshot,
         user_id: str,
         session_id: str,
-        conversation_history: Optional[List[Dict]] = None,
-        plan_id: Optional[str] = None,  # Phase 4: for plan_version tracking
+        conversation_history: list[dict] | None = None,
+        plan_id: str | None = None,  # Phase 4: for plan_version tracking
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -157,7 +158,7 @@ class LangGraphPlanner:
         plan_version = langgraph_state.get("_plan_version", 1)
         plan_id = langgraph_state.get("_plan_id")
 
-        def _normalize_tool_call(tc) -> Optional[Dict[str, Any]]:
+        def _normalize_tool_call(tc) -> dict[str, Any] | None:
             if isinstance(tc, dict):
                 name = tc.get("name") or tc.get("tool") or tc.get("function", {}).get("name")
                 args = tc.get("args") or tc.get("arguments") or tc.get("function", {}).get("arguments", {})
@@ -252,9 +253,9 @@ class LangGraphPlanner:
         snapshot: StateSnapshot,
         user_id: str,
         session_id: str,
-        previous_plan: Optional[ExecutablePlan] = None,
-        conflict_info: Optional[Dict[str, Any]] = None,
-        plan_id: Optional[str] = None,
+        previous_plan: ExecutablePlan | None = None,
+        conflict_info: dict[str, Any] | None = None,
+        plan_id: str | None = None,
     ) -> ExecutablePlan:
         """Re-plan after version conflict or validation failure
 

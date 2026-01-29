@@ -11,8 +11,7 @@ This service provides the feedback loop for the plan review system.
 """
 from __future__ import annotations
 
-import uuid
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -49,8 +48,8 @@ class PlanFeedbackService:
         user_id: UUID,
         plan_id: UUID,
         review_result: PlanReviewResult,
-        user_decision: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        user_decision: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         将审查意见写入 feedback_log
 
@@ -105,8 +104,8 @@ class PlanFeedbackService:
         content: str,
         decision: str = "supplement",
         priority: str = "normal",
-        related_task_id: Optional[UUID] = None,
-    ) -> Optional[Dict[str, Any]]:
+        related_task_id: UUID | None = None,
+    ) -> dict[str, Any] | None:
         """
         将用户反馈写入 feedback_log
 
@@ -203,7 +202,7 @@ class PlanFeedbackService:
         self,
         user_id: UUID,
         plan_id: UUID,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取待处理的反馈（高优先级或需要补充的）
 
@@ -232,8 +231,8 @@ class PlanFeedbackService:
         plan_id: UUID,
         review_id: str,
         user_decision: str,
-        user_comment: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        user_comment: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         更新现有反馈的决策（用户确认后调用）
 

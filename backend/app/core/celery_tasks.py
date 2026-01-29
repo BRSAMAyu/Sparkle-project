@@ -7,8 +7,9 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
-from app.core.celery_app import celery_app
 from loguru import logger
+
+from app.core.celery_app import celery_app
 
 
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
@@ -30,9 +31,10 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
     """
     import asyncio
     from uuid import UUID
+
     from app.db.session import AsyncSessionLocal
-    from app.services.embedding_service import embedding_service
     from app.models.galaxy import KnowledgeNode
+    from app.services.embedding_service import embedding_service
     from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 
     async def _process():
@@ -91,6 +93,7 @@ def analyze_error_batch(self, error_ids: list, user_id: str):
     """
     import asyncio
     from uuid import UUID
+
     from app.db.session import AsyncSessionLocal
     from app.services.error_book_service import ErrorBookService
 
@@ -133,6 +136,7 @@ def process_stored_file(
     """
     import asyncio
     from uuid import UUID
+
     from app.db.session import AsyncSessionLocal
     from app.services.file_processing_orchestrator import FileProcessingOrchestrator
 
@@ -162,6 +166,7 @@ def record_token_usage(self, user_id: str, session_id: str, request_id: str,
     这是 orchestrator 中 token_tracker.record_usage 的 Celery 版本
     """
     import asyncio
+
     from app.db.session import AsyncSessionLocal
     from app.services.token_tracker import TokenTracker
 
@@ -193,6 +198,7 @@ def save_learning_state(self, user_id: str, state_data: dict):
     这是 multi_dimensional_learner 中 _save 的 Celery 版本
     """
     import asyncio
+
     from app.db.session import AsyncSessionLocal
     from app.learning.multi_dimensional_learner import MultiDimensionalLearner
 
@@ -216,9 +222,11 @@ def persist_bayesian_data(self, user_id: str, data: dict):
     这是 persistent_bayesian_learner 中 _save_to_redis 的 Celery 版本
     """
     import asyncio
-    from app.core.cache import redis_client
-    from loguru import logger
     import json
+
+    from loguru import logger
+
+    from app.core.cache import redis_client
 
     async def _persist():
         try:
@@ -248,13 +256,14 @@ def invalidate_cache(self, cache_key: str):
     这是 route_cache 中 _invalidate_redis 的 Celery 版本
     """
     import asyncio
+
     from app.core.cache import redis_client
 
     async def _invalidate():
         try:
             await redis_client.delete(cache_key)
             return {"status": "success", "cache_key": cache_key}
-        except Exception as e:
+        except Exception:
             raise
 
     try:
@@ -272,9 +281,11 @@ def cleanup_pending_actions(self):
     """
     import asyncio
     from datetime import datetime, timedelta
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.models.pending_actions import PendingAction
-    from loguru import logger
 
     async def _cleanup():
         async with AsyncSessionLocal() as session:
@@ -306,11 +317,12 @@ def rerank_documents(self, query: str, doc_ids: list, user_id: str):
     这是 rerank_service 中模型加载和推理的 Celery 版本
     """
     import asyncio
+
     from app.db.session import AsyncSessionLocal
     from app.services.rerank_service import RerankService
 
     async def _rerank():
-        async with AsyncSessionLocal() as session:
+        async with AsyncSessionLocal():
             service = RerankService()
             results = await service.rerank(query, doc_ids, user_id)
             return {"status": "success", "results": results}
@@ -330,9 +342,11 @@ def expansion_worker_task(self, node_id: str, operation: str):
     """
     import asyncio
     from uuid import UUID
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.services.galaxy.expansion_service import ExpansionService
-    from loguru import logger
 
     async def _expand():
         async with AsyncSessionLocal() as session:
@@ -362,6 +376,7 @@ def visualize_graph(self, user_id: str, graph_data: dict):
     这是 visualization service 的 Celery 版本
     """
     import asyncio
+
     from app.services.visualization.graph_generator import GraphGenerator
 
     async def _visualize():
@@ -385,8 +400,8 @@ def monitor_task_execution(task_func):
 
     自动记录任务执行时间、成功率等指标
     """
-    from functools import wraps
     import time
+    from functools import wraps
 
     @wraps(task_func)
     def wrapper(*args, **kwargs):

@@ -6,7 +6,7 @@ Target: 60%+ cache hit rate, sub-millisecond lookup latency.
 """
 import hashlib
 import json
-from typing import Optional, Tuple
+
 from loguru import logger
 
 
@@ -47,7 +47,7 @@ class IntentCache:
         normalized = " ".join(message.lower().split())
         return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
-    async def get_cached_intent(self, message: str) -> Optional[Tuple[str, float]]:
+    async def get_cached_intent(self, message: str) -> tuple[str, float] | None:
         """Get cached intent classification
 
         Args:

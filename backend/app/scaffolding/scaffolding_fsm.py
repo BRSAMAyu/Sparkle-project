@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -43,7 +43,7 @@ class ScaffoldingFSM:
         user_id: UUID,
         intervention_id: UUID,
         intent_type: str,
-        template_variant_id: Optional[str],
+        template_variant_id: str | None,
     ) -> ScaffoldingState:
         state = await self.get_state(user_id)
         history = list(state.history or [])
@@ -65,7 +65,7 @@ class ScaffoldingFSM:
         self,
         user_id: UUID,
         success: bool,
-        feedback: Optional[str] = None,
+        feedback: str | None = None,
         weight: float = 1.0,
     ) -> ScaffoldingState:
         state = await self.get_state(user_id)
@@ -91,7 +91,7 @@ class ScaffoldingFSM:
         await self.db.flush()
         return state
 
-    def snapshot(self, state: ScaffoldingState) -> Dict[str, Any]:
+    def snapshot(self, state: ScaffoldingState) -> dict[str, Any]:
         return {
             "capability_level": state.capability_level,
             "support_level": state.support_level,

@@ -1,12 +1,13 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
-from app.services.document_service import document_service
-from app.core.cache import cache_service
-import shutil
-import os
-import uuid
 import json
+import os
 import tempfile
+import uuid
+
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from loguru import logger
+
+from app.core.cache import cache_service
+from app.services.document_service import document_service
 
 router = APIRouter()
 
@@ -130,5 +131,5 @@ async def check_task_status(task_id: str):
     data = await cache_service.get(f"task:{task_id}")
     if not data:
         raise HTTPException(status_code=404, detail="Task not found or expired")
-    
+
     return data

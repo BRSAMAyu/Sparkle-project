@@ -2,17 +2,14 @@
 Curiosity Capsule Model
 """
 import enum
-from sqlalchemy import (
-    Column, String, Text, Enum,
-    ForeignKey, DateTime, Boolean, Float, Integer, JSON
-)
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Boolean, Column, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
-from app.models.task import Task
 
 
 class DepthLevel(enum.Enum):

@@ -1,13 +1,11 @@
 """Photon Schemas - Photon system request/response models"""
-from typing import Optional, List, Dict, Any
-from enum import Enum
-from pydantic import BaseModel, Field, validator
-from uuid import UUID
 from datetime import datetime
+from typing import Any
+from uuid import UUID
 
-from app.schemas.common import BaseSchema
+from pydantic import BaseModel, Field, validator
+
 from app.models.shop import PhotonTransactionType
-
 
 # ========== Photon Balance Schemas ==========
 
@@ -15,7 +13,7 @@ class PhotonBalance(BaseModel):
     """User photon balance information"""
     user_id: UUID = Field(description="User ID")
     balance: int = Field(description="Current photon balance")
-    updated_at: Optional[datetime] = Field(default=None, description="Last update time")
+    updated_at: datetime | None = Field(default=None, description="Last update time")
 
     class Config:
         from_attributes = True
@@ -36,9 +34,9 @@ class PhotonTransactionItem(BaseModel):
     amount: int = Field(description="Amount (positive for income, negative for expense)")
     balance_before: int = Field(description="Balance before transaction")
     balance_after: int = Field(description="Balance after transaction")
-    source: Optional[str] = Field(default=None, description="Source description")
-    related_item_id: Optional[str] = Field(default=None, description="Related item ID")
-    extra_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+    source: str | None = Field(default=None, description="Source description")
+    related_item_id: str | None = Field(default=None, description="Related item ID")
+    extra_data: dict[str, Any] | None = Field(default=None, description="Additional metadata")
     created_at: datetime = Field(description="Transaction time")
 
     @property
@@ -58,8 +56,8 @@ class PhotonTransactionItem(BaseModel):
 class TransactionHistoryResponse(BaseModel):
     """Transaction history response"""
     success: bool = Field(default=True)
-    data: List[PhotonTransactionItem] = Field(default_factory=list, description="Transaction history")
-    meta: Dict[str, Any] = Field(default_factory=dict, description="Pagination info")
+    data: list[PhotonTransactionItem] = Field(default_factory=list, description="Transaction history")
+    meta: dict[str, Any] = Field(default_factory=dict, description="Pagination info")
 
 
 class TransactionSummary(BaseModel):
@@ -68,14 +66,14 @@ class TransactionSummary(BaseModel):
     total_expense: int = Field(default=0, description="Total expense")
     net_change: int = Field(default=0, description="Net change")
     transaction_count: int = Field(default=0, description="Total transactions")
-    by_type: Dict[str, int] = Field(default_factory=dict, description="Breakdown by type")
+    by_type: dict[str, int] = Field(default_factory=dict, description="Breakdown by type")
 
 
 class TransactionSummaryResponse(BaseModel):
     """Transaction summary response"""
     success: bool = Field(default=True)
     data: TransactionSummary = Field(description="Transaction summary")
-    meta: Dict[str, Any] = Field(default_factory=dict, description="Time period info")
+    meta: dict[str, Any] = Field(default_factory=dict, description="Time period info")
 
 
 # ========== Photon Transfer Schemas ==========
@@ -84,7 +82,7 @@ class PhotonTransferRequest(BaseModel):
     """Photon transfer request"""
     recipient_id: UUID = Field(description="Recipient user ID")
     amount: int = Field(gt=0, description="Amount to transfer")
-    message: Optional[str] = Field(default=None, max_length=200, description="Optional message")
+    message: str | None = Field(default=None, max_length=200, description="Optional message")
 
     @validator('amount')
     def validate_amount(cls, v):
@@ -108,11 +106,11 @@ class PhotonTransferResponse(BaseModel):
     """Photon transfer response"""
     success: bool = Field(default=True)
     message: str = Field(description="Success message")
-    data: Dict[str, Any] = Field(description="Transfer details")
+    data: dict[str, Any] = Field(description="Transfer details")
     transfer_id: UUID = Field(description="Transfer transaction ID")
     sender_balance_before: int = Field(description="Sender balance before")
     sender_balance_after: int = Field(description="Sender balance after")
-    recipient_username: Optional[str] = Field(default=None, description="Recipient username")
+    recipient_username: str | None = Field(default=None, description="Recipient username")
     amount_transferred: int = Field(description="Amount transferred")
 
 
@@ -124,8 +122,8 @@ class PhotonAdjustmentRequest(BaseModel):
     amount: int = Field(description="Amount to adjust (positive to grant, negative to deduct)")
     reason: str = Field(description="Reason for adjustment")
     transaction_type: PhotonTransactionType = Field(description="Transaction type")
-    related_item_id: Optional[str] = Field(default=None, description="Related item ID")
-    extra_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+    related_item_id: str | None = Field(default=None, description="Related item ID")
+    extra_data: dict[str, Any] | None = Field(default=None, description="Additional metadata")
 
     class Config:
         json_schema_extra = {

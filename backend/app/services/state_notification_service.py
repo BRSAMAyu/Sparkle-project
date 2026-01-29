@@ -8,9 +8,10 @@ Sends detailed notifications for major state changes:
 
 Integrates with WebSocket to deliver real-time notifications to clients.
 """
-from typing import Optional, Dict, Any, List
-from uuid import UUID, uuid4
 from datetime import datetime
+from typing import Any
+from uuid import UUID, uuid4
+
 from loguru import logger
 
 from app.core.websocket import get_ws_manager
@@ -34,7 +35,7 @@ class StateNotificationService:
         plan_id: UUID,
         task_count_freed: int = 0,
         memory_count_removed: int = 0,
-        new_primary_plan: Optional[str] = None,
+        new_primary_plan: str | None = None,
         intervention_level: str = "toast"
     ):
         """
@@ -189,7 +190,7 @@ class StateNotificationService:
         setting_field: str,
         old_value: Any,
         new_value: Any,
-        impact_description: Optional[str] = None,
+        impact_description: str | None = None,
         intervention_level: str = "toast"
     ):
         """
@@ -295,7 +296,7 @@ class StateNotificationService:
         self,
         user_id: str,
         change_type: str,
-        change_data: Dict[str, Any],
+        change_data: dict[str, Any],
         formatted_message: str,
         intervention_level: str,
         priority: str

@@ -5,15 +5,15 @@ Tool Preference Router - 工具偏好路由
 优化后续工具选择和工作流路由
 """
 import uuid
-from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
+
 from loguru import logger
-from sqlalchemy import select, and_, desc, func
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.learning.bayesian_learner import BayesianLearner
 from app.models.tool_history import UserToolHistory
 from app.services.tool_history_service import ToolHistoryService
-from app.learning.bayesian_learner import BayesianLearner
 
 
 class ToolPreferenceRouter:
@@ -32,10 +32,10 @@ class ToolPreferenceRouter:
 
     async def get_preferred_tools(
         self,
-        category: Optional[str] = None,
+        category: str | None = None,
         limit: int = 5,
         days: int = 30
-    ) -> List[str]:
+    ) -> list[str]:
         """
         获取用户偏好的工具列表
 
@@ -62,7 +62,7 @@ class ToolPreferenceRouter:
     async def estimate_tool_success_probability(
         self,
         tool_name: str,
-        context: Optional[Dict] = None
+        context: dict | None = None
     ) -> float:
         """
         估计工具成功概率
@@ -94,9 +94,9 @@ class ToolPreferenceRouter:
 
     async def rank_tools_by_success(
         self,
-        tool_names: List[str],
-        context: Optional[Dict] = None
-    ) -> List[Tuple[str, float]]:
+        tool_names: list[str],
+        context: dict | None = None
+    ) -> list[tuple[str, float]]:
         """
         根据成功率对工具进行排序
 
@@ -151,16 +151,13 @@ class ToolPreferenceRouter:
 
         # 如果距上次失败超过3小时，也值得重试
         time_since_failure = datetime.utcnow() - last_failure_time
-        if time_since_failure > timedelta(hours=3):
-            return True
-
-        return False
+        return time_since_failure > timedelta(hours=3)
 
     async def get_fallback_tools(
         self,
         primary_tool: str,
         limit: int = 3
-    ) -> List[str]:
+    ) -> list[str]:
         """
         获取备选工具列表
 
@@ -222,7 +219,7 @@ class ToolPreferenceRouter:
         except Exception as e:
             logger.error(f"Failed to update learner from history: {e}")
 
-    async def _get_all_used_tools(self) -> List[str]:
+    async def _get_all_used_tools(self) -> list[str]:
         """获取用户已使用过的所有工具"""
         query = select(
             UserToolHistory.tool_name
@@ -233,7 +230,7 @@ class ToolPreferenceRouter:
         results = await self.db_session.execute(query)
         return [row[0] for row in results.fetchall()]
 
-    def _get_productivity_factor(self, context: Dict) -> float:
+    def _get_productivity_factor(self, context: dict) -> float:
         """
         根据上下文计算生产力因子
 
@@ -262,7 +259,7 @@ class ToolPreferenceRouter:
     async def generate_tool_recommendation(
         self,
         intent: str,
-        available_tools: List[str]
+        available_tools: list[str]
     ) -> str:
         """
         基于意图和用户历史，推荐最合适的工具
@@ -289,7 +286,7 @@ class ToolPreferenceRouter:
 
         return recommended_tool
 
-    async def get_tool_stats_snapshot(self, tool_name: str) -> Dict:
+    async def get_tool_stats_snapshot(self, tool_name: str) -> dict:
         """获取工具统计快照"""
         stats = await self.history_service.get_tool_statistics(
             user_id=self.user_id,

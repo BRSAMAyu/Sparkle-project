@@ -8,11 +8,11 @@ Endpoints:
 - GET /predictive/dropout-risk - 流失风险评估
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db

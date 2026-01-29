@@ -4,36 +4,34 @@ Leaderboards API
 
 提供多种类型的排行榜查询接口
 """
-from typing import Dict, Any, Optional
+from typing import Any
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.schemas.leaderboard import (
-    LeaderboardType,
     LeaderboardPeriod,
     LeaderboardRequest,
-    LeaderboardResponse,
-    MyRankResponse,
-    LeaderboardSummary
+    LeaderboardType,
 )
 from app.services.leaderboard_service import LeaderboardService
 
 router = APIRouter()
 
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def get_leaderboard(
     type: LeaderboardType = Query(LeaderboardType.GLOBAL, description="排行榜类型"),
     limit: int = Query(50, ge=1, le=100, description="返回数量"),
     offset: int = Query(0, ge=0, description="偏移量"),
     period: LeaderboardPeriod = Query(LeaderboardPeriod.ALL_TIME, description="统计周期"),
-    subject_id: Optional[UUID] = Query(None, description="学科ID（仅学科榜）"),
-    group_id: Optional[UUID] = Query(None, description="群组ID（仅群组榜）"),
+    subject_id: UUID | None = Query(None, description="学科ID（仅学科榜）"),
+    group_id: UUID | None = Query(None, description="群组ID（仅群组榜）"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -92,7 +90,7 @@ async def get_leaderboard(
         )
 
 
-@router.get("/summary", response_model=Dict[str, Any])
+@router.get("/summary", response_model=dict[str, Any])
 async def get_leaderboard_summary(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -126,7 +124,7 @@ async def get_leaderboard_summary(
         )
 
 
-@router.get("/my-rank", response_model=Dict[str, Any])
+@router.get("/my-rank", response_model=dict[str, Any])
 async def get_my_rank(
     type: LeaderboardType = Query(LeaderboardType.GLOBAL, description="排行榜类型"),
     period: LeaderboardPeriod = Query(LeaderboardPeriod.ALL_TIME, description="统计周期"),
@@ -168,7 +166,7 @@ async def get_my_rank(
         )
 
 
-@router.get("/types", response_model=Dict[str, Any])
+@router.get("/types", response_model=dict[str, Any])
 async def list_leaderboard_types():
     """
     获取支持的排行榜类型列表
@@ -214,7 +212,7 @@ async def list_leaderboard_types():
     }
 
 
-@router.get("/top-three/{type}", response_model=Dict[str, Any])
+@router.get("/top-three/{type}", response_model=dict[str, Any])
 async def get_top_three(
     type: LeaderboardType = Path(..., description="排行榜类型"),
     current_user: User = Depends(get_current_user),
@@ -271,9 +269,9 @@ async def get_top_three(
         )
 
 
-@router.post("/refresh-cache", response_model=Dict[str, Any])
+@router.post("/refresh-cache", response_model=dict[str, Any])
 async def refresh_leaderboard_cache(
-    type: Optional[LeaderboardType] = Query(None, description="刷新指定类型，不传则刷新全部"),
+    type: LeaderboardType | None = Query(None, description="刷新指定类型，不传则刷新全部"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):

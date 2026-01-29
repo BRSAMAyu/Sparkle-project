@@ -2,14 +2,11 @@
 Capsule Feedback Model
 """
 import enum
-import uuid
-from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, String, Text, Integer, Boolean, Float, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class FeedbackCategory(enum.Enum):
@@ -47,7 +44,7 @@ class CapsuleFeedback(BaseModel):
     def __repr__(self):
         return f"<CapsuleFeedback(capsule_id={self.capsule_id}, rating={self.rating})>"
 
-    def calculate_preference_deltas(self) -> tuple[Optional[float], Optional[float]]:
+    def calculate_preference_deltas(self) -> tuple[float | None, float | None]:
         """
         根据反馈计算偏好变化
 

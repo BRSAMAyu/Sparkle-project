@@ -5,9 +5,8 @@ Security Audit Log Models
 """
 
 from datetime import datetime
-from typing import Optional
-from uuid import UUID
-from sqlalchemy import Column, String, DateTime, JSON, Text, ForeignKey, Enum
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 

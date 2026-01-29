@@ -6,17 +6,17 @@
 - 删除关联的 embeddings
 - 清理 MinIO 存储
 """
-from typing import List, Optional
-from uuid import UUID
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from loguru import logger
+from uuid import UUID
 
-from app.models.file_storage import StoredFile
-from app.models.document_chunks import DocumentChunk
-from app.models.galaxy import KnowledgeNode
+from loguru import logger
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config.phase5_config import phase5_config
+from app.models.document_chunks import DocumentChunk
+from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode
 
 
 class FileCascadeService:
@@ -34,7 +34,7 @@ class FileCascadeService:
     async def soft_delete_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None
+        user_id: UUID | None = None
     ) -> dict:
         """
         软删除文件及其关联数据
@@ -129,7 +129,7 @@ class FileCascadeService:
     async def hard_delete_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
         force: bool = False
     ) -> dict:
         """
@@ -297,7 +297,7 @@ class FileCascadeService:
     async def restore_soft_deleted_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None
+        user_id: UUID | None = None
     ) -> dict:
         """
         恢复软删除的文件
@@ -455,7 +455,7 @@ class FileCascadeService:
 async def cascade_delete_file(
     db: AsyncSession,
     file_id: UUID,
-    user_id: Optional[UUID] = None,
+    user_id: UUID | None = None,
     hard: bool = False,
     force: bool = False
 ) -> dict:

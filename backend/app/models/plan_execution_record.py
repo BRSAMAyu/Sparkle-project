@@ -3,13 +3,11 @@ PlanExecutionRecord - 方案执行记录模型
 
 记录方案执行后的验证结果，用于反馈学习和分析
 """
-from sqlalchemy import (
-    Column, String, Integer, Float, Boolean, Text, ForeignKey, Index, JSON
-)
+from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

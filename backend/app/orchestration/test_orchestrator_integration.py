@@ -9,12 +9,13 @@ These tests verify:
 - Error handling and recovery
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typing import Dict, Any, AsyncGenerator
+from collections.abc import AsyncGenerator
 from datetime import datetime
-import json
+from typing import Any
+from unittest.mock import AsyncMock
+
+import pytest
 
 # Import orchestrator components
 # from app.orchestration.orchestrator import ChatOrchestrator, STATE_INIT, STATE_THINKING, STATE_GENERATING
@@ -41,7 +42,7 @@ class MockLLMService:
 
 class MockToolExecutor:
     """Mock tool executor"""
-    async def execute_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
+    async def execute_tool(self, tool_name: str, **kwargs) -> dict[str, Any]:
         return {
             "status": "success",
             "result": f"Result from {tool_name}"
@@ -54,11 +55,11 @@ class MockStateManager:
         self.state = "INIT"
         self.context = {}
 
-    async def save_state(self, state: str, context: Dict) -> None:
+    async def save_state(self, state: str, context: dict) -> None:
         self.state = state
         self.context = context
 
-    async def load_state(self, session_id: str) -> Dict:
+    async def load_state(self, session_id: str) -> dict:
         return {"state": self.state, "context": self.context}
 
 
@@ -189,7 +190,7 @@ class TestToolExecution:
             results.append(result)
 
         assert len(results) == 3
-        for i, result in enumerate(results):
+        for _i, result in enumerate(results):
             assert result["status"] == "success"
 
     @pytest.mark.asyncio
@@ -355,8 +356,8 @@ class TestVectorSearchAndRAG:
         v3 = [0.0, 1.0, 0.0]  # Orthogonal
 
         # Dot product similarity
-        sim_identical = sum(a * b for a, b in zip(v1, v2))
-        sim_orthogonal = sum(a * b for a, b in zip(v1, v3))
+        sim_identical = sum(a * b for a, b in zip(v1, v2, strict=False))
+        sim_orthogonal = sum(a * b for a, b in zip(v1, v3, strict=False))
 
         assert sim_identical == 1.0
         assert sim_orthogonal == 0.0
@@ -374,7 +375,7 @@ class TestVectorSearchAndRAG:
         # Calculate similarities
         for candidate in candidates:
             candidate["similarity"] = sum(
-                a * b for a, b in zip(query_embedding, candidate["embedding"])
+                a * b for a, b in zip(query_embedding, candidate["embedding"], strict=False)
             )
 
         # Sort by similarity
@@ -507,7 +508,7 @@ class TestErrorHandlingAndRecovery:
             try:
                 # Simulate timeout
                 await asyncio.sleep(1)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return "Fallback response"
 
         # This is a conceptual test

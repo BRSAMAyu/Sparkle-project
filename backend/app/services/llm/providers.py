@@ -1,9 +1,10 @@
-from typing import AsyncGenerator, List, Dict, Any
+from collections.abc import AsyncGenerator
+
 from fastapi import HTTPException
 from loguru import logger
 
 try:
-    from openai import AsyncOpenAI, APIError
+    from openai import APIError, AsyncOpenAI
     HAS_OPENAI = True
 except ImportError:
     AsyncOpenAI = None
@@ -11,6 +12,7 @@ except ImportError:
     HAS_OPENAI = False
 
 from app.services.llm.base import LLMProvider
+
 
 class OpenAICompatibleProvider(LLMProvider):
     """
@@ -28,8 +30,8 @@ class OpenAICompatibleProvider(LLMProvider):
         )
 
     async def chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: list[dict[str, str]],
         model: str,
         temperature: float = 0.7,
         **kwargs
@@ -50,8 +52,8 @@ class OpenAICompatibleProvider(LLMProvider):
             raise e
 
     async def stream_chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: list[dict[str, str]],
         model: str,
         temperature: float = 0.7,
         **kwargs

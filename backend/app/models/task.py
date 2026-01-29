@@ -3,15 +3,26 @@
 Task Model - 学习任务卡片系统
 """
 import enum
+
 from sqlalchemy import (
-    Column, String, Integer, Text, Enum,
-    ForeignKey, DateTime, Date, Index, JSON, Boolean, update
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    event,
+    update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from sqlalchemy import event
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

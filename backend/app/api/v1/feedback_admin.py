@@ -1,13 +1,12 @@
 from datetime import timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_db
 from app.core.cache import cache_service
 from app.learning.prompt_bandit import PromptBandit
 from app.services.response_feedback_service import ResponseFeedbackService
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/admin", tags=["Admin Feedback"], dependencies=[Depends(get_current_active_superuser)])
 
@@ -41,7 +40,7 @@ async def feedback_summary(
 @router.get("/bandit/prompt")
 async def bandit_prompt_state(
     workflow_id: str = Query(..., min_length=1),
-    arms: Optional[str] = Query(None, description="Comma-separated list of prompt versions"),
+    arms: str | None = Query(None, description="Comma-separated list of prompt versions"),
 ):
     arm_list = [a.strip() for a in (arms or "v1,v2").split(",") if a.strip()]
     bandit = PromptBandit(redis_client=cache_service.redis)

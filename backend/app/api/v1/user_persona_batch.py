@@ -4,21 +4,21 @@ User Persona Batch Editing API
 
 Provides batch operations for managing user preferences and personas.
 """
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-from uuid import UUID
 import csv
 import io
 import json
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
-from loguru import logger
+from datetime import datetime
+from typing import Any
+from uuid import UUID
 
-from app.api.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends
+from loguru import logger
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.services.memory_service import MemoryService
-
 
 router = APIRouter(prefix="/user/persona", tags=["user-persona"])
 
@@ -26,8 +26,8 @@ router = APIRouter(prefix="/user/persona", tags=["user-persona"])
 # Request/Response Models
 class BatchUpdatePreferencesRequest(BaseModel):
     """批量更新偏好请求"""
-    preference_ids: List[str] = Field(..., description="要更新的偏好ID列表")
-    updates: Dict[str, Any] = Field(..., description="更新内容")
+    preference_ids: list[str] = Field(..., description="要更新的偏好ID列表")
+    updates: dict[str, Any] = Field(..., description="更新内容")
     operation: str = Field(default="update", description="操作类型: update, delete, merge")
 
 
@@ -35,7 +35,7 @@ class BatchUpdatePreferencesResponse(BaseModel):
     """批量更新响应"""
     success_count: int
     failed_count: int
-    errors: List[str] = []
+    errors: list[str] = []
 
 
 class ExportPersonaRequest(BaseModel):
@@ -48,7 +48,7 @@ class ExportPersonaRequest(BaseModel):
 class ImportPersonaRequest(BaseModel):
     """导入画像数据请求"""
     format: str = Field(..., description="导入格式: json, csv")
-    data: Dict[str, Any] = Field(..., description="画像数据")
+    data: dict[str, Any] = Field(..., description="画像数据")
     merge_strategy: str = Field(default="merge", description="合并策略: merge, replace")
 
 
@@ -70,7 +70,7 @@ async def batch_update_preferences(
         errors=[],
     )
 
-    def _normalize_updates(updates: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_updates(updates: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(updates)
         if "key" in normalized and "pref_key" not in normalized:
             normalized["pref_key"] = normalized.pop("key")
@@ -217,7 +217,7 @@ async def import_persona_data(
     data = request.data
     total_items = 0
 
-    def _csv_count(payload: Optional[str]) -> int:
+    def _csv_count(payload: str | None) -> int:
         if not payload:
             return 0
         # Count non-header lines; ignore blank lines
@@ -293,7 +293,7 @@ async def import_persona_data(
         # Import goals
         for goal_data in data.get("goals", []):
             try:
-                goal_metadata: Dict[str, Any] = {}
+                goal_metadata: dict[str, Any] = {}
                 if goal_data.get("description") is not None:
                     goal_metadata["description"] = goal_data.get("description")
                 if goal_data.get("priority") is not None:
@@ -322,7 +322,7 @@ async def import_persona_data(
 
                     if matching:
                         # Update existing
-                        updates: Dict[str, Any] = {}
+                        updates: dict[str, Any] = {}
                         if goal_data.get("status") is not None:
                             updates["status"] = goal_data.get("status")
                         if goal_data.get("target_date") is not None:
@@ -415,7 +415,7 @@ async def import_persona_data(
                         except Exception:
                             target_date_val = datetime.fromisoformat(target_date_raw).date()
 
-                    metadata: Dict[str, Any] = {}
+                    metadata: dict[str, Any] = {}
                     if row.get("description"):
                         metadata["description"] = row.get("description")
                     if row.get("priority"):

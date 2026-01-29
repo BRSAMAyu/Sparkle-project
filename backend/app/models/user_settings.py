@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, ForeignKey, Index, Boolean, JSON
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, Index, Integer
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class UserSettings(BaseModel):

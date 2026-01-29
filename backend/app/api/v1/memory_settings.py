@@ -5,7 +5,7 @@ from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.user import User
-from app.schemas.memory_settings import MemorySettingsUpdate, MemorySettingsResponse
+from app.schemas.memory_settings import MemorySettingsResponse, MemorySettingsUpdate
 from app.services.memory_settings_service import MemorySettingsService
 
 router = APIRouter(prefix="/memory", tags=["memory"])

@@ -1,14 +1,15 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query, Request
-from typing import List, Dict, Any
 from loguru import logger
 
-from app.services.suggestion_service import suggestion_service
 from app.api.deps import get_current_user_id
 from app.core.rate_limiting import limiter
+from app.services.suggestion_service import suggestion_service
 
 router = APIRouter(tags=["Suggestions"])
 
-@router.get("/suggestions", response_model=List[Dict[str, Any]])
+@router.get("/suggestions", response_model=list[dict[str, Any]])
 @limiter.limit("60/minute")
 async def get_suggestions(
     request: Request,

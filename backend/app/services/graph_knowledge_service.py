@@ -4,20 +4,20 @@
 在原有 KnowledgeService 基础上增加图数据库支持
 """
 
-import asyncio
 import json
 import uuid
-from typing import List, Optional, Dict, Any
 from datetime import datetime
+from typing import Any
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.age_client import get_age_client
-from app.models.galaxy import KnowledgeNode, NodeRelation
-from app.models.graph_models import KnowledgeVertex, RelationEdge
-from app.services.knowledge_service import KnowledgeService
 from app.core.cache import cache_service
+from app.models.galaxy import KnowledgeNode, NodeRelation
+from app.models.graph_models import KnowledgeVertex
+from app.services.knowledge_service import KnowledgeService
 
 
 class GraphKnowledgeService:
@@ -42,9 +42,9 @@ class GraphKnowledgeService:
         description: str,
         sector_code: str = "VOID",
         importance_level: int = 1,
-        keywords: List[str] = None,
+        keywords: list[str] = None,
         source_type: str = "user_created",
-        source_task_id: Optional[uuid.UUID] = None
+        source_task_id: uuid.UUID | None = None
     ) -> KnowledgeNode:
         """
         创建知识节点（双写）
@@ -183,7 +183,7 @@ class GraphKnowledgeService:
         user_id: uuid.UUID,
         depth: int = 2,
         top_k: int = 5
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         GraphRAG 检索（增强版）
 
@@ -211,7 +211,7 @@ class GraphKnowledgeService:
         self,
         user_id: uuid.UUID,
         target_node_id: uuid.UUID
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户学习路径
 
@@ -243,7 +243,7 @@ class GraphKnowledgeService:
         self,
         node_id: uuid.UUID,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取相关知识（用于知识拓展）
 
@@ -260,7 +260,7 @@ class GraphKnowledgeService:
         related = await retriever.find_related_concepts(node.name, limit)
         return related
 
-    async def get_user_interest_graph(self, user_id: uuid.UUID) -> Dict[str, Any]:
+    async def get_user_interest_graph(self, user_id: uuid.UUID) -> dict[str, Any]:
         """
         获取用户兴趣图谱
 

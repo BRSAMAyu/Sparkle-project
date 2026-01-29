@@ -2313,7 +2313,9 @@ CREATE TABLE mastery_audit_log (
     reason character varying(50) NOT NULL,
     ip_address inet,
     user_agent text,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    request_id character varying(100),
+    revision integer
 );
 
 
@@ -3524,7 +3526,8 @@ CREATE TABLE subtasks (
     status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
     completed_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
 );
 
 
@@ -3569,7 +3572,8 @@ CREATE TABLE task_feedbacks (
     task_type_snapshot character varying(50),
     actual_minutes_snapshot integer,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
 );
 
 
@@ -7255,6 +7259,13 @@ CREATE INDEX idx_strategy_nodes_user ON strategy_nodes USING btree (user_id);
 
 
 --
+-- Name: idx_subtasks_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_subtasks_deleted_at ON subtasks USING btree (deleted_at);
+
+
+--
 -- Name: idx_subtasks_order; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7280,6 +7291,13 @@ CREATE INDEX idx_subtasks_status ON subtasks USING btree (status);
 --
 
 CREATE INDEX idx_suggestion_log_user_created ON asset_suggestion_logs USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_task_feedbacks_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_task_feedbacks_deleted_at ON task_feedbacks USING btree (deleted_at);
 
 
 --

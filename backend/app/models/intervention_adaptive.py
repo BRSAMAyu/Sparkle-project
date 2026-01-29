@@ -2,9 +2,9 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime, Boolean, JSON, ForeignKey, Integer, Float
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class ScaffoldingState(BaseModel):

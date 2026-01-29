@@ -2,11 +2,12 @@
 IRT Models
 项目反应理论相关模型
 """
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import Column, DateTime, Float, ForeignKey, String
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 
 class IRTItemParameter(BaseModel):

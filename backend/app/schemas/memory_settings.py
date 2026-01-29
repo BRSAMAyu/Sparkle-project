@@ -1,26 +1,24 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, field_validator
-
 
 CAPTURE_LEVELS = {"low", "medium", "high"}
 
 
 class MemorySettingsUpdate(BaseModel):
-    enabled: Optional[bool] = None
-    allow_preferences: Optional[bool] = None
-    allow_goals: Optional[bool] = None
-    allow_episodic: Optional[bool] = None
-    capture_level: Optional[str] = None
-    blocked_pref_keys: Optional[List[str]] = None
-    blocked_sources: Optional[List[str]] = None
+    enabled: bool | None = None
+    allow_preferences: bool | None = None
+    allow_goals: bool | None = None
+    allow_episodic: bool | None = None
+    capture_level: str | None = None
+    blocked_pref_keys: list[str] | None = None
+    blocked_sources: list[str] | None = None
 
     @field_validator("capture_level")
     @classmethod
-    def validate_capture_level(cls, value: Optional[str]) -> Optional[str]:
+    def validate_capture_level(cls, value: str | None) -> str | None:
         if value is None:
             return value
         if value not in CAPTURE_LEVELS:
@@ -34,7 +32,7 @@ class MemorySettingsResponse(BaseModel):
     allow_goals: bool
     allow_episodic: bool
     capture_level: str
-    blocked_pref_keys: List[str]
-    blocked_sources: List[str]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    blocked_pref_keys: list[str]
+    blocked_sources: list[str]
+    created_at: datetime | None
+    updated_at: datetime | None

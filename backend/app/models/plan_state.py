@@ -5,11 +5,12 @@ Plan-level state storage for tracking plan execution context.
 See: docs/state/plan_state_spec.md for design details.
 """
 import enum
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Index, Boolean
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 # Use JSONB for PostgreSQL, fallback to JSON for SQLite
 try:
@@ -134,8 +135,8 @@ class PlanState(BaseModel):
     @classmethod
     def from_dict(cls, data: dict) -> "PlanState":
         """Create from dictionary (for cache deserialization)"""
-        from uuid import UUID
         from datetime import datetime
+        from uuid import UUID
 
         def parse_datetime(val):
             if val is None:

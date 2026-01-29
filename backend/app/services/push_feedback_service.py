@@ -5,13 +5,13 @@ from datetime import datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import PushPreference
-from app.models.notification import PushHistory
-from app.services.personalization.preference_service import PreferenceService
 from app.core.cache import cache_service
+from app.models.notification import PushHistory
+from app.models.user import PushPreference
+from app.services.personalization.preference_service import PreferenceService
 
 
 class PushFeedbackService:

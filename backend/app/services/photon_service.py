@@ -2,17 +2,19 @@
 光子积分服务
 Photon Service - 处理光子积分的发放、扣除和余额查询
 """
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, desc
-from loguru import logger
 
-from app.models.user import User
-from app.models.shop import PhotonTransactionHistory, PhotonTransactionType as DBPhotonTransactionType
-from app.core.cache import cache_service
+from loguru import logger
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.shop import PhotonTransactionHistory
+from app.models.shop import PhotonTransactionType as DBPhotonTransactionType
+from app.models.user import User
 
 
 class PhotonTransactionType:
@@ -95,8 +97,8 @@ class PhotonService:
         amount: int,
         source: str,
         transaction_type: str = PhotonTransactionType.GRANT_ACHIEVEMENT,
-        extra_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        extra_data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         发放光子积分
 
@@ -142,9 +144,9 @@ class PhotonService:
         amount: int,
         reason: str,
         transaction_type: str = PhotonTransactionType.DEDUCT_CONTRACT,
-        extra_data: Optional[Dict[str, Any]] = None,
+        extra_data: dict[str, Any] | None = None,
         allow_negative: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         扣除光子积分
 
@@ -242,7 +244,7 @@ class PhotonService:
         to_user_id: str,
         amount: int,
         reason: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         在用户之间转移光子积分
 
@@ -335,9 +337,9 @@ class PhotonService:
         amount: int,
         balance_before: int,
         balance_after: int,
-        source: Optional[str] = None,
-        related_item_id: Optional[str] = None,
-        extra_data: Optional[Dict[str, Any]] = None
+        source: str | None = None,
+        related_item_id: str | None = None,
+        extra_data: dict[str, Any] | None = None
     ) -> PhotonTransactionHistory:
         """
         记录光子交易历史
@@ -383,10 +385,10 @@ class PhotonService:
     async def get_transaction_history(
         self,
         user_id: str,
-        transaction_type: Optional[str] = None,
+        transaction_type: str | None = None,
         limit: int = 50,
         offset: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         查询用户交易历史
 
@@ -400,7 +402,6 @@ class PhotonService:
             交易历史列表和分页信息
         """
         # 构建查询
-        from sqlalchemy import func, desc
 
         query = select(PhotonTransactionHistory).where(
             PhotonTransactionHistory.user_id == user_id
@@ -462,7 +463,7 @@ class PhotonService:
         self,
         user_id: str,
         days: int = 30
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取交易汇总统计
 
@@ -497,10 +498,7 @@ class PhotonService:
         by_type = {}
         for t in transactions:
             # Handle both enum and string types
-            if hasattr(t.transaction_type, 'value'):
-                type_key = t.transaction_type.value
-            else:
-                type_key = str(t.transaction_type)
+            type_key = t.transaction_type.value if hasattr(t.transaction_type, 'value') else str(t.transaction_type)
             if type_key not in by_type:
                 by_type[type_key] = 0
             by_type[type_key] += t.amount

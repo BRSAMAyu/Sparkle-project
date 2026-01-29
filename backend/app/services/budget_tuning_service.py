@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Dict, Iterable, List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.context_pack import ContextBudgetProfile
-
 
 BUCKETS = ["preferences", "goals", "episodic"]
 MIN_MULTIPLIER = 0.7
@@ -21,15 +20,15 @@ class BudgetTuningService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_multipliers(self, intent: str) -> Dict[str, float]:
+    async def get_multipliers(self, intent: str) -> dict[str, float]:
         profiles = await self._load_profiles(intent)
         await self._apply_decay(profiles)
-        multipliers = {bucket: 1.0 for bucket in BUCKETS}
+        multipliers = dict.fromkeys(BUCKETS, 1.0)
         for profile in profiles.values():
             multipliers[profile.bucket] = profile.multiplier
         return multipliers
 
-    async def apply_feedback(self, intent: str, reasons: Iterable[str], score: float) -> Dict[str, float]:
+    async def apply_feedback(self, intent: str, reasons: Iterable[str], score: float) -> dict[str, float]:
         multipliers = await self.get_multipliers(intent)
         adjusted = self._apply_reason_adjustments(multipliers, reasons, score)
         normalized = self._normalize(adjusted)
@@ -48,7 +47,7 @@ class BudgetTuningService:
         await self.db.commit()
         return normalized
 
-    async def reset_profiles(self, intent: str) -> Dict[str, float]:
+    async def reset_profiles(self, intent: str) -> dict[str, float]:
         profiles = await self._load_profiles(intent)
         now = datetime.utcnow()
         for bucket in BUCKETS:
@@ -60,9 +59,9 @@ class BudgetTuningService:
                 profile.multiplier = 1.0
             profile.updated_at = now
         await self.db.commit()
-        return {bucket: 1.0 for bucket in BUCKETS}
+        return dict.fromkeys(BUCKETS, 1.0)
 
-    async def _load_profiles(self, intent: str) -> Dict[str, ContextBudgetProfile]:
+    async def _load_profiles(self, intent: str) -> dict[str, ContextBudgetProfile]:
         result = await self.db.execute(
             select(ContextBudgetProfile).where(
                 ContextBudgetProfile.intent == intent,
@@ -72,7 +71,7 @@ class BudgetTuningService:
         profiles = result.scalars().all()
         return {profile.bucket: profile for profile in profiles}
 
-    async def _apply_decay(self, profiles: Dict[str, ContextBudgetProfile]) -> None:
+    async def _apply_decay(self, profiles: dict[str, ContextBudgetProfile]) -> None:
         if not profiles:
             return
         now = datetime.utcnow()
@@ -95,10 +94,10 @@ class BudgetTuningService:
 
     def _apply_reason_adjustments(
         self,
-        multipliers: Dict[str, float],
+        multipliers: dict[str, float],
         reasons: Iterable[str],
         score: float,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         adjusted = dict(multipliers)
         reason_set = {reason.lower() for reason in reasons if reason}
         if "verbose" in reason_set:
@@ -113,12 +112,12 @@ class BudgetTuningService:
             adjusted["preferences"] -= 0.01
         return adjusted
 
-    def _normalize(self, multipliers: Dict[str, float]) -> Dict[str, float]:
+    def _normalize(self, multipliers: dict[str, float]) -> dict[str, float]:
         values = dict(multipliers)
         for _ in range(2):
             total = sum(values.values())
             if total <= 0:
-                values = {bucket: 1.0 for bucket in BUCKETS}
+                values = dict.fromkeys(BUCKETS, 1.0)
                 total = TARGET_SUM
             scale = TARGET_SUM / total
             for bucket in values:
