@@ -16,30 +16,32 @@ async def test_demo_mode():
     """
     测试 DEMO_MODE 下的流式对话
     """
-    logger.info("🧪 Testing gRPC StreamChat with DEMO_MODE...")
+    logger.info("🧪 Testing gRPC StreamChat with REAL_USER...")
+    
+    real_user_id = "006848e2-7961-4e46-a72c-375749013d0e"
 
     async with grpc.aio.insecure_channel('localhost:50051') as channel:
         stub = agent_service_pb2_grpc.AgentServiceStub(channel)
 
-        # 使用预设的演示关键词
+        # 使用非常简单的请求，确保能走到最后的 record_decision
         request = agent_service_pb2.ChatRequest(
-            user_id="demo_user",
-            session_id="demo_session",
-            message="帮我制定高数复习计划",  # 这是 DEMO_MOCK_RESPONSES 中的关键词
+            user_id=real_user_id,
+            session_id="fresh_session_v5",
+            message="你好，请介绍一下你自己", 
             user_profile=agent_service_pb2.UserProfile(
-                nickname="演示同学",
+                nickname="测试同学",
                 timezone="Asia/Shanghai",
                 language="zh-CN"
             ),
-            request_id="demo_req_001"
+            request_id="fresh_req_v5"
         )
 
-        token = create_access_token({"sub": "demo_user"})
+        token = create_access_token({"sub": real_user_id})
         
         # Use Internal API Key to bypass JWT secret mismatch issues in dev environment
         # This matches how Gateway calls Agent
         # Use settings.INTERNAL_API_KEY which is loaded from .env by Pydantic
-        internal_key = settings.INTERNAL_API_KEY
+        internal_key = "dev_internal_key"
         
         metadata = (
             ("authorization", f"Bearer {token}"),

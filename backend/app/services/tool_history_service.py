@@ -272,7 +272,7 @@ class ToolHistoryService:
         ).where(
             and_(
                 UserToolHistory.user_id == user_id,
-                not UserToolHistory.success
+                UserToolHistory.success == False
             )
         ).order_by(
             desc(UserToolHistory.created_at)

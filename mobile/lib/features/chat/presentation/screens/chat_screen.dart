@@ -841,8 +841,8 @@ class _StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use surfaceSecondary to match Dashboard ceramic cards
-    final bubbleColor = isDark ? DS.surfaceSecondary : DS.brandPrimary;
+    // Use a lighter color for better contrast in dark mode
+    final bubbleColor = isDark ? const Color(0xFF2A2A2A) : DS.brandPrimary;
     final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
     return Align(
       alignment: Alignment.centerLeft,
@@ -860,7 +860,7 @@ class _StreamingBubble extends StatelessWidget {
             bottomLeft: Radius.circular(4),
           ),
           boxShadow: DS.shadowSm,
-          border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+          border: Border.all(color: isDark ? const Color(0xFF3A3A3A) : DS.neutral200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -957,8 +957,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use surfaceSecondary to match Dashboard ceramic cards
-    final bubbleColor = isDark ? DS.surfaceSecondary : DS.brandPrimary;
+    // Use a lighter color for better contrast in dark mode
+    final bubbleColor = isDark ? const Color(0xFF2A2A2A) : DS.brandPrimary;
     final dotColor = isDark
         ? DS.textPrimary.withValues(alpha: 0.7)
         : DS.onBrandPrimary.withValues(alpha: 0.7);
@@ -973,7 +973,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           bottomLeft: Radius.circular(4),
         ),
         boxShadow: DS.shadowSm,
-        border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+        border: Border.all(color: isDark ? const Color(0xFF3A3A3A) : DS.neutral200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

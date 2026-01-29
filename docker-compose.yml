@@ -61,10 +61,10 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/2
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/2
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_internal_key}
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - STT_PROVIDER=${STT_PROVIDER:-xunfei}
@@ -122,8 +122,8 @@ services:
     ports:
       - "50051:50051"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@sparkle_db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://sparkle_redis:6379/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_internal_key}
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
@@ -181,9 +181,9 @@ services:
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/2
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       sparkle_db:
@@ -203,8 +203,8 @@ services:
     command: celery -A app.core.celery_app beat -l info
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/1
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       sparkle_db:
@@ -238,7 +238,7 @@ services:
       - PORT=8080
       - GRPC_TIMEOUT_SECONDS=30
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
-      - REDIS_URL=${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}
+      - REDIS_URL=${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-change-me}
       - AGENT_ADDRESS=sparkle_agent:50051
       - BACKEND_URL=http://sparkle_api:8000

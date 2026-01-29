@@ -125,7 +125,8 @@ class _FilePickerWithPresignedUploadState
     return Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.brandPrimary,
+        // Use surfaceSecondary to match Dashboard ceramic cards
+        color: DS.surfaceSecondary,
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(DS.borderRadiusXl),),
       ),
@@ -139,7 +140,7 @@ class _FilePickerWithPresignedUploadState
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: isDark ? DS.neutral700 : DS.neutral300,
+                color: DS.surfaceTertiary,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -149,7 +150,7 @@ class _FilePickerWithPresignedUploadState
             style: TextStyle(
               fontSize: 18,
               fontWeight: DS.fontWeightBold,
-              color: isDark ? DS.brandPrimary : DS.neutral900,
+              color: DS.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -160,11 +161,11 @@ class _FilePickerWithPresignedUploadState
               height: 140,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isDark ? DS.neutral700 : DS.neutral300,
+                  color: DS.surfaceTertiary,
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(DS.borderRadiusLg),
-                color: isDark ? DS.neutral800 : DS.neutral50,
+                color: isDark ? DS.surfaceTertiary : DS.neutral50,
               ),
               child: Center(
                 child: _selectedFile == null
@@ -177,7 +178,7 @@ class _FilePickerWithPresignedUploadState
                           Text(
                             '点击选择文件',
                             style: TextStyle(
-                                color: isDark ? DS.neutral400 : DS.neutral600,),
+                                color: DS.textSecondary,),
                           ),
                         ],
                       )
@@ -192,7 +193,7 @@ class _FilePickerWithPresignedUploadState
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: DS.fontWeightSemiBold,
-                              color: isDark ? DS.brandPrimary : DS.neutral900,
+                              color: DS.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -200,8 +201,7 @@ class _FilePickerWithPresignedUploadState
                             Text(
                               '上传中 ${(_progress * 100).toStringAsFixed(0)}%',
                               style: TextStyle(
-                                  color:
-                                      isDark ? DS.neutral400 : DS.neutral600,),
+                                  color: DS.textSecondary,),
                             ),
                         ],
                       ),

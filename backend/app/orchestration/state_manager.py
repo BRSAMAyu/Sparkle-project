@@ -6,6 +6,7 @@ Session State Manager
 - 活跃计划管理（P0: 任务→计划自动切换）
 - 计划上下文跟踪
 """
+import asyncio
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -262,6 +263,119 @@ class SessionStateManager:
         except Exception as e:
             logger.error(f"Error releasing lock for session {session_id}: {e}")
             return False
+
+    async def renew_lock(self, session_id: str, request_id: str) -> bool:
+        """
+        续期锁（延长锁的 TTL）
+
+        用于长时间运行的任务，防止锁在处理完成前过期。
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+
+        Returns:
+            bool: 是否成功续期
+        """
+        try:
+            lock_key = self._get_lock_key(session_id)
+
+            # Lua script: 仅当 lock owner 匹配时才续期
+            lua_script = """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("expire", KEYS[1], ARGV[2])
+            else
+                return 0
+            end
+            """
+
+            result = await self.redis.eval(lua_script, 1, lock_key, request_id, self.lock_ttl)
+
+            if result:
+                logger.debug(f"Lock renewed for session {session_id}")
+                return True
+            else:
+                logger.warning(f"Failed to renew lock for session {session_id}, not owner or expired")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error renewing lock for session {session_id}: {e}")
+            return False
+
+    async def _lock_renewal_task(
+        self,
+        session_id: str,
+        request_id: str,
+        stop_event: asyncio.Event,
+        interval: float = 10.0
+    ):
+        """
+        后台锁续期任务
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+            stop_event: 停止事件
+            interval: 续期间隔（秒），默认 10 秒
+        """
+        try:
+            while not stop_event.is_set():
+                # 等待 interval 秒或直到收到停止信号
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=interval)
+                    break  # 收到停止信号，退出循环
+                except asyncio.TimeoutError:
+                    # 超时，执行续期
+                    pass
+
+                success = await self.renew_lock(session_id, request_id)
+                if not success:
+                    logger.warning(f"Lock renewal failed for session {session_id}, stopping renewal")
+                    break
+        except asyncio.CancelledError:
+            logger.debug(f"Lock renewal task cancelled for session {session_id}")
+        except Exception as e:
+            logger.error(f"Lock renewal task error for session {session_id}: {e}")
+
+    async def start_lock_renewal(
+        self,
+        session_id: str,
+        request_id: str,
+        interval: float = 10.0
+    ) -> tuple[asyncio.Task, asyncio.Event]:
+        """
+        启动锁续期后台任务
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+            interval: 续期间隔（秒），默认 10 秒
+
+        Returns:
+            Tuple[asyncio.Task, asyncio.Event]: (续期任务, 停止事件)
+        """
+        stop_event = asyncio.Event()
+        task = asyncio.create_task(
+            self._lock_renewal_task(session_id, request_id, stop_event, interval)
+        )
+        logger.debug(f"Started lock renewal task for session {session_id}")
+        return task, stop_event
+
+    async def stop_lock_renewal(self, task: asyncio.Task, stop_event: asyncio.Event):
+        """
+        停止锁续期后台任务
+
+        Args:
+            task: 续期任务
+            stop_event: 停止事件
+        """
+        stop_event.set()
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=2.0)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
+        logger.debug(f"Stopped lock renewal task")
 
     async def cache_response(self, session_id: str, request_id: str, response: dict[str, Any], ttl: int = 300) -> bool:
         """
