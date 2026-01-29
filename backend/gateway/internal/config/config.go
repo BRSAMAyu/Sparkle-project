@@ -356,7 +356,7 @@ func Load() *Config {
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
 	viper.SetDefault("AGENT_TLS_SERVER_NAME", "")
 	viper.SetDefault("AGENT_TLS_INSECURE", false)
-	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 5)
+	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 60)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("JWT_ISSUER", "")
 	viper.SetDefault("JWT_AUDIENCE", "")
