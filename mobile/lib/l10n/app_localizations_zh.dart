@@ -276,9 +276,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiNudgeFocus => '保持专注，你正在状态！';
 
   @override
-  String get qwen3CognitiveStatus => 'Qwen3 认知状态';
-
-  @override
   String get winStreak => '连胜';
 
   @override

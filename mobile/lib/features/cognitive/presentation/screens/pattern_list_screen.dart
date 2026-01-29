@@ -75,7 +75,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         child: Row(
           children: [
             IconButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => context.pop(),
               icon: Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
             ),
             Expanded(

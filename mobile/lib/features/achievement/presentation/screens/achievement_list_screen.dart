@@ -130,7 +130,7 @@ class _AchievementListScreenState
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => context.pop(),
                 ),
                 const SizedBox(width: DS.spacing8),
                 Expanded(

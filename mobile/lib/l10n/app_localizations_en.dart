@@ -284,9 +284,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiNudgeFocus => 'Stay focused, you\'re in the zone!';
 
   @override
-  String get qwen3CognitiveStatus => 'Qwen3 Cognitive Status';
-
-  @override
   String get winStreak => 'Win Streak';
 
   @override

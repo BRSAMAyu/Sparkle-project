@@ -975,7 +975,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                         Text(
                           '分数差异: ${(caseData.scoreDiscrepancy * 100).toInt()}%',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.orange,
+                            color: DS.textPrimary,
                           ),
                         ),
                       ],

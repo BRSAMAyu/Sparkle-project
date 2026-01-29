@@ -34,7 +34,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             value: state.period,
             underline: const SizedBox.shrink(),
             icon: const Icon(Icons.arrow_drop_down),
-            items: AnalyticsPeriod.all.map((period) => DropdownMenuItem(
+            items: providers.AnalyticsPeriod.all.map((period) => DropdownMenuItem(
                 value: period.value,
                 child: Text(period.label),
               ),).toList(),
@@ -52,7 +52,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
               ? _buildError(state.error!)
               : state.analytics == null
                   ? const Center(child: Text('暂无数据'))
-                  : _buildContent(state.analytics),
+                  : _buildContent(state.analytics!),
     );
   }
 
@@ -72,7 +72,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildContent(models.NotificationAnalytics analytics) => SingleChildScrollView(
+  Widget _buildContent(NotificationAnalytics analytics) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: ContentConstraint(
         child: Column(

@@ -230,6 +230,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           Scaffold(
             extendBodyBehindAppBar: true,
             appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () async {
+                  final shouldPop = await _onWillPop();
+                  if (mounted && shouldPop) {
+                    context.pop();
+                  }
+                },
+              ),
               backgroundColor: Colors.transparent,
               elevation: 0,
               iconTheme: IconThemeData(color: DS.neutral900),

@@ -4,6 +4,7 @@
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,7 @@ from app.models.decision_record import DecisionRecord as DecisionRecordModel
 class DecisionRecordService:
     """决策记录服务"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession | None):
         self.db = db
 
     async def record_decision(
@@ -26,6 +27,9 @@ class DecisionRecordService:
         outcome: str,
     ) -> None:
         """记录一次决策"""
+        if self.db is None:
+            logger.warning("DecisionRecordService called without db session; skipping record")
+            return
         record = DecisionRecordModel(
             user_id=user_id,
             module=module,

@@ -147,9 +147,9 @@ class _QuickPromptChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ActionChip(
-        label:
-            Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
-        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+        label: Text(label, style: TextStyle(fontSize: 12, color: DS.primaryBase)),
+        backgroundColor: DS.primaryBase.withValues(alpha: 0.08),
+        side: BorderSide(color: DS.primaryBase.withValues(alpha: 0.2)),
         onPressed: onTap,
       );
 }

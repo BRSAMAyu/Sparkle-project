@@ -517,7 +517,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
-func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
+func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if key == "collaboration_timeline" {
@@ -540,6 +540,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
+		"session_id":     sessionID,
 		"metadata":       metadata,
 	}
 
@@ -1206,7 +1207,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			default:
 				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(convertResponseToJSON(resp))
+				conn.WriteJSON(convertResponseToJSON(resp, input.SessionID))
 				conn.WriteJSON(gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
@@ -1463,7 +1464,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		default:
 			conn := responder.(*websocket.Conn)
 			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp)
+			jsonResp := convertResponseToJSON(resp, input.SessionID)
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)

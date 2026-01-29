@@ -861,19 +861,20 @@ class ProductionChatOrchestrator:
             try:
                 from app.services.decision_record_service import DecisionRecordService
 
-                decision_service = DecisionRecordService(self.db)
-                await decision_service.record_decision(
-                    user_id=uuid.UUID(str(user_id)),
-                    module="ai",
-                    action="generate_response",
-                    preference_version=(user_context_data or {}).get("preference_version", 0),
-                    preferences_snapshot={
-                        "verbosity": llm_profile_meta.get("verbosity_target"),
-                        "temperature": llm_profile_meta.get("temperature"),
-                        "tone": llm_profile_meta.get("tone"),
-                    },
-                    outcome=f"Generated response with {len(full_response)} chars",
-                )
+                if self.db_session is not None:
+                    decision_service = DecisionRecordService(self.db_session)
+                    await decision_service.record_decision(
+                        user_id=uuid.UUID(str(user_id)),
+                        module="ai",
+                        action="generate_response",
+                        preference_version=(user_context_data or {}).get("preference_version", 0),
+                        preferences_snapshot={
+                            "verbosity": llm_profile_meta.get("verbosity_target"),
+                            "temperature": llm_profile_meta.get("temperature"),
+                            "tone": llm_profile_meta.get("tone"),
+                        },
+                        outcome=f"Generated response with {len(full_response)} chars",
+                    )
             except Exception as e:
                 logger.warning(f"Failed to record decision: {e}")
 

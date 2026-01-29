@@ -634,7 +634,7 @@ class _CorrectionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Chip(
-        label: Text('纠错 $count', style: TextStyle(color: DS.semanticWarning)),
+        label: Text('纠错 $count', style: TextStyle(color: DS.textPrimary)),
         backgroundColor: DS.semanticWarning.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

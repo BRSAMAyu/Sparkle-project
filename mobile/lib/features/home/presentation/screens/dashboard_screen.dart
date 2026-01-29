@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
-import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -55,42 +53,6 @@ class DashboardScreen extends ConsumerWidget {
       DeviceCategory.phone => double.infinity,
       DeviceCategory.phablet => double.infinity,
     };
-
-    // Listen for Edge AI Nudges
-    ref.listen(edgeAIStateProvider, (previous, next) {
-      next.whenData((state) {
-        if (state != null && state.shouldInterrupt) {
-          final theme = Theme.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.auto_awesome, color: theme.colorScheme.onPrimary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? l10n.aiNudgeGentle : l10n.aiNudgeFocus}',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: theme.colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: l10n.view,
-                textColor: theme.colorScheme.onPrimary,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EdgeAIStatusScreen(),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-      });
-    });
 
     return Scaffold(
       extendBody: true,
@@ -262,20 +224,6 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-            const Spacer(),
-            // Edge AI Entry Point
-            IconButton(
-              icon: const Icon(Icons.psychology_outlined),
-              color: DS.brandPrimaryConst,
-              tooltip: 'Qwen3 认知状态',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EdgeAIStatusScreen(),
-                  ),
-                );
-              },
             ),
           ],
         ),

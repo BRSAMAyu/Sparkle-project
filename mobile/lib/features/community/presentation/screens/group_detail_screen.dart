@@ -49,6 +49,10 @@ class GroupDetailScreen extends ConsumerWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
         SliverAppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
           expandedHeight: 200.0,
           pinned: true,
           stretch: true,

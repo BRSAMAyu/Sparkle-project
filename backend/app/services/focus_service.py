@@ -6,7 +6,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.focus import FocusSession, FocusStatus, FocusType
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.llm_service import llm_service
 
@@ -66,8 +66,8 @@ class FocusService:
                 task = await db.get(Task, task_id)
                 if task:
                     task.actual_minutes = (task.actual_minutes or 0) + duration_minutes
-                    if task.status == "pending":
-                        task.status = "in_progress"
+                    if task.status == TaskStatus.PENDING:
+                        task.status = TaskStatus.IN_PROGRESS
                         task.started_at = start_time
 
         # ========== Achievement Integration ==========
