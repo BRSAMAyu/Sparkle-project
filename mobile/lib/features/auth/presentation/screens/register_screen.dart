@@ -158,7 +158,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible),
+                            () => _isPasswordVisible = !_isPasswordVisible,),
                       ),
                     ),
                     validator: (value) {

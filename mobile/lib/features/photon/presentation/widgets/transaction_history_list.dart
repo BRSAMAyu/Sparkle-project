@@ -7,7 +7,7 @@ import 'package:sparkle/shared/entities/photon_model.dart';
 /// Transaction History List Widget
 /// 交易历史列表组件
 class TransactionHistoryList extends ConsumerStatefulWidget {
-  const TransactionHistoryList({Key? key}) : super(key: key);
+  const TransactionHistoryList({super.key});
 
   @override
   ConsumerState<TransactionHistoryList> createState() =>
@@ -169,11 +169,9 @@ class _TransactionHistoryListState
     );
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
+  bool _isSameDay(DateTime date1, DateTime date2) => date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
-  }
 
   String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
@@ -187,7 +185,7 @@ class _TransactionHistoryListState
     } else if (difference == 1) {
       return '昨天';
     } else if (difference < 7) {
-      return '${difference}天前';
+      return '$difference天前';
     } else {
       return DateFormat('yyyy年MM月dd日').format(date);
     }
@@ -196,9 +194,9 @@ class _TransactionHistoryListState
 
 class _TransactionItem extends StatelessWidget {
   const _TransactionItem({
-    Key? key,
+    super.key,
     required this.transaction,
-  }) : super(key: key);
+  });
 
   final PhotonTransaction transaction;
 
@@ -206,13 +204,12 @@ class _TransactionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = transaction.isIncome;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.grey[200]!,
-          width: 1,
         ),
       ),
       child: Padding(

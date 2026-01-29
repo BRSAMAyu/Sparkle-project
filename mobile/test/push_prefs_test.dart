@@ -3,7 +3,7 @@
 import 'package:sparkle/shared/entities/user_model.dart';
 
 void main() {
-  final Map<String, Object?> json = {
+  final json = <String, Object?>{
     'id': '652a2a54-cb21-4791-bdb8-7421b460239c',
     'username': 'testuser',
     'email': 'test@example.com',

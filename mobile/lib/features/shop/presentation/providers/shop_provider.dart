@@ -13,10 +13,6 @@ final shopRepositoryProvider = Provider<ShopRepository>((ref) {
 // ========== Shop Items State ==========
 
 class ShopItemsState {
-  final List<ShopItem> items;
-  final bool isLoading;
-  final String? error;
-  final Map<String, List<ShopItem>> itemsByCategory;
 
   ShopItemsState({
     this.items = const [],
@@ -24,25 +20,25 @@ class ShopItemsState {
     this.error,
     this.itemsByCategory = const {},
   });
+  final List<ShopItem> items;
+  final bool isLoading;
+  final String? error;
+  final Map<String, List<ShopItem>> itemsByCategory;
 
   ShopItemsState copyWith({
     List<ShopItem>? items,
     bool? isLoading,
     String? error,
     Map<String, List<ShopItem>>? itemsByCategory,
-  }) {
-    return ShopItemsState(
+  }) => ShopItemsState(
       items: items ?? this.items,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       itemsByCategory: itemsByCategory ?? this.itemsByCategory,
     );
-  }
 
   /// Get items by type
-  List<ShopItem> getItemsByType(ShopItemType type) {
-    return itemsByCategory[type.name] ?? [];
-  }
+  List<ShopItem> getItemsByType(ShopItemType type) => itemsByCategory[type.name] ?? [];
 }
 
 // ========== Shop Items Provider ==========
@@ -60,7 +56,7 @@ class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
     String? rarity,
     bool onlyAvailable = true,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final items = await _repository.getShopItems(
@@ -123,11 +119,6 @@ final selectedShopItemProvider =
 // ========== Purchase History State ==========
 
 class PurchaseHistoryState {
-  final List<ShopPurchase> purchases;
-  final bool isLoading;
-  final String? error;
-  final bool hasMore;
-  final int currentOffset;
 
   PurchaseHistoryState({
     this.purchases = const [],
@@ -136,6 +127,11 @@ class PurchaseHistoryState {
     this.hasMore = true,
     this.currentOffset = 0,
   });
+  final List<ShopPurchase> purchases;
+  final bool isLoading;
+  final String? error;
+  final bool hasMore;
+  final int currentOffset;
 
   PurchaseHistoryState copyWith({
     List<ShopPurchase>? purchases,
@@ -143,15 +139,13 @@ class PurchaseHistoryState {
     String? error,
     bool? hasMore,
     int? currentOffset,
-  }) {
-    return PurchaseHistoryState(
+  }) => PurchaseHistoryState(
       purchases: purchases ?? this.purchases,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       hasMore: hasMore ?? this.hasMore,
       currentOffset: currentOffset ?? this.currentOffset,
     );
-  }
 }
 
 // ========== Purchase History Provider ==========
@@ -173,11 +167,10 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
 
     if (state.isLoading || !state.hasMore) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final purchases = await _repository.getPurchaseHistory(
-        limit: _limit,
         offset: state.currentOffset,
       );
 
@@ -215,27 +208,25 @@ final purchaseHistoryProvider =
 // ========== Inventory State ==========
 
 class InventoryState {
-  final Map<String, List<InventoryItem>> inventory;
-  final bool isLoading;
-  final String? error;
 
   InventoryState({
     this.inventory = const {},
     this.isLoading = false,
     this.error,
   });
+  final Map<String, List<InventoryItem>> inventory;
+  final bool isLoading;
+  final String? error;
 
   InventoryState copyWith({
     Map<String, List<InventoryItem>>? inventory,
     bool? isLoading,
     String? error,
-  }) {
-    return InventoryState(
+  }) => InventoryState(
       inventory: inventory ?? this.inventory,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
-  }
 
   List<InventoryItem> get skins => inventory['skins'] ?? [];
   List<InventoryItem> get titles => inventory['titles'] ?? [];
@@ -253,7 +244,7 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
   final ShopRepository _repository;
 
   Future<void> loadInventory() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final inventory = await _repository.getInventory();
@@ -273,7 +264,7 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
     required String itemId,
     required String itemType,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       await _repository.equipItem(itemId: itemId, itemType: itemType);

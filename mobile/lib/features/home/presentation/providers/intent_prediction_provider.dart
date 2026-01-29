@@ -127,7 +127,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     final result = IntentClassifier.classify(text);
 
     final typingPredictions = <PredictedAction>[];
-    double localTopConfidence = 0.0;
+    var localTopConfidence = 0.0;
 
     if (result != null) {
       final intent = result.type;

@@ -55,24 +55,6 @@ enum ConsumableEffectType {
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ShopItem {
-  final String id;
-  final String name;
-  final String? description;
-  final ShopItemType itemType;
-  final String category;
-  final int pricePhotons;
-  final int? originalPrice;
-  final int? discountPercent;
-  final bool isAvailable;
-  final bool isLimited;
-  final int? stockQuantity;
-  final String? iconUrl;
-  final ItemRarity rarity;
-  final Map<String, dynamic>? itemConfig;
-  final int sortOrder;
-  final bool hasDiscount;
-  final bool isInStock;
-  final bool isOwned;
 
   ShopItem({
     required this.id,
@@ -97,6 +79,24 @@ class ShopItem {
 
   factory ShopItem.fromJson(Map<String, dynamic> json) =>
       _$ShopItemFromJson(json);
+  final String id;
+  final String name;
+  final String? description;
+  final ShopItemType itemType;
+  final String category;
+  final int pricePhotons;
+  final int? originalPrice;
+  final int? discountPercent;
+  final bool isAvailable;
+  final bool isLimited;
+  final int? stockQuantity;
+  final String? iconUrl;
+  final ItemRarity rarity;
+  final Map<String, dynamic>? itemConfig;
+  final int sortOrder;
+  final bool hasDiscount;
+  final bool isInStock;
+  final bool isOwned;
 
   Map<String, dynamic> toJson() => _$ShopItemToJson(this);
 
@@ -147,8 +147,7 @@ class ShopItem {
     bool? hasDiscount,
     bool? isInStock,
     bool? isOwned,
-  }) {
-    return ShopItem(
+  }) => ShopItem(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
@@ -168,27 +167,15 @@ class ShopItem {
       isInStock: isInStock ?? this.isInStock,
       isOwned: isOwned ?? this.isOwned,
     );
-  }
 
   @override
-  String toString() {
-    return 'ShopItem(id: $id, name: $name, type: $itemType, price: $pricePhotons, isOwned: $isOwned)';
-  }
+  String toString() => 'ShopItem(id: $id, name: $name, type: $itemType, price: $pricePhotons, isOwned: $isOwned)';
 }
 
 // ========== 购买记录实体 ==========
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ShopPurchase {
-  final String id;
-  final String itemId;
-  final String itemName;
-  final String? itemIconUrl;
-  final ShopItemType itemType;
-  final int pricePaid;
-  final int photonBalanceBefore;
-  final int photonBalanceAfter;
-  final DateTime createdAt;
 
   ShopPurchase({
     required this.id,
@@ -204,6 +191,15 @@ class ShopPurchase {
 
   factory ShopPurchase.fromJson(Map<String, dynamic> json) =>
       _$ShopPurchaseFromJson(json);
+  final String id;
+  final String itemId;
+  final String itemName;
+  final String? itemIconUrl;
+  final ShopItemType itemType;
+  final int pricePaid;
+  final int photonBalanceBefore;
+  final int photonBalanceAfter;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => _$ShopPurchaseToJson(this);
 
@@ -217,8 +213,7 @@ class ShopPurchase {
     int? photonBalanceBefore,
     int? photonBalanceAfter,
     DateTime? createdAt,
-  }) {
-    return ShopPurchase(
+  }) => ShopPurchase(
       id: id ?? this.id,
       itemId: itemId ?? this.itemId,
       itemName: itemName ?? this.itemName,
@@ -229,28 +224,15 @@ class ShopPurchase {
       photonBalanceAfter: photonBalanceAfter ?? this.photonBalanceAfter,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 
   @override
-  String toString() {
-    return 'ShopPurchase(id: $id, itemId: $itemId, itemName: $itemName, pricePaid: $pricePaid)';
-  }
+  String toString() => 'ShopPurchase(id: $id, itemId: $itemId, itemName: $itemName, pricePaid: $pricePaid)';
 }
 
 // ========== 用户物品实体（背包） ==========
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class InventoryItem {
-  final String id;
-  final String name;
-  final String? iconUrl;
-  final ShopItemType itemType;
-  final ItemRarity rarity;
-  final String category;
-  final int quantity;
-  final bool isEquipped;
-  final DateTime? expiresAt;
-  final Map<String, dynamic>? itemConfig;
 
   InventoryItem({
     required this.id,
@@ -267,6 +249,16 @@ class InventoryItem {
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) =>
       _$InventoryItemFromJson(json);
+  final String id;
+  final String name;
+  final String? iconUrl;
+  final ShopItemType itemType;
+  final ItemRarity rarity;
+  final String category;
+  final int quantity;
+  final bool isEquipped;
+  final DateTime? expiresAt;
+  final Map<String, dynamic>? itemConfig;
 
   Map<String, dynamic> toJson() => _$InventoryItemToJson(this);
 
@@ -277,9 +269,7 @@ class InventoryItem {
   }
 
   /// 是否有效（未过期且有库存）
-  bool get isValid {
-    return !isExpired && quantity > 0;
-  }
+  bool get isValid => !isExpired && quantity > 0;
 
   InventoryItem copyWith({
     String? id,
@@ -292,8 +282,7 @@ class InventoryItem {
     bool? isEquipped,
     DateTime? expiresAt,
     Map<String, dynamic>? itemConfig,
-  }) {
-    return InventoryItem(
+  }) => InventoryItem(
       id: id ?? this.id,
       name: name ?? this.name,
       iconUrl: iconUrl ?? this.iconUrl,
@@ -305,10 +294,7 @@ class InventoryItem {
       expiresAt: expiresAt ?? this.expiresAt,
       itemConfig: itemConfig ?? this.itemConfig,
     );
-  }
 
   @override
-  String toString() {
-    return 'InventoryItem(id: $id, name: $name, type: $itemType, quantity: $quantity, isEquipped: $isEquipped)';
-  }
+  String toString() => 'InventoryItem(id: $id, name: $name, type: $itemType, quantity: $quantity, isEquipped: $isEquipped)';
 }

@@ -6,10 +6,10 @@ import 'package:sparkle/features/photon/presentation/providers/photon_provider.d
 /// 光子余额卡片组件
 class PhotonBalanceCard extends ConsumerWidget {
   const PhotonBalanceCard({
-    Key? key,
+    super.key,
     this.onTap,
     this.showRefreshButton = true,
-  }) : super(key: key);
+  });
 
   final VoidCallback? onTap;
   final bool showRefreshButton;
@@ -28,7 +28,7 @@ class PhotonBalanceCard extends ConsumerWidget {
               ),
             );
           },
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -133,11 +133,10 @@ class PhotonBalanceCard extends ConsumerWidget {
 
 // Placeholder for transaction history screen
 class TransactionHistoryScreen extends ConsumerWidget {
-  const TransactionHistoryScreen({Key? key}) : super(key: key);
+  const TransactionHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
       appBar: AppBar(
         title: const Text('交易历史'),
       ),
@@ -145,5 +144,4 @@ class TransactionHistoryScreen extends ConsumerWidget {
         child: Text('Transaction History - To be implemented'),
       ),
     );
-  }
 }

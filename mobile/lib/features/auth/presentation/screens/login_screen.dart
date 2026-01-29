@@ -132,7 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible),
+                            () => _isPasswordVisible = !_isPasswordVisible,),
                       ),
                     ),
                     validator: (value) =>

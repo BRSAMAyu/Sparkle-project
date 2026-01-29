@@ -289,17 +289,13 @@ final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
   switch (boardState.sprintFilter) {
     case SprintTaskFilter.todo:
       tasks = tasks.where((t) => t.status == TaskStatus.pending).toList();
-      break;
     case SprintTaskFilter.inProgress:
       tasks = tasks.where((t) => t.status == TaskStatus.inProgress).toList();
-      break;
     case SprintTaskFilter.done:
       tasks = tasks.where((t) => t.status == TaskStatus.completed).toList();
-      break;
     case SprintTaskFilter.all:
       // 全部显示所有任务（包括已完成，排除已放弃）
       tasks = tasks.where((t) => t.status != TaskStatus.abandoned).toList();
-      break;
   }
 
   // 按优先级排序

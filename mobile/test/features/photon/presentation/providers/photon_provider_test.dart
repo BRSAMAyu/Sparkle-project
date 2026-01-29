@@ -136,7 +136,7 @@ void main() {
       final updatedBalance = PhotonBalance(
         userId: 'user-123',
         balance: 700,
-        updatedAt: DateTime(2024, 1, 28, 11, 0),
+        updatedAt: DateTime(2024, 1, 28, 11),
       );
 
       mockRepository.getBalanceHandler = () async => initialBalance;
@@ -173,7 +173,7 @@ void main() {
           balanceBefore: 100,
           balanceAfter: 50,
           source: 'shop:purchase',
-          createdAt: DateTime(2024, 1, 28, 11, 0),
+          createdAt: DateTime(2024, 1, 28, 11),
         ),
       ];
 
@@ -181,9 +181,7 @@ void main() {
         String? transactionType,
         int limit = 20,
         int offset = 0,
-      }) async {
-        return transactions;
-      };
+      }) async => transactions;
 
       container.read(photonTransactionsProvider);
       await container.read(photonTransactionsProvider.notifier)
@@ -217,7 +215,7 @@ void main() {
           amount: -50,
           balanceBefore: 100,
           balanceAfter: 50,
-          createdAt: DateTime(2024, 1, 28, 11, 0),
+          createdAt: DateTime(2024, 1, 28, 11),
         ),
       ];
 
@@ -261,9 +259,7 @@ void main() {
         String? transactionType,
         int limit = 20,
         int offset = 0,
-      }) async {
-        return transactions;
-      };
+      }) async => transactions;
 
       container.read(photonTransactionsProvider);
       await container.read(photonTransactionsProvider.notifier)
@@ -287,9 +283,7 @@ void main() {
         String? transactionType,
         int limit = 20,
         int offset = 0,
-      }) async {
-        return [];
-      };
+      }) async => [];
 
       container.read(photonTransactionsProvider);
       await container.read(photonTransactionsProvider.notifier)
@@ -316,9 +310,7 @@ void main() {
         },
       );
 
-      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async {
-        return summary;
-      };
+      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async => summary;
 
       final result = await container.read(transactionSummaryProvider.future);
 
@@ -339,9 +331,7 @@ void main() {
         byType: {},
       );
 
-      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async {
-        return summary;
-      };
+      mockRepository.getTransactionSummaryHandler = ({int days = 30}) async => summary;
 
       final sub = container.listen(transactionSummaryProvider, (_, __) {});
 
@@ -363,7 +353,6 @@ void main() {
           balance: 500,
           updatedAt: DateTime(2024, 1, 28),
         ),
-        isLoading: false,
       );
 
       final updated = state.copyWith(
@@ -377,9 +366,7 @@ void main() {
 
     test('copyWith with error sets error and clears loading', () {
       final state = PhotonBalanceState(
-        balance: null,
         isLoading: true,
-        error: null,
       );
 
       final updated = state.copyWith(
@@ -407,9 +394,6 @@ void main() {
 
       final state = PhotonTransactionsState(
         transactions: transactions,
-        isLoading: false,
-        error: null,
-        hasMore: true,
         currentOffset: 1,
       );
 
@@ -427,9 +411,7 @@ void main() {
     test('correctly identifies when no more items to load', () {
       final state = PhotonTransactionsState(
         transactions: [],
-        isLoading: false,
         hasMore: false,
-        currentOffset: 0,
       );
 
       expect(state.hasMore, isFalse);
@@ -451,7 +433,7 @@ void main() {
       await Future.delayed(Duration.zero);
 
       // Should not throw
-      expect(() => container.dispose(), returnsNormally);
+      expect(container.dispose, returnsNormally);
     });
   });
 }

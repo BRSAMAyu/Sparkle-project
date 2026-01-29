@@ -35,6 +35,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _currentTimerDuration = 0; // In seconds
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
+  bool _isTimerRunning = false;
 
   // Focus Protection State
   DateTime? _pageEnterTime;

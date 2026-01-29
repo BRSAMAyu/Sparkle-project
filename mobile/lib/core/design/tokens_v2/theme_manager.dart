@@ -53,7 +53,7 @@ class ThemeManager extends ChangeNotifier {
       try {
         _skinConfig = Map<String, dynamic>.from(
           // 简单的JSON解析（实际项目中应该用dart:convert）
-          _parseSimpleJson(skinConfigJson)
+          _parseSimpleJson(skinConfigJson),
         );
       } catch (e) {
         // 解析失败，忽略皮肤配置
@@ -183,7 +183,7 @@ class ThemeManager extends ChangeNotifier {
     if (colorString is Color) return colorString;
     if (colorString is! String) return null;
 
-    final hex = colorString.toString().replaceAll('#', '');
+    final hex = colorString.replaceAll('#', '');
     if (hex.length == 6) {
       return Color(int.parse('FF$hex', radix: 16));
     } else if (hex.length == 8) {
@@ -255,16 +255,16 @@ class ThemeManager extends ChangeNotifier {
     for (final pair in pairs) {
       final parts = pair.split(':');
       if (parts.length == 2) {
-        final key = parts[0].trim().replaceAll('"', '').replaceAll("'", "");
+        final key = parts[0].trim().replaceAll('"', '').replaceAll("'", '');
         final value = parts[1].trim();
         if (value.startsWith('[') && value.endsWith(']')) {
           // 数组
           final arrayStr = value.substring(1, value.length - 1);
           result[key] = arrayStr.isEmpty
               ? <String>[]
-              : arrayStr.split(',').map((e) => e.trim().replaceAll('"', '').replaceAll("'", "")).toList();
+              : arrayStr.split(',').map((e) => e.trim().replaceAll('"', '').replaceAll("'", '')).toList();
         } else {
-          result[key] = value.replaceAll('"', '').replaceAll("'", "");
+          result[key] = value.replaceAll('"', '').replaceAll("'", '');
         }
       }
     }
@@ -276,7 +276,7 @@ class ThemeManager extends ChangeNotifier {
     if (map == null) return '{}';
     final buffer = StringBuffer();
     buffer.write('{');
-    bool first = true;
+    var first = true;
     map.forEach((key, value) {
       if (!first) buffer.write(', ');
       first = false;

@@ -83,7 +83,6 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
     try {
       final result = await _shopRepository.equipItem(
         itemType: 'title',
-        itemId: null,
       );
       if (result['success'] == true) {
         state = null;

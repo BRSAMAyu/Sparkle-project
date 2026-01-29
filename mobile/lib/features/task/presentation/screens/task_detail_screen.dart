@@ -344,8 +344,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) => _controller.reverse(),
       onTapCancel: () => _controller.reverse(),
@@ -408,7 +407,6 @@ class _InfoTileCardState extends State<_InfoTileCard>
         ),
       ),
     );
-  }
 }
 
 class _BottomActionBar extends ConsumerWidget {

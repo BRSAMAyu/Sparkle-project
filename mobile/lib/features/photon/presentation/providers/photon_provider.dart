@@ -13,27 +13,25 @@ final photonRepositoryProvider = Provider<PhotonRepository>((ref) {
 // ========== Balance State ==========
 
 class PhotonBalanceState {
-  final PhotonBalance? balance;
-  final bool isLoading;
-  final String? error;
 
   PhotonBalanceState({
     this.balance,
     this.isLoading = false,
     this.error,
   });
+  final PhotonBalance? balance;
+  final bool isLoading;
+  final String? error;
 
   PhotonBalanceState copyWith({
     PhotonBalance? balance,
     bool? isLoading,
     String? error,
-  }) {
-    return PhotonBalanceState(
+  }) => PhotonBalanceState(
       balance: balance ?? this.balance,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
-  }
 }
 
 // ========== Balance Provider ==========
@@ -46,7 +44,7 @@ class PhotonBalanceNotifier extends StateNotifier<PhotonBalanceState> {
   final PhotonRepository _repository;
 
   Future<void> loadBalance() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final balance = await _repository.getBalance();
@@ -73,11 +71,6 @@ final photonBalanceProvider =
 // ========== Transactions State ==========
 
 class PhotonTransactionsState {
-  final List<PhotonTransaction> transactions;
-  final bool isLoading;
-  final String? error;
-  final bool hasMore;
-  final int currentOffset;
 
   PhotonTransactionsState({
     this.transactions = const [],
@@ -86,6 +79,11 @@ class PhotonTransactionsState {
     this.hasMore = true,
     this.currentOffset = 0,
   });
+  final List<PhotonTransaction> transactions;
+  final bool isLoading;
+  final String? error;
+  final bool hasMore;
+  final int currentOffset;
 
   PhotonTransactionsState copyWith({
     List<PhotonTransaction>? transactions,
@@ -93,15 +91,13 @@ class PhotonTransactionsState {
     String? error,
     bool? hasMore,
     int? currentOffset,
-  }) {
-    return PhotonTransactionsState(
+  }) => PhotonTransactionsState(
       transactions: transactions ?? this.transactions,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       hasMore: hasMore ?? this.hasMore,
       currentOffset: currentOffset ?? this.currentOffset,
     );
-  }
 }
 
 // ========== Transactions Provider ==========
@@ -127,7 +123,7 @@ class PhotonTransactionsNotifier
 
     if (state.isLoading || !state.hasMore) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final transactions = await _repository.getTransactionHistory(
@@ -171,5 +167,5 @@ final photonTransactionsProvider =
 final transactionSummaryProvider =
     FutureProvider.autoDispose<TransactionSummary>((ref) async {
   final repository = ref.watch(photonRepositoryProvider);
-  return repository.getTransactionSummary(days: 30);
+  return repository.getTransactionSummary();
 });

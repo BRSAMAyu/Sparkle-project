@@ -10,10 +10,8 @@ class IntentPredictionResponse {
   const IntentPredictionResponse({
     required this.intentType,
     required this.confidence,
-    this.suggestedActions = const [],
+    required this.executionMode, required this.modeConfidence, this.suggestedActions = const [],
     this.suggestedTools = const [],
-    required this.executionMode,
-    required this.modeConfidence,
   });
 
   factory IntentPredictionResponse.fromJson(Map<String, dynamic> json) =>

@@ -48,10 +48,9 @@ class XunFeiProvider(STTProvider):
         """
         生成科大讯飞WebSocket鉴权URL
 
-        使用科大讯飞中英识别大模型API (SLM)
+        使用科大讯飞语音听写（流式版）API
         参考：https://www.xfyun.cn/doc/asr/voicedictation/API.html
         """
-        # 大模型API地址
         host = "iat.xf-yun.com"
         path = "/v1"
 
@@ -175,10 +174,10 @@ class XunFeiProvider(STTProvider):
             return
 
         # 使用配置的语言
-        target_language = language or self.language
-        if target_language.lower().startswith("zh"):
+        target_language = (language or self.language).lower()
+        if target_language.startswith("zh"):
             target_language = "zh_cn"
-        elif target_language.lower().startswith("en"):
+        elif target_language.startswith("en"):
             target_language = "en_us"
         target_sample_rate = sample_rate or self.sample_rate
 
@@ -204,11 +203,16 @@ class XunFeiProvider(STTProvider):
                     frame_status = 0 if is_first else 1
 
                     iat_params = {
-                        "domain": self.domain,
+                        "domain": self.domain,  # 官方要求 slm
                         "language": target_language,
                         "eos": self.eos_ms,
                         "vinfo": 1,
                         "dwa": "wpgs",  # 开启动态修正
+                        "result": {
+                            "encoding": "utf8",
+                            "compress": "raw",
+                            "format": "json",
+                        },
                     }
                     if target_language == "zh_cn":
                         iat_params["accent"] = "mandarin"
@@ -217,9 +221,6 @@ class XunFeiProvider(STTProvider):
                         "header": {
                             "app_id": self.app_id,
                             "status": frame_status
-                        },
-                        "parameter": {
-                            "iat": iat_params
                         },
                         "payload": {
                             "audio": {
@@ -233,6 +234,8 @@ class XunFeiProvider(STTProvider):
                             }
                         }
                     }
+                    if is_first:
+                        frame["parameter"] = {"iat": iat_params}
 
                     await websocket.send(json.dumps(frame))
                     seq += 1
@@ -324,10 +327,11 @@ class XunFeiProvider(STTProvider):
 
             # 创建音频流生成器
             async def audio_generator():
-                # 16kHz/16bit/mono: 40ms ~= 1280 bytes
+                # 官方建议：每次发送间隔40ms，字节数为1280的整数倍且<=10000
+                # 16kHz/16bit/mono: 40ms=1280 bytes
                 sample_rate = detected_sample_rate or self.sample_rate
                 bytes_per_40ms = int(sample_rate * 2 * 0.04)
-                chunk_size = max(320, min(10000, bytes_per_40ms))
+                chunk_size = max(1280, min(10000, (bytes_per_40ms // 1280) * 1280 or 1280))
                 for i in range(0, len(audio_data), chunk_size):
                     yield audio_data[i : i + chunk_size]
                     # 官方建议间隔40ms

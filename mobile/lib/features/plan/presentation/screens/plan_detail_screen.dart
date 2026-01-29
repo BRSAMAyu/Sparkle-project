@@ -309,7 +309,7 @@ class _PlanProgressTab extends StatelessWidget {
                               child: Text(
                                 label,
                                 style: TextStyle(
-                                    color: DS.neutral500, fontSize: 10),
+                                    color: DS.neutral500, fontSize: 10,),
                               ),
                             );
                           },
@@ -385,7 +385,7 @@ class _PlanProgressTab extends StatelessWidget {
                               child: Text(
                                 dayBuckets[index].label,
                                 style: TextStyle(
-                                    color: DS.neutral500, fontSize: 10),
+                                    color: DS.neutral500, fontSize: 10,),
                               ),
                             );
                           },

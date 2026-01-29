@@ -883,8 +883,7 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
   }
 
   /// 转换为UI步骤列表
-  List<TimelineStep> toTimelineSteps() {
-    return steps.map((step) => TimelineStep(
+  List<TimelineStep> toTimelineSteps() => steps.map((step) => TimelineStep(
       agentName: step.agentName,
       agentRole: step.agentRole,
       action: step.action,
@@ -894,7 +893,6 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
       outputSummary: step.outputSummary,
       metadata: step.metadata,
     )).toList();
-  }
 }
 
 /// 协作步骤数据模型

@@ -15,6 +15,8 @@ void main() {
 }
 
 class ChatMessageList extends StatelessWidget {
+  const ChatMessageList({super.key});
+
   @override
   Widget build(BuildContext context) => Container();
 }

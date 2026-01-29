@@ -49,7 +49,6 @@ class UserTitleBadge extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: DS.brandPrimary.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Text(
@@ -65,8 +64,7 @@ class UserTitleBadge extends ConsumerWidget {
 /// 根据称号格式（前缀/后缀）显示名称和称号
 class UsernameWithTitle extends ConsumerWidget {
   const UsernameWithTitle({
-    super.key,
-    required this.username,
+    required this.username, super.key,
     this.userId,
     this.equippedTitleId,
     this.usernameStyle,
@@ -143,8 +141,7 @@ class UsernameWithTitle extends ConsumerWidget {
 /// 显示用户拥有的称号列表，允许装备
 class TitleSelector extends ConsumerWidget {
   const TitleSelector({
-    super.key,
-    required this.titles,
+    required this.titles, super.key,
     this.equippedTitleId,
     this.onEquip,
     this.onUnequip,

@@ -1,4 +1,3 @@
-export 'data/models/notification_analytics_model.dart';
 export 'data/models/unified_notification_model.dart';
 export 'data/repositories/notification_center_repository.dart';
 export 'notification_center_routes.dart';

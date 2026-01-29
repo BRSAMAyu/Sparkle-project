@@ -116,7 +116,7 @@ class TestShopRepository implements ShopRepository {
 
   @override
   Future<Map<String, dynamic>> useConsumable(String consumableId,
-      {int quantity = 1}) {
+      {int quantity = 1,}) {
     throw UnimplementedError();
   }
 }
@@ -134,8 +134,7 @@ ShopItem buildShopItem({
   bool isOwned = false,
   bool isAvailable = true,
   bool isLimited = false,
-}) {
-  return ShopItem(
+}) => ShopItem(
     id: id,
     name: name,
     itemType: itemType,
@@ -149,7 +148,6 @@ ShopItem buildShopItem({
     isAvailable: isAvailable,
     isLimited: isLimited,
   );
-}
 
 void main() {
   late TestShopRepository mockRepository;
@@ -175,7 +173,6 @@ void main() {
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
         buildShopItem(
@@ -194,9 +191,7 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
       container.read(shopItemsProvider);
 
@@ -219,14 +214,12 @@ void main() {
           id: 'skin_001',
           name: 'Skin 1',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
         buildShopItem(
           id: 'skin_002',
           name: 'Skin 2',
           itemType: ShopItemType.skin,
-          category: 'skins',
           pricePhotons: 200,
           rarity: ItemRarity.rare,
           sortOrder: 2,
@@ -246,9 +239,7 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
       container.read(shopItemsProvider);
       await Future.delayed(Duration.zero);
@@ -288,7 +279,6 @@ void main() {
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
       ];
@@ -298,13 +288,9 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
-      mockRepository.purchaseItemHandler = (itemId) async {
-        return {'success': true};
-      };
+      mockRepository.purchaseItemHandler = (itemId) async => {'success': true};
 
       // Initial load
       container.read(shopItemsProvider);
@@ -326,7 +312,6 @@ void main() {
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
       ];
@@ -336,9 +321,7 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
       mockRepository.purchaseItemHandler = (itemId) async {
         throw Exception('Insufficient balance');
@@ -362,7 +345,6 @@ void main() {
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
       ];
@@ -372,9 +354,7 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
       container.read(shopItemsProvider);
       await Future.delayed(Duration.zero);
@@ -385,9 +365,7 @@ void main() {
         String? category,
         String? rarity,
         bool onlyAvailable = true,
-      }) async {
-        return items;
-      };
+      }) async => items;
 
       final notifier = container.read(shopItemsProvider.notifier);
       await notifier.refresh();
@@ -416,9 +394,7 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async {
-        return purchases;
-      };
+      }) async => purchases;
 
       container.read(purchaseHistoryProvider);
 
@@ -457,7 +433,7 @@ void main() {
           pricePaid: 200,
           photonBalanceBefore: 400,
           photonBalanceAfter: 200,
-          createdAt: DateTime(2024, 1, 28, 11, 0),
+          createdAt: DateTime(2024, 1, 28, 11),
         ),
       ];
 
@@ -489,9 +465,7 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async {
-        return [];
-      };
+      }) async => [];
 
       container.read(purchaseHistoryProvider);
       final notifier = container.read(purchaseHistoryProvider.notifier);
@@ -521,9 +495,7 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async {
-        return purchases;
-      };
+      }) async => purchases;
 
       container.read(purchaseHistoryProvider);
       final notifier = container.read(purchaseHistoryProvider.notifier);
@@ -533,9 +505,7 @@ void main() {
       mockRepository.getPurchaseHistoryHandler = ({
         int limit = 20,
         int offset = 0,
-      }) async {
-        return purchases;
-      };
+      }) async => purchases;
 
       await notifier.refresh();
 
@@ -604,9 +574,7 @@ void main() {
       mockRepository.equipItemHandler = ({
         required String itemType,
         String? itemId,
-      }) async {
-        return {'success': true};
-      };
+      }) async => {'success': true};
 
       container.read(inventoryProvider);
       await Future.delayed(Duration.zero);
@@ -707,9 +675,7 @@ void main() {
     test('loads owned item IDs', () async {
       final ownedIds = ['skin_001', 'skin_002', 'title_001'];
 
-      mockRepository.getOwnedItemsHandler = ({String? itemType}) async {
-        return ownedIds;
-      };
+      mockRepository.getOwnedItemsHandler = ({String? itemType}) async => ownedIds;
 
       final result = await container.read(ownedItemsProvider.future);
 
@@ -721,9 +687,7 @@ void main() {
     });
 
     test('handles empty owned items', () async {
-      mockRepository.getOwnedItemsHandler = ({String? itemType}) async {
-        return [];
-      };
+      mockRepository.getOwnedItemsHandler = ({String? itemType}) async => [];
 
       final result = await container.read(ownedItemsProvider.future);
 
@@ -738,15 +702,12 @@ void main() {
           id: 'skin_001',
           name: 'Test Skin',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
       ];
 
       final state = ShopItemsState(
         items: items,
-        isLoading: false,
-        error: null,
         itemsByCategory: {},
       );
 
@@ -765,7 +726,6 @@ void main() {
           id: 'skin_001',
           name: 'Skin 1',
           itemType: ShopItemType.skin,
-          category: 'skins',
           sortOrder: 1,
         ),
         buildShopItem(
@@ -781,7 +741,6 @@ void main() {
 
       final state = ShopItemsState(
         items: items,
-        isLoading: false,
         itemsByCategory: {
           'skin': [items[0]],
           'consumable': [items[1]],
@@ -815,8 +774,6 @@ void main() {
 
       final state = PurchaseHistoryState(
         purchases: purchases,
-        isLoading: false,
-        hasMore: true,
         currentOffset: 1,
       );
 
@@ -829,8 +786,6 @@ void main() {
       final state = PurchaseHistoryState(
         purchases: [],
         isLoading: true,
-        hasMore: true,
-        currentOffset: 0,
       );
 
       final updated = state.copyWith(
@@ -894,7 +849,6 @@ void main() {
         id: 'skin_001',
         name: 'Test Skin',
         itemType: ShopItemType.skin,
-        category: 'skins',
         sortOrder: 1,
       );
 
@@ -911,7 +865,6 @@ void main() {
         id: 'skin_001',
         name: 'Test Skin',
         itemType: ShopItemType.skin,
-        category: 'skins',
         sortOrder: 1,
       );
 
@@ -942,7 +895,7 @@ void main() {
       await Future.delayed(Duration.zero);
 
       // Should not throw
-      expect(() => testContainer.dispose(), returnsNormally);
+      expect(testContainer.dispose, returnsNormally);
     });
   });
 }

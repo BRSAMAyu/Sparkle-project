@@ -217,3 +217,5 @@ gha-creds-*.json
 postgres_data/
 redis_data/
 minio_data/
+# Keep dictionaries directory (MDX files for vocabulary lookup)
+# data/dictionaries/

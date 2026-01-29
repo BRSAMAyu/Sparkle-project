@@ -189,7 +189,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             SwitchListTile(
               title: Text(l10n.enableNotifications),
-              subtitle: Text('接收智能推送和学习提醒'),
+              subtitle: const Text('接收智能推送和学习提醒'),
               value: pushPrefs.enableCuriosity,
               onChanged: (v) {
                 ref.read(pushPreferencesProvider.notifier).toggleEnableCuriosity();

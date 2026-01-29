@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Unified notification model combining system and intervention notifications
 class UnifiedNotification {
 

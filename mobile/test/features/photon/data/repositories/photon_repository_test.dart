@@ -147,7 +147,7 @@ void main() {
           (e) => e.toString(),
           'message',
           contains('Unauthorized'),
-        )),
+        ),),
       );
     });
   });
@@ -289,7 +289,7 @@ void main() {
         );
       };
 
-      final result = await repository.getTransactionSummary(days: 30);
+      final result = await repository.getTransactionSummary();
 
       expect(result.totalIncome, 500);
       expect(result.totalExpense, 150);
@@ -301,9 +301,9 @@ void main() {
 
   group('PhotonRepository - transferPhotons', () {
     test('successfully transfers photons', () async {
-      final recipientId = 'user-456';
-      final amount = 100;
-      final message = 'Good luck!';
+      const recipientId = 'user-456';
+      const amount = 100;
+      const message = 'Good luck!';
 
       final responseData = {
         'success': true,
@@ -364,7 +364,7 @@ void main() {
           (e) => e.toString(),
           'message',
           contains('Insufficient photon balance'),
-        )),
+        ),),
       );
     });
   });
@@ -480,7 +480,7 @@ void main() {
       final balance = PhotonBalance(
         userId: 'user-123',
         balance: 500,
-        updatedAt: DateTime(2024, 1, 28, 10, 0, 0),
+        updatedAt: DateTime(2024, 1, 28, 10, 0),
       );
 
       final json = balance.toJson();
