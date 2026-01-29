@@ -196,7 +196,8 @@ class Settings(BaseSettings):
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_CHAT_MODEL: str = "glm-4.7"
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
-    ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型
+    ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
+    GLM_4_7_FLASH_MODEL: str = "glm-4.7-flash"  # GLM-4.7-Flash 模型（支持思考模式）
     ZHIPU_TEMPERATURE: float = 0.3
 
     # SiliconFlow API
@@ -212,11 +213,11 @@ class Settings(BaseSettings):
     HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
 
     # Embedding Service
-    EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
-    EMBEDDING_MODEL: str = "Qwen/Qwen3-Embedding-4B"  # 向量模型
+    EMBEDDING_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
-    RERANK_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
-    RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"  # 重排序模型
+    RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
 
     # DashScope (Aliyun)
     DASHSCOPE_API_KEY: str = ""

@@ -69,8 +69,11 @@ class TaskType(str, Enum):
 class ModelTier(str, Enum):
     """模型层级（按成本/能力分类）"""
     FAST = "fast"           # 快速响应（如 mimo-v2-flash）
+    FREE_FAST = "free_fast" # 免费快速（如 glm-4.7-flash 非思考模式）
     STANDARD = "standard"   # 标准模型（如 deepseek-chat, glm-4.7）
     REASONING = "reasoning" # 强推理（如 deepseek-reasoner）
+    FREE_REASONING = "free_reasoning" # 免费推理（如 glm-4.7-flash 思考模式）
+    SPECIALIST = "specialist" # 专家模型（如 OCR、翻译等专用模型）
 
 
 @dataclass
