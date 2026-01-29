@@ -167,7 +167,7 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	cd backend && python grpc_server.py
+	@bash backend/scripts/run_grpc_with_env.sh
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."

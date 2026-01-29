@@ -31,6 +31,7 @@ class ModelProvider(str, Enum):
     DEEPSEEK = "deepseek"  # DeepSeek (核心模型)
     ZHIPU = "zhipu"        # Zhipu GLM (编程/工具)
     DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
+    SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
 
 
 @dataclass
@@ -161,6 +162,30 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=150,
             ),
+            # GLM-4.7-Flash 非思考模式 - 快速响应（免费）
+            "glm_4_7_flash_no_thinking": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.GLM_4_7_FLASH_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=True,  # 关闭思考模式，快速响应
+                tier=ModelTier.FREE_FAST,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=200,
+            ),
+            # GLM-4.7-Flash 思考模式 - 深度推理（免费）
+            "glm_4_7_flash_thinking": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.GLM_4_7_FLASH_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,  # 开启保留式思考，深度推理
+                tier=ModelTier.FREE_REASONING,
+                cost_per_1k_tokens=0.0005,
+                avg_latency_ms=1000,
+            ),
 
             # ===== Aliyun DashScope (通义千问) =====
             "dashscope_chat": ModelConfig(
@@ -184,6 +209,30 @@ class LLMRouter:
                 avg_latency_ms=2000,
             ),
 
+            # ===== SiliconFlow (专家模型：OCR、翻译等) =====
+            # DeepSeek OCR - 文档识别与清洗
+            "siliconflow_ocr": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.SILICONFLOW_OCR_MODEL,
+                base_url=settings.SILICONFLOW_BASE_URL,
+                api_key=settings.SILICONFLOW_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.001,
+                avg_latency_ms=2000,
+            ),
+            # Hunyuan MT - 机器翻译
+            "siliconflow_translate": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.HUNYUAN_TRANSLATE_MODEL,
+                base_url=settings.HUNYUAN_BASE_URL,
+                api_key=settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY,
+                temperature=0.2,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.0005,
+                avg_latency_ms=1000,
+            ),
+
             # ===== 通用备用 =====
             "default": ModelConfig(
                 provider=ModelProvider.DEEPSEEK,  # 默认用deepseek
@@ -198,13 +247,19 @@ class LLMRouter:
         self._available_models = configs
 
         # 按tier分组（优先级从高到低）
-        # - STANDARD: 使用非思考模式 GLM-4.7，快速响应
-        # - REASONING: 使用思考模式 GLM-4.7，深度推理
-        # - FAST: 使用非思考模式 GLM-4.7-FlashX，极速响应
+        # - FREE_FAST: 免费快速响应模型（glm-4.7-flash 非思考模式）
+        # - FREE_REASONING: 免费深度推理模型（glm-4.7-flash 思考模式）
+        # - FAST: 付费快速响应模型（xunfei暂不可用，使用zhipu_flash）
+        # - STANDARD: 付费标准模型
+        # - REASONING: 付费推理模型
+        # - SPECIALIST: 专家模型（OCR、翻译等专用功能）
         self._tier_mapping = {
+            ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
+            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
             ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
             ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
             ModelTier.REASONING: ["zhipu_reason", "deepseek_reason", "dashscope_reason"],
+            ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
         }
 
         # 注册到agent_profile_registry

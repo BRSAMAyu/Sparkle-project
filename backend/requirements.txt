@@ -85,8 +85,15 @@ grpcio-tools>=1.60.0
 grpcio-reflection>=1.60.0
 protobuf>=4.25.0
 
-# PDF Parsing
+# Document Processing (Office formats & OCR)
+python-docx>=1.0.0      # DOCX document processing
+python-pptx>=1.0.0      # PPTX presentation processing
+Pillow>=10.0.0          # Image processing for OCR/thumbnails
+pytesseract>=0.3.10     # Tesseract OCR wrapper
+
 # PDF Generation & Reporting
+weasyprint>=60.0
+jinja2>=3.1.0
 celery>=5.3.6
 y-py>=0.6.0
 
