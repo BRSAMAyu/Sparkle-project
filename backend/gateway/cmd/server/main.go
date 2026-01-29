@@ -163,6 +163,7 @@ func main() {
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
 	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
+	dashboardProxyHandler := handler.NewDashboardProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
 	// STT Handler for Speech-to-Text WebSocket proxy
@@ -422,6 +423,9 @@ func main() {
 
 		// Intervention Routes (proxy to Python backend)
 		api.Any("/interventions/*path", authMiddleware, interventionProxyHandler.Proxy)
+
+		// Dashboard Routes (proxy to Python backend)
+		api.Any("/dashboard/*path", authMiddleware, dashboardProxyHandler.Proxy)
 	}
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))

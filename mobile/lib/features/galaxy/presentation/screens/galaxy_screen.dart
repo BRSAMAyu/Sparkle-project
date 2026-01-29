@@ -545,13 +545,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           desktop: 48.0,
           wide: 56.0,
         );
-    final minimapSize = ResponsiveSystem.resolve(
+    final minimapSizeBase = ResponsiveSystem.resolve(
       context: context,
       mobile: 96.0,
       tablet: 120.0,
       desktop: 140.0,
       wide: 160.0,
     );
+    final minimapSize =
+        isLandscapeMobile ? minimapSizeBase * 0.8 : minimapSizeBase;
     final zoomSliderHeight = ResponsiveSystem.resolve(
       context: context,
       mobile: isLandscapeMobile ? 96.0 : 140.0,
@@ -662,9 +664,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 onLongPressStart: _handleLongPressStart,
                 child: InteractiveViewer(
                   transformationController: _transformationController,
+                  alignment: Alignment.topLeft,
                   boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
                   minScale: 0.1,
-                  maxScale: 3.0,
+                  maxScale: 5.0,
                   constrained: false, // Infinite canvas
                   child: SizedBox(
                     width: _canvasSize,
@@ -769,35 +772,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       ],
                     );
 
-                    // DPR Scaling Logic
-                    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-                    final currentDpr = PerformanceService.instance.currentDpr.value;
-                    final renderScale = (currentDpr / devicePixelRatio).clamp(0.1, 1.0);
-
-                    if (renderScale > 0.99) {
-                      return content;
-                    }
-
-                    // Render at lower resolution and scale up
-                    return Transform.scale(
-                      scale: 1 / renderScale,
-                      alignment: Alignment.topLeft,
-                      transformHitTests: false,
-                      child: RepaintBoundary(
-                        child: SizedBox(
-                          width: canvasSize * renderScale,
-                          height: canvasSize * renderScale,
-                          child: FittedBox(
-                            fit: BoxFit.fill,
-                            child: SizedBox(
-                              width: canvasSize,
-                              height: canvasSize,
-                              child: content,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
+                    return content;
                   },
                 ),
               ),
@@ -945,7 +920,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ),
 
           // 6. Mini Map (Bottom Left)
-          if (!_isEntering && !isLandscapeMobile)
+          if (!_isEntering)
             Positioned(
               bottom: bottomInset,
               left: overlayInset,
@@ -958,7 +933,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ),
 
           // 6.1 Guide Button (Above Mini Map)
-          if (!_isEntering && !isLandscapeMobile)
+          if (!_isEntering)
             Positioned(
               bottom: bottomInset + minimapSize + 12,
               left: overlayInset + 8,

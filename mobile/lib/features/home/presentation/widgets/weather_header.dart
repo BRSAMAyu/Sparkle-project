@@ -41,7 +41,7 @@ class WeatherHeader extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? DS.textSecondary : DS.neutral700,
+                        color: DS.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -52,9 +52,7 @@ class WeatherHeader extends ConsumerWidget {
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isDark
-                        ? DS.textSecondary.withValues(alpha: 0.6)
-                        : DS.neutral600.withValues(alpha: 0.8),
+                    color: DS.textSecondary.withValues(alpha: 0.7),
                   ),
                 ),
               ],

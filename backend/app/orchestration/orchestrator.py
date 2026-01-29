@@ -948,29 +948,37 @@ class ChatOrchestrator:
                     )
                     return
 
-            # Step 2: Acquire Distributed Lock
-            with tracer.start_as_current_span("redis.acquire_lock"):
-                lock_acquired = await self._acquire_session_lock(session_id, request_id)
-
-            if not lock_acquired:
-                yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    error=agent_service_pb2.Error(
-                        code="CONFLICT",
-                        message="会话正在处理另一个请求，请稍候",
-                        retryable=True
-                    ),
-                    finish_reason=agent_service_pb2.ERROR
-                )
-                return
-
+            lock_acquired = False
+            lock_renewal_task: asyncio.Task | None = None
+            lock_renewal_stop: asyncio.Event | None = None
             total_prompt_tokens = 0
             total_completion_tokens = 0
             transparency_generator: TransparencyDataGenerator | None = None
 
             try:
+                # Step 2: Acquire Distributed Lock
+                with tracer.start_as_current_span("redis.acquire_lock"):
+                    lock_acquired = await self._acquire_session_lock(session_id, request_id)
+
+                if not lock_acquired:
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=response_id,
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        error=agent_service_pb2.Error(
+                            code="CONFLICT",
+                            message="会话正在处理另一个请求，请稍候",
+                            retryable=True
+                        ),
+                        finish_reason=agent_service_pb2.ERROR
+                    )
+                    return
+
+                # Start lock renewal for long-running requests
+                lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
+                    session_id, request_id, interval=10.0
+                )
+
                 # Step 3: Initialize Workflow State
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
 
@@ -1118,7 +1126,8 @@ class ChatOrchestrator:
                                     user_context_payload["preferred_tools"] = preferred_tools
                                 logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
                         except Exception as e:
-                            logger.warning(f"Failed to get tool preferences: {e}")
+                            logger.warning(f"Failed to get tool preferences (non-fatal): {e}")
+                            if active_db: await active_db.rollback()
                     elif grpc_context:
                         # If no DB session but have gRPC context, use it
                         user_context_payload = grpc_context
@@ -1187,9 +1196,6 @@ class ChatOrchestrator:
                                 await stream_callback(agent_service_pb2.ChatResponse(
                                     finish_reason=agent_service_pb2.STOP
                                 ))
-                                # Release lock and return early
-                                await self._release_session_lock(session_id, request_id)
-                                ACTIVE_SESSIONS.dec()
                                 return
 
                             # If confirmation needed, ask for confirmation
@@ -1205,9 +1211,6 @@ class ChatOrchestrator:
                                 await stream_callback(agent_service_pb2.ChatResponse(
                                     finish_reason=agent_service_pb2.STOP
                                 ))
-                                # Release lock and return early
-                                await self._release_session_lock(session_id, request_id)
-                                ACTIVE_SESSIONS.dec()
                                 return
 
                         except Exception as e:
@@ -2033,9 +2036,21 @@ class ChatOrchestrator:
 
                     llm_profile_meta = {}
                     if isinstance(user_context_payload, dict):
-                        llm_profile_meta = user_context_payload.get("llm_profile") or {}
-                        if not isinstance(llm_profile_meta, dict):
-                            llm_profile_meta = {}
+                        llm_profile = user_context_payload.get("llm_profile")
+                        if llm_profile:
+                            # Handle both dict and JSON string cases
+                            if isinstance(llm_profile, str):
+                                try:
+                                    import json
+                                    llm_profile_meta = json.loads(llm_profile)
+                                except (json.JSONDecodeError, TypeError):
+                                    logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
+                                    llm_profile_meta = {}
+                            elif isinstance(llm_profile, dict):
+                                llm_profile_meta = llm_profile
+                            else:
+                                logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
+                                llm_profile_meta = {}
 
                     # Build metadata with plan switch notification
                     response_metadata = {
@@ -2111,22 +2126,36 @@ class ChatOrchestrator:
                     try:
                         from app.services.decision_record_service import DecisionRecordService
 
-                        if active_db is not None:
+                        if active_db is not None and active_db.is_active:
+                            logger.debug(f"DEBUG: llm_profile_meta type={type(llm_profile_meta)} content={llm_profile_meta}")
+                            
+                            def get_val(d, key, default):
+                                if not isinstance(d, dict): return default
+                                # Try normal key, then try key with literal double quotes
+                                if key in d: return d[key]
+                                quoted_key = f'"{key}"'
+                                if quoted_key in d: return d[quoted_key]
+                                return default
+
+                            # Ensure llm_profile_meta is a dict and has defaults
+                            pref_snapshot = {
+                                "verbosity": get_val(llm_profile_meta, "verbosity_target", "balanced"),
+                                "temperature": get_val(llm_profile_meta, "temperature", 0.7),
+                                "tone": get_val(llm_profile_meta, "tone", "encouraging"),
+                            }
+                            
                             decision_service = DecisionRecordService(active_db)
                             await decision_service.record_decision(
                                 user_id=uuid.UUID(str(user_id)),
                                 module="ai",
                                 action="generate_response",
                                 preference_version=(user_context_payload or {}).get("preference_version", 0),
-                                preferences_snapshot={
-                                    "verbosity": llm_profile_meta.get("verbosity_target"),
-                                    "temperature": llm_profile_meta.get("temperature"),
-                                    "tone": llm_profile_meta.get("tone"),
-                                },
+                                preferences_snapshot=pref_snapshot,
                                 outcome=f"Generated response with {len(full_response)} chars",
                             )
                     except Exception as e:
                         logger.warning(f"Failed to record decision: {e}")
+                        logger.debug(f"llm_profile_meta type: {type(llm_profile_meta)}, content: {llm_profile_meta}")
                     with tracer.start_as_current_span("orchestrator.cache_response"):
                         await self._cache_response(session_id, request_id, final_response_data)
 
@@ -2187,8 +2216,16 @@ class ChatOrchestrator:
                 REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
                 COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
 
+                # Stop lock renewal task
+                if lock_renewal_task and lock_renewal_stop:
+                    try:
+                        await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
+                    except Exception as e:
+                        logger.warning(f"Failed to stop lock renewal: {e}")
+
                 # Always release lock
-                await self._release_session_lock(session_id, request_id)
+                if lock_acquired:
+                    await self._release_session_lock(session_id, request_id)
 
                 # Record token usage (async, non-blocking)
                 if self.token_tracker and total_prompt_tokens > 0:

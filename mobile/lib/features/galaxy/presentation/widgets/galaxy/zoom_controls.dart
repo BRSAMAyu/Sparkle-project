@@ -7,7 +7,7 @@ class ZoomControls extends StatefulWidget {
     required this.transformationController,
     super.key,
     this.minScale = 0.1,
-    this.maxScale = 3.0,
+    this.maxScale = 5.0,
     this.sliderHeight = 150,
   });
   final TransformationController transformationController;

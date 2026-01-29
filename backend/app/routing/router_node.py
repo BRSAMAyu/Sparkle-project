@@ -82,6 +82,7 @@ class RouterNode:
 
             except Exception as e:
                 logger.warning(f"Tool preference learning failed: {e}")
+                if db_session: await db_session.rollback()
 
         # 3. Exploration Selection
         if candidates:

@@ -304,11 +304,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               ),
                                             ],
                                           )
-                                        : AppMaterials.ceramic.copyWith(
-                                            glowColor: context
-                                                .sparkleColors.glowPrimary
-                                                .withValues(alpha: 0.2),
-                                          ),
+                                        : _getAIMessageMaterial(context),
                                     shapeBorder: ContinuousRectangleBorder(
                                       borderRadius: BorderRadius.circular(24),
                                     ),
@@ -698,6 +694,29 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     }
 
     return null;
+  }
+
+  /// Get the material for AI message bubbles with proper contrast in dark mode
+  ///
+  /// Dark mode: Uses a lighter gray (#2A2A2A) for better contrast
+  /// Light mode: Uses standard ceramic material
+  SparkleMaterial _getAIMessageMaterial(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDark) {
+      // Use a lighter color than surfaceSecondary for better contrast
+      // surfaceAmbient (#0D0D0D) < surfacePrimary (#121212) < surfaceSecondary (#1E1E1E) < this (#2A2A2A)
+      return SparkleMaterial(
+        backgroundColor: const Color(0xFF2A2A2A),
+        borderColor: const Color(0xFF3A3A3A),
+      );
+    }
+
+    // Light mode: use neutral100 for the AI bubble
+    return SparkleMaterial(
+      backgroundColor: DS.neutral100,
+      glowColor: DS.brandPrimary.withValues(alpha: 0.1),
+    );
   }
 
   Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(

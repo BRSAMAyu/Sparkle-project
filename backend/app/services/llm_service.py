@@ -165,6 +165,9 @@ class LLMService:
         self.enable_dynamic_routing = enable_dynamic_routing
         self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False))
 
+        # 并发安全保护
+        self._state_lock = asyncio.Lock()
+
         # 当前选中的模型配置
         self._current_selection: LLMSelection | None = None
         self._provider: LLMProvider | None = None
@@ -241,6 +244,22 @@ class LLMService:
 
         logger.info(f"[Legacy] LLMService initialized with provider={provider_type}")
 
+    async def _get_state_snapshot(self) -> dict[str, Any]:
+        """
+        获取状态快照（线程安全）
+
+        Returns:
+            Dict with provider, chat_model, reason_model, extra_body, current_selection
+        """
+        async with self._state_lock:
+            return {
+                "provider": self._provider,
+                "chat_model": self.chat_model,
+                "reason_model": self.reason_model,
+                "extra_body": self._extra_body,
+                "current_selection": self._current_selection,
+            }
+
     @property
     def provider(self) -> LLMProvider:
         """获取当前provider（向后兼容）"""
@@ -253,9 +272,9 @@ class LLMService:
         """获取默认模型（向后兼容）"""
         return self.chat_model
 
-    def switch_model_for_task(self, task_type: TaskType):
+    async def switch_model_for_task(self, task_type: TaskType):
         """
-        根据任务类型动态切换模型
+        根据任务类型动态切换模型（线程安全）
 
         Args:
             task_type: 任务类型（如 TaskType.DEEP_REASONING）
@@ -264,20 +283,23 @@ class LLMService:
             logger.warning("Dynamic routing is disabled, cannot switch model")
             return
 
-        selection = llm_router.select_model(self.agent_role, task_type)
-        kwargs = llm_router.get_openai_client_kwargs(selection)
+        # 保护状态变更
+        async with self._state_lock:
+            selection = llm_router.select_model(self.agent_role, task_type)
+            kwargs = llm_router.get_openai_client_kwargs(selection)
 
-        self._provider = OpenAICompatibleProvider(
-            api_key=kwargs["api_key"],
-            base_url=kwargs["base_url"]
-        )
-        self.chat_model = kwargs["model"]
-        self.reason_model = kwargs["model"]
-        self._current_selection = selection
+            self._provider = OpenAICompatibleProvider(
+                api_key=kwargs["api_key"],
+                base_url=kwargs["base_url"]
+            )
+            self.chat_model = kwargs["model"]
+            self.reason_model = kwargs["model"]
+            self._current_selection = selection
+            self._extra_body = kwargs.get("extra_body")
 
-        logger.info(
-            f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
-        )
+            logger.info(
+                f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
+            )
 
     def get_current_selection(self) -> LLMSelection | None:
         """获取当前的模型选择（用于观测）"""

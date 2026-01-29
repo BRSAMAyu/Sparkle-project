@@ -595,6 +595,9 @@ class ProductionChatOrchestrator:
 
         active_db = db_session or self.db_session
 
+        lock_acquired = False
+        lock_renewal_task: asyncio.Task | None = None
+        lock_renewal_stop: asyncio.Event | None = None
         try:
             # 验证请求
             with TRACER.start_as_current_span("request.validate"):
@@ -629,6 +632,11 @@ class ProductionChatOrchestrator:
             lock_acquired = await self._acquire_session_lock(session_id, request_id)
             if not lock_acquired:
                 raise ValueError("Another request is processing for this session")
+
+            # Start lock renewal for long-running requests
+            lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
+                session_id, request_id, interval=10.0
+            )
 
             # 构建上下文
             with TRACER.start_as_current_span("context.build"):
@@ -847,9 +855,21 @@ class ProductionChatOrchestrator:
             )
             llm_profile_meta = {}
             if isinstance(user_context_data, dict):
-                llm_profile_meta = user_context_data.get("llm_profile") or {}
-                if not isinstance(llm_profile_meta, dict):
-                    llm_profile_meta = {}
+                llm_profile = user_context_data.get("llm_profile")
+                if llm_profile:
+                    # Handle both dict and JSON string cases
+                    if isinstance(llm_profile, str):
+                        try:
+                            import json
+                            llm_profile_meta = json.loads(llm_profile)
+                        except (json.JSONDecodeError, TypeError):
+                            logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
+                            llm_profile_meta = {}
+                    elif isinstance(llm_profile, dict):
+                        llm_profile_meta = llm_profile
+                    else:
+                        logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
+                        llm_profile_meta = {}
             response_metadata = {
                 "response_id": response_id,
                 "trace_id": trace_id,
@@ -935,8 +955,15 @@ class ProductionChatOrchestrator:
             )
 
         finally:
-            # 清理会话
-            await self._release_session_lock(session_id, request_id)
+            # Stop lock renewal task
+            if lock_renewal_task and lock_renewal_stop:
+                try:
+                    await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
+                except Exception as e:
+                    logger.warning(f"Failed to stop lock renewal: {e}")
+            # 清理会话 - only release lock if it was acquired
+            if lock_acquired:
+                await self._release_session_lock(session_id, request_id)
             await self._track_session(session_id, add=False)
 
     def get_health_status(self) -> dict[str, Any]:
