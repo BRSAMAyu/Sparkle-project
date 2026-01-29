@@ -84,11 +84,10 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
   Widget _buildFilterBar() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: DS.surface,
+        color: Theme.of(context).colorCode.surface,
         border: Border(
           bottom: BorderSide(
-            color: DS.surfaceTertiary.withValues(alpha: 0.5),
-            width: 1,
+            color: Theme.of(context).colorCode.borderSubtle,
           ),
         ),
       ),
@@ -99,13 +98,11 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: NotificationFilter.values.map((filter) {
-                return NotificationFilterChip(
+              children: NotificationFilter.values.map((filter) => NotificationFilterChip(
                   label: _getFilterLabel(filter),
                   isSelected: _filter == filter,
                   onTap: () => _setFilter(filter),
-                );
-              }).toList(),
+                )).toList(),
             ),
           ),
 
@@ -115,13 +112,11 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: SourceTypeFilter.values.map((filter) {
-                return NotificationFilterChip(
+              children: SourceTypeFilter.values.map((filter) => NotificationFilterChip(
                   label: _getSourceFilterLabel(filter),
                   isSelected: _sourceFilter == filter,
                   onTap: () => _setSourceFilter(filter),
-                );
-              }).toList(),
+                )).toList(),
             ),
           ),
         ],
@@ -178,7 +173,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           Text(error),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _refresh(),
+            onPressed: _refresh,
             child: const Text('重试'),
           ),
         ],

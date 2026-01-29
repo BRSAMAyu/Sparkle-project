@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Unified notification model combining system and intervention notifications
 class UnifiedNotification {
 
@@ -6,16 +8,12 @@ class UnifiedNotification {
     required this.sourceType,
     required this.title,
     required this.content,
-    this.type,
-    required this.priority,
-    required this.isRead,
-    required this.createdAt,
+    required this.priority, required this.isRead, required this.createdAt, this.type,
     this.readAt,
     this.metadata = const {},
   });
 
-  factory UnifiedNotification.fromJson(Map<String, dynamic> json) {
-    return UnifiedNotification(
+  factory UnifiedNotification.fromJson(Map<String, dynamic> json) => UnifiedNotification(
       id: json['id'] as String,
       sourceType: json['source_type'] as String,
       title: json['title'] as String,
@@ -29,7 +27,6 @@ class UnifiedNotification {
           : null,
       metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     );
-  }
   final String id;
   final String sourceType; // 'system' or 'intervention'
   final String title;
