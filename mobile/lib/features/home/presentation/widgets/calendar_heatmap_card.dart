@@ -251,7 +251,9 @@ class _DayCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
       onTap: hasTasks ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -271,18 +273,29 @@ class _DayCell extends StatelessWidget {
               : null,
         ),
         alignment: Alignment.center,
-        child: isToday
-            ? Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w600,
-                  color: DS.brandPrimary70Const,
-                ),
-              )
-            : null,
+        child: Text(
+          '$day',
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+            color: _getTextColor(isDark, intensity),
+          ),
+        ),
       ),
     );
+  }
+
+  Color _getTextColor(bool isDark, int intensity) {
+    // High intensity (3-4) or selected = white text
+    if (intensity >= 3 || isSelected) {
+      return Colors.white;
+    }
+    // Low intensity (0-2) = use contrast color based on theme
+    if (isDark) {
+      return isToday ? DS.primaryBase : DS.textSecondary;
+    }
+    return isToday ? DS.primaryBase : DS.textPrimary;
+  }
 
   Border? _buildBorder() {
     if (isSelected) {

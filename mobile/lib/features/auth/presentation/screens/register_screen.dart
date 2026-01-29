@@ -78,7 +78,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/login'),
         ),
         title: Text(l10n.register),
         elevation: 0,
@@ -193,16 +193,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: DS.brandPrimary,
-                      foregroundColor: DS.brandPrimary,
+                      foregroundColor: Colors.white,
                     ),
                     onPressed: authState.isLoading ? null : _submit,
                     child: authState.isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: DS.brandPrimaryConst,
+                              color: Colors.white,
                             ),
                           )
                         : Text(l10n.register),

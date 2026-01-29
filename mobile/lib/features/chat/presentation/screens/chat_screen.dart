@@ -77,7 +77,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final transparentMode = ref.watch(transparentModeProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -640,31 +639,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Calculate bottom padding for ListView to prevent messages being hidden
   /// behind fixed components at the bottom.
   double _calculateBottomPadding(BuildContext context, ChatState chatState) {
-    // Base padding
-    double padding = 20.0;
+    // Use a more generous calculation based on actual screen height
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
 
-    // PlanSelectorPill height
-    padding += 48.0;
+    // Base padding
+    double padding = isSmallScreen ? 40.0 : 60.0;
+
+    // PlanSelectorPill height (can vary with content)
+    padding += isSmallScreen ? 44.0 : 52.0;
 
     // ChatModeSelectorPill height
-    padding += 40.0;
+    padding += isSmallScreen ? 36.0 : 44.0;
 
     // IntentPredictionBar height (when visible)
     if (chatState.aiStatus != null) {
-      padding += 44.0;
+      padding += isSmallScreen ? 48.0 : 56.0;
     }
 
-    // ChatInput base height (can expand with multiline)
-    padding += 72.0;
+    // ChatInput base height + expansion buffer
+    padding += isSmallScreen ? 80.0 : 100.0;
 
     // TransparencyPanel (conditional)
     if (ref.watch(transparentModeProvider)) {
-      padding += 120.0; // Approximate height
+      padding += isSmallScreen ? 140.0 : 160.0;
     }
 
-    // SafeArea bottom padding
+    // GraphRAG visualizer
+    if (chatState.graphragTrace != null) {
+      padding += 80.0;
+    }
+
+    // SafeArea bottom padding - use actual value with more buffer
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    padding += bottomPadding.clamp(0.0, 34.0);
+    padding += bottomPadding.clamp(0.0, 50.0);
+
+    // Add extra buffer for safety
+    padding += isSmallScreen ? 40.0 : 20.0;
 
     return padding;
   }

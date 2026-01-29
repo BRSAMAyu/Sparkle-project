@@ -416,13 +416,23 @@ class LLMService:
                 # 获取 provider 名称用于并发控制
                 provider_name = selection.config.provider.value
 
+                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
+                # 否则回退到 DeepSeek 时会继续使用 Zhipu 的 base_url
+                current_provider = self.provider
+                if selection != self._current_selection:
+                    kwargs = llm_router.get_openai_client_kwargs(selection)
+                    current_provider = OpenAICompatibleProvider(
+                        api_key=kwargs["api_key"],
+                        base_url=kwargs["base_url"]
+                    )
+
                 try:
                     async with llm_concurrency.acquire(provider_name):
-                        response = await self.provider.chat(
+                        response = await current_provider.chat(
                             messages,
                             model=selection.config.model_name,
                             temperature=selection.config.temperature,
-                            **kwargs
+                            **kwargs if 'kwargs' in locals() else {}
                         )
                         return response
                 except Exception as e:
@@ -632,21 +642,30 @@ class LLMService:
 
             # 定义流式调用函数
             async def _stream_with_selection(selection: LLMSelection) -> AsyncGenerator[str, None]:
+                # 获取 provider 名称用于并发控制
                 provider_name = selection.config.provider.value
-                async with llm_concurrency.acquire(provider_name):
-                    stream = self.provider.stream_chat(
-                        messages,
-                        model=selection.config.model_name,
-                        temperature=selection.config.temperature,
-                        **kwargs
-                    )
-                    if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
-                        stream = await stream
-                    if not hasattr(stream, "__aiter__"):
-                        raise TypeError("stream_chat must return an async iterator")
 
-                    async for chunk in stream:
-                        yield chunk
+                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
+                current_provider = self.provider
+                if selection != self._current_selection:
+                    kwargs = llm_router.get_openai_client_kwargs(selection)
+                    current_provider = OpenAICompatibleProvider(
+                        api_key=kwargs["api_key"],
+                        base_url=kwargs["base_url"]
+                    )
+
+                try:
+                    async with llm_concurrency.acquire(provider_name):
+                        async for chunk in current_provider.stream_chat(
+                            messages,
+                            model=selection.config.model_name,
+                            temperature=selection.config.temperature,
+                            **kwargs if 'kwargs' in locals() else {}
+                        ):
+                            yield chunk
+                except Exception as e:
+                    logger.error(f"[LLM] Stream processing failed for model {selection.config.model_name}: {e}")
+                    raise e
 
             try:
                 await circuit_breaker_service.check("primary_llm")

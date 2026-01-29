@@ -16,10 +16,12 @@ class TaskBoardCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final boardState = ref.watch(taskBoardProvider);
     final isDualColumn = context.isTablet || context.isDesktop;
+    final brightness = Theme.of(context).brightness;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: MaterialStyler(
+        key: ValueKey('task_board_card_$brightness'),
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.spacing16),
@@ -137,7 +139,10 @@ class TaskBoardCard extends ConsumerWidget {
       ),
     );
 
-  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) => Container(
+  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) {
+    final brightness = Theme.of(context).brightness;
+    return Container(
+      key: ValueKey('side_panel_$brightness'),
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfacePrimary.withValues(alpha: 0.5),
@@ -158,6 +163,7 @@ class TaskBoardCard extends ConsumerWidget {
         ],
       ),
     );
+  }
 
   Widget _buildPanelContent(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Column(

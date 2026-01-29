@@ -2,8 +2,9 @@ import json
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +46,7 @@ class ChatResponse(BaseModel):
 async def chat_with_task_context(
     task_id: UUID,
     request: ChatRequest,
+    req_raw: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -53,6 +55,7 @@ async def chat_with_task_context(
     Binds conversation to a task and injects task context.
     """
     from app.models.task import Task
+    logger.info(f"Chat request headers: {req_raw.headers}")
 
     # 1. Verify Task Ownership
     task = await db.get(Task, task_id)
@@ -177,6 +180,7 @@ async def chat_with_task_context(
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    req_raw: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -184,6 +188,7 @@ async def chat(
     Agent 模式的聊天接口
     支持工具调用和结构化响应
     """
+    logger.info(f"Main chat request headers: {req_raw.headers}")
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
     error_handler = AgentErrorHandler()

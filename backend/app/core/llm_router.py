@@ -191,7 +191,7 @@ class LLMRouter:
             "dashscope_chat": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_CHAT_MODEL,
-                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=settings.DASHSCOPE_TEMPERATURE,
                 tier=ModelTier.STANDARD,
@@ -201,7 +201,7 @@ class LLMRouter:
             "dashscope_reason": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_REASON_MODEL,
-                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=0.2,
                 tier=ModelTier.REASONING,

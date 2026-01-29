@@ -29,6 +29,7 @@ async def test_llm_direct():
     print("=" * 60)
 
     # Initialize LLM service
+    settings.DEMO_MODE = False
     llm = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 
     print(f"\nConfiguration:")
