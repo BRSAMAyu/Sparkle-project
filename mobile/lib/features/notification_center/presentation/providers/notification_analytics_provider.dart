@@ -45,7 +45,7 @@ class NotificationAnalytics extends _$NotificationAnalytics {
 
   /// Load analytics for a specific period
   Future<void> loadAnalytics(String period) async {
-    state = state.copyWith(isLoading: true, error: null, period: period);
+    state = state.copyWith(isLoading: true, period: period);
 
     try {
       final analytics = await _repository.getAnalytics(period);

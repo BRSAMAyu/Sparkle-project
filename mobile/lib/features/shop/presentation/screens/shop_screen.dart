@@ -8,7 +8,7 @@ import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation
 /// Shop Screen
 /// 商城界面
 class ShopScreen extends ConsumerStatefulWidget {
-  const ShopScreen({Key? key}) : super(key: key);
+  const ShopScreen({super.key});
 
   @override
   ConsumerState<ShopScreen> createState() => _ShopScreenState();

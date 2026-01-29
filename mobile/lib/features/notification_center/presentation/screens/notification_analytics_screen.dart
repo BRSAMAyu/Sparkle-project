@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
+import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart'
+    as model;
 import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart';
 
 /// Notification Analytics Screen
@@ -52,7 +53,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
               ? _buildError(state.error!)
               : state.analytics == null
                   ? const Center(child: Text('暂无数据'))
-                  : _buildContent(state.analytics),
+                  : _buildContent(state.analytics!),
     );
   }
 
@@ -72,7 +73,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildContent(NotificationAnalytics analytics) => SingleChildScrollView(
+  Widget _buildContent(model.NotificationAnalytics analytics) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: ContentConstraint(
         child: Column(
@@ -100,7 +101,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
     );
 
-  Widget _buildSummarySection(NotificationAnalyticsSummary summary) => Column(
+  Widget _buildSummarySection(model.NotificationAnalyticsSummary summary) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -118,7 +119,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touchApp)),
+            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touch_app)),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard('查看率', '${summary.viewRate.toStringAsFixed(1)}%', Icons.pie_chart)),
           ],
@@ -162,7 +163,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
 
   Widget _buildTypeDistributionSection(
-    Map<String, NotificationTypeStats> byType,
+    Map<String, model.NotificationTypeStats> byType,
   ) =>
       Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,7 +173,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        ...byType.entries.map((MapEntry<String, NotificationTypeStats> entry) {
+        ...byType.entries.map((MapEntry<String, model.NotificationTypeStats> entry) {
           final stats = entry.value;
           return _buildTypeStatCard(
             entry.key == 'system' ? '系统通知' : '干预通知',
@@ -251,7 +252,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildTrendsSection(List<NotificationTrendData> trends) => Column(
+  Widget _buildTrendsSection(List<model.NotificationTrendData> trends) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -274,7 +275,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ],
     );
 
-  Widget _buildTrendChart(List<NotificationTrendData> trends) {
+  Widget _buildTrendChart(List<model.NotificationTrendData> trends) {
     if (trends.isEmpty) {
       return const Center(child: Text('暂无趋势数据'));
     }
@@ -354,7 +355,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
 /// Custom painter for trend chart
 class _TrendChartPainter extends CustomPainter {
   _TrendChartPainter(this.trends, this.maxValue);
-  final List<NotificationTrendData> trends;
+  final List<model.NotificationTrendData> trends;
   final double maxValue;
 
   @override

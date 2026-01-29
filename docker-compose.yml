@@ -93,8 +93,12 @@ services:
       - HUNYUAN_API_KEY=${HUNYUAN_API_KEY}
       - HUNYUAN_BASE_URL=${HUNYUAN_BASE_URL:-https://api.siliconflow.cn/v1}
       - HUNYUAN_TRANSLATE_MODEL=${HUNYUAN_TRANSLATE_MODEL:-tencent/Hunyuan-A13B-Instruct}
+      # MDX词典配置
+      - MDX_DICTIONARY_PATH=/app/data/dictionaries/oaldpe.mdx
+      - MDD_RESOURCES_PATH=${MDD_RESOURCES_PATH:-}
     volumes:
       - ./backend:/app
+      - ./data/dictionaries:/app/data/dictionaries:ro  # 词典文件（只读挂载）
     deploy:
       resources:
         limits:

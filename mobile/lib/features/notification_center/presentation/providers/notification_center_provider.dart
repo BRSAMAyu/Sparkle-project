@@ -47,7 +47,7 @@ class NotificationCenter extends _$NotificationCenter {
     bool unreadOnly = false,
     String? sourceType,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final notifications = await _repository.getNotifications(

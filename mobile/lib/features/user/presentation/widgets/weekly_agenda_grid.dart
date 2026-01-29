@@ -54,11 +54,9 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
     }
   }
 
-  Map<String, dynamic> _exportData() {
-    return {
+  Map<String, dynamic> _exportData() => {
       'grid': _gridState.map((e) => e.name).toList(),
     };
-  }
 
   void _updateCell(int index) {
     if (index >= 0 && index < 168) {

@@ -23,36 +23,34 @@ class LearningPreferences {
   final double depth;
   final double curiosity;
 
-  LearningPreferences copyWith({double? depth, double? curiosity}) {
-    return LearningPreferences(
+  LearningPreferences copyWith({double? depth, double? curiosity}) => LearningPreferences(
       depth: depth ?? this.depth,
       curiosity: curiosity ?? this.curiosity,
     );
-  }
 }
 
 /// Provider for learning preferences (depth and curiosity)
 final learningPreferencesProvider =
     StateNotifierProvider<LearningPreferencesNotifier, LearningPreferences>(
-  (ref) => LearningPreferencesNotifier(ref),
+  LearningPreferencesNotifier.new,
 );
 
 /// Provider for push notification preferences
 final pushPreferencesProvider =
     StateNotifierProvider<PushPreferencesNotifier, PushPreferences>(
-  (ref) => PushPreferencesNotifier(ref),
+  PushPreferencesNotifier.new,
 );
 
 /// Provider for task reminder configuration
 final taskReminderConfigProvider =
     StateNotifierProvider<TaskReminderConfigNotifier, TaskReminderConfig>(
-  (ref) => TaskReminderConfigNotifier(ref),
+  TaskReminderConfigNotifier.new,
 );
 
 /// Provider for weekly agenda data
 final weeklyAgendaProvider =
     StateNotifierProvider<WeeklyAgendaNotifier, Map<String, dynamic>>(
-  (ref) => WeeklyAgendaNotifier(ref),
+  WeeklyAgendaNotifier.new,
 );
 
 class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
@@ -157,13 +155,11 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
 class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
   PushPreferencesNotifier(this._ref)
       : super(PushPreferences(
-          enableCuriosity: true,
           personaType: 'coach',
-          dailyCap: 5,
-        )) {
+        ),) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _loadFromUser(next.user!);
+        _loadFromUser(next.user);
       }
     });
     _loadFromUser(_ref.read(authProvider).user);
@@ -226,7 +222,7 @@ class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
       : super(const LearningPreferences(depth: 0.5, curiosity: 0.5)) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _loadFromUser(next.user!);
+        _loadFromUser(next.user);
       }
     });
     _loadFromUser(_ref.read(authProvider).user);

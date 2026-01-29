@@ -7,10 +7,10 @@ import 'package:sparkle/features/photon/presentation/providers/photon_provider.d
 /// 购买确认弹窗
 class PurchaseConfirmationDialog extends ConsumerStatefulWidget {
   const PurchaseConfirmationDialog({
-    Key? key,
+    super.key,
     required this.item,
     required this.onConfirm,
-  }) : super(key: key);
+  });
 
   final ShopItem item;
   final VoidCallback onConfirm;
@@ -57,13 +57,11 @@ class _PurchaseConfirmationDialogState
                           child: Image.network(
                             widget.item.iconUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
+                            errorBuilder: (context, error, stackTrace) => Icon(
                                 _getItemTypeIcon(widget.item.itemType),
                                 size: 64,
                                 color: _getRarityColor(widget.item.rarity),
-                              );
-                            },
+                              ),
                           ),
                         )
                       : Icon(
@@ -168,7 +166,7 @@ class _PurchaseConfirmationDialogState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('购买后余额：',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: TextStyle(fontWeight: FontWeight.bold),),
                       Row(
                         children: [
                           Icon(
@@ -239,7 +237,7 @@ class _PurchaseConfirmationDialogState
                     _isPurchasing = true;
                   });
 
-                  await widget.onConfirm();
+                  widget.onConfirm();
 
                   if (mounted) {
                     setState(() {

@@ -80,13 +80,13 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
           inventory['consumables'] as List<dynamic>? ?? [];
       final boosts = inventory['boosts'] as List<dynamic>? ?? [];
 
-      double expMultiplier = 1.0;
+      var expMultiplier = 1.0;
       DateTime? expEndTime;
-      double photonMultiplier = 1.0;
+      var photonMultiplier = 1.0;
       DateTime? photonEndTime;
-      int streakCharges = 0;
-      int hintCharges = 0;
-      bool customAvatar = false;
+      var streakCharges = 0;
+      var hintCharges = 0;
+      var customAvatar = false;
 
       // 检查所有消耗品
       for (final item in [...consumables, ...boosts]) {
@@ -113,7 +113,6 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
                 );
               }
             }
-            break;
 
           case 'photon_boost':
             final multiplier = config['multiplier'] as double? ?? 1.0;
@@ -127,21 +126,17 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
                 );
               }
             }
-            break;
 
           case 'streak_freeze':
             streakCharges += quantity;
-            break;
 
           case 'hint_reveal':
             hintCharges += quantity;
-            break;
 
           case 'custom_avatar':
             if (config['permanent'] == true) {
               customAvatar = true;
             }
-            break;
         }
       }
 
@@ -179,14 +174,10 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
   }
 
   /// 获取当前经验倍率
-  double getExpMultiplier() {
-    return state.isExpBoostActive ? state.expBoostMultiplier : 1.0;
-  }
+  double getExpMultiplier() => state.isExpBoostActive ? state.expBoostMultiplier : 1.0;
 
   /// 获取当前光子倍率
-  double getPhotonMultiplier() {
-    return state.isPhotonBoostActive ? state.photonBoostMultiplier : 1.0;
-  }
+  double getPhotonMultiplier() => state.isPhotonBoostActive ? state.photonBoostMultiplier : 1.0;
 
   /// 使用连击冻结
   bool useStreakFreeze() {

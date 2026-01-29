@@ -106,8 +106,7 @@ ShopItem buildShopItem({
   bool isOwned = false,
   bool isAvailable = true,
   bool isLimited = false,
-}) {
-  return ShopItem(
+}) => ShopItem(
     id: id,
     name: name,
     itemType: itemType,
@@ -121,7 +120,6 @@ ShopItem buildShopItem({
     isAvailable: isAvailable,
     isLimited: isLimited,
   );
-}
 
 void main() {
   late TestApiClient mockApiClient;
@@ -262,7 +260,7 @@ void main() {
 
   group('ShopRepository - purchaseItem', () {
     test('successfully purchases item', () async {
-      final itemId = 'skin_001';
+      const itemId = 'skin_001';
 
       final responseData = {
         'success': true,
@@ -324,7 +322,7 @@ void main() {
           (e) => e.toString(),
           'message',
           contains('Insufficient photon balance'),
-        )),
+        ),),
       );
     });
 
@@ -347,7 +345,7 @@ void main() {
           (e) => e.toString(),
           'message',
           contains('out of stock'),
-        )),
+        ),),
       );
     });
   });
@@ -508,8 +506,8 @@ void main() {
 
   group('ShopRepository - equipItem', () {
     test('successfully equips item', () async {
-      final itemId = 'skin_001';
-      final itemType = 'skin';
+      const itemId = 'skin_001';
+      const itemType = 'skin';
 
       final responseData = {
         'success': true,
@@ -595,8 +593,8 @@ void main() {
 
   group('ShopRepository - useConsumable', () {
     test('successfully uses consumable', () async {
-      final consumableId = 'boost_001';
-      final quantity = 2;
+      const consumableId = 'boost_001';
+      const quantity = 2;
 
       final responseData = {
         'success': true,
@@ -652,7 +650,6 @@ void main() {
         id: '1',
         name: 'Common',
         itemType: ShopItemType.skin,
-        category: 'skins',
         sortOrder: 1,
       );
 
@@ -662,7 +659,6 @@ void main() {
         id: '2',
         name: 'Rare',
         itemType: ShopItemType.skin,
-        category: 'skins',
         pricePhotons: 200,
         rarity: ItemRarity.rare,
         sortOrder: 1,
@@ -676,7 +672,6 @@ void main() {
         id: '1',
         name: 'Skin',
         itemType: ShopItemType.skin,
-        category: 'skins',
         sortOrder: 1,
       );
 
@@ -706,7 +701,7 @@ void main() {
         category: 'boosts',
         quantity: 1,
         isEquipped: false,
-        expiresAt: DateTime(2024, 1, 1), // Past date
+        expiresAt: DateTime(2024, 1), // Past date
       );
 
       expect(expiredItem.isExpired, isTrue);
@@ -722,7 +717,7 @@ void main() {
         category: 'boosts',
         quantity: 5,
         isEquipped: false,
-        expiresAt: DateTime.now().add(Duration(days: 30)), // Future date
+        expiresAt: DateTime.now().add(const Duration(days: 30)), // Future date
       );
 
       expect(validItem.isExpired, isFalse);
@@ -738,7 +733,6 @@ void main() {
         category: 'skins',
         quantity: 1,
         isEquipped: false,
-        expiresAt: null,
       );
 
       expect(perpetualItem.isExpired, isFalse);

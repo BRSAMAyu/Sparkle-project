@@ -392,6 +392,12 @@ class TaskService:
         return await TaskService.abandon(db, task, reason)
 
     @staticmethod
+    async def delete(db: AsyncSession, db_obj: Task) -> None:
+        """Delete task"""
+        await db.delete(db_obj)
+        await db.commit()
+
+    @staticmethod
     async def confirm_tasks_by_tool_result(
         db: AsyncSession, tool_result_id: str, user_id: UUID
     ) -> list[Task]:

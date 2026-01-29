@@ -44,9 +44,6 @@ enum PhotonTransactionType {
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class PhotonBalance {
-  final String userId;
-  final int balance;
-  final DateTime? updatedAt;
 
   PhotonBalance({
     required this.userId,
@@ -56,6 +53,9 @@ class PhotonBalance {
 
   factory PhotonBalance.fromJson(Map<String, dynamic> json) =>
       _$PhotonBalanceFromJson(json);
+  final String userId;
+  final int balance;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() => _$PhotonBalanceToJson(this);
 
@@ -63,37 +63,20 @@ class PhotonBalance {
     String? userId,
     int? balance,
     DateTime? updatedAt,
-  }) {
-    return PhotonBalance(
+  }) => PhotonBalance(
       userId: userId ?? this.userId,
       balance: balance ?? this.balance,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 
   @override
-  String toString() {
-    return 'PhotonBalance(userId: $userId, balance: $balance, updatedAt: $updatedAt)';
-  }
+  String toString() => 'PhotonBalance(userId: $userId, balance: $balance, updatedAt: $updatedAt)';
 }
 
 // ========== 光子交易记录实体 ==========
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class PhotonTransaction {
-  final String id;
-  final PhotonTransactionType transactionType;
-  final int amount;
-  final int balanceBefore;
-  final int balanceAfter;
-  final String? source;
-  final String? relatedItemId;
-
-  /// Backend field: extra_data
-  @JsonKey(name: 'extra_data')
-  final Map<String, dynamic>? metadata;
-
-  final DateTime createdAt;
 
   PhotonTransaction({
     required this.id,
@@ -109,6 +92,19 @@ class PhotonTransaction {
 
   factory PhotonTransaction.fromJson(Map<String, dynamic> json) =>
       _$PhotonTransactionFromJson(json);
+  final String id;
+  final PhotonTransactionType transactionType;
+  final int amount;
+  final int balanceBefore;
+  final int balanceAfter;
+  final String? source;
+  final String? relatedItemId;
+
+  /// Backend field: extra_data
+  @JsonKey(name: 'extra_data')
+  final Map<String, dynamic>? metadata;
+
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => _$PhotonTransactionToJson(this);
 
@@ -156,8 +152,7 @@ class PhotonTransaction {
     String? relatedItemId,
     Map<String, dynamic>? metadata,
     DateTime? createdAt,
-  }) {
-    return PhotonTransaction(
+  }) => PhotonTransaction(
       id: id ?? this.id,
       transactionType: transactionType ?? this.transactionType,
       amount: amount ?? this.amount,
@@ -168,23 +163,15 @@ class PhotonTransaction {
       metadata: metadata ?? this.metadata,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
 
   @override
-  String toString() {
-    return 'PhotonTransaction(id: $id, type: $transactionType, amount: $amount, balanceAfter: $balanceAfter)';
-  }
+  String toString() => 'PhotonTransaction(id: $id, type: $transactionType, amount: $amount, balanceAfter: $balanceAfter)';
 }
 
 // ========== 交易汇总统计实体 ==========
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class TransactionSummary {
-  final int totalIncome;
-  final int totalExpense;
-  final int netChange;
-  final int transactionCount;
-  final Map<String, int> byType;
 
   TransactionSummary({
     required this.totalIncome,
@@ -196,6 +183,11 @@ class TransactionSummary {
 
   factory TransactionSummary.fromJson(Map<String, dynamic> json) =>
       _$TransactionSummaryFromJson(json);
+  final int totalIncome;
+  final int totalExpense;
+  final int netChange;
+  final int transactionCount;
+  final Map<String, int> byType;
 
   Map<String, dynamic> toJson() => _$TransactionSummaryToJson(this);
 
@@ -205,18 +197,14 @@ class TransactionSummary {
     int? netChange,
     int? transactionCount,
     Map<String, int>? byType,
-  }) {
-    return TransactionSummary(
+  }) => TransactionSummary(
       totalIncome: totalIncome ?? this.totalIncome,
       totalExpense: totalExpense ?? this.totalExpense,
       netChange: netChange ?? this.netChange,
       transactionCount: transactionCount ?? this.transactionCount,
       byType: byType ?? this.byType,
     );
-  }
 
   @override
-  String toString() {
-    return 'TransactionSummary(income: $totalIncome, expense: $totalExpense, net: $netChange, count: $transactionCount)';
-  }
+  String toString() => 'TransactionSummary(income: $totalIncome, expense: $totalExpense, net: $netChange, count: $transactionCount)';
 }

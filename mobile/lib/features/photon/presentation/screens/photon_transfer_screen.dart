@@ -5,7 +5,7 @@ import 'package:sparkle/features/photon/presentation/providers/photon_provider.d
 /// Photon Transfer Screen
 /// 光子转账界面
 class PhotonTransferScreen extends ConsumerStatefulWidget {
-  const PhotonTransferScreen({Key? key}) : super(key: key);
+  const PhotonTransferScreen({super.key});
 
   @override
   ConsumerState<PhotonTransferScreen> createState() =>
@@ -230,8 +230,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
 
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) {
-        return Container(
+      builder: (context) => Container(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -266,8 +265,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               ),
             ],
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -277,8 +275,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
 
     showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      builder: (context) => AlertDialog(
           title: const Text('确认转账'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -310,8 +307,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               child: const Text('确认'),
             ),
           ],
-        );
-      },
+        ),
     );
   }
 
@@ -338,7 +334,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('转账失败：${e.toString()}'),
+            content: Text('转账失败：${e}'),
             backgroundColor: Colors.red,
           ),
         );

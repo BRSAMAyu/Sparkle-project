@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/shared/entities/user_brief.dart';
 
 class GroupMembersScreen extends ConsumerStatefulWidget {
   const GroupMembersScreen({

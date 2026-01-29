@@ -13,8 +13,7 @@ class NotificationAnalyticsSummary {
     required this.avgTimeToAction,
   });
 
-  factory NotificationAnalyticsSummary.fromJson(Map<String, dynamic> json) {
-    return NotificationAnalyticsSummary(
+  factory NotificationAnalyticsSummary.fromJson(Map<String, dynamic> json) => NotificationAnalyticsSummary(
       totalSent: json['total_sent'] as int? ?? 0,
       totalViewed: json['total_viewed'] as int? ?? 0,
       totalClicked: json['total_clicked'] as int? ?? 0,
@@ -22,7 +21,6 @@ class NotificationAnalyticsSummary {
       clickRate: (json['click_rate'] as num?)?.toDouble() ?? 0.0,
       avgTimeToAction: (json['avg_time_to_action'] as num?)?.toDouble() ?? 0.0,
     );
-  }
   final int totalSent;
   final int totalViewed;
   final int totalClicked;
@@ -52,8 +50,7 @@ class NotificationTypeStats {
     required this.clickRate,
   });
 
-  factory NotificationTypeStats.fromJson(Map<String, dynamic> json) {
-    return NotificationTypeStats(
+  factory NotificationTypeStats.fromJson(Map<String, dynamic> json) => NotificationTypeStats(
       type: json['type'] as String,
       sent: json['sent'] as int? ?? 0,
       viewed: json['viewed'] as int? ?? 0,
@@ -61,7 +58,6 @@ class NotificationTypeStats {
       viewRate: (json['view_rate'] as num?)?.toDouble() ?? 0.0,
       clickRate: (json['click_rate'] as num?)?.toDouble() ?? 0.0,
     );
-  }
   final String type;
   final int sent;
   final int viewed;
@@ -89,14 +85,12 @@ class NotificationTrendData {
     required this.clicked,
   });
 
-  factory NotificationTrendData.fromJson(Map<String, dynamic> json) {
-    return NotificationTrendData(
+  factory NotificationTrendData.fromJson(Map<String, dynamic> json) => NotificationTrendData(
       date: json['date'] as String,
       sent: json['sent'] as int? ?? 0,
       viewed: json['viewed'] as int? ?? 0,
       clicked: json['clicked'] as int? ?? 0,
     );
-  }
   final String date;
   final int sent;
   final int viewed;
@@ -133,14 +127,14 @@ class NotificationAnalytics { // 24 values
 
     final trendsList = <NotificationTrendData>[];
     if (json['trends'] != null) {
-      for (var item in json['trends'] as List) {
+      for (final item in json['trends'] as List) {
         trendsList.add(NotificationTrendData.fromJson(item as Map<String, dynamic>));
       }
     }
 
     final distributionList = <int>[];
     if (json['hourly_distribution'] != null) {
-      for (var item in json['hourly_distribution'] as List) {
+      for (final item in json['hourly_distribution'] as List) {
         distributionList.add(item as int);
       }
     }

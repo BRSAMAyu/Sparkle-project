@@ -43,11 +43,13 @@ class PredictionService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['ok'] == true) {
+      if (response.statusCode == 200 &&
+          response.data != null &&
+          response.data!['ok'] == true) {
         debugPrint('✅ Received prediction response');
 
         // Parse content (which is a JSON string)
-        final content = jsonDecode(response.data['content'] as String);
+        final content = jsonDecode(response.data!['content'] as String);
         final candidatesData = content['candidates'] as List<dynamic>?;
 
         if (candidatesData == null || candidatesData.isEmpty) {

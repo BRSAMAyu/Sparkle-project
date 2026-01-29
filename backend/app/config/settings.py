@@ -248,7 +248,7 @@ class Settings(BaseSettings):
     XUNFEI_APP_ID: str = ""
     XUNFEI_API_KEY: str = ""
     XUNFEI_API_SECRET: str = ""
-    XUNFEI_STT_DOMAIN: str = "iat"
+    XUNFEI_STT_DOMAIN: str = "slm"
     XUNFEI_STT_LANGUAGE: str = "zh-CN"
     XUNFEI_STT_SAMPLE_RATE: int = 16000
     XUNFEI_STT_MAX_AUDIO_DURATION: int = 60

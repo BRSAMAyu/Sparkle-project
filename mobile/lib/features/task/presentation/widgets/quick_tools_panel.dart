@@ -29,8 +29,7 @@ class QuickToolsPanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Wrap(
+  Widget build(BuildContext context) => Wrap(
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
@@ -86,7 +85,6 @@ class QuickToolsPanel extends StatelessWidget {
           ),
         ],
       );
-  }
 }
 
 class _ToolButton extends StatelessWidget {

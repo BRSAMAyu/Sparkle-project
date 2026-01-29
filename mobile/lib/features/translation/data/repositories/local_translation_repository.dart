@@ -84,21 +84,16 @@ class LocalTranslationRepository {
       case TranslationSortOrder.newestFirst:
         final tempRecords = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords.cast<TranslationRecord>().reversed.toList();
-        break;
       case TranslationSortOrder.oldestFirst:
         records = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
-        break;
       case TranslationSortOrder.highestRating:
         final tempRecords3 = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords3.cast<TranslationRecord>().reversed.toList();
-        break;
       case TranslationSortOrder.lowestRating:
         records = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
-        break;
       case TranslationSortOrder.mostViewed:
         final tempRecords5 = await _collection.where().sortByViewCount().thenByCreatedAt().offset(offset).limit(limit).findAll();
         records = tempRecords5.cast<TranslationRecord>().reversed.toList();
-        break;
     }
 
     return records.map(_toHistoryItem).toList();

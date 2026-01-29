@@ -5,17 +5,16 @@ import 'package:sparkle/shared/entities/shop_model.dart';
 /// 商城物品卡片组件
 class ShopItemCard extends StatelessWidget {
   const ShopItemCard({
-    Key? key,
+    super.key,
     required this.item,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   final ShopItem item;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -210,7 +209,6 @@ class ShopItemCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Color _getRarityColor(ItemRarity rarity) {
     switch (rarity) {

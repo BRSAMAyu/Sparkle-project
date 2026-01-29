@@ -84,10 +84,10 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
   Widget _buildFilterBar() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorCode.surface,
+        color: DS.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorCode.borderSubtle,
+            color: DS.surfaceTertiary.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
