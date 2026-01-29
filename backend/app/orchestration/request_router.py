@@ -11,11 +11,10 @@ Phase 1.1 Improvement: Added intent caching and progressive classification.
 
 Phase 2.1-2.3 Improvement: Integrated BERT classifier, user profiling, and monitoring.
 """
-from typing import Optional, Tuple, Dict
 from loguru import logger
 
-from app.orchestration.schemas import RouteDecision
 from app.orchestration.intent_cache import IntentCache
+from app.orchestration.schemas import RouteDecision
 
 # Phase 2: Optional advanced features
 try:
@@ -26,14 +25,14 @@ except ImportError:
     logger.warning("BERT classifier not available")
 
 try:
-    from app.orchestration.user_intent_profiler import get_user_profiler, update_user_intent
+    from app.orchestration.user_intent_profiler import get_user_profiler
     PROFILER_AVAILABLE = True
 except ImportError:
     PROFILER_AVAILABLE = False
     logger.warning("User profiler not available")
 
 try:
-    from app.orchestration.intent_monitor import get_intent_monitor, record_classification, record_cache_result
+    from app.orchestration.intent_monitor import get_intent_monitor
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
@@ -363,7 +362,7 @@ class RequestRouter:
 
         return "chat"
 
-    async def _classify_intent_with_confidence(self, message: str) -> Tuple[str, float]:
+    async def _classify_intent_with_confidence(self, message: str) -> tuple[str, float]:
         """意图分类（带置信度评分） - P0 Fix: Improved priority handling
 
         P2 Improvement: Returns intent with confidence score.
@@ -435,9 +434,9 @@ class RequestRouter:
     async def _apply_bert_enhancement(
         self,
         message: str,
-        keyword_scores: Dict[str, float],
+        keyword_scores: dict[str, float],
         user_id: str = None
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """Apply BERT semantic enhancement to keyword scores
 
         Phase 2.1: Combines fast keyword matching with accurate BERT classification.
@@ -473,9 +472,9 @@ class RequestRouter:
 
     async def _apply_user_profiling(
         self,
-        scores: Dict[str, float],
+        scores: dict[str, float],
         user_id: str
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Apply user intent profiling to boost personalized intents
 
         Phase 2.2: Boosts frequently used intents by up to 30%.
@@ -691,7 +690,7 @@ class RequestRouter:
         initial_intent: str,
         initial_confidence: float,
         user_id: str = None
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """渐进式意图分类 (Progressive Classification)
 
         Three-tier classification pipeline:
@@ -750,7 +749,7 @@ class RequestRouter:
 
         # === Tier 3: LLM classification (only if Tier 2 didn't resolve) ===
         if initial_confidence < 0.65:
-            logger.info(f"Tier-3: Using LLM classification for low confidence case")
+            logger.info("Tier-3: Using LLM classification for low confidence case")
             try:
                 intent = await self._classify_intent_llm_assisted(message, user_id)
                 elapsed = (time.time() - start_time) * 1000
@@ -793,8 +792,9 @@ class RequestRouter:
         从 Redis 读取用户的 context version
         """
         if self.redis:
-            from app.orchestration.orchestrator import CONTEXT_VERSION_KEY_PREFIX
             import json
+
+            from app.orchestration.orchestrator import CONTEXT_VERSION_KEY_PREFIX
 
             key = f"{CONTEXT_VERSION_KEY_PREFIX}{user_id}"
             try:

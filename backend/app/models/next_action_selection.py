@@ -5,14 +5,12 @@ Next Action Selection Model
 用于个性化推荐和偏好学习。
 """
 import json
-import uuid
-from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, TypeDecorator, Text
+from sqlalchemy import Boolean, Column, Integer, String, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class JSONCompat(TypeDecorator):
@@ -79,7 +77,7 @@ class NextActionSelection(BaseModel):
     def __repr__(self):
         return f"<NextActionSelection(user_id={self.user_id}, action_type={self.action_type}, selected={self.selected})>"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典格式"""
         return {
             "id": str(self.id),

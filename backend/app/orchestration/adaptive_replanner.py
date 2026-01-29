@@ -3,15 +3,15 @@ AdaptiveReplanner - Automatic plan adjustments and replanning trigger.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
-from uuid import UUID
 import uuid
+from datetime import datetime, timedelta
+from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
 from app.orchestration.plan_review_service import plan_review_service
-from app.services.plan_progress_service import PlanProgressService, PlanHealthReport
+from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
 
 
@@ -27,7 +27,7 @@ class AdaptiveReplanner:
         self,
         db,
         redis=None,
-        progress_service: Optional[PlanProgressService] = None,
+        progress_service: PlanProgressService | None = None,
     ) -> None:
         self.db = db
         self.redis = redis
@@ -39,7 +39,7 @@ class AdaptiveReplanner:
         user_id: UUID,
         plan_id: UUID,
         task_id: UUID,
-        completion_rate: Optional[float] = None,
+        completion_rate: float | None = None,
     ) -> None:
         report = await self.progress_service.evaluate_progress(user_id, plan_id)
         await self._handle_report(
@@ -54,8 +54,8 @@ class AdaptiveReplanner:
         user_id: UUID,
         plan_id: UUID,
         task_id: UUID,
-        category: Optional[str] = None,
-        difficulty_delta: Optional[float] = None,
+        category: str | None = None,
+        difficulty_delta: float | None = None,
     ) -> None:
         report = await self.progress_service.evaluate_progress(user_id, plan_id)
         await self._handle_report(
@@ -70,10 +70,10 @@ class AdaptiveReplanner:
         self,
         report: PlanHealthReport,
         trigger: str,
-        task_id: Optional[UUID] = None,
-        completion_rate: Optional[float] = None,
-        feedback_category: Optional[str] = None,
-        difficulty_delta: Optional[float] = None,
+        task_id: UUID | None = None,
+        completion_rate: float | None = None,
+        feedback_category: str | None = None,
+        difficulty_delta: float | None = None,
     ) -> None:
         if not report.requires_adjustment:
             return
@@ -108,10 +108,10 @@ class AdaptiveReplanner:
         self,
         report: PlanHealthReport,
         trigger: str,
-        task_id: Optional[UUID] = None,
-        completion_rate: Optional[float] = None,
-        difficulty_delta: Optional[float] = None,
-        feedback_category: Optional[str] = None,
+        task_id: UUID | None = None,
+        completion_rate: float | None = None,
+        difficulty_delta: float | None = None,
+        feedback_category: str | None = None,
     ) -> None:
         state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id)
         if not state:
@@ -152,9 +152,9 @@ class AdaptiveReplanner:
         self,
         report: PlanHealthReport,
         trigger: str,
-        task_id: Optional[UUID] = None,
-        completion_rate: Optional[float] = None,
-        feedback_category: Optional[str] = None,
+        task_id: UUID | None = None,
+        completion_rate: float | None = None,
+        feedback_category: str | None = None,
     ) -> None:
         now = datetime.utcnow().isoformat()
         adaptive_facts = {
@@ -194,11 +194,11 @@ class AdaptiveReplanner:
 
     def _calculate_adjustments(
         self,
-        facts: Dict[str, Any],
+        facts: dict[str, Any],
         report: PlanHealthReport,
-        difficulty_delta: Optional[float],
-    ) -> Dict[str, Any]:
-        adjustments: Dict[str, Any] = {}
+        difficulty_delta: float | None,
+    ) -> dict[str, Any]:
+        adjustments: dict[str, Any] = {}
         adaptive = dict(facts.get("adaptive_adjustments", {}))
 
         time_multiplier = adaptive.get("time_multiplier", 1.0)
@@ -228,7 +228,7 @@ class AdaptiveReplanner:
 
     def _recently_triggered(
         self,
-        facts: Dict[str, Any],
+        facts: dict[str, Any],
         key: str,
         cooldown: timedelta,
     ) -> bool:
@@ -246,9 +246,9 @@ class AdaptiveReplanner:
         self,
         feedback_type: str,
         content: str,
-        task_id: Optional[UUID],
-        applied_adjustment: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        task_id: UUID | None,
+        applied_adjustment: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         entry = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
             "timestamp": datetime.utcnow().isoformat(),

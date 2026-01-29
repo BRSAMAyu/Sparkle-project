@@ -7,16 +7,17 @@ import asyncio
 import hashlib
 import json
 import time
-from typing import List, Optional, Dict, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from typing import Any
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from loguru import logger
 from openai import AsyncOpenAI
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.services.llm_service import llm_service
 from app.core.cache import cache_service
+from app.services.llm_service import llm_service
 from app.services.vocabulary_service import vocabulary_service
 
 
@@ -32,19 +33,19 @@ class TranslatedSegment:
     """Translated segment with metadata"""
     id: str
     translation: str
-    notes: List[str]
-    spans: List[Dict[str, Any]]  # Alignment spans (future enhancement)
+    notes: list[str]
+    spans: list[dict[str, Any]]  # Alignment spans (future enhancement)
 
 
 @dataclass
 class TranslationResult:
     """Complete translation result"""
-    segments: List[TranslatedSegment]
+    segments: list[TranslatedSegment]
     provider: str
     model_id: str
     cache_hit: bool
     latency_ms: int
-    recommendation: Optional[Dict[str, Any]] = None
+    recommendation: dict[str, Any] | None = None
 
 
 class TranslationService:
@@ -68,17 +69,17 @@ class TranslationService:
 
     async def translate(
         self,
-        segments: List[TranslationSegment],
+        segments: list[TranslationSegment],
         source_lang: str,
         target_lang: str,
         domain: str = "general",
         style: str = "natural",
-        glossary_id: Optional[str] = None,
+        glossary_id: str | None = None,
         timeout: float = 15.0,
         # v2 Signals
-        user_id: Optional[UUID] = None,
-        fingerprint: Optional[str] = None,
-        db: Optional[AsyncSession] = None
+        user_id: UUID | None = None,
+        fingerprint: str | None = None,
+        db: AsyncSession | None = None
     ) -> TranslationResult:
         """
         Translate text segments with caching and terminology support.
@@ -134,7 +135,7 @@ class TranslationService:
         translated_segments = []
         actual_provider = "llm"
         actual_model = llm_service.chat_model
-        
+
         for segment in segments:
             try:
                 # _translate_segment now returns a dict with provider info
@@ -146,11 +147,11 @@ class TranslationService:
                     timeout=timeout
                 )
                 translated_segments.append(tx_result["segment"])
-                
+
                 # Update provider info from the last successful segment
                 actual_provider = tx_result["provider"]
                 actual_model = tx_result["model"]
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Translation timeout for segment {segment.id}: {segment.text[:50]}...")
                 # Fallback: simple placeholder
                 translated_segments.append(TranslatedSegment(
@@ -192,10 +193,10 @@ class TranslationService:
 
     async def _evaluate_signals(
         self,
-        user_id: Optional[UUID | str],
-        fingerprint: Optional[str],
+        user_id: UUID | str | None,
+        fingerprint: str | None,
         db: AsyncSession
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Evaluate user signals to generate recommendations.
 
@@ -209,10 +210,7 @@ class TranslationService:
         user_uuid = None
         if user_id:
             try:
-                if isinstance(user_id, str):
-                    user_uuid = UUID(user_id)
-                else:
-                    user_uuid = user_id
+                user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
             except ValueError:
                 logger.warning(f"Invalid user_id format: {user_id}")
                 return {
@@ -230,22 +228,22 @@ class TranslationService:
             except Exception as e:
                 logger.warning(f"Failed to check quota: {e}")
                 quota_remaining = daily_limit  # Assume full quota on error
-        
+
         should_create = False
         reason = None
-        
+
         if quota_remaining > 0 and fingerprint:
             # 2. Check Repetition (Redis)
             # Key: translation:signal:freq:{user_id}:{fingerprint}
             # TTL: 1 hour (short term memory)
             freq_key = f"translation:signal:freq:{user_id}:{fingerprint}"
             count = await cache_service.incr(freq_key)
-            await cache_service.expire(freq_key, 3600) 
-            
+            await cache_service.expire(freq_key, 3600)
+
             if count >= 2:
                 should_create = True
                 reason = "repeated_query"
-        
+
         return {
             "should_create_card": should_create,
             "reason": reason,
@@ -259,8 +257,8 @@ class TranslationService:
         target_lang: str,
         domain: str,
         style: str,
-        glossary_terms: List[Dict[str, str]]
-    ) -> Dict[str, Any]:
+        glossary_terms: list[dict[str, str]]
+    ) -> dict[str, Any]:
         """使用翻译专用模型（经由 Hunyuan 或 SiliconFlow），失败时 fallback 到通用 LLM。"""
 
         # Language name mapping for clearer prompts
@@ -352,12 +350,12 @@ Output ONLY the translation, no explanations."""
 
     def _generate_cache_key(
         self,
-        segments: List[TranslationSegment],
+        segments: list[TranslationSegment],
         source_lang: str,
         target_lang: str,
         domain: str,
         style: str,
-        glossary_id: Optional[str]
+        glossary_id: str | None
     ) -> str:
         """
         Generate stable cache key.
@@ -388,7 +386,7 @@ Output ONLY the translation, no explanations."""
         hash_val = hashlib.sha256(key_str.encode()).hexdigest()[:16]
         return f"translation:{hash_val}"
 
-    async def _load_glossary(self, glossary_id: str) -> List[Dict[str, str]]:
+    async def _load_glossary(self, glossary_id: str) -> list[dict[str, str]]:
         """
         Load glossary terms from database or config.
 
@@ -417,7 +415,7 @@ Output ONLY the translation, no explanations."""
 
         return []
 
-    def segment_text(self, text: str) -> List[TranslationSegment]:
+    def segment_text(self, text: str) -> list[TranslationSegment]:
         """
         Segment text into translation units.
 

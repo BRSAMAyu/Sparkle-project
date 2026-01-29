@@ -1,27 +1,27 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.models.error_book import ErrorRecord
+from app.models.galaxy import KnowledgeNode
+from app.models.nightly_review import NightlyReview
+from app.models.semantic_memory import StrategyNode
+from app.models.task import Task
 from app.models.user import User
 from app.schemas.events import (
+    EventDeleteResponse,
+    EventDetailResponse,
     EventIngestRequest,
     EventIngestResponse,
-    EventDetailResponse,
+    EvidenceResolveItem,
     EvidenceResolveRequest,
     EvidenceResolveResponse,
-    EvidenceResolveItem,
     UserStateSummary,
-    EventDeleteResponse,
 )
 from app.services.event_service import EventService
 from app.services.state_estimator_service import StateEstimatorService
-from app.models.error_book import ErrorRecord
-from app.models.galaxy import KnowledgeNode
-from app.models.semantic_memory import StrategyNode
-from app.models.task import Task
-from app.models.nightly_review import NightlyReview
-from sqlalchemy import select
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -80,7 +80,7 @@ async def resolve_evidence(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    resolved: List[EvidenceResolveItem] = []
+    resolved: list[EvidenceResolveItem] = []
     for item in payload.items:
         if item.user_deleted:
             resolved.append(
@@ -146,7 +146,7 @@ async def resolve_evidence(
                     select(ErrorRecord).where(
                         ErrorRecord.id == item.id,
                         ErrorRecord.user_id == current_user.id,
-                        ErrorRecord.is_deleted == False,
+                        not ErrorRecord.is_deleted,
                     )
                 )
                 error = result.scalar_one_or_none()

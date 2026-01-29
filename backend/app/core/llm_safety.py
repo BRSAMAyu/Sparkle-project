@@ -11,9 +11,8 @@ LLM 安全防护模块
 创建时间: 2026-01-03
 """
 
-import re
 import logging
-from typing import Tuple, Optional, List
+import re
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ class SafetyCheckResult:
     """安全检查结果"""
     is_safe: bool
     sanitized_text: str
-    violations: List[str]
+    violations: list[str]
     risk_score: float  # 0.0 - 1.0
 
 
@@ -152,7 +151,7 @@ class LLMSafetyService:
 
         logger.info(f"LLMSafetyService initialized (deep_analysis={enable_deep_analysis})")
 
-    def sanitize_input(self, text: str, user_id: Optional[str] = None) -> SafetyCheckResult:
+    def sanitize_input(self, text: str, user_id: str | None = None) -> SafetyCheckResult:
         """
         主入口: 检查并净化用户输入
 
@@ -276,10 +275,7 @@ class LLMSafetyService:
             if match:
                 # 部分遮蔽敏感信息
                 masked = match.group(0)
-                if len(masked) > 10:
-                    masked = masked[:4] + "*" * (len(masked) - 8) + masked[-4:]
-                else:
-                    masked = "*" * len(masked)
+                masked = masked[:4] + "*" * (len(masked) - 8) + masked[-4:] if len(masked) > 10 else "*" * len(masked)
 
                 sanitized = pattern.sub(masked, text)
                 return RiskResult(
@@ -364,8 +360,8 @@ class RiskResult:
     """内部风险检测结果"""
     detected: bool
     sanitized_text: str
-    pattern: Optional[str] = None
-    reason: Optional[str] = None
+    pattern: str | None = None
+    reason: str | None = None
 
 
 # 单例实例

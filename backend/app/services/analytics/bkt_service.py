@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,7 +21,7 @@ class BKTService:
     Bayesian Knowledge Tracing updater.
     """
 
-    def __init__(self, db: AsyncSession, params: Optional[BKTParams] = None):
+    def __init__(self, db: AsyncSession, params: BKTParams | None = None):
         self.db = db
         self.params = params or BKTParams()
 
@@ -40,7 +39,7 @@ class BKTService:
         p_l_given_obs = numerator / denominator if denominator > 0 else p_l
         return p_l_given_obs + (1 - p_l_given_obs) * self.params.p_transit
 
-    async def update_mastery(self, user_id: UUID, node_id: UUID, correct: bool) -> Optional[UserNodeStatus]:
+    async def update_mastery(self, user_id: UUID, node_id: UUID, correct: bool) -> UserNodeStatus | None:
         stmt = select(UserNodeStatus).where(
             UserNodeStatus.user_id == user_id,
             UserNodeStatus.node_id == node_id

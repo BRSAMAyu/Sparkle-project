@@ -2,7 +2,6 @@
 向量嵌入服务 (Embedding Service)
 用于将文本转换为向量表示，支持语义搜索
 """
-from typing import List
 import asyncio
 from http import HTTPStatus
 
@@ -35,7 +34,7 @@ class EmbeddingService:
         self.siliconflow_model = settings.SILICONFLOW_EMBEDDING_MODEL or settings.EMBEDDING_MODEL
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def get_embedding(self, text: str, text_type: str = "document") -> List[float]:
+    async def get_embedding(self, text: str, text_type: str = "document") -> list[float]:
         """
         获取文本的向量表示
 
@@ -50,7 +49,7 @@ class EmbeddingService:
         return embeddings[0]
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def batch_embeddings(self, texts: List[str], text_type: str = "document") -> List[List[float]]:
+    async def batch_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         """
         批量获取文本向量
 
@@ -79,7 +78,7 @@ class EmbeddingService:
 
         raise ValueError(f"Unsupported embedding provider: {self.provider}")
 
-    async def _dashscope_embeddings(self, texts: List[str], text_type: str = "document") -> List[List[float]]:
+    async def _dashscope_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         def _call():
             dashscope.api_key = self.dashscope_api_key
             if self.dashscope_base_url:
@@ -100,7 +99,7 @@ class EmbeddingService:
         embeddings = resp.output.get("embeddings", [])
         return [item["embedding"] for item in embeddings]
 
-    async def _siliconflow_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def _siliconflow_embeddings(self, texts: list[str]) -> list[list[float]]:
         base_url = self.siliconflow_base_url.rstrip("/")
         url = base_url if base_url.endswith("/embeddings") else f"{base_url}/embeddings"
         payload = {

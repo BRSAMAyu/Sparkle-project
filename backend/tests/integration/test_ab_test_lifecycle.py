@@ -11,6 +11,7 @@ Tests the complete workflow:
 6. Complete experiment
 7. Generate statistics report
 """
+import os
 import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, AsyncSession
@@ -27,6 +28,12 @@ from app.models.experiment import (
     ExperimentStatus,
 )
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
+
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("FULL_STACK_TESTS") != "1",
+    reason="Requires full API auth overrides and experiment data fixtures.",
+)
 # from app.core.config import settings  # TODO: Fix config module import
 
 

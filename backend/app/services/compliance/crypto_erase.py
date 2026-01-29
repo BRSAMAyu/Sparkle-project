@@ -1,14 +1,13 @@
 import base64
 import os
 from datetime import datetime
-from typing import Optional, Tuple
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.compliance import UserPersonaKey, CryptoShreddingCertificate
+from app.models.compliance import CryptoShreddingCertificate, UserPersonaKey
 from app.services.compliance.key_provider import get_master_key_provider
 
 
@@ -41,7 +40,7 @@ class CryptoEraseManager:
     async def get_or_create_user_key(self, user_id: UUID) -> UserPersonaKey:
         stmt = select(UserPersonaKey).where(
             UserPersonaKey.user_id == user_id,
-            UserPersonaKey.is_active == True
+            UserPersonaKey.is_active
         )
         result = await self.db.execute(stmt)
         key = result.scalar_one_or_none()
@@ -61,7 +60,7 @@ class CryptoEraseManager:
         await self.db.refresh(key)
         return key
 
-    async def encrypt_payload(self, user_id: UUID, plaintext: str) -> Tuple[str, str]:
+    async def encrypt_payload(self, user_id: UUID, plaintext: str) -> tuple[str, str]:
         key = await self.get_or_create_user_key(user_id)
         if not key.encrypted_key:
             raise ValueError("User key is not available")
@@ -72,10 +71,10 @@ class CryptoEraseManager:
         blob = base64.b64encode(nonce + ciphertext).decode("ascii")
         return blob, key.key_id
 
-    async def decrypt_payload(self, user_id: UUID, blob: str) -> Optional[str]:
+    async def decrypt_payload(self, user_id: UUID, blob: str) -> str | None:
         stmt = select(UserPersonaKey).where(
             UserPersonaKey.user_id == user_id,
-            UserPersonaKey.is_active == True
+            UserPersonaKey.is_active
         )
         result = await self.db.execute(stmt)
         key = result.scalar_one_or_none()
@@ -89,10 +88,10 @@ class CryptoEraseManager:
         plaintext = aes.decrypt(nonce, ciphertext, None)
         return plaintext.decode("utf-8")
 
-    async def destroy_user_key(self, user_id: UUID, cloud_provider_ack: Optional[str] = None) -> CryptoShreddingCertificate:
+    async def destroy_user_key(self, user_id: UUID, cloud_provider_ack: str | None = None) -> CryptoShreddingCertificate:
         stmt = select(UserPersonaKey).where(
             UserPersonaKey.user_id == user_id,
-            UserPersonaKey.is_active == True
+            UserPersonaKey.is_active
         )
         result = await self.db.execute(stmt)
         key = result.scalar_one_or_none()

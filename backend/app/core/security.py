@@ -2,8 +2,7 @@
 Security and Authentication Utilities
 JWT token generation, password hashing, etc.
 """
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from jose import JWTError, jwt
@@ -33,16 +32,13 @@ def get_password_hash(password: str) -> str:
         raise ValueError("Failed to hash password")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     创建 JWT access token
     """
     to_encode = data.copy()
-    now = datetime.utcnow()
-    if expires_delta:
-        expire = now + expires_delta
-    else:
-        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    now = datetime.now(UTC)
+    expire = now + expires_delta if expires_delta else now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update(
         {
             "exp": expire,
@@ -64,7 +60,7 @@ def create_refresh_token(data: dict) -> str:
     创建 JWT refresh token
     """
     to_encode = data.copy()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update(
         {
@@ -82,7 +78,7 @@ def create_refresh_token(data: dict) -> str:
     return encoded_jwt
 
 
-def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
+def decode_token(token: str, expected_type: str | None = None) -> dict:
     """
     解码 JWT token
     """

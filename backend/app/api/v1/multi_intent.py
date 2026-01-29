@@ -4,28 +4,25 @@ Multi-Intent Recognition API
 
 提供意图解析和执行接口
 """
-from typing import Dict, Any, Optional
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from typing import Any
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, status
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.schemas.intent import (
-    IntentParseRequest,
     IntentExecuteRequest,
-    IntentExecuteResponse,
-    IntentAnalysisPreview,
-    MultiIntentResult
+    IntentParseRequest,
 )
 from app.services.multi_intent_service import MultiIntentService
 
 router = APIRouter()
 
 
-@router.post("/parse", response_model=Dict[str, Any])
+@router.post("/parse", response_model=dict[str, Any])
 async def parse_intents(
     request: IntentParseRequest,
     current_user: User = Depends(get_current_user),
@@ -65,7 +62,7 @@ async def parse_intents(
         )
 
 
-@router.post("/preview", response_model=Dict[str, Any])
+@router.post("/preview", response_model=dict[str, Any])
 async def create_intent_preview(
     request: IntentParseRequest,
     current_user: User = Depends(get_current_user),
@@ -103,7 +100,7 @@ async def create_intent_preview(
         )
 
 
-@router.post("/execute", response_model=Dict[str, Any])
+@router.post("/execute", response_model=dict[str, Any])
 async def execute_intents(
     request: IntentExecuteRequest,
     current_user: User = Depends(get_current_user),
@@ -151,10 +148,10 @@ async def execute_intents(
         )
 
 
-@router.post("/analyze-and-execute", response_model=Dict[str, Any])
+@router.post("/analyze-and-execute", response_model=dict[str, Any])
 async def analyze_and_execute(
     message: str,
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
     auto_execute: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -221,7 +218,7 @@ async def analyze_and_execute(
         )
 
 
-@router.get("/intent-types", response_model=Dict[str, Any])
+@router.get("/intent-types", response_model=dict[str, Any])
 async def list_intent_types():
     """
     获取支持的意图类型列表

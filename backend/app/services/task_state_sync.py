@@ -14,18 +14,17 @@ Usage:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task, TaskStatus
-from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink
-from app.services.plan_state_service import PlanStateService
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink
 from app.services.milestone_handler import MilestoneHandler
+from app.services.plan_state_service import PlanStateService
 
 
 class TaskStateSyncService:
@@ -81,7 +80,7 @@ class TaskStateSyncService:
     async def on_task_completed(
         self,
         task: Task,
-        actual_minutes: Optional[int] = None,
+        actual_minutes: int | None = None,
     ) -> None:
         """
         Handle task completion event.
@@ -111,7 +110,7 @@ class TaskStateSyncService:
             if new_milestones and state:
                 pending_count = await self._count_pending_tasks(task.plan_id)
                 plan_context = state.to_dict()
-                
+
                 for milestone in new_milestones:
                     await self._milestone_handler.on_milestone_achieved(
                         user_id=task.user_id,
@@ -140,7 +139,7 @@ class TaskStateSyncService:
     async def on_task_updated(
         self,
         task: Task,
-        old_status: Optional[TaskStatus] = None,
+        old_status: TaskStatus | None = None,
     ) -> None:
         """
         Handle task update event.
@@ -196,7 +195,7 @@ class TaskStateSyncService:
         self,
         user_id: UUID,
         plan_id: UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Rebuild task_index from database.
 
@@ -219,7 +218,7 @@ class TaskStateSyncService:
         tasks = list(result.scalars().all())
 
         # Build index
-        task_index: Dict[str, Any] = {
+        task_index: dict[str, Any] = {
             "total": len(tasks),
             "completed": 0,
             "by_type": {},
@@ -263,7 +262,7 @@ class TaskStateSyncService:
         user_id: UUID,
         plan_id: UUID,
         limit: int = 20,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get lightweight task summaries for a plan.
 
@@ -305,7 +304,7 @@ class TaskStateSyncService:
         self,
         user_id: UUID,
         task_id: UUID,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get full task details for LLM consumption.
 

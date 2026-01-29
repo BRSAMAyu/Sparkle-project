@@ -2,15 +2,14 @@
 Subjects API Endpoints
 学科标准接口 (v2.1)
 """
-from typing import List, Any
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-from app.services.subject_service import SubjectService
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
+from app.services.subject_service import SubjectService
 
 router = APIRouter()
 subject_service = SubjectService()
@@ -19,13 +18,13 @@ class SubjectResponse(BaseModel):
     id: int
     name: str
     category: str
-    
+
     class Config:
         from_attributes = True
 
 class SubjectListResponse(BaseModel):
     success: bool
-    data: List[SubjectResponse]
+    data: list[SubjectResponse]
 
 @router.get("", response_model=SubjectListResponse)
 async def get_subjects(

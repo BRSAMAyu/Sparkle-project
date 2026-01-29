@@ -1,6 +1,6 @@
 import json
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.models.user import User
-from app.services.personalization.preference_service import PreferenceService
-from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.cognitive_service import CognitiveService
 from app.services.memory_service import MemoryService
 from app.services.persona_service import PersonaService
+from app.services.personalization.preference_service import PreferenceService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -66,7 +66,7 @@ def _editability_meta(
     risk_level: str,
     field_type: str,
     source_type: str = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     构建偏好项的可编辑性元数据
 
@@ -132,21 +132,21 @@ def _editability_meta(
 
 
 class OnboardingRequest(BaseModel):
-    learning_goal_type: Optional[str] = None
-    learning_goal: Optional[str] = None
-    learning_style: Optional[str] = None
-    study_time_minutes: Optional[int] = Field(default=None, ge=5, le=360)
-    knowledge_level: Optional[str] = None
-    response_depth: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    curiosity_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    learning_goal_type: str | None = None
+    learning_goal: str | None = None
+    learning_style: str | None = None
+    study_time_minutes: int | None = Field(default=None, ge=5, le=360)
+    knowledge_level: str | None = None
+    response_depth: float | None = Field(default=None, ge=0.0, le=1.0)
+    curiosity_preference: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class CorrectionRequest(BaseModel):
     target_type: str
-    target_id: Optional[str] = None
-    field_name: Optional[str] = None
-    suggested_value: Optional[str] = None
-    reason: Optional[str] = None
+    target_id: str | None = None
+    field_name: str | None = None
+    suggested_value: str | None = None
+    reason: str | None = None
 
 
 class PreferenceUpdateRequest(BaseModel):
@@ -160,12 +160,12 @@ class PreferenceRollbackRequest(BaseModel):
 
 class GoalUpdateRequest(BaseModel):
     goal_id: UUID
-    title: Optional[str] = None
-    status: Optional[str] = None
-    target_date: Optional[date] = None
+    title: str | None = None
+    status: str | None = None
+    target_date: date | None = None
 
 
-def _coerce_preference_value(pref_key: str, value: Any) -> Dict[str, Any]:
+def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
     if isinstance(value, (int, float)):
@@ -186,7 +186,7 @@ def _coerce_preference_value(pref_key: str, value: Any) -> Dict[str, Any]:
 async def get_profile_transparent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     memory_service = MemoryService(db)
     persona_service = PersonaService(db, cache_service.redis)
     cognitive_service = CognitiveService(db)
@@ -318,7 +318,7 @@ async def list_system_updates(
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     service = SystemUpdateService(cache_service.redis)
     items = await service.list_updates(current_user.id, limit=limit, offset=offset)
     return {"items": items}
@@ -329,7 +329,7 @@ async def submit_onboarding(
     payload: OnboardingRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     memory_service = MemoryService(db)
     pref_service = PreferenceService(db, cache_service.redis)
 
@@ -337,8 +337,8 @@ async def submit_onboarding(
         {"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}
     ]
 
-    updated: Dict[str, Any] = {}
-    explicit_updates: Dict[str, Any] = {}
+    updated: dict[str, Any] = {}
+    explicit_updates: dict[str, Any] = {}
 
     if payload.learning_style:
         record = await memory_service.upsert_preference(
@@ -409,7 +409,7 @@ async def submit_onboarding(
             updated["curiosity_preference"] = payload.curiosity_preference
 
     if payload.learning_goal:
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
         if payload.learning_goal_type:
             metadata = {"goal_type": payload.learning_goal_type}
         record = await memory_service.create_goal(
@@ -433,7 +433,7 @@ async def update_preference(
     payload: PreferenceUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not payload.pref_key:
         return {"status": "error", "message": "pref_key required"}
 
@@ -459,7 +459,7 @@ async def rollback_preference(
     payload: PreferenceRollbackRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not payload.pref_key:
         return {"status": "error", "message": "pref_key required"}
 
@@ -496,9 +496,9 @@ async def update_goal(
     payload: GoalUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     memory_service = MemoryService(db)
-    updates: Dict[str, Any] = {}
+    updates: dict[str, Any] = {}
     if payload.title is not None:
         updates["title"] = payload.title
     if payload.status is not None:
@@ -535,7 +535,7 @@ async def submit_correction(
     payload: CorrectionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from app.models.memory import MemoryCorrection
 
     if not payload.target_type:

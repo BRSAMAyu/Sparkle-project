@@ -1,20 +1,22 @@
-from typing import Dict, Any, List, Optional
-from uuid import UUID
-from datetime import datetime
 import asyncio
 import json
+from datetime import datetime
+from typing import Any
+from uuid import UUID
+
 from loguru import logger
 from pydantic import BaseModel, Field
-
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.galaxy_service import GalaxyService
+
+from app.schemas.error_book import ErrorQueryParams
+from app.schemas.task import TaskListQuery, TaskStatus
 from app.services.error_book_service import ErrorBookService
+from app.services.focus_service import focus_service
+from app.services.galaxy_service import GalaxyService
+from app.services.personalization.preference_service import PreferenceService
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
-from app.services.focus_service import focus_service
-from app.schemas.task import TaskListQuery, TaskStatus
-from app.schemas.error_book import ErrorQueryParams
-from app.services.personalization.preference_service import PreferenceService
+
 
 class CognitiveContext(BaseModel):
     """
@@ -25,20 +27,20 @@ class CognitiveContext(BaseModel):
     timestamp: datetime
 
     # Knowledge State (Galaxy)
-    knowledge_stats: Dict[str, Any] = Field(default_factory=dict, description="Overall mastery and stats")
-    recent_mastery_changes: List[Dict[str, Any]] = Field(default_factory=list, description="Recently mastered nodes")
+    knowledge_stats: dict[str, Any] = Field(default_factory=dict, description="Overall mastery and stats")
+    recent_mastery_changes: list[dict[str, Any]] = Field(default_factory=list, description="Recently mastered nodes")
 
     # Problem Areas (Error Book)
-    error_summary: Dict[str, Any] = Field(default_factory=dict, description="Review stats and weak subjects")
-    recent_errors: List[Dict[str, Any]] = Field(default_factory=list, description="Recent error records for context")
+    error_summary: dict[str, Any] = Field(default_factory=dict, description="Review stats and weak subjects")
+    recent_errors: list[dict[str, Any]] = Field(default_factory=list, description="Recent error records for context")
 
     # Task & Goals (Task/Plan)
-    active_tasks: List[Dict[str, Any]] = Field(default_factory=list, description="Current pending tasks")
-    focus_stats: Dict[str, Any] = Field(default_factory=dict, description="Today's focus performance")
+    active_tasks: list[dict[str, Any]] = Field(default_factory=list, description="Current pending tasks")
+    focus_stats: dict[str, Any] = Field(default_factory=dict, description="Today's focus performance")
 
     # User Profile (User)
-    preferences: Dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
-    engagement_metrics: Dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
+    preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
+    engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -86,7 +88,7 @@ class ContextOrchestrator:
                 # 版本不一致，需要刷新
                 logger.info(f"Preference version changed for user {user_id}: "
                            f"cached={cached.preference_version}, current={current_version}, refreshing context")
-        
+
         uid = UUID(user_id)
 
         # Parallel Execution of independent context gathering
@@ -137,7 +139,7 @@ class ContextOrchestrator:
 
     def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
         sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
-        def _clean(data: Dict[str, Any]) -> Dict[str, Any]:
+        def _clean(data: dict[str, Any]) -> dict[str, Any]:
             return {k: v for k, v in data.items() if k not in sensitive_keys}
 
         context.preferences = _clean(context.preferences)
@@ -150,7 +152,7 @@ class ContextOrchestrator:
             return default
         return result
 
-    async def _get_cached_context(self, user_id: str) -> Optional[CognitiveContext]:
+    async def _get_cached_context(self, user_id: str) -> CognitiveContext | None:
         if not self.redis:
             return None
         try:
@@ -175,34 +177,34 @@ class ContextOrchestrator:
 
     # --- Sub-fetchers ---
 
-    async def _get_knowledge_profile(self, user_id: UUID) -> Dict[str, Any]:
+    async def _get_knowledge_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch Galaxy stats and recent mastery"""
         # 1. Stats
         stats_model = await self.galaxy_service.stats.calculate_user_stats(user_id)
         stats = stats_model.dict() if stats_model else {}
-        
+
         # 2. Recent Mastery (This might require a specialized query in GalaxyService or StatsService)
         # For now, we can infer or leave empty if not easily available without custom query.
         # Assuming we might want to add a method to GalaxyService later for "recent updates".
-        recent = [] 
-        
+        recent = []
+
         return {
             "stats": stats,
             "recent": recent
         }
 
-    async def _get_error_profile(self, user_id: UUID) -> Dict[str, Any]:
+    async def _get_error_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch Error Book stats and recent errors"""
         # 1. Stats
         stats = await self.error_book_service.get_review_stats(user_id)
-        
+
         # 2. Recent Errors (Top 5 pending review or just created)
         # We want "Recent High Frequency Errors" or just "Recent Errors"
         errors, _ = await self.error_book_service.list_errors(
-            user_id, 
+            user_id,
             ErrorQueryParams(page=1, page_size=5, need_review=False) # Just latest
         )
-        
+
         recent_errors_data = []
         for e in errors:
             recent_errors_data.append({
@@ -212,21 +214,21 @@ class ContextOrchestrator:
                 "error_type": e.latest_analysis.get("error_type_label") if e.latest_analysis else "Unknown",
                 "mastery": e.mastery_level
             })
-            
+
         return {
             "summary": stats,
             "recent": recent_errors_data
         }
 
-    async def _get_task_profile(self, user_id: UUID) -> Dict[str, Any]:
+    async def _get_task_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch Active Tasks and Focus Stats"""
         # 1. Active Tasks
         tasks, _ = await TaskService.get_multi(
-            self.db, 
-            user_id, 
+            self.db,
+            user_id,
             TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
         )
-        
+
         active_tasks_data = []
         for t in tasks:
             active_tasks_data.append({
@@ -236,16 +238,16 @@ class ContextOrchestrator:
                 "due_date": t.due_date.isoformat() if t.due_date else None,
                 "type": t.type.value
             })
-            
+
         # 2. Focus Stats
         focus = await focus_service.get_today_stats(self.db, user_id)
-        
+
         return {
             "tasks": active_tasks_data,
             "focus": focus
         }
 
-    async def _get_user_profile(self, user_id: UUID) -> Dict[str, Any]:
+    async def _get_user_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch User Context and Analytics"""
         # 1. Context
         user_ctx = await self.user_service.get_context(user_id)

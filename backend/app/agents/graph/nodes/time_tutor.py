@@ -1,13 +1,14 @@
 from langchain_core.messages import HumanMessage, SystemMessage
-from app.agents.graph.state import SparkleState
+
 from app.agents.graph.llm_factory import LLMFactory
 from app.agents.graph.nodes.registry_tools import (
-    create_task,
     batch_create_tasks,
     create_plan,
+    create_task,
     generate_tasks_for_plan,
     suggest_focus_session,
 )
+from app.agents.graph.state import SparkleState
 
 # --- 2. 节点逻辑 ---
 
@@ -17,7 +18,7 @@ async def time_tutor_node(state: SparkleState):
     负责任务管理、日程规划
     """
     messages = state["messages"]
-    
+
     # 1. Handle Collaboration Context
     collaboration_context = state.get("collaboration_context")
     if collaboration_context:
@@ -51,10 +52,10 @@ async def time_tutor_node(state: SparkleState):
                 )
             ),
         )
-    
+
     # 使用高性价比模型 (GPT-4o-mini)
     llm = LLMFactory.get_llm("time_tutor")
-    
+
     tools = [
         create_plan,
         generate_tasks_for_plan,
@@ -63,9 +64,9 @@ async def time_tutor_node(state: SparkleState):
         suggest_focus_session,
     ]
     llm_with_tools = llm.bind_tools(tools)
-    
+
     response = await llm_with_tools.ainvoke(messages)
-    
+
     return {
         "messages": [response],
         "active_agent": "time_tutor",

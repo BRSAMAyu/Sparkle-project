@@ -7,23 +7,22 @@ Provides endpoints for managing learning assets:
 - List and filter assets
 - Record suggestion feedback
 """
-from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
-from loguru import logger
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.db.session import get_db
 from app.models.learning_assets import (
-    AssetStatus,
     AssetKind,
+    AssetStatus,
     UserSuggestionResponse,
 )
+from app.models.user import User
 from app.services.learning_asset_service import learning_asset_service
-
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -33,13 +32,13 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 class CreateAssetRequest(BaseModel):
     """Request to create a new learning asset"""
     selected_text: str = Field(..., description="Text that was selected", max_length=1000)
-    translation: Optional[str] = Field(None, description="Translated text")
-    definition: Optional[str] = Field(None, description="Definition or meaning")
-    example: Optional[str] = Field(None, description="Example sentence")
-    source_file_id: Optional[str] = Field(None, description="Source document UUID")
-    context_before: Optional[str] = Field(None, description="Text before selection", max_length=500)
-    context_after: Optional[str] = Field(None, description="Text after selection", max_length=500)
-    page_no: Optional[int] = Field(None, description="Page number")
+    translation: str | None = Field(None, description="Translated text")
+    definition: str | None = Field(None, description="Definition or meaning")
+    example: str | None = Field(None, description="Example sentence")
+    source_file_id: str | None = Field(None, description="Source document UUID")
+    context_before: str | None = Field(None, description="Text before selection", max_length=500)
+    context_after: str | None = Field(None, description="Text after selection", max_length=500)
+    page_no: int | None = Field(None, description="Page number")
     language_code: str = Field(default="en", description="Source language code")
     asset_kind: str = Field(default="WORD", description="Asset type: WORD, SENTENCE, CONCEPT")
     activate_immediately: bool = Field(default=False, description="Skip inbox, activate directly")
@@ -51,14 +50,14 @@ class AssetResponse(BaseModel):
     status: str
     asset_kind: str
     headword: str
-    definition: Optional[str]
-    translation: Optional[str]
-    example: Optional[str]
+    definition: str | None
+    translation: str | None
+    example: str | None
     language_code: str
     lookup_count: int
     review_count: int
     review_success_rate: float
-    inbox_expires_at: Optional[str]
+    inbox_expires_at: str | None
     created_at: str
     updated_at: str
 
@@ -68,7 +67,7 @@ class AssetResponse(BaseModel):
 
 class AssetListResponse(BaseModel):
     """Response for asset listing"""
-    assets: List[AssetResponse]
+    assets: list[AssetResponse]
     total: int
     limit: int
     offset: int
@@ -78,7 +77,7 @@ class SuggestionFeedbackRequest(BaseModel):
     """Request to record feedback on a suggestion"""
     suggestion_log_id: str = Field(..., description="Suggestion log UUID")
     response: str = Field(..., description="Response: ACCEPT, DISMISS, IGNORE")
-    asset_id: Optional[str] = Field(None, description="Created asset ID if accepted")
+    asset_id: str | None = Field(None, description="Created asset ID if accepted")
 
 
 # ============ Endpoints ============
@@ -212,7 +211,7 @@ async def archive_asset(
 
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
 async def list_assets(
-    status: Optional[str] = Query(None, description="Filter by status: INBOX, ACTIVE, ARCHIVED"),
+    status: str | None = Query(None, description="Filter by status: INBOX, ACTIVE, ARCHIVED"),
     limit: int = Query(50, ge=1, le=100, description="Max results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     current_user: User = Depends(get_current_user),

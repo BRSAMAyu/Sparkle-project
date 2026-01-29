@@ -4,12 +4,13 @@ Agent Execution Statistics Service
 跟踪和分析Multi-Agent系统中各个Agent的使用情况和性能指标。
 """
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any
-from sqlalchemy import select, func, and_, desc, case
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from typing import Any
 
-from app.models.agent_stats import AgentExecutionStats, AgentStatsSummary
+from loguru import logger
+from sqlalchemy import and_, case, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.agent_stats import AgentExecutionStats
 
 
 class AgentStatsService:
@@ -25,12 +26,12 @@ class AgentStatsService:
         request_id: str,
         agent_type: str,
         started_at: datetime,
-        completed_at: Optional[datetime] = None,
+        completed_at: datetime | None = None,
         status: str = "success",
-        tool_name: Optional[str] = None,
-        operation: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        error_message: Optional[str] = None
+        tool_name: str | None = None,
+        operation: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        error_message: str | None = None
     ) -> AgentExecutionStats:
         """
         记录一次Agent执行
@@ -82,7 +83,7 @@ class AgentStatsService:
         self,
         user_id: int,
         days: int = 30
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取用户的Agent使用统计
 
@@ -179,7 +180,7 @@ class AgentStatsService:
         user_id: int,
         limit: int = 5,
         days: int = 30
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户最常用的Agent类型
 
@@ -225,10 +226,10 @@ class AgentStatsService:
 
     async def get_performance_metrics(
         self,
-        user_id: Optional[int] = None,
-        agent_type: Optional[str] = None,
+        user_id: int | None = None,
+        agent_type: str | None = None,
         days: int = 7
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取性能指标
 
@@ -283,10 +284,7 @@ class AgentStatsService:
         p95 = 0
         if durations:
             mid = len(durations) // 2
-            if len(durations) % 2 == 0:
-                median = int((durations[mid - 1] + durations[mid]) / 2)
-            else:
-                median = int(durations[mid])
+            median = int((durations[mid - 1] + durations[mid]) / 2) if len(durations) % 2 == 0 else int(durations[mid])
             p95_index = max(int(len(durations) * 0.95) - 1, 0)
             p95 = int(durations[p95_index])
 

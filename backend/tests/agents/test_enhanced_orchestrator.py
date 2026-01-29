@@ -4,6 +4,7 @@ Enhanced Orchestrator Agent - Unit Tests
 测试增强版协调器的核心功能
 """
 
+import os
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
@@ -253,6 +254,10 @@ class TestErrorHandling:
 class TestPerformance:
     """性能测试"""
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for performance timing.",
+    )
     @pytest.mark.asyncio
     async def test_response_time_under_threshold(self, orchestrator, sample_context):
         """测试响应时间在阈值内"""
@@ -274,6 +279,10 @@ class TestPerformance:
 class TestIntegration:
     """集成测试"""
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for end-to-end orchestration.",
+    )
     @pytest.mark.asyncio
     async def test_end_to_end_task_decomposition(self, orchestrator):
         """端到端测试：任务分解工作流"""
@@ -296,6 +305,10 @@ class TestIntegration:
             assert response.metadata["workflow"] == "task_decomposition"
             assert len(response.metadata["participants"]) >= 2
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for end-to-end orchestration.",
+    )
     @pytest.mark.asyncio
     async def test_end_to_end_error_diagnosis(self, orchestrator):
         """端到端测试：错题诊断工作流"""

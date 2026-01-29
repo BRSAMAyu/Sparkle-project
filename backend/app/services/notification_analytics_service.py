@@ -3,27 +3,28 @@ Notification Analytics Service
 
 Provides usage statistics and analytics for notifications.
 """
-from typing import Dict, List
-from uuid import UUID
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, desc
+from uuid import UUID
+
 from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
     import redis.asyncio as aioredis
+
     from app.config import settings
 except ImportError:
     aioredis = None
 
-from app.models.notification import Notification
 from app.models.intervention import InterventionRequest
+from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction
 from app.schemas.unified_notification import (
     NotificationAnalyticsResponse,
     NotificationAnalyticsSummary,
-    NotificationTypeStats,
     NotificationTrendData,
+    NotificationTypeStats,
 )
 
 
@@ -122,7 +123,7 @@ class NotificationAnalyticsService:
             and_(
                 Notification.user_id == user_id,
                 Notification.created_at >= start_date,
-                Notification.is_read == True
+                Notification.is_read
             )
         )
         result = await self.db.execute(system_viewed_stmt)
@@ -192,7 +193,7 @@ class NotificationAnalyticsService:
         self,
         user_id: UUID,
         start_date: datetime
-    ) -> Dict[str, NotificationTypeStats]:
+    ) -> dict[str, NotificationTypeStats]:
         """Get statistics broken down by notification type"""
         stats = {}
 
@@ -210,7 +211,7 @@ class NotificationAnalyticsService:
             and_(
                 Notification.user_id == user_id,
                 Notification.created_at >= start_date,
-                Notification.is_read == True
+                Notification.is_read
             )
         )
         result = await self.db.execute(system_viewed_stmt)
@@ -290,7 +291,7 @@ class NotificationAnalyticsService:
         self,
         user_id: UUID,
         start_date: datetime
-    ) -> List[NotificationTrendData]:
+    ) -> list[NotificationTrendData]:
         """Get daily trend data for the period"""
         trends = []
 
@@ -319,7 +320,7 @@ class NotificationAnalyticsService:
                     Notification.user_id == user_id,
                     Notification.created_at >= day_start,
                     Notification.created_at <= day_end,
-                    Notification.is_read == True
+                    Notification.is_read
                 )
             )
             result = await self.db.execute(system_viewed_stmt)
@@ -374,7 +375,7 @@ class NotificationAnalyticsService:
     async def _get_hourly_distribution(
         self,
         user_id: UUID
-    ) -> List[int]:
+    ) -> list[int]:
         """
         Get 24-hour distribution of notification activity.
 

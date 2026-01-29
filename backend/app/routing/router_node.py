@@ -1,46 +1,47 @@
-from typing import List, Dict, Any, Optional
-import uuid
-from loguru import logger
 import random
+import uuid
 
-from app.orchestration.statechart_engine import WorkflowState
-from app.routing.graph_router import GraphBasedRouter
+from loguru import logger
+
+from app.core.business_metrics import metrics_collector, track_routing_decision
 from app.learning.bayesian_learner import BayesianLearner
-from app.core.business_metrics import track_routing_decision, metrics_collector
+from app.orchestration.statechart_engine import WorkflowState
 from app.routing.exploration_router import HybridExplorationRouter
+from app.routing.graph_router import GraphBasedRouter
 from app.routing.tool_preference_router import ToolPreferenceRouter
+
 
 class RouterNode:
     """
     Intelligent Router Node.
     Decides the next step in the workflow based on state and history.
-    
+
     Integrates Graph-based routing (Phase 2) and Bayesian Learning (Phase 4).
     """
-    def __init__(self, routes: List[str], redis_client=None, user_id: Optional[str] = None):
+    def __init__(self, routes: list[str], redis_client=None, user_id: str | None = None):
         self.routes = routes
         self.graph_router = GraphBasedRouter()
-        
+
         # Initialize semantic and hybrid routers
+        from app.routing.semantic_router import HybridRouter, SemanticRouter
         from app.services.embedding_service import embedding_service
-        from app.routing.semantic_router import SemanticRouter, HybridRouter
-        
+
         self.semantic_router = SemanticRouter(
             embedding_service=embedding_service,
             knowledge_graph=None # KG requires db_session, skipping for now
         )
-        
+
         self.hybrid_router = HybridRouter(
             graph_router=self.graph_router,
             semantic_router=self.semantic_router
         )
-        
+
         if redis_client and user_id:
             from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
             self.learner = PersistentBayesianLearner(redis_client, user_id)
         else:
             self.learner = BayesianLearner()
-            
+
         # Initialize Exploration Router
         self.exploration_router = HybridExplorationRouter(self.learner, user_id)
 
@@ -55,7 +56,7 @@ class RouterNode:
         db_session = state.context_data.get("db_session")
 
         # 1. Get Candidate Routes (Hybrid + Neighbors)
-        target_capability = self._extract_capability(last_msg)
+        self._extract_capability(last_msg)
         candidates = await self._get_candidate_routes(current_node, last_msg, state.context_data)
 
         # 2. Apply Tool Preference Learning (if available)
@@ -110,7 +111,7 @@ class RouterNode:
 
         return state
 
-    def _extract_capability(self, message: str) -> Optional[str]:
+    def _extract_capability(self, message: str) -> str | None:
         """Lightweight capability extraction used for routing hints."""
         if not message:
             return None
@@ -123,7 +124,7 @@ class RouterNode:
             return "summarizer"
         return None
 
-    def _simple_route(self, message: str) -> Optional[str]:
+    def _simple_route(self, message: str) -> str | None:
         """Fallback routing when advanced routing yields no candidates."""
         if not self.routes:
             return None
@@ -135,24 +136,24 @@ class RouterNode:
         return random.choice(self.routes)
 
     @track_routing_decision(method="hybrid")
-    async def find_route_with_metrics(self, current: str, query: str, context: Dict) -> Optional[str]:
+    async def find_route_with_metrics(self, current: str, query: str, context: dict) -> str | None:
         """Route with metrics tracking"""
         return await self.hybrid_router.find_route(current, query, context)
 
-    async def _get_candidate_routes(self, current: str, query: str, context: Dict) -> List[str]:
+    async def _get_candidate_routes(self, current: str, query: str, context: dict) -> list[str]:
         """Get list of candidate routes."""
         candidates = set()
-        
+
         # 1. Hybrid Router suggestion
         hybrid_route = await self.find_route_with_metrics(current, query, context)
         if hybrid_route:
             candidates.add(hybrid_route)
-            
+
         # 2. Graph Neighbors (valid transitions)
         if current in self.graph_router.graph.nodes():
             neighbors = list(self.graph_router.graph.neighbors(current))
             candidates.update(neighbors)
-            
+
         return list(candidates)
 
     def condition(self, state: WorkflowState) -> str:

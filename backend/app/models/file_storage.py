@@ -2,10 +2,10 @@
 File storage models
 文件存储模型
 """
-from sqlalchemy import Column, String, BigInteger, ForeignKey
+from sqlalchemy import BigInteger, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class StoredFile(BaseModel):

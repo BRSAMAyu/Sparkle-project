@@ -3,16 +3,23 @@ Learning Assets Models (学习资产模型)
 Represents user's vocabulary, sentences, and concepts collected from translation lookups.
 """
 import enum
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
+
 from sqlalchemy import (
-    Column, String, Text, Integer, Float, Boolean,
-    ForeignKey, DateTime, Index, UniqueConstraint, JSON
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, HardDeleteBaseModel, GUID
+from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

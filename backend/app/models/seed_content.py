@@ -2,16 +2,15 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-import uuid
-from enum import Enum
-from typing import Optional, List, Any, Dict
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
+from enum import Enum
+
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")

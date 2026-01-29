@@ -4,31 +4,31 @@ Seed Library Service
 """
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc, asc, text
-from sqlalchemy.orm import selectinload
+from typing import Any
+
 from loguru import logger
+from sqlalchemy import and_, asc, desc, func, or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.seed_content import (
-    SeedLibrary,
-    SeedItem,
-    UserLibrarySubscription,
+    ItemType,
     LibraryCategory,
     LibraryVisibility,
-    ItemType,
-    DifficultyLevel,
+    SeedItem,
+    SeedLibrary,
+    UserLibrarySubscription,
 )
 from app.schemas.seed_content import (
-    LibraryCreate,
-    LibraryUpdate,
     ItemCreate,
+    ItemListParams,
+    ItemQueryRequest,
     ItemUpdate,
+    LibraryCreate,
+    LibraryListParams,
+    LibraryUpdate,
     SubscriptionCreate,
     SubscriptionUpdate,
-    ItemQueryRequest,
-    LibraryListParams,
-    ItemListParams,
 )
 from app.services.embedding_service import embedding_service
 
@@ -40,11 +40,11 @@ class SeedLibraryService:
 
     def _build_embedding_text(
         self,
-        title: Optional[str],
-        content: Optional[str],
-        content_data: Optional[Dict[str, Any]] = None,
-        item_type: Optional[str] = None,
-    ) -> Optional[str]:
+        title: str | None,
+        content: str | None,
+        content_data: dict[str, Any] | None = None,
+        item_type: str | None = None,
+    ) -> str | None:
         """
         构建用于生成 embedding 的文本
 
@@ -142,7 +142,7 @@ class SeedLibraryService:
         db: AsyncSession,
         library_id: uuid.UUID,
         include_items: bool = False,
-    ) -> Optional[SeedLibrary]:
+    ) -> SeedLibrary | None:
         """
         获取库详情
 
@@ -171,8 +171,8 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         params: LibraryListParams,
-        user_id: Optional[uuid.UUID] = None,
-    ) -> Tuple[List[SeedLibrary], int]:
+        user_id: uuid.UUID | None = None,
+    ) -> tuple[list[SeedLibrary], int]:
         """
         获取库列表
 
@@ -259,10 +259,7 @@ class SeedLibraryService:
 
         # 排序
         sort_column = getattr(SeedLibrary, params.sort_by, SeedLibrary.created_at)
-        if params.sort_order == "desc":
-            query = query.order_by(desc(sort_column))
-        else:
-            query = query.order_by(asc(sort_column))
+        query = query.order_by(desc(sort_column)) if params.sort_order == "desc" else query.order_by(asc(sort_column))
 
         # 分页
         total_query = select(func.count()).select_from(SeedLibrary).where(and_(*conditions))
@@ -284,7 +281,7 @@ class SeedLibraryService:
         update_data: LibraryUpdate,
         user_id: uuid.UUID,
         is_superuser: bool = False,
-    ) -> Optional[SeedLibrary]:
+    ) -> SeedLibrary | None:
         """
         更新库
 
@@ -364,9 +361,9 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         library_id: uuid.UUID,
-        quality_score: Optional[float] = None,
+        quality_score: float | None = None,
         is_featured: bool = False,
-    ) -> Optional[SeedLibrary]:
+    ) -> SeedLibrary | None:
         """
         将库提升为官方库 (管理员操作)
 
@@ -403,7 +400,7 @@ class SeedLibraryService:
         item_data: ItemCreate,
         user_id: uuid.UUID,
         is_superuser: bool = False,
-    ) -> Optional[SeedItem]:
+    ) -> SeedItem | None:
         """
         添加内容项
 
@@ -460,7 +457,7 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         params: ItemListParams,
-    ) -> Tuple[List[SeedItem], int]:
+    ) -> tuple[list[SeedItem], int]:
         """
         获取内容项列表
 
@@ -513,10 +510,7 @@ class SeedLibraryService:
 
         # 排序
         sort_column = getattr(SeedItem, params.sort_by, SeedItem.order_index)
-        if params.sort_order == "desc":
-            query = query.order_by(desc(sort_column))
-        else:
-            query = query.order_by(asc(sort_column))
+        query = query.order_by(desc(sort_column)) if params.sort_order == "desc" else query.order_by(asc(sort_column))
 
         # 分页
         total_query = select(func.count()).select_from(SeedItem).where(and_(*conditions))
@@ -535,7 +529,7 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         item_id: uuid.UUID,
-    ) -> Optional[SeedItem]:
+    ) -> SeedItem | None:
         """获取单个内容项"""
         result = await db.execute(
             select(SeedItem).where(
@@ -554,7 +548,7 @@ class SeedLibraryService:
         update_data: ItemUpdate,
         user_id: uuid.UUID,
         is_superuser: bool = False,
-    ) -> Optional[SeedItem]:
+    ) -> SeedItem | None:
         """
         更新内容项
 
@@ -664,7 +658,7 @@ class SeedLibraryService:
         library_id: uuid.UUID,
         user_id: uuid.UUID,
         subscription_data: SubscriptionCreate,
-    ) -> Optional[UserLibrarySubscription]:
+    ) -> UserLibrarySubscription | None:
         """
         订阅库
 
@@ -753,8 +747,8 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         user_id: uuid.UUID,
-        is_enabled: Optional[bool] = None,
-    ) -> List[UserLibrarySubscription]:
+        is_enabled: bool | None = None,
+    ) -> list[UserLibrarySubscription]:
         """
         获取用户的订阅列表
 
@@ -788,7 +782,7 @@ class SeedLibraryService:
         library_id: uuid.UUID,
         user_id: uuid.UUID,
         update_data: SubscriptionUpdate,
-    ) -> Optional[UserLibrarySubscription]:
+    ) -> UserLibrarySubscription | None:
         """
         更新订阅
 
@@ -833,7 +827,7 @@ class SeedLibraryService:
         db: AsyncSession,
         user_id: uuid.UUID,
         query_request: ItemQueryRequest,
-    ) -> Tuple[List[SeedItem], int]:
+    ) -> tuple[list[SeedItem], int]:
         """
         跨订阅库查询内容项 - 支持语义搜索和关键词搜索
 
@@ -846,13 +840,13 @@ class SeedLibraryService:
             (内容项列表, 总数)
         """
         # 确定查询的库范围
-        lib_ids: Optional[List[uuid.UUID]] = None
+        lib_ids: list[uuid.UUID] | None = None
         if query_request.use_subscribed_only:
             subscribed_lib_ids = await db.execute(
                 select(UserLibrarySubscription.library_id).where(
                     and_(
                         UserLibrarySubscription.user_id == user_id,
-                        UserLibrarySubscription.is_enabled == True,
+                        UserLibrarySubscription.is_enabled,
                         UserLibrarySubscription.deleted_at.is_(None)
                     )
                 )
@@ -863,7 +857,7 @@ class SeedLibraryService:
                 official_libs = await db.execute(
                     select(SeedLibrary.id).where(
                         and_(
-                            SeedLibrary.is_official == True,
+                            SeedLibrary.is_official,
                             SeedLibrary.deleted_at.is_(None)
                         )
                     )
@@ -904,16 +898,16 @@ class SeedLibraryService:
     async def _keyword_query_items(
         self,
         db: AsyncSession,
-        query: Optional[str],
-        lib_ids: Optional[List[uuid.UUID]],
-        item_types: Optional[List[str]],
-        subjects: Optional[List[str]],
-        difficulty_levels: Optional[List[str]],
-        tags: Optional[List[str]],
+        query: str | None,
+        lib_ids: list[uuid.UUID] | None,
+        item_types: list[str] | None,
+        subjects: list[str] | None,
+        difficulty_levels: list[str] | None,
+        tags: list[str] | None,
         limit: int,
-    ) -> Tuple[List[SeedItem], int]:
+    ) -> tuple[list[SeedItem], int]:
         """关键词搜索内部实现"""
-        conditions = [SeedItem.deleted_at.is_(None), SeedItem.is_active == True]
+        conditions = [SeedItem.deleted_at.is_(None), SeedItem.is_active]
 
         if lib_ids:
             conditions.append(SeedItem.library_id.in_(lib_ids))
@@ -957,15 +951,15 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         query: str,
-        lib_ids: Optional[List[uuid.UUID]],
-        item_types: Optional[List[str]],
-        subjects: Optional[List[str]],
-        difficulty_levels: Optional[List[str]],
-        tags: Optional[List[str]],
+        lib_ids: list[uuid.UUID] | None,
+        item_types: list[str] | None,
+        subjects: list[str] | None,
+        difficulty_levels: list[str] | None,
+        tags: list[str] | None,
         limit: int,
         semantic_weight: float = 0.6,
         keyword_weight: float = 0.4,
-    ) -> Tuple[List[SeedItem], int]:
+    ) -> tuple[list[SeedItem], int]:
         """
         混合搜索：语义搜索 + 关键词搜索，使用 RRF 融合
 
@@ -1003,11 +997,11 @@ class SeedLibraryService:
 
         # RRF (Reciprocal Rank Fusion) 融合
         k = 60  # RRF 常数
-        item_scores: Dict[uuid.UUID, float] = {}
-        item_map: Dict[uuid.UUID, SeedItem] = {}
+        item_scores: dict[uuid.UUID, float] = {}
+        item_map: dict[uuid.UUID, SeedItem] = {}
 
         # 语义搜索结果评分
-        for rank, (item, sim_score) in enumerate(semantic_results):
+        for rank, (item, _sim_score) in enumerate(semantic_results):
             item_id = item.id
             item_map[item_id] = item
             rrf_score = semantic_weight * (1 / (k + rank + 1))
@@ -1042,11 +1036,11 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         user_id: uuid.UUID,
-        subject: Optional[str] = None,
-        difficulty_level: Optional[str] = None,
-        task_type: Optional[str] = None,
+        subject: str | None = None,
+        difficulty_level: str | None = None,
+        task_type: str | None = None,
         count: int = 3,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取 Few-shot 示例用于 LLM prompt 增强
 
@@ -1063,7 +1057,7 @@ class SeedLibraryService:
         """
         conditions = [
             SeedItem.deleted_at.is_(None),
-            SeedItem.is_active == True,
+            SeedItem.is_active,
             SeedItem.item_type == ItemType.EXAMPLE,
         ]
 
@@ -1074,7 +1068,7 @@ class SeedLibraryService:
                     SeedLibrary.category == LibraryCategory.FEW_SHOT,
                     SeedLibrary.deleted_at.is_(None),
                     or_(
-                        SeedLibrary.is_official == True,
+                        SeedLibrary.is_official,
                         SeedLibrary.visibility == LibraryVisibility.PUBLIC,
                     )
                 )
@@ -1135,7 +1129,7 @@ class SeedLibraryService:
         template_key: str,
         user_id: uuid.UUID,
         language: str = "zh",
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         获取回复模板
 
@@ -1150,7 +1144,7 @@ class SeedLibraryService:
         """
         conditions = [
             SeedItem.deleted_at.is_(None),
-            SeedItem.is_active == True,
+            SeedItem.is_active,
             SeedItem.item_type == ItemType.TEMPLATE,
             SeedItem.tags.contains([template_key]),
         ]
@@ -1163,7 +1157,7 @@ class SeedLibraryService:
                     SeedLibrary.language == language,
                     SeedLibrary.deleted_at.is_(None),
                     or_(
-                        SeedLibrary.is_official == True,
+                        SeedLibrary.is_official,
                         SeedLibrary.visibility == LibraryVisibility.PUBLIC,
                     )
                 )
@@ -1191,7 +1185,7 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         library_id: uuid.UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取库统计信息
 
@@ -1208,8 +1202,8 @@ class SeedLibraryService:
     async def batch_get_library_stats(
         self,
         db: AsyncSession,
-        library_ids: List[uuid.UUID],
-    ) -> Dict[uuid.UUID, Dict[str, Any]]:
+        library_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, dict[str, Any]]:
         """
         批量获取多个库的统计信息（避免 N+1 查询）
 
@@ -1252,7 +1246,7 @@ class SeedLibraryService:
         subscriber_counts = {row[0]: row[1] for row in subscriber_counts_result.all()}
 
         # 构建结果映射
-        stats_map: Dict[uuid.UUID, Dict[str, Any]] = {}
+        stats_map: dict[uuid.UUID, dict[str, Any]] = {}
         for lib_id in library_ids:
             stats_map[lib_id] = {
                 "item_count": item_counts.get(lib_id, 0),
@@ -1267,8 +1261,8 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         batch_size: int = 50,
-        library_id: Optional[uuid.UUID] = None,
-    ) -> Dict[str, int]:
+        library_id: uuid.UUID | None = None,
+    ) -> dict[str, int]:
         """
         批量为缺少 embedding 的 SeedItem 生成向量
 
@@ -1328,12 +1322,12 @@ class SeedLibraryService:
         self,
         db: AsyncSession,
         query: str,
-        user_id: Optional[uuid.UUID] = None,
-        library_ids: Optional[List[uuid.UUID]] = None,
-        item_types: Optional[List[str]] = None,
+        user_id: uuid.UUID | None = None,
+        library_ids: list[uuid.UUID] | None = None,
+        item_types: list[str] | None = None,
         limit: int = 10,
         threshold: float = 0.3,
-    ) -> List[Tuple["SeedItem", float]]:
+    ) -> list[tuple["SeedItem", float]]:
         """
         语义搜索种子内容项
 
@@ -1359,7 +1353,7 @@ class SeedLibraryService:
         # 构建查询条件
         conditions = [
             SeedItem.deleted_at.is_(None),
-            SeedItem.is_active == True,
+            SeedItem.is_active,
             SeedItem.embedding.isnot(None),
         ]
 
@@ -1371,7 +1365,6 @@ class SeedLibraryService:
 
         # 使用 pgvector 的 cosine 距离进行相似度搜索
         # 注意：pgvector 的 <=> 操作符返回距离，需要转换为相似度
-        from sqlalchemy import literal
 
         similarity_expr = (1 - SeedItem.embedding.cosine_distance(query_embedding)).label("similarity")
 

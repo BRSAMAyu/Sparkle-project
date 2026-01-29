@@ -3,13 +3,15 @@ Prism/Cognitive Prism Tools - 认知棱镜工具
 
 Provides tools for behavior analysis and cognitive prism features.
 """
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
 from pydantic import BaseModel
 
-from .base import BaseTool, ToolCategory, ToolResult
 from app.services.cognitive_service import CognitiveService
+
+from .base import BaseTool, ToolCategory, ToolResult
 
 
 # Empty params schema - this tool doesn't need any parameters
@@ -35,7 +37,7 @@ class GetUserBehaviorPatternsTool(BaseTool):
         params: Any,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)

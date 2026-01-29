@@ -2,10 +2,10 @@
 Nightly Review Models
 Phase 2 nightly reviewer output.
 """
-from sqlalchemy import Column, String, JSON, Date, DateTime, ForeignKey
+from sqlalchemy import JSON, Column, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class NightlyReview(BaseModel):

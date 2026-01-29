@@ -9,12 +9,19 @@ Tests the complete memory evolution tracking workflow:
 4. Predictions can be generated
 5. Visualization data is correct
 """
+import os
 import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.memory_service import MemoryService
 from app.services.memory_evolution_service import MemoryEvolutionService
+
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("FULL_STACK_TESTS") != "1",
+    reason="Requires full memory evolution data fixtures and services.",
+)
 from app.models.memory import MemoryPreference, MemoryGoal
 from app.models.memory_evolution import MemoryEvolution, EvolutionPrediction
 

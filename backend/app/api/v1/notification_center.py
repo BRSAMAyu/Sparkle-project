@@ -3,23 +3,22 @@ Notification Center API Endpoints
 
 Provides unified access to notifications and analytics.
 """
-from typing import Optional
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
-from app.services.notification_center_service import NotificationCenterService
-from app.services.notification_analytics_service import NotificationAnalyticsService
 from app.schemas.unified_notification import (
-    UnifiedNotificationResponse,
-    NotificationInteractionResponse,
+    NotificationAnalyticsResponse,
+    NotificationHistoryFilters,
     NotificationPreferencesResponse,
     NotificationPreferencesUpdate,
-    NotificationHistoryFilters,
-    NotificationAnalyticsResponse,
+    UnifiedNotificationResponse,
 )
+from app.services.notification_analytics_service import NotificationAnalyticsService
+from app.services.notification_center_service import NotificationCenterService
 
 router = APIRouter(prefix="/notification-center", tags=["notification-center"])
 
@@ -29,7 +28,7 @@ async def get_unified_notifications(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of records to return"),
     unread_only: bool = Query(False, description="Only return unread notifications"),
-    source_type: Optional[str] = Query(None, description="Filter by source: system, intervention"),
+    source_type: str | None = Query(None, description="Filter by source: system, intervention"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -178,10 +177,10 @@ async def clear_read_notifications(
 async def get_notification_history(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
-    type: Optional[str] = Query(None, description="Filter by type: all, system, intervention"),
-    start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
-    end_date: Optional[str] = Query(None, description="End date (ISO format)"),
-    search: Optional[str] = Query(None, description="Search in title/content"),
+    type: str | None = Query(None, description="Filter by type: all, system, intervention"),
+    start_date: str | None = Query(None, description="Start date (ISO format)"),
+    end_date: str | None = Query(None, description="End date (ISO format)"),
+    search: str | None = Query(None, description="Search in title/content"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):

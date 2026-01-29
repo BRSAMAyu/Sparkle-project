@@ -2,13 +2,10 @@
 Memory Evolution Models
 记忆演化模型 - 支持记忆变化追踪和预测
 """
-from datetime import datetime
-from typing import Optional, List, Any, Dict
-from sqlalchemy import Column, String, DateTime, Float, Integer, ForeignKey, JSON, ARRAY
+from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 # SQLite compatibility for JSONB and ARRAY
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")

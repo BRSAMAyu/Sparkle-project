@@ -2,31 +2,26 @@
 Photon API Endpoints
 光子积分系统 API 端点
 """
-from typing import Dict, Any, Optional
+from typing import Any
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
-from app.models.shop import PhotonTransactionType
 from app.schemas.photon import (
-    PhotonBalanceResponse,
-    TransactionHistoryResponse,
-    TransactionSummaryResponse,
-    PhotonTransferRequest,
-    PhotonTransferResponse,
     PhotonAdjustmentRequest,
-    PhotonAdjustmentResponse,
+    PhotonTransferRequest,
 )
 from app.services.photon_service import get_photon_service
 
 router = APIRouter()
 
 
-@router.get("/balance", response_model=Dict[str, Any])
+@router.get("/balance", response_model=dict[str, Any])
 async def get_photon_balance(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -49,9 +44,9 @@ async def get_photon_balance(
     }
 
 
-@router.get("/transactions", response_model=Dict[str, Any])
+@router.get("/transactions", response_model=dict[str, Any])
 async def get_transaction_history(
-    transaction_type: Optional[str] = Query(None, description="Filter by transaction type"),
+    transaction_type: str | None = Query(None, description="Filter by transaction type"),
     limit: int = Query(50, ge=1, le=100, description="Number of items to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     current_user: User = Depends(get_current_user),
@@ -82,7 +77,7 @@ async def get_transaction_history(
     }
 
 
-@router.get("/transactions/summary", response_model=Dict[str, Any])
+@router.get("/transactions/summary", response_model=dict[str, Any])
 async def get_transaction_summary(
     days: int = Query(30, ge=1, le=365, description="Number of days to summarize"),
     current_user: User = Depends(get_current_user),
@@ -108,7 +103,7 @@ async def get_transaction_summary(
     }
 
 
-@router.post("/transfer", response_model=Dict[str, Any])
+@router.post("/transfer", response_model=dict[str, Any])
 async def transfer_photons(
     request: PhotonTransferRequest,
     current_user: User = Depends(get_current_user),
@@ -154,7 +149,7 @@ async def transfer_photons(
         raise HTTPException(status_code=500, detail="Failed to complete transfer")
 
 
-@router.post("/adjust", response_model=Dict[str, Any])
+@router.post("/adjust", response_model=dict[str, Any])
 async def adjust_photons(
     request: PhotonAdjustmentRequest,
     current_user: User = Depends(get_current_user),
@@ -203,7 +198,7 @@ async def adjust_photons(
 
         return {
             "success": True,
-            "message": f"Successfully adjusted photon balance",
+            "message": "Successfully adjusted photon balance",
             "data": {
                 "user_id": result["user_id"],
                 "balance": result["new_balance"],

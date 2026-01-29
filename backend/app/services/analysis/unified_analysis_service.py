@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cognitive import CognitiveFragment
-from app.schemas.analysis import AnalysisTaskInput, AnalysisResult
+from app.schemas.analysis import AnalysisResult, AnalysisTaskInput
 from app.schemas.intervention import EvidenceRef
 from app.services.analysis.orchestrator import AnalysisOrchestrator
 from app.services.analytics_service import AnalyticsService
@@ -37,7 +37,7 @@ class UnifiedAnalysisService:
             task_id=str(fragment.id),
             task_type="behavior_pattern_from_fragment",
             user_id=fragment.user_id,
-            source_type=fragment.source_type,
+            source_type=fragment.source_type or "cognitive_fragment",
             payload={
                 "fragment_content": fragment.content,
                 "context_tags": fragment.context_tags,
@@ -56,7 +56,7 @@ class UnifiedAnalysisService:
     async def analyze_error(self, error_record: Any) -> AnalysisResult:
         raise NotImplementedError("analyze_error not implemented in Phase2")
 
-    async def write_memory_from_result(self, result: AnalysisResult) -> Optional[str]:
+    async def write_memory_from_result(self, result: AnalysisResult) -> str | None:
         if result.status != "ok":
             return None
         if result.task_type != "behavior_pattern_from_fragment":

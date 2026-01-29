@@ -2291,6 +2291,8 @@ type MasteryAuditLog struct {
 	IpAddress  *netip.Addr      `json:"ip_address"`
 	UserAgent  pgtype.Text      `json:"user_agent"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
+	RequestID  pgtype.Text      `json:"request_id"`
+	Revision   pgtype.Int4      `json:"revision"`
 }
 
 type MemoryCorrection struct {
@@ -3051,6 +3053,7 @@ type Subtask struct {
 	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    pgtype.Timestamp   `json:"deleted_at"`
 }
 
 type SystemConfigChangeLog struct {
@@ -3111,6 +3114,7 @@ type TaskFeedback struct {
 	ActualMinutesSnapshot   pgtype.Int4      `json:"actual_minutes_snapshot"`
 	CreatedAt               pgtype.Timestamp `json:"created_at"`
 	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
+	DeletedAt               pgtype.Timestamp `json:"deleted_at"`
 }
 
 type TaskKnowledgeLink struct {

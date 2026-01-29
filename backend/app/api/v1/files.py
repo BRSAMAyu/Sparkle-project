@@ -2,11 +2,10 @@
 File processing API
 文件处理 API
 """
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, AnyUrl
+from pydantic import AnyUrl, BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -14,11 +13,10 @@ from app.core.celery_tasks import process_stored_file
 from app.db.session import get_db
 from app.models.file_storage import StoredFile
 
-
 router = APIRouter()
 
 
-async def verify_internal_token(x_internal_token: Optional[str] = Header(None)) -> None:
+async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
     if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
@@ -29,7 +27,7 @@ class FileProcessRequest(BaseModel):
     download_url: AnyUrl
     file_name: str
     mime_type: str
-    thumbnail_upload_url: Optional[AnyUrl] = None
+    thumbnail_upload_url: AnyUrl | None = None
 
 
 @router.post("/files/process", summary="Trigger file processing")

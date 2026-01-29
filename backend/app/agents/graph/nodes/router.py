@@ -1,10 +1,12 @@
-from typing import Literal, Optional
-from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
-from loguru import logger
+from typing import Literal
 
-from app.agents.graph.state import SparkleState
+from langchain_core.prompts import ChatPromptTemplate
+from loguru import logger
+from pydantic import BaseModel, Field
+
 from app.agents.graph.llm_factory import LLMFactory
+from app.agents.graph.state import SparkleState
+
 
 # 1. 定义路由输出结构
 class RouteDecision(BaseModel):

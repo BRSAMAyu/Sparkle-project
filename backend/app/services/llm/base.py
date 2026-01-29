@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, List, Dict, Any, Optional
+from collections.abc import AsyncGenerator
+
 
 class LLMProvider(ABC):
     """
     Abstract base class for LLM providers.
     """
-    
+
     @abstractmethod
     async def chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: list[dict[str, str]],
         model: str,
         temperature: float = 0.7,
         **kwargs
@@ -21,8 +22,8 @@ class LLMProvider(ABC):
 
     @abstractmethod
     async def stream_chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: list[dict[str, str]],
         model: str,
         temperature: float = 0.7,
         **kwargs

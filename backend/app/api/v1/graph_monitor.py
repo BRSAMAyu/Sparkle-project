@@ -5,17 +5,17 @@ GraphRAG 监控 API
 """
 
 import time
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
 from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
-from app.config import settings
+from app.db.session import get_db
+
 try:
     from app.services.graph_knowledge_service import GraphKnowledgeService
     GRAPH_SERVICE_AVAILABLE = True
@@ -26,7 +26,7 @@ except ModuleNotFoundError as exc:
 
 # Prometheus metrics
 try:
-    from prometheus_client import Counter, Histogram, Gauge, generate_latest
+    from prometheus_client import Counter, Gauge, Histogram, generate_latest
     from starlette.responses import Response
     PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -78,10 +78,10 @@ def _require_graph_service(db: AsyncSession) -> "GraphKnowledgeService":
     return GraphKnowledgeService(db)
 
 
-@router.get("/health", response_model=Dict[str, Any])
+@router.get("/health", response_model=dict[str, Any])
 async def graph_rag_health(
     db: AsyncSession = Depends(get_db)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     GraphRAG 系统健康检查
 
@@ -189,7 +189,7 @@ async def graph_rag_health(
             try:
                 # 执行一个快速查询测试
                 start = time.time()
-                test_result = await graph_ks.graph_rag_search(
+                await graph_ks.graph_rag_search(
                     query="test",
                     user_id=None,
                     depth=1,
@@ -225,10 +225,10 @@ async def graph_rag_health(
     return health_status
 
 
-@router.get("/statistics", response_model=Dict[str, Any])
+@router.get("/statistics", response_model=dict[str, Any])
 async def graph_statistics(
     db: AsyncSession = Depends(get_db)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     获取 GraphRAG 系统详细统计信息
 
@@ -266,11 +266,11 @@ async def graph_statistics(
         )
 
 
-@router.post("/sync/trigger", response_model=Dict[str, Any])
+@router.post("/sync/trigger", response_model=dict[str, Any])
 async def trigger_sync(
     db: AsyncSession = Depends(get_db),
     full_sync: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     手动触发数据同步
 
@@ -325,8 +325,8 @@ async def trigger_sync(
         )
 
 
-@router.get("/sync/status", response_model=Dict[str, Any])
-async def sync_status() -> Dict[str, Any]:
+@router.get("/sync/status", response_model=dict[str, Any])
+async def sync_status() -> dict[str, Any]:
     """
     获取同步队列状态
 
@@ -380,13 +380,13 @@ async def sync_status() -> Dict[str, Any]:
         }
 
 
-@router.get("/query/test", response_model=Dict[str, Any])
+@router.get("/query/test", response_model=dict[str, Any])
 async def test_query(
     db: AsyncSession = Depends(get_db),
     query: str = "test query",
     depth: int = 2,
     top_k: int = 3
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     执行测试查询以验证 GraphRAG 功能
 
@@ -464,10 +464,10 @@ async def prometheus_metrics():
     )
 
 
-@router.get("/health/detailed", response_model=Dict[str, Any])
+@router.get("/health/detailed", response_model=dict[str, Any])
 async def detailed_health_check(
     db: AsyncSession = Depends(get_db)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     详细的 GraphRAG 健康检查（包含所有组件）
 
@@ -665,7 +665,7 @@ async def detailed_health_check(
     return health_report
 
 
-def calculate_health_score(health_report: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_health_score(health_report: dict[str, Any]) -> dict[str, Any]:
     """
     计算健康评分 (0-100)
     """
@@ -702,14 +702,13 @@ def calculate_health_score(health_report: Dict[str, Any]) -> Dict[str, Any]:
     # 数据完整性扣分
     metrics = health_report.get("metrics", {})
     data_integrity = metrics.get("data_integrity", {})
-    if isinstance(data_integrity, dict):
-        if data_integrity.get("total_nodes", 0) == 0:
-            score -= 10
+    if isinstance(data_integrity, dict) and data_integrity.get("total_nodes", 0) == 0:
+        score -= 10
 
     # 性能扣分
     performance = metrics.get("performance", {})
     if isinstance(performance, dict):
-        for test_name, result in performance.items():
+        for _test_name, result in performance.items():
             if isinstance(result, dict) and result.get("status") == "critical":
                 score -= 10
             elif isinstance(result, dict) and result.get("status") == "slow":
@@ -726,7 +725,7 @@ def calculate_health_score(health_report: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def generate_health_summary(health_report: Dict[str, Any]) -> Dict[str, Any]:
+def generate_health_summary(health_report: dict[str, Any]) -> dict[str, Any]:
     """
     生成健康状态摘要
     """
@@ -736,10 +735,7 @@ def generate_health_summary(health_report: Dict[str, Any]) -> Dict[str, Any]:
 
     if status == "healthy":
         message = "All systems operational"
-        if not alerts:
-            action = "No action required"
-        else:
-            action = f"{len(alerts)} informational alerts present"
+        action = "No action required" if not alerts else f"{len(alerts)} informational alerts present"
     elif status == "degraded":
         message = f"{len(alerts)} issues detected, system partially operational"
         action = "Review alerts and consider recommendations"

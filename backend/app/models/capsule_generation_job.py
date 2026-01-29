@@ -3,12 +3,11 @@ Capsule Generation Job Model
 """
 import enum
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, ARRAY, JSON
+from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class JobStatus(enum.Enum):

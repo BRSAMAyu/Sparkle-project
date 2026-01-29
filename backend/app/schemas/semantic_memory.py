@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -8,9 +8,9 @@ from pydantic import BaseModel, ConfigDict
 class StrategyNodeResponse(BaseModel):
     id: UUID
     title: str
-    description: Optional[str] = None
-    subject_code: Optional[str] = None
-    tags: Optional[List[str]] = None
+    description: str | None = None
+    subject_code: str | None = None
+    tags: list[str] | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -19,20 +19,20 @@ class StrategyNodeResponse(BaseModel):
 class SimilarErrorItem(BaseModel):
     id: UUID
     subject_code: str
-    root_cause: Optional[str] = None
+    root_cause: str | None = None
     created_at: datetime
 
 
 class ConceptBrief(BaseModel):
     id: UUID
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class ErrorSemanticSummary(BaseModel):
     error_id: UUID
-    root_cause: Optional[str] = None
-    linked_concepts: List[ConceptBrief]
-    strategies: List[StrategyNodeResponse]
-    similar_errors: List[SimilarErrorItem]
-    metadata: Optional[Dict[str, Any]] = None
+    root_cause: str | None = None
+    linked_concepts: list[ConceptBrief]
+    strategies: list[StrategyNodeResponse]
+    similar_errors: list[SimilarErrorItem]
+    metadata: dict[str, Any] | None = None

@@ -4,11 +4,12 @@ Orchestrator Agent - 协调者智能体
 负责路由查询到合适的专业智能体，并整合多个智能体的响应
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from loguru import logger
 
-from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
-from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
+from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
+from .specialist_agents import CodeAgent, MathAgent, ScienceAgent, WritingAgent
 
 
 class OrchestratorAgent(BaseAgent):
@@ -27,7 +28,7 @@ class OrchestratorAgent(BaseAgent):
         ]
 
         # 初始化专家智能体
-        self.specialist_agents: List[BaseAgent] = [
+        self.specialist_agents: list[BaseAgent] = [
             MathAgent(),
             CodeAgent(),
             WritingAgent(),
@@ -75,7 +76,7 @@ class OrchestratorAgent(BaseAgent):
             # 多个智能体响应，需要整合
             return await self._synthesize_responses(context, agent_responses)
 
-    async def _route_query(self, query: str) -> List[BaseAgent]:
+    async def _route_query(self, query: str) -> list[BaseAgent]:
         """
         路由查询到合适的智能体
 
@@ -108,7 +109,7 @@ class OrchestratorAgent(BaseAgent):
     async def _synthesize_responses(
         self,
         context: AgentContext,
-        responses: List[AgentResponse]
+        responses: list[AgentResponse]
     ) -> AgentResponse:
         """
         整合多个智能体的响应
@@ -123,8 +124,8 @@ class OrchestratorAgent(BaseAgent):
         logger.info(f"Synthesizing {len(responses)} agent responses")
 
         # 构建整合后的响应文本
-        synthesized_text = f"## 多专家协作回答\n\n"
-        synthesized_text += f"您的问题涉及多个领域，以下是我们团队的综合答复：\n\n"
+        synthesized_text = "## 多专家协作回答\n\n"
+        synthesized_text += "您的问题涉及多个领域，以下是我们团队的综合答复：\n\n"
 
         for i, response in enumerate(responses, 1):
             synthesized_text += f"### {i}. {response.agent_name} 的回答\n\n"
@@ -185,9 +186,9 @@ class MultiAgentWorkflow:
         user_query: str,
         user_id: str,
         session_id: str,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         执行多智能体工作流
 

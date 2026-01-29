@@ -1,6 +1,8 @@
-from prometheus_client import Counter, Histogram, Gauge, Summary, REGISTRY
-from functools import wraps
 import time
+from functools import wraps
+
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram
+
 
 def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwargs):
     """Safely get or create a prometheus metric."""

@@ -2,10 +2,10 @@
 User State Snapshot Models
 Phase 1 estimator output.
 """
-from sqlalchemy import Column, Boolean, JSON, Float, DateTime, ForeignKey
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class UserStateSnapshot(BaseModel):

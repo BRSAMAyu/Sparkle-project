@@ -3,7 +3,7 @@ STT Provider抽象接口
 定义语音转文字服务的统一接口，支持多Provider切换
 """
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
 
 
 class STTProvider(ABC):
@@ -18,8 +18,8 @@ class STTProvider(ABC):
     async def transcribe_stream(
         self,
         audio_stream: AsyncGenerator[bytes, None],
-        language: Optional[str] = None,
-        sample_rate: Optional[int] = None,
+        language: str | None = None,
+        sample_rate: int | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         实时语音识别流式接口
@@ -42,7 +42,7 @@ class STTProvider(ABC):
     async def transcribe_file(
         self,
         file_path: str,
-        language: Optional[str] = None,
+        language: str | None = None,
     ) -> str:
         """
         文件语音识别接口

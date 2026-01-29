@@ -2,13 +2,12 @@
 Achievement System Models
 成就系统数据模型 - 包含成就定义、用户成就记录、连胜统计、契约等
 """
-from datetime import datetime
-from typing import Optional
-from sqlalchemy import Column, String, Integer, Float, Boolean, JSON, ForeignKey, DateTime, Enum, Index
-from sqlalchemy.orm import relationship
 import enum
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 
 class AchievementRarity(str, enum.Enum):

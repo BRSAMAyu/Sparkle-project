@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -13,7 +12,7 @@ from app.models.user_memory_settings import UserMemorySettings
 @dataclass(frozen=True)
 class MemoryPolicyDecision:
     allowed: bool
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 class MemoryPolicyEvaluator:
@@ -24,8 +23,8 @@ class MemoryPolicyEvaluator:
         self,
         user_id: UUID,
         kind: str,
-        pref_key: Optional[str] = None,
-        source_type: Optional[str] = None,
+        pref_key: str | None = None,
+        source_type: str | None = None,
     ) -> MemoryPolicyDecision:
         settings_record = await self._get_settings(user_id)
         if settings_record is None:
@@ -51,7 +50,7 @@ class MemoryPolicyEvaluator:
 
         return MemoryPolicyDecision(allowed=True)
 
-    async def _get_settings(self, user_id: UUID) -> Optional[UserMemorySettings]:
+    async def _get_settings(self, user_id: UUID) -> UserMemorySettings | None:
         result = await self.db.execute(
             select(UserMemorySettings).where(
                 UserMemorySettings.user_id == user_id,

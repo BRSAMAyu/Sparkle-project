@@ -2,81 +2,115 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
+import contextlib
 import json
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
-from typing import List, Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
-from app.db.session import get_db
-from app.config import settings
-from app.core.security import decode_token
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.core.websocket import manager
+from app.config import settings
 from app.core.rate_limiting import limiter
-from app.models.user import User, UserStatus
-from app.models.community import GroupType, GroupMember, GroupRole
+from app.core.security import decode_token
+from app.core.websocket import manager
+from app.db.session import AsyncSessionLocal, get_db
+from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from app.models.community import GroupMember, GroupMessage, GroupRole, GroupType, PrivateMessage, SharedResourceType
+from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.task import Task
-from app.models.cognitive import CognitiveFragment, BehaviorPattern
-from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.user import User, UserStatus
 from app.schemas.community import (
-    # 好友
-    FriendRequest, FriendResponse, FriendshipInfo, FriendRecommendation,
-    # 群组
-    GroupCreate, GroupUpdate, GroupInfo, GroupListItem, GroupMemberInfo,
-    MemberRoleUpdate, UserBrief,
-    # 消息
-    MessageSend, MessageInfo, MessageEdit, MessageReactionUpdate,
-    PrivateMessageSend, PrivateMessageInfo,
-    # 群文件
-    GroupFileShareRequest, GroupFilePermissionUpdate, GroupFileInfo, GroupFileCategoryStat, GroupFilePermissions,
-    # 任务
-    GroupTaskCreate, GroupTaskInfo,
-    # 状态
-    UserStatusUpdate,
+    # 广播相关
+    BroadcastMessageCreate,
+    BroadcastMessageInfo,
     # 其他
-    CheckinRequest, CheckinResponse,
-    # 打卡
-    CheckinRequest, CheckinResponse,
+    CheckinRequest,
+    CheckinResponse,
+    EncryptionKeyCreate,
+    EncryptionKeyInfo,
+    FlameStatus,
+    FriendRecommendation,
+    # 好友
+    FriendRequest,
+    FriendResponse,
+    FriendshipInfo,
+    # 群管理相关
+    GroupAnnouncementUpdate,
+    # 群组
+    GroupCreate,
+    GroupFileCategoryStat,
+    GroupFileInfo,
+    GroupFilePermissions,
+    GroupFilePermissionUpdate,
+    # 群文件
+    GroupFileShareRequest,
     # 火堆
-    GroupFlameStatus, FlameStatus,
-    # 共享资源
-    SharedResourceCreate, SharedResourceInfo,
+    GroupFlameStatus,
+    GroupInfo,
+    GroupListItem,
+    GroupModerationSettings,
+    GroupTaskCreate,
+    GroupTaskInfo,
     # 枚举
-    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum, MessageTypeEnum, ReactionActionEnum,
-    # 加密相关
-    EncryptionKeyCreate, EncryptionKeyInfo, EncryptedMessageSend,
-    # 举报相关
-    MessageReportCreate, MessageReportInfo, MessageReportReview, ReportStatusEnum,
+    GroupTypeEnum,
+    MemberMuteRequest,
+    MemberWarnRequest,
+    MessageEdit,
     # 收藏相关
-    MessageFavoriteCreate, MessageFavoriteInfo,
+    MessageFavoriteCreate,
+    MessageFavoriteInfo,
     # 转发相关
     MessageForwardRequest,
-    # 广播相关
-    BroadcastMessageCreate, BroadcastMessageInfo,
-    # 群管理相关
-    GroupAnnouncementUpdate, GroupModerationSettings, MemberMuteRequest, MemberWarnRequest,
-    # 离线队列相关
-    OfflineMessageInfo, OfflineMessageRetryRequest, OfflineMessageStatusEnum,
+    MessageInfo,
+    MessageReactionUpdate,
+    # 举报相关
+    MessageReportCreate,
+    MessageReportInfo,
+    MessageReportReview,
     # 搜索相关
-    MessageSearchRequest, MessageSearchResult
+    MessageSearchRequest,
+    MessageSearchResult,
+    # 消息
+    MessageSend,
+    MessageTypeEnum,
+    # 离线队列相关
+    OfflineMessageInfo,
+    OfflineMessageRetryRequest,
+    PrivateMessageInfo,
+    PrivateMessageSend,
+    ReactionActionEnum,
+    SharedResourceCreate,
+    SharedResourceInfo,
+    SharedResourceTypeEnum,
+    UserBrief,
+    # 状态
+    UserStatusUpdate,
 )
-from app.services.community_service import (
-    FriendshipService, GroupService, GroupMessageService,
-    CheckinService, GroupTaskService, PrivateMessageService
-)
-from app.services.group_file_service import GroupFileService
 from app.services.collaboration_service import collaboration_service
 from app.services.community_advanced_service import (
-    EncryptionService, ModerationService, ReportService, FavoriteService,
-    ForwardService, BroadcastService, MessageSearchService, OfflineQueueService
+    BroadcastService,
+    EncryptionService,
+    FavoriteService,
+    ForwardService,
+    MessageSearchService,
+    ModerationService,
+    OfflineQueueService,
+    ReportService,
 )
-from app.models.community import SharedResourceType, GroupMessage, PrivateMessage
-from app.db.session import AsyncSessionLocal
+from app.services.community_service import (
+    CheckinService,
+    FriendshipService,
+    GroupMessageService,
+    GroupService,
+    GroupTaskService,
+    PrivateMessageService,
+)
+from app.services.group_file_service import GroupFileService
 
 router = APIRouter()
 
@@ -91,7 +125,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             flame_level=msg.sender.flame_level,
             flame_brightness=msg.sender.flame_brightness
         )
-    
+
     quoted_message = None
     if msg.reply_to:
         # Simplified quote (1 level recursion)
@@ -179,13 +213,13 @@ def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
 def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
     sender = UserBrief.model_validate(msg.sender)
     receiver = UserBrief.model_validate(msg.receiver)
-    
+
     quoted_message = None
     if msg.reply_to:
         # Simplified quote (1 level recursion)
         q_sender = UserBrief.model_validate(msg.reply_to.sender)
         q_receiver = UserBrief.model_validate(msg.reply_to.receiver)
-        
+
         quoted_message = PrivateMessageInfo(
             id=msg.reply_to.id,
             created_at=msg.reply_to.created_at,
@@ -228,7 +262,7 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
         quoted_message=quoted_message
     )
 
-def _is_self_only_visibility(content_data: Optional[dict], user_id: UUID) -> bool:
+def _is_self_only_visibility(content_data: dict | None, user_id: UUID) -> bool:
     if not content_data:
         return False
     if content_data.get("visibility") != "self":
@@ -240,7 +274,7 @@ def _is_self_only_visibility(content_data: Optional[dict], user_id: UUID) -> boo
         return str(user_id) in [str(item) for item in visible_to]
     return str(visible_to) == str(user_id)
 
-def _normalize_self_visibility(content_data: Optional[dict], user_id: UUID) -> Optional[dict]:
+def _normalize_self_visibility(content_data: dict | None, user_id: UUID) -> dict | None:
     if not content_data:
         return content_data
     if content_data.get("visibility") != "self":
@@ -251,7 +285,7 @@ def _normalize_self_visibility(content_data: Optional[dict], user_id: UUID) -> O
     updated["visible_to"] = str(user_id)
     return updated
 
-def _truncate_text(text: Optional[str], limit: int = 160) -> Optional[str]:
+def _truncate_text(text: str | None, limit: int = 160) -> str | None:
     if not text:
         return None
     cleaned = text.strip()
@@ -429,7 +463,7 @@ async def respond_to_friend_request(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/friends", response_model=List[FriendshipInfo], summary="获取好友列表")
+@router.get("/friends", response_model=list[FriendshipInfo], summary="获取好友列表")
 async def get_friends(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -469,7 +503,7 @@ async def get_pending_requests(
     return requests
 
 
-@router.get("/users/search", response_model=List[UserBrief], summary="搜索用户")
+@router.get("/users/search", response_model=list[UserBrief], summary="搜索用户")
 @limiter.limit("20/minute")
 async def search_users(
     request: Request,
@@ -480,11 +514,11 @@ async def search_users(
 ):
     """
     搜索用户（用于添加好友）
-    
+
     支持按用户名或昵称搜索
     """
-    from sqlalchemy import select, func, and_, or_, or_
-    
+    from sqlalchemy import select
+
     # Simple search implementation
     stmt = select(User).where(
         or_(
@@ -493,12 +527,12 @@ async def search_users(
         )
     ).where(
         User.id != current_user.id,
-        User.is_active == True
+        User.is_active
     ).limit(limit)
-    
+
     result = await db.execute(stmt)
     users = result.scalars().all()
-    
+
     return [
         UserBrief(
             id=user.id,
@@ -511,7 +545,7 @@ async def search_users(
     ]
 
 
-@router.get("/friends/recommendations", response_model=List[FriendRecommendation], summary="获取好友推荐")
+@router.get("/friends/recommendations", response_model=list[FriendRecommendation], summary="获取好友推荐")
 @limiter.limit("10/minute")
 async def get_friend_recommendations(
     request: Request,
@@ -525,7 +559,7 @@ async def get_friend_recommendations(
     2. 相似的学习偏好/标签
     3. 地理位置（如果可用）
     """
-    from app.models.community import GroupMember, Friendship
+    from app.models.community import Friendship, GroupMember
 
     recommendations = []
     seen_user_ids = set()
@@ -609,7 +643,7 @@ async def get_friend_recommendations(
             and_(
                 User.id != current_user.id,
                 User.id.notin_(seen_user_ids) if seen_user_ids else True,
-                User.is_active == True
+                User.is_active
             )
         ).limit(100)
 
@@ -659,7 +693,7 @@ async def get_friend_recommendations(
             and_(
                 User.id != current_user.id,
                 User.id.notin_(seen_user_ids) if seen_user_ids else True,
-                User.is_active == True,
+                User.is_active,
                 User.last_login_at.isnot(None)
             )
         ).order_by(
@@ -692,7 +726,7 @@ async def get_friend_recommendations(
 async def websocket_endpoint(
     websocket: WebSocket,
     group_id: UUID,
-    token: Optional[str] = Query(None),
+    token: str | None = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -723,10 +757,10 @@ async def websocket_endpoint(
         if not membership_result.scalar_one_or_none():
             await websocket.close(code=4003)
             return
-            
+
         # 建立连接
         await manager.connect(websocket, str(group_id), user_id)
-        
+
         try:
             while True:
                 # 保持连接活跃，接收客户端消息（如果有）
@@ -743,17 +777,15 @@ async def websocket_endpoint(
                     pass
         except WebSocketDisconnect:
             manager.disconnect(websocket, str(group_id), user_id)
-            
+
     except Exception as e:
         print(f"WebSocket Error: {e}")
         # 尝试关闭连接
-        try:
+        with contextlib.suppress(BaseException):
             await websocket.close()
-        except:
-            pass
 
 
-def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
+def _extract_ws_token(websocket: WebSocket) -> str | None:
     auth_header = websocket.headers.get("authorization")
     if auth_header:
         parts = auth_header.split()
@@ -826,7 +858,7 @@ async def join_group(
             "type": "member_joined",
             "group_id": str(group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -850,7 +882,7 @@ async def leave_group(
             "type": "member_left",
             "group_id": str(group_id),
             "user_id": str(current_user.id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -891,7 +923,7 @@ async def transfer_group_owner(
             "group_id": str(group_id),
             "old_owner_id": str(current_user.id),
             "new_owner_id": str(new_owner_id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -899,7 +931,7 @@ async def transfer_group_owner(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups", response_model=List[GroupListItem], summary="获取我的群组")
+@router.get("/groups", response_model=list[GroupListItem], summary="获取我的群组")
 async def get_my_groups(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -908,11 +940,11 @@ async def get_my_groups(
     return await GroupService.get_my_groups(db, current_user.id)
 
 
-@router.get("/groups/search", response_model=List[GroupListItem], summary="搜索公开群组")
+@router.get("/groups/search", response_model=list[GroupListItem], summary="搜索公开群组")
 async def search_groups(
-    keyword: Optional[str] = None,
-    group_type: Optional[GroupTypeEnum] = None,
-    tags: Optional[List[str]] = Query(default=None),
+    keyword: str | None = None,
+    group_type: GroupTypeEnum | None = None,
+    tags: list[str] | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
@@ -934,7 +966,7 @@ async def search_groups(
             id=group_dict['id'],
             name=group_dict['name'],
             type=GroupTypeEnum(group_dict['type'].value),
-            member_count=group_dict['member_count'], 
+            member_count=group_dict['member_count'],
             total_flame_power=group_dict['total_flame_power'],
             deadline=deadline,
             days_remaining=days_remaining,
@@ -991,10 +1023,10 @@ async def send_message(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/messages", response_model=List[MessageInfo], summary="获取群消息")
+@router.get("/groups/{group_id}/messages", response_model=list[MessageInfo], summary="获取群消息")
 async def get_messages(
     group_id: UUID,
-    before_id: Optional[UUID] = None,
+    before_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -1064,10 +1096,10 @@ async def share_group_file(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/files", response_model=List[GroupFileInfo], summary="获取群文件列表")
+@router.get("/groups/{group_id}/files", response_model=list[GroupFileInfo], summary="获取群文件列表")
 async def list_group_files(
     group_id: UUID,
-    category: Optional[str] = Query(default=None),
+    category: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -1114,7 +1146,7 @@ async def update_group_file_permissions(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/files/categories", response_model=List[GroupFileCategoryStat], summary="获取群文件分类统计")
+@router.get("/groups/{group_id}/files/categories", response_model=list[GroupFileCategoryStat], summary="获取群文件分类统计")
 async def get_group_file_categories(
     group_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -1205,7 +1237,7 @@ async def update_group_message_reaction(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/threads/{thread_root_id}", response_model=List[MessageInfo], summary="获取群消息线程")
+@router.get("/groups/{group_id}/threads/{thread_root_id}", response_model=list[MessageInfo], summary="获取群消息线程")
 async def get_group_thread_messages(
     group_id: UUID,
     thread_root_id: UUID,
@@ -1221,7 +1253,7 @@ async def get_group_thread_messages(
     return [_build_message_info(msg) for msg in messages]
 
 
-@router.get("/groups/{group_id}/messages/search", response_model=List[MessageInfo], summary="搜索群消息")
+@router.get("/groups/{group_id}/messages/search", response_model=list[MessageInfo], summary="搜索群消息")
 async def search_group_messages(
     group_id: UUID,
     keyword: str = Query(min_length=1, max_length=120),
@@ -1274,10 +1306,10 @@ async def send_private_message(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/friends/{friend_id}/messages", response_model=List[PrivateMessageInfo], summary="获取私信记录")
+@router.get("/friends/{friend_id}/messages", response_model=list[PrivateMessageInfo], summary="获取私信记录")
 async def get_private_messages(
     friend_id: UUID,
-    before_id: Optional[UUID] = None,
+    before_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -1382,7 +1414,7 @@ async def update_private_message_reaction(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/friends/{friend_id}/messages/search", response_model=List[PrivateMessageInfo], summary="搜索私信")
+@router.get("/friends/{friend_id}/messages/search", response_model=list[PrivateMessageInfo], summary="搜索私信")
 async def search_private_messages(
     friend_id: UUID,
     keyword: str = Query(min_length=1, max_length=120),
@@ -1405,7 +1437,7 @@ async def _update_user_status(user_id: str, status: UserStatus):
         # Invisible 逻辑: 如果当前是隐身，上线/下线操作不改变DB状态（保持隐身）
         # 且不广播任何通知。
         if user.status == UserStatus.INVISIBLE:
-            return 
+            return
 
         user.status = status
         db.add(user)
@@ -1428,14 +1460,14 @@ async def update_status(
     user.status = UserStatus(data.status.value)
     db.add(user)
     await db.commit()
-    
+
     # 通知
     broadcast_status = data.status.value
     if data.status == UserStatus.INVISIBLE:
         broadcast_status = UserStatus.OFFLINE.value
-        
+
     await manager.notify_status_change(str(user.id), broadcast_status)
-    
+
     return {"success": True, "status": data.status}
 
 
@@ -1456,27 +1488,27 @@ async def user_websocket_endpoint(
         if not user_id:
             await websocket.close(code=4003)
             return
-            
+
         # 获取好友列表以便优化 Presence 通知
         async with AsyncSessionLocal() as db:
             friends = await FriendshipService.get_friends(db, UUID(user_id))
             friend_ids = [str(f_user.id) for _, f_user in friends]
 
         await manager.connect_user(websocket, user_id, friend_ids=friend_ids)
-        
+
         # 上线通知
         await _update_user_status(user_id, UserStatus.ONLINE)
-        
+
         try:
             while True:
                 # 保持连接，接收客户端消息
-                data = await websocket.receive_text()
+                await websocket.receive_text()
                 # 可以在这里处理心跳
         except WebSocketDisconnect:
             manager.disconnect_user(user_id)
             # 下线通知
             await _update_user_status(user_id, UserStatus.OFFLINE)
-            
+
     except Exception as e:
         print(f"User WebSocket Error: {e}")
         try:
@@ -1511,7 +1543,7 @@ async def checkin(
             "group_id": str(data.group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
             "duration": data.today_duration_minutes,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(data.group_id))
 
         return result
@@ -1543,7 +1575,7 @@ async def create_group_task(
                 "description": task.description,
                 "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
             },
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return GroupTaskInfo(
@@ -1574,7 +1606,7 @@ async def create_group_task(
         raise HTTPException(status_code=403, detail=str(e))
 
 
-@router.get("/groups/{group_id}/tasks", response_model=List[GroupTaskInfo], summary="获取群任务列表")
+@router.get("/groups/{group_id}/tasks", response_model=list[GroupTaskInfo], summary="获取群任务列表")
 async def get_group_tasks(
     group_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -1643,9 +1675,11 @@ async def get_group_flame_status(
 
     返回所有成员的火苗状态，用于渲染火堆动画
     """
-    from sqlalchemy import select, func, and_, or_
-    from app.models.community import GroupMember
     import math
+
+    from sqlalchemy import select
+
+    from app.models.community import GroupMember
 
     group = await GroupService.get_group(db, group_id)
     if not group:
@@ -1802,10 +1836,10 @@ async def share_resource(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/resources", response_model=List[SharedResourceInfo], summary="获取群组共享资源")
+@router.get("/groups/{group_id}/resources", response_model=list[SharedResourceInfo], summary="获取群组共享资源")
 async def get_group_resources(
     group_id: UUID,
-    resource_type: Optional[SharedResourceTypeEnum] = None,
+    resource_type: SharedResourceTypeEnum | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -1814,18 +1848,18 @@ async def get_group_resources(
     获取分享到群组的资源列表
     """
     # Check if user is member
-    await GroupService.get_group(db, group_id, current_user.id) # Will raise/return None if not accessible? 
-    # Actually get_group returns None if not found or not member? 
+    await GroupService.get_group(db, group_id, current_user.id) # Will raise/return None if not accessible?
+    # Actually get_group returns None if not found or not member?
     # Current implementation of get_group checks permission implicitly or explicitly?
     # Let's rely on service check or do manual check if strictly needed.
     # GroupService.get_group returns group info if user is member (based on internal logic usually).
-    
+
     rtype = SharedResourceType(resource_type.value) if resource_type else None
-    
+
     resources = await collaboration_service.get_group_resources(
         db, group_id, rtype, limit
     )
-    
+
     result = []
     for res in resources:
         # Determine strict type string
@@ -1857,7 +1891,7 @@ async def get_group_resources(
             brief = _build_share_brief(SharedResourceType.COGNITIVE_PRISM_PATTERN, res.behavior_pattern)
             resource_title = brief["title"]
             resource_summary = brief["summary"]
-        
+
         result.append(SharedResourceInfo(
             id=res.id,
             created_at=res.created_at,
@@ -1908,7 +1942,7 @@ async def register_encryption_key(
     )
 
 
-@router.get("/encryption/keys/{user_id}", response_model=List[EncryptionKeyInfo], summary="获取用户公钥")
+@router.get("/encryption/keys/{user_id}", response_model=list[EncryptionKeyInfo], summary="获取用户公钥")
 async def get_user_encryption_keys(
     user_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -1988,7 +2022,7 @@ async def update_group_moderation_settings(
             "type": "group_settings_updated",
             "group_id": str(group_id),
             "settings": data.model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {
@@ -2110,7 +2144,7 @@ async def report_message(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/groups/{group_id}/reports", response_model=List[MessageReportInfo], summary="获取群组待处理举报")
+@router.get("/groups/{group_id}/reports", response_model=list[MessageReportInfo], summary="获取群组待处理举报")
 async def get_group_pending_reports(
     group_id: UUID,
     limit: int = Query(default=50, ge=1, le=100),
@@ -2213,9 +2247,9 @@ async def add_message_favorite(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/favorites", response_model=List[MessageFavoriteInfo], summary="获取收藏列表")
+@router.get("/favorites", response_model=list[MessageFavoriteInfo], summary="获取收藏列表")
 async def get_message_favorites(
-    tags: Optional[List[str]] = Query(default=None),
+    tags: list[str] | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -2382,7 +2416,7 @@ async def get_group_topics(
 
 # ============ 离线队列 ============
 
-@router.get("/offline/pending", response_model=List[OfflineMessageInfo], summary="获取待发送的离线消息")
+@router.get("/offline/pending", response_model=list[OfflineMessageInfo], summary="获取待发送的离线消息")
 async def get_pending_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -2405,7 +2439,7 @@ async def get_pending_offline_messages(
     ]
 
 
-@router.get("/offline/failed", response_model=List[OfflineMessageInfo], summary="获取发送失败的离线消息")
+@router.get("/offline/failed", response_model=list[OfflineMessageInfo], summary="获取发送失败的离线消息")
 async def get_failed_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),

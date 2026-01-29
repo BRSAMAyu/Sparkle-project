@@ -1,8 +1,7 @@
-from sqlalchemy import Column, String, Float, DateTime, Index, UniqueConstraint, JSON
+from sqlalchemy import JSON, Column, Float, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

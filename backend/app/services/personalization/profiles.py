@@ -2,7 +2,6 @@
 策略配置数据类 - 各模块的个性化参数
 """
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -28,7 +27,7 @@ class PushPolicyProfile:
     memory_urgency_threshold: float
     curiosity_frequency: str
     silent_during_focus: bool
-    active_hours: List[int]
+    active_hours: list[int]
     timezone: str
     preference_version: int
 
@@ -42,4 +41,4 @@ class TaskPlanProfile:
     micro_task_friendly: bool
     exploration_ratio: float
     review_priority: str
-    fragmented_time_slots: List[dict]
+    fragmented_time_slots: list[dict]

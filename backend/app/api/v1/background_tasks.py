@@ -1,27 +1,26 @@
 """
 Background Tasks API Endpoints
 """
-from typing import List, Dict, Any, Optional
-from uuid import UUID
 from datetime import datetime, timedelta
+from typing import Any
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, or_
-from loguru import logger
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.db.session import get_db
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
-
+from app.models.user import User
 
 router = APIRouter()
 
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def get_background_tasks(
-    status: Optional[BackgroundTaskStatus] = Query(None, description="Filter by status"),
-    task_type: Optional[BackgroundTaskType] = Query(None, description="Filter by task type"),
+    status: BackgroundTaskStatus | None = Query(None, description="Filter by status"),
+    task_type: BackgroundTaskType | None = Query(None, description="Filter by task type"),
     limit: int = Query(20, ge=1, le=100, description="Limit results"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -48,7 +47,7 @@ async def get_background_tasks(
     }
 
 
-@router.get("/{task_id}", response_model=Dict[str, Any])
+@router.get("/{task_id}", response_model=dict[str, Any])
 async def get_background_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -73,7 +72,7 @@ async def get_background_task(
     return {"data": task.to_dict()}
 
 
-@router.post("/{task_id}/retry", response_model=Dict[str, Any])
+@router.post("/{task_id}/retry", response_model=dict[str, Any])
 async def retry_background_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -117,7 +116,7 @@ async def retry_background_task(
     }
 
 
-@router.post("/{task_id}/cancel", response_model=Dict[str, Any])
+@router.post("/{task_id}/cancel", response_model=dict[str, Any])
 async def cancel_background_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
@@ -160,7 +159,7 @@ async def cancel_background_task(
     }
 
 
-@router.get("/stats/summary", response_model=Dict[str, Any])
+@router.get("/stats/summary", response_model=dict[str, Any])
 async def get_background_task_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -172,7 +171,7 @@ async def get_background_task_stats(
     stats = {}
 
     for status in BackgroundTaskStatus:
-        result = await db.execute(
+        await db.execute(
             select(BackgroundTask)
             .where(
                 and_(

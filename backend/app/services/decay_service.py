@@ -3,13 +3,13 @@
 实现艾宾浩斯遗忘曲线，让知识点随时间逐渐暗淡
 """
 import math
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
-from datetime import datetime, timedelta, timezone
-from typing import List, Dict
-from sqlalchemy import select, and_, func
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
 
 class DecayService:
@@ -33,7 +33,7 @@ class DecayService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def apply_daily_decay(self) -> Dict[str, int]:
+    async def apply_daily_decay(self) -> dict[str, int]:
         """
         每日遗忘衰减任务
 
@@ -41,14 +41,14 @@ class DecayService:
             dict: 衰减统计 {processed: int, dimmed: int, collapsed: int}
         """
         stats = {'processed': 0, 'dimmed': 0, 'collapsed': 0}
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # 1. 查询需要衰减的节点状态
         # 条件：已解锁 + 未暂停衰减 + 上次学习超过 1 天
         query = select(UserNodeStatus).where(
             and_(
-                UserNodeStatus.is_unlocked == True,
-                UserNodeStatus.decay_paused == False,
+                UserNodeStatus.is_unlocked,
+                not UserNodeStatus.decay_paused,
                 UserNodeStatus.last_study_at < now - timedelta(days=self.DECAY_CHECK_INTERVAL),
                 UserNodeStatus.mastery_score > self.MIN_MASTERY
             )
@@ -105,14 +105,14 @@ class DecayService:
 
         return max(decayed_mastery, self.MIN_MASTERY)
 
-    async def get_review_suggestions(self, user_id: UUID, limit: int = 5) -> List[Dict]:
+    async def get_review_suggestions(self, user_id: UUID, limit: int = 5) -> list[dict]:
         """
         获取复习建议
 
         Returns:
             List[dict]: 建议复习的知识点列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         query = (
             select(UserNodeStatus, KnowledgeNode)
@@ -120,7 +120,7 @@ class DecayService:
             .where(
                 and_(
                     UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked == True,
+                    UserNodeStatus.is_unlocked,
                     UserNodeStatus.next_review_at <= now
                 )
             )
@@ -164,20 +164,20 @@ class DecayService:
             status.decay_paused = pause
             await self.db.commit()
 
-    async def get_decay_stats(self, user_id: UUID) -> Dict[str, any]:
+    async def get_decay_stats(self, user_id: UUID) -> dict[str, any]:
         """
         获取用户的衰减统计信息
 
         Returns:
             dict: 包含需要复习的节点数、暗淡节点数等
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # 统计需要复习的节点
         review_query = select(func.count()).select_from(UserNodeStatus).where(
             and_(
                 UserNodeStatus.user_id == user_id,
-                UserNodeStatus.is_unlocked == True,
+                UserNodeStatus.is_unlocked,
                 UserNodeStatus.next_review_at <= now
             )
         )
@@ -188,7 +188,7 @@ class DecayService:
         dim_query = select(func.count()).select_from(UserNodeStatus).where(
             and_(
                 UserNodeStatus.user_id == user_id,
-                UserNodeStatus.is_unlocked == True,
+                UserNodeStatus.is_unlocked,
                 UserNodeStatus.mastery_score < self.THRESHOLD_DIM
             )
         )
@@ -199,7 +199,7 @@ class DecayService:
         collapse_query = select(func.count()).select_from(UserNodeStatus).where(
             and_(
                 UserNodeStatus.user_id == user_id,
-                UserNodeStatus.is_unlocked == True,
+                UserNodeStatus.is_unlocked,
                 UserNodeStatus.mastery_score < self.THRESHOLD_COLLAPSE
             )
         )
@@ -218,7 +218,7 @@ class DecayService:
         self,
         user_id: UUID,
         days_ahead: int = 30
-    ) -> Dict[str, Dict[str, any]]:
+    ) -> dict[str, dict[str, any]]:
         """
         时光机：预测未来的知识衰减状态
 
@@ -237,7 +237,7 @@ class DecayService:
                 }
             }
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # 查询用户所有已解锁的节点
         query = (
@@ -246,7 +246,7 @@ class DecayService:
             .where(
                 and_(
                     UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked == True
+                    UserNodeStatus.is_unlocked
                 )
             )
         )
@@ -294,10 +294,10 @@ class DecayService:
     async def simulate_intervention(
         self,
         user_id: UUID,
-        node_ids: List[UUID],
+        node_ids: list[UUID],
         days_ahead: int = 30,
         review_boost: float = 30.0  # 复习提升的掌握度
-    ) -> Dict[str, Dict[str, any]]:
+    ) -> dict[str, dict[str, any]]:
         """
         时光机干预模拟：如果现在复习这些节点，未来会如何？
 
@@ -310,7 +310,7 @@ class DecayService:
         Returns:
             dict: 与 project_decay_future 相同格式的预测结果
         """
-        now = datetime.now(timezone.utc)
+        datetime.now(UTC)
 
         query = (
             select(UserNodeStatus, KnowledgeNode)
@@ -318,7 +318,7 @@ class DecayService:
             .where(
                 and_(
                     UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked == True
+                    UserNodeStatus.is_unlocked
                 )
             )
         )
@@ -367,7 +367,7 @@ class DecayService:
         current_mastery: float,
         future_mastery: float,
         is_intervened: bool = False
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """
         生成前端可视化状态
 

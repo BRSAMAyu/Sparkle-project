@@ -5,14 +5,15 @@ Generates candidate actions from signals with 5 constraints
 This service converts signals into actionable candidate suggestions
 while enforcing guardrails to prevent over-intervention.
 """
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 import random
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
+
 from loguru import logger
 
-from app.services.signal_generation_service import Signals, Signal
 from app.core.cache import cache_service
+from app.services.signal_generation_service import Signal, Signals
 
 
 @dataclass
@@ -25,9 +26,9 @@ class CandidateAction:
     confidence: float
     timing_hint: str  # "now", "in_5min", "after_current_task"
     payload_seed: str  # For strong model expansion
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "id": self.id,
@@ -74,7 +75,7 @@ class CandidateGenerationService:
         self,
         user_id: str,
         signals: Signals
-    ) -> List[CandidateAction]:
+    ) -> list[CandidateAction]:
         """
         Generate candidate actions from signals with constraints.
 
@@ -215,7 +216,7 @@ class CandidateGenerationService:
             metadata=signal.metadata,
         )
 
-    def _apply_diversity(self, candidates: List[CandidateAction]) -> List[CandidateAction]:
+    def _apply_diversity(self, candidates: list[CandidateAction]) -> list[CandidateAction]:
         """
         Constraint 4: Diversity control
 
@@ -330,8 +331,8 @@ class CandidateGenerationService:
     async def generate_from_dict(
         self,
         user_id: str,
-        signals_dict: Dict[str, Any]
-    ) -> List[CandidateAction]:
+        signals_dict: dict[str, Any]
+    ) -> list[CandidateAction]:
         """
         Generate candidates from signals dictionary.
 

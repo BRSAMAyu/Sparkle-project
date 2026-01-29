@@ -8,17 +8,16 @@ v2.2 变更:
 """
 import json
 import re
-from typing import Any, Optional, List
-from pydantic import BaseModel
-from loguru import logger
+
 import json_repair
+from loguru import logger
+from pydantic import BaseModel
 
 from app.schemas.llm import (
-    LLMResponse,
     CoercedInt,
     CoercedStrList,
+    LLMResponse,
 )
-
 
 # ==================== Schema 定义 ====================
 
@@ -29,7 +28,7 @@ class TaskActionParams(BaseModel):
     estimated_minutes: CoercedInt = 15  # 自动转换 "15" -> 15, "十五" -> 15, "1小时" -> 60
     tags: CoercedStrList = []           # 自动转换 "tag" -> ["tag"]
     difficulty: CoercedInt = 3          # 自动转换
-    guide_content: Optional[str] = None
+    guide_content: str | None = None
 
     class Config:
         extra = "ignore"
@@ -52,35 +51,35 @@ class ChatAction(BaseModel):
 class LLMResponseParser:
     """
     LLM 响应解析器 - v2.1 增强版
-    
+
     改进：
     1. Pydantic 宽容模式，自动类型转换
     2. 显性降级状态，不再"假装成功"
     """
-    
+
     def parse(self, raw_response: str) -> LLMResponse:
         """
         解析 LLM 响应，支持多级容错
-        
+
         Level 1: 直接解析（使用宽容模式）
         Level 2: JSON 修复后解析
         Level 3: 正则提取后解析
         Level 4: 🆕 显性降级（告知用户操作可能未成功）
         """
-        
+
         # Level 1: 直接解析
         try:
             return self._parse_json(raw_response)
         except Exception as e:
             logger.warning(f"Direct parse failed: {e}")
-        
+
         # Level 2: JSON 修复
         try:
             fixed = json_repair.repair_json(raw_response)
             return self._parse_json(fixed)
         except Exception as e:
             logger.warning(f"JSON repair failed: {e}")
-        
+
         # Level 3: 正则提取
         try:
             json_match = re.search(r'\{[\s\S]*\}', raw_response)
@@ -88,34 +87,34 @@ class LLMResponseParser:
                 return self._parse_json(json_match.group())
         except Exception as e:
             logger.warning(f"Regex extract failed: {e}")
-        
+
         # Level 4: 🆕 显性降级 - 必须让用户知道
         logger.error("All parse methods failed, returning degraded response")
-        
+
         extracted_text = self._extract_text(raw_response)
-        
+
         # 🆕 关键改进：检测是否有"假装成功"的风险
         degraded_reason = self._detect_action_intent(extracted_text)
-        
+
         return LLMResponse(
             assistant_message=extracted_text,
             actions=[],
             parse_degraded=True,  # 🆕 显性标记
             degraded_reason=degraded_reason
         )
-    
+
     def _parse_json(self, json_str: str) -> LLMResponse:
         """解析并验证 JSON"""
         data = json.loads(json_str)
         return LLMResponse.model_validate(data)
-    
+
     def _extract_text(self, raw: str) -> str:
         """从原始响应中提取可读文本"""
         text = re.sub(r'```json[\s\S]*?```', '', raw)
         text = re.sub(r'\{[\s\S]*\}', '', text)
         return text.strip() or "抱歉，我遇到了一些问题，请重新描述您的需求。"
-    
-    def _detect_action_intent(self, text: str) -> Optional[str]:
+
+    def _detect_action_intent(self, text: str) -> str | None:
         """
         增强版意图检测 (v2.2)
 

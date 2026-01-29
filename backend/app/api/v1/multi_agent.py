@@ -4,15 +4,15 @@ Multi-Agent API - 多智能体协作API
 提供多专家智能体协作服务
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
-from loguru import logger
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
+from pydantic import BaseModel
+
+from app.agents.orchestrator_agent import create_multi_agent_workflow
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.agents.orchestrator_agent import create_multi_agent_workflow
-
 
 router = APIRouter(prefix="/multi-agent", tags=["multi-agent"])
 
@@ -31,12 +31,12 @@ class MultiAgentResponse(BaseModel):
     agent_name: str
 
     # 可选字段
-    reasoning: Optional[str] = None
-    confidence: Optional[float] = None
-    metadata: Optional[Dict[str, Any]] = None
+    reasoning: str | None = None
+    confidence: float | None = None
+    metadata: dict[str, Any] | None = None
 
     # 追踪信息
-    trace: Optional[Dict[str, Any]] = None
+    trace: dict[str, Any] | None = None
 
 
 @router.post("/chat", response_model=MultiAgentResponse)

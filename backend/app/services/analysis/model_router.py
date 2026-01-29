@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from app.config import settings
 
@@ -24,7 +23,7 @@ class ModelRouter:
     def route(
         self,
         task_type: str,
-        complexity: Optional[float] = None,
+        complexity: float | None = None,
         sensitive: bool = False,
     ) -> ModelRoute:
         if sensitive or (complexity is not None and complexity >= 0.7):

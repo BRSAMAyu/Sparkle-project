@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Dict, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -10,11 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.memory_rank_policy import MemoryRankPolicy
 
-
 WEIGHT_KEYS = ("evidence", "freshness", "correction")
 
 
-def _default_weights() -> Dict[str, float]:
+def _default_weights() -> dict[str, float]:
     return {
         "evidence": settings.MEMORY_RANK_DEFAULT_EVIDENCE,
         "freshness": settings.MEMORY_RANK_DEFAULT_FRESHNESS,
@@ -23,7 +21,7 @@ def _default_weights() -> Dict[str, float]:
 
 
 class MemoryRankPolicyService:
-    _cache: Dict[str, tuple[datetime, Dict[str, float]]] = {}
+    _cache: dict[str, tuple[datetime, dict[str, float]]] = {}
     _cache_ttl = timedelta(seconds=60)
 
     def __init__(self, db: AsyncSession) -> None:
@@ -32,7 +30,7 @@ class MemoryRankPolicyService:
     def _cache_key(self, intent: str, user_id: UUID) -> str:
         return f"{intent}:{user_id}"
 
-    def _normalize_weights(self, weights: Dict[str, float]) -> Dict[str, float]:
+    def _normalize_weights(self, weights: dict[str, float]) -> dict[str, float]:
         defaults = _default_weights()
         cleaned = {}
         for key in WEIGHT_KEYS:
@@ -47,9 +45,9 @@ class MemoryRankPolicyService:
     async def _fetch_policy(
         self,
         scope_type: str,
-        scope_key: Optional[str],
+        scope_key: str | None,
         include_deleted: bool = False,
-    ) -> Optional[MemoryRankPolicy]:
+    ) -> MemoryRankPolicy | None:
         stmt = select(MemoryRankPolicy).where(
             MemoryRankPolicy.scope_type == scope_type,
             MemoryRankPolicy.scope_key == scope_key,
@@ -59,7 +57,7 @@ class MemoryRankPolicyService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_policy(self, intent: str, user_id: UUID) -> Dict[str, float]:
+    async def get_policy(self, intent: str, user_id: UUID) -> dict[str, float]:
         cache_key = self._cache_key(intent, user_id)
         cached = self._cache.get(cache_key)
         if cached and cached[0] > datetime.utcnow():
@@ -93,8 +91,8 @@ class MemoryRankPolicyService:
     async def upsert_policy(
         self,
         scope_type: str,
-        scope_key: Optional[str],
-        weights: Dict[str, float],
+        scope_key: str | None,
+        weights: dict[str, float],
     ) -> MemoryRankPolicy:
         if scope_type not in {"global", "intent", "user"}:
             raise ValueError("invalid scope_type")

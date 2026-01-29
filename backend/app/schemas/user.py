@@ -1,10 +1,9 @@
 """User Schemas - Registration, login, profile, etc."""
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, EmailStr
-from uuid import UUID
 import enum
+from typing import Any, Optional
+from uuid import UUID
 
-from app.schemas.common import BaseSchema
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # ========== Request Schemas ==========
 
@@ -26,25 +25,32 @@ class UserRegister(BaseModel):
     username: str = Field(min_length=3, max_length=50, description="Username")
     email: EmailStr = Field(description="Email")
     password: str = Field(min_length=6, max_length=100, description="Password")
-    nickname: Optional[str] = Field(default=None, max_length=100, description="Nickname")
+    nickname: str | None = Field(default=None, max_length=100, description="Nickname")
 
 class UserLogin(BaseModel):
     """User login"""
-    username: str = Field(description="Username or email")
+    username: str | None = Field(default=None, description="Username")
+    email: EmailStr | None = Field(default=None, description="Email")
     password: str = Field(description="Password")
+
+    @model_validator(mode="after")
+    def _validate_identifier(self):
+        if not self.username and not self.email:
+            raise ValueError("username or email is required")
+        return self
 
 class UserUpdate(BaseModel):
     """User information update"""
-    nickname: Optional[str] = Field(default=None, max_length=100, description="Nickname")
-    email: Optional[EmailStr] = Field(default=None, description="Email")
-    avatar_url: Optional[str] = Field(default=None, max_length=500, description="Avatar URL")
-    avatar_status: Optional[AvatarStatus] = Field(default=None, description="Avatar audit status")
-    pending_avatar_url: Optional[str] = Field(default=None, max_length=500, description="Pending Avatar URL")
-    depth_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
-    curiosity_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
-    status: Optional[UserStatusEnum] = Field(default=None, description="Status update") # Allow update here too?
-    equipped_skin: Optional[str] = Field(default=None, max_length=50, description="Equipped skin ID")
-    equipped_title: Optional[str] = Field(default=None, max_length=50, description="Equipped title ID")
+    nickname: str | None = Field(default=None, max_length=100, description="Nickname")
+    email: EmailStr | None = Field(default=None, description="Email")
+    avatar_url: str | None = Field(default=None, max_length=500, description="Avatar URL")
+    avatar_status: AvatarStatus | None = Field(default=None, description="Avatar audit status")
+    pending_avatar_url: str | None = Field(default=None, max_length=500, description="Pending Avatar URL")
+    depth_preference: float | None = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
+    curiosity_preference: float | None = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
+    status: UserStatusEnum | None = Field(default=None, description="Status update") # Allow update here too?
+    equipped_skin: str | None = Field(default=None, max_length=50, description="Equipped skin ID")
+    equipped_title: str | None = Field(default=None, max_length=50, description="Equipped title ID")
 
 class PasswordChange(BaseModel):
     """Password change"""
@@ -59,10 +65,10 @@ class SocialLoginRequest(BaseModel):
     """Social login request"""
     provider: str = Field(description="Provider (google, apple, wechat)")
     token: str = Field(description="ID Token or Auth Code")
-    openid: Optional[str] = Field(default=None, description="WeChat OpenID")
-    email: Optional[EmailStr] = Field(default=None, description="Email (if available)")
-    nickname: Optional[str] = Field(default=None, description="Nickname (if available)")
-    avatar_url: Optional[str] = Field(default=None, description="Avatar URL (if available)")
+    openid: str | None = Field(default=None, description="WeChat OpenID")
+    email: EmailStr | None = Field(default=None, description="Email (if available)")
+    nickname: str | None = Field(default=None, description="Nickname (if available)")
+    avatar_url: str | None = Field(default=None, description="Avatar URL (if available)")
 
 # ========== Response Schemas ==========
 
@@ -71,10 +77,10 @@ class UserBase(BaseModel):
     id: UUID = Field(description="User ID")
     username: str = Field(description="Username")
     email: str = Field(description="Email")
-    nickname: Optional[str] = Field(description="Nickname")
-    avatar_url: Optional[str] = Field(description="Avatar URL")
+    nickname: str | None = Field(description="Nickname")
+    avatar_url: str | None = Field(description="Avatar URL")
     avatar_status: AvatarStatus = Field(default=AvatarStatus.APPROVED, description="Avatar status")
-    pending_avatar_url: Optional[str] = Field(default=None, description="Pending avatar URL")
+    pending_avatar_url: str | None = Field(default=None, description="Pending avatar URL")
 
     class Config:
         from_attributes = True
@@ -89,8 +95,8 @@ class UserProfile(UserBase):
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="Status")
     created_at: str = Field(description="Registration time")
     photon_balance: int = Field(default=0, description="Photon balance")
-    equipped_skin: Optional[str] = Field(default=None, description="Equipped skin ID")
-    equipped_title: Optional[str] = Field(default=None, description="Equipped title ID")
+    equipped_skin: str | None = Field(default=None, description="Equipped skin ID")
+    equipped_title: str | None = Field(default=None, description="Equipped title ID")
     push_preferences: Optional["PushPreferenceResponse"] = Field(default=None, description="Push notification preferences")
 
 class UserFlameStatus(BaseModel):
@@ -108,8 +114,8 @@ class UserPreferences(BaseModel):
     """User preferences"""
     learning_depth: float = Field(description="Learning depth preference (0-1)")
     curiosity_level: float = Field(description="Curiosity preference (0-1)")
-    schedule_preferences: Optional[Dict[str, Any]] = Field(default=None, description="Active time slots")
-    weather_preferences: Optional[Dict[str, Any]] = Field(default=None, description="Weather mapping preferences")
+    schedule_preferences: dict[str, Any] | None = Field(default=None, description="Active time slots")
+    weather_preferences: dict[str, Any] | None = Field(default=None, description="Weather mapping preferences")
     notification_enabled: bool = Field(default=True, description="Whether notifications are enabled")
     persona_type: str = Field(default="coach", description="AI persona type (coach, anime, etc.)")
     daily_cap: int = Field(default=5, description="Daily interaction cap")
@@ -120,11 +126,11 @@ class UserPreferences(BaseModel):
 
 class PushPreferenceUpdate(BaseModel):
     """Push preference update request"""
-    enable_curiosity: Optional[bool] = Field(default=None, description="Enable curiosity-based push notifications")
-    persona_type: Optional[str] = Field(default=None, description="AI persona type (coach, anime, mentor, friend)")
-    daily_cap: Optional[int] = Field(default=None, ge=1, le=20, description="Daily push notification cap")
-    active_slots: Optional[list[Dict[str, str]]] = Field(default=None, description="Active time slots [{'start': '08:00', 'end': '09:00'}]")
-    timezone: Optional[str] = Field(default=None, description="User timezone")
+    enable_curiosity: bool | None = Field(default=None, description="Enable curiosity-based push notifications")
+    persona_type: str | None = Field(default=None, description="AI persona type (coach, anime, mentor, friend)")
+    daily_cap: int | None = Field(default=None, ge=1, le=20, description="Daily push notification cap")
+    active_slots: list[dict[str, str]] | None = Field(default=None, description="Active time slots [{'start': '08:00', 'end': '09:00'}]")
+    timezone: str | None = Field(default=None, description="User timezone")
 
 
 class PushPreferenceResponse(BaseModel):
@@ -132,7 +138,7 @@ class PushPreferenceResponse(BaseModel):
     enable_curiosity: bool = Field(description="Enable curiosity-based push notifications")
     persona_type: str = Field(description="AI persona type")
     daily_cap: int = Field(description="Daily push notification cap")
-    active_slots: Optional[list[Dict[str, str]]] = Field(default=None, description="Active time slots")
+    active_slots: list[dict[str, str]] | None = Field(default=None, description="Active time slots")
     timezone: str = Field(description="User timezone")
 
     class Config:
@@ -146,8 +152,8 @@ class UserContext(BaseModel):
     timezone: str = Field(default="Asia/Shanghai", description="User timezone")
     language: str = Field(default="zh-CN", description="User language")
     is_pro: bool = Field(default=False, description="Whether user is Pro")
-    preferences: Dict[str, Any] = Field(default_factory=dict, description="Core preferences")
-    active_slots: Optional[Dict[str, Any]] = Field(default=None, description="Active time slots")
+    preferences: dict[str, Any] = Field(default_factory=dict, description="Core preferences")
+    active_slots: dict[str, Any] | None = Field(default=None, description="Active time slots")
     daily_cap: int = Field(default=5, description="Daily interaction cap")
     persona_type: str = Field(default="coach", description="AI persona type")
 

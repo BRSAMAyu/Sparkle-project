@@ -4,15 +4,15 @@ Intent Prediction API
 
 提供实时意图预测接口，用于前端打字时显示预测建议
 """
-from typing import Dict, Any, Optional
-from uuid import UUID
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.services.shadow_prediction_service import shadow_prediction_service
 
@@ -22,7 +22,7 @@ router = APIRouter()
 class IntentPredictRequest(BaseModel):
     """意图预测请求"""
     partial_text: str = Field(..., description="部分输入的文本", min_length=1)
-    active_plan_id: Optional[str] = Field(default=None, description="当前活跃的计划ID")
+    active_plan_id: str | None = Field(default=None, description="当前活跃的计划ID")
 
 
 class IntentPredictResponse(BaseModel):
@@ -35,7 +35,7 @@ class IntentPredictResponse(BaseModel):
     mode_confidence: float = Field(description="执行模式置信度")
 
 
-@router.post("/intent/predict", response_model=Dict[str, Any])
+@router.post("/intent/predict", response_model=dict[str, Any])
 async def predict_intent(
     request: IntentPredictRequest,
     current_user: User = Depends(get_current_user),
@@ -75,7 +75,7 @@ async def predict_intent(
         )
 
 
-@router.get("/intent/types", response_model=Dict[str, Any])
+@router.get("/intent/types", response_model=dict[str, Any])
 async def list_intent_types():
     """
     获取支持的意图类型列表
@@ -102,7 +102,7 @@ async def list_intent_types():
                     "value": key,
                     "description": intent_type_descriptions.get(key, "")
                 }
-                for key in intent_type_descriptions.keys()
+                for key in intent_type_descriptions
             ]
         }
     }

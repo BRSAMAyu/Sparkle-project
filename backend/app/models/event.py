@@ -3,10 +3,11 @@ Tracking Event Models
 Phase 1 unified event schema.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, JSON, DateTime, BigInteger, ForeignKey
+
+from sqlalchemy import JSON, BigInteger, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class TrackingEvent(BaseModel):

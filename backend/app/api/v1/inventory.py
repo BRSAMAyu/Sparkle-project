@@ -2,28 +2,26 @@
 Inventory API Endpoints
 物品背包系统 API 端点
 """
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from typing import Any
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.db.session import get_db
 from app.models.shop import ShopItemType
+from app.models.user import User
 from app.schemas.shop import (
-    InventoryResponse,
     EquipRequest,
-    EquipResponse,
     UseConsumableRequest,
-    UseConsumableResponse,
 )
 from app.services.inventory_service import get_inventory_service
 
 router = APIRouter()
 
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def get_inventory(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -55,7 +53,7 @@ async def get_inventory(
     }
 
 
-@router.post("/equip", response_model=Dict[str, Any])
+@router.post("/equip", response_model=dict[str, Any])
 async def equip_item(
     request: EquipRequest,
     current_user: User = Depends(get_current_user),
@@ -99,9 +97,9 @@ async def equip_item(
         raise HTTPException(status_code=500, detail="Failed to equip item")
 
 
-@router.get("/owned", response_model=Dict[str, Any])
+@router.get("/owned", response_model=dict[str, Any])
 async def get_owned_items(
-    item_type: Optional[ShopItemType] = Query(None, description="Filter by item type"),
+    item_type: ShopItemType | None = Query(None, description="Filter by item type"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -126,7 +124,7 @@ async def get_owned_items(
     }
 
 
-@router.post("/consumables/use", response_model=Dict[str, Any])
+@router.post("/consumables/use", response_model=dict[str, Any])
 async def use_consumable(
     request: UseConsumableRequest,
     current_user: User = Depends(get_current_user),

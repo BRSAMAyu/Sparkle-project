@@ -200,7 +200,8 @@ async def test_performance_query_optimization(budget_service):
         assert time_miss < 0.01
 
 
-def test_algorithm_correctness_vs_speed(budget_service):
+@pytest.mark.asyncio
+async def test_algorithm_correctness_vs_speed(budget_service):
     """
     Test that optimization doesn't sacrifice accuracy for speed
     测试优化不牺牲准确性

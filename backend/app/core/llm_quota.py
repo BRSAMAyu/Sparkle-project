@@ -13,9 +13,8 @@ LLM 成本控制与配额管理模块
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Tuple
 from dataclasses import dataclass
+from datetime import datetime
 
 try:
     from circuitbreaker import circuit
@@ -25,6 +24,7 @@ except ImportError:
             return func
         return decorator
 import redis.asyncio as redis
+
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 
@@ -52,7 +52,7 @@ class QuotaCheckResult:
     limit: int
     remaining: int
     percentage: float
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class QuotaExceededError(Exception):
@@ -68,7 +68,7 @@ class UserStats:
     weekly_usage: int
     total_calls: int
     avg_tokens_per_call: float
-    last_call_time: Optional[datetime]
+    last_call_time: datetime | None
 
 
 class LLMCostGuard:
@@ -92,7 +92,7 @@ class LLMCostGuard:
     def __init__(
         self,
         redis_client: redis.Redis,
-        config: Optional[QuotaConfig] = None
+        config: QuotaConfig | None = None
     ):
         """
         初始化成本守卫
@@ -383,7 +383,7 @@ class LLMCostGuard:
             week=week
         )
 
-    async def get_daily_stats(self, user_id: str) -> Dict:
+    async def get_daily_stats(self, user_id: str) -> dict:
         """获取每日统计 (用于 API 返回)"""
         stats = await self.get_user_stats(user_id)
         return {
@@ -424,7 +424,7 @@ async def protected_llm_call(llm_service_func, *args, **kwargs):
 
 
 # 单例实例 (需要在应用启动时注入 Redis)
-cost_guard: Optional[LLMCostGuard] = None
+cost_guard: LLMCostGuard | None = None
 
 
 async def init_cost_guard(redis_url: str = "redis://localhost:6379/1"):

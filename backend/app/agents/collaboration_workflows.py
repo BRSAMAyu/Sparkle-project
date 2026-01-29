@@ -8,15 +8,16 @@ Collaboration Workflows - 多智能体协作工作流
 """
 
 import asyncio
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
+
 from loguru import logger
 
 from .base_agent import AgentResponse
-from .enhanced_agents import EnhancedAgentContext, StudyPlannerAgent, ProblemSolverAgent
-from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
+from .enhanced_agents import EnhancedAgentContext, ProblemSolverAgent, StudyPlannerAgent
 from .search_agent import SearchAgent
+from .specialist_agents import CodeAgent, MathAgent, ScienceAgent, WritingAgent
 
 
 # ==========================================
@@ -26,12 +27,12 @@ from .search_agent import SearchAgent
 class CollaborationResult:
     """多智能体协作结果"""
     workflow_type: str  # 工作流类型
-    participants: List[str]  # 参与的智能体名称
-    outputs: List[AgentResponse]  # 各智能体的输出
+    participants: list[str]  # 参与的智能体名称
+    outputs: list[AgentResponse]  # 各智能体的输出
     final_response: str  # 整合后的最终响应
     reasoning: str  # 整体推理过程
-    metadata: Dict[str, Any]  # 额外元数据
-    timeline: List[Dict[str, Any]]  # 执行时间线（用于可视化）
+    metadata: dict[str, Any]  # 额外元数据
+    timeline: list[dict[str, Any]]  # 执行时间线（用于可视化）
     confidence: float = 0.9
 
 
@@ -41,10 +42,10 @@ def _build_timeline_step(
     start_time: datetime,
     *,
     status: str = "completed",
-    output_summary: Optional[str] = None,
-    agent_role: Optional[str] = None,
-    duration_ms: Optional[int] = None,
-) -> Dict[str, Any]:
+    output_summary: str | None = None,
+    agent_role: str | None = None,
+    duration_ms: int | None = None,
+) -> dict[str, Any]:
     """Normalize timeline steps to a consistent schema."""
     now = datetime.now()
     elapsed_ms = int((now - start_time).total_seconds() * 1000)
@@ -87,7 +88,7 @@ class TaskDecompositionWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    , tool_call_id: Optional[str] = None) -> CollaborationResult:
+    , tool_call_id: str | None = None) -> CollaborationResult:
         """
         执行任务分解协作
 
@@ -173,7 +174,7 @@ class TaskDecompositionWorkflow:
         if parallel_tasks:
             results = await asyncio.gather(*[task for _, task in parallel_tasks], return_exceptions=True)
 
-            for i, (agent_name, result) in enumerate(zip([name for name, _ in parallel_tasks], results)):
+            for _i, (agent_name, result) in enumerate(zip([name for name, _ in parallel_tasks], results, strict=False)):
                 if isinstance(result, Exception):
                     logger.error(f"[TaskDecomposition] {agent_name} failed: {result}")
                     continue
@@ -218,7 +219,7 @@ class TaskDecompositionWorkflow:
             confidence=0.88
         )
 
-    def _categorize_concepts(self, concepts: List[str]) -> Dict[str, List[str]]:
+    def _categorize_concepts(self, concepts: list[str]) -> dict[str, list[str]]:
         """将知识点分类到不同领域"""
         categorization = {
             "math": [],
@@ -243,7 +244,7 @@ class TaskDecompositionWorkflow:
     async def _integrate_plan(
         self,
         planner_response: AgentResponse,
-        all_outputs: List[AgentResponse],
+        all_outputs: list[AgentResponse],
         context: EnhancedAgentContext
     ) -> str:
         """整合所有专家输出，生成统一的学习计划"""
@@ -300,7 +301,7 @@ class ProgressiveExplorationWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    , tool_call_id: Optional[str] = None) -> CollaborationResult:
+    , tool_call_id: str | None = None) -> CollaborationResult:
         """
         执行渐进式深度探索
 
@@ -467,7 +468,7 @@ class ProgressiveExplorationWorkflow:
 
     def _format_exploration_summary(
         self,
-        conversation_history: List[Dict],
+        conversation_history: list[dict],
         planner_response: AgentResponse
     ) -> str:
         """格式化探索总结"""
@@ -514,7 +515,7 @@ class ErrorDiagnosisWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    , tool_call_id: Optional[str] = None) -> CollaborationResult:
+    , tool_call_id: str | None = None) -> CollaborationResult:
         """
         执行错题诊断
 
@@ -648,8 +649,8 @@ class ErrorDiagnosisWorkflow:
         self,
         solver_response: AgentResponse,
         planner_response: AgentResponse,
-        practice_response: Optional[AgentResponse],
-        weak_points: List[str]
+        practice_response: AgentResponse | None,
+        weak_points: list[str]
     ) -> str:
         """格式化错题诊断报告"""
 

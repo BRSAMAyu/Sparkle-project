@@ -1,15 +1,16 @@
-from uuid import UUID
-from typing import Optional, List
 from datetime import datetime, timedelta
+from uuid import UUID
+
 from loguru import logger
-from sqlalchemy import select, and_, func
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord, NodeRelation
-from app.services.expansion_service import ExpansionService
-from app.schemas.galaxy import SparkResult, SparkEvent, GalaxyUserStats, SectorCode, NodeWithStatus
-from app.core.cache import cache_service
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
+from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult
+from app.services.expansion_service import ExpansionService
+
 
 class GalaxyStatsService:
     # 掌握度计算常量
@@ -25,7 +26,7 @@ class GalaxyStatsService:
         user_id: UUID,
         node_id: UUID,
         study_minutes: int,
-        task_id: Optional[UUID] = None,
+        task_id: UUID | None = None,
         trigger_expansion: bool = True
     ) -> SparkResult:
         """
@@ -70,7 +71,7 @@ class GalaxyStatsService:
 
         # 5.5. 发布掌握度更新事件
         try:
-            from app.core.event_bus import event_bus, NodeMasteryUpdatedEvent
+            from app.core.event_bus import NodeMasteryUpdatedEvent, event_bus
             await event_bus.publish(
                 "node_mastery_updated",
                 NodeMasteryUpdatedEvent(
@@ -201,7 +202,7 @@ class GalaxyStatsService:
         """计算用户统计数据"""
         query = (
             select(
-                func.count().filter(UserNodeStatus.is_unlocked == True).label('unlocked_count'),
+                func.count().filter(UserNodeStatus.is_unlocked).label('unlocked_count'),
                 func.count().filter(UserNodeStatus.mastery_score >= 80).label('mastered_count'),
                 func.sum(UserNodeStatus.total_study_minutes).label('total_minutes')
             )
@@ -223,7 +224,7 @@ class GalaxyStatsService:
             streak_days=0
         )
 
-    async def predict_next_node(self, user_id: UUID) -> Optional[NodeWithStatus]:
+    async def predict_next_node(self, user_id: UUID) -> NodeWithStatus | None:
         """
         预测下一个最佳学习节点
         """
@@ -252,7 +253,7 @@ class GalaxyStatsService:
 
             for rel in relations:
                 target_status = await self._get_user_status(user_id, rel.target_node_id)
-                
+
                 score = 0.0
                 if not target_status or not target_status.is_unlocked:
                     score = 10.0
@@ -262,11 +263,11 @@ class GalaxyStatsService:
                     continue
 
                 score *= rel.strength
-                
+
                 if score > best_score:
                     best_score = score
                     best_candidate = rel.target_node_id
-            
+
             target_node_id = best_candidate
 
         if not target_node_id:
@@ -277,7 +278,7 @@ class GalaxyStatsService:
             )
             fallback_result = await self.db.execute(fallback_query)
             candidates = fallback_result.scalars().all()
-            
+
             for node in candidates:
                 st = await self._get_user_status(user_id, node.id)
                 if not st or st.mastery_score < 90:
@@ -288,10 +289,10 @@ class GalaxyStatsService:
             node = await self.db.get(KnowledgeNode, target_node_id)
             status = await self._get_user_status(user_id, target_node_id)
             return NodeWithStatus.from_models(node, status)
-        
+
         return None
 
-    async def get_heatmap_data(self, user_id: UUID) -> List[dict]:
+    async def get_heatmap_data(self, user_id: UUID) -> list[dict]:
         """
         Phase 4.2: Get Heatmap Data for MiniMap.
         Returns list of {x, y, intensity} based on decay/review status.
@@ -305,16 +306,16 @@ class GalaxyStatsService:
                 and_(
                     UserNodeStatus.user_id == user_id,
                     KnowledgeNode.position_x.isnot(None),
-                    UserNodeStatus.is_unlocked == True
+                    UserNodeStatus.is_unlocked
                 )
             )
         )
         result = await self.db.execute(stmt)
         rows = result.all()
-        
+
         heatmap = []
         now = datetime.utcnow()
-        
+
         for px, py, next_review, mastery in rows:
             intensity = 0.0
             if next_review:
@@ -326,18 +327,18 @@ class GalaxyStatsService:
                     delta = (next_review - now).total_seconds() / 3600 # hours
                     if delta < 24:
                         intensity = 0.5
-            
+
             # Low mastery also adds to "heat" (needs attention)
             if mastery < 50:
                 intensity = max(intensity, 0.3)
-                
+
             if intensity > 0:
                 heatmap.append({
                     "x": px,
                     "y": py,
                     "intensity": intensity
                 })
-                
+
         return heatmap
 
     # --- Helpers ---
@@ -348,10 +349,7 @@ class GalaxyStatsService:
 
     def _check_level_up(self, old_mastery: float, new_mastery: float) -> bool:
         thresholds = [30, 60, 80, 95]
-        for threshold in thresholds:
-            if old_mastery < threshold <= new_mastery:
-                return True
-        return False
+        return any(old_mastery < threshold <= new_mastery for threshold in thresholds)
 
     def _calculate_next_review(self, mastery_score: float) -> datetime:
         if mastery_score >= 80: days = 14
@@ -377,7 +375,7 @@ class GalaxyStatsService:
 
         return status
 
-    async def _get_user_status(self, user_id: UUID, node_id: UUID) -> Optional[UserNodeStatus]:
+    async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
         query = select(UserNodeStatus).where(
             and_(
                 UserNodeStatus.user_id == user_id,

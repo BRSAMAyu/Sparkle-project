@@ -8,12 +8,10 @@ Plan Quota Service
 - 自动主计划选择逻辑
 """
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, Any, Optional, Tuple, List
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, and_, func, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
@@ -28,7 +26,7 @@ class QuotaStatus:
     limit: int          # 配额上限
     remaining: int      # 剩余配额
     is_unlimited: bool  # 是否无限制
-    primary_plan_id: Optional[UUID] = None  # 当前主计划ID
+    primary_plan_id: UUID | None = None  # 当前主计划ID
 
 
 class PlanQuotaService:
@@ -49,8 +47,8 @@ class PlanQuotaService:
     async def check_quota_available(
         self,
         user_id: UUID,
-        plan_type: Optional[str] = None
-    ) -> Tuple[bool, str]:
+        plan_type: str | None = None
+    ) -> tuple[bool, str]:
         """
         检查用户是否可以创建新计划
 
@@ -79,7 +77,7 @@ class PlanQuotaService:
     async def check_and_raise(
         self,
         user_id: UUID,
-        plan_type: Optional[str] = None
+        plan_type: str | None = None
     ) -> None:
         """
         检查配额并在超限时抛出异常
@@ -130,8 +128,8 @@ class PlanQuotaService:
     async def auto_set_primary_plan(
         self,
         user_id: UUID,
-        new_plan_id: Optional[UUID] = None
-    ) -> Optional[UUID]:
+        new_plan_id: UUID | None = None
+    ) -> UUID | None:
         """
         自动设置主计划
 
@@ -185,7 +183,7 @@ class PlanQuotaService:
             and_(
                 Plan.id == plan_id,
                 Plan.user_id == user_id,
-                Plan.is_active == True
+                Plan.is_active
             )
         )
         result = await self.db.execute(query)
@@ -202,7 +200,7 @@ class PlanQuotaService:
         logger.info(f"Primary plan set to {plan_id} for user {user_id}")
         return True
 
-    async def ensure_primary_exists(self, user_id: UUID) -> Optional[UUID]:
+    async def ensure_primary_exists(self, user_id: UUID) -> UUID | None:
         """
         确保用户有主计划（如果有活跃计划的话）
 
@@ -248,19 +246,19 @@ class PlanQuotaService:
         query = select(func.count(Plan.id)).where(
             and_(
                 Plan.user_id == user_id,
-                Plan.is_active == True
+                Plan.is_active
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one() or 0
 
-    async def _get_primary_plan(self, user_id: UUID) -> Optional[Plan]:
+    async def _get_primary_plan(self, user_id: UUID) -> Plan | None:
         """获取用户当前主计划"""
         query = select(Plan).where(
             and_(
                 Plan.user_id == user_id,
-                Plan.is_active == True,
-                Plan.is_primary == True
+                Plan.is_active,
+                Plan.is_primary
             )
         )
         result = await self.db.execute(query)
@@ -273,7 +271,7 @@ class PlanQuotaService:
             .where(
                 and_(
                     Plan.user_id == user_id,
-                    Plan.is_primary == True
+                    Plan.is_primary
                 )
             )
             .values(is_primary=False)
@@ -295,7 +293,7 @@ class PlanQuotaService:
         await self.db.execute(stmt)
         await self.db.commit()
 
-    async def _select_best_primary_plan(self, user_id: UUID) -> Optional[Plan]:
+    async def _select_best_primary_plan(self, user_id: UUID) -> Plan | None:
         """
         选择最佳主计划
 
@@ -320,7 +318,7 @@ class PlanQuotaService:
             .where(
                 and_(
                     Plan.user_id == user_id,
-                    Plan.is_active == True
+                    Plan.is_active
                 )
             )
             .order_by(
@@ -338,7 +336,7 @@ class PlanQuotaService:
         self,
         user_id: UUID,
         include_inactive: bool = False
-    ) -> List[Plan]:
+    ) -> list[Plan]:
         """
         获取按优先级排序的计划列表
 
@@ -361,7 +359,7 @@ class PlanQuotaService:
 
         conditions = [Plan.user_id == user_id]
         if not include_inactive:
-            conditions.append(Plan.is_active == True)
+            conditions.append(Plan.is_active)
 
         query = (
             select(Plan)

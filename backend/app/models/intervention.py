@@ -3,10 +3,11 @@ Intervention Models
 Phase 0: Contract, guardrails, audit, and feedback storage.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean, JSON, ForeignKey, Integer, Float, UniqueConstraint
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class InterventionRequest(BaseModel):

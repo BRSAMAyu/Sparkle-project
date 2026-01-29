@@ -1,19 +1,22 @@
-import json
-import inspect
-import uuid
-from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator, Union
 import asyncio
-from loguru import logger
+import inspect
+import json
+import uuid
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
+from typing import Any
+
+from fastapi import HTTPException
+from loguru import logger
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.agent_profiles import AgentRole, TaskType
+from app.core.llm_router import LLMSelection, llm_router
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
-from app.core.llm_router import llm_router, LLMSelection, select_model_for_agent
-from app.core.agent_profiles import AgentRole, TaskType
-from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -26,7 +29,7 @@ from app.services.circuit_breaker import circuit_breaker_service, CircuitBreaker
 # 2. 可以按需添加更多关键词和响应
 # ==========================================
 
-DEMO_MOCK_RESPONSES: Dict[str, str] = {
+DEMO_MOCK_RESPONSES: dict[str, str] = {
     "帮我制定高数复习计划": """好的！基于你的学习情况，我为你制定了一个高效的高数复习计划。
 
 📚 **高数冲刺复习计划**
@@ -112,21 +115,21 @@ DEMO_MOCK_RESPONSES: Dict[str, str] = {
 @dataclass
 class LLMResponse:
     content: str
-    tool_calls: Optional[List[Dict]] = None
+    tool_calls: list[dict] | None = None
     finish_reason: str = "stop"
 
 @dataclass
 class StreamChunk:
     type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage"
-    content: Optional[str] = None
-    tool_call_id: Optional[str] = None
-    tool_name: Optional[str] = None
-    arguments: Optional[str] = None # For tool_call_chunk
-    full_arguments: Optional[Dict] = None # For tool_call_end
+    content: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+    arguments: str | None = None # For tool_call_chunk
+    full_arguments: dict | None = None # For tool_call_end
     # Token usage fields
-    prompt_tokens: Optional[int] = None
-    completion_tokens: Optional[int] = None
-    total_tokens: Optional[int] = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
 
 tracer = trace.get_tracer(__name__)
 
@@ -147,7 +150,7 @@ class LLMService:
 
     def __init__(
         self,
-        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
+        agent_role: AgentRole | str | Any = AgentRole.GENERATION,
         enable_dynamic_routing: bool = True,
     ):
         """
@@ -161,15 +164,15 @@ class LLMService:
         self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False))
 
         # 当前选中的模型配置
-        self._current_selection: Optional[LLMSelection] = None
-        self._provider: Optional[LLMProvider] = None
+        self._current_selection: LLMSelection | None = None
+        self._provider: LLMProvider | None = None
 
         # 向后兼容：保留原有的模型名称
         self.chat_model: str = ""
         self.reason_model: str = ""
 
         # GLM 特有参数
-        self._extra_body: Optional[Dict[str, Any]] = None
+        self._extra_body: dict[str, Any] | None = None
 
         if enable_dynamic_routing:
             # 使用新的 LLMRouter
@@ -274,12 +277,12 @@ class LLMService:
             f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
         )
 
-    def get_current_selection(self) -> Optional[LLMSelection]:
+    def get_current_selection(self) -> LLMSelection | None:
         """获取当前的模型选择（用于观测）"""
         return self._current_selection
 
     @staticmethod
-    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+    def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
         if isinstance(agent_role, AgentRole):
             return agent_role
         if isinstance(agent_role, str):
@@ -315,7 +318,7 @@ class LLMService:
                 return AgentRole.GENERATION
         return AgentRole.GENERATION
 
-    def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
+    def _check_demo_match(self, messages: list[dict[str, str]]) -> str | None:
         """
         检查是否匹配演示关键词
 
@@ -355,8 +358,8 @@ class LLMService:
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> str:
@@ -367,7 +370,7 @@ class LLMService:
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
-            
+
             # 🎭 Demo Mode 拦截
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -383,13 +386,13 @@ class LLMService:
                 )
 
             logger.debug(f"Sending chat request to model: {model}")
-            
+
             try:
                 # Circuit Breaker Check
                 await circuit_breaker_service.check("primary_llm")
-                
+
                 response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
-                
+
                 # Record Success
                 await circuit_breaker_service.record_success("primary_llm")
                 return response
@@ -405,8 +408,8 @@ class LLMService:
 
     async def reason(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.2,
         **kwargs
     ) -> str:
@@ -444,8 +447,8 @@ class LLMService:
 
     async def reason_json(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.2,
         **kwargs
     ) -> Any:
@@ -455,7 +458,7 @@ class LLMService:
         raw = await self.reason(messages, model=model, temperature=temperature, **kwargs)
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
-        def _extract_json_block(text: str) -> Optional[str]:
+        def _extract_json_block(text: str) -> str | None:
             for start, end in (("{", "}"), ("[", "]")):
                 if start in text and end in text:
                     return text[text.find(start):text.rfind(end) + 1]
@@ -472,8 +475,8 @@ class LLMService:
 
     async def chat_json(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.3,
         **kwargs
     ) -> Any:
@@ -483,7 +486,7 @@ class LLMService:
         raw = await self.chat(messages, model=model, temperature=temperature, **kwargs)
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
-        def _extract_json_block(text: str) -> Optional[str]:
+        def _extract_json_block(text: str) -> str | None:
             for start, end in (("{", "}"), ("[", "]")):
                 if start in text and end in text:
                     return text[text.find(start):text.rfind(end) + 1]
@@ -500,10 +503,10 @@ class LLMService:
 
     async def stream_chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
-        user_context: Optional[Dict[str, Any]] = None,
+        user_context: dict[str, Any] | None = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
@@ -556,8 +559,8 @@ class LLMService:
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        conversation_history: Optional[List[Dict]] = None
+        tools: list[dict[str, Any]],
+        conversation_history: list[dict] | None = None
     ) -> LLMResponse:
         """
         带工具调用的聊天
@@ -593,10 +596,10 @@ class LLMService:
                     request_params["extra_body"] = self._extra_body
 
                 response = await self.provider.client.chat.completions.create(**request_params)
-                
+
                 choice = response.choices[0]
                 message = choice.message
-                
+
                 if response.usage:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
@@ -620,11 +623,11 @@ class LLMService:
                 )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
-    
+
     async def continue_with_tool_results(
         self,
-        conversation_history: List[Dict],
-        tool_results: List[Dict]
+        conversation_history: list[dict],
+        tool_results: list[dict]
     ) -> LLMResponse:
         """
         将工具执行结果反馈给 LLM，获取最终回复
@@ -635,7 +638,7 @@ class LLMService:
                 "role": "tool",
                 "content": json.dumps(result, ensure_ascii=False)
             })
-        
+
         if not self.provider:
             raise HTTPException(
                 status_code=501,
@@ -660,7 +663,7 @@ class LLMService:
                 response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
-                
+
                 if response.usage:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
@@ -673,13 +676,13 @@ class LLMService:
                 )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
-    
+
     async def chat_stream_with_tools(
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        user_context: Optional[Dict[str, Any]] = None,
+        tools: list[dict[str, Any]],
+        user_context: dict[str, Any] | None = None,
         temperature: float = 0.7,
     ) -> AsyncIterator[StreamChunk]:
         """
@@ -770,7 +773,7 @@ class LLMService:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
     @staticmethod
-    def _resolve_temperature(user_context: Optional[Dict[str, Any]], default: float) -> float:
+    def _resolve_temperature(user_context: dict[str, Any] | None, default: float) -> float:
         if not user_context or not isinstance(user_context, dict):
             return default
         llm_profile = user_context.get("llm_profile", {}) or {}
@@ -786,10 +789,10 @@ class LLMService:
         user_nickname: str,
         persona: str,
         trigger_type: str,
-        context_data: Dict,
+        context_data: dict,
         depth_preference: float = 0.5,
         curiosity_preference: float = 0.5,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Generate "irresistible" push notification content based on persona.
         """
@@ -813,7 +816,7 @@ class LLMService:
         selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"])
         if exploration_instruction:
             selected_persona_prompt = f"{selected_persona_prompt} {exploration_instruction}"
-        
+
         trigger_desc = ""
         if trigger_type == "memory":
             nodes = ", ".join(context_data.get("nodes", []))
@@ -822,19 +825,19 @@ class LLMService:
             trigger_desc = f"Deadline approaching for plan '{context_data.get('plan_name')}'."
         elif trigger_type == "inactivity":
             trigger_desc = "User hasn't studied for over 24 hours."
-        
+
         system_prompt = f"You are Sparkle, an AI Learning Assistant. {selected_persona_prompt} Context: {trigger_desc}"
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Generate push notification now."}
         ]
-        
+
         try:
             with tracer.start_as_current_span("llm_generate_push") as span:
                 span.set_attribute("llm.persona", persona)
                 span.set_attribute("llm.trigger", trigger_type)
-                
+
                 response_text = await self.chat(messages, temperature=0.8)
                 cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
                 content = json.loads(cleaned_text)
@@ -851,7 +854,7 @@ class LLMService:
 llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 
 # 创建专用角色的服务实例（按需使用）
-def get_llm_service(agent_role: Union[AgentRole, str]) -> LLMService:
+def get_llm_service(agent_role: AgentRole | str) -> LLMService:
     """
     获取指定角色的LLM服务实例
 
@@ -891,10 +894,10 @@ async def build_prompt_with_seed_examples(
     system_prompt: str,
     user_message: str,
     user_id: str,
-    subject: Optional[str] = None,
-    db: Optional[AsyncSession] = None,
+    subject: str | None = None,
+    db: AsyncSession | None = None,
     count: int = 3,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     使用种子库的 few-shot 示例增强 prompt
 
@@ -909,8 +912,8 @@ async def build_prompt_with_seed_examples(
     Returns:
         增强后的消息列表
     """
-    from app.services.seed_library_service import SeedLibraryService
     from app.db.session import get_db
+    from app.services.seed_library_service import SeedLibraryService
 
     messages = [{"role": "system", "content": system_prompt}]
 
@@ -957,8 +960,8 @@ async def get_reply_template(
     template_key: str,
     user_id: str,
     language: str = "zh",
-    db: Optional[AsyncSession] = None,
-) -> Optional[str]:
+    db: AsyncSession | None = None,
+) -> str | None:
     """
     获取回复模板
 
@@ -971,8 +974,8 @@ async def get_reply_template(
     Returns:
         模板内容或 None
     """
-    from app.services.seed_library_service import SeedLibraryService
     from app.db.session import get_db
+    from app.services.seed_library_service import SeedLibraryService
 
     if db is None:
         db_gen = get_db()

@@ -2,34 +2,38 @@
 错题档案服务层 - Phase 4 Optimized
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, desc, update, or_, String
-from datetime import datetime, timedelta
-from typing import Optional, List, Tuple, Dict
-from uuid import UUID
-import random
 import json
-from loguru import logger
+import random
+from datetime import datetime, timedelta
+from uuid import UUID
 
+from loguru import logger
+from sqlalchemy import String, and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.event_bus import ErrorCreated, event_bus
+from app.core.llm_client import llm_client
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
-    ErrorRecordCreate, ErrorRecordUpdate, ErrorQueryParams,
-    ErrorAnalysisResult, ReviewAction, ReviewPerformanceEnum,
-    KnowledgeLinkBrief
+    ErrorQueryParams,
+    ErrorRecordCreate,
+    ErrorRecordUpdate,
+    KnowledgeLinkBrief,
+    ReviewAction,
+    ReviewPerformanceEnum,
 )
-from app.core.llm_client import llm_client
 from app.services.embedding_service import embedding_service
-from app.core.event_bus import event_bus, ErrorCreated
-from app.services.semantic_memory_service import SemanticMemoryService
 from app.services.ocr_service import ocr_service
+from app.services.semantic_memory_service import SemanticMemoryService
+
 
 class ReviewSchedulerService:
     """
     复习计划调度服务
     SM-2 Algorithm with Fuzzing/Jitter to prevent review bombing.
     """
-    
+
     def calculate_next_review(
         self,
         current_mastery: float,
@@ -37,12 +41,12 @@ class ReviewSchedulerService:
         interval_days: float,
         review_count: int,
         performance: ReviewPerformanceEnum
-    ) -> Tuple[float, float, float, datetime]:
+    ) -> tuple[float, float, float, datetime]:
         """
         Returns: (new_mastery, new_ef, new_interval, next_review_date)
         """
         now = datetime.utcnow()
-        
+
         # SM-2 Logic
         # Quality: Forgotten=1, Fuzzy=3, Remembered=5 (simplified mapping)
         if performance == ReviewPerformanceEnum.REMEMBERED:
@@ -50,13 +54,13 @@ class ReviewSchedulerService:
         elif performance == ReviewPerformanceEnum.FUZZY:
             quality = 3
         else: # Forgotten
-            quality = 1 
-            
+            quality = 1
+
         # 1. Update Easiness Factor (EF)
         # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
         new_ef = easiness_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
         new_ef = max(1.3, new_ef) # SM-2 minimum EF
-        
+
         # 2. Update Interval
         if quality < 3:
             # Failed
@@ -69,9 +73,9 @@ class ReviewSchedulerService:
                 new_interval = 6.0
             else:
                 new_interval = interval_days * new_ef
-            
+
             review_count += 1
-            
+
         # 3. Update Mastery (Simplified)
         if quality == 5:
             new_mastery = min(1.0, current_mastery + 0.15)
@@ -87,9 +91,9 @@ class ReviewSchedulerService:
             final_interval = new_interval * jitter
         else:
             final_interval = new_interval
-            
+
         next_review = now + timedelta(days=final_interval)
-        
+
         return new_mastery, new_ef, final_interval, next_review
 
 
@@ -97,11 +101,11 @@ class ErrorBookService:
     """
     错题档案核心服务 (Phase 4)
     """
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.review_scheduler = ReviewSchedulerService()
-    
+
     async def create_error(self, user_id: UUID, data: ErrorRecordCreate) -> ErrorRecord:
         error = ErrorRecord(
             user_id=user_id,
@@ -111,10 +115,10 @@ class ErrorBookService:
             correct_answer=data.correct_answer,
             subject_code=data.subject.value,
             chapter=data.chapter,
-            
+
             cognitive_tags=data.cognitive_tags,
             ai_analysis_summary=data.ai_analysis_summary,
-            
+
             # Initial State
             next_review_at=datetime.utcnow(), # Immediate review or +1 day? Usually immediate for first learn.
             interval_days=0.0,
@@ -122,14 +126,14 @@ class ErrorBookService:
             review_count=0,
             mastery_level=0.0
         )
-        
+
         self.db.add(error)
         await self.db.commit()
         await self.db.refresh(error)
-        
+
         logger.info(f"Created error record {error.id} for user {user_id}")
         return error
-    
+
     async def analyze_and_link(self, error_id: UUID, user_id: UUID):
         """
         Async Background Task:
@@ -142,12 +146,12 @@ class ErrorBookService:
         # Ideally, the caller handles the session scope, or we use a fresh session here.
         # Assuming `self.db` is valid or using `AsyncSessionLocal` pattern in the worker wrapper.
         # Here we assume self.db is injected correctly (likely needing a fresh session if run in background).
-        
+
         try:
             stmt = select(ErrorRecord).where(ErrorRecord.id == error_id)
             res = await self.db.execute(stmt)
             error = res.scalar_one_or_none()
-            
+
             if not error:
                 logger.error(f"Error {error_id} not found for analysis")
                 return
@@ -155,7 +159,7 @@ class ErrorBookService:
             # --- Step 1: OCR / Text Check ---
             ocr_text = None
             final_text = error.question_text or ""
-            
+
             if error.question_image_url and (not error.question_text or len(error.question_text) < 10):
                 # Trigger OCR
                 logger.info(f"Running OCR for error {error.id}")
@@ -172,7 +176,7 @@ class ErrorBookService:
             # --- Step 2: RAG Retrieval ---
             linked_ids = []
             suggested_concepts = []
-            
+
             try:
                 # Retrieve relevant knowledge nodes
                 nodes = await self._search_knowledge_nodes(user_id, final_text)
@@ -193,14 +197,14 @@ class ErrorBookService:
                 correct_ans=error.correct_answer,
                 linked_nodes=nodes if 'nodes' in locals() and nodes else []
             )
-            
+
             if ocr_text:
                 analysis_result['ocr_text'] = ocr_text
-            
+
             # Extract suggested concepts if any (from LLM or fallback)
-            # Currently strict JSON schema doesn't have 'suggested_concepts' in top level, 
+            # Currently strict JSON schema doesn't have 'suggested_concepts' in top level,
             # but we can add it to the DB column.
-            
+
             # --- Step 4: Update DB ---
             error.latest_analysis = analysis_result
             error.linked_knowledge_node_ids = linked_ids
@@ -211,7 +215,7 @@ class ErrorBookService:
                 await semantic_service.upsert_strategy_from_error(error)
             except Exception as e:
                 logger.warning(f"Semantic memory linking failed: {e}")
-            
+
             # If question text was empty, maybe fill it with OCR?
             if not error.question_text and ocr_text:
                 error.question_text = ocr_text
@@ -244,10 +248,10 @@ class ErrorBookService:
             logger.error(f"OCR failed for image {image_url}: {e}")
             return ""
 
-    async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> List[KnowledgeNode]:
+    async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> list[KnowledgeNode]:
         # Generate embedding
         embedding = await embedding_service.get_embedding(text, text_type="query")
-        
+
         # PGVector search
         # Note: This requires the KnowledgeNode model to have the `embedding` column and pgvector extension
         # We assume KnowledgeNode.embedding is mapped.
@@ -263,27 +267,27 @@ class ErrorBookService:
             .where(
                 KnowledgeNode.not_deleted_filter(),
                 or_(
-                    KnowledgeNode.is_seed == True,
+                    KnowledgeNode.is_seed,
                     UserNodeStatus.user_id.isnot(None),
                 ),
             )
             .order_by(KnowledgeNode.embedding.l2_distance(embedding))
             .limit(limit)
         )
-        
+
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
     async def _run_llm_analysis(self, subject, question, user_ans, correct_ans, linked_nodes) -> dict:
         node_context = ", ".join([n.name for n in linked_nodes])
-        
+
         prompt = f"""
         Analyze this {subject} error.
         Question: {question}
         Student Answer: {user_ans}
         Correct Answer: {correct_ans}
         Related Concepts: {node_context}
-        
+
         Provide output in JSON:
         {{
             "error_type": "concept_confusion" | "calculation_error" | "reading_careless" | "knowledge_gap" | "method_wrong" | "logic_error" | "other",
@@ -295,7 +299,7 @@ class ErrorBookService:
             "study_suggestion": "Actionable advice..."
         }}
         """
-        
+
         try:
             response = await llm_client.chat_completion(
                 messages=[
@@ -323,44 +327,44 @@ class ErrorBookService:
                 "study_suggestion": "请稍后重试"
             }
 
-    async def get_error(self, error_id: UUID, user_id: UUID) -> Optional[ErrorRecord]:
+    async def get_error(self, error_id: UUID, user_id: UUID) -> ErrorRecord | None:
         stmt = select(ErrorRecord).where(
             and_(
                 ErrorRecord.id == error_id,
                 ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted == False
+                not ErrorRecord.is_deleted
             )
         )
         result = await self.db.execute(stmt)
         record = result.scalar_one_or_none()
-        
+
         if record and record.linked_knowledge_node_ids:
             # Manually fetch knowledge nodes for response mapping
             # This transient data handling is tricky with Pydantic from_attributes=True
             # We might need to attach it to the record instance dynamically
             node_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(record.linked_knowledge_node_ids))
             nodes = (await self.db.execute(node_stmt)).scalars().all()
-            
+
             # Create transient list of dicts/objects expected by Schema
             record.knowledge_links = [
-                KnowledgeLinkBrief(id=n.id, name=n.name, is_primary=True) 
+                KnowledgeLinkBrief(id=n.id, name=n.name, is_primary=True)
                 for n in nodes
             ]
-        
+
         return record
 
     async def list_errors(
-        self, 
-        user_id: UUID, 
+        self,
+        user_id: UUID,
         params: ErrorQueryParams
-    ) -> Tuple[List[ErrorRecord], int]:
+    ) -> tuple[list[ErrorRecord], int]:
         query = select(ErrorRecord).where(
             and_(
                 ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted == False
+                not ErrorRecord.is_deleted
             )
         )
-        
+
         if params.subject:
             query = query.where(ErrorRecord.subject_code == params.subject.value)
         if params.chapter:
@@ -386,39 +390,39 @@ class ErrorBookService:
                     func.cast(ErrorRecord.latest_analysis, String).ilike(f"%{params.keyword}%")
                 )
             )
-            
+
         # Count
         count_query = select(func.count()).select_from(query.subquery())
         total = (await self.db.execute(count_query)).scalar() or 0
-        
+
         # Order
         query = query.order_by(
             ErrorRecord.next_review_at.asc().nullslast(),
             ErrorRecord.created_at.desc()
         ).offset((params.page - 1) * params.page_size).limit(params.page_size)
-        
+
         result = await self.db.execute(query)
         items = result.scalars().all()
-        
+
         # Optimizing list view: likely don't need full knowledge link details for every item
         # If needed, we'd need a batched fetch strategy.
-        
+
         return items, total
 
-    async def update_error(self, error_id: UUID, user_id: UUID, data: ErrorRecordUpdate) -> Optional[ErrorRecord]:
+    async def update_error(self, error_id: UUID, user_id: UUID, data: ErrorRecordUpdate) -> ErrorRecord | None:
         error = await self.get_error(error_id, user_id)
         if not error:
             return None
-            
+
         update_data = data.dict(exclude_unset=True)
         # Rename subject to subject_code if present
         if 'subject' in update_data:
             update_data['subject_code'] = update_data.pop('subject').value
-            
+
         for key, value in update_data.items():
             if hasattr(error, key):
                 setattr(error, key, value)
-                
+
         await self.db.commit()
         await self.db.refresh(error)
         return error
@@ -429,10 +433,10 @@ class ErrorBookService:
         )
         result = await self.db.execute(stmt)
         error = result.scalar_one_or_none()
-        
+
         if not error:
             return False
-            
+
         error.is_deleted = True
         await self.db.commit()
         return True
@@ -441,7 +445,7 @@ class ErrorBookService:
         error = await self.get_error(error_id, user_id)
         if not error:
             raise ValueError(f"Error {error_id} not found")
-        
+
         # Calculate new schedule
         new_mastery, new_ef, new_interval, next_review = self.review_scheduler.calculate_next_review(
             current_mastery=error.mastery_level or 0.0,
@@ -450,7 +454,7 @@ class ErrorBookService:
             review_count=error.review_count or 0,
             performance=data.performance
         )
-        
+
         # Update Record
         error.mastery_level = new_mastery
         error.easiness_factor = new_ef
@@ -458,39 +462,39 @@ class ErrorBookService:
         error.next_review_at = next_review
         error.review_count = (error.review_count or 0) + 1
         error.last_reviewed_at = datetime.utcnow()
-        
+
         await self.db.commit()
         await self.db.refresh(error)
-        
+
         return error
 
     async def get_review_stats(self, user_id: UUID) -> dict:
         # Base query
-        base_filter = and_(ErrorRecord.user_id == user_id, ErrorRecord.is_deleted == False)
-        
+        base_filter = and_(ErrorRecord.user_id == user_id, not ErrorRecord.is_deleted)
+
         total = await self.db.scalar(
             select(func.count()).select_from(ErrorRecord).where(base_filter)
         )
-        
+
         mastered = await self.db.scalar(
             select(func.count()).select_from(ErrorRecord).where(
                 and_(base_filter, ErrorRecord.mastery_level >= 0.8)
             )
         )
-        
+
         need_review = await self.db.scalar(
             select(func.count()).select_from(ErrorRecord).where(
                 and_(base_filter, ErrorRecord.next_review_at <= datetime.utcnow())
             )
         )
-        
+
         subject_result = await self.db.execute(
             select(ErrorRecord.subject_code, func.count())
             .where(base_filter)
             .group_by(ErrorRecord.subject_code)
         )
         subject_distribution = {row[0]: row[1] for row in subject_result}
-        
+
         return {
             "total_errors": total or 0,
             "mastered_count": mastered or 0,

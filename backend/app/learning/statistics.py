@@ -9,7 +9,6 @@ Provides statistical methods for analyzing A/B test experiments including:
 - Confidence intervals
 - Effect size estimation
 """
-from typing import Dict, List, Tuple, Optional
 try:
     from scipy import stats
     HAS_SCIPY = True
@@ -17,7 +16,6 @@ except ImportError:
     stats = None
     HAS_SCIPY = False
 import numpy as np
-from loguru import logger
 
 
 class ABTestStatistics:
@@ -25,10 +23,10 @@ class ABTestStatistics:
 
     @staticmethod
     def t_test(
-        control_data: List[float],
-        treatment_data: List[float],
+        control_data: list[float],
+        treatment_data: list[float],
         alpha: float = 0.05,
-    ) -> Dict:
+    ) -> dict:
         """
         Independent sample t-test (Welch's t-test)
 
@@ -117,7 +115,7 @@ class ABTestStatistics:
         treatment_success: int,
         treatment_total: int,
         alpha: float = 0.05,
-    ) -> Dict:
+    ) -> dict:
         """
         Chi-square test for proportion comparison
 
@@ -199,7 +197,7 @@ class ABTestStatistics:
         alpha: float = 0.05,
         power: float = 0.8,
         two_tailed: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """
         Calculate required sample size for proportion test
 
@@ -260,12 +258,12 @@ class ABTestStatistics:
 
     @staticmethod
     def sequential_analysis(
-        control_data: List[float],
-        treatment_data: List[float],
+        control_data: list[float],
+        treatment_data: list[float],
         alpha: float = 0.05,
         power: float = 0.8,
         look_ahead: int = 10,
-    ) -> Dict:
+    ) -> dict:
         """
         Sequential analysis (supports early stopping)
 
@@ -353,10 +351,10 @@ class ABTestStatistics:
 
     @staticmethod
     def _confidence_interval_difference(
-        control_data: List[float],
-        treatment_data: List[float],
+        control_data: list[float],
+        treatment_data: list[float],
         alpha: float,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Calculate confidence interval for difference"""
         if not HAS_SCIPY:
             return (0.0, 0.0)
@@ -391,7 +389,7 @@ class ABTestStatistics:
     @staticmethod
     def _calculate_sequential_boundaries(
         alpha: float, power: float, look_ahead: int
-    ) -> Dict:
+    ) -> dict:
         """Calculate sequential analysis boundaries (O'Brien-Fleming)"""
         if not HAS_SCIPY:
             return {"upper": 0.0, "lower": 0.0, "alpha_spending": 0.0}
@@ -442,7 +440,7 @@ class ABTestStatistics:
         return f"Need {sample_per_group} samples per group (total {total}) to detect {mde * 100:.1f}% effect"
 
     @staticmethod
-    def _make_sequential_recommendation(final_result: Dict) -> str:
+    def _make_sequential_recommendation(final_result: dict) -> str:
         """Generate sequential analysis recommendation"""
         if final_result["decision"] == "reject_null":
             return f"Significance reached at {final_result['sample_size']} samples, can stop early"
@@ -463,7 +461,7 @@ class ABTestStatistics:
         minimum_detectable_effect: float,
         alpha: float,
         power: float,
-    ) -> Dict:
+    ) -> dict:
         """Fallback sample size calculation using normal approximation"""
         if not HAS_SCIPY:
             return {

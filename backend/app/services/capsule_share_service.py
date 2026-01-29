@@ -3,16 +3,14 @@ Capsule Share Service
 
 处理胶囊分享功能（分享到群组/好友）
 """
-from typing import List, Optional
 from uuid import UUID
+
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.community import Friendship, Group, GroupMember, GroupMessage, MessageType, PrivateMessage
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.community import Group, GroupMember, GroupMessage, MessageType
-from app.models.community import Friendship, PrivateMessage
 from app.models.user import User
 
 
@@ -32,7 +30,7 @@ class CapsuleShareService:
         capsule_id: UUID,
         group_id: UUID,
         db: AsyncSession,
-        message: Optional[str] = None,
+        message: str | None = None,
     ) -> GroupMessage:
         """
         分享胶囊到群组
@@ -106,7 +104,7 @@ class CapsuleShareService:
         capsule_id: UUID,
         friend_id: UUID,
         db: AsyncSession,
-        message: Optional[str] = None,
+        message: str | None = None,
     ) -> PrivateMessage:
         """
         分享胶囊给好友
@@ -183,7 +181,7 @@ class CapsuleShareService:
     def _build_share_message(
         self,
         capsule: CuriosityCapsule,
-        additional_message: Optional[str] = None,
+        additional_message: str | None = None,
     ) -> str:
         """
         构建分享消息文本
@@ -222,7 +220,7 @@ class CapsuleShareService:
         self,
         user_id: UUID,
         db: AsyncSession,
-    ) -> List[Group]:
+    ) -> list[Group]:
         """
         获取用户可分享的群组列表
 
@@ -241,7 +239,7 @@ class CapsuleShareService:
         self,
         user_id: UUID,
         db: AsyncSession,
-    ) -> List[User]:
+    ) -> list[User]:
         """
         获取用户可分享的好友列表
 

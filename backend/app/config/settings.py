@@ -3,10 +3,10 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List, Optional
-from urllib.parse import urlparse, urlunparse, quote
+from urllib.parse import quote, urlparse, urlunparse
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, model_validator, Field, AliasChoices
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool | None = None
-    
+
     # Security
     # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
     SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False  # 是否打印SQL语句（生产环境应为False）
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = []
+    BACKEND_CORS_ORIGINS: list[str] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -175,9 +175,16 @@ class Settings(BaseSettings):
     # LLM Service
     LLM_API_BASE_URL: str = ""
     LLM_API_KEY: str = ""
-    LLM_MODEL_NAME: str = "qwen-turbo"
+    LLM_MODEL_NAME: str = "qwen-plus"
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
+    # LLM Tier Routing (comma-separated model keys from LLMRouter)
+    LLM_TIER_FREE_FAST: str = ""
+    LLM_TIER_FREE_REASONING: str = ""
+    LLM_TIER_FAST: str = ""
+    LLM_TIER_STANDARD: str = ""
+    LLM_TIER_REASONING: str = ""
+    LLM_TIER_SPECIALIST: str = ""
 
     # XiaoMi MIMO Configuration (快速响应)
     XIAOMI_MIMO_API_KEY: str = ""
@@ -238,6 +245,7 @@ class Settings(BaseSettings):
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
 
     # XunFei (科大讯飞) STT Configuration
+    XUNFEI_APP_ID: str = ""
     XUNFEI_API_KEY: str = ""
     XUNFEI_API_SECRET: str = ""
     XUNFEI_STT_DOMAIN: str = "iat"
@@ -309,8 +317,8 @@ class Settings(BaseSettings):
     ENABLE_MEMORY_DECAY: bool = True
     ENABLE_LTM_ROLLOUT: bool = True
     LTM_ROLLOUT_PERCENT: int = 100
-    LTM_ROLLOUT_USER_ALLOWLIST: List[str] = []
-    LTM_ROLLOUT_COHORT_TAGS: List[str] = []
+    LTM_ROLLOUT_USER_ALLOWLIST: list[str] = []
+    LTM_ROLLOUT_COHORT_TAGS: list[str] = []
     LTM_RELEASE_EVIDENCE_MISSING_THRESHOLD: float = 0.1
     LTM_RELEASE_EVAL_THRESHOLD: float = 0.6
     LTM_RELEASE_JOB_SUCCESS_THRESHOLD: float = 0.9
@@ -354,7 +362,7 @@ class Settings(BaseSettings):
     # MDX Dictionary Configuration
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
-    MDD_RESOURCES_PATH: Optional[str] = None
+    MDD_RESOURCES_PATH: str | None = None
 
     # Internal API
     INTERNAL_API_KEY: str = ""
@@ -449,6 +457,13 @@ class Settings(BaseSettings):
     @field_validator("XUNFEI_API_KEY", mode="before")
     @classmethod
     def validate_xunfei_api_key(cls, v):
+        if not v:
+            return ""
+        return v
+
+    @field_validator("XUNFEI_APP_ID", mode="before")
+    @classmethod
+    def validate_xunfei_app_id(cls, v):
         if not v:
             return ""
         return v

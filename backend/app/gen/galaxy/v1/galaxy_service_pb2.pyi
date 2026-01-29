@@ -1,10 +1,10 @@
 import datetime
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -18,7 +18,7 @@ class CollaborativeGalaxyUpdate(_message.Message):
     yjs_update: bytes
     user_id: str
     timestamp: int
-    def __init__(self, galaxy_id: _Optional[str] = ..., yjs_update: _Optional[bytes] = ..., user_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(self, galaxy_id: str | None = ..., yjs_update: bytes | None = ..., user_id: str | None = ..., timestamp: int | None = ...) -> None: ...
 
 class SyncCollaborativeGalaxyRequest(_message.Message):
     __slots__ = ("galaxy_id", "partial_update", "user_id")
@@ -28,7 +28,7 @@ class SyncCollaborativeGalaxyRequest(_message.Message):
     galaxy_id: str
     partial_update: bytes
     user_id: str
-    def __init__(self, galaxy_id: _Optional[str] = ..., partial_update: _Optional[bytes] = ..., user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, galaxy_id: str | None = ..., partial_update: bytes | None = ..., user_id: str | None = ...) -> None: ...
 
 class SyncCollaborativeGalaxyResponse(_message.Message):
     __slots__ = ("success", "server_update")
@@ -36,7 +36,7 @@ class SyncCollaborativeGalaxyResponse(_message.Message):
     SERVER_UPDATE_FIELD_NUMBER: _ClassVar[int]
     success: bool
     server_update: bytes
-    def __init__(self, success: bool = ..., server_update: _Optional[bytes] = ...) -> None: ...
+    def __init__(self, success: bool = ..., server_update: bytes | None = ...) -> None: ...
 
 class UpdateNodeMasteryRequest(_message.Message):
     __slots__ = ("user_id", "node_id", "mastery", "version", "reason", "request_id", "revision")
@@ -54,7 +54,7 @@ class UpdateNodeMasteryRequest(_message.Message):
     reason: str
     request_id: str
     revision: int
-    def __init__(self, user_id: _Optional[str] = ..., node_id: _Optional[str] = ..., mastery: _Optional[int] = ..., version: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reason: _Optional[str] = ..., request_id: _Optional[str] = ..., revision: _Optional[int] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., node_id: str | None = ..., mastery: int | None = ..., version: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., reason: str | None = ..., request_id: str | None = ..., revision: int | None = ...) -> None: ...
 
 class UpdateNodeMasteryResponse(_message.Message):
     __slots__ = ("success", "old_mastery", "new_mastery", "reason", "request_id", "current_revision")
@@ -70,4 +70,4 @@ class UpdateNodeMasteryResponse(_message.Message):
     reason: str
     request_id: str
     current_revision: int
-    def __init__(self, success: bool = ..., old_mastery: _Optional[int] = ..., new_mastery: _Optional[int] = ..., reason: _Optional[str] = ..., request_id: _Optional[str] = ..., current_revision: _Optional[int] = ...) -> None: ...
+    def __init__(self, success: bool = ..., old_mastery: int | None = ..., new_mastery: int | None = ..., reason: str | None = ..., request_id: str | None = ..., current_revision: int | None = ...) -> None: ...

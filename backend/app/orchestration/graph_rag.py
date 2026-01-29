@@ -6,20 +6,21 @@ GraphRAG 检索器
 
 import asyncio
 import hashlib
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from loguru import logger
 import json
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
+from loguru import logger
+
+from app.config import settings
 from app.core.age_client import get_age_client
 from app.core.cache import cache_service
 from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
-from app.config import settings
+from app.services.graphrag_trace_store import cache_trace
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service
-from app.services.graphrag_trace_store import cache_trace
 
 
 @dataclass
@@ -30,33 +31,33 @@ class RetrievalTrace:
     timestamp: datetime
 
     # 节点信息
-    nodes_retrieved: List[Dict[str, Any]]  # 被检索的节点列表
-    node_sources: Dict[str, str]  # node_id -> source_method (vector/graph/user_interest)
+    nodes_retrieved: list[dict[str, Any]]  # 被检索的节点列表
+    node_sources: dict[str, str]  # node_id -> source_method (vector/graph/user_interest)
 
     # 关系信息
-    relationships: List[Dict[str, Any]]  # 图检索中的关系
+    relationships: list[dict[str, Any]]  # 图检索中的关系
 
     # 检索方法详情
-    vector_search_results: List[Dict[str, Any]]
-    graph_search_results: List[Dict[str, Any]]
-    user_interest_nodes: List[str]
+    vector_search_results: list[dict[str, Any]]
+    graph_search_results: list[dict[str, Any]]
+    user_interest_nodes: list[str]
 
     # 性能指标
-    timing: Dict[str, float] = field(default_factory=dict)
+    timing: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
 class GraphRAGResult:
     """GraphRAG 检索结果"""
     query: str
-    entities: List[str]
-    vector_results: List[Dict[str, Any]]
-    graph_results: List[Dict[str, Any]]
+    entities: list[str]
+    vector_results: list[dict[str, Any]]
+    graph_results: list[dict[str, Any]]
     fused_context: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
     # 新增：检索追踪信息
-    trace: Optional[RetrievalTrace] = None
+    trace: RetrievalTrace | None = None
 
 
 class GraphRAGRetriever:
@@ -71,7 +72,7 @@ class GraphRAGRetriever:
     def _normalize_query(self, query: str) -> str:
         return " ".join(query.strip().lower().split())
 
-    def _build_cache_key(self, query: str, user_id: str, knowledge_version: Optional[str]) -> str:
+    def _build_cache_key(self, query: str, user_id: str, knowledge_version: str | None) -> str:
         normalized_query = self._normalize_query(query)
         parts = [normalized_query, user_id, "v1"]
         if knowledge_version:
@@ -83,7 +84,7 @@ class GraphRAGRetriever:
     async def _get_cached_result(
         self,
         cache_key: str
-    ) -> Optional[GraphRAGResult]:
+    ) -> GraphRAGResult | None:
         cached = await cache_service.get(cache_key)
         if not cached:
             return None
@@ -116,9 +117,9 @@ class GraphRAGRetriever:
         query: str,
         user_id: str,
         depth: int
-    ) -> Tuple[List[str], List[Dict[str, Any]], List[Dict[str, Any]], str, List[Dict[str, Any]], List[str], Dict[str, float], List[Dict[str, Any]]]:
+    ) -> tuple[list[str], list[dict[str, Any]], list[dict[str, Any]], str, list[dict[str, Any]], list[str], dict[str, float], list[dict[str, Any]]]:
         import time
-        timing: Dict[str, float] = {}
+        timing: dict[str, float] = {}
         start_time = time.time()
 
         timeout = settings.GRAPHRAG_FASTPATH_TIMEOUT_SECONDS
@@ -136,7 +137,7 @@ class GraphRAGRetriever:
             timing["entity_extraction"] = parallel_duration
             timing["vector_search"] = parallel_duration
             timing["user_interests"] = parallel_duration
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("GraphRAG fastpath timeout in parallel stage, falling back to sequential")
             RETRIEVAL_TIMEOUT_TOTAL.labels(source="graphrag", stage="parallel").inc()
             return await self._retrieve_sequential(query, user_id, depth)
@@ -147,7 +148,7 @@ class GraphRAGRetriever:
                 self.graph_search(entities, depth),
                 timeout=timeout
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("GraphRAG fastpath graph search timeout")
             RETRIEVAL_TIMEOUT_TOTAL.labels(source="graphrag", stage="graph_search").inc()
             graph_results, relationships = [], []
@@ -167,9 +168,9 @@ class GraphRAGRetriever:
         query: str,
         user_id: str,
         depth: int
-    ) -> Tuple[List[str], List[Dict[str, Any]], List[Dict[str, Any]], str, List[Dict[str, Any]], List[str], Dict[str, float], List[Dict[str, Any]]]:
+    ) -> tuple[list[str], list[dict[str, Any]], list[dict[str, Any]], str, list[dict[str, Any]], list[str], dict[str, float], list[dict[str, Any]]]:
         import time
-        timing: Dict[str, float] = {}
+        timing: dict[str, float] = {}
         start_time = time.time()
 
         # 1. 实体识别
@@ -202,7 +203,7 @@ class GraphRAGRetriever:
 
         return entities, vector_results, graph_results, fused_context, unique_results, user_interests, timing, relationships
 
-    async def extract_entities(self, query: str) -> List[str]:
+    async def extract_entities(self, query: str) -> list[str]:
         """
         使用 LLM 从查询中提取实体
 
@@ -245,13 +246,13 @@ class GraphRAGRetriever:
             # 降级：简单关键词提取
             return await self._simple_extract(query)
 
-    async def _simple_extract(self, query: str) -> List[str]:
+    async def _simple_extract(self, query: str) -> list[str]:
         """简单关键词提取（降级）"""
         # 这里可以使用简单的 NLP 或关键词提取
         # 暂时返回空，由后续处理
         return []
 
-    async def vector_search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    async def vector_search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """
         向量检索（语义相似）
 
@@ -288,7 +289,7 @@ class GraphRAGRetriever:
             logger.error(f"向量检索失败: {e}")
             return []
 
-    async def graph_search(self, entities: List[str], depth: int = 2) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    async def graph_search(self, entities: list[str], depth: int = 2) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """
         图检索（结构关联）
 
@@ -353,7 +354,7 @@ class GraphRAGRetriever:
         logger.debug(f"图检索: {len(results)} 条结果, {len(relationships)} 个关系")
         return results, relationships
 
-    async def get_user_interests(self, user_id: str) -> List[str]:
+    async def get_user_interests(self, user_id: str) -> list[str]:
         """
         获取用户兴趣领域
 
@@ -383,8 +384,8 @@ class GraphRAGRetriever:
             logger.warning(f"获取用户兴趣失败: {e}")
             return []
 
-    def fuse_results(self, vector_results: List[Dict], graph_results: List[Dict],
-                     user_interests: List[str]) -> Tuple[str, List[Dict]]:
+    def fuse_results(self, vector_results: list[dict], graph_results: list[dict],
+                     user_interests: list[str]) -> tuple[str, list[dict]]:
         """
         融合向量和图结果
 
@@ -564,7 +565,7 @@ class GraphRAGRetriever:
 
         return result
 
-    async def find_learning_path(self, start_node: str, target_node: str) -> List[Dict[str, Any]]:
+    async def find_learning_path(self, start_node: str, target_node: str) -> list[dict[str, Any]]:
         """
         查找学习路径（高级功能）
 
@@ -599,7 +600,7 @@ class GraphRAGRetriever:
             logger.warning(f"查找学习路径失败: {e}")
             return []
 
-    async def find_related_concepts(self, concept: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def find_related_concepts(self, concept: str, limit: int = 10) -> list[dict[str, Any]]:
         """
         查找相关概念（用于知识拓展）
 

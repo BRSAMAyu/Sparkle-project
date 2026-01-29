@@ -2,7 +2,6 @@
 LLM Client Wrapper
 Provides a unified interface for different LLM providers (Qwen, DeepSeek, OpenAI)
 """
-from typing import List, Dict, Any, Optional
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -35,12 +34,12 @@ class LLMClient:
     )
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        response_format: Optional[Dict[str, str]] = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None,
         stream: bool = False,
-        model: Optional[str] = None
+        model: str | None = None
     ) -> str:
         """
         调用 LLM Chat Completion API
@@ -94,10 +93,10 @@ class LLMClient:
 
     async def reason_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.2,
-        max_tokens: Optional[int] = None,
-        response_format: Optional[Dict[str, str]] = None
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None
     ) -> str:
         """
         调用 LLM Reasoning 模型
@@ -110,7 +109,7 @@ class LLMClient:
             model=self.reason_model_name
         )
 
-    async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """
         生成文本向量 (批量)
 

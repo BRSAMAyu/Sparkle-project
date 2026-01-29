@@ -29,19 +29,17 @@ Design:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task import Task
 from app.services.plan_state_service import PlanStateService
-
 
 # Configuration
 MAX_ACTIVE_PLANS = 3  # 并行计划数量限制
@@ -56,17 +54,17 @@ class SharedSessionState:
     session_id: str
 
     # 用户偏好（从 UserScope）
-    user_preferences: Dict[str, Any] = field(default_factory=dict)
+    user_preferences: dict[str, Any] = field(default_factory=dict)
 
     # 认知档案
-    cognitive_profile: Dict[str, Any] = field(default_factory=dict)
+    cognitive_profile: dict[str, Any] = field(default_factory=dict)
 
     # 会话级信号
     fatigue_level: float = 0.0
-    recent_topics: List[str] = field(default_factory=list)
+    recent_topics: list[str] = field(default_factory=list)
     last_activity_time: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "user_id": str(self.user_id),
@@ -79,7 +77,7 @@ class SharedSessionState:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SharedSessionState":
+    def from_dict(cls, data: dict[str, Any]) -> SharedSessionState:
         """从字典创建"""
         from uuid import UUID
 
@@ -97,12 +95,12 @@ class SharedSessionState:
 @dataclass
 class ActivePlansTracker:
     """活跃计划追踪器"""
-    focus_plan_id: Optional[UUID] = None  # 当前焦点计划
-    active_plan_ids: List[UUID] = field(default_factory=list)
+    focus_plan_id: UUID | None = None  # 当前焦点计划
+    active_plan_ids: list[UUID] = field(default_factory=list)
 
     # 切换历史
-    switch_history: List[Dict[str, Any]] = field(default_factory=list)
-    last_switch_time: Optional[datetime] = None
+    switch_history: list[dict[str, Any]] = field(default_factory=list)
+    last_switch_time: datetime | None = None
 
     def add_active_plan(self, plan_id: UUID) -> bool:
         """
@@ -173,7 +171,7 @@ class ActivePlansTracker:
             return True
         return False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "focus_plan_id": str(self.focus_plan_id) if self.focus_plan_id else None,
@@ -183,7 +181,7 @@ class ActivePlansTracker:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ActivePlansTracker":
+    def from_dict(cls, data: dict[str, Any]) -> ActivePlansTracker:
         """从字典创建"""
         return cls(
             focus_plan_id=UUID(data["focus_plan_id"]) if data.get("focus_plan_id") else None,
@@ -209,7 +207,7 @@ class MultiPlanStateManager:
         self,
         db: AsyncSession,
         redis=None,
-        plan_state_service: Optional[PlanStateService] = None
+        plan_state_service: PlanStateService | None = None
     ):
         """
         Args:
@@ -257,7 +255,7 @@ class MultiPlanStateManager:
         self,
         user_id: UUID,
         session_id: str,
-        updates: Dict[str, Any]
+        updates: dict[str, Any]
     ) -> SharedSessionState:
         """
         更新共享会话状态
@@ -348,8 +346,8 @@ class MultiPlanStateManager:
         self,
         user_id: UUID,
         session_id: str,
-        focus_plan_id: Optional[UUID] = None
-    ) -> Dict[str, Any]:
+        focus_plan_id: UUID | None = None
+    ) -> dict[str, Any]:
         """
         获取组合上下文（供 LLM 使用）
 
@@ -413,7 +411,7 @@ class MultiPlanStateManager:
         user_id: UUID,
         session_id: str,
         task_id: UUID
-    ) -> Optional[UUID]:
+    ) -> UUID | None:
         """
         根据任务自动切换焦点计划
 
@@ -459,9 +457,9 @@ class MultiPlanStateManager:
         self,
         user_id: UUID,
         plan_id: UUID,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 20
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         查询特定计划的任务卡（供 LLM 使用）
 
@@ -541,7 +539,7 @@ class MultiPlanStateManager:
     async def get_focus_plan_id(
         self,
         session_id: str
-    ) -> Optional[UUID]:
+    ) -> UUID | None:
         """
         获取当前焦点计划ID
 
@@ -610,7 +608,7 @@ class MultiPlanStateManager:
         self,
         user_id: UUID,
         session_id: str
-    ) -> List[UUID]:
+    ) -> list[UUID]:
         """
         获取所有活跃计划ID列表
 

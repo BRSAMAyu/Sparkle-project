@@ -228,7 +228,8 @@ class TestTaskManagerIntegration:
             "cleanup_old_data",
             "notify_user",
             "daily_report",
-            "health_check_task",
+            "app.core.celery_tasks.health_check_task",
+            "generate_node_embedding",
         ]
 
         for task in expected_tasks:

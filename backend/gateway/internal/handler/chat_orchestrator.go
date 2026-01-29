@@ -267,6 +267,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 				// Route based on message type
 				switch msgType {
+				case "ping":
+					conn.WriteJSON(gin.H{"type": "pong"})
+					return false
 				case "action_feedback":
 					h.handleActionFeedback(conn, msgMap, userID)
 					return false
@@ -1120,6 +1123,30 @@ func generateRequestID() string {
 	return "req_" + strings.ReplaceAll(id.String(), "-", "")
 }
 
+func (h *ChatOrchestrator) resolveUserUUID(ctx context.Context, userID string) (uuid.UUID, string, error) {
+	if parsed, err := uuid.Parse(userID); err == nil {
+		return parsed, userID, nil
+	}
+
+	if h.queries == nil {
+		return uuid.Nil, userID, nil
+	}
+
+	user, err := h.queries.GetUserByEmail(ctx, userID)
+	if err != nil {
+		return uuid.Nil, userID, nil
+	}
+	if !user.ID.Valid {
+		return uuid.Nil, userID, nil
+	}
+
+	parsed, err := uuid.FromBytes(user.ID.Bytes[:])
+	if err != nil {
+		return uuid.Nil, userID, nil
+	}
+	return parsed, parsed.String(), nil
+}
+
 func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder interface{}, userID string, input *chatInput, requestID string) bool {
 	tracer := otel.Tracer("chat-orchestrator")
 	span := trace.SpanFromContext(ctx)
@@ -1193,13 +1220,19 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	// Resolve user identity to UUID (token sub may be email)
+	userUUID, resolvedUserID, _ := h.resolveUserUUID(ctx, userID)
+	if resolvedUserID != "" {
+		userID = resolvedUserID
+	}
+
 	// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
 	userContextJSON := ""
 	var contextFetchLatency time.Duration
-	if h.userContext != nil {
+	if h.userContext != nil && userUUID != uuid.Nil {
 		ucCtx, ucSpan := tracer.Start(ctx, "user_context.fetch")
 		contextFetchStart := time.Now()
-		contextData, err := h.userContext.GetUserContextData(ucCtx, uuid.MustParse(userID))
+		contextData, err := h.userContext.GetUserContextData(ucCtx, userUUID)
 		contextFetchLatency = time.Since(contextFetchStart)
 		ucSpan.End()
 

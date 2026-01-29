@@ -1,15 +1,16 @@
 import json
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
-from pydantic import ValidationError
-from loguru import logger
+from typing import Any
 
-from app.tools.registry import tool_registry
-from app.tools.base import ToolResult
-from app.services.tool_history_service import ToolHistoryService
-from app.db.session import AsyncSessionLocal
+from loguru import logger
+from pydantic import ValidationError
+
 from app.core.business_metrics import COMPENSATION_TRIGGERED
+from app.db.session import AsyncSessionLocal
+from app.services.tool_history_service import ToolHistoryService
+from app.tools.base import ToolResult
+from app.tools.registry import tool_registry
 
 
 class ToolExecutor:
@@ -17,16 +18,16 @@ class ToolExecutor:
     工具执行器
     负责解析 LLM 的工具调用请求并执行
     """
-    
+
     async def execute_tool_call(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
-        db_session: Optional[Any],
-        progress_callback: Optional[Any] = None,
-        tool_call_id: Optional[str] = None,
-        compensation_call: Optional[Dict[str, Any]] = None
+        db_session: Any | None,
+        progress_callback: Any | None = None,
+        tool_call_id: str | None = None,
+        compensation_call: dict[str, Any] | None = None
     ) -> ToolResult:
         """
         执行单个工具调用并记录执行历史
@@ -69,13 +70,13 @@ class ToolExecutor:
     async def _execute_tool_call_with_session(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
         db_session: Any,
-        progress_callback: Optional[Any],
-        tool_call_id: Optional[str],
+        progress_callback: Any | None,
+        tool_call_id: str | None,
         owns_session: bool,
-        compensation_call: Optional[Dict[str, Any]]
+        compensation_call: dict[str, Any] | None
     ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
 
@@ -202,12 +203,12 @@ class ToolExecutor:
         user_id: str,
         tool_name: str,
         success: bool,
-        execution_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
-        error_type: Optional[str] = None,
-        tool_category: Optional[str] = None,
-        input_args: Optional[Dict[str, Any]] = None,
-        output_summary: Optional[str] = None,
+        execution_time_ms: int | None = None,
+        error_message: str | None = None,
+        error_type: str | None = None,
+        tool_category: str | None = None,
+        input_args: dict[str, Any] | None = None,
+        output_summary: str | None = None,
         use_separate_session: bool = False
     ) -> None:
         """
@@ -290,8 +291,8 @@ class ToolExecutor:
 
     def _parse_compensation_call(
         self,
-        compensation_call: Optional[Dict[str, Any]]
-    ) -> Optional[Tuple[str, Dict[str, Any]]]:
+        compensation_call: dict[str, Any] | None
+    ) -> tuple[str, dict[str, Any]] | None:
         if not compensation_call or not isinstance(compensation_call, dict):
             return None
         tool_name = (
@@ -319,7 +320,7 @@ class ToolExecutor:
     async def _maybe_execute_compensation(
         self,
         *,
-        compensation_spec: Optional[Tuple[str, Dict[str, Any]]],
+        compensation_spec: tuple[str, dict[str, Any]] | None,
         user_id: str,
         db_session: Any,
         owns_session: bool,
@@ -342,19 +343,19 @@ class ToolExecutor:
             )
         except Exception as e:
             logger.warning(f"Compensation tool failed: {tool_name} - {e}")
-    
+
     async def execute_tool_calls(
         self,
-        tool_calls: List[Dict[str, Any]],
+        tool_calls: list[dict[str, Any]],
         user_id: str,
-        db_session: Optional[Any]
-    ) -> List[ToolResult]:
+        db_session: Any | None
+    ) -> list[ToolResult]:
         """
         批量执行工具调用（按顺序）
-        
+
         Args:
             tool_calls: 工具调用列表，格式为 OpenAI function_call
-            
+
         Returns:
             List[ToolResult]: 执行结果列表
         """

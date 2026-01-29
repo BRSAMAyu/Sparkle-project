@@ -5,13 +5,15 @@ SummarizationWorker - 后台总结任务处理器
 并将结果缓存回 Redis。
 """
 
-import json
 import asyncio
-from typing import Dict, List, Any
+import json
+import time
 from datetime import datetime
-from loguru import logger
+from typing import Any
 
 import redis.asyncio as redis
+from loguru import logger
+
 from app.services.llm_service import llm_service
 
 
@@ -113,7 +115,7 @@ class SummarizationWorker:
                 logger.error(f"Failed to process batch item: {e}")
                 self.failed_count += 1
 
-    async def _process_task(self, task: Dict[str, Any]) -> bool:
+    async def _process_task(self, task: dict[str, Any]) -> bool:
         """
         处理单个总结任务
 
@@ -126,11 +128,11 @@ class SummarizationWorker:
         session_id = task.get("session_id")
         user_id = task.get("user_id")
         history = task.get("history", [])
-        timestamp = task.get("timestamp", time.time())
+        task.get("timestamp", time.time())
         priority = task.get("priority", "normal")
 
         if not session_id or not history:
-            logger.warning(f"Invalid task: missing session_id or history")
+            logger.warning("Invalid task: missing session_id or history")
             return False
 
         logger.info(
@@ -186,7 +188,7 @@ class SummarizationWorker:
 
         return False
 
-    async def _generate_summary(self, history: List[Dict], user_id: str) -> str:
+    async def _generate_summary(self, history: list[dict], user_id: str) -> str:
         """
         使用 LLM 生成历史对话摘要
 
@@ -224,7 +226,7 @@ class SummarizationWorker:
             logger.error(f"LLM call failed: {e}")
             raise
 
-    def _build_summary_prompt(self, history: List[Dict]) -> str:
+    def _build_summary_prompt(self, history: list[dict]) -> str:
         """
         构建总结提示词
 
@@ -260,7 +262,7 @@ class SummarizationWorker:
 
         return "\n".join(prompt_parts)
 
-    async def _log_summary(self, session_id: str, summary: str, history: List[Dict]):
+    async def _log_summary(self, session_id: str, summary: str, history: list[dict]):
         """
         记录总结日志（用于监控和调试）
 
@@ -284,7 +286,7 @@ class SummarizationWorker:
         except:
             pass  # 日志失败不影响主流程
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         获取工作器统计信息
         """
@@ -319,6 +321,7 @@ def create_summarization_worker(
         SummarizationWorker 实例
     """
     import redis.asyncio as redis
+
     from app.config import settings
     from app.core.redis_utils import resolve_redis_password
 

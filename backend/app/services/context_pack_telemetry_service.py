@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,12 +17,12 @@ class ContextPackTelemetryService:
         *,
         user_id: UUID,
         intent: str,
-        budgets: Dict[str, Any],
-        token_usage: Dict[str, Any],
-        memory_counts: Dict[str, Any],
-        evidence_score_avg: Optional[float],
-        request_id: Optional[str] = None,
-        trace_id: Optional[str] = None,
+        budgets: dict[str, Any],
+        token_usage: dict[str, Any],
+        memory_counts: dict[str, Any],
+        evidence_score_avg: float | None,
+        request_id: str | None = None,
+        trace_id: str | None = None,
     ) -> UUID:
         record = ContextPackRun(
             user_id=user_id,

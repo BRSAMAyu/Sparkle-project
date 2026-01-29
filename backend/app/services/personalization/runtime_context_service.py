@@ -2,7 +2,7 @@
 运行时上下文服务 - 收集影响个性化的实时状态
 """
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -22,7 +22,7 @@ class RuntimeContextService:
         self.db = db
         self.redis = redis
 
-    async def get_runtime_context(self, user_id: UUID, timezone: str = "Asia/Shanghai") -> Dict[str, Any]:
+    async def get_runtime_context(self, user_id: UUID, timezone: str = "Asia/Shanghai") -> dict[str, Any]:
         """获取运行时上下文"""
         return {
             "focus_session_active": await self._is_focus_active(user_id),
@@ -49,9 +49,7 @@ class RuntimeContextService:
         focus_mode, snapshot_at = row
         if not focus_mode:
             return False
-        if snapshot_at and datetime.utcnow() - snapshot_at > timedelta(hours=2):
-            return False
-        return True
+        return not (snapshot_at and datetime.utcnow() - snapshot_at > timedelta(hours=2))
 
     async def _get_active_plan_count(self, user_id: UUID) -> int:
         result = await self.db.execute(

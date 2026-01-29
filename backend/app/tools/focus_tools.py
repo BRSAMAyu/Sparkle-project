@@ -1,10 +1,10 @@
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
+
+from app.models.task import Task
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import SuggestFocusSessionParams
-from app.models.task import Task
-from loguru import logger
 
 
 class SuggestFocusSessionTool(BaseTool):
@@ -20,7 +20,7 @@ class SuggestFocusSessionTool(BaseTool):
         params: SuggestFocusSessionParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             task_data = None

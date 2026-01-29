@@ -7,17 +7,15 @@ Creates draft knowledge nodes that users can review and publish.
 Author: Claude Code (Opus 4.5)
 Created: 2026-01-15
 """
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
-from uuid import UUID
 import uuid
+from datetime import datetime, timedelta
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.models.user import User
 from app.services.embedding_service import embedding_service
 
 
@@ -40,11 +38,11 @@ class KnowledgeIntegrationService:
         source_text: str,
         translation: str,
         context: str,
-        source_url: Optional[str] = None,
-        source_document_id: Optional[UUID] = None,
+        source_url: str | None = None,
+        source_document_id: UUID | None = None,
         language: str = "en",
-        domain: Optional[str] = None,
-        subject_id: Optional[int] = None,
+        domain: str | None = None,
+        subject_id: int | None = None,
     ) -> KnowledgeNode:
         """
         Create or update a vocabulary knowledge node from a translation.
@@ -82,7 +80,7 @@ class KnowledgeIntegrationService:
             description = self._format_vocabulary_description(
                 source_text, translation, context, language, source_url
             )
-            
+
             node = KnowledgeNode(
                 id=uuid.uuid4(),
                 name=source_text,
@@ -138,7 +136,7 @@ class KnowledgeIntegrationService:
         node: KnowledgeNode,
         user_id: UUID,
         context: str,
-        source_url: Optional[str]
+        source_url: str | None
     ) -> KnowledgeNode:
         """Handle logic when vocabulary node already exists."""
         # 1. Ensure User Status Exists
@@ -171,11 +169,11 @@ class KnowledgeIntegrationService:
                 append_text = f"\n\n**其他场景**:\n{context}"
                 if source_url:
                     append_text += f"\n*来源: {source_url}*"
-                
+
                 node.description += append_text
                 node.updated_at = datetime.utcnow()
                 logger.info(f"📝 Appended context to node {node.id}")
-        
+
         await self.db.commit()
         await self.db.refresh(node)
         return node
@@ -186,7 +184,7 @@ class KnowledgeIntegrationService:
         translation: str,
         context: str,
         language: str,
-        source_url: Optional[str] = None
+        source_url: str | None = None
     ) -> str:
         """Format node description with translation and context."""
         description_parts = []
@@ -205,7 +203,7 @@ class KnowledgeIntegrationService:
                 f"**{source_text}**"
             )
             description_parts.append(f"\n**使用场景**:\n{highlighted_context}")
-            
+
         if source_url:
             description_parts.append(f"\n*来源: {source_url}*")
 
@@ -232,7 +230,7 @@ class KnowledgeIntegrationService:
         self,
         node_id: UUID,
         name: str,
-        description: Optional[str]
+        description: str | None
     ):
         """
         Generate embedding for the node (async, non-blocking).
@@ -350,9 +348,9 @@ class KnowledgeIntegrationService:
         self,
         node_id: UUID,
         user_id: UUID,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        keywords: Optional[list] = None,
+        name: str | None = None,
+        description: str | None = None,
+        keywords: list | None = None,
     ) -> KnowledgeNode:
         """
         Update node content before publishing.

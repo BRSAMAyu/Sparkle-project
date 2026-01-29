@@ -3,10 +3,11 @@ Unit tests for app.core.security module.
 Tests password hashing, JWT token generation and validation.
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch, MagicMock
 from jose import JWTError
 
+from app.config import settings
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -113,19 +114,19 @@ class TestAccessTokenCreation:
         """Test that token expiration is set correctly"""
         data = {"sub": "user123"}
         expiry = timedelta(minutes=15)
-        before_creation = datetime.utcnow()
+        before_creation = datetime.now(UTC)
 
         token = create_access_token(data, expires_delta=expiry)
 
-        after_creation = datetime.utcnow()
+        after_creation = datetime.now(UTC)
         payload = decode_token(token)
 
-        # Check expiration is approximately 15 minutes from now
-        exp_time = datetime.fromtimestamp(payload["exp"])
-        min_expected = before_creation + expiry
-        max_expected = after_creation + expiry
+        # Check expiration is approximately 15 minutes from now (timestamp precision)
+        exp_ts = payload["exp"]
+        min_expected = (before_creation + expiry).timestamp()
+        max_expected = (after_creation + expiry).timestamp()
 
-        assert min_expected <= exp_time <= max_expected
+        assert min_expected - 1 <= exp_ts <= max_expected + 1
 
 
 class TestRefreshTokenCreation:
@@ -203,10 +204,16 @@ class TestTokenDecoding:
         from jose import jwt
 
         # Create token without 'sub' claim
+        now = datetime.now(UTC)
         token = jwt.encode(
-            {"exp": 1234567890, "iat": 1234567800},
-            "secret",
-            algorithm="HS256"
+            {
+                "exp": now + timedelta(hours=1),
+                "iat": now,
+                "aud": settings.JWT_AUDIENCE,
+                "iss": settings.JWT_ISSUER,
+            },
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM
         )
 
         with pytest.raises(JWTError, match="Token missing required claims"):
@@ -241,15 +248,17 @@ class TestTokenSecurity:
     def test_token_iat_is_set(self):
         """Test that token has issued-at time"""
         data = {"sub": "user123"}
-        before_creation = datetime.utcnow()
+        before_creation = datetime.now(UTC)
 
         token = create_access_token(data)
 
-        after_creation = datetime.utcnow()
+        after_creation = datetime.now(UTC)
         payload = decode_token(token)
 
-        iat_time = datetime.fromtimestamp(payload["iat"])
-        assert before_creation <= iat_time <= after_creation
+        iat_ts = payload["iat"]
+        min_expected = before_creation.timestamp()
+        max_expected = after_creation.timestamp()
+        assert min_expected - 1 <= iat_ts <= max_expected + 1
 
     def test_different_users_different_tokens(self):
         """Test that different users get different tokens"""
@@ -265,9 +274,8 @@ class TestEdgeCases:
     def test_empty_token_data(self):
         """Test creating token with minimal data"""
         token = create_access_token({})
-        payload = decode_token(token)
-
-        assert "sub" in payload  # Should be in payload
+        with pytest.raises(JWTError, match="Token missing required claims"):
+            decode_token(token)
 
     def test_unicode_password(self):
         """Test password with unicode characters"""

@@ -1,19 +1,16 @@
 """
 偏好推断服务 - 从用户反馈中学习并调整推断偏好
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from uuid import UUID
-from typing import Dict, List, Optional
+
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user_preferences import UserPreferencesCenter
 from app.core.metrics import (
-    PREFERENCE_INFERENCE_TOTAL,
     PREFERENCE_INFERENCE_CONFIDENCE,
+    PREFERENCE_INFERENCE_TOTAL,
 )
-
 
 INFERENCE_STEP = 0.05       # 每次反馈调整幅度
 MIN_INFERRED = 0.1          # 最小推断值
@@ -58,9 +55,9 @@ class PreferenceInferenceService:
         self,
         user_id: UUID,
         feedback_type: int,  # 1=up, -1=down
-        reasons: List[str],
-        metadata: Optional[Dict] = None
-    ) -> Dict[str, any]:
+        reasons: list[str],
+        metadata: dict | None = None
+    ) -> dict[str, any]:
         """
         处理用户反馈，更新推断偏好
 
@@ -160,7 +157,7 @@ class PreferenceInferenceService:
         user_id: UUID,
         behavior_type: str,
         value: any = None
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """
         处理用户行为模式，更新推断偏好
         """
@@ -230,7 +227,7 @@ class PreferenceInferenceService:
         }
 
     @staticmethod
-    def _normalize_reasons(reasons: List[str]) -> List[str]:
+    def _normalize_reasons(reasons: list[str]) -> list[str]:
         """标准化反馈原因"""
         normalized = []
         for reason in reasons:

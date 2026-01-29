@@ -6,7 +6,8 @@ Tool Registry - 统一工具注册表
 
 推荐使用: from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 """
-from typing import List, Optional
+from typing import Optional
+
 from .base import BaseTool, ToolCategory
 
 
@@ -35,19 +36,19 @@ class ToolRegistry:
                 self._dynamic_registry.register_from_package("app.tools")
         return self._dynamic_registry
 
-    def get_tool(self, name: str) -> Optional[BaseTool]:
+    def get_tool(self, name: str) -> BaseTool | None:
         """根据名称获取工具"""
         return self._get_dynamic_registry().get_tool(name)
 
-    def get_all_tools(self) -> List[BaseTool]:
+    def get_all_tools(self) -> list[BaseTool]:
         """获取所有工具"""
         return self._get_dynamic_registry().get_all_tools()
 
-    def get_tools_by_category(self, category: ToolCategory) -> List[BaseTool]:
+    def get_tools_by_category(self, category: ToolCategory) -> list[BaseTool]:
         """按分类获取工具"""
         return self._get_dynamic_registry().get_tools_by_category(category)
 
-    def get_openai_tools_schema(self) -> List[dict]:
+    def get_openai_tools_schema(self) -> list[dict]:
         """
         获取所有工具的 OpenAI Function Calling 格式
         用于发送给 LLM
@@ -60,7 +61,7 @@ class ToolRegistry:
         """
         return self._get_dynamic_registry().get_tools_description()
 
-    def list_tools(self, verbose: bool = False) -> List[dict]:
+    def list_tools(self, verbose: bool = False) -> list[dict]:
         """列出所有工具信息"""
         return self._get_dynamic_registry().list_tools(verbose=verbose)
 

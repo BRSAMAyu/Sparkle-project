@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict
+from typing import Any
 
 from loguru import logger
 
-from app.schemas.analysis import AnalysisTaskInput, AnalysisResult
+from app.schemas.analysis import AnalysisResult, AnalysisTaskInput
 from app.services.analysis.model_router import ModelRouter
 from app.services.llm_service import llm_service
 
@@ -79,7 +79,7 @@ class AnalysisOrchestrator:
         )
 
 
-def _build_behavior_prompt(payload: Dict[str, Any]) -> str:
+def _build_behavior_prompt(payload: dict[str, Any]) -> str:
     similar_text = payload.get("similar_text", "")
     return f"""
             Analyze this behavioral error/thought:
@@ -87,19 +87,19 @@ def _build_behavior_prompt(payload: Dict[str, Any]) -> str:
             Context: {payload.get('context_tags')}
             Error Tags: {payload.get('error_tags')}
             Severity: {payload.get('severity', 1)}/5
-            
+
             Similar Past Events (RAG Context):
             {similar_text}
-            
+
             User Profile:
             {payload.get('user_summary', '')}
-            
+
             Task:
             1. Identify the Root Cause.
             2. Identify Pattern.
             3. Suggest SMART Intervention.
             4. Provide Confidence Score (0.0 - 1.0).
-            
+
             Output JSON Format:
             {{
                 "root_cause": "...",
@@ -112,7 +112,7 @@ def _build_behavior_prompt(payload: Dict[str, Any]) -> str:
             """
 
 
-def _parse_json_response(response_text: str) -> Dict[str, Any] | None:
+def _parse_json_response(response_text: str) -> dict[str, Any] | None:
     try:
         cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned_text)

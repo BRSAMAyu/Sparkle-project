@@ -10,9 +10,10 @@ Agent Profile Configuration - 统一的Agent配置管理
 支持运行时动态更新，无需重启服务。
 """
 
-from typing import Dict, List, Optional, Any, Literal
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Literal
+
 from loguru import logger
 
 
@@ -85,15 +86,15 @@ class AgentProfile:
 
     # LLM 配置
     model_tier: ModelTier = ModelTier.STANDARD
-    specific_model: Optional[str] = None  # 强制指定具体模型（覆盖 tier）
+    specific_model: str | None = None  # 强制指定具体模型（覆盖 tier）
     temperature: float = 0.7
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
 
     # 系统Prompt
     system_prompt_template: str = ""
 
     # 工具配置
-    allowed_tools: List[str] = field(default_factory=list)
+    allowed_tools: list[str] = field(default_factory=list)
     tool_choice: Literal["auto", "required", "none"] = "auto"
 
     # 行为配置
@@ -103,7 +104,7 @@ class AgentProfile:
     # 成本控制
     cost_tier: int = 1  # 1=便宜, 2=中等, 3=昂贵
 
-    def get_model_config(self, available_models: Dict[str, Any]) -> Dict[str, Any]:
+    def get_model_config(self, available_models: dict[str, Any]) -> dict[str, Any]:
         """获取实际模型配置（考虑 tier 和 specific_model）"""
         if self.specific_model:
             return available_models.get(self.specific_model, {})
@@ -125,7 +126,7 @@ class AgentProfile:
 # 默认 Agent Profiles 配置
 # ============================================
 
-DEFAULT_AGENT_PROFILES: Dict[AgentRole, AgentProfile] = {
+DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
     # ==================== 主系统 Agents ====================
     AgentRole.ORCHESTRATOR: AgentProfile(
         role=AgentRole.ORCHESTRATOR,
@@ -354,7 +355,7 @@ Query: {query}"""
 # 任务类型 -> Agent/Model 映射
 # ============================================
 
-TASK_TO_AGENT_PROFILE: Dict[TaskType, Dict[str, Any]] = {
+TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     TaskType.SIMPLE_CHAT: {
         "default_agent": AgentRole.TIME_TUTOR,
         "fallback_agent": AgentRole.STUDY_BUDDY,
@@ -408,10 +409,10 @@ class AgentProfileRegistry:
     """Agent配置注册表（支持运行时更新）"""
 
     def __init__(self):
-        self._profiles: Dict[AgentRole, AgentProfile] = DEFAULT_AGENT_PROFILES.copy()
-        self._model_configs: Dict[str, Any] = {}
+        self._profiles: dict[AgentRole, AgentProfile] = DEFAULT_AGENT_PROFILES.copy()
+        self._model_configs: dict[str, Any] = {}
 
-    def register_model_configs(self, configs: Dict[str, Any]):
+    def register_model_configs(self, configs: dict[str, Any]):
         """注册可用的模型配置"""
         self._model_configs.update(configs)
 
@@ -425,7 +426,7 @@ class AgentProfileRegistry:
         agent_role = task_config.get("default_agent", AgentRole.GENERATION)
         return self.get_profile(agent_role)
 
-    def update_profile(self, role: AgentRole, updates: Dict[str, Any]):
+    def update_profile(self, role: AgentRole, updates: dict[str, Any]):
         """更新Agent配置（运行时）"""
         if role in self._profiles:
             current = self._profiles[role]
@@ -433,7 +434,7 @@ class AgentProfileRegistry:
                 setattr(current, key, value)
             logger.info(f"Updated profile for {role}: {updates}")
 
-    def list_all_profiles(self) -> Dict[AgentRole, Dict[str, Any]]:
+    def list_all_profiles(self) -> dict[AgentRole, dict[str, Any]]:
         """列出所有Agent配置（用于调试）"""
         return {
             role: {

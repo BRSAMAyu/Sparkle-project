@@ -4,35 +4,32 @@ Recommendations API
 
 提供协同过滤推荐接口
 """
-from typing import List, Dict, Any, Optional
+from typing import Any
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.schemas.recommendation import (
-    RecommendationItemType,
     CollaborativeFilteringRequest,
-    SimilarUsersRequest,
+    RecommendationItemType,
     SimilarItemsRequest,
-    CollaborativeFilteringResponse,
-    UserSimilarityScore,
-    ItemSimilarity,
-    UserInteractionSummary
+    SimilarUsersRequest,
 )
 from app.services.collaborative_filtering_service import CollaborativeFilteringService
 
 router = APIRouter()
 
 
-@router.get("/collaborative", response_model=Dict[str, Any])
+@router.get("/collaborative", response_model=dict[str, Any])
 async def get_collaborative_recommendations(
     limit: int = Query(10, ge=1, le=50, description="推荐数量"),
-    item_type: Optional[RecommendationItemType] = Query(None, description="物品类型筛选"),
-    subject_id: Optional[UUID] = Query(None, description="学科筛选"),
+    item_type: RecommendationItemType | None = Query(None, description="物品类型筛选"),
+    subject_id: UUID | None = Query(None, description="学科筛选"),
     min_similarity: float = Query(0.3, ge=0.0, le=1.0, description="最小相似度"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -79,7 +76,7 @@ async def get_collaborative_recommendations(
         )
 
 
-@router.get("/similar-users", response_model=Dict[str, Any])
+@router.get("/similar-users", response_model=dict[str, Any])
 async def get_similar_users(
     limit: int = Query(20, ge=1, le=100, description="返回数量"),
     min_common_items: int = Query(3, ge=1, description="最小共同物品数"),
@@ -123,7 +120,7 @@ async def get_similar_users(
         )
 
 
-@router.get("/similar-items", response_model=Dict[str, Any])
+@router.get("/similar-items", response_model=dict[str, Any])
 async def get_similar_items(
     item_id: UUID = Query(..., description="物品ID"),
     item_type: RecommendationItemType = Query(..., description="物品类型"),
@@ -169,7 +166,7 @@ async def get_similar_items(
         )
 
 
-@router.get("/my-interactions", response_model=Dict[str, Any])
+@router.get("/my-interactions", response_model=dict[str, Any])
 async def get_my_interaction_summary(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -203,13 +200,13 @@ async def get_my_interaction_summary(
         )
 
 
-@router.post("/record-interaction", response_model=Dict[str, Any])
+@router.post("/record-interaction", response_model=dict[str, Any])
 async def record_interaction(
     item_id: UUID,
     item_type: str,
     interaction_type: str = "learned",
     weight: float = Query(1.0, ge=0.0, le=10.0, description="交互强度"),
-    subject_id: Optional[UUID] = Query(None, description="学科ID"),
+    subject_id: UUID | None = Query(None, description="学科ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -260,7 +257,7 @@ async def record_interaction(
         )
 
 
-@router.get("/stats", response_model=Dict[str, Any])
+@router.get("/stats", response_model=dict[str, Any])
 async def get_recommendation_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -277,8 +274,9 @@ async def get_recommendation_stats(
         - cache_hit_rate: 缓存命中率
     """
     try:
-        from app.models.recommendation import UserItemInteraction, RecommendationCache, UserSimilarity
-        from sqlalchemy import select, func
+        from sqlalchemy import func, or_, select
+
+        from app.models.recommendation import RecommendationCache, UserItemInteraction, UserSimilarity
 
         # 统计交互次数
         interaction_count_query = select(func.count(UserItemInteraction.id)).where(

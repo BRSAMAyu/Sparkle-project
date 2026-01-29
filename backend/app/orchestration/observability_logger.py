@@ -7,10 +7,10 @@ Responsibilities:
 3. Event tracking
 4. Prometheus metrics integration
 """
-from typing import Dict, Any, Optional, List
-from loguru import logger
-from datetime import datetime
 import json
+from typing import Any
+
+from loguru import logger
 
 from app.orchestration.schemas import ObservabilityEvent
 
@@ -35,7 +35,7 @@ class ObservabilityLogger:
         user_id: str,
         session_id: str,
         message: str,
-        decision: Dict[str, Any]
+        decision: dict[str, Any]
     ):
         """Log routing decision"""
         logger.info(
@@ -72,7 +72,7 @@ class ObservabilityLogger:
         user_id: str,
         session_id: str,
         plan_id: str,
-        plan_data: Dict[str, Any]
+        plan_data: dict[str, Any]
     ):
         """Log LangGraph planning"""
         agents = plan_data.get("agents_involved", [])
@@ -112,7 +112,7 @@ class ObservabilityLogger:
         session_id: str,
         plan_id: str,
         failure_reason: str,
-        suggestion: Optional[str] = None
+        suggestion: str | None = None
     ):
         """Log validation failure"""
         logger.warning(
@@ -148,7 +148,7 @@ class ObservabilityLogger:
         old_state: str,
         new_state: str,
         reason: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ):
         """Log circuit breaker state change"""
         logger.info(
@@ -170,7 +170,7 @@ class ObservabilityLogger:
 
         # Metrics
         try:
-            from app.core.metrics import CIRCUIT_BREAKER_TRIPS, CIRCUIT_BREAKER_RESETS
+            from app.core.metrics import CIRCUIT_BREAKER_RESETS, CIRCUIT_BREAKER_TRIPS
             if new_state == "open":
                 CIRCUIT_BREAKER_TRIPS.labels(circuit_name=circuit_name).inc()
             elif old_state in ["open", "half_open"] and new_state == "closed":
@@ -182,7 +182,7 @@ class ObservabilityLogger:
         self,
         user_id: str,
         session_id: str,
-        agents: List[str],
+        agents: list[str],
         mode: str
     ):
         """Log collaboration start"""
@@ -205,7 +205,7 @@ class ObservabilityLogger:
         self,
         user_id: str,
         session_id: str,
-        agents: List[str],
+        agents: list[str],
         mode: str,
         tool_calls_count: int,
         latency_ms: float
@@ -233,7 +233,7 @@ class ObservabilityLogger:
         self,
         user_id: str,
         session_id: str,
-        prediction: Dict[str, Any]
+        prediction: dict[str, Any]
     ):
         """Log Shadow Mode prediction"""
         is_correct = prediction.get("is_correct", False)
@@ -282,7 +282,7 @@ class ObservabilityLogger:
         user_id: str = "",
         session_id: str = "",
         plan_id: str = "",
-        data: Optional[Dict[str, Any]] = None
+        data: dict[str, Any] | None = None
     ):
         """Log generic event"""
         event = ObservabilityEvent(

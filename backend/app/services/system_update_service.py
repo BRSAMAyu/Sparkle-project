@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -16,7 +16,7 @@ class SystemUpdateService:
     def __init__(self, redis_client=None):
         self.redis = redis_client or cache_service.redis
 
-    async def enqueue(self, user_id: UUID | str, payload: Dict[str, Any]) -> None:
+    async def enqueue(self, user_id: UUID | str, payload: dict[str, Any]) -> None:
         if not self.redis:
             return
         key = f"{self.KEY_PREFIX}{user_id}"
@@ -30,7 +30,7 @@ class SystemUpdateService:
         except Exception as exc:
             logger.warning(f"SystemUpdate enqueue failed: {exc}")
 
-    async def drain(self, user_id: UUID | str, limit: int = 20) -> List[Dict[str, Any]]:
+    async def drain(self, user_id: UUID | str, limit: int = 20) -> list[dict[str, Any]]:
         if not self.redis:
             return []
         key = f"{self.KEY_PREFIX}{user_id}"
@@ -44,7 +44,7 @@ class SystemUpdateService:
             logger.warning(f"SystemUpdate drain failed: {exc}")
             return []
 
-        updates: List[Dict[str, Any]] = []
+        updates: list[dict[str, Any]] = []
         for raw in raw_items:
             try:
                 updates.append(json.loads(raw))
@@ -57,7 +57,7 @@ class SystemUpdateService:
         user_id: UUID | str,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if not self.redis:
             return []
         key = f"{self.KEY_PREFIX}{user_id}"
@@ -69,7 +69,7 @@ class SystemUpdateService:
             logger.warning(f"SystemUpdate list failed: {exc}")
             return []
 
-        updates: List[Dict[str, Any]] = []
+        updates: list[dict[str, Any]] = []
         for raw in raw_items:
             try:
                 updates.append(json.loads(raw))
@@ -85,8 +85,8 @@ def build_system_update(
     title: str,
     description: str,
     priority: str = "low",
-    metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         "type": update_type,
         "category": category,

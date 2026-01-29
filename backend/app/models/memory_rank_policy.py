@@ -1,7 +1,7 @@
 """
 Memory ranking policy model for personalized weights.
 """
-from sqlalchemy import Column, String, JSON, Index
+from sqlalchemy import JSON, Column, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import BaseModel

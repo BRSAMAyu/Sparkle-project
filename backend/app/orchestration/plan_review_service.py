@@ -9,15 +9,16 @@ Implements intelligent plan review with:
 import asyncio
 import json
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
+from typing import Any
+
 from loguru import logger
 
-from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
-from app.services.llm_service import llm_service
 from app.core.pending_actions import pending_actions_store
+from app.orchestration.schemas import ExecutablePlan
+from app.services.llm_service import llm_service
 
 
 class ReviewDecision(Enum):
@@ -50,10 +51,10 @@ class ReviewComment:
     category: str
     severity: str
     message: str
-    suggested_fix: Optional[str] = None
-    affected_tool_calls: List[str] = field(default_factory=list)
+    suggested_fix: str | None = None
+    affected_tool_calls: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "category": self.category,
             "severity": self.severity,
@@ -70,13 +71,13 @@ class PlanReviewResult:
     plan_id: str
     decision: str
     confidence: float
-    comments: List[ReviewComment]
+    comments: list[ReviewComment]
     reviewed_at: str
-    suggested_modifications: Optional[Dict[str, Any]] = None
+    suggested_modifications: dict[str, Any] | None = None
     auto_approved: bool = False
-    user_facing_reason: Optional[str] = None
+    user_facing_reason: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "review_id": self.review_id,
             "plan_id": self.plan_id,
@@ -146,7 +147,7 @@ class PlanReviewService:
         self,
         plan: ExecutablePlan,
         user_message: str,
-        user_context: Dict[str, Any],
+        user_context: dict[str, Any],
     ) -> PlanReviewResult:
         """
         Review an executable plan before execution.
@@ -211,7 +212,7 @@ class PlanReviewService:
             ),
         )
 
-    async def _quick_rule_check(self, plan: ExecutablePlan, user_context: Dict[str, Any]) -> Optional[str]:
+    async def _quick_rule_check(self, plan: ExecutablePlan, user_context: dict[str, Any]) -> str | None:
         """
         Quick rule-based check for auto-approval.
 
@@ -287,7 +288,7 @@ class PlanReviewService:
     async def _validate_feasibility(
         self,
         plan: ExecutablePlan,
-        user_context: Dict[str, Any],
+        user_context: dict[str, Any],
     ) -> bool:
         """
         P0 Fix #1: Validate plan feasibility against user constraints.
@@ -305,7 +306,7 @@ class PlanReviewService:
             True if plan appears feasible, False if clearly infeasible
         """
         # Extract user skill level (default to intermediate if unknown)
-        user_skill_level = user_context.get("skill_level", "intermediate").lower()
+        user_context.get("skill_level", "intermediate").lower()
         user_background = user_context.get("user_background", "")
 
         # Check each tool call for feasibility issues
@@ -316,7 +317,7 @@ class PlanReviewService:
             daily_hours = params.get("daily_hours")
             total_days = params.get("total_days", params.get("duration_days"))
             difficulty = params.get("difficulty", "").lower()
-            goal_type = params.get("type", "").lower()
+            params.get("type", "").lower()
             title = params.get("title", "").lower()
 
             # Normalize difficulty from title if not in params
@@ -344,13 +345,12 @@ class PlanReviewService:
 
             # Rule: Impossible to reach "expert" in 1 week with low hours
             if total_days and total_days <= 7:
-                if difficulty in ["expert", "master", "精通"]:
-                    if daily_hours and daily_hours < 4:
-                        logger.warning(
-                            f"Feasibility check failed: {difficulty} in {total_days} days "
-                            f"with {daily_hours}h/day is unrealistic"
-                        )
-                        return False
+                if difficulty in ["expert", "master", "精通"] and daily_hours and daily_hours < 4:
+                    logger.warning(
+                        f"Feasibility check failed: {difficulty} in {total_days} days "
+                        f"with {daily_hours}h/day is unrealistic"
+                    )
+                    return False
 
                 # Check total hours required
                 if daily_hours and total_days:
@@ -390,8 +390,8 @@ class PlanReviewService:
         self,
         plan: ExecutablePlan,
         user_message: str,
-        user_context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        user_context: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Perform LLM-based deep review of the plan with retry mechanism.
 
@@ -464,8 +464,8 @@ class PlanReviewService:
         self,
         plan: ExecutablePlan,
         user_message: str,
-        user_context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        user_context: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Rule-based fallback when LLM review is unavailable.
 
@@ -599,7 +599,7 @@ Respond in JSON format:
         self,
         plan: ExecutablePlan,
         user_message: str,
-        user_context: Dict[str, Any],
+        user_context: dict[str, Any],
     ) -> str:
         """Build prompt for LLM review"""
         tool_summary = []
@@ -674,7 +674,7 @@ Please review this plan and provide your assessment."""
         self,
         decision: str,
         auto_approved: bool = False,
-        auto_approve_reason: Optional[str] = None,
+        auto_approve_reason: str | None = None,
     ) -> str:
         """
         Get user-facing explanation for the review decision.
@@ -700,7 +700,7 @@ Please review this plan and provide your assessment."""
             return "🔍 请确认计划：需要您确认后再执行"
         return "计划审查完成"
 
-    def _get_auto_approve_reason(self, reason_code: Optional[str]) -> str:
+    def _get_auto_approve_reason(self, reason_code: str | None) -> str:
         """
         Get user-friendly explanation for auto-approval reason.
 
@@ -722,9 +722,9 @@ Please review this plan and provide your assessment."""
         user_decision: str,
         user_id: str,
         db_session: Any,  # P1 Fix #10: Now required for feedback writing
-        user_comment: Optional[str] = None,
-        modifications: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        user_comment: str | None = None,
+        modifications: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Handle user feedback on a plan review.
 
@@ -794,8 +794,9 @@ Please review this plan and provide your assessment."""
         # === Phase 4: 时机2: Write user decision to feedback_log ===
         if db_session and plan_id:
             try:
-                from app.services.plan_feedback_service import get_plan_feedback_service
                 from uuid import UUID
+
+                from app.services.plan_feedback_service import get_plan_feedback_service
 
                 feedback_service = get_plan_feedback_service(db_session, self.redis)
 
@@ -834,7 +835,7 @@ Please review this plan and provide your assessment."""
             "message": f"Review {user_decision} by user",
         }
 
-    async def get_stored_plan(self, plan_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_stored_plan(self, plan_id: str, user_id: str) -> dict[str, Any] | None:
         """
         Retrieve a stored plan for execution after approval.
 
@@ -851,8 +852,8 @@ Please review this plan and provide your assessment."""
         return None
 
     async def resume_plan_after_approval(
-        self, plan_id: str, user_id: str, db_session: Optional[Any] = None
-    ) -> Dict[str, Any]:
+        self, plan_id: str, user_id: str, db_session: Any | None = None
+    ) -> dict[str, Any]:
         """
         Resume plan execution after user approval.
 
@@ -918,12 +919,14 @@ Please review this plan and provide your assessment."""
             action_id: The approval action ID for tracking
         """
         from uuid import UUID
+
         from sqlalchemy import select
+
         from app.database import get_db_session
-        from app.services.plan_service import PlanService
-        from app.models.plan import Plan, PlanType
+        from app.models.plan import PlanType
         from app.models.task import Task
         from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+        from app.services.plan_service import PlanService
         from app.tools.schemas import GenerateTasksForPlanParams
 
         try:
@@ -997,7 +1000,7 @@ Please review this plan and provide your assessment."""
 
     async def notify_plan_rejected(
         self, plan_id: str, user_id: str, feedback: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle plan rejection by user.
 
@@ -1043,7 +1046,7 @@ Please review this plan and provide your assessment."""
 
     async def trigger_replanning(
         self, plan_id: str, user_id: str, feedback: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Trigger replanning based on user feedback.
 
@@ -1132,12 +1135,13 @@ Please review this plan and provide your assessment."""
         Execute replanning asynchronously and either auto-run or queue review.
         """
         from uuid import UUID
-        from app.database import get_db_session
+
         from app.core.context_pack import ContextPackBuilder
+        from app.core.sse import sse_manager
+        from app.database import get_db_session
+        from app.orchestration.executor import ToolExecutor
         from app.orchestration.lang_graph_planner import LangGraphPlanner
         from app.orchestration.state_snapshot import StateSnapshotManager
-        from app.core.sse import sse_manager
-        from app.orchestration.executor import ToolExecutor
 
         try:
             async with get_db_session() as db:

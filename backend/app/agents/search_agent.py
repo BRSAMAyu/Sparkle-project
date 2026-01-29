@@ -4,13 +4,15 @@ Search Agent - 检索智能体
 基于知识星图检索，为其他智能体提供证据和上下文。
 """
 
-from typing import List, Dict, Any
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
 
-from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.llm_service import llm_service
+
+from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
 
 
 class SearchAgent(BaseAgent):
@@ -36,7 +38,7 @@ class SearchAgent(BaseAgent):
     async def process(self, context: AgentContext) -> AgentResponse:
         logger.info(f"SearchAgent processing: {context.user_query[:50]}...")
 
-        search_results: List[Dict[str, Any]] = []
+        search_results: list[dict[str, Any]] = []
         summary_text = ""
 
         if context.db_session:

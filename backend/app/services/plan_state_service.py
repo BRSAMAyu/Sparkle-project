@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -29,7 +29,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan_state import PlanState, PlanStateStatus
-
 
 # Cache configuration
 PLAN_STATE_CACHE_TTL = 3600  # 1 hour
@@ -64,7 +63,7 @@ class PlanStateService:
         user_id: UUID,
         plan_id: UUID,
         refresh: bool = False,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Get plan state with Redis caching.
 
@@ -121,7 +120,7 @@ class PlanStateService:
         self,
         user_id: UUID,
         limit: int = 10,
-    ) -> List[PlanState]:
+    ) -> list[PlanState]:
         """
         Get all active plan states for a user.
 
@@ -150,8 +149,8 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        initial_facts: Optional[Dict[str, Any]] = None,
-        initial_constraints: Optional[Dict[str, Any]] = None,
+        initial_facts: dict[str, Any] | None = None,
+        initial_constraints: dict[str, Any] | None = None,
         for_write: bool = True,
     ) -> PlanState:
         """
@@ -202,9 +201,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        patch: Dict[str, Any],
+        patch: dict[str, Any],
         bump_version: bool = True,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Update plan state with patch.
 
@@ -294,7 +293,7 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Archive a plan state.
 
@@ -332,9 +331,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        summary: Dict[str, Any],
+        summary: dict[str, Any],
         limit: int = 20,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Append a task summary to PlanState.task_summaries.
 
@@ -365,8 +364,8 @@ class PlanStateService:
         plan_id: UUID,
         task_id: UUID,
         task_type: str,
-        actual_minutes: Optional[int] = None,
-    ) -> Tuple[Optional[PlanState], List[Dict[str, Any]]]:
+        actual_minutes: int | None = None,
+    ) -> tuple[PlanState | None, list[dict[str, Any]]]:
         """
         Handle task completion event.
 
@@ -434,12 +433,12 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
+        milestone: dict[str, Any],
         pending_task_count: int,
     ) -> None:
         """
         Handle milestone trigger event.
-        
+
         Args:
             user_id: User ID
             plan_id: Plan ID
@@ -455,7 +454,7 @@ class PlanStateService:
         user_id: UUID,
         plan_id: UUID,
         task_type: str,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Handle task creation event.
 
@@ -493,9 +492,9 @@ class PlanStateService:
         plan_id: UUID,
         feedback_type: str,
         content: str,
-        task_id: Optional[UUID] = None,
-        applied_adjustment: Optional[Dict[str, Any]] = None,
-    ) -> Optional[PlanState]:
+        task_id: UUID | None = None,
+        applied_adjustment: dict[str, Any] | None = None,
+    ) -> PlanState | None:
         """
         Append feedback to feedback_log.
 
@@ -534,9 +533,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        feedback_log: List[Dict[str, Any]],
+        feedback_log: list[dict[str, Any]],
         bump_version: bool = True,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Replace feedback_log entries for a plan state.
 
@@ -600,7 +599,7 @@ class PlanStateService:
         except Exception as e:
             logger.warning(f"Failed to set plan state cache: {e}")
 
-    def _deep_merge(self, base: Dict, overlay: Dict) -> None:
+    def _deep_merge(self, base: dict, overlay: dict) -> None:
         """Deep merge overlay into base dict."""
         for key, value in overlay.items():
             if key in base and isinstance(base[key], dict) and isinstance(value, dict):
@@ -610,15 +609,14 @@ class PlanStateService:
 
     def _check_milestone_triggers(
         self,
-        task_index: Dict[str, Any],
-        existing_milestones: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        task_index: dict[str, Any],
+        existing_milestones: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """
         Check if any milestone triggers should fire.
 
         Returns list of new milestones to add.
         """
-        import uuid
 
         new_milestones = []
         completed = task_index.get("completed", 0)

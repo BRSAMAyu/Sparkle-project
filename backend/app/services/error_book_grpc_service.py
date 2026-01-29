@@ -1,20 +1,23 @@
 """
 gRPC Implementation for Error Book Service
 """
-import grpc
-from typing import Optional
 from uuid import UUID
-from google.protobuf.timestamp_pb2 import Timestamp
 
-from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
-from app.services.error_book_service import ErrorBookService
-from app.schemas.error_book import (
-    ErrorRecordCreate, ErrorRecordUpdate, ErrorQueryParams,
-    ReviewAction, ReviewPerformanceEnum, SubjectEnum, ErrorTypeEnum
-)
-from app.db.session import AsyncSessionLocal
+import grpc
+
 from app.core.task_manager import task_manager
-from app.core.celery_app import schedule_long_task
+from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
+from app.schemas.error_book import (
+    ErrorQueryParams,
+    ErrorRecordCreate,
+    ErrorRecordUpdate,
+    ErrorTypeEnum,
+    ReviewAction,
+    ReviewPerformanceEnum,
+    SubjectEnum,
+)
+from app.services.error_book_service import ErrorBookService
+
 
 class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
 
@@ -76,7 +79,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
     async def ListErrors(self, request, context):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
-            
+
             # Map params
             params = ErrorQueryParams(
                 subject=SubjectEnum(request.subject_code) if request.subject_code else None,
@@ -89,9 +92,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 page=request.page if request.page > 0 else 1,
                 page_size=request.page_size if request.page_size > 0 else 20
             )
-            
+
             items, total = await service.list_errors(UUID(request.user_id), params)
-            
+
             return error_book_pb2.ListErrorsResponse(
                 items=[self._map_to_proto(item) for item in items],
                 total=total,
@@ -108,13 +111,13 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 context.set_details("Error record not found")
                 return error_book_pb2.ErrorRecord()
-            
+
             return self._map_to_proto(error)
 
     async def UpdateError(self, request, context):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
-            
+
             data = ErrorRecordUpdate(
                 question_text=request.question_text if request.HasField('question_text') else None,
                 user_answer=request.user_answer if request.HasField('user_answer') else None,
@@ -123,12 +126,12 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 chapter=request.chapter if request.HasField('chapter') else None,
                 question_image_url=request.question_image_url if request.HasField('question_image_url') else None
             )
-            
+
             error = await service.update_error(UUID(request.error_id), UUID(request.user_id), data)
             if not error:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 return error_book_pb2.ErrorRecord()
-                
+
             return self._map_to_proto(error)
 
     async def DeleteError(self, request, context):
@@ -144,25 +147,25 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             if not error:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 return error_book_pb2.AnalyzeErrorResponse()
-            
+
             import asyncio
             asyncio.create_task(self._run_analysis_task(UUID(request.error_id), UUID(request.user_id)))
-            
+
             return error_book_pb2.AnalyzeErrorResponse(message="Analysis task submitted")
 
     async def SubmitReview(self, request, context):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
-            
+
             try:
                 data = ReviewAction(
                     performance=ReviewPerformanceEnum(request.performance),
                     time_spent_seconds=request.time_spent_seconds
                 )
-                
+
                 error = await service.submit_review(UUID(request.user_id), UUID(request.error_id), data)
                 return self._map_to_proto(error)
-                
+
             except ValueError as e:
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 context.set_details(str(e))
@@ -176,7 +179,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
             stats = await service.get_review_stats(UUID(request.user_id))
-            
+
             return error_book_pb2.ReviewStatsResponse(
                 total_errors=stats['total_errors'],
                 mastered_count=stats['mastered_count'],
@@ -193,9 +196,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 page=request.page if request.page > 0 else 1,
                 page_size=request.page_size if request.page_size > 0 else 20
             )
-            
+
             items, total = await service.list_errors(UUID(request.user_id), params)
-            
+
             return error_book_pb2.ListErrorsResponse(
                 items=[self._map_to_proto(item) for item in items],
                 total=total,
@@ -217,7 +220,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             mastery_level=error.mastery_level or 0.0,
             review_count=error.review_count or 0,
         )
-        
+
         if error.next_review_at:
             proto.next_review_at.FromDatetime(error.next_review_at)
         if error.last_reviewed_at:
@@ -226,7 +229,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             proto.created_at.FromDatetime(error.created_at)
         if error.updated_at:
             proto.updated_at.FromDatetime(error.updated_at)
-            
+
         if error.latest_analysis:
             # error.latest_analysis is dict (from JSONB)
             la = error.latest_analysis
@@ -240,7 +243,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 study_suggestion=la.get('study_suggestion', ''),
                 ocr_text=la.get('ocr_text', '')
             ))
-            
+
         # Mapping transient knowledge links if available
         if hasattr(error, 'knowledge_links') and error.knowledge_links:
             for link in error.knowledge_links:
@@ -250,5 +253,5 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 l.name = link.name
                 l.relevance = link.relevance
                 l.is_primary = link.is_primary
-                
+
         return proto

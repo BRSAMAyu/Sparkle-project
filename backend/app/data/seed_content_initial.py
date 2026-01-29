@@ -7,21 +7,19 @@ Seed Content Initial Data
 2. 常见问题回复模板 (template) - 如何开始学习、功能介绍
 3. Python编程练习题库 (teaching) - 列表操作、函数定义练习
 """
-import uuid
-from typing import List, Dict, Any
+from typing import Any
 
 from app.models.seed_content import (
-    SeedLibrary,
-    SeedItem,
+    DifficultyLevel,
+    ItemType,
     LibraryCategory,
     LibraryVisibility,
-    ItemType,
-    DifficultyLevel,
+    SeedItem,
+    SeedLibrary,
 )
 
-
 # 官方库定义
-OFFICIAL_LIBRARIES: List[Dict[str, Any]] = [
+OFFICIAL_LIBRARIES: list[dict[str, Any]] = [
     {
         "name": "数学基础示例库",
         "description": "数学问题求解的标准示例，用于 AI 辅助教学",
@@ -426,7 +424,7 @@ async def initialize_seed_libraries(db_session) -> int:
 
     # 检查是否已初始化
     existing = await db_session.execute(
-        select(SeedLibrary).where(SeedLibrary.is_official == True)
+        select(SeedLibrary).where(SeedLibrary.is_official)
     )
     if existing.scalars().first():
         logger = __import__("loguru").logger
@@ -471,6 +469,7 @@ async def initialize_seed_libraries(db_session) -> int:
 if __name__ == "__main__":
     # 用于手动初始化
     import asyncio
+
     from app.db.session import get_db
 
     async def main():

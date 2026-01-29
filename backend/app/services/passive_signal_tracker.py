@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +18,9 @@ class PassiveSignalTracker:
         self,
         user_id: UUID,
         signal_type: str,
-        intervention_id: Optional[UUID] = None,
-        context: Optional[Dict[str, Any]] = None,
-        timestamp: Optional[Any] = None,
+        intervention_id: UUID | None = None,
+        context: dict[str, Any] | None = None,
+        timestamp: Any | None = None,
     ) -> PassiveSignal:
         signal = PassiveSignal(
             user_id=user_id,

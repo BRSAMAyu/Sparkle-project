@@ -2,22 +2,23 @@
 AgentService gRPC Implementation
 实现 gRPC 服务端，对接现有的 LLM 服务和 RAG 能力
 """
+import asyncio
 import json
 import time
 import uuid
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timedelta
-from typing import AsyncIterator, Callable, Optional
 
 import grpc
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.orchestrator import ChatOrchestrator
-from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
+from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.services.response_feedback_service import ResponseFeedbackService
-from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -36,7 +37,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self,
         context: grpc.aio.ServicerContext,
         metadata: dict[str, str],
-    ) -> Optional[str]:
+    ) -> str | None:
         user_id = metadata.get("user-id")
         if not user_id:
             context.set_code(grpc.StatusCode.UNAUTHENTICATED)
@@ -79,15 +80,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         try:
             # 从 metadata 获取追踪信息
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id", "")
-            
+
             # Security Audit: Log missing authorization headers
             if not metadata.get("authorization") and not request.user_id:
                 logger.warning(f"SECURITY ALERT: StreamChat call without authorization metadata or user_id. Session: {request.session_id}")
             elif metadata.get("authorization"):
                 logger.debug(f"Auth metadata found for user_id={user_id}")
-            
+
             trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
             workflow_id = "standard_chat"
@@ -178,7 +179,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             meta_user_id = metadata.get("user-id")
             user_id = meta_user_id or request.user_id
             if request.user_id and meta_user_id and request.user_id != meta_user_id:
@@ -299,12 +300,13 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 return agent_service_pb2.MemoryResult(items=[], total_found=0)
 
             async with self.db_session_factory() as db_session:
-                from app.services.galaxy_service import GalaxyService
                 import uuid
-                
+
+                from app.services.galaxy_service import GalaxyService
+
                 # Use GalaxyService for structured search
                 galaxy_service = GalaxyService(db_session)
-                
+
                 # Perform semantic search
                 search_results = await galaxy_service.semantic_search(
                     user_id=uuid.UUID(request.user_id),
@@ -312,7 +314,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     limit=request.limit if request.limit > 0 else 10,
                     threshold=request.min_score if request.min_score > 0 else 0.3
                 )
-                
+
                 # Convert to gRPC MemoryResult items
                 memory_items = []
                 for result in search_results:
@@ -322,13 +324,13 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         "importance_level": str(result.node.importance_level),
                         "is_seed": str(result.node.is_seed),
                     }
-                    
+
                     # Add user status if available
                     if result.user_status:
                         metadata["mastery_score"] = str(result.user_status.mastery_score)
                         metadata["is_unlocked"] = str(result.user_status.is_unlocked)
                         metadata["total_study_minutes"] = str(result.user_status.total_study_minutes)
-                    
+
                     # Create MemoryItem
                     memory_item = agent_service_pb2.MemoryItem(
                         id=str(result.node.id),
@@ -337,7 +339,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         metadata=metadata
                     )
                     memory_items.append(memory_item)
-                
+
                 return agent_service_pb2.MemoryResult(
                     items=memory_items,
                     total_found=len(memory_items)
@@ -460,7 +462,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id")
 
             if not user_id:
@@ -615,7 +617,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         import uuid
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id")
 
             if not user_id:
@@ -662,7 +664,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Import review history service (Phase 2c)
             try:
-                from app.services.review_history_service import get_review_history_service, FeedbackType
+                from app.services.review_history_service import FeedbackType, get_review_history_service
             except ImportError:
                 logger.warning("[AgentService] Review history service not available")
                 # Return success even if service is unavailable (don't block user)
@@ -747,7 +749,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id")
 
             if not user_id:
@@ -819,7 +821,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id")
 
             if not user_id:
@@ -853,8 +855,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.review_appeal_service import (
-                    get_appeal_review_service,
                     AppealRequest,
+                    get_appeal_review_service,
                 )
 
                 appeal_service = get_appeal_review_service(db_session)
@@ -905,7 +907,6 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Returns current status and resolution details if available.
         """
         try:
-            user_id = request.user_id
 
             if not request.appeal_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
@@ -984,8 +985,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.feedback_driven_generation import (
-                    get_feedback_driven_generation_service,
                     FeedbackType,
+                    get_feedback_driven_generation_service,
                 )
 
                 feedback_service = get_feedback_driven_generation_service(db_session)
@@ -1077,8 +1078,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.feedback_driven_generation import (
-                    get_feedback_driven_generation_service,
                     RegenerationType,
+                    get_feedback_driven_generation_service,
                 )
 
                 regen_service = get_feedback_driven_generation_service(db_session)
@@ -1212,7 +1213,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             status_filter = request.status_filter if request.status_filter else None
 
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             if not await self._require_admin(context, metadata):
                 return agent_service_pb2.GetArbitrationQueueResponse()
 
@@ -1223,8 +1224,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (
-                    get_arbitration_service,
                     ArbitrationPriority,
+                    get_arbitration_service,
                 )
 
                 arbitration_service = get_arbitration_service(db_session)
@@ -1295,7 +1296,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             if not await self._require_admin(context, metadata):
                 return agent_service_pb2.AssignArbitrationCaseResponse(
                     success=False,
@@ -1325,8 +1326,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (
-                    get_arbitration_service,
                     ArbitratorRole,
+                    get_arbitration_service,
                 )
 
                 arbitration_service = get_arbitration_service(db_session)
@@ -1343,7 +1344,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     ArbitratorRole.REVIEWER,
                 )
 
-                case = await arbitration_service.assign_case(
+                await arbitration_service.assign_case(
                     case_id=request.case_id,
                     arbitrator_id=request.arbitrator_id,
                     arbitrator_role=role,
@@ -1384,7 +1385,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             if not await self._require_admin(context, metadata):
                 return agent_service_pb2.SubmitArbitrationDecisionResponse(
                     success=False,
@@ -1422,9 +1423,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             async with self.db_session_factory() as db_session:
                 from app.services.arbitration_service import (
-                    get_arbitration_service,
                     AppealDecision,
                     ArbitratorRole,
+                    get_arbitration_service,
                 )
 
                 arbitration_service = get_arbitration_service(db_session)
@@ -1504,7 +1505,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             logger.info("GetArbitrationQueueStats")
 
             raw_metadata = context.invocation_metadata()
-            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            metadata = dict(raw_metadata) if raw_metadata else {}
             if not await self._require_admin(context, metadata):
                 return agent_service_pb2.GetArbitrationQueueStatsResponse()
 

@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import hashlib
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.error_book import ErrorRecord
-from app.models.semantic_memory import StrategyNode, SemanticLink
+from app.models.semantic_memory import SemanticLink, StrategyNode
 
 
 class SemanticMemoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def upsert_strategy_from_error(self, error: ErrorRecord) -> Optional[StrategyNode]:
+    async def upsert_strategy_from_error(self, error: ErrorRecord) -> StrategyNode | None:
         if not error.latest_analysis:
             return None
         suggestion = error.latest_analysis.get("study_suggestion")
@@ -48,7 +47,7 @@ class SemanticMemoryService:
         await self._ensure_links(error, strategy)
         return strategy
 
-    async def get_strategies_for_error(self, error_id: UUID, user_id: UUID) -> List[StrategyNode]:
+    async def get_strategies_for_error(self, error_id: UUID, user_id: UUID) -> list[StrategyNode]:
         links = await self._get_links("error", str(error_id), "strategy")
         if not links:
             return []
@@ -68,7 +67,7 @@ class SemanticMemoryService:
         error_id: UUID,
         user_id: UUID,
         limit: int = 5,
-    ) -> List[ErrorRecord]:
+    ) -> list[ErrorRecord]:
         error = await self._get_error(user_id, error_id)
         if not error or not error.latest_analysis:
             return []
@@ -79,7 +78,7 @@ class SemanticMemoryService:
         try:
             stmt = select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted == False,
+                not ErrorRecord.is_deleted,
                 ErrorRecord.id != error_id,
                 ErrorRecord.subject_code == error.subject_code,
                 ErrorRecord.latest_analysis["root_cause"].astext == root_cause,
@@ -89,7 +88,7 @@ class SemanticMemoryService:
         except Exception:
             stmt = select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted == False,
+                not ErrorRecord.is_deleted,
                 ErrorRecord.id != error_id,
                 ErrorRecord.subject_code == error.subject_code,
             ).limit(50)
@@ -101,17 +100,17 @@ class SemanticMemoryService:
             ]
             return matched[:limit]
 
-    async def _get_error(self, user_id: UUID, error_id: UUID) -> Optional[ErrorRecord]:
+    async def _get_error(self, user_id: UUID, error_id: UUID) -> ErrorRecord | None:
         result = await self.db.execute(
             select(ErrorRecord).where(
                 ErrorRecord.user_id == user_id,
                 ErrorRecord.id == error_id,
-                ErrorRecord.is_deleted == False,
+                not ErrorRecord.is_deleted,
             )
         )
         return result.scalar_one_or_none()
 
-    async def _get_strategy_by_hash(self, user_id: UUID, content_hash: str) -> Optional[StrategyNode]:
+    async def _get_strategy_by_hash(self, user_id: UUID, content_hash: str) -> StrategyNode | None:
         result = await self.db.execute(
             select(StrategyNode).where(
                 StrategyNode.user_id == user_id,
@@ -121,7 +120,7 @@ class SemanticMemoryService:
         )
         return result.scalar_one_or_none()
 
-    async def _get_links(self, source_type: str, source_id: str, target_type: str) -> List[SemanticLink]:
+    async def _get_links(self, source_type: str, source_id: str, target_type: str) -> list[SemanticLink]:
         result = await self.db.execute(
             select(SemanticLink).where(
                 SemanticLink.source_type == source_type,
@@ -159,7 +158,7 @@ class SemanticMemoryService:
         target_type: str,
         target_id: str,
         relation_type: str,
-        evidence_refs: Optional[list] = None,
+        evidence_refs: list | None = None,
     ) -> None:
         result = await self.db.execute(
             select(SemanticLink).where(
@@ -187,5 +186,5 @@ class SemanticMemoryService:
         self.db.add(link)
 
     def _hash_content(self, user_id: str, content: str) -> str:
-        payload = f"{user_id}:{content}".encode("utf-8")
+        payload = f"{user_id}:{content}".encode()
         return hashlib.sha256(payload).hexdigest()

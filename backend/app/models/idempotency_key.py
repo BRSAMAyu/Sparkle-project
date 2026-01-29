@@ -2,7 +2,7 @@
 幂等性键模型
 IdempotencyKey Model - 用于防止重复请求处理
 """
-from sqlalchemy import Column, String, DateTime, JSON, ForeignKey, Index
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
