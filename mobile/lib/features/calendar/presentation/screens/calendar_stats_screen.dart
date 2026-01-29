@@ -625,7 +625,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: DS.surfaceSecondary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -840,7 +840,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             title: Text('提醒', style: TextStyle(color: DS.brandPrimary)),
             trailing: DropdownButton<int>(
               value: _reminderMinutes,
-              dropdownColor: const Color(0xFF2C2C2C),
+              dropdownColor: DS.surfaceTertiary,
               style: TextStyle(color: DS.brandPrimary),
               underline: Container(),
               items: const [
@@ -859,7 +859,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             title: Text('重复', style: TextStyle(color: DS.brandPrimary)),
             trailing: DropdownButton<String?>(
               value: _recurrenceRule,
-              dropdownColor: const Color(0xFF2C2C2C),
+              dropdownColor: DS.surfaceTertiary,
               style: TextStyle(color: DS.brandPrimary),
               underline: Container(),
               items: const [

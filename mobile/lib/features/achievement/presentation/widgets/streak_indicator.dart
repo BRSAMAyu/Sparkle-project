@@ -73,7 +73,7 @@ class _StreakIndicatorCompact extends StatelessWidget {
   final StreakStats streakStats;
   final VoidCallback? onTap;
 
-  Color get _flameColor => _getFlameColor(streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -111,13 +111,6 @@ class _StreakIndicatorCompact extends StatelessWidget {
         ),
       ),
     );
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700); // 金色 - 大师级
-    if (streak >= 14) return const Color(0xFFFF6B00); // 橙红色 - 专家级
-    if (streak >= 7) return const Color(0xFFFF9500); // 橙色 - 进阶级
-    return DS.warning; // 黄色 - 入门级
-  }
 }
 
 /// 标准型连胜指示器
@@ -130,7 +123,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
   final StreakStats streakStats;
   final VoidCallback? onTap;
 
-  Color get _flameColor => _getFlameColor(streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -228,13 +221,6 @@ class _StreakIndicatorStandard extends StatelessWidget {
         size: DS.iconSizeLg,
       ),
     );
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
-  }
 }
 
 /// 完整型连胜指示器
@@ -280,7 +266,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
     super.dispose();
   }
 
-  Color get _flameColor => _getFlameColor(widget.streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(widget.streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -475,13 +461,6 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
       ],
     );
   }
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
-  }
 }
 
 /// 圆形连胜指示器
@@ -541,7 +520,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
     super.dispose();
   }
 
-  Color get _flameColor => _getFlameColor(widget.streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(widget.streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) {
@@ -629,13 +608,6 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         ),
       ),
     );
-  }
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
   }
 }
 
