@@ -169,8 +169,20 @@ class LLMClient:
                 "input": texts
             }
 
+            # 构建 API URL (与 chat_completion 保持一致的逻辑)
+            # 1. 如果 base_url 已经包含完整路径 (ending in /embeddings)，直接使用
+            # 2. 如果 base_url 包含版本号 (v1, v4)，直接追加 /embeddings
+            # 3. 否则默认追加 /v1/embeddings
+            url = self.base_url.rstrip("/")
+            if url.endswith("/embeddings"):
+                pass
+            elif url.endswith("/v1") or url.endswith("/v4"):
+                url = f"{url}/embeddings"
+            else:
+                url = f"{url}/v1/embeddings"
+
             response = await client.post(
-                f"{self.base_url}/v1/embeddings" if not self.base_url.endswith("/embeddings") else self.base_url,
+                url,
                 headers=headers,
                 json=payload
             )

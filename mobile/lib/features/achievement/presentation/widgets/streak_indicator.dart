@@ -555,70 +555,77 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         widget.onTap?.call();
       },
       child: SizedBox(
-        width: 100,
-        height: 100,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // 背景光晕
-            if (!isZeroStreak)
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) => Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: displayColor.withValues(alpha: 0.3),
-                        blurRadius: 20 * _pulseAnimation.value,
-                        spreadRadius: 4 * _pulseAnimation.value,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            // 进度圆环
-            AnimatedBuilder(
-              animation: _progressAnimation,
-              builder: (context, child) => CustomPaint(
-                size: const Size(100, 100),
-                painter: _CircularProgressPainter(
-                  progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
-                  color: displayColor,
-                  isBackground: isZeroStreak,
-                ),
-              ),
-            ),
-            // 中心内容
-            Column(
-              mainAxisSize: MainAxisSize.min,
+        width: double.infinity,
+        height: double.infinity,
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Icon(
-                  Icons.whatshot_rounded,
-                  color: displayColor,
-                  size: 20,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
-                  style: TextStyle(
-                    fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
-                    fontWeight: DS.fontWeightBold,
-                    color: displayColor,
+                // 背景光晕
+                if (!isZeroStreak)
+                  AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) => Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: displayColor.withValues(alpha: 0.3),
+                            blurRadius: 20 * _pulseAnimation.value,
+                            spreadRadius: 4 * _pulseAnimation.value,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // 进度圆环
+                AnimatedBuilder(
+                  animation: _progressAnimation,
+                  builder: (context, child) => CustomPaint(
+                    size: const Size(100, 100),
+                    painter: _CircularProgressPainter(
+                      progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
+                      color: displayColor,
+                      isBackground: isZeroStreak,
+                    ),
                   ),
                 ),
-                Text(
-                  isZeroStreak ? '挑战' : '天',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: DS.textSecondary,
-                  ),
+                // 中心内容
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.whatshot_rounded,
+                      color: displayColor,
+                      size: 20,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
+                      style: TextStyle(
+                        fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: displayColor,
+                      ),
+                    ),
+                    Text(
+                      isZeroStreak ? '挑战' : '天',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

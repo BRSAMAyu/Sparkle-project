@@ -9,17 +9,16 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final size = MediaQuery.of(context).size;
     final category = ResponsiveSystem.getCategory(context);
 
-    // Responsive column count: 3 for narrow mobile, 4 for standard, 5 for tablet/desktop
+    // Responsive column count: 3 for watch, 4 for mobile, 5 for tablet/desktop
     final crossAxisCount = switch (category) {
       DeviceCategory.tablet => 5,
       DeviceCategory.desktop => 5,
       DeviceCategory.tv => 5,
-      DeviceCategory.watch => size.width < 400 ? 3 : 4,
-      DeviceCategory.phone => size.width < 400 ? 3 : 4,
-      DeviceCategory.phablet => size.width < 400 ? 3 : 4,
+      DeviceCategory.watch => 3,
+      DeviceCategory.phone => 4,
+      DeviceCategory.phablet => 4,
     };
 
     return Padding(
@@ -50,22 +49,37 @@ class ExpandedToolbarSection extends ConsumerWidget {
               _ToolButton(
                 icon: Icons.timer_rounded,
                 label: '番茄钟',
-                route: '/focus?mode=pomodoro',
+                route: '/focus',
               ),
               _ToolButton(
-                icon: Icons.note_add_rounded,
-                label: '快速笔记',
-                route: '/memory/new',
+                icon: Icons.edit_note_rounded,
+                label: '闪念笔记',
+                route: '/memory',
               ),
               _ToolButton(
-                icon: Icons.casino_rounded,
-                label: '随机任务',
-                route: '/tasks/random',
+                icon: Icons.assignment_late_rounded,
+                label: '错题本',
+                route: '/errors',
+              ),
+              _ToolButton(
+                icon: Icons.psychology_rounded,
+                label: '认知模式',
+                route: '/cognitive/patterns',
               ),
               _ToolButton(
                 icon: Icons.lightbulb_rounded,
                 label: '好奇心胶囊',
-                route: '/cognitive',
+                route: '/curiosity-capsule',
+              ),
+              _ToolButton(
+                icon: Icons.event_note_rounded,
+                label: '复习计划',
+                route: '/review',
+              ),
+              _ToolButton(
+                icon: Icons.show_chart_rounded,
+                label: '学习预测',
+                route: '/learning/forecast',
               ),
             ],
           ),
