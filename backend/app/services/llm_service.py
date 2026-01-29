@@ -541,19 +541,35 @@ class LLMService:
                     detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
                 )
 
+            import time as _time
             model = model or self.chat_model
             temperature = self._resolve_temperature(user_context, temperature)
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
 
-            logger.debug(f"Starting stream chat with model: {model}")
+            # Performance logging
+            start_time = _time.perf_counter()
+            first_chunk_time = None
+            chunk_count = 0
+            logger.info(f"[LLM] stream_chat START: model={model}, clear_thinking={self._extra_body}")
+
             stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
             if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
                 stream = await stream
             if not hasattr(stream, "__aiter__"):
                 raise TypeError("stream_chat must return an async iterator")
-            async for chunk in stream:
-                yield chunk
+
+            try:
+                async for chunk in stream:
+                    chunk_count += 1
+                    if first_chunk_time is None:
+                        first_chunk_time = _time.perf_counter()
+                        ttfc = (first_chunk_time - start_time) * 1000
+                        logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={model}, ttfc={ttfc:.0f}ms")
+                    yield chunk
+            finally:
+                elapsed = (_time.perf_counter() - start_time) * 1000
+                logger.info(f"[LLM] stream_chat END: model={model}, elapsed={elapsed:.0f}ms, chunks={chunk_count}")
 
     async def chat_with_tools(
         self,

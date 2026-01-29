@@ -1155,10 +1155,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		attribute.String("session_id", input.SessionID),
 	)
 
-	// Debug logging to verify session_id is received
-	log.Printf("[DEBUG] handleChatMessage called: session_id=%s, request_id=%s, user_id=%s, message=%.50s", input.SessionID, requestID, userID, input.Message)
-
-	ctx, cancel := context.WithCancel(ctx)
+	// Set timeout for the entire chat message processing
+	// Default 60s, configurable via GRPC_TIMEOUT_SECONDS
+	timeoutSeconds := 60
+	if h.cfg != nil && h.cfg.GRPCTimeoutSeconds > 0 {
+		timeoutSeconds = h.cfg.GRPCTimeoutSeconds
+	}
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
@@ -1468,12 +1471,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			conn := responder.(*websocket.Conn)
 			// Convert protobuf response to JSON-friendly map
 			jsonResp := convertResponseToJSON(resp, input.SessionID)
-			// Debug logging to verify session_id
-			if sid, ok := jsonResp["session_id"].(string); ok {
-				log.Printf("[DEBUG] WebSocket response with session_id=%s, response_id=%s", sid, jsonResp["response_id"])
-			} else {
-				log.Printf("[DEBUG] WebSocket response WITHOUT session_id, response_id=%s", jsonResp["response_id"])
-			}
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
