@@ -27,23 +27,53 @@ class TaskBoardCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with title and view switcher
-            Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    '任务看板',
-                    style: context.sparkleTypography.titleLarge.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: DS.textPrimary,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = ResponsiveSystem.isMobile(context);
+                final switcherMinWidth = isMobile ? 260.0 : 320.0;
+
+                if (isMobile) {
+                  // Mobile: Column layout for better space utilization
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '任务看板',
+                        style: context.sparkleTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      const TaskViewSwitcher(),
+                    ],
+                  );
+                }
+
+                // Tablet/Desktop: Row layout
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '任务看板',
+                        style: context.sparkleTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                const Flexible(
-                  child: TaskViewSwitcher(),
-                ),
-              ],
+                    const SizedBox(width: DS.spacing16),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: switcherMinWidth,
+                        maxWidth: 400,
+                      ),
+                      child: const TaskViewSwitcher(),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: DS.spacing12),
             // Content based on current view with optional dual-column layout

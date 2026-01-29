@@ -756,12 +756,30 @@ class ChatOrchestrator:
             focus_stats = await focus_service.get_today_stats(db_session, uuid.UUID(user_id))
 
             if user_context_data:
+                # Handle preferences: could be dict (from cognitive_context) or object (from base_user_context)
+                preferences_dict = {}
+                if "preferences" in user_context_data:
+                    prefs = user_context_data["preferences"]
+                    if isinstance(prefs, dict):
+                        preferences_dict = prefs
+                    elif hasattr(prefs, 'model_dump'):
+                        preferences_dict = prefs.model_dump()
+                    else:
+                        logger.warning(f"Unexpected preferences type: {type(prefs)}")
+                elif "user_context" in user_context_data and hasattr(user_context_data["user_context"], "preferences"):
+                    # Old structure: preferences is on user_context object
+                    prefs = user_context_data["user_context"].preferences
+                    if hasattr(prefs, "model_dump"):
+                        preferences_dict = prefs.model_dump()
+                    else:
+                        preferences_dict = {"depth_preference": 0.5, "curiosity_preference": 0.5}
+
                 return {
                     "user_context": user_context_data,
                     "analytics_summary": analytics,
                     "preferences": {
-                        "depth_preference": user_context.preferences.get("depth_preference", 0.5),
-                        "curiosity_preference": user_context.preferences.get("curiosity_preference", 0.5),
+                        "depth_preference": preferences_dict.get("depth_preference", 0.5),
+                        "curiosity_preference": preferences_dict.get("curiosity_preference", 0.5),
                     },
                     "next_actions": next_actions,
                     "active_plans": active_plans,
