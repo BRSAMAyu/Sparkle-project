@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
-import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart';
+import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart' as providers;
 
 /// Notification Analytics Screen
 class NotificationAnalyticsScreen extends ConsumerStatefulWidget {
@@ -18,13 +18,13 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     super.initState();
     // Load analytics on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationAnalyticsProvider.notifier).loadAnalytics('7d');
+      ref.read(providers.notificationAnalyticsProvider.notifier).loadAnalytics('7d');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(notificationAnalyticsProvider);
+    final state = ref.watch(providers.notificationAnalyticsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +40,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
               ),).toList(),
             onChanged: (value) {
               if (value != null) {
-                ref.read(notificationAnalyticsProvider.notifier).setPeriod(value);
+                ref.read(providers.notificationAnalyticsProvider.notifier).setPeriod(value);
               }
             },
           ),
@@ -65,14 +65,14 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           Text('加载失败: $error'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => ref.read(notificationAnalyticsProvider.notifier).refresh(),
+            onPressed: () => ref.read(providers.notificationAnalyticsProvider.notifier).refresh(),
             child: const Text('重试'),
           ),
         ],
       ),
     );
 
-  Widget _buildContent(NotificationAnalytics analytics) => SingleChildScrollView(
+  Widget _buildContent(models.NotificationAnalytics analytics) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: ContentConstraint(
         child: Column(
@@ -118,7 +118,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touchApp)),
+            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touch_app)),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard('查看率', '${summary.viewRate.toStringAsFixed(1)}%', Icons.pie_chart)),
           ],

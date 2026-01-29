@@ -37,8 +37,8 @@ final communityEventsStreamProvider =
   }
 
   final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
-  // 安全修复：token不再放在URL中，改用headers
-  final wsUrl = '$baseUrl/community/ws/connect';
+  // 支持两种认证方式：headers用于移动端，query param用于Web端fallback
+  final wsUrl = '$baseUrl/community/ws/connect?token=$token';
   final headers = <String, dynamic>{
     'Authorization': 'Bearer $token',
   };
