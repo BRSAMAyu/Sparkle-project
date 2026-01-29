@@ -401,3 +401,58 @@ async def update_push_preference(
         active_slots=push_pref.active_slots,
         timezone=push_pref.timezone
     )
+
+
+@router.put("/me/schedule-preferences", response_model=UserProfile)
+async def update_schedule_preferences(
+    schedule_prefs: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update current user's weekly schedule preferences (time slots grid)
+    """
+    current_user.schedule_preferences = schedule_prefs
+
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+
+    # Load push_preferences for response
+    result = await db.execute(
+        select(PushPreference).where(PushPreference.user_id == current_user.id)
+    )
+    push_pref = result.scalar_one_or_none()
+
+    return UserProfile(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        nickname=current_user.nickname,
+        avatar_url=current_user.avatar_url,
+        avatar_status=current_user.avatar_status,
+        pending_avatar_url=current_user.pending_avatar_url,
+        flame_level=current_user.flame_level,
+        flame_brightness=current_user.flame_brightness,
+        depth_preference=current_user.depth_preference,
+        curiosity_preference=current_user.curiosity_preference,
+        is_active=current_user.is_active,
+        status=current_user.status,
+        created_at=current_user.created_at.isoformat() if current_user.created_at else "",
+        photon_balance=current_user.photon_balance,
+        equipped_skin=current_user.equipped_skin,
+        equipped_title=current_user.equipped_title,
+        push_preferences=PushPreferenceResponse(
+            enable_curiosity=push_pref.enable_curiosity if push_pref else True,
+            persona_type=push_pref.persona_type if push_pref else "coach",
+            daily_cap=push_pref.daily_cap if push_pref else 5,
+            active_slots=push_pref.active_slots if push_pref else [],
+            timezone=push_pref.timezone if push_pref else "Asia/Shanghai"
+        ) if push_pref else PushPreferenceResponse(
+            enable_curiosity=True,
+            persona_type="coach",
+            daily_cap=5,
+            active_slots=[],
+            timezone="Asia/Shanghai"
+        )
+    )

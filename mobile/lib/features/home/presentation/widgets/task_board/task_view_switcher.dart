@@ -11,6 +11,7 @@ class TaskViewSwitcher extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final boardState = ref.watch(taskBoardProvider);
     final currentView = boardState.currentView;
+    final isNarrow = ResponsiveSystem.isMobile(context);
 
     return MaterialStyler(
       material: AppMaterials.neoGlass.copyWith(
@@ -25,6 +26,7 @@ class TaskViewSwitcher extends ConsumerWidget {
           return _ViewTab(
             mode: mode,
             isSelected: isSelected,
+            isNarrow: isNarrow,
             onTap: () => ref.read(taskBoardProvider.notifier).switchView(mode),
           );
         }).toList(),
@@ -38,10 +40,12 @@ class _ViewTab extends StatelessWidget {
     required this.mode,
     required this.isSelected,
     required this.onTap,
+    this.isNarrow = false,
   });
 
   final TaskViewMode mode;
   final bool isSelected;
+  final bool isNarrow;
   final VoidCallback onTap;
 
   @override
@@ -56,8 +60,8 @@ class _ViewTab extends StatelessWidget {
         onTap: onTap,
         borderRadius: DS.borderRadiusFull,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
+          padding: EdgeInsets.symmetric(
+            horizontal: isNarrow ? DS.spacing8 : DS.spacing12,
             vertical: DS.spacing8,
           ),
           child: Row(
@@ -68,12 +72,17 @@ class _ViewTab extends StatelessWidget {
                 size: DS.iconSizeSm,
                 color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
               ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                _getLabel(mode),
-                style: context.sparkleTypography.labelLarge.copyWith(
-                  color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              SizedBox(width: isNarrow ? DS.spacing4 : DS.spacing6),
+              Flexible(
+                child: Text(
+                  _getLabel(mode),
+                  style: context.sparkleTypography.labelLarge.copyWith(
+                    color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: isNarrow ? DS.fontSizeSm : DS.fontSizeBase,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],

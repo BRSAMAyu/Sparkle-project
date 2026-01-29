@@ -70,25 +70,22 @@ class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   Future<void> updateAgenda(Map<String, dynamic> data) async {
+    final prevState = state;
+    // Optimistic update
     state = data;
 
-    // Save to backend via user preferences
+    // Save to backend via dedicated schedule preferences endpoint
     try {
       final repo = _ref.read(userRepositoryProvider);
-      // We'll use the push preferences update endpoint with the schedule data
-      final prefs = _ref.read(pushPreferencesProvider);
-      await repo.updatePushPreferences(
-        PushPreferences(
-          enableCuriosity: prefs.enableCuriosity,
-          personaType: prefs.personaType,
-          dailyCap: prefs.dailyCap,
-          activeSlots: prefs.activeSlots,
-          timezone: prefs.timezone,
-        ),
-      );
+      final updatedUser = await repo.updateSchedulePreferences(data);
+      // Update auth state with new user data
+      final authNotifier = _ref.read(authProvider.notifier);
+      final currentAuthState = _ref.read(authProvider);
+      authNotifier.state = currentAuthState.copyWith(user: updatedUser);
     } catch (e) {
-      // Log error but keep optimistic update
-      print('Failed to save weekly agenda: $e');
+      // Revert on error
+      state = prevState;
+      rethrow;
     }
   }
 }
@@ -243,11 +240,13 @@ class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
     double? depth,
     double? curiosity,
   }) async {
-    final newState = state.copyWith(depth: depth, curiosity: curiosity);
-    state = newState;
-
+    final prevState = state;
     final user = _ref.read(authProvider).user;
     if (user == null) return;
+
+    final newState = state.copyWith(depth: depth, curiosity: curiosity);
+    // Optimistic update
+    state = newState;
 
     try {
       final repo = _ref.read(userRepositoryProvider);
@@ -262,11 +261,8 @@ class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
       final currentAuthState = _ref.read(authProvider);
       authNotifier.state = currentAuthState.copyWith(user: updatedUser);
     } catch (e) {
-      // Revert state on error
-      state = LearningPreferences(
-        depth: user.depthPreference,
-        curiosity: user.curiosityPreference,
-      );
+      // Revert to previous state on error
+      state = prevState;
       rethrow;
     }
   }
