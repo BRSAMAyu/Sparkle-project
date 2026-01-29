@@ -10,7 +10,7 @@ from app.services.notification_service import NotificationService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("", response_model=List[NotificationResponse])
 async def read_notifications(
     skip: int = 0,
     limit: int = 50,
@@ -26,7 +26,7 @@ async def read_notifications(
     )
     return notifications
 
-@router.post("/", response_model=NotificationResponse)
+@router.post("", response_model=NotificationResponse)
 async def create_notification(
     notification_in: NotificationCreate,
     db: AsyncSession = Depends(get_db),

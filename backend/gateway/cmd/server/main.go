@@ -743,6 +743,10 @@ func main() {
 		if userID != "" {
 			c.Request.Header.Set("X-User-ID", userID)
 		}
+		// Ensure backend receives Authorization header for proxied routes
+		if token := c.GetString("auth_token"); token != "" {
+			c.Request.Header.Set("Authorization", "Bearer "+token)
+		}
 
 		// Assign A/B variant (if configured for this route) and forward headers.
 		abTestMiddleware.AssignVariant()(c)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+    "encoding/json"
     "net/http"
     "strconv"
 
@@ -44,8 +45,26 @@ func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin
 
 func (h *ErrorBookHandler) CreateError(c *gin.Context) {
     injectAuthContext(c)
+    var raw map[string]interface{}
+    if err := c.ShouldBindJSON(&raw); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    if _, ok := raw["subject_code"]; !ok {
+        if subject, ok := raw["subject"]; ok {
+            raw["subject_code"] = subject
+        }
+    }
+    delete(raw, "subject")
+
+    payload, err := json.Marshal(raw)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
     var req errorbookv1.CreateErrorRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
+    if err := json.Unmarshal(payload, &req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
@@ -70,9 +89,14 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
     page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
     pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
     
+    subjectCode := c.Query("subject_code")
+    if subjectCode == "" {
+        subjectCode = c.Query("subject")
+    }
+
     req := &errorbookv1.ListErrorsRequest{
         UserId:      userID,
-        SubjectCode: c.Query("subject_code"),
+        SubjectCode: subjectCode,
         Chapter:     c.Query("chapter"),
         ErrorType:   c.Query("error_type"),
         Keyword:     c.Query("keyword"),

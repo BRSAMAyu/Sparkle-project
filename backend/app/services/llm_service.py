@@ -363,11 +363,6 @@ class LLMService:
         """
         Send a chat request to the LLM.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
@@ -380,6 +375,12 @@ class LLMService:
                 # 模拟思考延迟
                 await asyncio.sleep(1.0)
                 return mock_response
+
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
 
             logger.debug(f"Sending chat request to model: {model}")
             
@@ -412,11 +413,6 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
         model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", model)
@@ -426,6 +422,12 @@ class LLMService:
                 span.set_attribute("llm.demo_mode", True)
                 await asyncio.sleep(1.0)
                 return mock_response
+
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
 
             try:
                 await circuit_breaker_service.check("primary_llm")
@@ -507,17 +509,7 @@ class LLMService:
         """
         Stream chat response from the LLM.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
-        model = model or self.chat_model
-        temperature = self._resolve_temperature(user_context, temperature)
         with tracer.start_as_current_span("llm_stream_chat") as span:
-            span.set_attribute("llm.model", model)
-            span.set_attribute("llm.temperature", temperature)
-            
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -530,6 +522,26 @@ class LLMService:
                     # 模拟打字效果的延迟
                     await asyncio.sleep(0.03)
                 return
+
+            if self.demo_mode and not self.provider:
+                span.set_attribute("llm.demo_mode", True)
+                fallback = "（演示模式）当前未配置可用的 LLM 服务，请稍后再试。"
+                chunk_size = 10
+                for i in range(0, len(fallback), chunk_size):
+                    yield fallback[i:i + chunk_size]
+                    await asyncio.sleep(0.03)
+                return
+
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
+
+            model = model or self.chat_model
+            temperature = self._resolve_temperature(user_context, temperature)
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
 
             logger.debug(f"Starting stream chat with model: {model}")
             stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
