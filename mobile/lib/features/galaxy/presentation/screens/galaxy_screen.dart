@@ -571,9 +571,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodePreviewBottomInset = nodePreviewBottomInset
           .clamp(bottomInset + 40, bottomInset + 200);
     }
+    // Zoom controls should be positioned above the spark button (bottomInset)
+    // and reset button (bottomInset + 56). Adding 56 for reset button height + 12 gap.
     final zoomControlsBottom = isLandscapeMobile
-        ? bottomInset + 56
-        : bottomInset + minimapSize / 2;
+        ? bottomInset + 56 + 48 + 12  // Above reset button with gap
+        : bottomInset + 56 + 48 + 12; // Same for portrait - consistent positioning
 
     return Scaffold(
       backgroundColor: DS.galaxyBackground, // Deep space background

@@ -507,10 +507,11 @@ class SparkleColors {
         semanticWarning: Color(0xFFFFFF00),
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
-        surfacePrimary: Color(0xFF000000),
-        surfaceSecondary: Color(0xFF000000),
-        surfaceTertiary: Color(0xFF000000),
-        surfaceAmbient: Color(0xFF000000),
+        // High contrast dark: deeper blacks with subtle elevation hints
+        surfacePrimary: Color(0xFF0A0A0A),
+        surfaceSecondary: Color(0xFF1A1A1A),
+        surfaceTertiary: Color(0xFF252525),
+        surfaceAmbient: Color(0xFF050505),
         rimLight: Color(0xFFFFFFFF),
         glowPrimary: Color(0x00000000),
         noiseColor: Color(0x00000000),
@@ -551,16 +552,17 @@ class SparkleColors {
       semanticWarning: Color(0xFFFFB74D),
       semanticError: Color(0xFFEF5350),
       semanticInfo: Color(0xFF64B5F6),
-      surfacePrimary: Color(0xFF000000),
-      surfaceSecondary: Color(0xFF000000),
-      surfaceTertiary: Color(0xFF000000),
-      surfaceAmbient: Color(0xFF000000),
+      // Dark mode surface hierarchy (Material 3 elevation system)
+      surfacePrimary: Color(0xFF121212),    // Background - darkest
+      surfaceSecondary: Color(0xFF1E1E1E),  // Cards, elevated surfaces
+      surfaceTertiary: Color(0xFF2D2D2D),   // Higher elevation (dialogs, sheets)
+      surfaceAmbient: Color(0xFF0D0D0D),    // Ambient/overlay backgrounds
       rimLight: Color(0x33FFFFFF), // white 0.2
       glowPrimary: Color(0x66FF8C5A), // brandPrimary 0.4
       noiseColor: Color(0x08FFFFFF), // white 0.03
-      textPrimary: Color(0xFFFFFFFF),
-      textSecondary: Color(0xFFE0E0E0),
-      textDisabled: Color(0xFF757575),
+      textPrimary: Color(0xFFF5F5F5),  // Slightly off-white for less eye strain
+      textSecondary: Color(0xFFB0B0B0), // Better contrast than pure gray
+      textDisabled: Color(0xFF666666),  // More visible disabled state
       brightness: Brightness.dark,
       taskLearning: Color(0xFF64B5F6),
       taskTraining: Color(0xFFFFB74D),
