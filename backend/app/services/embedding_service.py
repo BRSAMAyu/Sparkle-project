@@ -65,8 +65,16 @@ class EmbeddingService:
             return []
 
         if self.provider == "dashscope":
+            if not self.dashscope_api_key:
+                if settings.DEMO_MODE:
+                    return [[0.0] * self.embedding_dim for _ in texts]
+                raise ValueError("DASHSCOPE_API_KEY not set for dashscope embedding provider")
             return await self._dashscope_embeddings(texts, text_type=text_type)
         if self.provider == "siliconflow":
+            if not self.siliconflow_api_key:
+                if settings.DEMO_MODE:
+                    return [[0.0] * self.embedding_dim for _ in texts]
+                raise ValueError("SILICONFLOW_API_KEY not set for siliconflow embedding provider")
             return await self._siliconflow_embeddings(texts)
 
         raise ValueError(f"Unsupported embedding provider: {self.provider}")

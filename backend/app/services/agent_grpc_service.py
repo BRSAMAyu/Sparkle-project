@@ -107,6 +107,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             )
 
             # Create a dedicated DB session for this stream
+            has_text_content = False
             async with self.db_session_factory() as db_session:
                 try:
                     # Delegate to Orchestrator
@@ -118,6 +119,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             "prompt_version": prompt_version,
                         },
                     ):
+                        # Track whether we actually streamed any text content
+                        if response.WhichOneof("content") in ("delta", "full_text"):
+                            has_text_content = True
                         response.trace_id = trace_id
                         if not response.workflow_id:
                             response.workflow_id = workflow_id
@@ -128,6 +132,22 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 except Exception:
                     await db_session.rollback()
                     raise
+
+            if not has_text_content:
+                logger.warning(
+                    f"StreamChat completed without text content for trace={trace_id}, "
+                    f"session={request.session_id}"
+                )
+                yield agent_service_pb2.ChatResponse(
+                    response_id=str(uuid.uuid4()),
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request.request_id,
+                    trace_id=trace_id,
+                    workflow_id=workflow_id,
+                    prompt_version=prompt_version,
+                    full_text="（系统提示）当前未生成有效回复，请稍后重试。",
+                    finish_reason=agent_service_pb2.STOP,
+                )
 
             logger.info(f"StreamChat completed for trace={trace_id}")
 

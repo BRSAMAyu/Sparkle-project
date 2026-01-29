@@ -173,7 +173,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		log.Printf("Failed to upgrade WS: %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = conn.Close()
+	}()
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
@@ -1186,7 +1189,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			}
 
-			return true
+			return false
 		}
 	}
 

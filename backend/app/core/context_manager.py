@@ -122,7 +122,7 @@ class ContextOrchestrator:
             focus_stats=task_data.get("focus", {}),
 
             preferences=user_data.get("preferences", {}),
-            engagement_metrics=user_data.get("metrics", {}),
+            engagement_metrics=user_data.get("metrics") or {},
 
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,

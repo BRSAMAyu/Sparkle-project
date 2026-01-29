@@ -6,6 +6,8 @@ import asyncio
 import json
 import os
 import time
+import urllib.request
+import urllib.error
 from jose import jwt as jose_jwt
 from pathlib import Path
 import websockets
@@ -32,18 +34,64 @@ def _create_jwt(user_id: str) -> str:
         "sub": user_id,
         "exp": int(time.time()) + 3600,
         "type": "access",  # Required by validateJWT in gateway
+        "iss": "sparkle-gateway",
+        "aud": "sparkle-app",
     }
     return jose_jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
+def _http_json(method: str, url: str, payload: dict) -> dict:
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method=method)
+    req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _get_auth_token_and_user_id() -> tuple[str, str] | None:
+    base_url = os.getenv("GATEWAY_URL", "http://localhost:8080")
+    email = os.getenv("STAGE3_EMAIL", "ws_test@example.com")
+    username = os.getenv("STAGE3_USERNAME", "ws_test_user")
+    password = os.getenv("STAGE3_PASSWORD", "SecurePass123!")
+
+    register_payload = {"email": email, "password": password, "username": username}
+    login_payload = {"username": username, "password": password}
+
+    try:
+        try:
+            reg = _http_json("POST", f"{base_url}/api/v1/auth/register", register_payload)
+            token = reg.get("token", {}).get("access_token")
+            user_id = reg.get("user", {}).get("id")
+            if token and user_id:
+                return token, user_id
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (400, 409, 422, 429):
+                raise
+
+        login = _http_json("POST", f"{base_url}/api/v1/auth/login", login_payload)
+        token = login.get("access_token")
+        user_id = (login.get("user") or {}).get("id")
+        if token and user_id:
+            return token, user_id
+    except Exception as exc:
+        logger.warning(f"Auth flow failed, falling back to static JWT: {exc}")
+        return None
+
+    return None
+
+
 async def test_websocket_chat():
     """
     测试 WebSocket 流式对话
     """
-    user_id = DEFAULT_USER_ID
-    token = _create_jwt(user_id)
+    auth = _get_auth_token_and_user_id()
+    if auth:
+        token, user_id = auth
+    else:
+        user_id = DEFAULT_USER_ID
+        token = _create_jwt(user_id)
     uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
 
     headers = {"Authorization": f"Bearer {token}"}
