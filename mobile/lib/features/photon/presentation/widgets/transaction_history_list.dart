@@ -194,7 +194,6 @@ class _TransactionHistoryListState
 
 class _TransactionItem extends StatelessWidget {
   const _TransactionItem({
-    super.key,
     required this.transaction,
   });
 

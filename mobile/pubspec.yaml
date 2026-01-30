@@ -71,6 +71,11 @@ dependencies:
   http: ^1.2.0
   connectivity_plus: ^7.0.0
 
+  # Social Login
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
+  fluwx: ^4.1.0
+
   # Protobuf
   protobuf: ^3.1.0
   fixnum: ^1.1.0

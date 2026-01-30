@@ -59,22 +59,12 @@ class ShopItem {
   ShopItem({
     required this.id,
     required this.name,
-    this.description,
-    required this.itemType,
-    required this.category,
-    required this.pricePhotons,
+    required this.itemType, required this.category, required this.pricePhotons, required this.isAvailable, required this.isLimited, required this.rarity, required this.sortOrder, required this.hasDiscount, required this.isInStock, required this.isOwned, this.description,
     this.originalPrice,
     this.discountPercent,
-    required this.isAvailable,
-    required this.isLimited,
     this.stockQuantity,
     this.iconUrl,
-    required this.rarity,
     this.itemConfig,
-    required this.sortOrder,
-    required this.hasDiscount,
-    required this.isInStock,
-    required this.isOwned,
   });
 
   factory ShopItem.fromJson(Map<String, dynamic> json) =>
@@ -181,12 +171,7 @@ class ShopPurchase {
     required this.id,
     required this.itemId,
     required this.itemName,
-    this.itemIconUrl,
-    required this.itemType,
-    required this.pricePaid,
-    required this.photonBalanceBefore,
-    required this.photonBalanceAfter,
-    required this.createdAt,
+    required this.itemType, required this.pricePaid, required this.photonBalanceBefore, required this.photonBalanceAfter, required this.createdAt, this.itemIconUrl,
   });
 
   factory ShopPurchase.fromJson(Map<String, dynamic> json) =>
@@ -237,12 +222,7 @@ class InventoryItem {
   InventoryItem({
     required this.id,
     required this.name,
-    this.iconUrl,
-    required this.itemType,
-    required this.rarity,
-    required this.category,
-    required this.quantity,
-    required this.isEquipped,
+    required this.itemType, required this.rarity, required this.category, required this.quantity, required this.isEquipped, this.iconUrl,
     this.expiresAt,
     this.itemConfig,
   });

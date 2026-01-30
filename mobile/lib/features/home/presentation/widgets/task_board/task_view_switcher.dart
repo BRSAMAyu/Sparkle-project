@@ -36,7 +36,6 @@ class TaskViewSwitcher extends ConsumerWidget {
           if (useExpanded && !isMobile) {
             // Tablet/Desktop: Equal width tabs
             return Row(
-              mainAxisSize: MainAxisSize.max,
               children: TaskViewMode.values.map((mode) {
                 final isSelected = currentView == mode;
                 return Expanded(
@@ -85,14 +84,7 @@ class TaskViewSwitcher extends ConsumerWidget {
 
 class _ViewTab extends StatelessWidget {
   const _ViewTab({
-    super.key,
-    required this.mode,
-    required this.isSelected,
-    required this.height,
-    required this.fontSize,
-    required this.iconSize,
-    required this.horizontalPadding,
-    required this.onTap,
+    required this.mode, required this.isSelected, required this.height, required this.fontSize, required this.iconSize, required this.horizontalPadding, required this.onTap, super.key,
   });
 
   final TaskViewMode mode;
@@ -107,7 +99,7 @@ class _ViewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // Get colors dynamically based on current theme
     final selectedColor = DS.brandPrimary;
-    final unselectedColor = Colors.transparent;
+    const unselectedColor = Colors.transparent;
     final selectedTextColor = DS.onBrandPrimary;
     final unselectedTextColor = DS.textSecondary;
 

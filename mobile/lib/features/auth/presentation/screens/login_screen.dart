@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -35,6 +36,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               _usernameController.text.trim(),
               _passwordController.text.trim(),
             ),
+      );
+    }
+  }
+
+  Future<void> _handleSocialLogin(
+      Future<SocialAuthResult?> Function() loginMethod,) async {
+    try {
+      final result = await loginMethod();
+      if (result != null) {
+        if (!mounted) return;
+        unawaited(
+          ref.read(authProvider.notifier).socialLogin(
+                provider: result.provider,
+                token: result.token,
+                openid: result.openid,
+                email: result.email,
+                nickname: result.nickname,
+                avatarUrl: result.avatarUrl,
+              ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login Failed: ${e}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -183,44 +212,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       _SocialLoginButton(
                         icon: Icons.g_mobiledata_rounded,
                         label: l10n.google,
-                        onTap: () {
-                          // Mock Google Login
-                          unawaited(
-                            ref.read(authProvider.notifier).socialLogin(
-                                  provider: 'google',
-                                  token: 'mock-google-token-123',
-                                  nickname: 'Google User',
-                                ),
-                          );
-                        },
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithGoogle,
+                        ),
                       ),
                       _SocialLoginButton(
                         icon: Icons.apple_rounded,
                         label: l10n.apple,
-                        onTap: () {
-                          // Mock Apple Login
-                          unawaited(
-                            ref.read(authProvider.notifier).socialLogin(
-                                  provider: 'apple',
-                                  token: 'mock-apple-token-123',
-                                  nickname: 'Apple User',
-                                ),
-                          );
-                        },
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithApple,
+                        ),
                       ),
                       _SocialLoginButton(
                         icon: Icons.wechat_rounded,
                         label: l10n.wechat,
-                        onTap: () {
-                          // Mock WeChat Login
-                          unawaited(
-                            ref.read(authProvider.notifier).socialLogin(
-                                  provider: 'wechat',
-                                  token: 'mock-wechat-token-123',
-                                  nickname: 'WeChat User',
-                                ),
-                          );
-                        },
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithWeChat,
+                        ),
                       ),
                     ],
                   ),

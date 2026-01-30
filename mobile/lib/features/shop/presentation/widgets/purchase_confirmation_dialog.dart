@@ -7,9 +7,7 @@ import 'package:sparkle/features/photon/presentation/providers/photon_provider.d
 /// 购买确认弹窗
 class PurchaseConfirmationDialog extends ConsumerStatefulWidget {
   const PurchaseConfirmationDialog({
-    super.key,
-    required this.item,
-    required this.onConfirm,
+    required this.item, required this.onConfirm, super.key,
   });
 
   final ShopItem item;

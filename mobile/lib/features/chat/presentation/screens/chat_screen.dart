@@ -350,9 +350,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     // Bottom input area - wrapped to prevent overflow
                     LayoutBuilder(
-                      builder: (context, constraints) {
-                        return _buildBottomInputArea(context, chatState, constraints);
-                      },
+                      builder: (context, constraints) => _buildBottomInputArea(context, chatState, constraints),
                     ),
                   ],
                 ),
@@ -543,8 +541,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return Center(
+  Widget _buildQuickActions(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.xxl),
         child: Column(
@@ -623,7 +620,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ),
     );
-  }
 
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
@@ -644,7 +640,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isSmallScreen = screenHeight < 700;
 
     // Base padding
-    double padding = isSmallScreen ? 40.0 : 60.0;
+    var padding = isSmallScreen ? 40.0 : 60.0;
 
     // PlanSelectorPill height (can vary with content)
     padding += isSmallScreen ? 44.0 : 52.0;

@@ -152,7 +152,7 @@ class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
 class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
   PushPreferencesNotifier(this._ref)
       : super(PushPreferences(
-          personaType: 'coach',
+          
         ),) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {

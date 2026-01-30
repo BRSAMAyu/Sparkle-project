@@ -36,11 +36,10 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Registration failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Registration failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
@@ -52,7 +51,7 @@ class AuthRepository {
           accessToken: 'demo_token',
           refreshToken: 'demo_refresh_token',
           expiresIn: 3600,
-        ));
+        ),);
         return DemoDataService().demoUser;
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -73,17 +72,17 @@ class AuthRepository {
       
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Login failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Login failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
   Future<UserModel> socialLogin({
     required String provider,
     required String token,
+    String? openid,
     String? email,
     String? nickname,
     String? avatarUrl,
@@ -94,7 +93,7 @@ class AuthRepository {
           accessToken: 'demo',
           refreshToken: 'demo',
           expiresIn: 3600,
-        ));
+        ),);
         return DemoDataService().demoUser;
       }
       final endpoint =
@@ -104,6 +103,7 @@ class AuthRepository {
         data: {
           'provider': provider,
           'token': token,
+          if (openid != null) 'openid': openid,
           'email': email,
           'nickname': nickname,
           'avatar_url': avatarUrl,
@@ -120,12 +120,22 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Social login failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Social login failed');
     } catch (e) {
       throw Exception('An unexpected error occurred: $e');
     }
+  }
+
+  String? _extractErrorMessage(dynamic data) {
+    if (data == null) return null;
+    if (data is String) return data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'] ?? data['message'] ?? data['error'];
+      if (detail is String) return detail;
+      if (detail != null) return detail.toString();
+    }
+    return data.toString();
   }
 
   Future<void> logout() async {

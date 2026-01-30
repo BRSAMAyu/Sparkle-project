@@ -172,6 +172,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: bool | None = None
 
+    # WeChat Configuration
+    WECHAT_APP_ID: str = ""
+    WECHAT_APP_SECRET: str = ""
+
     # LLM Service
     LLM_API_BASE_URL: str = ""
     LLM_API_KEY: str = ""
