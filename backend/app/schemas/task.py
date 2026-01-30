@@ -104,7 +104,7 @@ class TaskComplete(BaseModel):
 class TaskCompleteRequest(BaseModel):
     """Complete task request body (v2.1)"""
     actual_minutes: int = Field(ge=1, description="Actual minutes")
-    note: str | None = Field(default=None, description="User note")
+    note: str | None = Field(default=None, validation_alias=AliasChoices("note", "user_note"), description="User note")
     completion_quality: int | None = Field(default=None, ge=1, le=5, description="Self rating 1-5")
 
 class TaskAbandon(BaseModel):
