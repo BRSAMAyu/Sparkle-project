@@ -1,5 +1,6 @@
 """User Schemas - Registration, login, profile, etc."""
 import enum
+from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
@@ -93,7 +94,8 @@ class UserProfile(UserBase):
     curiosity_preference: float = Field(description="Curiosity preference")
     is_active: bool = Field(description="Is active")
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="Status")
-    created_at: str = Field(description="Registration time")
+    created_at: datetime = Field(description="Registration time")
+    updated_at: datetime = Field(description="Last update time")
     photon_balance: int = Field(default=0, description="Photon balance")
     equipped_skin: str | None = Field(default=None, description="Equipped skin ID")
     equipped_title: str | None = Field(default=None, description="Equipped title ID")

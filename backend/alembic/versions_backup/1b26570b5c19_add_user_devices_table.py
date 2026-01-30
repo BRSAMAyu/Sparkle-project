@@ -48,7 +48,6 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id", name="pk_user_devices"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.Comment("用户设备令牌表 - 用于推送通知和离线消息推送")
     )
 
     # 创建索引
