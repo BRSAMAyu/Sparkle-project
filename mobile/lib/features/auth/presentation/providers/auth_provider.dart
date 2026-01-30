@@ -71,6 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> socialLogin({
     required String provider,
     required String token,
+    String? openid,
     String? email,
     String? nickname,
     String? avatarUrl,
@@ -80,6 +81,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.socialLogin(
         provider: provider,
         token: token,
+        openid: openid,
         email: email,
         nickname: nickname,
         avatarUrl: avatarUrl,

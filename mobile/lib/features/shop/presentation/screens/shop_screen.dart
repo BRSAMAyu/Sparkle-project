@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/shared/entities/shop_model.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
-import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
 import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation_dialog.dart';
+import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
+import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// Shop Screen
 /// 商城界面

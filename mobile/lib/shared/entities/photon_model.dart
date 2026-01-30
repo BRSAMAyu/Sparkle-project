@@ -84,10 +84,9 @@ class PhotonTransaction {
     required this.amount,
     required this.balanceBefore,
     required this.balanceAfter,
-    this.source,
+    required this.createdAt, this.source,
     this.relatedItemId,
     this.metadata,
-    required this.createdAt,
   });
 
   factory PhotonTransaction.fromJson(Map<String, dynamic> json) =>

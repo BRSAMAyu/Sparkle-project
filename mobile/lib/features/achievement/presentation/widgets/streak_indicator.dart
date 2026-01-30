@@ -534,7 +534,6 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         widget.onTap?.call();
       },
       child: Align(
-        alignment: Alignment.center,
         child: SizedBox(
           width: 100,
           height: 100,

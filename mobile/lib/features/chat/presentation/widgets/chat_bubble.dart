@@ -638,8 +638,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
-    return MarkdownStyleSheet(
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
         p: TextStyle(
             color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
@@ -664,7 +663,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
             color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
             decoration: TextDecoration.underline,),
       );
-    }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
@@ -706,9 +704,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (isDark) {
       // Use a lighter color than surfaceSecondary for better contrast
       // surfaceAmbient (#0D0D0D) < surfacePrimary (#121212) < surfaceSecondary (#1E1E1E) < this (#2A2A2A)
-      return SparkleMaterial(
-        backgroundColor: const Color(0xFF2A2A2A),
-        borderColor: const Color(0xFF3A3A3A),
+      return const SparkleMaterial(
+        backgroundColor: Color(0xFF2A2A2A),
+        borderColor: Color(0xFF3A3A3A),
       );
     }
 

@@ -701,7 +701,7 @@ void main() {
         category: 'boosts',
         quantity: 1,
         isEquipped: false,
-        expiresAt: DateTime(2024, 1), // Past date
+        expiresAt: DateTime(2024), // Past date
       );
 
       expect(expiredItem.isExpired, isTrue);

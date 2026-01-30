@@ -49,5 +49,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- WeChat -->
+        <package android:name="com.tencent.mm" />
     </queries>
 </manifest>

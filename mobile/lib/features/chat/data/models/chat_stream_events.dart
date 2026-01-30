@@ -892,7 +892,7 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
       durationMs: step.durationMs,
       outputSummary: step.outputSummary,
       metadata: step.metadata,
-    )).toList();
+    ),).toList();
 }
 
 /// 协作步骤数据模型

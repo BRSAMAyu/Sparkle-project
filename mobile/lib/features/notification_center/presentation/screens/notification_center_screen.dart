@@ -102,7 +102,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
                   label: _getFilterLabel(filter),
                   isSelected: _filter == filter,
                   onTap: () => _setFilter(filter),
-                )).toList(),
+                ),).toList(),
             ),
           ),
 
@@ -116,7 +116,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
                   label: _getSourceFilterLabel(filter),
                   isSelected: _sourceFilter == filter,
                   onTap: () => _setSourceFilter(filter),
-                )).toList(),
+                ),).toList(),
             ),
           ),
         ],
