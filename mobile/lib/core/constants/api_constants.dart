@@ -5,6 +5,12 @@ class ApiConstants {
   static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
   static const String _wsBaseUrlOverride =
       String.fromEnvironment('WS_BASE_URL');
+  static const String _androidEmulatorUrlOverride =
+      String.fromEnvironment('ANDROID_EMULATOR_URL');
+  static const String _androidDeviceUrlOverride =
+      String.fromEnvironment('ANDROID_DEVICE_URL');
+  static const bool _androidUseEmulator =
+      bool.fromEnvironment('ANDROID_USE_EMULATOR', defaultValue: false);
   static const String apiCertSha256 =
       String.fromEnvironment('API_CERT_SHA256');
 
@@ -27,7 +33,7 @@ class ApiConstants {
       return 'http://localhost:8080';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8080';
+      return _androidBaseUrl();
     }
     return 'http://localhost:8080';
   }
@@ -74,8 +80,12 @@ class ApiConstants {
       final uri = Uri.parse(_baseUrlOverride);
       return uri.host;
     }
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android) {
-      return '10.0.2.2';
+    if (kIsWeb) {
+      return 'localhost';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final uri = Uri.parse(_androidBaseUrl());
+      return uri.host;
     }
     return 'localhost';
   }
@@ -88,9 +98,23 @@ class ApiConstants {
       return 'ws://localhost:8080';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'ws://10.0.2.2:8080';
+      return _toWsUrl(_androidBaseUrl());
     }
     return 'ws://localhost:8080';
+  }
+
+  static String _androidBaseUrl() {
+    if (_androidEmulatorUrlOverride.isNotEmpty) {
+      return _androidEmulatorUrlOverride;
+    }
+    if (_androidUseEmulator) {
+      return 'http://10.0.2.2:8080';
+    }
+    if (_androidDeviceUrlOverride.isNotEmpty) {
+      return _androidDeviceUrlOverride;
+    }
+    // Default to emulator host to preserve existing behavior.
+    return 'http://10.0.2.2:8080';
   }
 
   static String _applyWsSchemeForEnvironment(
