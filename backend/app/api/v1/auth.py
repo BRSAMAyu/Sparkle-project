@@ -22,7 +22,7 @@ from app.core.security import (
 )
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import RefreshTokenRequest, SocialLoginRequest, UserBase, UserLogin, UserRegister
+from app.schemas.user import RefreshTokenRequest, SocialLoginRequest, UserBase, UserLogin, UserRegister, UserProfile
 
 router = APIRouter()
 
@@ -36,6 +36,7 @@ async def register(
     """
     Register a new user
     """
+    logger.info(f"Registration attempt: username={data.username}, email={data.email}")
     # Check existing user
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalars().first():
@@ -70,7 +71,7 @@ async def register(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     return {
-        "user": UserBase.model_validate(user),
+        "user": UserProfile.model_validate(user),
         "token": {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -88,6 +89,7 @@ async def login(
     """
     User login with username/email and password
     """
+    logger.info(f"Login attempt: identifier={data.username or data.email}")
     login_id = data.username or data.email
     if not login_id:
         raise HTTPException(status_code=422, detail="用户名或邮箱不能为空")
@@ -130,25 +132,25 @@ async def login(
     # Successful login - reset failed attempts
     await account_lockout_service.handle_successful_login(str(user.id))
 
-    logger.info(f"User logged in: {user.username} (ID: {user.id})")
-
+    # Create tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+    # P1 Fix: Return full user profile and standardized structure
+    # Keeping top-level token fields for backward compatibility
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "nickname": user.nickname,
-            "avatar_url": user.avatar_url
-        }
+        "token": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        },
+        "user": UserProfile.model_validate(user)
     }
 
 @router.post("/social-login", response_model=Any)
@@ -288,13 +290,12 @@ async def social_login(
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "nickname": user.nickname,
-            "avatar_url": user.avatar_url
-        }
+        "token": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        },
+        "user": UserProfile.model_validate(user)
     }
 
 @router.post("/refresh", response_model=Any)

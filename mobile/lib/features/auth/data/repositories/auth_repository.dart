@@ -44,15 +44,16 @@ class AuthRepository {
     }
   }
 
-  Future<TokenResponse> login(String usernameOrEmail, String password) async {
+  Future<UserModel> login(String usernameOrEmail, String password) async {
     try {
       if (DemoDataService.isDemoMode) {
         // Should not happen via this method usually, but for safety
-        return TokenResponse(
+        await saveTokens(TokenResponse(
           accessToken: 'demo_token',
           refreshToken: 'demo_refresh_token',
           expiresIn: 3600,
-        );
+        ));
+        return DemoDataService().demoUser;
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.login,
@@ -61,9 +62,16 @@ class AuthRepository {
           'password': password,
         },
       );
-      final tokenResponse = TokenResponse.fromJson(response.data!);
+      final data = response.data!;
+      // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
+      final tokenData = data['token'] is Map<String, dynamic> 
+          ? data['token'] as Map<String, dynamic> 
+          : data;
+          
+      final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      return tokenResponse;
+      
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
@@ -73,7 +81,7 @@ class AuthRepository {
     }
   }
 
-  Future<TokenResponse> socialLogin({
+  Future<UserModel> socialLogin({
     required String provider,
     required String token,
     String? email,
@@ -82,11 +90,12 @@ class AuthRepository {
   }) async {
     try {
       if (DemoDataService.isDemoMode) {
-        return TokenResponse(
+        await saveTokens(TokenResponse(
           accessToken: 'demo',
           refreshToken: 'demo',
           expiresIn: 3600,
-        );
+        ));
+        return DemoDataService().demoUser;
       }
       final endpoint =
           provider == 'apple' ? '/auth/apple' : '/auth/social-login';
@@ -101,9 +110,15 @@ class AuthRepository {
         },
       );
 
-      final tokenResponse = TokenResponse.fromJson(response.data!);
+      final data = response.data!;
+      // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
+      final tokenData = data['token'] is Map<String, dynamic> 
+          ? data['token'] as Map<String, dynamic> 
+          : data;
+
+      final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      return tokenResponse;
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
