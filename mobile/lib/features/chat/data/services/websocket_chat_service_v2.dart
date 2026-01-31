@@ -913,16 +913,21 @@ class WebSocketChatServiceV2 {
         isProduction: isProduction,
       );
 
-      // Token in headers only - never in URL query
-      final query = 'user_id=$userId';
+      // Add token to query parameter for WebSocket authentication
+      // (Authorization header may not be preserved during WebSocket upgrade)
+      final query = effectiveToken != null
+          ? 'user_id=$userId&token=$effectiveToken'
+          : 'user_id=$userId';
 
       final wsUrl = '$effectiveBaseUrl/ws/chat?$query';
       _log('🔌 Connecting to: $wsUrl');
 
+      // Note: We still send Authorization header for reference, but WS uses query param
       final headers = <String, dynamic>{};
       if (effectiveToken != null && effectiveToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $effectiveToken';
       }
+      // Headers are included but query param token is used as fallback
 
       if (_channelFactory != null) {
         _channel = _channelFactory!(
@@ -1111,6 +1116,7 @@ class WebSocketChatServiceV2 {
 
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
+    _log('📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

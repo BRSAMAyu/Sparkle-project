@@ -1196,6 +1196,14 @@ class ChatOrchestrator:
                                 await stream_callback(agent_service_pb2.ChatResponse(
                                     finish_reason=agent_service_pb2.STOP
                                 ))
+                                # Drain queue before returning
+                                logger.info(f"Draining queue, size={queue.qsize()}")
+                                while not queue.empty():
+                                    item = await queue.get()
+                                    content_type = item.WhichOneof("content")
+                                    logger.info(f"Yielding from queue: type={content_type}")
+                                    yield item
+                                logger.info("Queue drained, returning from clarification path")
                                 return
 
                             # If confirmation needed, ask for confirmation
@@ -1211,6 +1219,10 @@ class ChatOrchestrator:
                                 await stream_callback(agent_service_pb2.ChatResponse(
                                     finish_reason=agent_service_pb2.STOP
                                 ))
+                                # Drain queue before returning
+                                while not queue.empty():
+                                    item = await queue.get()
+                                    yield item
                                 return
 
                         except Exception as e:
@@ -2041,7 +2053,6 @@ class ChatOrchestrator:
                             # Handle both dict and JSON string cases
                             if isinstance(llm_profile, str):
                                 try:
-                                    import json
                                     llm_profile_meta = json.loads(llm_profile)
                                 except (json.JSONDecodeError, TypeError):
                                     logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")

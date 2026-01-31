@@ -6,6 +6,7 @@ Tracks and manages memory evolution history, predictions, and analysis.
 """
 from datetime import datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, select
@@ -59,7 +60,7 @@ class MemoryEvolutionService:
         # 3. Evidence count changes
         evidence_count_before = old_value.get('evidence_count', 0)
         evidence_count_after = new_value.get('evidence_count', 0)
-        new_evidence_ids = new_value.get('evidence_refs', [])
+        new_evidence_ids = self._extract_evidence_ids(new_value.get('evidence_refs', []))
 
         # 4. Analyze impact
         impact_score = await self._calculate_impact_score(
@@ -105,6 +106,25 @@ class MemoryEvolutionService:
         )
 
         return evolution
+
+    @staticmethod
+    def _extract_evidence_ids(evidence_refs: Any) -> list:
+        """Extract UUIDs from evidence refs, skipping non-UUID values."""
+        refs = evidence_refs or []
+        ids = []
+        for ref in refs:
+            ref_id = None
+            if isinstance(ref, dict):
+                ref_id = ref.get("id")
+            else:
+                ref_id = getattr(ref, "id", None)
+            if not ref_id:
+                continue
+            try:
+                ids.append(UUID(str(ref_id)))
+            except (ValueError, TypeError):
+                continue
+        return ids
 
     async def get_evolution_history(
         self,

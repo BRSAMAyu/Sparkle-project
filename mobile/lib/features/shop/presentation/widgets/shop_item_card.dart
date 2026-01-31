@@ -5,9 +5,7 @@ import 'package:sparkle/shared/entities/shop_model.dart';
 /// 商城物品卡片组件
 class ShopItemCard extends StatelessWidget {
   const ShopItemCard({
-    super.key,
-    required this.item,
-    required this.onTap,
+    required this.item, required this.onTap, super.key,
   });
 
   final ShopItem item;
@@ -16,7 +14,7 @@ class ShopItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -57,13 +55,11 @@ class ShopItemCard extends StatelessWidget {
                               child: Image.network(
                                 item.iconUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
+                                errorBuilder: (context, error, stackTrace) => Icon(
                                     _getItemTypeIcon(item.itemType),
                                     size: 64,
                                     color: _getRarityColor(item.rarity),
-                                  );
-                                },
+                                  ),
                               ),
                             )
                           : Icon(

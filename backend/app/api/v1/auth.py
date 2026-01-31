@@ -22,12 +22,17 @@ from app.core.security import (
 )
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import RefreshTokenRequest, SocialLoginRequest, UserBase, UserLogin, UserRegister
+from app.schemas.user import RefreshTokenRequest, SocialLoginRequest, UserBase, UserLogin, UserRegister, UserProfile
 
 router = APIRouter()
 
+# Relax rate limits in development to avoid blocking during iterative testing.
+AUTH_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
+SOCIAL_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "5/15minutes"
+REFRESH_RATE_LIMIT = "100/15minutes" if settings.DEBUG else "10/15minutes"
+
 @router.post("/register", response_model=Any)
-@limiter.limit("5/15minutes")
+@limiter.limit(AUTH_RATE_LIMIT)
 async def register(
     request: Request,
     data: UserRegister,
@@ -36,6 +41,7 @@ async def register(
     """
     Register a new user
     """
+    logger.info(f"Registration attempt: username={data.username}, email={data.email}")
     # Check existing user
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalars().first():
@@ -70,7 +76,7 @@ async def register(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     return {
-        "user": UserBase.model_validate(user),
+        "user": UserProfile.model_validate(user),
         "token": {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -79,7 +85,7 @@ async def register(
     }
 
 @router.post("/login", response_model=Any)
-@limiter.limit("5/15minutes")
+@limiter.limit(AUTH_RATE_LIMIT)
 async def login(
     request: Request,
     data: UserLogin,
@@ -88,6 +94,7 @@ async def login(
     """
     User login with username/email and password
     """
+    logger.info(f"Login attempt: identifier={data.username or data.email}")
     login_id = data.username or data.email
     if not login_id:
         raise HTTPException(status_code=422, detail="用户名或邮箱不能为空")
@@ -130,29 +137,29 @@ async def login(
     # Successful login - reset failed attempts
     await account_lockout_service.handle_successful_login(str(user.id))
 
-    logger.info(f"User logged in: {user.username} (ID: {user.id})")
-
+    # Create tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+    # P1 Fix: Return full user profile and standardized structure
+    # Keeping top-level token fields for backward compatibility
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "nickname": user.nickname,
-            "avatar_url": user.avatar_url
-        }
+        "token": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        },
+        "user": UserProfile.model_validate(user)
     }
 
 @router.post("/social-login", response_model=Any)
-@limiter.limit("5/15minutes")
+@limiter.limit(SOCIAL_RATE_LIMIT)
 async def social_login(
     request: Request,
     data: SocialLoginRequest,
@@ -206,30 +213,73 @@ async def social_login(
                 }
 
         elif data.provider == 'wechat':
-            if not data.openid:
-                raise HTTPException(status_code=400, detail="微信登录缺少 openid 参数")
-            # WeChat token verification
             import httpx
             timeout = httpx.Timeout(5.0, connect=5.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
-                # WeChat uses different flow - verify access token
-                response = await client.get(
-                    "https://api.weixin.qq.com/sns/auth",
-                    params={"access_token": data.token, "openid": data.openid}
-                )
-                if response.status_code != 200:
-                    raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
+                if not data.openid:
+                    # Code Exchange Flow (Preferred)
+                    if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+                        raise HTTPException(status_code=500, detail="服务器未配置微信登录")
+                    
+                    # 1. Exchange code for access_token and openid
+                    token_resp = await client.get(
+                        "https://api.weixin.qq.com/sns/oauth2/access_token",
+                        params={
+                            "appid": settings.WECHAT_APP_ID,
+                            "secret": settings.WECHAT_APP_SECRET,
+                            "code": data.token,
+                            "grant_type": "authorization_code"
+                        }
+                    )
+                    token_data = token_resp.json()
+                    
+                    if "errcode" in token_data and token_data["errcode"] != 0:
+                        logger.error(f"WeChat code exchange failed: {token_data}")
+                        raise HTTPException(status_code=401, detail="微信登录失败，请重试")
+                        
+                    social_id = token_data['openid']
+                    access_token = token_data['access_token']
+                    
+                    # 2. Get User Info
+                    user_resp = await client.get(
+                        "https://api.weixin.qq.com/sns/userinfo",
+                        params={
+                            "access_token": access_token,
+                            "openid": social_id,
+                            "lang": "zh_CN"
+                        }
+                    )
+                    user_data = user_resp.json()
+                    
+                    if "errcode" in user_data and user_data["errcode"] != 0:
+                        logger.error(f"WeChat user info failed: {user_data}")
+                        raise HTTPException(status_code=401, detail="获取微信用户信息失败")
+                        
+                    user_info = {
+                        'email': None,
+                        'name': user_data.get('nickname'),
+                        'picture': user_data.get('headimgurl')
+                    }
+                    
+                else:
+                    # Token Verification Flow (Legacy)
+                    response = await client.get(
+                        "https://api.weixin.qq.com/sns/auth",
+                        params={"access_token": data.token, "openid": data.openid}
+                    )
+                    if response.status_code != 200:
+                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
 
-                result = response.json()
-                if result.get('errcode') != 0:
-                    raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
+                    result = response.json()
+                    if result.get('errcode') != 0:
+                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
 
-                social_id = data.openid
-                user_info = {
-                    'email': None,
-                    'name': None,
-                    'picture': None
-                }
+                    social_id = data.openid
+                    user_info = {
+                        'email': None,
+                        'name': None,
+                        'picture': None
+                    }
 
     except HTTPException:
         raise
@@ -288,17 +338,16 @@ async def social_login(
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "nickname": user.nickname,
-            "avatar_url": user.avatar_url
-        }
+        "token": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        },
+        "user": UserProfile.model_validate(user)
     }
 
 @router.post("/refresh", response_model=Any)
-@limiter.limit("10/15minutes")
+@limiter.limit(REFRESH_RATE_LIMIT)
 async def refresh_token(
     request: Request,
     data: RefreshTokenRequest,

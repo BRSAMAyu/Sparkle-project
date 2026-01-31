@@ -82,7 +82,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
           if (state.isLoading)
             Center(
               child: Padding(
-                padding: EdgeInsets.all(DS.xl),
+                padding: const EdgeInsets.all(DS.xl),
                 child: CircularProgressIndicator(
                   color: DS.primaryBase,
                 ),

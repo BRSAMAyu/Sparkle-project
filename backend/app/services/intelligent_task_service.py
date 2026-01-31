@@ -161,7 +161,25 @@ class IntelligentTaskService:
 
             if "choices" in data and len(data["choices"]) > 0:
                 content = data["choices"][0]["message"]["content"]
-                return json.loads(content)
+                result = json.loads(content)
+                
+                # Sanitize values
+                if "estimated_minutes" in result:
+                    try:
+                        minutes = int(result["estimated_minutes"])
+                        # Ensure reasonable bounds (5-180 minutes)
+                        result["estimated_minutes"] = max(5, min(180, minutes))
+                    except (ValueError, TypeError):
+                        result["estimated_minutes"] = 25
+                
+                if "difficulty" in result:
+                    try:
+                        diff = int(result["difficulty"])
+                        result["difficulty"] = max(1, min(5, diff))
+                    except (ValueError, TypeError):
+                        result["difficulty"] = 1
+                        
+                return result
             else:
                 raise ValueError(f"Unexpected response format: {data}")
 

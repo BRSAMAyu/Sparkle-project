@@ -36,23 +36,23 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Registration failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Registration failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
-  Future<TokenResponse> login(String usernameOrEmail, String password) async {
+  Future<UserModel> login(String usernameOrEmail, String password) async {
     try {
       if (DemoDataService.isDemoMode) {
         // Should not happen via this method usually, but for safety
-        return TokenResponse(
+        await saveTokens(TokenResponse(
           accessToken: 'demo_token',
           refreshToken: 'demo_refresh_token',
           expiresIn: 3600,
-        );
+        ),);
+        return DemoDataService().demoUser;
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.login,
@@ -61,32 +61,40 @@ class AuthRepository {
           'password': password,
         },
       );
-      final tokenResponse = TokenResponse.fromJson(response.data!);
+      final data = response.data!;
+      // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
+      final tokenData = data['token'] is Map<String, dynamic> 
+          ? data['token'] as Map<String, dynamic> 
+          : data;
+          
+      final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      return tokenResponse;
+      
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Login failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Login failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
-  Future<TokenResponse> socialLogin({
+  Future<UserModel> socialLogin({
     required String provider,
     required String token,
+    String? openid,
     String? email,
     String? nickname,
     String? avatarUrl,
   }) async {
     try {
       if (DemoDataService.isDemoMode) {
-        return TokenResponse(
+        await saveTokens(TokenResponse(
           accessToken: 'demo',
           refreshToken: 'demo',
           expiresIn: 3600,
-        );
+        ),);
+        return DemoDataService().demoUser;
       }
       final endpoint =
           provider == 'apple' ? '/auth/apple' : '/auth/social-login';
@@ -95,22 +103,39 @@ class AuthRepository {
         data: {
           'provider': provider,
           'token': token,
+          if (openid != null) 'openid': openid,
           'email': email,
           'nickname': nickname,
           'avatar_url': avatarUrl,
         },
       );
 
-      final tokenResponse = TokenResponse.fromJson(response.data!);
+      final data = response.data!;
+      // Use the nested token object if available (new structure), otherwise fallback to root (old structure)
+      final tokenData = data['token'] is Map<String, dynamic> 
+          ? data['token'] as Map<String, dynamic> 
+          : data;
+
+      final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
-      return tokenResponse;
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Social login failed');
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? 'Social login failed');
     } catch (e) {
       throw Exception('An unexpected error occurred: $e');
     }
+  }
+
+  String? _extractErrorMessage(dynamic data) {
+    if (data == null) return null;
+    if (data is String) return data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'] ?? data['message'] ?? data['error'];
+      if (detail is String) return detail;
+      if (detail != null) return detail.toString();
+    }
+    return data.toString();
   }
 
   Future<void> logout() async {

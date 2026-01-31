@@ -27,7 +27,13 @@ class OpenAICompatibleProvider(LLMProvider):
                 status_code=501,
                 detail="OpenAI client not installed. Install llm extras to enable LLM features."
             )
-        self.api_key = api_key
+        if not api_key:
+            logger.error(f"LLM Provider Initialization Error: api_key is empty for base_url={base_url}")
+            # Do not raise here to allow fallback/demo mode to handle it, but log it clearly
+            self.api_key = "MISSING_KEY"
+        else:
+            self.api_key = api_key
+            
         self.base_url = base_url
 
         # Set explicit timeout:

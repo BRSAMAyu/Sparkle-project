@@ -1,6 +1,6 @@
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
-import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 聊天流事件基类
@@ -892,7 +892,7 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
       durationMs: step.durationMs,
       outputSummary: step.outputSummary,
       metadata: step.metadata,
-    )).toList();
+    ),).toList();
 }
 
 /// 协作步骤数据模型

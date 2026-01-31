@@ -480,7 +480,7 @@ void main() {
       final balance = PhotonBalance(
         userId: 'user-123',
         balance: 500,
-        updatedAt: DateTime(2024, 1, 28, 10, 0),
+        updatedAt: DateTime(2024, 1, 28, 10),
       );
 
       final json = balance.toJson();

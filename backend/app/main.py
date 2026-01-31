@@ -7,6 +7,7 @@ import sys
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -321,6 +322,20 @@ else:
 # Make sure the directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """处理 Pydantic 验证错误"""
+    logger.error(f"Validation error for {request.method} {request.url}: {exc.errors()}")
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "error_code": "ValidationError",
+            "message": "请求数据格式不正确",
+            "detail": exc.errors()
+        },
+    )
 
 @app.exception_handler(SparkleException)
 async def sparkle_exception_handler(request: Request, exc: SparkleException):

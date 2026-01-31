@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -52,11 +55,17 @@ class AppUsageService {
 
   /// Get the currently active foreground app
   Future<String?> getCurrentForegroundApp() async {
+    if (kIsWeb || !Platform.isAndroid) {
+      return null;
+    }
     try {
       final result = await _channel.invokeMethod<String>('getForegroundApp');
       return result;
     } on PlatformException catch (e) {
       print('Error getting foreground app: ${e.message}');
+      return null;
+    } on MissingPluginException {
+      // Plugin not available on this platform/build.
       return null;
     }
   }
@@ -106,6 +115,9 @@ class AppUsageService {
 
   /// Start monitoring app usage
   void startMonitoring({Duration interval = const Duration(seconds: 10)}) {
+    if (kIsWeb || !Platform.isAndroid) {
+      return;
+    }
     _monitoringTimer?.cancel();
     _monitoringTimer = Timer.periodic(interval, (_) async {
       final packageName = await getCurrentForegroundApp();

@@ -334,7 +334,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('转账失败：${e}'),
+            content: Text('转账失败：$e'),
             backgroundColor: Colors.red,
           ),
         );

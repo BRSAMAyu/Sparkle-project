@@ -237,6 +237,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   LinearGradient _getActionGradient(String type) {
     switch (type) {
       case 'create_task':
+      case 'task_list':
         return DS.primaryGradient;
       case 'create_plan':
         return DS.secondaryGradient;
@@ -260,6 +261,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   Color _getActionColor(String type) {
     switch (type) {
       case 'create_task':
+      case 'task_list':
         return DS.primaryBase;
       case 'create_plan':
         return DS.secondaryBase;
@@ -290,6 +292,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     switch (type) {
       case 'create_task':
         return Icons.add_task_rounded;
+      case 'task_list':
+        return Icons.format_list_bulleted_rounded;
       case 'create_plan':
         return Icons.map_rounded;
       case 'update_preference':
@@ -323,6 +327,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     switch (type) {
       case 'create_task':
         return 'AI建议：创建任务';
+      case 'task_list':
+        return 'AI任务拆解';
       case 'create_plan':
         return 'AI建议：创建计划';
       case 'update_preference':
@@ -357,6 +363,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
     if (action.type == 'nightly_review') {
       return _buildNightlyReviewContent(context, action);
+    }
+    if (action.type == 'task_list') {
+      return _buildTaskListContent(context, action);
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -484,6 +493,83 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
         ],
       );
+  }
+
+  Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
+    final tasks = action.data['tasks'] as List<dynamic>? ?? [];
+    if (tasks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...tasks.take(5).map((item) {
+          final task = item as Map<String, dynamic>;
+          final title = task['title']?.toString() ?? '未命名任务';
+          final minutes = task['estimated_minutes']?.toString() ?? '30';
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing8),
+            child: Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.neutral100,
+                borderRadius: DS.borderRadius12,
+                border: Border.all(color: DS.neutral200),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.spacing4),
+                    decoration: BoxDecoration(
+                      color: DS.primaryBase.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: DS.primaryBase,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: DS.fontWeightSemibold,
+                                color: DS.neutral900,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$minutes 分钟',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: DS.neutral600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (tasks.length > 5)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing4),
+            child: Text(
+              '以及其他 ${tasks.length - 5} 个任务...',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral500,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildNightlyReviewContent(BuildContext context, WidgetPayload action) {

@@ -99,10 +99,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.route,
+    required this.icon, required this.label, required this.route, super.key,
   });
 
   final IconData icon;
