@@ -101,7 +101,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void dispose() {
     _controller.removeListener(_handleTextChange);
-    widget.onTextChanged?.call(''); // Notify empty text
+    // widget.onTextChanged?.call(''); // Removed to prevent unsafe ancestor lookup during disposal
     _controller.dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();
@@ -216,7 +216,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           focusNode: _focusNode,
                           maxLines: 4,
                           minLines: 1,
-                          enabled: canSend,
+                          enabled: widget.enabled && !_isSending,
                           textInputAction: enterToSend
                               ? TextInputAction.send
                               : TextInputAction.newline,

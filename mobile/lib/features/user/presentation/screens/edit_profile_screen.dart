@@ -70,34 +70,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (source == 'preset') {
       if (!mounted) return;
-      showDialog<void>(
+      final parentContext = context;
+      final selectedUrl = await showDialog<String>(
         context: context,
-        builder: (context) => AvatarSelectionDialog(
+        builder: (dialogContext) => AvatarSelectionDialog(
           currentAvatarUrl: user?.avatarUrl,
-          onAvatarSelected: (url) async {
-            setState(() => _isLoading = true);
-            try {
-              await ref.read(authProvider.notifier).updateAvatar(url);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: const Text('头像更新成功'),
-                      backgroundColor: DS.successConst,),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('更新失败: $e'), backgroundColor: DS.error,),
-                );
-              }
-            } finally {
-              if (mounted) setState(() => _isLoading = false);
-            }
-          },
+          onAvatarSelected: (_) {},
         ),
       );
+      if (!mounted || selectedUrl == null) return;
+      setState(() => _isLoading = true);
+      try {
+        await ref.read(authProvider.notifier).updateAvatar(selectedUrl);
+        if (parentContext.mounted) {
+          ScaffoldMessenger.of(parentContext).showSnackBar(
+            SnackBar(
+                content: const Text('头像更新成功'),
+                backgroundColor: DS.successConst,),
+          );
+        }
+      } catch (e) {
+        if (parentContext.mounted) {
+          ScaffoldMessenger.of(parentContext).showSnackBar(
+            SnackBar(
+                content: Text('更新失败: $e'), backgroundColor: DS.error,),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
       return;
     }
 

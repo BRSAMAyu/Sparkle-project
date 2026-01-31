@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/shared/entities/shop_model.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
+import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// Purchase Confirmation Dialog
 /// 购买确认弹窗

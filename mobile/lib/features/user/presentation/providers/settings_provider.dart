@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskReminderConfig;
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskReminderConfig;
 
 /// Key for storing 'Enter to Send' preference in SharedPreferences
 const String kEnterToSendKey = 'settings_enter_to_send';

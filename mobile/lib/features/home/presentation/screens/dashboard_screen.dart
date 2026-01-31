@@ -40,11 +40,25 @@ class DashboardScreen extends ConsumerWidget {
 
     // Dynamic bottom spacing based on visible predictions
     final hasPredictions = predictions.isNotEmpty;
-    // Updated spacing: OmniBar(16) + MultiAgentBar(~50) + IntentPredictionBar(~40) + margins
-    final bottomSpacing = hasPredictions ? 210.0 : 130.0;
+    final category = ResponsiveSystem.getCategory(context);
+    final isSmallScreen = category == DeviceCategory.phone ||
+        category == DeviceCategory.phablet ||
+        category == DeviceCategory.watch;
+
+    // Calculate spacing for floating components
+    // OmniBar: ~52px, MultiAgentBar: ~44px, IntentPredictionBar: ~36px
+    final omniBarHeight = 52.0;
+    final multiAgentBarHeight = 44.0;
+    final intentBarHeight = 36.0;
+    final spacing = 8.0;
+
+    // Calculate cumulative bottom positions
+    final omniBarBottom = spacing; // 16
+    final multiAgentBarBottom = omniBarBottom + omniBarHeight + spacing; // ~76
+    final intentBarBottom = multiAgentBarBottom + multiAgentBarHeight + spacing; // ~128
+    final totalBottomHeight = intentBarBottom + intentBarHeight + spacing; // ~172
 
     // Max width for floating components on larger screens
-    final category = ResponsiveSystem.getCategory(context);
     final floatingMaxWidth = switch (category) {
       DeviceCategory.tablet => DS.contentMaxWidthTablet,
       DeviceCategory.desktop => DS.contentMaxWidthDesktop,
@@ -102,50 +116,58 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SliverToBoxAdapter(child: ExpandedToolbarSection()),
 
-                  // Dynamic bottom spacing for prediction bar and OmniBar
-                  SliverToBoxAdapter(child: SizedBox(height: bottomSpacing)),
+                  // Dynamic bottom spacing for floating components
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: totalBottomHeight + (hasPredictions ? 40 : 0),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Layer 3: Intent Prediction Bar (above OmniBar)
+          // Layer 3: Intent Prediction Bar (only show when has predictions)
+          if (hasPredictions)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: intentBarBottom,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: floatingMaxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                    child: const IntentPredictionBar(),
+                  ),
+                ),
+              ),
+            ),
+
+          // Layer 4: MultiAgent Bar (always show above OmniBar)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 88,
+            bottom: multiAgentBarBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: IntentPredictionBar(),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? DS.spacing16 : DS.spacing16,
+                    vertical: DS.spacing4,
+                  ),
+                  child: const MultiAgentBar(),
                 ),
               ),
             ),
           ),
 
-          // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
+          // Layer 5: Omni-Bar (bottom)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 138,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: MultiAgentBar(),
-                ),
-              ),
-            ),
-          ),
-
-          // Layer 4: Omni-Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
+            bottom: omniBarBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
@@ -156,35 +178,41 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Theme Toggle Button
-        Positioned(
-          right: 20,
-          bottom: 130,
-          child: GestureDetector(
-            onTap: () {
-              ref.read(themeManagerProvider).toggleDarkMode();
-            },
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: DS.shadowLg,
-                color: DS.surfaceSecondary,
-                border: Border.all(color: DS.brandPrimaryConst, width: 2),
-              ),
-              child: Icon(
-                Theme.of(context).brightness == Brightness.dark
-                    ? Icons.wb_sunny
-                    : Icons.nightlight_round,
-                size: 24,
-                color: DS.brandPrimaryConst,
-              ),
-            ),
-          ),
-        ),
+
+          // Layer 6: Theme Toggle Button - responsive positioning
+          _buildThemeToggleButton(context, ref, isSmallScreen, multiAgentBarBottom),
         ],
       ),
+    );
+  }
+
+  /// Build theme toggle button with responsive positioning
+  /// On small screens: top-right corner
+  /// On larger screens: right side floating above MultiAgentBar
+  Widget _buildThemeToggleButton(
+    BuildContext context,
+    WidgetRef ref,
+    bool isSmallScreen,
+    double multiAgentBarBottom,
+  ) {
+    if (isSmallScreen) {
+      // Small screen: position at top-right
+      return Positioned(
+        top: 8,
+        right: 8,
+        child: _ThemeToggleButton(onTap: () {
+          ref.read(themeManagerProvider).toggleDarkMode();
+        }),
+      );
+    }
+
+    // Larger screen: position to the right of MultiAgentBar
+    return Positioned(
+      right: 8,
+      bottom: multiAgentBarBottom + 8, // Slightly above MultiAgentBar
+      child: _ThemeToggleButton(onTap: () {
+        ref.read(themeManagerProvider).toggleDarkMode();
+      }),
     );
   }
 
@@ -360,4 +388,35 @@ class _StreakCard extends StatelessWidget {
         ),
       ),
     );
+}
+
+/// Theme toggle button widget
+class _ThemeToggleButton extends StatelessWidget {
+  const _ThemeToggleButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: DS.shadowSm,
+          color: DS.surfaceSecondary,
+          border: Border.all(color: DS.brandPrimaryConst, width: 1.5),
+        ),
+        child: Icon(
+          isDark ? Icons.wb_sunny : Icons.nightlight_round,
+          size: 20,
+          color: DS.brandPrimaryConst,
+        ),
+      ),
+    );
+  }
 }
