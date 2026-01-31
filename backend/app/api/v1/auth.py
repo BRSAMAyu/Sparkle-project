@@ -377,3 +377,75 @@ async def refresh_token(
         }
     except Exception:
         raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录")
+
+
+@router.post("/guest", response_model=Any)
+@limiter.limit("100/15minutes")
+async def guest_login(
+    request: Request,
+    guest_id: str = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Guest login - 返回访客模式的JWT token
+    用于测试和体验，不需要注册账号
+    """
+    import uuid
+
+    # 如果没有提供guest_id，生成一个简短的ID
+    if not guest_id:
+        # 生成一个6字符的简短guest ID
+        import random
+        import string
+        guest_id = 'guest_' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+
+    # 检查是否已存在guest用户（用于保持会话连续性）
+    existing_user = await db.execute(
+        select(User).where(User.username == guest_id)
+    )
+    user = existing_user.scalars().first()
+
+    # 如果不存在，创建一个临时guest用户
+    if not user:
+        user = User(
+            username=guest_id,
+            email=f"{guest_id}@guest.local",  # 临时邮箱
+            hashed_password=get_password_hash(str(uuid.uuid4())), # 随机密码
+            nickname=f"访客{guest_id[-4:]}",
+            registration_source="guest",
+            is_active=True,
+            # 标记为guest用户
+            user_type="guest"  # 需要在User模型中添加此字段，如果没有则忽略
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    # 生成一个长期有效的token (7天)
+    access_token_expires = timedelta(days=7)
+    access_token = create_access_token(
+        data={"sub": str(user.id), "is_guest": True},
+        expires_delta=access_token_expires
+    )
+    refresh_token = create_refresh_token(
+        data={"sub": str(user.id), "is_guest": True}
+    )
+
+    logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}")
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "token": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        },
+        "user": {
+            "id": str(user.id),
+            "username": user.username,
+            "nickname": user.nickname,
+            "is_guest": True
+        }
+    }

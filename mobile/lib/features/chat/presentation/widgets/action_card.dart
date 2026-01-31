@@ -6,6 +6,8 @@ import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class ActionCard extends StatefulWidget {
   const ActionCard({
@@ -67,6 +69,28 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       }
 
       return FocusActionCard(data: widget.action.data);
+    }
+
+    if (widget.action.type == 'task_card') {
+      try {
+        final data = Map<String, dynamic>.from(widget.action.data);
+        // 补全默认值，防止后端数据缺失导致解析失败
+        data['user_id'] ??= 'current_user';
+        data['tags'] ??= <String>[];
+        data['difficulty'] ??= 1;
+        data['energy_cost'] ??= 1;
+        final now = DateTime.now().toIso8601String();
+        data['created_at'] ??= now;
+        data['updated_at'] ??= data['created_at'];
+
+        final task = TaskModel.fromJson(data);
+        return TaskCard(
+          task: task,
+          onTap: () => context.push('/tasks/${task.id}'),
+        );
+      } catch (e) {
+        debugPrint('Error parsing task card data: $e');
+      }
     }
 
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;

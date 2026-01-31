@@ -287,6 +287,40 @@ class AuthRepository {
     if (DemoDataService.isDemoMode) return true;
     return await getAccessToken() != null;
   }
+
+  /// Guest login - 获取访客模式的JWT token
+  Future<UserModel> guestLogin(String guestId) async {
+    try {
+      if (DemoDataService.isDemoMode) {
+        await saveTokens(TokenResponse(
+          accessToken: 'demo',
+          refreshToken: 'demo',
+          expiresIn: 3600,
+        ),);
+        return DemoDataService().demoUser;
+      }
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/auth/guest',
+        data: {'guest_id': guestId},
+      );
+
+      final data = response.data!;
+      final tokenData = data['token'] is Map<String, dynamic>
+          ? data['token'] as Map<String, dynamic>
+          : data;
+
+      final tokenResponse = TokenResponse.fromJson(tokenData);
+      await saveTokens(tokenResponse);
+
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data);
+      throw Exception(message ?? '访客登录失败');
+    } catch (e) {
+      throw Exception('An unexpected error occurred: $e');
+    }
+  }
 }
 
 // Provider for FlutterSecureStorage

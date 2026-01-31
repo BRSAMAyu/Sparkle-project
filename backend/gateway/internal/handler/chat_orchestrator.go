@@ -683,7 +683,6 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 			}
 		}
 		result["intervention"] = intervention
-	}
 	default:
 		// If no content field is set, add type "metadata" for responses with only metadata
 		if _, hasType := result["type"]; !hasType {

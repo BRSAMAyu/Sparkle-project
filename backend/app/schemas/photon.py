@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.shop import PhotonTransactionType
 
@@ -84,7 +84,8 @@ class PhotonTransferRequest(BaseModel):
     amount: int = Field(gt=0, description="Amount to transfer")
     message: str | None = Field(default=None, max_length=200, description="Optional message")
 
-    @validator('amount')
+    @field_validator('amount')
+    @classmethod
     def validate_amount(cls, v):
         if v <= 0:
             raise ValueError('Amount must be positive')
