@@ -11,6 +11,10 @@ class ApiConstants {
       String.fromEnvironment('ANDROID_DEVICE_URL');
   static const bool _androidUseEmulator =
       bool.fromEnvironment('ANDROID_USE_EMULATOR');
+  static const String _iosSimulatorUrlOverride =
+      String.fromEnvironment('IOS_SIMULATOR_URL');
+  static const String _iosDeviceUrlOverride =
+      String.fromEnvironment('IOS_DEVICE_URL');
   static const String apiCertSha256 =
       String.fromEnvironment('API_CERT_SHA256');
 
@@ -34,6 +38,9 @@ class ApiConstants {
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _androidBaseUrl();
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return _iosBaseUrl();
     }
     return 'http://localhost:8080';
   }
@@ -87,6 +94,10 @@ class ApiConstants {
       final uri = Uri.parse(_androidBaseUrl());
       return uri.host;
     }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final uri = Uri.parse(_iosBaseUrl());
+      return uri.host;
+    }
     return 'localhost';
   }
 
@@ -99,6 +110,9 @@ class ApiConstants {
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       return _toWsUrl(_androidBaseUrl());
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return _toWsUrl(_iosBaseUrl());
     }
     return 'ws://localhost:8080';
   }
@@ -113,8 +127,25 @@ class ApiConstants {
     if (_androidDeviceUrlOverride.isNotEmpty) {
       return _androidDeviceUrlOverride;
     }
-    // Default to emulator host to preserve existing behavior.
-    return 'http://10.0.2.2:8080';
+    // Default to localhost, which works with adb reverse on real devices
+    // and on emulators when port forwarding is set up
+    return 'http://localhost:8080';
+  }
+
+  static String _iosBaseUrl() {
+    if (_iosSimulatorUrlOverride.isNotEmpty) {
+      return _iosSimulatorUrlOverride;
+    }
+    if (_iosDeviceUrlOverride.isNotEmpty) {
+      return _iosDeviceUrlOverride;
+    }
+    if (!kReleaseMode) {
+      debugPrint(
+          '⚠️ WARNING: iOS is using localhost. On a physical device, '
+          'set IOS_DEVICE_URL or API_BASE_URL to your Mac/LAN IP.',
+      );
+    }
+    return 'http://localhost:8080';
   }
 
   static String _applyWsSchemeForEnvironment(

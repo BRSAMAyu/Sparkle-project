@@ -203,7 +203,10 @@ class BatchCreateTasksTool(BaseTool):
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",  # 任务列表组件
-                widget_data={"tasks": created_tasks}
+                widget_data={
+                    "tasks": created_tasks,
+                    "tool_result_id": tool_call_id
+                }
             )
         except Exception as e:
             return ToolResult(
@@ -369,7 +372,10 @@ class BreakdownTaskTool(BaseTool):
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",
-                widget_data={"tasks": created_tasks}
+                widget_data={
+                    "tasks": created_tasks,
+                    "tool_result_id": tool_call_id
+                }
             )
         except Exception as e:
             return ToolResult(

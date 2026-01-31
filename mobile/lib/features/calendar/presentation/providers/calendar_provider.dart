@@ -101,12 +101,22 @@ final calendarProvider =
 
 /// Task calendar state
 class TaskCalendarState {
-  TaskCalendarState({this.taskSummaries = const {}});
+  TaskCalendarState({
+    this.taskSummaries = const {},
+    this.loadedMonths = const {},
+  });
 
   final Map<DateTime, TaskDaySummary> taskSummaries;
+  final Set<String> loadedMonths;
 
-  TaskCalendarState copyWith(Map<DateTime, TaskDaySummary>? taskSummaries) =>
-      TaskCalendarState(taskSummaries: taskSummaries ?? this.taskSummaries);
+  TaskCalendarState copyWith({
+    Map<DateTime, TaskDaySummary>? taskSummaries,
+    Set<String>? loadedMonths,
+  }) =>
+      TaskCalendarState(
+        taskSummaries: taskSummaries ?? this.taskSummaries,
+        loadedMonths: loadedMonths ?? this.loadedMonths,
+      );
 }
 
 /// Task calendar notifier for loading task summaries
@@ -116,8 +126,12 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
   final TaskRepository _taskRepository;
 
   /// Load tasks for a specific month and calculate summaries
-  Future<void> loadTasksForMonth(DateTime month) async {
+  Future<void> loadTasksForMonth(DateTime month, {bool force = false}) async {
     try {
+      final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      if (!force && state.loadedMonths.contains(monthKey)) {
+        return;
+      }
       final start = DateTime(month.year, month.month);
       final end = DateTime(month.year, month.month + 1, 0);
 
@@ -168,7 +182,10 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
         summaries[dueDate] = newSummary;
       }
 
-      state = TaskCalendarState(taskSummaries: summaries);
+      state = state.copyWith(
+        taskSummaries: summaries,
+        loadedMonths: {...state.loadedMonths, monthKey},
+      );
     } catch (e) {
       // Keep existing state on error
     }

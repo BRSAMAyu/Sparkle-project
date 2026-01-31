@@ -41,6 +41,7 @@ class SparkleAvatar extends StatelessWidget {
     } else if (url!.toLowerCase().contains('/svg') ||
         url!.toLowerCase().endsWith('.svg')) {
       avatar = Container(
+        key: ValueKey('svg_$url'),
         width: radius * 2,
         height: radius * 2,
         decoration: BoxDecoration(
@@ -58,6 +59,7 @@ class SparkleAvatar extends StatelessWidget {
       );
     } else {
       avatar = CachedNetworkImage(
+        key: ValueKey('img_$url'),
         imageUrl: url!,
         imageBuilder: (context, imageProvider) => CircleAvatar(
           radius: radius,

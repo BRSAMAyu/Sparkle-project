@@ -338,9 +338,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.timer_outlined),
                           ),
-                          items: {15, 25, 45, 60, 90, 120, _estimatedMinutes}
-                              .toList()
-                              ..sort()
+                          items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                                  .toList()
+                                ..sort())
                               .map(
                                 (m) => DropdownMenuItem(
                                   value: m,
@@ -386,9 +386,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.timer_outlined),
                           ),
-                          items: {15, 25, 45, 60, 90, 120, _estimatedMinutes}
-                              .toList()
-                              ..sort()
+                          items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                                  .toList()
+                                ..sort())
                               .map(
                                 (m) => DropdownMenuItem(
                                   value: m,
