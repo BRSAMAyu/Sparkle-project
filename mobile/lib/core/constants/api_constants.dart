@@ -25,6 +25,7 @@ class ApiConstants {
         debugPrint(
             '⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.',);
       }
+      debugPrint('🔧 API Base URL (override): $_baseUrlOverride');
       return _baseUrlOverride;
     }
 
@@ -37,10 +38,14 @@ class ApiConstants {
       return 'http://localhost:8080';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return _androidBaseUrl();
+      final url = _androidBaseUrl();
+      debugPrint('🔧 API Base URL (Android): $url');
+      return url;
     }
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return _iosBaseUrl();
+      final url = _iosBaseUrl();
+      debugPrint('🔧 API Base URL (iOS): $url');
+      return url;
     }
     return 'http://localhost:8080';
   }

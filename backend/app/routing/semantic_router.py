@@ -115,7 +115,7 @@ class HybridRouter:
         capability = semantic_result if semantic_result else self._extract_capability(query)
         if capability:
             # Map capability to node inside graph router if it handles it
-            graph_result = self.graph.find_route(current, capability)
+            graph_result = await self.graph.find_route(current, capability)
             if graph_result:
                 return graph_result
 

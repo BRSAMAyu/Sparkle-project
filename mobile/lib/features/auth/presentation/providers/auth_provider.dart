@@ -106,25 +106,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  void loginAsGuest() {
+  Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
-    DemoDataService.isDemoMode = true;
-
-    // Simulate a short delay
-    unawaited(
-      Future<void>.delayed(
-        const Duration(milliseconds: 500),
-        () {
-          final guestUser = DemoDataService().demoUser;
-
-          state = state.copyWith(
-            isLoading: false,
-            isAuthenticated: true,
-            user: guestUser,
-          );
-        },
-      ),
-    );
+    try {
+      // 使用真实API获取游客token
+      final user = await _authRepository.guestLogin('guest_user');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        user: user,
+      );
+    } catch (e) {
+      // 如果API失败，回退到Demo模式
+      DemoDataService.isDemoMode = true;
+      final guestUser = DemoDataService().demoUser;
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        user: guestUser,
+      );
+    }
   }
 
   Future<void> refreshUser() async {
