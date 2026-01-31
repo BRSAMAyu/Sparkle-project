@@ -638,7 +638,7 @@ class GroupMessageService:
         if not is_sender and not is_admin:
             raise ValueError("无权限撤回该消息")
 
-        if is_sender and datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+        if is_sender and (datetime.utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         if msg.is_revoked:
@@ -1098,8 +1098,10 @@ class GroupTaskService:
                 GroupTask.group_id == group_id,
                 GroupTask.not_deleted_filter()
             ).options(
-                selectinload(GroupTask.creator),
-                selectinload(GroupTask.claims)
+                selectinload(GroupTask.creator)
+                # 注意：不使用 selectinload(GroupTask.claims)
+                # 因为模型中配置了 lazy="dynamic"，与 selectinload 不兼容
+                # 改为在循环中按需查询或使用统计字段
             ).order_by(desc(GroupTask.created_at))
         )
 
@@ -1265,7 +1267,7 @@ class PrivateMessageService:
             raise ValueError("无权限撤回该消息")
         if msg.is_revoked:
             return msg
-        if datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+        if (datetime.utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         msg.is_revoked = True
@@ -1394,14 +1396,16 @@ class PrivateMessageService:
         sender_id: UUID
     ) -> int:
         """标记来自某人的消息为已读"""
-        from sqlalchemy import update
+        from sqlalchemy import and_, update
 
         from app.models.community import PrivateMessage
 
         stmt = update(PrivateMessage).where(
-            PrivateMessage.receiver_id == user_id,
-            PrivateMessage.sender_id == sender_id,
-            not PrivateMessage.is_read
+            and_(
+                PrivateMessage.receiver_id == user_id,
+                PrivateMessage.sender_id == sender_id,
+                PrivateMessage.is_read == False
+            )
         ).values(
             is_read=True,
             read_at=datetime.utcnow()

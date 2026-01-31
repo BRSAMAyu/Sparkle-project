@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ============================================
 # 枚举定义
@@ -73,19 +73,23 @@ class ErrorRecordCreate(BaseModel):
     cognitive_tags: list[str] = Field(default_factory=list, description="认知维度标签")
     ai_analysis_summary: str | None = Field(None, description="AI 分析摘要")
 
-    @validator("cognitive_tags", each_item=True)
-    def validate_cognitive_tags(cls, value: str) -> str:
-        if value not in COGNITIVE_DIMENSIONS:
-            raise ValueError("Invalid cognitive dimension tag")
+    @field_validator("cognitive_tags")
+    @classmethod
+    def validate_cognitive_tags(cls, value: list[str]) -> list[str]:
+        for tag in value:
+            if tag not in COGNITIVE_DIMENSIONS:
+                raise ValueError("Invalid cognitive dimension tag")
         return value
 
-    @root_validator(pre=True)
-    def check_content_or_image(cls, values):
-        text = values.get('question_text')
-        image = values.get('question_image_url')
-        if not text and not image:
-            raise ValueError('题目内容和图片不能同时为空')
-        return values
+    @model_validator(mode='before')
+    @classmethod
+    def check_content_or_image(cls, data):
+        if isinstance(data, dict):
+            text = data.get('question_text')
+            image = data.get('question_image_url')
+            if not text and not image:
+                raise ValueError('题目内容和图片不能同时为空')
+        return data
 
 
 class ErrorRecordUpdate(BaseModel):
@@ -100,10 +104,13 @@ class ErrorRecordUpdate(BaseModel):
     cognitive_tags: list[str] | None = None
     ai_analysis_summary: str | None = None
 
-    @validator("cognitive_tags", each_item=True)
-    def validate_cognitive_tags(cls, value: str) -> str:
-        if value not in COGNITIVE_DIMENSIONS:
-            raise ValueError("Invalid cognitive dimension tag")
+    @field_validator("cognitive_tags")
+    @classmethod
+    def validate_cognitive_tags(cls, value: list[str] | None) -> list[str] | None:
+        if value:
+            for tag in value:
+                if tag not in COGNITIVE_DIMENSIONS:
+                    raise ValueError("Invalid cognitive dimension tag")
         return value
 
 
@@ -216,7 +223,8 @@ class ErrorQueryParams(BaseModel):
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
 
-    @validator("cognitive_dimension")
+    @field_validator("cognitive_dimension")
+    @classmethod
     def validate_cognitive_dimension(cls, value: str | None) -> str | None:
         if value is None:
             return value

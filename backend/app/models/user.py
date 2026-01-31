@@ -119,6 +119,13 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    chat_sessions = relationship(
+        "ChatSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     intervention_requests = relationship(
         "InterventionRequest",
         back_populates="user",

@@ -12,7 +12,8 @@
 from typing import Any
 
 from loguru import logger
-from pydantic import BaseSettings, Field, PostgresDsn, RedisDsn, validator
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic_settings import BaseSettings
 
 
 class ProductionSettings(BaseSettings):
@@ -128,31 +129,36 @@ class ProductionSettings(BaseSettings):
     CACHE_TTL_LONG: int = Field(default=86400, env="CACHE_TTL_LONG")
 
     # ==================== 验证器 ====================
-    @validator("APP_NAME")
+    @field_validator("APP_NAME")
+    @classmethod
     def validate_app_name(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError("APP_NAME cannot be empty")
         return v
 
-    @validator("SECRET_KEY")
+    @field_validator("SECRET_KEY")
+    @classmethod
     def validate_secret_key(cls, v):
         if len(v) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters")
         return v
 
-    @validator("DATABASE_URL")
+    @field_validator("DATABASE_URL")
+    @classmethod
     def validate_database_url(cls, v):
-        if not v.startswith("postgresql"):
+        if not str(v).startswith("postgresql"):
             raise ValueError("DATABASE_URL must be a PostgreSQL URL")
         return v
 
-    @validator("LLM_API_KEY")
+    @field_validator("LLM_API_KEY")
+    @classmethod
     def validate_llm_key(cls, v):
         if len(v) < 10:
             raise ValueError("LLM_API_KEY appears to be invalid")
         return v
 
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL")
+    @classmethod
     def validate_log_level(cls, v):
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v not in valid_levels:

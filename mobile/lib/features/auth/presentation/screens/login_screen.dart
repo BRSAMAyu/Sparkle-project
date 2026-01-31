@@ -245,15 +245,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   // Guest Mode
                   TextButton(
-                    onPressed: () {
-                      ref.read(authProvider.notifier).loginAsGuest();
+                    onPressed: authState.isLoading ? null : () async {
+                      await ref.read(authProvider.notifier).loginAsGuest();
                     },
-                    child: Text(
-                      l10n.continueAsGuest,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
+                    child: authState.isLoading
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            l10n.continueAsGuest,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
                   ),
                 ],
               ),

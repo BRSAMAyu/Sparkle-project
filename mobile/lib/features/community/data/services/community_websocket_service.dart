@@ -139,7 +139,7 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.baseUrl}/api/v1/community/groups/$groupId/ws?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/groups/$groupId/ws?token=$token';
 
     debugPrint('[WS] Connecting to group: $groupId');
 
@@ -190,7 +190,7 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.baseUrl}/api/v1/community/ws/connect?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/ws/connect?token=$token';
 
     debugPrint('[WS] Connecting to personal channel');
 

@@ -36,10 +36,21 @@ func NewSTTHandler(pythonSTTUrl string, logger *zap.Logger) *STTHandler {
 
 // HandleWebSocket proxies Flutter WebSocket connections to Python STT service
 func (h *STTHandler) HandleWebSocket(c *gin.Context) {
+	// Debug logging for real device testing
+	origin := c.GetHeader("Origin")
+	h.logger.Info("STT WebSocket upgrade attempt",
+		zap.String("origin", origin),
+		zap.String("client_ip", c.ClientIP()),
+		zap.String("upgrade_header", c.GetHeader("Upgrade")),
+		zap.String("connection_header", c.GetHeader("Connection")))
+
 	// 1. Upgrade HTTP to WebSocket
 	clientConn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		h.logger.Error("Failed to upgrade WebSocket connection", zap.Error(err))
+		h.logger.Error("Failed to upgrade WebSocket connection",
+			zap.Error(err),
+			zap.String("origin", origin),
+			zap.String("client_ip", c.ClientIP()))
 		return
 	}
 	defer clientConn.Close()
