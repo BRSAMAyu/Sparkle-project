@@ -355,38 +355,62 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                           as ChatMessageModel,),
                                             ),
                                           ),
-                                        MarkdownBody(
-                                          data: _content,
-                                          styleSheet: _getMarkdownStyle(
-                                              context, isUser,),
-                                          onTapLink: (text, href, title) async {
-                                            if (href == null) return;
-                                            final uri = Uri.tryParse(href);
-                                            if (uri == null) return;
+                                        // Use constrained height for long messages
+                                        LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            // Calculate max height based on screen size
+                                            final maxHeight =
+                                                                                MediaQuery.of(context).size.height * 0.5;
+                                            final contentWidget = MarkdownBody(
+                                              data: _content,
+                                              styleSheet: _getMarkdownStyle(
+                                                  context, isUser,),
+                                              onTapLink: (text, href, title) async {
+                                                if (href == null) return;
+                                                final uri = Uri.tryParse(href);
+                                                if (uri == null) return;
 
-                                            final scheme =
-                                                uri.scheme.toLowerCase();
-                                            const allowedSchemes = [
-                                              'http',
-                                              'https',
-                                            ];
-                                            if (!allowedSchemes
-                                                .contains(scheme)) {
-                                              return;
+                                                final scheme =
+                                                    uri.scheme.toLowerCase();
+                                                const allowedSchemes = [
+                                                  'http',
+                                                  'https',
+                                                ];
+                                                if (!allowedSchemes
+                                                    .contains(scheme)) {
+                                                  return;
+                                                }
+
+                                                try {
+                                                  if (await canLaunchUrl(uri)) {
+                                                    await launchUrl(
+                                                      uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication,
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      'Failed to launch URL: $e',);
+                                                }
+                                              },
+                                            );
+
+                                            // Try to estimate content height and decide if scrolling is needed
+                                            // For long content (heuristic: >500 chars), use constrained scrollable
+                                            final shouldConstrain = _content.length > 500;
+
+                                            if (!shouldConstrain) {
+                                              return contentWidget;
                                             }
 
-                                            try {
-                                              if (await canLaunchUrl(uri)) {
-                                                await launchUrl(
-                                                  uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication,
-                                                );
-                                              }
-                                            } catch (e) {
-                                              debugPrint(
-                                                  'Failed to launch URL: $e',);
-                                            }
+                                            return SizedBox(
+                                              height: maxHeight,
+                                              child: SingleChildScrollView(
+                                                physics: const ClampingScrollPhysics(),
+                                                child: contentWidget,
+                                              ),
+                                            );
                                           },
                                         ),
                                       ],

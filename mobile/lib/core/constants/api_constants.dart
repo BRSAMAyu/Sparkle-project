@@ -10,7 +10,7 @@ class ApiConstants {
   static const String _androidDeviceUrlOverride =
       String.fromEnvironment('ANDROID_DEVICE_URL');
   static const bool _androidUseEmulator =
-      bool.fromEnvironment('ANDROID_USE_EMULATOR', defaultValue: false);
+      bool.fromEnvironment('ANDROID_USE_EMULATOR');
   static const String apiCertSha256 =
       String.fromEnvironment('API_CERT_SHA256');
 

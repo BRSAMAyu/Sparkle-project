@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
@@ -48,6 +50,10 @@ class FakeRef extends Fake implements Ref {}
 void main() {
   testWidgets('ChatScreen scrolls to bottom (0.0) when new message arrives',
       (WidgetTester tester) async {
+    // Initialize SharedPreferences and ViewStorageService
+    SharedPreferences.setMockInitialValues({});
+    await ViewStorageService.ensureInitialized();
+
     final mockChatRepo = FakeChatRepository();
     final mockChatNotifier = MockChatNotifier(mockChatRepo, FakeRef());
 

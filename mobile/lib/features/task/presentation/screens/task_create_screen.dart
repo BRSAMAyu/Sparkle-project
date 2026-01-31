@@ -323,49 +323,109 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               ),
               const SizedBox(height: DS.lg),
 
-              // Estimated Time & Difficulty Row
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _estimatedMinutes,
-                      decoration: const InputDecoration(
-                        labelText: '预计时长',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.timer_outlined),
+              // Estimated Time & Difficulty - Responsive layout
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 500;
+                  if (isNarrow) {
+                    // Narrow screen: Column layout
+                    return Column(
+                      children: [
+                        DropdownButtonFormField<int>(
+                          value: _estimatedMinutes,
+                          decoration: const InputDecoration(
+                            labelText: '预计时长',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.timer_outlined),
+                          ),
+                          items: {15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                              .toList()
+                              ..sort()
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m,
+                                  child: Text('$m 分钟'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _estimatedMinutes = v);
+                          },
+                        ),
+                        const SizedBox(height: DS.lg),
+                        DropdownButtonFormField<int>(
+                          initialValue: _difficulty,
+                          decoration: const InputDecoration(
+                            labelText: '难度',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.bar_chart),
+                          ),
+                          items: [1, 2, 3, 4, 5]
+                              .map(
+                                (l) => DropdownMenuItem(
+                                  value: l,
+                                  child: Text('Level $l'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _difficulty = v);
+                          },
+                        ),
+                      ],
+                    );
+                  }
+                  // Wide screen: Row layout
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: _estimatedMinutes,
+                          decoration: const InputDecoration(
+                            labelText: '预计时长',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.timer_outlined),
+                          ),
+                          items: {15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                              .toList()
+                              ..sort()
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m,
+                                  child: Text('$m 分钟'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _estimatedMinutes = v);
+                          },
+                        ),
                       ),
-                      items: [15, 25, 45, 60, 90, 120]
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m,
-                              child: Text('$m 分钟'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _estimatedMinutes = v!),
-                    ),
-                  ),
-                  const SizedBox(width: DS.lg),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _difficulty,
-                      decoration: const InputDecoration(
-                        labelText: '难度',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.bar_chart),
+                      const SizedBox(width: DS.lg),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _difficulty,
+                          decoration: const InputDecoration(
+                            labelText: '难度',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.bar_chart),
+                          ),
+                          items: [1, 2, 3, 4, 5]
+                              .map(
+                                (l) => DropdownMenuItem(
+                                  value: l,
+                                  child: Text('Level $l'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _difficulty = v);
+                          },
+                        ),
                       ),
-                      items: [1, 2, 3, 4, 5]
-                          .map(
-                            (l) => DropdownMenuItem(
-                              value: l,
-                              child: Text('Level $l'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _difficulty = v!),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: DS.lg),
 

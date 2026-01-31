@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);
@@ -88,7 +89,7 @@ class AuthInterceptor extends Interceptor {
         // Clone the request and retry
         // Use a new Dio instance with the same base configuration
         final dio = Dio(BaseOptions(
-          baseUrl: ApiEndpoints.baseUrl,
+          baseUrl: ApiConstants.baseUrl,
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 30),
         ));

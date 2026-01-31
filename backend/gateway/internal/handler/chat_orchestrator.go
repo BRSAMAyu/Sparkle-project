@@ -181,12 +181,20 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
 	if userID == "" {
+		// Fallback: Try query parameter (for Guest mode or WebSocket upgrade requests where headers might be stripped)
+		userID = c.Query("user_id")
+	}
+
+	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		_ = conn.Close() // Explicitly close rejected connection
 		return
 	}
 	authToken := c.GetString("auth_token")
+	if authToken == "" {
+		authToken = c.Query("token")
+	}
 
 	log.Printf("WebSocket connected for user: %s", userID)
 	authMethod := c.GetString("ws_auth_method")
@@ -675,6 +683,12 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 			}
 		}
 		result["intervention"] = intervention
+	}
+	default:
+		// If no content field is set, add type "metadata" for responses with only metadata
+		if _, hasType := result["type"]; !hasType {
+			result["type"] = "metadata"
+		}
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {

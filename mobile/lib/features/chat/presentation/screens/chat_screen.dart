@@ -542,81 +542,84 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: DS.primaryBase.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: DS.primaryBase.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
               ),
-              child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
-            ),
-            const SizedBox(height: DS.xl),
-            Text(
-              '你好，我是你的 AI 导师',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: DS.textPrimary,
-                  ),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              '今天想做点什么？',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-            ),
-            const SizedBox(height: 40),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _QuickActionChip(
-                      icon: Icons.add_task_rounded,
-                      label: '新建微任务',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我创建一个新的微任务'),
-                      ),
+              const SizedBox(height: DS.xl),
+              Text(
+                '你好，我是你的 AI 导师',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: DS.textPrimary,
                     ),
-                    _QuickActionChip(
-                      icon: Icons.calendar_month_rounded,
-                      label: '生成长期计划',
-                      color: DS.capsuleAccent,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我生成一个长期学习计划'),
-                      ),
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                '今天想做点什么？',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: DS.textSecondary,
                     ),
-                    _QuickActionChip(
-                      icon: Icons.bug_report_rounded,
-                      label: '错误归因',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('我想分析一下最近的错误原因'),
+              ),
+              const SizedBox(height: 40),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _QuickActionChip(
+                        icon: Icons.add_task_rounded,
+                        label: '新建微任务',
+                        color: DS.brandPrimaryConst,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('帮我创建一个新的微任务'),
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+                      _QuickActionChip(
+                        icon: Icons.calendar_month_rounded,
+                        label: '生成长期计划',
+                        color: DS.capsuleAccent,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('帮我生成一个长期学习计划'),
+                        ),
+                      ),
+                      _QuickActionChip(
+                        icon: Icons.bug_report_rounded,
+                        label: '错误归因',
+                        color: DS.brandPrimaryConst,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('我想分析一下最近的错误原因'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -715,9 +718,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ChatInput(
             enabled: !chatState.isSending,
             onTextChanged: (text) {
-              ref
-                  .read(intentPredictionProvider.notifier)
-                  .onInputChanged(text);
+              if (mounted) {
+                ref
+                    .read(intentPredictionProvider.notifier)
+                    .onInputChanged(text);
+              }
             },
             onFileUploaded: (StoredFile file) {
               if (file.status != 'processed') {

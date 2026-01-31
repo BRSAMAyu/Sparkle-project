@@ -19,8 +19,31 @@ class TaskRepository {
 
   // A generic error handler for Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ??
-        'An unknown error occurred in $functionName';
+    String errorMessage;
+
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      errorMessage = '网络超时，请检查网络连接';
+    } else if (e.type == DioExceptionType.connectionError) {
+      errorMessage = '网络连接失败，请检查网络设置';
+    } else if (e.response != null) {
+      // Try to extract error message from response
+      final data = e.response!.data;
+      if (data is Map) {
+        errorMessage = (data['detail'] as String?) ??
+            (data['message'] as String?) ??
+            (data['error'] as String?) ??
+            '服务器返回错误 (HTTP ${e.response!.statusCode})';
+      } else if (data is String) {
+        errorMessage = data;
+      } else {
+        errorMessage = '服务器返回错误 (HTTP ${e.response!.statusCode})';
+      }
+    } else {
+      errorMessage = '未知错误: ${e.message ?? "无法连接到服务器"}';
+    }
+
     throw Exception(errorMessage);
   }
 

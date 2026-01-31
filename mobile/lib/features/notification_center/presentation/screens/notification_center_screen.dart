@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
-import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
+import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 
 /// Notification Center Screen
 class NotificationCenterScreen extends ConsumerStatefulWidget {
