@@ -7,6 +7,7 @@ Provides test infrastructure for end-to-end testing across Flutter → Go → Py
 import asyncio
 import os
 import pytest
+import pytest_asyncio
 import json
 from datetime import datetime, timedelta
 from typing import AsyncGenerator, Dict, Any, Generator
@@ -23,11 +24,16 @@ sys.path.insert(0, str(backend_dir))
 
 # Try to import with fallbacks
 try:
-    from app.db.base import Base
+    # Prefer the real model Base used by the app
+    from app.db.session import Base
 except ImportError:
-    # Create a simple Base if not available
-    from sqlalchemy.ext.declarative import declarative_base
-    Base = declarative_base()
+    # Fallback for older layouts
+    try:
+        from app.db.base import Base
+    except ImportError:
+        # Create a simple Base if not available
+        from sqlalchemy.ext.declarative import declarative_base
+        Base = declarative_base()
 
 try:
     from app.models.user import User
@@ -124,54 +130,44 @@ except ImportError as e:
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test"
+    # Use the same database as production
+    "postgresql+asyncpg://postgres:change-me@localhost:5432/sparkle"
 )
 
 @pytest.fixture(scope="session")
 def event_loop():
     """Create event loop for async tests"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest.fixture(scope="session")
-async def test_engine():
-    """Create test database engine"""
+@pytest_asyncio.fixture(scope="session")
+async def test_engine(event_loop):
+    """Create test database engine - uses existing schema"""
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        poolclass=StaticPool,  # Use in-memory for tests
         echo=False,
     )
-
-    # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
     yield engine
-
-    # Cleanup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create test database session"""
+    """Create a simple test database session."""
     async_session_maker = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
 
-    async with async_session_maker() as session:
+    session = async_session_maker()
+    try:
         yield session
-        # Rollback after each test
-        await session.rollback()
+    finally:
+        await session.close()
 
 
 # =============================================================================
@@ -197,10 +193,38 @@ def mock_llm_service():
                 }
 
     class MockLLMService:
+        def __init__(self):
+            self.next_stream_response = None
+
         async def chat_stream(self, messages, **kwargs):
             """Mock streaming chat"""
             response_content = "This is a mocked LLM response for testing."
             return MockLLMResponse(response_content)
+
+        async def chat_stream_with_tools(
+            self,
+            system_prompt: str,
+            user_message: str,
+            tools: list[dict[str, Any]],
+            user_context: dict[str, Any] | None = None,
+            temperature: float = 0.7,
+        ):
+            """Mock streamed tool-aware chat by yielding StreamChunk text."""
+            from app.services.llm_service import StreamChunk
+            if self.next_stream_response is not None:
+                response_content = self.next_stream_response
+                self.next_stream_response = None
+            elif "翻译" in user_message or "Hello" in user_message:
+                response_content = "你好，世界"
+            elif "计划" in user_message and ("创建" in user_message or "制定" in user_message):
+                response_content = "请问你想学习什么科目？"
+            elif "难" in user_message:
+                response_content = "Python不难，循序渐进就好。"
+            else:
+                response_content = "This is a mocked tool-aware response."
+            for word in response_content.split():
+                yield StreamChunk(type="text", content=word + " ")
+            yield StreamChunk(type="text", content="")
 
         async def chat_json(self, messages, **kwargs):
             """Mock JSON response"""
@@ -234,10 +258,14 @@ def mock_redis():
                 return None
             return self._data.get(key)
 
-        async def set(self, key: str, value: Any, ex: int = None):
+        async def set(self, key: str, value: Any, ex: int = None, nx: bool = False, px: int | None = None):
+            if nx and key in self._data:
+                return False
             self._data[key] = value
             if ex:
                 self._expired[key] = datetime.now() + timedelta(seconds=ex)
+            elif px:
+                self._expired[key] = datetime.now() + timedelta(milliseconds=px)
             return True
 
         async def delete(self, *keys):
@@ -254,8 +282,95 @@ def mock_redis():
                 self._expired[key] = datetime.now() + timedelta(seconds=seconds)
             return True
 
+        async def setex(self, key: str, seconds: int, value: Any):
+            return await self.set(key, value, ex=seconds)
+
+        async def eval(self, script: str, numkeys: int, *keys_and_args):
+            # Simplified eval for lock release patterns; return success.
+            return 1
+
+        async def lrange(self, key: str, start: int, end: int):
+            data = self._data.get(key, [])
+            if not isinstance(data, list):
+                return []
+            if end == -1:
+                return data[start:]
+            return data[start:end + 1]
+
+        async def rpush(self, key: str, *values):
+            if key not in self._data or not isinstance(self._data[key], list):
+                self._data[key] = []
+            self._data[key].extend(values)
+            return len(self._data[key])
+
+        async def llen(self, key: str):
+            data = self._data.get(key, [])
+            return len(data) if isinstance(data, list) else 0
+
+        async def ltrim(self, key: str, start: int, end: int):
+            data = self._data.get(key, [])
+            if isinstance(data, list):
+                self._data[key] = data[start:end + 1]
+            return True
+
+        async def sadd(self, key: str, *values):
+            if key not in self._data or not isinstance(self._data[key], set):
+                self._data[key] = set()
+            before = len(self._data[key])
+            self._data[key].update(values)
+            return len(self._data[key]) - before
+
+        async def smembers(self, key: str):
+            data = self._data.get(key, set())
+            return data if isinstance(data, set) else set()
+
+        async def zadd(self, key: str, mapping: Dict[Any, float]):
+            if key not in self._data or not isinstance(self._data[key], dict):
+                self._data[key] = {}
+            self._data[key].update(mapping)
+            return len(mapping)
+
+        async def zrange(self, key: str, start: int, end: int, withscores: bool = False):
+            data = self._data.get(key, {})
+            if not isinstance(data, dict):
+                return []
+            items = sorted(data.items(), key=lambda x: x[1])
+            sliced = items[start:] if end == -1 else items[start:end + 1]
+            return sliced if withscores else [item[0] for item in sliced]
+
         async def keys(self, pattern: str = "*"):
             return [k for k in self._data.keys() if pattern == "*" or pattern.replace("*", "") in k]
+
+        async def expire(self, key: str, seconds: int):
+            if key in self._data:
+                self._expired[key] = datetime.now() + timedelta(seconds=seconds)
+            return True
+
+        async def hset(self, key: str, field: str = None, value=None, mapping: dict = None):
+            if key not in self._data or not isinstance(self._data[key], dict):
+                self._data[key] = {}
+            if mapping:
+                self._data[key].update(mapping)
+            elif field:
+                self._data[key][field] = value
+            return 1
+
+        async def hget(self, key: str, field: str):
+            data = self._data.get(key, {})
+            if isinstance(data, dict):
+                return data.get(field)
+            return None
+
+        async def hgetall(self, key: str):
+            data = self._data.get(key, {})
+            return data if isinstance(data, dict) else {}
+
+        async def hdel(self, key: str, *fields):
+            data = self._data.get(key, {})
+            if isinstance(data, dict):
+                for field in fields:
+                    data.pop(field, None)
+            return len(fields)
 
         async def flushdb(self):
             self._data.clear()
@@ -288,6 +403,44 @@ def mock_redis():
                     return None
 
             return MockPubSub(self, channel)
+
+        def pipeline(self):
+            class MockPipeline:
+                def __init__(self, redis_mock):
+                    self.redis = redis_mock
+                    self._ops = []
+
+                def set(self, *args, **kwargs):
+                    self._ops.append(("set", args, kwargs))
+                    return self
+
+                def get(self, *args, **kwargs):
+                    self._ops.append(("get", args, kwargs))
+                    return self
+
+                def lrange(self, *args, **kwargs):
+                    self._ops.append(("lrange", args, kwargs))
+                    return self
+
+                def ltrim(self, *args, **kwargs):
+                    self._ops.append(("ltrim", args, kwargs))
+                    return self
+
+                async def execute(self):
+                    results = []
+                    for op, args, kwargs in self._ops:
+                        if op == "set":
+                            results.append(await self.redis.set(*args, **kwargs))
+                        elif op == "get":
+                            results.append(await self.redis.get(*args, **kwargs))
+                        elif op == "lrange":
+                            results.append(await self.redis.lrange(*args, **kwargs))
+                        elif op == "ltrim":
+                            results.append(await self.redis.ltrim(*args, **kwargs))
+                    self._ops.clear()
+                    return results
+
+            return MockPipeline(self)
 
     return MockRedis()
 
@@ -338,7 +491,7 @@ def mock_websocket_client():
 # Test Data Fixtures
 # =============================================================================
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession) -> User:
     """Create a test user"""
     user_id = uuid4()
@@ -350,12 +503,12 @@ async def test_user(db_session: AsyncSession) -> User:
         is_active=True,
     )
     db_session.add(user)
-    await db_session.commit()
+    await db_session.flush()  # Use flush instead of commit for test isolation
     await db_session.refresh(user)
     return user
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_chat_session(db_session: AsyncSession, test_user: User) -> ChatSession:
     """Create a test chat session"""
     session = ChatSession(
@@ -365,7 +518,7 @@ async def test_chat_session(db_session: AsyncSession, test_user: User) -> ChatSe
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(session)
     return session
 
@@ -396,7 +549,7 @@ def sample_task_data() -> Dict[str, Any]:
     }
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_plan_with_tasks(
     db_session: AsyncSession,
     test_user: User,
@@ -434,7 +587,7 @@ async def test_plan_with_tasks(
         )
         db_session.add(task)
 
-    await db_session.commit()
+    await db_session.flush()
     await db_session.refresh(plan)
     return plan
 
@@ -478,7 +631,7 @@ def test_assertions():
     return Assertions()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_scenario_runner():
     """Helper to run complex test scenarios"""
     class ScenarioRunner:

@@ -23,7 +23,7 @@ from app.models.capsule_favorite import CapsuleFavorite
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.capsule_generation_job import CapsuleGenerationJob, GenerationType
 from app.models.capsule_generation_job import JobStatus as CapsuleJobStatus
-from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
     Friendship,
@@ -146,6 +146,7 @@ __all__ = [
     "PlanType",
     "PlanStage",
     "ChatMessage",
+    "ChatSession",
     "MessageRole",
     "ErrorRecord",
     "Job",
