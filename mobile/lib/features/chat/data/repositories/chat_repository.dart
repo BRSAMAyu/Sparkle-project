@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
@@ -11,8 +12,9 @@ import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.da
 class ChatRepository {
   ChatRepository(
     this._dio, {
+    required ProviderContainer container,
     WebSocketChatServiceV2? wsService,
-  }) : _wsService = wsService ?? WebSocketChatServiceV2();
+  }) : _wsService = wsService ?? WebSocketChatServiceV2(container: container);
   final Dio _dio;
   final WebSocketChatServiceV2 _wsService;
 

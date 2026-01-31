@@ -1783,7 +1783,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
 // 3. Provider
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return ChatRepository(apiClient.dio);
+  return ChatRepository(
+    apiClient.dio,
+    container: ref.container,
+  );
 });
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>(

@@ -32,6 +32,17 @@ class PlanStage(str, enum.Enum):
     PAUSED = "paused"
 
 
+class PlanStatus(str, enum.Enum):
+    """计划状态枚举"""
+    DRAFT = "draft"                  # 草稿
+    PENDING_REVIEW = "pending_review"  # 待审核
+    ACTIVE = "active"                # 激活
+    PAUSED = "paused"                # 暂停
+    COMPLETED = "completed"          # 已完成
+    ARCHIVED = "archived"            # 已归档
+    CANCELLED = "cancelled"          # 已取消
+
+
 class Plan(BaseModel):
     """
     计划模型
