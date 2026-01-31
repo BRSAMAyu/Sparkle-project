@@ -286,7 +286,22 @@ def mock_redis():
             return await self.set(key, value, ex=seconds)
 
         async def eval(self, script: str, numkeys: int, *keys_and_args):
-            # Simplified eval for lock release patterns; return success.
+            """Mock Lua script execution for lock release pattern."""
+            # Parse keys and args
+            keys = list(keys_and_args[:numkeys])
+            args = list(keys_and_args[numkeys:])
+
+            # Handle lock release pattern: if get(key) == value then del(key)
+            if "get" in script and "del" in script and len(keys) >= 1:
+                key = keys[0]
+                expected_value = args[0] if args else None
+                current_value = self._data.get(key)
+
+                if current_value == expected_value:
+                    self._data.pop(key, None)
+                    return 1
+                return 0
+
             return 1
 
         async def lrange(self, key: str, start: int, end: int):
