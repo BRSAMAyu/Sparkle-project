@@ -145,10 +145,12 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(event_loop):
-    """Create test database engine - uses existing schema"""
+    """Create test database engine - uses NullPool to avoid connection sharing issues."""
+    from sqlalchemy.pool import NullPool
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
+        poolclass=NullPool,  # Create new connection for each request
     )
     yield engine
     await engine.dispose()
@@ -156,18 +158,19 @@ async def test_engine(event_loop):
 
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a simple test database session."""
+    """Create a simple test database session with proper transaction handling."""
     async_session_maker = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
 
-    session = async_session_maker()
-    try:
-        yield session
-    finally:
-        await session.close()
+    async with async_session_maker() as session:
+        # Begin transaction
+        async with session.begin():
+            yield session
+        # Transaction automatically commits or rolls back on exception
+        # Session automatically closed by context manager
 
 
 # =============================================================================
