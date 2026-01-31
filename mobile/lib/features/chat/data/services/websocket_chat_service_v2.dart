@@ -1116,6 +1116,7 @@ class WebSocketChatServiceV2 {
 
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
+    _log('📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

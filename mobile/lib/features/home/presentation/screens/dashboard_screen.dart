@@ -46,17 +46,30 @@ class DashboardScreen extends ConsumerWidget {
         category == DeviceCategory.watch;
 
     // Calculate spacing for floating components
-    // OmniBar: ~52px, MultiAgentBar: ~44px, IntentPredictionBar: ~36px
-    final omniBarHeight = 52.0;
-    final multiAgentBarHeight = 44.0;
-    final intentBarHeight = 36.0;
     final spacing = 8.0;
 
     // Calculate cumulative bottom positions
-    final omniBarBottom = spacing; // 16
-    final multiAgentBarBottom = omniBarBottom + omniBarHeight + spacing; // ~76
-    final intentBarBottom = multiAgentBarBottom + multiAgentBarHeight + spacing; // ~128
-    final totalBottomHeight = intentBarBottom + intentBarHeight + spacing; // ~172
+    final omniBarBottom = spacing; // 8
+
+    // IntentPredictionBar position (above OmniBar)
+    final intentBarBottom = omniBarBottom + 52.0 + spacing; // ~68
+
+    // Base position for MultiAgentBar (when no IntentPredictionBar)
+    final baseMultiAgentBarBottom = omniBarBottom + 52.0 + spacing; // ~68
+
+    // Adjust MultiAgentBar position based on whether IntentPredictionBar is shown
+    final showIntentBar = hasPredictions;
+    final finalMultiAgentBarBottom = showIntentBar
+        ? intentBarBottom + 36.0 + spacing // ~108 (IntentPredictionBar is ~36px)
+        : baseMultiAgentBarBottom;
+
+    // IntentPredictionBar only shows when has predictions
+    final finalIntentBarBottom = showIntentBar ? intentBarBottom : 0.0;
+
+    // Total bottom spacing
+    final totalBottomHeight = showIntentBar
+        ? finalMultiAgentBarBottom + 44.0 + spacing // ~156
+        : baseMultiAgentBarBottom + 44.0 + spacing; // ~120
 
     // Max width for floating components on larger screens
     final floatingMaxWidth = switch (category) {
@@ -87,9 +100,9 @@ class DashboardScreen extends ConsumerWidget {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  // Top Overlay
+                  // Top Overlay with theme toggle button
                   SliverToBoxAdapter(
-                      child: _buildTopOverlay(context, user, l10n),),
+                      child: _buildTopOverlay(context, ref, user, l10n),),
 
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
@@ -119,7 +132,7 @@ class DashboardScreen extends ConsumerWidget {
                   // Dynamic bottom spacing for floating components
                   SliverToBoxAdapter(
                     child: SizedBox(
-                      height: totalBottomHeight + (hasPredictions ? 40 : 0),
+                      height: totalBottomHeight,
                     ),
                   ),
                 ],
@@ -128,27 +141,27 @@ class DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3: Intent Prediction Bar (only show when has predictions)
-          if (hasPredictions)
+          if (showIntentBar)
             Positioned(
               left: 0,
               right: 0,
-              bottom: intentBarBottom,
+              bottom: finalIntentBarBottom,
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: floatingMaxWidth),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                    child: const IntentPredictionBar(),
+                    child: const IntentPredictionBar(showIdle: true),
                   ),
                 ),
               ),
             ),
 
-          // Layer 4: MultiAgent Bar (always show above OmniBar)
+          // Layer 4: MultiAgent Bar (above OmniBar)
           Positioned(
             left: 0,
             right: 0,
-            bottom: multiAgentBarBottom,
+            bottom: finalMultiAgentBarBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
@@ -178,81 +191,63 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-
-          // Layer 6: Theme Toggle Button - responsive positioning
-          _buildThemeToggleButton(context, ref, isSmallScreen, multiAgentBarBottom),
         ],
       ),
     );
   }
 
-  /// Build theme toggle button with responsive positioning
-  /// On small screens: top-right corner
-  /// On larger screens: right side floating above MultiAgentBar
-  Widget _buildThemeToggleButton(
-    BuildContext context,
-    WidgetRef ref,
-    bool isSmallScreen,
-    double multiAgentBarBottom,
-  ) {
-    if (isSmallScreen) {
-      // Small screen: position at top-right
-      return Positioned(
-        top: 8,
-        right: 8,
-        child: _ThemeToggleButton(onTap: () {
-          ref.read(themeManagerProvider).toggleDarkMode();
-        }),
-      );
-    }
-
-    // Larger screen: position to the right of MultiAgentBar
-    return Positioned(
-      right: 8,
-      bottom: multiAgentBarBottom + 8, // Slightly above MultiAgentBar
-      child: _ThemeToggleButton(onTap: () {
-        ref.read(themeManagerProvider).toggleDarkMode();
-      }),
-    );
-  }
-
   Widget _buildTopOverlay(
-          BuildContext context, UserModel? user, AppLocalizations l10n,) =>
+          BuildContext context, WidgetRef ref, UserModel? user, AppLocalizations l10n,) =>
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage:
-                  user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-              backgroundColor: DS.primaryBase,
-              child: user?.avatarUrl == null
-                  ? Text((user?.nickname ?? 'U')[0].toUpperCase())
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Lv.${user?.flameLevel ?? 1}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.warning,
+            // Avatar and user info
+            Expanded(
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundImage:
+                        user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                    backgroundColor: DS.primaryBase,
+                    child: user?.avatarUrl == null
+                        ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                        : null,
                   ),
-                ),
-                Text(
-                  user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimaryConst,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Lv.${user?.flameLevel ?? 1}',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.warning,
+                          ),
+                        ),
+                        Text(
+                          user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.brandPrimaryConst,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            // Theme toggle button
+            _ThemeToggleButton(onTap: () {
+              ref.read(themeManagerProvider).toggleDarkMode();
+            }),
           ],
         ),
       );
@@ -281,10 +276,10 @@ class DashboardScreen extends ConsumerWidget {
           mainAxisSpacing: DS.spacing12,
           crossAxisSpacing: DS.spacing12,
           children: [
-          // Card A: Focus Core (2x1.5)
+          // Card A: Focus Core (2x1)
           StaggeredGridTile.count(
             crossAxisCellCount: 2,
-            mainAxisCellCount: 1.5,
+            mainAxisCellCount: 1,
             child: FocusCard(onTap: () => context.push('/focus')),
           ),
           // Card E: Calendar Heatmap (1x1)

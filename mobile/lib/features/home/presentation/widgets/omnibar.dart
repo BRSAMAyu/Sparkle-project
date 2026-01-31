@@ -191,7 +191,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      onSubmitted: enterToSend ? (_) => _submit() : null,
+                      // Avoid implicit submits from some IMEs on Android.
+                      onSubmitted: null,
+                      textInputAction: TextInputAction.newline,
+                      keyboardType: TextInputType.text,
+                      maxLines: 1,
                       style: context.sparkleTypography.bodyLarge.copyWith(
                         color: DS.textPrimary,
                       ),
