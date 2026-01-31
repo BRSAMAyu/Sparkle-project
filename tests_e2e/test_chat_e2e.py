@@ -13,10 +13,54 @@ import asyncio
 from uuid import uuid4
 from datetime import datetime
 
+from sqlalchemy import select
+
+from google.protobuf import timestamp_pb2, struct_pb2  # noqa: F401
+from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.orchestration.orchestrator import Orchestrator
-from app.services.llm_service import LLMService
-from app.core.event_bus import EventBus
+from app.services import llm_service as llm_service_module
+
+
+def _build_orchestrator(db_session, mock_llm_service, mock_redis, user_id):
+    """Create orchestrator wired to mock LLM service."""
+    llm_service_module.llm_service = mock_llm_service
+    from app.orchestration import orchestrator as orchestrator_module
+    orchestrator_module.llm_service = mock_llm_service
+    from app.agents import standard_workflow as standard_workflow_module
+    standard_workflow_module.llm_service = mock_llm_service
+    return Orchestrator(
+        db_session=db_session,
+        redis_client=mock_redis,
+        user_id=str(user_id),
+    )
+
+
+def _build_request(session_id, user_id, message):
+    return agent_service_pb2.ChatRequest(
+        session_id=str(session_id),
+        user_id=str(user_id),
+        message=message,
+        request_id=str(uuid4()),
+    )
+
+
+async def _collect_stream(orchestrator, request):
+    responses = []
+    async for chunk in orchestrator.process_stream(request):
+        responses.append(chunk)
+    return responses
+
+
+def _concat_text(responses):
+    parts = []
+    for resp in responses:
+        field = resp.WhichOneof("content")
+        if field == "delta":
+            parts.append(resp.delta)
+        elif field == "full_text":
+            parts.append(resp.full_text)
+    return "".join(parts)
 
 
 # =============================================================================
@@ -53,27 +97,25 @@ async def test_e2e_simple_chat_message_flow(
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
+    session_id = session.id
 
     # Arrange: Initialize orchestrator with mock LLM
-    orchestrator = Orchestrator(
-        db=db_session,
-        llm_service=mock_llm_service,
-        event_bus=EventBus(),
-        redis_client=mock_redis,
+    orchestrator = _build_orchestrator(
+        db_session,
+        mock_llm_service,
+        mock_redis,
+        test_user.id,
     )
 
     # Act: User sends message
     user_message_content = "你好,我想学习Python,请给我一些建议"
 
     # Simulate message flow
-    response_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=user_message_content,
-    ):
-        response_chunks.append(chunk)
+    response_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session_id, test_user.id, user_message_content),
+    )
 
     # Assert: Response received
     assert len(response_chunks) > 0, "Should receive response chunks"
@@ -81,7 +123,7 @@ async def test_e2e_simple_chat_message_flow(
     # Assert: Message persisted
     result = await db_session.execute(
         select(ChatMessage).where(
-            ChatMessage.session_id == session.id,
+            ChatMessage.session_id == session_id,
             ChatMessage.role == MessageRole.USER
         )
     )
@@ -92,7 +134,7 @@ async def test_e2e_simple_chat_message_flow(
     # Assert: Assistant response persisted
     result = await db_session.execute(
         select(ChatMessage).where(
-            ChatMessage.session_id == session.id,
+            ChatMessage.session_id == session_id,
             ChatMessage.role == MessageRole.ASSISTANT
         )
     )
@@ -130,14 +172,14 @@ async def test_e2e_chat_with_plan_creation(
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
 
     # Arrange: Initialize orchestrator
-    orchestrator = Orchestrator(
-        db=db_session,
-        llm_service=mock_llm_service,
-        event_bus=EventBus(),
-        redis_client=mock_redis,
+    orchestrator = _build_orchestrator(
+        db_session,
+        mock_llm_service,
+        mock_redis,
+        test_user.id,
     )
 
     # Act: User requests plan creation
@@ -176,13 +218,10 @@ async def test_e2e_chat_with_plan_creation(
     mock_llm_service.chat_stream = mock_plan_generation
 
     # Process message
-    response_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=user_message,
-    ):
-        response_chunks.append(chunk)
+    response_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session.id, test_user.id, user_message),
+    )
 
     # Assert: Response received
     assert len(response_chunks) > 0
@@ -226,41 +265,35 @@ async def test_e2e_chat_with_clarification_loop(
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
 
     # Arrange: Initialize orchestrator
-    orchestrator = Orchestrator(
-        db=db_session,
-        llm_service=mock_llm_service,
-        event_bus=EventBus(),
-        redis_client=mock_redis,
+    orchestrator = _build_orchestrator(
+        db_session,
+        mock_llm_service,
+        mock_redis,
+        test_user.id,
     )
 
     # Act 1: User sends incomplete request
     incomplete_message = "帮我创建学习计划"
 
-    response_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=incomplete_message,
-    ):
-        response_chunks.append(chunk)
+    response_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session.id, test_user.id, incomplete_message),
+    )
 
     # Assert: Clarification question asked
     assert len(response_chunks) > 0
-    full_response = "".join(c.get("delta", "") for c in response_chunks)
+    full_response = _concat_text(response_chunks)
     assert any(keyword in full_response for keyword in ["请问", "什么", "哪个", "想学习", "科目"])
 
     # Act 2: User provides clarification
     clarification = "我想学习Python,为期7天"
-    response_chunks_2 = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=clarification,
-    ):
-        response_chunks_2.append(chunk)
+    response_chunks_2 = await _collect_stream(
+        orchestrator,
+        _build_request(session.id, test_user.id, clarification),
+    )
 
     # Assert: System proceeds with plan creation
     assert len(response_chunks_2) > 0
@@ -291,34 +324,37 @@ async def test_e2e_chat_with_tool_execution(
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
+    session_id = session.id
 
     # Arrange: Mock translation tool
     async def mock_translation_tool(text, source_lang, target_lang):
         return f"翻译结果 ({source_lang} → {target_lang}): {text}"
 
     # Arrange: Initialize orchestrator
-    orchestrator = Orchestrator(
-        db=db_session,
-        llm_service=mock_llm_service,
-        event_bus=EventBus(),
-        redis_client=mock_redis,
+    orchestrator = _build_orchestrator(
+        db_session,
+        mock_llm_service,
+        mock_redis,
+        test_user.id,
     )
-    orchestrator.register_tool("translation", mock_translation_tool)
+
+    async def mock_translation_response(messages, **kwargs):
+        from tests_e2e.conftest import MockLLMResponse
+        return MockLLMResponse(content="你好，世界")
+
+    mock_llm_service.chat_stream = mock_translation_response
 
     # Act: User requests translation
     user_message = "请把'Hello World'翻译成中文"
 
-    response_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=user_message,
-    ):
-        response_chunks.append(chunk)
+    response_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session_id, test_user.id, user_message),
+    )
 
     # Assert: Response contains translation
-    full_response = "".join(c.get("delta", "") for c in response_chunks)
+    full_response = _concat_text(response_chunks)
     assert "你好" in full_response or "Hello" in full_response
 
 
@@ -348,44 +384,39 @@ async def test_e2e_chat_conversation_context_maintenance(
         is_active=True,
     )
     db_session.add(session)
-    await db_session.commit()
+    await db_session.flush()
+    session_id = session.id
 
     # Arrange: Initialize orchestrator
-    orchestrator = Orchestrator(
-        db=db_session,
-        llm_service=mock_llm_service,
-        event_bus=EventBus(),
-        redis_client=mock_redis,
+    orchestrator = _build_orchestrator(
+        db_session,
+        mock_llm_service,
+        mock_redis,
+        test_user.id,
     )
 
     # Act 1: First message
     message_1 = "我想学习Python编程"
-    response_1_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=message_1,
-    ):
-        response_1_chunks.append(chunk)
+    response_1_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session_id, test_user.id, message_1),
+    )
 
     # Act 2: Follow-up message with pronoun reference
     message_2 = "它难学吗?"
-    response_2_chunks = []
-    async for chunk in orchestrator.process_message_stream(
-        session_id=str(session.id),
-        user_id=str(test_user.id),
-        message_content=message_2,
-    ):
-        response_2_chunks.append(chunk)
+    response_2_chunks = await _collect_stream(
+        orchestrator,
+        _build_request(session_id, test_user.id, message_2),
+    )
 
     # Assert: Context maintained (LLM should understand "它" = Python)
-    full_response_2 = "".join(c.get("delta", "") for c in response_2_chunks)
+    full_response_2 = _concat_text(response_2_chunks)
     # Mock response should mention Python or difficulty
     assert any(keyword in full_response_2 for keyword in ["Python", "难", "容易", "难度"])
 
     # Assert: Both messages in history
     result = await db_session.execute(
-        select(ChatMessage).where(ChatMessage.session_id == session.id)
+        select(ChatMessage).where(ChatMessage.session_id == session_id)
     )
     messages = result.scalars().all()
     assert len(messages) == 4  # 2 user + 2 assistant

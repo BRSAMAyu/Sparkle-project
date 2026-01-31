@@ -23,6 +23,7 @@ from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
+from app.models.chat import ChatMessage, MessageRole
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
@@ -994,6 +995,22 @@ class ChatOrchestrator:
                 elif request.HasField("tool_result"):
                     tool_result = request.tool_result
                     user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
+
+                if active_db and user_message:
+                    try:
+                        user_msg = ChatMessage(
+                            user_id=uuid.UUID(str(user_id)),
+                            session_id=uuid.UUID(str(session_id)),
+                            role=MessageRole.USER,
+                            content=user_message,
+                            message_id=request_id,
+                        )
+                        active_db.add(user_msg)
+                        await active_db.commit()
+                    except Exception as e:
+                        logger.warning(f"Failed to persist user chat message: {e}")
+                        with contextlib.suppress(Exception):
+                            await active_db.rollback()
 
                 # P0: Build user + conversation context
                 # First, try to merge extra_context from gRPC (from Go Gateway)
@@ -2134,6 +2151,21 @@ class ChatOrchestrator:
                         "tool_results": [],
                         "metadata": response_metadata,
                     }
+                    if active_db and full_response:
+                        try:
+                            assistant_msg = ChatMessage(
+                                user_id=uuid.UUID(str(user_id)),
+                                session_id=uuid.UUID(str(session_id)),
+                                role=MessageRole.ASSISTANT,
+                                content=full_response,
+                                model_name=getattr(llm_service, "default_model", None),
+                            )
+                            active_db.add(assistant_msg)
+                            await active_db.commit()
+                        except Exception as e:
+                            logger.warning(f"Failed to persist assistant chat message: {e}")
+                            with contextlib.suppress(Exception):
+                                await active_db.rollback()
                     try:
                         from app.services.decision_record_service import DecisionRecordService
 
