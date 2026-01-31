@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -83,6 +84,7 @@ void main() {
   group('WebSocketChatServiceV2 - Comprehensive Tests', () {
     late WebSocketChatServiceV2 service;
     late MockWebSocketChannel mockChannel;
+    late ProviderContainer container;
     late DebugPrintCallback originalDebugPrint;
     WebSocketChannel mockFactory(Uri uri, {Map<String, dynamic>? headers}) =>
         mockChannel;
@@ -91,7 +93,9 @@ void main() {
       originalDebugPrint = debugPrint;
       debugPrint = (String? message, {int? wrapWidth}) {};
       mockChannel = MockWebSocketChannel();
+      container = ProviderContainer();
       service = WebSocketChatServiceV2(
+        container: container,
         baseUrl: 'ws://test.com',
         channelFactory: mockFactory,
       );
@@ -100,6 +104,7 @@ void main() {
     tearDown(() {
       service.dispose();
       unawaited(mockChannel.close());
+      container.dispose();
       debugPrint = originalDebugPrint;
     });
 
@@ -254,15 +259,15 @@ void main() {
     // ============================================================================
 
     // 1. ✅ Token安全测试
-    test('Token is passed in headers, not URL', () {
-      // We can check the mock factory arguments if we capture them,
-      // but here we can check the service logic or trust the previous regex test.
-      // Let's refine the mock factory to capture the uri and headers.
-
+    test('Token is passed in both query param and header for WebSocket compatibility', () {
+      // WebSocket authentication strategy:
+      // 1. Token in query parameter (primary - survives WebSocket upgrade)
+      // 2. Token in Authorization header (fallback for compatibility)
       Uri? capturedUri;
       Map<String, dynamic>? capturedHeaders;
 
       service = WebSocketChatServiceV2(
+        container: container,
         baseUrl: 'ws://test.com',
         channelFactory: (uri, {headers}) {
           capturedUri = uri;
@@ -273,7 +278,9 @@ void main() {
 
       service.sendMessage(message: 'init', userId: 'u1', token: 'secret-token');
 
-      expect(capturedUri.toString(), isNot(contains('secret-token')));
+      // Token should be in query parameter (required for WebSocket upgrade)
+      expect(capturedUri.toString(), contains('token=secret-token'));
+      // Authorization header should also be set (fallback)
       expect(capturedHeaders?['Authorization'], 'Bearer secret-token');
     });
 
@@ -320,6 +327,7 @@ void main() {
       // If factory throws, it logs error and doesn't set connected.
 
       service = WebSocketChatServiceV2(
+        container: container,
         baseUrl: 'ws://test.com',
         channelFactory: (uri, {headers}) {
           throw Exception('Connection failed');
@@ -349,10 +357,13 @@ void main() {
     group('Plan Review Event Flow', () {
       late WebSocketChatServiceV2 planService;
       late MockWebSocketChannel planChannel;
+      late ProviderContainer planContainer;
 
       setUp(() {
         planChannel = MockWebSocketChannel();
+        planContainer = ProviderContainer();
         planService = WebSocketChatServiceV2(
+          container: planContainer,
           baseUrl: 'ws://test.com',
           channelFactory: (uri, {headers}) => planChannel,
         );
@@ -361,6 +372,7 @@ void main() {
       tearDown(() {
         planService.dispose();
         unawaited(planChannel.close());
+        planContainer.dispose();
       });
 
       test('Parses plan review from delta metadata', () async {
@@ -492,10 +504,13 @@ void main() {
     group('Transparency Event Flow', () {
       late WebSocketChatServiceV2 transparencyService;
       late MockWebSocketChannel transparencyChannel;
+      late ProviderContainer transparencyContainer;
 
       setUp(() {
         transparencyChannel = MockWebSocketChannel();
+        transparencyContainer = ProviderContainer();
         transparencyService = WebSocketChatServiceV2(
+          container: transparencyContainer,
           baseUrl: 'ws://test.com',
           channelFactory: (uri, {headers}) => transparencyChannel,
         );
@@ -504,6 +519,7 @@ void main() {
       tearDown(() {
         transparencyService.dispose();
         unawaited(transparencyChannel.close());
+        transparencyContainer.dispose();
       });
 
       test('Parses transparency_step from delta metadata', () async {

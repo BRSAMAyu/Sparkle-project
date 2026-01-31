@@ -167,7 +167,10 @@ func main() {
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
 	// STT Handler for Speech-to-Text WebSocket proxy
-	sttHandler := handler.NewSTTHandler(cfg.BackendURL+"/api/v1/stt/stream", logger.Log)
+	// Convert HTTP URL to WebSocket URL
+	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
+	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
+	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger.Log)
 
 	// WebSocket Proxy for Python Community WebSocket
 	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger.Log)

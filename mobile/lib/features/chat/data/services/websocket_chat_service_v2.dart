@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -636,11 +639,13 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri,
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 {
   WebSocketChatServiceV2({
+    required ProviderContainer container,
     String? baseUrl,
     WebSocketChannelFactory? channelFactory,
     bool enableReconnect = true,
     bool autoConnect = true,
-  })  : baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
+  })  : _container = container,
+        baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
         _autoConnect = autoConnect;
@@ -649,6 +654,7 @@ class WebSocketChatServiceV2 {
   final WebSocketChannelFactory? _channelFactory;
   final bool _enableReconnect;
   final bool _autoConnect;
+  final ProviderContainer _container;
 
   // WebSocket 连接
   WebSocketChannel? _channel;
@@ -684,6 +690,11 @@ class WebSocketChatServiceV2 {
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
+
+  // 401错误处理和Token刷新
+  bool _isRefreshingToken = false;
+  int _401ErrorCount = 0;
+  static const int _max401Retries = 1;
 
   /// Exposed for testing
   @visibleForTesting
@@ -908,10 +919,12 @@ class WebSocketChatServiceV2 {
 
       // Force secure WebSocket in production
       const isProduction = kReleaseMode;
+      _log('📍 Original baseUrl: $baseUrl');
       final effectiveBaseUrl = _applyWebSocketSchemeForEnvironment(
         baseUrl,
         isProduction: isProduction,
       );
+      _log('📍 Effective WebSocket URL: $effectiveBaseUrl');
 
       // Add token to query parameter for WebSocket authentication
       // (Authorization header may not be preserved during WebSocket upgrade)
@@ -1003,13 +1016,139 @@ class WebSocketChatServiceV2 {
     }
   }
 
+  /// 检测错误是否为401认证失败
+  bool _is401Error(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    return errorStr.contains('401') ||
+        errorStr.contains('unauthorized') ||
+        errorStr.contains('jwt') ||
+        errorStr.contains('token') ||
+        errorStr.contains('authentication');
+  }
+
+  /// 处理401错误：自动刷新Token并重连
+  Future<void> _handle401Error() async {
+    if (_disposed) return;
+
+    // 防止并发刷新
+    if (_isRefreshingToken) {
+      _log('⏳ Token refresh already in progress, skipping...');
+      return;
+    }
+
+    // 检查是否超过最大重试次数
+    if (_401ErrorCount >= _max401Retries) {
+      _log('❌ Max 401 retry attempts exceeded, logging out...');
+
+      // 发送友好错误提示
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'AUTH_FAILED',
+            message: '登录已过期，请重新登录',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 执行登出
+      try {
+        await _container.read(authRepositoryProvider).logout();
+      } catch (e) {
+        _log('❌ Logout failed: $e');
+      }
+
+      // 更新连接状态，禁用重连
+      _updateConnectionState(WsConnectionState.failed);
+      _enableReconnectLocal = false;
+      _pendingMessages.clear();
+      return;
+    }
+
+    _isRefreshingToken = true;
+    _401ErrorCount++;
+
+    _log('🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)');
+
+    try {
+      // 发送刷新中的提示
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'TOKEN_REFRESHING',
+            message: '正在刷新登录状态...',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 刷新Token
+      final authRepo = _container.read(authRepositoryProvider);
+      final newTokenResponse = await authRepo.refreshToken();
+
+      _log('✅ Token refreshed successfully');
+
+      // 更新当前Token
+      _currentToken = newTokenResponse.accessToken;
+      _reconnectAttempts = 0; // 重置普通重连计数器
+
+      // 用新Token重连
+      if (_currentUserId != null) {
+        _closeConnection();
+        _updateConnectionState(WsConnectionState.disconnected);
+        _establishConnection(_currentUserId!, _currentToken);
+      }
+    } catch (e) {
+      _log('❌ Token refresh failed: $e');
+
+      // Token刷新失败，发送友好错误并登出
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'AUTH_FAILED',
+            message: '登录已过期，请重新登录',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 执行登出
+      try {
+        await _container.read(authRepositoryProvider).logout();
+      } catch (logoutErr) {
+        _log('❌ Logout failed: $logoutErr');
+      }
+
+      // 禁用重连
+      _updateConnectionState(WsConnectionState.failed);
+      _enableReconnectLocal = false;
+      _pendingMessages.clear();
+    } finally {
+      _isRefreshingToken = false;
+    }
+  }
+
+  /// 本地重连开关（用于401后禁用）
+  bool _enableReconnectLocal = true;
+
   /// 处理连接错误
   void _handleConnectionError(dynamic error) {
     if (_disposed) return;
 
     _log('❌ Connection error: $error');
 
-    // 发送错误事件给消息流
+    // 检测是否为401认证错误
+    if (_is401Error(error)) {
+      _log('🔐 401 Authentication error detected');
+      // 异步处理401，避免阻塞错误处理流程
+      Future.microtask(() => _handle401Error());
+      return;
+    }
+
+    // 普通连接错误，发送错误事件给消息流
     if (_messageStreamController != null) {
       _safeAdd(
         _messageStreamController!,
@@ -1038,7 +1177,7 @@ class WebSocketChatServiceV2 {
   /// 触发重连（指数退避）(TODO-A7)
   void _triggerReconnect() {
     if (_disposed) return; // TODO-A7: Check disposed
-    if (!_enableReconnect) {
+    if (!_enableReconnect || !_enableReconnectLocal) {
       _log('⛔ Reconnect disabled');
       _updateConnectionState(WsConnectionState.failed);
       return;
@@ -1162,13 +1301,26 @@ class WebSocketChatServiceV2 {
     required bool isProduction,
   }) {
     final uri = Uri.parse(rawBaseUrl);
-    if (isProduction) {
-      if (uri.scheme != 'wss') {
-        debugPrint(
-            '⚠️ WARNING: Forcing WSS for release WebSocket connections.',);
-      }
-      return uri.replace(scheme: 'wss').toString();
+
+    // 确保总是使用WebSocket协议（ws:// 或 wss://）
+    final currentScheme = uri.scheme;
+    String finalScheme;
+
+    if (currentScheme == 'https' || currentScheme == 'wss') {
+      finalScheme = 'wss';
+    } else if (currentScheme == 'http' || currentScheme == 'ws') {
+      finalScheme = 'ws';
+    } else {
+      // 未知协议，根据环境决定
+      finalScheme = isProduction ? 'wss' : 'ws';
     }
+
+    // 如果需要转换协议
+    if (currentScheme != finalScheme) {
+      _log('🔄 Converting URL scheme: $currentScheme → $finalScheme');
+      return uri.replace(scheme: finalScheme).toString();
+    }
+
     return rawBaseUrl;
   }
 
