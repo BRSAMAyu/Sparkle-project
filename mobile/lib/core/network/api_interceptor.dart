@@ -108,7 +108,9 @@ class AuthInterceptor extends Interceptor {
         return handler.resolve(response);
       } catch (e) {
         // Refresh token failed, logout user
-        unawaited(_ref.read(authRepositoryProvider).logout());
+        unawaited(_ref.read(authRepositoryProvider).logout(
+              keepDemoMode: DemoDataService.isDemoMode,
+            ));
         return super.onError(err, handler);
       }
     }

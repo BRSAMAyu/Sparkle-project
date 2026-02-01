@@ -182,6 +182,7 @@ class Settings(BaseSettings):
     LLM_MODEL_NAME: str = "qwen-plus"
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
+    LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
     # LLM Tier Routing (comma-separated model keys from LLMRouter)
     LLM_TIER_FREE_FAST: str = ""
     LLM_TIER_FREE_REASONING: str = ""

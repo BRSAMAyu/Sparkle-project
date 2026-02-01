@@ -206,22 +206,6 @@ class ChatRepository {
     return controller.stream;
   }
 
-  Stream<ChatStreamEvent> _mockChatStream(String message) async* {
-    yield TextEvent(content: 'Received: $message\n');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    yield TextEvent(content: 'Thinking...\n');
-    yield ToolStartEvent(toolName: 'demo_tool');
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    yield ToolResultEvent(
-        result:
-            ToolResultModel(success: true, toolName: 'demo_tool', data: {}),);
-    yield TextEvent(content: 'This is a simulated response in Demo Mode.\n');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    yield TextEvent(
-        content: 'I can show you Markdown too:\n\n* Item 1\n* Item 2',);
-    yield DoneEvent();
-  }
-
   Future<void> _startSSEConnection({
     required String message,
     required StreamController<ChatStreamEvent> controller,
