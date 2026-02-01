@@ -223,6 +223,7 @@ class InteractiveTaskCard extends ConsumerWidget {
       TaskType.reflection => ('反思', DS.prismPurple),
       TaskType.social => ('社交', DS.info),
       TaskType.planning => ('规划', DS.warning),
+      TaskType.ocr => ('OCR', Colors.grey),
     };
 
     return Container(

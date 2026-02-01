@@ -59,12 +59,13 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
     };
 
 const _$TaskTypeEnumMap = {
-  TaskType.learning: 'learning',
-  TaskType.training: 'training',
-  TaskType.errorFix: 'errorFix',
-  TaskType.reflection: 'reflection',
-  TaskType.social: 'social',
-  TaskType.planning: 'planning',
+  TaskType.learning: 'LEARNING',
+  TaskType.training: 'TRAINING',
+  TaskType.errorFix: 'ERROR_FIX',
+  TaskType.reflection: 'REFLECTION',
+  TaskType.social: 'SOCIAL',
+  TaskType.planning: 'PLANNING',
+  TaskType.ocr: 'OCR',
 };
 
 const _$TaskStatusEnumMap = {

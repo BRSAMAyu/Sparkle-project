@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, taskReminderConfigProvider;
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
@@ -118,8 +119,30 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         }
       }
 
+      // 🔧 修复：先将新任务添加到本地状态，确保立即显示
+      state = state.copyWith(
+        tasks: [...state.tasks, newTask],
+        todayTasks: _shouldIncludeInToday(newTask)
+            ? [...state.todayTasks, newTask]
+            : state.todayTasks,
+      );
+
+      // 然后异步刷新完整列表（不阻塞UI）
       await refreshTasks();
     });
+  }
+
+  // 判断任务是否应该包含在今日任务中
+  bool _shouldIncludeInToday(TaskModel task) {
+    if (task.dueDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final taskDay = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return taskDay == today;
   }
 
   Future<void> updateTask(String id, TaskUpdate taskUpdate,
@@ -378,9 +401,35 @@ final taskListProvider = StateNotifierProvider<TaskNotifier, TaskListState>(
       ref,
     ),);
 
-final taskDetailProvider = FutureProvider.family<TaskModel, String>((ref, id) {
+final taskDetailProvider = FutureProvider.family<TaskModel, String>((ref, id) async {
   final taskRepo = ref.watch(taskRepositoryProvider);
-  return taskRepo.getTask(id);
+
+  try {
+    // 尝试从 API 获取任务
+    return await taskRepo.getTask(id);
+  } catch (e) {
+    // 🔧 Demo 模式或任务不存在时，返回默认的"自由专注"任务
+    if (DemoDataService.isDemoMode || id.startsWith('focus_')) {
+      debugPrint('🎭 Using default focus task for: $id');
+      return TaskModel(
+        id: id,
+        userId: 'demo_user',
+        title: '自由专注',
+        type: TaskType.learning,
+        tags: [],
+        estimatedMinutes: 25,
+        difficulty: 1,
+        energyCost: 1,
+        priority: 0,
+        status: TaskStatus.pending,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    // 其他情况重新抛出错误
+    rethrow;
+  }
 });
 
 final activeTaskProvider = StateProvider<TaskModel?>((ref) => null);
