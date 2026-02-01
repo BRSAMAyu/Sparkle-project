@@ -191,7 +191,10 @@ class _OmniBarState extends ConsumerState<OmniBar>
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      textInputAction: TextInputAction.newline,
+                      textInputAction: enterToSend
+                          ? TextInputAction.send
+                          : TextInputAction.newline,
+                      onSubmitted: enterToSend ? (_) => _submit() : null,
                       keyboardType: TextInputType.text,
                       style: context.sparkleTypography.bodyLarge.copyWith(
                         color: DS.textPrimary,
