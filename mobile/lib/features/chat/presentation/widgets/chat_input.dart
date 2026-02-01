@@ -68,18 +68,21 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       backgroundColor: Colors.transparent,
       builder: (context) => DocumentCleanerSheet(
         onResult: (result) {
-          setState(() {
-            _controller.text = result;
-          });
-          // 🔧 Android输入法修复：延迟焦点请求
-          if (!_isFocusChanging) {
-            _isFocusChanging = true;
-            Future.delayed(const Duration(milliseconds: 150), () {
-              if (mounted && _focusNode.canRequestFocus) {
-                _focusNode.requestFocus();
-              }
-              _isFocusChanging = false;
+          // 🔧 修复：检查widget是否仍然挂载
+          if (mounted) {
+            setState(() {
+              _controller.text = result;
             });
+            // 🔧 Android输入法修复：延迟焦点请求
+            if (!_isFocusChanging) {
+              _isFocusChanging = true;
+              Future.delayed(const Duration(milliseconds: 150), () {
+                if (mounted && _focusNode.canRequestFocus) {
+                  _focusNode.requestFocus();
+                }
+                _isFocusChanging = false;
+              });
+            }
           }
         },
       ),
@@ -240,7 +243,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     _isFocusChanging = true;
                     _focusNode.unfocus();
                     Future.delayed(const Duration(milliseconds: 100), () {
-                      _isFocusChanging = false;
+                      if (mounted) {
+                        _isFocusChanging = false;
+                      }
                     });
                   },
                   onRecordingStopped: () {

@@ -114,12 +114,17 @@ class MultiAgentWorkflowAdapter:
 
         # Phase 3: Generate and stream response
         try:
+            logger.info(f"[DeepAnalysis] Calling LLM service with {len(messages)} messages")
+            chunk_count = 0
             async for chunk in self.llm_service.stream_chat(
                 messages=messages,
                 model=None,  # Use default model
                 temperature=0.7,
             ):
                 if chunk:
+                    chunk_count += 1
+                    if chunk_count == 1:
+                        logger.info(f"[DeepAnalysis] Received first chunk from LLM")
                     yield agent_service_pb2.ChatResponse(
                         delta=chunk,
                         status_update=agent_service_pb2.AgentStatus(
@@ -128,9 +133,10 @@ class MultiAgentWorkflowAdapter:
                         ),
                     )
         except Exception as e:
-            logger.error(f"[DeepAnalysis] LLM error: {e}")
+            logger.error(f"[DeepAnalysis] LLM error: {e}", exc_info=True)
+            logger.error(f"[DeepAnalysis] Messages sent: {messages}")
             yield agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 深度解析服务暂时不可用: {str(e)}"
+                delta=f"\n\n⚠️ 深度解析服务暂时不可用: {str(e)}\n\n请检查后端日志获取详细信息。"
             )
 
     async def execute_task_decomposition(

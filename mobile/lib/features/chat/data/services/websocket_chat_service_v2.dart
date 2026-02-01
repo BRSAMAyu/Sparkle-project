@@ -1010,6 +1010,29 @@ class WebSocketChatServiceV2 {
 
       if (_messageStreamController != null) {
         _safeAdd(_messageStreamController!, event);
+
+        // 🔧 修复：检查原始消息中的 finish_reason，如果存在则额外发送 DoneEvent
+        // 这是因为某些消息类型（如delta）在解析时会忽略 finish_reason
+        try {
+          final jsonData = json.decode(data) as Map<String, dynamic>;
+          final finishReason = jsonData['finish_reason'] as String?;
+          if (finishReason != null && finishReason != 'NULL' && finishReason.isNotEmpty) {
+            _log('📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent');
+            _safeAdd(
+              _messageStreamController!,
+              DoneEvent(
+                finishReason: finishReason,
+                responseId: jsonData['response_id'] as String?,
+                traceId: jsonData['trace_id'] as String?,
+                workflowId: jsonData['workflow_id'] as String?,
+                promptVersion: jsonData['prompt_version'] as String?,
+              ),
+            );
+          }
+        } catch (e) {
+          // 忽略解析错误，因为这是额外的检查
+          _log('⚠️ Failed to check finish_reason: $e');
+        }
       }
     } catch (e) {
       _log('❌ Parse error: $e');
@@ -1062,6 +1085,21 @@ class WebSocketChatServiceV2 {
       // 更新连接状态，禁用重连
       _updateConnectionState(WsConnectionState.failed);
       _enableReconnectLocal = false;
+
+      // 🔧 P0-2: 通知用户有消息未发送
+      if (_pendingMessages.isNotEmpty) {
+        _log('⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure');
+        if (_messageStreamController != null) {
+          _safeAdd(
+            _messageStreamController!,
+            ErrorEvent(
+              code: 'MESSAGES_LOST',
+              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              retryable: false,
+            ),
+          );
+        }
+      }
       _pendingMessages.clear();
       return;
     }
@@ -1125,6 +1163,21 @@ class WebSocketChatServiceV2 {
       // 禁用重连
       _updateConnectionState(WsConnectionState.failed);
       _enableReconnectLocal = false;
+
+      // 🔧 P0-2: 通知用户有消息未发送
+      if (_pendingMessages.isNotEmpty) {
+        _log('⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure');
+        if (_messageStreamController != null) {
+          _safeAdd(
+            _messageStreamController!,
+            ErrorEvent(
+              code: 'MESSAGES_LOST',
+              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              retryable: false,
+            ),
+          );
+        }
+      }
       _pendingMessages.clear();
     } finally {
       _isRefreshingToken = false;
@@ -1272,6 +1325,8 @@ class WebSocketChatServiceV2 {
       if (payload['type'] is String) {
         span.setAttribute('ws.type', payload['type'] as String);
       }
+      // 🔧 诊断：记录完整 payload 以验证 chat_mode 是否被发送
+      _log('📤 Full payload: ${json.encode(payload)}');
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');
       span.end();
