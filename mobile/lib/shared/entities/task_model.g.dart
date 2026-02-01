@@ -68,10 +68,10 @@ const _$TaskTypeEnumMap = {
 };
 
 const _$TaskStatusEnumMap = {
-  TaskStatus.pending: 'pending',
-  TaskStatus.inProgress: 'inProgress',
-  TaskStatus.completed: 'completed',
-  TaskStatus.abandoned: 'abandoned',
+  TaskStatus.pending: 'PENDING',
+  TaskStatus.inProgress: 'IN_PROGRESS',
+  TaskStatus.completed: 'COMPLETED',
+  TaskStatus.abandoned: 'ABANDONED',
 };
 
 TaskCreate _$TaskCreateFromJson(Map<String, dynamic> json) => TaskCreate(

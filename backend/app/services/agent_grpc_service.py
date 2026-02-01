@@ -91,7 +91,19 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
-            workflow_id = "standard_chat"
+            # 🔧 根据请求的 chat_mode 选择 workflow
+            chat_mode = getattr(request, 'chat_mode', None) or "standard"
+            logger.info(f"📋 Chat mode: {chat_mode}")
+
+            # 根据 chat_mode 映射到 workflow_id
+            workflow_map = {
+                "standard": "standard_chat",
+                "deep_analysis": "deep_analysis_workflow",
+                "study_plan": "study_plan_workflow",
+                "error_diagnosis": "error_diagnosis_workflow",
+            }
+            workflow_id = workflow_map.get(chat_mode, "standard_chat")
+
             prompt_versions = ["v1", "v2"]
             prompt_version = "v1"
             try:
@@ -104,7 +116,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             logger.info(
                 f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}, "
-                f"workflow={workflow_id}, prompt_version={prompt_version}"
+                f"chat_mode={chat_mode}, workflow={workflow_id}, prompt_version={prompt_version}"
             )
 
             # Create a dedicated DB session for this stream
@@ -116,6 +128,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         request,
                         db_session=db_session,
                         context_data={
+                            "chat_mode": chat_mode,
                             "workflow_id": workflow_id,
                             "prompt_version": prompt_version,
                         },

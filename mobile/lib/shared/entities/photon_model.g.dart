@@ -30,10 +30,10 @@ PhotonTransaction _$PhotonTransactionFromJson(Map<String, dynamic> json) =>
       amount: (json['amount'] as num).toInt(),
       balanceBefore: (json['balance_before'] as num).toInt(),
       balanceAfter: (json['balance_after'] as num).toInt(),
+      createdAt: DateTime.parse(json['created_at'] as String),
       source: json['source'] as String?,
       relatedItemId: json['related_item_id'] as String?,
       metadata: json['extra_data'] as Map<String, dynamic>?,
-      createdAt: DateTime.parse(json['created_at'] as String),
     );
 
 Map<String, dynamic> _$PhotonTransactionToJson(PhotonTransaction instance) =>

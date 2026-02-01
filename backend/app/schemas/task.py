@@ -36,20 +36,20 @@ class TaskCreate(BaseModel):
                 return value
             lowered = normalized.lower()
             alias_map = {
-                "learning": "LEARNING",
-                "training": "TRAINING",
-                "errorfix": "ERROR_FIX",
-                "error_fix": "ERROR_FIX",
-                "reflection": "REFLECTION",
-                "social": "SOCIAL",
-                "planning": "PLANNING",
-                "study": "LEARNING",
-                "review": "TRAINING",
-                "homework": "PLANNING",
-                "exam": "REFLECTION",
-                "other": "LEARNING",
+                "learning": "learning",
+                "training": "training",
+                "errorfix": "errorFix",
+                "error_fix": "errorFix",
+                "reflection": "reflection",
+                "social": "social",
+                "planning": "planning",
+                "study": "learning",
+                "review": "training",
+                "homework": "planning",
+                "exam": "reflection",
+                "other": "learning",
             }
-            mapped = alias_map.get(lowered, normalized.upper())
+            mapped = alias_map.get(lowered, normalized)
             try:
                 return TaskType(mapped)
             except Exception:
@@ -176,20 +176,20 @@ class TaskListQuery(BaseModel):
         if isinstance(value, str):
             lowered = value.strip().lower()
             alias_map = {
-                "learning": "LEARNING",
-                "training": "TRAINING",
-                "errorfix": "ERROR_FIX",
-                "error_fix": "ERROR_FIX",
-                "reflection": "REFLECTION",
-                "social": "SOCIAL",
-                "planning": "PLANNING",
-                "study": "LEARNING",
-                "review": "TRAINING",
-                "homework": "PLANNING",
-                "exam": "REFLECTION",
-                "other": "LEARNING",
+                "learning": "learning",
+                "training": "training",
+                "errorfix": "errorFix",
+                "error_fix": "errorFix",
+                "reflection": "reflection",
+                "social": "social",
+                "planning": "planning",
+                "study": "learning",
+                "review": "training",
+                "homework": "planning",
+                "exam": "reflection",
+                "other": "learning",
             }
-            mapped = alias_map.get(lowered, value.upper())
+            mapped = alias_map.get(lowered, value)
             try:
                 return TaskType(mapped)
             except Exception:

@@ -857,6 +857,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
           if (state.activeTools.isNotEmpty) {
             state = state.copyWith(activeTools: []);
           }
+          // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
+          state = state.copyWith(
+            clearAiStatus: true,
+            streamingContent: '',
+          );
           // 🔧 修复：立即退出流循环，确保执行清理代码（设置 isSending: false）
           break;
         }

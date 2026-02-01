@@ -13,7 +13,7 @@ from app.models.task import Task, TaskStatus, TaskType
 class TaskItem(BaseModel):
     title: str = Field(..., description="Title of the task.")
     content: str = Field(..., description="The generated content (Flashcard MD or Question JSON).")
-    type: str = Field("LEARNING", description="Task type: LEARNING (Flashcards) or TRAINING (Questions).")
+    type: str = Field("learning", description="Task type: learning (Flashcards) or training (Questions).")
     estimated_minutes: int = Field(15, description="Estimated duration.")
     knowledge_concept: str = Field(None, description="Name of the related concept.")
 
@@ -85,7 +85,7 @@ class StudyPlanCreatorTool(BaseTool):
                 for item in tasks:
                     # Resolve TaskType enum
                     t_type = TaskType.LEARNING
-                    if item.type.upper() == "TRAINING":
+                    if item.type.lower() == "training":
                         t_type = TaskType.TRAINING
 
                     # Resolve Knowledge Node (Simplified: we won't do a graph lookup here,
