@@ -332,7 +332,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     return Column(
                       children: [
                         DropdownButtonFormField<int>(
-                          value: _estimatedMinutes,
+                          initialValue: _estimatedMinutes,
                           decoration: const InputDecoration(
                             labelText: '预计时长',
                             border: OutlineInputBorder(),
@@ -380,7 +380,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _estimatedMinutes,
+                          initialValue: _estimatedMinutes,
                           decoration: const InputDecoration(
                             labelText: '预计时长',
                             border: OutlineInputBorder(),

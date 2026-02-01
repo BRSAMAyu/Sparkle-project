@@ -92,7 +92,7 @@ class AuthInterceptor extends Interceptor {
           baseUrl: ApiConstants.baseUrl,
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 30),
-        ));
+        ),);
         err.requestOptions.headers['Authorization'] =
             'Bearer ${newToken.accessToken}';
         final response = await dio.fetch<dynamic>(err.requestOptions);

@@ -791,7 +791,6 @@ class _FeedbackOption {
   const _FeedbackOption({
     required this.value,
     required this.label,
-    this.subtitle,
   });
 
   final String value;
