@@ -54,13 +54,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             final currentError = ref.read(chatProvider).error;
             if (currentError == next) {
               // 错误仍然相同，自动清除
-              ref.read(chatProvider.notifier).state =
-                ref.read(chatProvider).copyWith(clearError: true);
+              // 🔧 修复：正确使用StateNotifier更新状态
+              final notifier = ref.read(chatProvider.notifier);
+              notifier.state = notifier.state.copyWith(clearError: true);
             }
           }
         });
       }
     });
+
+    // 🔧 修复：将ref.listen移到initState，避免在build中监听
+    ref.listenManual(
+      chatProvider.select((state) => state.lastActionStatus),
+      (previous, next) {
+        if (next != null && next != previous) {
+          final message = ref.read(chatProvider).lastActionMessage;
+          if (message != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: next == 'failed' || next == 'error'
+                    ? DS.error
+                    : DS.primaryBase,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      },
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
@@ -70,25 +93,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for action status updates to show SnackBar
-    ref.listen(chatProvider.select((state) => state.lastActionStatus),
-        (previous, next) {
-      if (next != null && next != previous) {
-        final message = ref.read(chatProvider).lastActionMessage;
-        if (message != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: next == 'failed' || next == 'error'
-                  ? DS.error
-                  : DS.primaryBase,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
 
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
@@ -343,8 +347,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               icon: Icon(Icons.close, size: 18, color: DS.error),
                               onPressed: () {
                                 // Clear error
-                                ref.read(chatProvider.notifier).state =
-                                  ref.read(chatProvider).copyWith(clearError: true);
+                                // 🔧 修复：正确使用StateNotifier更新状态
+                                final notifier = ref.read(chatProvider.notifier);
+                                notifier.state = notifier.state.copyWith(clearError: true);
                               },
                               constraints: const BoxConstraints(),
                               padding: const EdgeInsets.all(4),

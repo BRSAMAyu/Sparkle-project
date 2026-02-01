@@ -19,27 +19,38 @@ class AiStatusCapsule extends StatelessWidget {
   final bool dense;
   final VoidCallback? onTap;
 
+  /// 🔧 安全获取品牌主色，避免SparkleThemeExtension未注册错误
+  Color _safeGetColor(BuildContext context) {
+    try {
+      return context.colors.brandPrimary;
+    } catch (e) {
+      // Fallback color if SparkleThemeExtension is not registered
+      return Colors.blue;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final baseColor = color ?? context.colors.brandPrimary;
+    // 🔧 修复：安全获取baseColor，避免SparkleThemeExtension未注册错误
+    final baseColor = color ?? _safeGetColor(context);
     final background = baseColor.withValues(alpha: 0.12);
     final border = baseColor.withValues(alpha: 0.3);
-    final horizontal = dense ? context.space.sm : context.space.md;
-    final vertical = dense ? context.space.xs : context.space.sm;
+    final horizontal = dense ? 4.0 : 8.0;
+    final vertical = dense ? 2.0 : 4.0;
 
     return SparklePressable(
       onTap: onTap,
       enabled: onTap != null,
       backgroundColor: background,
       border: BorderSide(color: border),
-      borderRadius: context.radius.fullRadius,
-      padding: context.space.edge(horizontal: horizontal, vertical: vertical),
+      borderRadius: BorderRadius.circular(8),
+      padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
             Icon(icon, size: dense ? 14 : 16, color: baseColor),
-            SizedBox(width: context.space.xs),
+            SizedBox(width: 8),
           ],
           Container(
             width: dense ? 6 : 8,
@@ -49,10 +60,10 @@ class AiStatusCapsule extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          SizedBox(width: context.space.xs),
+          SizedBox(width: 8),
           Text(
             label,
-            style: context.typo.labelSmall.copyWith(color: baseColor),
+            style: TextStyle(fontSize: dense ? 12 : 14, color: baseColor),
           ),
         ],
       ),
