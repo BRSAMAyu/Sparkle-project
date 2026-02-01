@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -138,9 +139,12 @@ class AuthRepository {
     return data.toString();
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool keepDemoMode = false}) async {
     if (DemoDataService.isDemoMode) {
-      DemoDataService.isDemoMode = false;
+      if (!keepDemoMode) {
+        DemoDataService.isDemoMode = false;
+      }
+      await clearTokens();
       return;
     }
     // In a real app, you might want to call a server endpoint to invalidate the token
@@ -148,13 +152,6 @@ class AuthRepository {
   }
 
   Future<TokenResponse> refreshToken() async {
-    if (DemoDataService.isDemoMode) {
-      return TokenResponse(
-        accessToken: 'demo',
-        refreshToken: 'demo',
-        expiresIn: 3600,
-      );
-    }
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) {
       throw Exception('No refresh token available.');

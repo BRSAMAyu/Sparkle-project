@@ -2055,7 +2055,6 @@ main  →  [A] → [B] → [C]
       ),
     ];
   }
-}
 
   // --- 🎯 专注会话历史 Data ---
   List<Map<String, dynamic>> get demoFocusSessions {

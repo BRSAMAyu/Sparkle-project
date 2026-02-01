@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -130,6 +131,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         isAuthenticated: true,
         user: guestUser,
+      );
+    }
+  }
+
+  Future<void> loginAsDemoAccount() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      // 🔥 混合模式：DemoMode保持true以显示丰富的Mock数据
+      // 但LLM聊天等核心功能会尝试使用真实API
+      DemoDataService.isDemoMode = true;
+      debugPrint('🎬 Demo account login (hybrid mode: Mock data + real LLM)');
+
+      // 使用真实账号登录获取token（用于LLM等功能）
+      final user = await _authRepository.login('chat_test', 'Chat123456');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        user: user,
+      );
+      debugPrint('✅ Demo account login successful, showing mock data for presentation');
+    } catch (e) {
+      debugPrint('⚠️ Demo account login failed: $e');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        error: e.toString(),
       );
     }
   }

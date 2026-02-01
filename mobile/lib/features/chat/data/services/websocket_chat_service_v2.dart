@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -1077,7 +1078,9 @@ class WebSocketChatServiceV2 {
 
       // 执行登出
       try {
-        await _container.read(authRepositoryProvider).logout();
+        await _container.read(authRepositoryProvider).logout(
+              keepDemoMode: DemoDataService.isDemoMode,
+            );
       } catch (e) {
         _log('❌ Logout failed: $e');
       }
@@ -1155,7 +1158,9 @@ class WebSocketChatServiceV2 {
 
       // 执行登出
       try {
-        await _container.read(authRepositoryProvider).logout();
+        await _container.read(authRepositoryProvider).logout(
+              keepDemoMode: DemoDataService.isDemoMode,
+            );
       } catch (logoutErr) {
         _log('❌ Logout failed: $logoutErr');
       }
