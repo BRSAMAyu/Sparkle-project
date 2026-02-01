@@ -477,6 +477,8 @@ class _PlanProgressTab extends StatelessWidget {
         return '社交';
       case TaskType.planning:
         return '规划';
+      case TaskType.ocr:
+        return 'OCR';
     }
   }
 }

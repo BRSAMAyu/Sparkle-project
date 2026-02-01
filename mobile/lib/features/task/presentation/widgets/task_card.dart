@@ -463,6 +463,8 @@ TaskPillTone _typeTone(TaskType type) {
       return TaskPillTone.success;
     case TaskType.planning:
       return TaskPillTone.neutral;
+    case TaskType.ocr:
+      return TaskPillTone.neutral;
   }
 }
 
@@ -493,5 +495,7 @@ String _typeLabel(TaskType type) {
       return 'Social';
     case TaskType.planning:
       return 'Plan';
+    case TaskType.ocr:
+      return 'OCR';
   }
 }

@@ -1,10 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
+import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 
 final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
+  // 🔧 Demo 模式下使用 Mock Repository
+  if (DemoDataService.isDemoMode) {
+    return MockCommunityRepository();
+  }
+
   final apiClient = ref.watch(apiClientProvider);
   return CommunityRepository(apiClient);
 });

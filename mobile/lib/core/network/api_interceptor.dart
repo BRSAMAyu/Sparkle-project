@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);
@@ -74,6 +75,14 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final path = err.requestOptions.path;
+
+    // 🎭 演示模式：忽略401错误，不尝试刷新token或logout
+    // 这样可以让演示模式下的请求失败时不会影响用户体验
+    if (DemoDataService.isDemoMode && err.response?.statusCode == 401) {
+      debugPrint('🎭 Demo Mode: Ignoring 401 error for $path');
+      return super.onError(err, handler);
+    }
+
     // Prevent infinite loop: Don't attempt to refresh token if the failed request
     // is itself an auth request (login, register, refresh, etc.)
     if (path.contains('/auth') ||

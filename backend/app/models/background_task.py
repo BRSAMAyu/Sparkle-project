@@ -23,11 +23,11 @@ class BackgroundTaskType(str, enum.Enum):
 
 class BackgroundTaskStatus(str, enum.Enum):
     """Background task status"""
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class BackgroundTask(BaseModel):

@@ -3,18 +3,20 @@ import 'package:json_annotation/json_annotation.dart';
 part 'task_model.g.dart';
 
 enum TaskType {
-  @JsonValue('learning')
+  @JsonValue('LEARNING')
   learning,
-  @JsonValue('training')
+  @JsonValue('TRAINING')
   training,
-  @JsonValue('errorFix')
+  @JsonValue('ERROR_FIX')
   errorFix,
-  @JsonValue('reflection')
+  @JsonValue('REFLECTION')
   reflection,
-  @JsonValue('social')
+  @JsonValue('SOCIAL')
   social,
-  @JsonValue('planning')
+  @JsonValue('PLANNING')
   planning,
+  @JsonValue('OCR')
+  ocr,
 }
 
 enum TaskStatus {

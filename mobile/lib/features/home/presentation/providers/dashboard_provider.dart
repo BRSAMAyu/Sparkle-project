@@ -209,12 +209,27 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final nextActionsList = dashboardData['next_actions'] as List<dynamic>;
       final nextActions = nextActionsList.map((item) {
         final map = item as Map<String, dynamic>;
+
+        // 🔧 修复：type字段可能是List，需要安全转换
+        String typeValue;
+        final typeRaw = map['type'];
+        if (typeRaw is List) {
+          // 如果是List，取第一个元素或使用默认值
+          typeValue = (typeRaw.isNotEmpty && typeRaw.first is String)
+              ? typeRaw.first as String
+              : 'learning';
+        } else if (typeRaw is String) {
+          typeValue = typeRaw;
+        } else {
+          typeValue = 'learning'; // 默认值
+        }
+
         return TaskData(
           id: map['id'] as String,
           title: map['title'] as String,
           estimatedMinutes: map['estimated_minutes'] as int,
           priority: map['priority'] as int,
-          type: map['type'] as String,
+          type: typeValue,
         );
       }).toList();
 

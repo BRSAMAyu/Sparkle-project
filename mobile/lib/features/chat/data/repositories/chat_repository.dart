@@ -106,11 +106,8 @@ class ChatRepository {
     bool includeReferences = false,
     String? chatMode,
   }) {
-    if (DemoDataService.isDemoMode) {
-      // Mock stream generator
-      return _mockChatStream(message);
-    }
-
+    // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
+    // 只有历史数据使用预设内容
     // 使用 WebSocket 服务
     return _wsService.sendMessage(
       message: message,

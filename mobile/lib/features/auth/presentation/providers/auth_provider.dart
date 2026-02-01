@@ -109,7 +109,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 使用真实API获取游客token
+      // ✅ 始终启用演示模式以展示完整的 Mock 数据
+      // 这样可以展示丰富的预设内容（任务、星图、成就等）
+      // 同时保持核心功能（LLM对话、任务创建）真实可用
+      DemoDataService.isDemoMode = true;
+      debugPrint('🎭 Demo Mode enabled for guest login');
+
+      // 使用真实API获取游客token（保持核心功能可用）
       final user = await _authRepository.guestLogin('guest_user');
       state = state.copyWith(
         isLoading: false,
@@ -117,8 +123,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
       );
     } catch (e) {
-      // 如果API失败，回退到Demo模式
-      DemoDataService.isDemoMode = true;
+      // API 失败时仍然使用演示模式
+      debugPrint('⚠️ Guest API failed, using demo data: $e');
       final guestUser = DemoDataService().demoUser;
       state = state.copyWith(
         isLoading: false,
