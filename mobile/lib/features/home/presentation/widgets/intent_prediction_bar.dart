@@ -56,8 +56,7 @@ class IntentPredictionBar extends ConsumerWidget {
 
 class _PredictionChip extends StatelessWidget {
   const _PredictionChip({
-    super.key,
-    required this.prediction,
+    required this.prediction, super.key,
   });
 
   final PredictedAction prediction;

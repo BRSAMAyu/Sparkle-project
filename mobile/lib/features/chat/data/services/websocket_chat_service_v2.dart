@@ -1144,7 +1144,7 @@ class WebSocketChatServiceV2 {
     if (_is401Error(error)) {
       _log('🔐 401 Authentication error detected');
       // 异步处理401，避免阻塞错误处理流程
-      Future.microtask(() => _handle401Error());
+      Future.microtask(_handle401Error);
       return;
     }
 
