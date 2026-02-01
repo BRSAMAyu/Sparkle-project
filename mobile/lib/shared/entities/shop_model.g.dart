@@ -9,22 +9,22 @@ part of 'shop_model.dart';
 ShopItem _$ShopItemFromJson(Map<String, dynamic> json) => ShopItem(
       id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
       itemType: $enumDecode(_$ShopItemTypeEnumMap, json['item_type']),
       category: json['category'] as String,
       pricePhotons: (json['price_photons'] as num).toInt(),
-      originalPrice: (json['original_price'] as num?)?.toInt(),
-      discountPercent: (json['discount_percent'] as num?)?.toInt(),
       isAvailable: json['is_available'] as bool,
       isLimited: json['is_limited'] as bool,
-      stockQuantity: (json['stock_quantity'] as num?)?.toInt(),
-      iconUrl: json['icon_url'] as String?,
       rarity: $enumDecode(_$ItemRarityEnumMap, json['rarity']),
-      itemConfig: json['item_config'] as Map<String, dynamic>?,
       sortOrder: (json['sort_order'] as num).toInt(),
       hasDiscount: json['has_discount'] as bool,
       isInStock: json['is_in_stock'] as bool,
       isOwned: json['is_owned'] as bool,
+      description: json['description'] as String?,
+      originalPrice: (json['original_price'] as num?)?.toInt(),
+      discountPercent: (json['discount_percent'] as num?)?.toInt(),
+      stockQuantity: (json['stock_quantity'] as num?)?.toInt(),
+      iconUrl: json['icon_url'] as String?,
+      itemConfig: json['item_config'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$ShopItemToJson(ShopItem instance) => <String, dynamic>{
@@ -66,12 +66,12 @@ ShopPurchase _$ShopPurchaseFromJson(Map<String, dynamic> json) => ShopPurchase(
       id: json['id'] as String,
       itemId: json['item_id'] as String,
       itemName: json['item_name'] as String,
-      itemIconUrl: json['item_icon_url'] as String?,
       itemType: $enumDecode(_$ShopItemTypeEnumMap, json['item_type']),
       pricePaid: (json['price_paid'] as num).toInt(),
       photonBalanceBefore: (json['photon_balance_before'] as num).toInt(),
       photonBalanceAfter: (json['photon_balance_after'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
+      itemIconUrl: json['item_icon_url'] as String?,
     );
 
 Map<String, dynamic> _$ShopPurchaseToJson(ShopPurchase instance) =>
@@ -91,12 +91,12 @@ InventoryItem _$InventoryItemFromJson(Map<String, dynamic> json) =>
     InventoryItem(
       id: json['id'] as String,
       name: json['name'] as String,
-      iconUrl: json['icon_url'] as String?,
       itemType: $enumDecode(_$ShopItemTypeEnumMap, json['item_type']),
       rarity: $enumDecode(_$ItemRarityEnumMap, json['rarity']),
       category: json['category'] as String,
       quantity: (json['quantity'] as num).toInt(),
       isEquipped: json['is_equipped'] as bool,
+      iconUrl: json['icon_url'] as String?,
       expiresAt: json['expires_at'] == null
           ? null
           : DateTime.parse(json['expires_at'] as String),

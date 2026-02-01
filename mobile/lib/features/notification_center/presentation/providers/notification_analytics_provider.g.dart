@@ -7,7 +7,7 @@ part of 'notification_analytics_provider.dart';
 // **************************************************************************
 
 String _$notificationAnalyticsHash() =>
-    r'c47f9d689aecfed7250abbf49b4788b4d0901ddd';
+    r'4c2ba6f6ac82faab628729981cb95c87b95c3072';
 
 /// Notification Analytics Notifier
 ///
