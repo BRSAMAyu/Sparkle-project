@@ -39,6 +39,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
   bool _isButtonPressed = false;
+  // 🔧 Android输入法修复：防止快速聚焦/失焦导致输入法崩溃
+  bool _isFocusChanging = false;
 
   void _showAttachmentSheet() {
     if (widget.onFileUploaded != null) {
@@ -69,7 +71,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           setState(() {
             _controller.text = result;
           });
-          _focusNode.requestFocus();
+          // 🔧 Android输入法修复：延迟焦点请求
+          if (!_isFocusChanging) {
+            _isFocusChanging = true;
+            Future.delayed(const Duration(milliseconds: 150), () {
+              if (mounted && _focusNode.canRequestFocus) {
+                _focusNode.requestFocus();
+              }
+              _isFocusChanging = false;
+            });
+          }
         },
       ),
     );
@@ -96,6 +107,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
       _focusNode.requestFocus();
     }
+    // 🔧 修复：当enabled状态从false变为true时，恢复可用状态但不自动聚焦
+    // 这样可以避免在Android上输入法异常显示/隐藏
+    if (widget.enabled && !oldWidget.enabled) {
+      // enabled状态恢复，但不主动请求焦点，让用户手动点击
+      // 这可以避免Android输入法的竞态条件
+    }
   }
 
   @override
@@ -116,14 +133,33 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
       _controller.clear();
       if (widget.onCancelQuote != null) widget.onCancelQuote!();
-      _focusNode.requestFocus();
+
+      // 🔧 Android输入法修复：延迟焦点请求，避免与输入法冲突
+      if (!_isFocusChanging) {
+        _isFocusChanging = true;
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _focusNode.canRequestFocus) {
+            _focusNode.requestFocus();
+          }
+          _isFocusChanging = false;
+        });
+      }
       return;
     }
 
     setState(() => _isSending = true);
     try {
       _controller.clear();
-      _focusNode.requestFocus();
+      // 🔧 Android输入法修复：延迟焦点请求
+      if (!_isFocusChanging) {
+        _isFocusChanging = true;
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _focusNode.canRequestFocus) {
+            _focusNode.requestFocus();
+          }
+          _isFocusChanging = false;
+        });
+      }
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -183,7 +219,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   onTranscription: (text) {
                     // 将语音识别结果填入文本框
                     _controller.text = text;
-                    _focusNode.requestFocus();
+                    // 🔧 Android输入法修复：延迟焦点请求
+                    if (!_isFocusChanging) {
+                      _isFocusChanging = true;
+                      Future.delayed(const Duration(milliseconds: 150), () {
+                        if (mounted && _focusNode.canRequestFocus) {
+                          _focusNode.requestFocus();
+                        }
+                        _isFocusChanging = false;
+                      });
+                    }
                   },
                   onError: (error) {
                     // 显示错误提示
@@ -191,8 +236,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       SnackBar(content: Text(error)),
                     );
                   },
-                  onRecordingStarted: _focusNode.unfocus,
-                  onRecordingStopped: _focusNode.requestFocus,
+                  onRecordingStarted: () {
+                    _isFocusChanging = true;
+                    _focusNode.unfocus();
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      _isFocusChanging = false;
+                    });
+                  },
+                  onRecordingStopped: () {
+                    // 🔧 Android输入法修复：录音结束后不立即请求焦点
+                    // 等待onTranscription回调设置文本后再聚焦
+                  },
                 ),
 
                 const SizedBox(width: DS.spacing8),
@@ -220,6 +274,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           textInputAction: enterToSend
                               ? TextInputAction.send
                               : TextInputAction.newline,
+                          // 🔧 Android输入法修复：确保键盘类型正确
+                          keyboardType: TextInputType.multiline,
+                          // 🔧 Android输入法修复：启用自动纠正和建议
+                          autocorrect: true,
+                          enableSuggestions: true,
                           decoration: InputDecoration(
                             hintText: widget.hintText ?? 'Type a message...',
                             hintStyle: TextStyle(

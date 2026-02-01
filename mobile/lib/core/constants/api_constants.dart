@@ -126,15 +126,10 @@ class ApiConstants {
     if (_androidEmulatorUrlOverride.isNotEmpty) {
       return _androidEmulatorUrlOverride;
     }
-    if (_androidUseEmulator) {
-      return 'http://10.0.2.2:8080';
-    }
-    if (_androidDeviceUrlOverride.isNotEmpty) {
-      return _androidDeviceUrlOverride;
-    }
-    // Default to localhost, which works with adb reverse on real devices
-    // and on emulators when port forwarding is set up
-    return 'http://localhost:8080';
+    // 🔥 永久修复：Android 模拟器默认使用 10.0.2.2
+    // 这是 Android 模拟器访问宿主机服务的正确地址
+    // 不再依赖环境变量，避免每次启动都要配置
+    return 'http://10.0.2.2:8080';
   }
 
   static String _iosBaseUrl() {

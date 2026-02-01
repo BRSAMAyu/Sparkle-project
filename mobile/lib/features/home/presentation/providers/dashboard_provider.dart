@@ -17,7 +17,7 @@ class DashboardState {
 
   DashboardState.loading()
       : weather = WeatherData(type: 'sunny', condition: ''),
-        flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
+        flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
         growth = null,
         nextActions = const [],
@@ -27,7 +27,7 @@ class DashboardState {
 
   DashboardState.error(String errorMessage)
       : weather = WeatherData(type: 'sunny', condition: ''),
-        flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
+        flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
         growth = null,
         nextActions = const [],
@@ -80,7 +80,7 @@ class FlameData {
     this.nudgeMessage = '保持专注，继续前行',
   });
   final int level;
-  final int brightness;
+  final double brightness; // 🔧 修复：改为double以匹配后端返回的0.0-1.0范围值
   final int todayFocusMinutes;
   final int tasksCompleted;
   final String nudgeMessage;
@@ -175,7 +175,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final flameMap = dashboardData['flame'] as Map<String, dynamic>;
       final flame = FlameData(
         level: flameMap['level'] as int,
-        brightness: flameMap['brightness'] as int,
+        brightness: (flameMap['brightness'] as num).toDouble(), // 🔧 修复：支持int和double类型
         todayFocusMinutes: flameMap['today_focus_minutes'] as int,
         tasksCompleted: flameMap['tasks_completed'] as int? ?? 0,
         nudgeMessage: flameMap['nudge_message'] as String? ?? '保持专注，继续前行',

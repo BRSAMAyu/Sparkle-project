@@ -46,6 +46,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
+    ref.listenManual(chatProvider.select((state) => state.error), (previous, next) {
+      if (next != null && next != previous) {
+        Future.delayed(const Duration(seconds: 10), () {
+          if (mounted) {
+            final currentError = ref.read(chatProvider).error;
+            if (currentError == next) {
+              // 错误仍然相同，自动清除
+              ref.read(chatProvider.notifier).state =
+                ref.read(chatProvider).copyWith(clearError: true);
+            }
+          }
+        });
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
       unawaited(ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
@@ -313,10 +329,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(DS.sm),
                         color: DS.error.withValues(alpha: 0.1),
-                        child: Text(
-                          'Error: ${chatState.error}',
-                          style: TextStyle(color: DS.error),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chatState.error!,
+                                style: TextStyle(color: DS.error, fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.close, size: 18, color: DS.error),
+                              onPressed: () {
+                                // Clear error
+                                ref.read(chatProvider.notifier).state =
+                                  ref.read(chatProvider).copyWith(clearError: true);
+                              },
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(4),
+                            ),
+                          ],
                         ),
                       ),
                     if (chatState.attachedFiles.isNotEmpty)
