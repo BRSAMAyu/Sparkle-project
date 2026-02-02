@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
@@ -48,7 +49,8 @@ class ChatRepository {
         'conversation_id': conversationId,
       },
     );
-    return ChatResponseModel.fromJson(response.data!);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
+    return ChatResponseModel.fromJson(payload);
   }
 
   /// 获取对话历史
@@ -65,13 +67,13 @@ class ChatRepository {
     if (limit != null) queryParams['limit'] = limit;
     if (offset != null) queryParams['offset'] = offset;
 
-    final response = await _dio.get<List<dynamic>>(
+    final response = await _dio.get<dynamic>(
       '/api/v1/chat/history/$conversationId',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final list = response.data ?? [];
-    return list
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getConversationHistory');
+    return data
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();
   }
@@ -87,8 +89,8 @@ class ChatRepository {
         },
       ];
     }
-    final response = await _dio.get<List<dynamic>>('/api/v1/chat/sessions');
-    final data = response.data ?? [];
+    final response = await _dio.get<dynamic>('/api/v1/chat/sessions');
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getRecentConversations');
     return List<Map<String, dynamic>>.from(
       data.map((item) => item as Map<String, dynamic>),
     );

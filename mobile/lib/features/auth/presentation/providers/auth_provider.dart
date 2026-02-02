@@ -138,19 +138,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsDemoAccount() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 🔥 混合模式：DemoMode保持true以显示丰富的Mock数据
-      // 但LLM聊天等核心功能会尝试使用真实API
-      DemoDataService.isDemoMode = true;
-      debugPrint('🎬 Demo account login (hybrid mode: Mock data + real LLM)');
+      // ✅ 演示账号登录：使用真实账户chat_test + 预设数据库数据
+      // 必须关闭DemoMode以确保从后端API读取真实数据
+      DemoDataService.isDemoMode = false;
+      debugPrint('🎬 Demo account login (real data from backend)');
 
-      // 使用真实账号登录获取token（用于LLM等功能）
       final user = await _authRepository.login('chat_test', 'Chat123456');
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
         user: user,
       );
-      debugPrint('✅ Demo account login successful, showing mock data for presentation');
+      debugPrint('✅ Demo account login successful, fetching real data from API');
     } catch (e) {
       debugPrint('⚠️ Demo account login failed: $e');
       state = state.copyWith(

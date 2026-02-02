@@ -95,12 +95,15 @@ class _NextActionItem extends ConsumerWidget {
         ? DS.brandPrimary.withValues(alpha: 0.08)
         : DS.brandPrimary.withValues(alpha: 0.15);
 
-    return GestureDetector(
-      onTap: () {
-        final taskModel = _toTaskModel(task);
-        context.push('/tasks/${taskModel.id}/execute');
-      },
-      child: Container(
+    return Consumer(
+      builder: (context, ref, child) => GestureDetector(
+        onTap: () {
+          final taskModel = _toTaskModel(task);
+          // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+          ref.read(activeTaskProvider.notifier).state = taskModel;
+          context.push('/tasks/${taskModel.id}/execute');
+        },
+        child: Container(
         padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           color: itemColor,
@@ -160,6 +163,7 @@ class _NextActionItem extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       );
     }
 

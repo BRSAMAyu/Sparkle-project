@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
@@ -21,6 +23,32 @@ class NotificationCenterRepository {
     bool unreadOnly = false,
     String? sourceType,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock notifications for demo mode
+      return [
+        UnifiedNotification(
+          id: 'demo-1',
+          sourceType: 'system',
+          title: '欢迎使用星火AI学习助手',
+          content: '开始您的学习之旅吧！',
+          priority: 'medium',
+          isRead: false,
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+          type: 'system',
+        ),
+        UnifiedNotification(
+          id: 'demo-2',
+          sourceType: 'intervention',
+          title: '休息提醒',
+          content: '您已经连续工作45分钟，建议休息一下',
+          priority: 'high',
+          isRead: false,
+          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          type: 'intervention',
+        ),
+      ];
+    }
+
     try {
       final queryParams = <String, dynamic>{
         'skip': skip,
@@ -29,20 +57,15 @@ class NotificationCenterRepository {
         if (sourceType != null) 'sourceType': sourceType,
       };
 
-      final response = await _client.get<List<dynamic>>(
+      final response = await _client.get<dynamic>(
         '/notification-center/notifications',
         queryParameters: queryParams,
       );
 
-      if (response.data == null) {
-        return [];
-      }
-
-      final notifications = (response.data as List)
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getNotifications');
+      return data
           .map((json) => UnifiedNotification.fromJson(json as Map<String, dynamic>))
           .toList();
-
-      return notifications;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -50,6 +73,10 @@ class NotificationCenterRepository {
 
   /// Mark a notification as read
   Future<void> markAsRead(String notificationId, String type) async {
+    if (DemoDataService.isDemoMode) {
+      // No-op in demo mode
+      return;
+    }
     try {
       await _client.put<Map<String, dynamic>>(
         '/notification-center/notifications/$notificationId/read',
@@ -62,12 +89,17 @@ class NotificationCenterRepository {
 
   /// Mark all notifications as read
   Future<int> markAllAsRead() async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock count for demo mode
+      return 2;
+    }
     try {
       final response = await _client.put<Map<String, dynamic>>(
         '/notification-center/notifications/mark-all-read',
       );
 
-      return response.data?['count'] as int? ?? 0;
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'markAllAsRead');
+      return payload['count'] as int? ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -75,6 +107,10 @@ class NotificationCenterRepository {
 
   /// Delete a notification
   Future<void> deleteNotification(String notificationId, String type) async {
+    if (DemoDataService.isDemoMode) {
+      // No-op in demo mode
+      return;
+    }
     try {
       await _client.delete<dynamic>(
         '/notification-center/notifications/$notificationId',
@@ -87,12 +123,17 @@ class NotificationCenterRepository {
 
   /// Clear all read notifications
   Future<int> clearReadNotifications() async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock count for demo mode
+      return 1;
+    }
     try {
       final response = await _client.delete<Map<String, dynamic>>(
         '/notification-center/notifications/clear-read',
       );
 
-      return response.data?['count'] as int? ?? 0;
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'clearReadNotifications');
+      return payload['count'] as int? ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -107,6 +148,28 @@ class NotificationCenterRepository {
     DateTime? endDate,
     String? search,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock history for demo mode
+      return {
+        'items': [
+          UnifiedNotification(
+            id: 'demo-history-1',
+            sourceType: 'system',
+            title: '历史通知1',
+            content: '这是一条历史通知',
+            priority: 'low',
+            isRead: true,
+            createdAt: DateTime.now().subtract(const Duration(days: 2)),
+            type: 'system',
+          ),
+        ],
+        'total': 1,
+        'page': page,
+        'page_size': pageSize,
+        'total_pages': 1,
+      };
+    }
+
     try {
       final queryParams = <String, dynamic>{
         'page': page,
@@ -132,17 +195,19 @@ class NotificationCenterRepository {
         };
       }
 
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getNotificationHistory');
+
       // Parse items
-      final items = (response.data!['items'] as List? ?? [])
+      final items = (payload['items'] as List? ?? [])
           .map((json) => UnifiedNotification.fromJson(json as Map<String, dynamic>))
           .toList();
 
       return {
         'items': items,
-        'total': response.data!['total'] as int? ?? 0,
-        'page': response.data!['page'] as int? ?? page,
-        'page_size': response.data!['page_size'] as int? ?? pageSize,
-        'total_pages': response.data!['total_pages'] as int? ?? 0,
+        'total': payload['total'] as int? ?? 0,
+        'page': payload['page'] as int? ?? page,
+        'page_size': payload['page_size'] as int? ?? pageSize,
+        'total_pages': payload['total_pages'] as int? ?? 0,
       };
     } on DioException catch (e) {
       throw _handleError(e);
@@ -151,6 +216,40 @@ class NotificationCenterRepository {
 
   /// Get notification analytics
   Future<NotificationAnalytics> getAnalytics(String period) async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock analytics for demo mode
+      return NotificationAnalytics(
+        summary: NotificationAnalyticsSummary(
+          totalSent: 50,
+          totalViewed: 45,
+          totalClicked: 30,
+          viewRate: 0.9,
+          clickRate: 0.6,
+          avgTimeToAction: 300.0,
+        ),
+        byType: {
+          'system': NotificationTypeStats(
+            type: 'system',
+            sent: 30,
+            viewed: 27,
+            clicked: 18,
+            viewRate: 0.9,
+            clickRate: 0.6,
+          ),
+          'intervention': NotificationTypeStats(
+            type: 'intervention',
+            sent: 20,
+            viewed: 18,
+            clicked: 12,
+            viewRate: 0.9,
+            clickRate: 0.6,
+          ),
+        },
+        trends: [],
+        hourlyDistribution: List.generate(24, (i) => i * 2),
+      );
+    }
+
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/notification-center/analytics',
@@ -161,7 +260,8 @@ class NotificationCenterRepository {
         throw Exception('No analytics data received');
       }
 
-      return NotificationAnalytics.fromJson(response.data!);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAnalytics');
+      return NotificationAnalytics.fromJson(payload);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -169,12 +269,24 @@ class NotificationCenterRepository {
 
   /// Get notification preferences
   Future<Map<String, dynamic>> getPreferences() async {
+    if (DemoDataService.isDemoMode) {
+      // Return mock preferences for demo mode
+      return {
+        'enable_system_notifications': true,
+        'enable_intervention_notifications': true,
+        'quiet_hours_start': '22:00',
+        'quiet_hours_end': '08:00',
+        'sound_enabled': true,
+      };
+    }
+
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/notification-center/preferences',
       );
 
-      return response.data ?? {};
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPreferences');
+      return payload;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -182,13 +294,26 @@ class NotificationCenterRepository {
 
   /// Update notification preferences
   Future<Map<String, dynamic>> updatePreferences(Map<String, dynamic> updates) async {
+    if (DemoDataService.isDemoMode) {
+      // Return updated mock preferences for demo mode
+      return {
+        'enable_system_notifications': true,
+        'enable_intervention_notifications': true,
+        'quiet_hours_start': '22:00',
+        'quiet_hours_end': '08:00',
+        'sound_enabled': true,
+        ...updates,
+      };
+    }
+
     try {
       final response = await _client.put<Map<String, dynamic>>(
         '/notification-center/preferences',
         data: updates,
       );
 
-      return response.data ?? {};
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePreferences');
+      return payload;
     } on DioException catch (e) {
       throw _handleError(e);
     }

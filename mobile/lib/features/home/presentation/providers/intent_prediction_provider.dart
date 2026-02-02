@@ -11,6 +11,8 @@ import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Predicted action for intent prediction bar
 class PredictedAction {
@@ -395,6 +397,28 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   void _navigateToTaskExecution(String taskId) {
     final context = navigatorKey.currentContext;
     if (context != null) {
+      // 🔧 修复：从taskListProvider获取完整任务并设置activeTaskProvider
+      final taskState = _ref.read(taskListProvider);
+      TaskModel? task;
+
+      // 尝试从各个列表中查找任务
+      try {
+        task = taskState.tasks.firstWhere((t) => t.id == taskId);
+      } catch (_) {
+        try {
+          task = taskState.todayTasks.firstWhere((t) => t.id == taskId);
+        } catch (_) {
+          try {
+            task = taskState.recommendedTasks.firstWhere((t) => t.id == taskId);
+          } catch (_) {
+            // 任务不在任何列表中
+          }
+        }
+      }
+
+      if (task != null) {
+        _ref.read(activeTaskProvider.notifier).state = task;
+      }
       GoRouter.of(context).push('/tasks/$taskId/execute');
     }
   }

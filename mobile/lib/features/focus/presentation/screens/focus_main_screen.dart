@@ -131,23 +131,27 @@ class FocusMainScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: DS.border, width: 0.5),
         ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          title: Text(
-            task.title,
-            style: TextStyle(
-                color: DS.textPrimary, fontWeight: FontWeight.w600,),
+        child: Consumer(
+          builder: (context, ref, child) => ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            title: Text(
+              task.title,
+              style: TextStyle(
+                  color: DS.textPrimary, fontWeight: FontWeight.w600,),
+            ),
+            subtitle: Text(
+              '预计 ${task.estimatedMinutes} 分钟',
+              style: TextStyle(color: DS.textSecondary),
+            ),
+            trailing:
+                Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
+            onTap: () {
+              // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+              ref.read(activeTaskProvider.notifier).state = task;
+              context.push('/tasks/${task.id}/execute');
+            },
           ),
-          subtitle: Text(
-            '预计 ${task.estimatedMinutes} 分钟',
-            style: TextStyle(color: DS.textSecondary),
-          ),
-          trailing:
-              Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
-          onTap: () {
-            context.push('/tasks/${task.id}/execute');
-          },
         ),
       );
 

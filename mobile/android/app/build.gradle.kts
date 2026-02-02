@@ -21,7 +21,7 @@ val applicationIdValue =
 
 android {
     namespace = applicationIdValue
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34  // Updated to support newer Android libraries
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,8 +38,8 @@ android {
         applicationId = applicationIdValue
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = flutter.minSdkVersion  // Minimum supported Android version
+        targetSdk = 34  // Target Android 14
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

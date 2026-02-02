@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 
 final omniBarRepositoryProvider = Provider<OmniBarRepository>(
   (ref) => OmniBarRepository(ref.read(apiClientProvider)),
@@ -15,6 +16,6 @@ class OmniBarRepository {
       ApiEndpoints.omnibarDispatch,
       data: {'text': text},
     );
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'omnibarDispatch');
   }
 }

@@ -167,7 +167,11 @@ class InteractiveTaskCard extends ConsumerWidget {
                 child: _ActionButton(
                   icon: Icons.play_arrow_rounded,
                   label: '开始',
-                  onTap: () => context.push('/tasks/${task.id}/execute'),
+                  onTap: () {
+                    // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+                    ref.read(activeTaskProvider.notifier).state = task;
+                    context.push('/tasks/${task.id}/execute');
+                  },
                   color: DS.success,
                 ),
               ),
