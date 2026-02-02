@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -27,11 +28,8 @@ class CommunityRepository {
     );
 
     if (response.statusCode == 200) {
-      final data = response.data;
-      final list = data is List
-          ? data
-          : (data as Map<String, dynamic>)['data'] as List<dynamic>;
-      return list.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getFeed');
+      return data.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load feed');
   }
@@ -43,7 +41,7 @@ class CommunityRepository {
     );
 
     if (response.statusCode == 201) {
-      final data = response.data as Map<String, dynamic>;
+      final data = ApiResponseParser.unwrapMap(response.data, action: 'createPost');
       return data['id'] as String;
     }
     throw Exception('Failed to create post');
@@ -63,7 +61,7 @@ class CommunityRepository {
       queryParameters: {'limit': limit, 'offset': offset},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getFriends');
       return data
           .map((e) => FriendshipInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -74,7 +72,7 @@ class CommunityRepository {
   Future<List<FriendshipInfo>> getPendingRequests() async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.friendsPending);
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getPendingRequests');
       return data
           .map((e) => FriendshipInfo.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -89,7 +87,7 @@ class CommunityRepository {
       queryParameters: {'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getFriendRecommendations');
       return data
           .map((e) => FriendRecommendation.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -123,7 +121,7 @@ class CommunityRepository {
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'searchUsers');
       return data
           .map((e) => UserBrief.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -134,7 +132,7 @@ class CommunityRepository {
   Future<List<GroupListItem>> getMyGroups() async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.groups);
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getMyGroups');
       return data
           .map((e) => GroupListItem.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -145,7 +143,8 @@ class CommunityRepository {
   Future<GroupInfo> getGroup(String groupId) async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.group(groupId));
     if (response.statusCode == 200) {
-      return GroupInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getGroup');
+      return GroupInfo.fromJson(payload);
     }
     throw Exception('Failed to load group');
   }
@@ -156,7 +155,8 @@ class CommunityRepository {
       data: group.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return GroupInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createGroup');
+      return GroupInfo.fromJson(payload);
     }
     throw Exception('Failed to create group');
   }
@@ -186,7 +186,7 @@ class CommunityRepository {
       queryParameters: query,
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'searchGroups');
       return data.map((e) => GroupListItem.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to search groups');
@@ -197,7 +197,7 @@ class CommunityRepository {
       ApiEndpoints.groupMembers(groupId),
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupMembers');
       return data.map((e) => GroupMemberInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load group members');
@@ -249,7 +249,7 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getMessages');
       return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load group messages');
@@ -278,7 +278,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return MessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendMessage');
+      return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to send group message');
   }
@@ -303,7 +304,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      return MessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'editGroupMessage');
+      return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit group message');
   }
@@ -323,7 +325,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      return MessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateGroupReaction');
+      return MessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update group reaction');
   }
@@ -335,7 +338,7 @@ class CommunityRepository {
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'searchGroupMessages');
       return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to search group messages');
@@ -349,7 +352,7 @@ class CommunityRepository {
       queryParameters: {'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getThreadMessages');
       return data.map((e) => MessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load thread messages');
@@ -365,7 +368,7 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getPrivateMessages');
       return data.map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load private messages');
@@ -378,7 +381,8 @@ class CommunityRepository {
       data: message.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return PrivateMessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendPrivateMessage');
+      return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to send private message');
   }
@@ -402,7 +406,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      return PrivateMessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'editPrivateMessage');
+      return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to edit private message');
   }
@@ -421,7 +426,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      return PrivateMessageInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePrivateReaction');
+      return PrivateMessageInfo.fromJson(payload);
     }
     throw Exception('Failed to update private reaction');
   }
@@ -434,7 +440,7 @@ class CommunityRepository {
       queryParameters: {'keyword': keyword, 'limit': limit},
     );
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'searchPrivateMessages');
       return data.map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to search private messages');
@@ -454,7 +460,8 @@ class CommunityRepository {
       },
     );
     if (response.statusCode == 200) {
-      return CheckinResponse.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'checkin');
+      return CheckinResponse.fromJson(payload);
     }
     throw Exception('Failed to check in');
   }
@@ -462,7 +469,7 @@ class CommunityRepository {
   Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.groupTasks(groupId));
     if (response.statusCode == 200) {
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupTasks');
       return data.map((e) => GroupTaskInfo.fromJson(e as Map<String, dynamic>)).toList();
     }
     throw Exception('Failed to load group tasks');
@@ -475,7 +482,8 @@ class CommunityRepository {
       data: task.toJson(),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return GroupTaskInfo.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createGroupTask');
+      return GroupTaskInfo.fromJson(payload);
     }
     throw Exception('Failed to create group task');
   }
@@ -487,7 +495,8 @@ class CommunityRepository {
   Future<GroupFlameStatus> getFlameStatus(String groupId) async {
     final response = await _apiClient.get<dynamic>(ApiEndpoints.groupFlame(groupId));
     if (response.statusCode == 200) {
-      return GroupFlameStatus.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getFlameStatus');
+      return GroupFlameStatus.fromJson(payload);
     }
     throw Exception('Failed to load flame status');
   }

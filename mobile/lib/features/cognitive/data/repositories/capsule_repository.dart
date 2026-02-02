@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
@@ -19,7 +20,8 @@ class CapsuleRepository {
       return DemoDataService().demoCuriosityCapsules;
     }
     final response = await _apiClient.get<dynamic>('/capsules/today');
-    return (response.data as List)
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getTodayCapsules');
+    return data
         .map((e) => CuriosityCapsuleModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -40,7 +42,8 @@ class CapsuleRepository {
           .firstWhere((c) => c.id == id, orElse: () => DemoDataService().demoCuriosityCapsules.first,);
     }
     final response = await _apiClient.get<dynamic>('/capsules/$id');
-    return CuriosityCapsuleModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getCapsuleDetail');
+    return CuriosityCapsuleModel.fromJson(payload);
   }
 
   /// 获取收藏列表
@@ -63,7 +66,7 @@ class CapsuleRepository {
       'limit': limit,
       'offset': offset,
     },);
-    return response.data as List;
+    return ApiResponseParser.unwrapList(response.data, action: 'getFavorites');
   }
 
   /// 收藏/取消收藏胶囊
@@ -84,7 +87,7 @@ class CapsuleRepository {
     final response = await _apiClient.post<dynamic>('/capsules/$id/favorite', queryParameters: {
       if (note != null) 'note': note,
     },);
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'toggleFavorite');
   }
 
   /// 提交反馈
@@ -115,7 +118,8 @@ class CapsuleRepository {
         if (comment != null) 'comment': comment,
       },
     );
-    return CapsuleFeedbackModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'submitFeedback');
+    return CapsuleFeedbackModel.fromJson(payload);
   }
 
   /// 分享胶囊
@@ -142,7 +146,7 @@ class CapsuleRepository {
         if (message != null) 'message': message,
       },
     );
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'shareCapsule');
   }
 
   /// 获取生成任务列表
@@ -173,7 +177,8 @@ class CapsuleRepository {
     final response = await _apiClient.get<dynamic>('/capsules/generation/jobs', queryParameters: {
       'limit': limit,
     },);
-    return (response.data as List)
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getGenerationJobs');
+    return data
         .map((e) => CapsuleGenerationJobModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -199,7 +204,7 @@ class CapsuleRepository {
         if (requestedCount != null) 'requested_count': requestedCount,
       },
     );
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'requestBatchGeneration');
   }
 
   /// 获取统计信息
@@ -214,7 +219,8 @@ class CapsuleRepository {
       );
     }
     final response = await _apiClient.get<dynamic>('/capsules/stats');
-    return CapsuleStatsModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getStats');
+    return CapsuleStatsModel.fromJson(payload);
   }
 
   /// 手动生成胶囊
@@ -223,7 +229,8 @@ class CapsuleRepository {
       return DemoDataService().demoCuriosityCapsules.first;
     }
     final response = await _apiClient.post<dynamic>('/capsules/generate');
-    return CuriosityCapsuleModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'generateCapsule');
+    return CuriosityCapsuleModel.fromJson(payload);
   }
 }
 
