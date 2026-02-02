@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
@@ -63,10 +64,10 @@ class EnhancedGalaxyRepository {
             ApiEndpoints.galaxyGraph,
             queryParameters: {'zoom_level': zoomLevel},
           );
-          final payload = response.data;
-          if (payload == null) {
-            throw const FormatException('Galaxy graph payload missing');
-          }
+          final payload = ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'getGalaxyGraph',
+          );
           return GalaxyGraphResponse.fromJson(payload);
         },
         onRetry: (attempt, error, delay) {
@@ -143,10 +144,10 @@ class EnhancedGalaxyRepository {
           final response = await _apiClient.get<Map<String, dynamic>>(
             ApiEndpoints.galaxyNodeDetail(nodeId),
           );
-          final payload = response.data;
-          if (payload == null) {
-            throw const FormatException('Node detail payload missing');
-          }
+          final payload = ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'getGalaxyNodeDetail',
+          );
           return KnowledgeDetailResponse.fromJson(payload);
         },
       );
@@ -174,8 +175,11 @@ class EnhancedGalaxyRepository {
           final response = await _apiClient.post<Map<String, dynamic>>(
             ApiEndpoints.galaxyPredictNext,
           );
-          final payload = response.data;
-          if (payload == null) return null;
+          if (response.data == null) return null;
+          final payload = ApiResponseParser.unwrapMap(
+            response.data!,
+            action: 'predictNextNode',
+          );
           return KnowledgeDetailResponse.fromJson(payload);
         },
         config: const RetryConfig(maxAttempts: 2),
@@ -202,8 +206,11 @@ class EnhancedGalaxyRepository {
             ApiEndpoints.galaxySearch,
             data: {'query': query},
           );
-          final payload = response.data;
-          if (payload == null) return [];
+          if (response.data == null) return [];
+          final payload = ApiResponseParser.unwrapMap(
+            response.data!,
+            action: 'searchGalaxyNodes',
+          );
           return GalaxySearchResponse.fromJson(payload).results;
         },
         config: const RetryConfig(maxAttempts: 2),

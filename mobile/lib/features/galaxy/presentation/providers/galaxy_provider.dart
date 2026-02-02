@@ -13,6 +13,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart'
 import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 /// Aggregation level based on zoom scale (5 levels)
 enum AggregationLevel {
@@ -48,6 +49,7 @@ class GalaxyState {
     this.nodePositions = const {},
     this.visibleNodes = const [],
     this.visibleEdges = const [],
+    this.visibleCompactNodes = const [], // 🔧 性能优化: 预计算的 CompactNode 列表
     this.userFlameIntensity = 0.0,
     this.isLoading = false,
     this.isOptimizing = false,
@@ -79,6 +81,8 @@ class GalaxyState {
   // Pre-computed visible subset for rendering
   final List<GalaxyNodeModel> visibleNodes;
   final List<GalaxyEdgeModel> visibleEdges;
+  // 🔧 性能优化: 预计算的 CompactNode 列表 (避免每帧映射)
+  final List<CompactKnowledgeNode> visibleCompactNodes;
 
   final double userFlameIntensity;
   final bool isLoading;
@@ -115,6 +119,7 @@ class GalaxyState {
     Map<String, Offset>? nodePositions,
     List<GalaxyNodeModel>? visibleNodes,
     List<GalaxyEdgeModel>? visibleEdges,
+    List<CompactKnowledgeNode>? visibleCompactNodes, // 🔧 新增参数
     double? userFlameIntensity,
     bool? isLoading,
     bool? isOptimizing,
@@ -143,6 +148,7 @@ class GalaxyState {
         nodePositions: nodePositions ?? this.nodePositions,
         visibleNodes: visibleNodes ?? this.visibleNodes,
         visibleEdges: visibleEdges ?? this.visibleEdges,
+        visibleCompactNodes: visibleCompactNodes ?? this.visibleCompactNodes, // 🔧 使用新字段
         userFlameIntensity: userFlameIntensity ?? this.userFlameIntensity,
         isLoading: isLoading ?? this.isLoading,
         isOptimizing: isOptimizing ?? this.isOptimizing,
@@ -782,20 +788,44 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     final visibleNodes = _computeVisibleNodes();
     final visibleEdges = _computeVisibleEdges(visibleNodes);
 
+    // 🔧 性能优化: 预计算 CompactNode 列表
+    final visibleCompactNodes = _computeCompactNodes(visibleNodes);
+
     if (withAnimation) {
       // Start bloom animation for new nodes
-      _startBloomAnimation(visibleNodes);
+      _startBloomAnimation(visibleNodes, visibleEdges, visibleCompactNodes);
     } else {
       state = state.copyWith(
         visibleNodes: visibleNodes,
         visibleEdges: visibleEdges,
+        visibleCompactNodes: visibleCompactNodes, // 🔧 设置预计算结果
         nodeAnimationProgress: const {}, // Clear animations
       );
     }
   }
 
+  /// 🔧 性能优化: 预计算 CompactNode 列表
+  /// 避免在每次渲染时都映射节点列表
+  List<CompactKnowledgeNode> _computeCompactNodes(
+    List<GalaxyNodeModel> visibleNodes,
+  ) {
+    final canvasCenter = state.canvasCenter;
+
+    return visibleNodes.map((node) {
+      final pos = state.nodePositions[node.id] ?? Offset.zero;
+      return node.toCompact(
+        pos.dx + canvasCenter,
+        pos.dy + canvasCenter,
+      );
+    }).toList();
+  }
+
   /// Start bloom animation for nodes
-  void _startBloomAnimation(List<GalaxyNodeModel> newVisibleNodes) {
+  void _startBloomAnimation(
+    List<GalaxyNodeModel> newVisibleNodes,
+    List<GalaxyEdgeModel> newVisibleEdges,
+    List<CompactKnowledgeNode> newVisibleCompactNodes, // 🔧 新增参数
+  ) {
     // Cancel existing timer
     _animationTimer?.cancel();
 
@@ -808,7 +838,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // Update state with initial animation progress
     state = state.copyWith(
       visibleNodes: newVisibleNodes,
-      visibleEdges: _computeVisibleEdges(newVisibleNodes),
+      visibleEdges: newVisibleEdges,
+      visibleCompactNodes: newVisibleCompactNodes, // 🔧 设置预计算结果
       nodeAnimationProgress: animationProgress,
     );
 

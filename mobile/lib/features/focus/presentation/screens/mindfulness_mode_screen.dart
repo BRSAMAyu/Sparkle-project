@@ -363,6 +363,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     if ((confirmed ?? false) && mounted) {
       await ref.read(mindfulnessProvider.notifier).stop();
       if (mounted) {
+        // 🔧 修复：从mindfulnessProvider获取完整任务并设置activeTaskProvider
+        final currentTask = ref.read(mindfulnessProvider).currentTask;
+        if (currentTask != null) {
+          ref.read(activeTaskProvider.notifier).state = currentTask;
+        }
         context.push('/tasks/${widget.taskId}/execute');
       }
     }
