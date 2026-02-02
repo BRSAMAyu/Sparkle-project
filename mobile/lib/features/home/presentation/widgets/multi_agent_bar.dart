@@ -40,7 +40,7 @@ class MultiAgentBar extends ConsumerWidget {
             Icon(
               Icons.auto_awesome,
               size: DS.iconSizeSm,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
             const SizedBox(width: DS.spacing8),
             Text(

@@ -6,7 +6,8 @@ This service processes compressed context from mobile and extracts
 decision-ready features WITHOUT making decisions itself.
 """
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Any
+
 from loguru import logger
 
 
@@ -47,7 +48,7 @@ class FeatureExtractResult:
     energy: EnergyState
     risk: TaskRisk
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "version": self.version,
@@ -89,7 +90,7 @@ class FeatureExtractionService:
     HIGH_INTERRUPTION_COUNT = 5
     TRANSLATION_DENSITY_THRESHOLD = 3  # requests per 10min
 
-    def extract(self, envelope: Dict[str, Any]) -> FeatureExtractResult:
+    def extract(self, envelope: dict[str, Any]) -> FeatureExtractResult:
         """
         Extract features from context envelope
 
@@ -137,7 +138,7 @@ class FeatureExtractionService:
 
         return result
 
-    def _extract_learning_rhythm(self, focus: Dict[str, Any]) -> LearningRhythm:
+    def _extract_learning_rhythm(self, focus: dict[str, Any]) -> LearningRhythm:
         """
         Extract learning rhythm metrics
 
@@ -165,7 +166,7 @@ class FeatureExtractionService:
         )
 
     def _extract_understanding_friction(
-        self, comprehension: Dict[str, Any]
+        self, comprehension: dict[str, Any]
     ) -> UnderstandingFriction:
         """
         Extract comprehension friction metrics
@@ -190,7 +191,7 @@ class FeatureExtractionService:
         )
 
     def _extract_energy_state(
-        self, focus: Dict[str, Any], time_ctx: Dict[str, Any]
+        self, focus: dict[str, Any], time_ctx: dict[str, Any]
     ) -> EnergyState:
         """
         Extract energy state metrics
@@ -213,7 +214,7 @@ class FeatureExtractionService:
             short_session_trend=short_session_trend,
         )
 
-    def _extract_task_risk(self, focus: Dict[str, Any]) -> TaskRisk:
+    def _extract_task_risk(self, focus: dict[str, Any]) -> TaskRisk:
         """
         Extract task risk metrics
 

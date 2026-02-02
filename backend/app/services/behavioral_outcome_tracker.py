@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,7 @@ class BehavioralOutcomeTracker:
         outcome_type: str,
         time_to_outcome: int,
         success: bool,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> BehavioralOutcome:
         outcome = BehavioralOutcome(
             user_id=user_id,

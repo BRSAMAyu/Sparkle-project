@@ -55,9 +55,13 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> put<T>(String path, {Object? data}) async {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
-      return await _dio.put(path, data: data);
+      return await _dio.put(path, data: data, queryParameters: queryParameters);
     } on DioException {
       // Handle error
       rethrow;
@@ -72,9 +76,12 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> delete<T>(String path) async {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
-      return await _dio.delete(path);
+      return await _dio.delete(path, queryParameters: queryParameters);
     } on DioException {
       // Handle error
       rethrow;

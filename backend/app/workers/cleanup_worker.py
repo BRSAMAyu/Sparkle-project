@@ -1,8 +1,10 @@
 import asyncio
+import logging
+
 from celery import shared_task
 from sqlalchemy import text
+
 from app.db.session import AsyncSessionLocal
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +29,8 @@ def cleanup_outbox_events():
     (Used by Go Gateway/CQRS infrastructure)
     """
     query = """
-        DELETE FROM event_outbox 
-        WHERE published_at IS NOT NULL 
+        DELETE FROM event_outbox
+        WHERE published_at IS NOT NULL
         AND published_at < NOW() - INTERVAL '7 days'
     """
     # Celery tasks are sync by default, we run the async part using asyncio.run or loop

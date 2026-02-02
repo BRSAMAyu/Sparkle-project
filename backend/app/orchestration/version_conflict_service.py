@@ -11,23 +11,21 @@ P1 Priority: 版本冲突检测增强
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Literal
+from typing import Any, Literal
 from uuid import UUID
-import time
 
 from loguru import logger
 from redis.asyncio import Redis
 
 from app.orchestration.schemas import (
-    ExecutablePlan,
-    StateSnapshot,
+    MAX_REPLAN_ATTEMPTS,
+    REPLAN_MAX_PER_WINDOW,
+    REPLAN_RATE_LIMIT_WINDOW,
     VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
     VERSION_CONFLICT_HITL_THRESHOLD,
-    MAX_REPLAN_ATTEMPTS,
-    REPLAN_RATE_LIMIT_WINDOW,
-    REPLAN_MAX_PER_WINDOW,
+    ExecutablePlan,
+    StateSnapshot,
 )
-from app.core.exceptions import VersionConflictError
 
 
 @dataclass
@@ -37,12 +35,12 @@ class VersionConflictResult:
     conflict_type: Literal["none", "plan_version", "context_version", "both"] = "none"
     expected_version: int = 0
     current_version: int = 0
-    changed_fields: List[str] = field(default_factory=list)
+    changed_fields: list[str] = field(default_factory=list)
     recommendation: Literal["proceed", "replan", "hitl"] = "proceed"
     replan_confidence: float = 1.0
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "has_conflict": self.has_conflict,
             "conflict_type": self.conflict_type,
@@ -59,13 +57,13 @@ class VersionConflictResult:
 class ReplanResult:
     """Replan operation result"""
     success: bool
-    new_plan: Optional[ExecutablePlan] = None
+    new_plan: ExecutablePlan | None = None
     reason: str = ""
     attempt_count: int = 0
     requires_hitl: bool = False
-    hitl_reason: Optional[str] = None
+    hitl_reason: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "new_plan_id": self.new_plan.plan_id if self.new_plan else None,
@@ -93,7 +91,7 @@ class VersionConflictService:
 
     def __init__(
         self,
-        redis: Optional[Redis] = None,
+        redis: Redis | None = None,
         plan_state_service=None,
         planner=None,
     ):
@@ -105,7 +103,7 @@ class VersionConflictService:
         self,
         plan: ExecutablePlan,
         user_id: UUID,
-        current_snapshot: Optional[StateSnapshot] = None,
+        current_snapshot: StateSnapshot | None = None,
     ) -> VersionConflictResult:
         """
         Check for version conflicts before plan execution
@@ -136,7 +134,6 @@ class VersionConflictService:
             plan_id = UUID(plan_id_str)
 
             # Get current PlanState version
-            from app.services.plan_state_service import PlanStateService
             plan_state = await self.plan_state_service.get_plan_state(user_id, plan_id)
 
             if not plan_state:
@@ -182,7 +179,7 @@ class VersionConflictService:
 
         return result
 
-    def _detect_changed_fields(self, plan: ExecutablePlan, plan_state) -> List[str]:
+    def _detect_changed_fields(self, plan: ExecutablePlan, plan_state) -> list[str]:
         """Detect which fields changed between planning and current state"""
         changed_fields = []
 
@@ -208,7 +205,7 @@ class VersionConflictService:
         self,
         expected_version: int,
         current_version: int,
-        changed_fields: List[str],
+        changed_fields: list[str],
     ) -> float:
         """
         Calculate confidence score for auto-replan
@@ -379,7 +376,7 @@ class VersionConflictService:
                 return ReplanResult(
                     success=True,
                     new_plan=new_plan,
-                    reason=f"Auto-replanned due to version conflict",
+                    reason="Auto-replanned due to version conflict",
                     attempt_count=attempt_count + 1,
                 )
 
@@ -446,11 +443,11 @@ class VersionConflictService:
 
 
 # Singleton instance
-version_conflict_service: Optional[VersionConflictService] = None
+version_conflict_service: VersionConflictService | None = None
 
 
 def get_version_conflict_service(
-    redis: Optional[Redis] = None,
+    redis: Redis | None = None,
     plan_state_service=None,
     planner=None,
 ) -> VersionConflictService:

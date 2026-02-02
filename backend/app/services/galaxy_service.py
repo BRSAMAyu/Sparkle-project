@@ -4,29 +4,31 @@ Refactored to delegate to specialized services:
 - KnowledgeRetrievalService: Search, Embedding
 - GalaxyStatsService: Spark, Stats, Prediction
 """
-import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
-from typing import Optional, List, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from loguru import logger
 
+from loguru import logger
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.cache import cached
+from app.core.event_bus import KnowledgeNodeUpdated, event_bus
+from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
-from app.models.outbox import EventOutbox
 from app.schemas.galaxy import (
-    GalaxyGraphResponse, SparkResult, SearchResultItem, 
-    GalaxyUserStats, NodeWithStatus, NodeRelationInfo
+    GalaxyGraphResponse,
+    NodeRelationInfo,
+    NodeWithStatus,
+    SearchResultItem,
+    SparkResult,
 )
-from app.services.galaxy.structure_service import GraphStructureService
+from app.services.embedding_service import embedding_service
+from app.services.expansion_service import ExpansionService
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.stats_service import GalaxyStatsService
-from app.services.expansion_service import ExpansionService
-from app.services.embedding_service import embedding_service
-from app.core.cache import cached
-from app.core.event_bus import event_bus, KnowledgeNodeUpdated
-from app.gen.sparkle.rag.v1 import evidence_pb2
+from app.services.galaxy.structure_service import GraphStructureService
+
 
 class GalaxyService:
     def __init__(self, db: AsyncSession):
@@ -34,7 +36,7 @@ class GalaxyService:
         self.structure = GraphStructureService(db)
         self.retrieval = KnowledgeRetrievalService(db)
         self.stats = GalaxyStatsService(db)
-        
+
         # Subscribe to error.created events
         # Note: In a real production app, subscription should be handled in a startup event or a separate worker
         # to avoid re-subscribing on every request if GalaxyService is transient.
@@ -48,7 +50,7 @@ class GalaxyService:
         try:
             user_id = UUID(event_data["user_id"])
             linked_node_ids = [UUID(nid) for nid in event_data.get("linked_node_ids", [])]
-            
+
             if not linked_node_ids:
                 return
 
@@ -59,13 +61,13 @@ class GalaxyService:
                 query = text("SELECT mastery_score FROM user_node_status WHERE user_id = :uid AND node_id = :nid")
                 res = await self.db.execute(query, {"uid": user_id, "nid": node_id})
                 current = res.scalar_one_or_none()
-                
+
                 current_score = current if current is not None else 0
-                
+
                 # 2. Penalty Logic (Simple: -10%)
                 # Ensure it doesn't go below 0
                 new_score = max(0, int(current_score * 0.9))
-                
+
                 if new_score != current_score:
                     # 3. Update Mastery using existing method (handles Outbox + Audit)
                     await self.update_node_mastery(
@@ -74,7 +76,7 @@ class GalaxyService:
                         new_mastery=new_score,
                         reason="error_penalty"
                     )
-                    
+
                     # 4. Publish galaxy.node.updated (Specific for frontend realtime update)
                     # update_node_mastery already publishes galaxy.node.mastery_updated via Outbox
                     # We can also publish a realtime event via Redis directly if needed for immediate websocket
@@ -85,7 +87,7 @@ class GalaxyService:
                     )
                     await event_bus.publish("galaxy.node.updated", realtime_event.to_dict())
                     logger.info(f"Reduced mastery for node {node_id} to {new_score}")
-                    
+
         except Exception as e:
             logger.error(f"Failed to handle error_created event: {e}")
 
@@ -96,9 +98,9 @@ class GalaxyService:
         user_id: UUID,
         title: str,
         summary: str,
-        subject_id: Optional[int] = None,
-        tags: List[str] = [],
-        parent_node_id: Optional[UUID] = None
+        subject_id: int | None = None,
+        tags: list[str] = None,
+        parent_node_id: UUID | None = None
     ) -> KnowledgeNode:
         """
         Create a new knowledge node.
@@ -107,6 +109,8 @@ class GalaxyService:
         2. Spawn background task for Embedding & Deduplication (Slow)
         """
         # 1. Fast Write
+        if tags is None:
+            tags = []
         node = await self.structure.create_node(
             user_id, title, summary, subject_id, tags, parent_node_id
         )
@@ -140,21 +144,21 @@ class GalaxyService:
     ) -> NodeRelation:
         return await self.structure.create_edge(user_id, source_id, target_id, relation_type)
 
-    async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> List[KnowledgeNode]:
+    async def get_node_neighbors(self, node_id: UUID, limit: int = 5) -> list[KnowledgeNode]:
         """Get connected neighbor nodes (Graph RAG support)"""
         return await self.structure.get_node_neighbors(node_id, limit)
 
-    async def update_node_positions(self, updates: List[dict]) -> int:
+    async def update_node_positions(self, updates: list[dict]) -> int:
         """Batch update node positions"""
         return await self.structure.update_node_positions(updates)
 
     async def get_nodes_in_bounds(
-        self, 
-        min_x: float, 
-        max_x: float, 
-        min_y: float, 
+        self,
+        min_x: float,
+        max_x: float,
+        min_y: float,
         max_y: float
-    ) -> List[KnowledgeNode]:
+    ) -> list[KnowledgeNode]:
         """Get nodes within viewport"""
         return await self.structure.get_nodes_in_bounds(min_x, max_x, min_y, max_y)
 
@@ -162,7 +166,7 @@ class GalaxyService:
     async def get_galaxy_graph(
         self,
         user_id: UUID,
-        sector_code: Optional[str] = None,
+        sector_code: str | None = None,
         include_locked: bool = True,
         zoom_level: float = 1.0
     ) -> GalaxyGraphResponse:
@@ -170,10 +174,10 @@ class GalaxyService:
         nodes_with_status, relations = await self.structure.get_graph_view(
             user_id, sector_code, include_locked, zoom_level
         )
-        
+
         # 2. Get Stats (Parallelizable if needed, but fast enough)
         user_stats = await self.stats.calculate_user_stats(user_id)
-        
+
         # 3. Assemble
         return GalaxyGraphResponse(
             nodes=[
@@ -198,21 +202,21 @@ class GalaxyService:
          self,
          user_id: UUID,
          query: str,
-         subject_id: Optional[int] = None,
+         subject_id: int | None = None,
          limit: int = 20
-    ) -> List[KnowledgeNode]:
+    ) -> list[KnowledgeNode]:
         return await self.retrieval.keyword_search(user_id, query, subject_id, limit)
 
     async def hybrid_search(
         self,
         user_id: UUID,
         query: str,
-        vector_query: Optional[str] = None,
-        subject_id: Optional[int] = None,
+        vector_query: str | None = None,
+        subject_id: int | None = None,
         limit: int = 5,
         threshold: float = 0.3,
         use_reranker: bool = True
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         return await self.retrieval.hybrid_search(
             user_id, query, vector_query, subject_id, limit, threshold, use_reranker
         )
@@ -221,36 +225,36 @@ class GalaxyService:
         self,
         user_id: UUID,
         query: str,
-        subject_id: Optional[int] = None,
+        subject_id: int | None = None,
         limit: int = 10,
         threshold: float = 0.3
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         # Reuse hybrid search logic or semantic_search_nodes but format as SearchResultItem
         # The original semantic_search in galaxy_service.py returned SearchResultItem.
         # KnowledgeRetrievalService has semantic_search_nodes returning KnowledgeNode.
         # We should map or use retrieval's hybrid search (which is better).
         # For backward compatibility, let's reimplement simple vector search here using retrieval service's primitive
-        
+
         nodes = await self.retrieval.semantic_search_nodes(query, subject_id, limit, threshold)
-        
+
         results = []
         for node in nodes:
             # We need user status to format properly
             status = await self.retrieval._get_user_status(user_id, node.id)
             results.append(self.retrieval._format_search_result(node, status, 0.0)) # Score missing
-            
+
         return results
 
     async def record_expansion_feedback(
         self,
         user_id: UUID,
         trigger_node_id: UUID,
-        expansion_queue_id: Optional[UUID],
-        rating: Optional[int],
-        implicit_score: Optional[float],
+        expansion_queue_id: UUID | None,
+        rating: int | None,
+        implicit_score: float | None,
         feedback_type: str,
-        prompt_version: Optional[str],
-        metadata: Optional[dict]
+        prompt_version: str | None,
+        metadata: dict | None
     ) -> UUID:
         expansion_service = ExpansionService(self.db)
         return await expansion_service.record_feedback(
@@ -267,15 +271,15 @@ class GalaxyService:
     async def semantic_search_nodes(
         self,
         query: str,
-        subject_id: Optional[int] = None,
+        subject_id: int | None = None,
         limit: int = 10,
         threshold: float = 0.3
-    ) -> List[KnowledgeNode]:
+    ) -> list[KnowledgeNode]:
         return await self.retrieval.semantic_search_nodes(query, subject_id, limit, threshold)
 
     def build_evidence_pack(
         self,
-        results: List[SearchResultItem],
+        results: list[SearchResultItem],
         request_id: str,
         trace_id: str,
         query: str,
@@ -317,19 +321,19 @@ class GalaxyService:
     async def auto_classify_task(
         self,
         task_title: str,
-        task_description: Optional[str] = None
-    ) -> Optional[UUID]:
+        task_description: str | None = None
+    ) -> UUID | None:
         # Logic was in galaxy_service.py, moving here or to retrieval
         search_text = f"{task_title} {task_description or ''}"
         nodes = await self.retrieval.semantic_search_nodes(search_text, limit=1)
         if nodes:
             return nodes[0].id
-        
+
         # Fallback keyword
         nodes_kw = await self.retrieval.keyword_search(UUID('00000000-0000-0000-0000-000000000000'), task_title.split()[0], limit=1)
         if nodes_kw:
             return nodes_kw[0].id
-            
+
         return None
 
     # --- Delegated to GalaxyStatsService ---
@@ -339,15 +343,15 @@ class GalaxyService:
         user_id: UUID,
         node_id: UUID,
         study_minutes: int,
-        task_id: Optional[UUID] = None,
+        task_id: UUID | None = None,
         trigger_expansion: bool = True
     ) -> SparkResult:
         return await self.stats.spark_node(user_id, node_id, study_minutes, task_id, trigger_expansion)
 
-    async def predict_next_node(self, user_id: UUID) -> Optional[NodeWithStatus]:
+    async def predict_next_node(self, user_id: UUID) -> NodeWithStatus | None:
         return await self.stats.predict_next_node(user_id)
 
-    async def get_heatmap_data(self, user_id: UUID) -> List[dict]:
+    async def get_heatmap_data(self, user_id: UUID) -> list[dict]:
         """Get forget curve heatmap data"""
         return await self.stats.get_heatmap_data(user_id)
 
@@ -360,19 +364,26 @@ class GalaxyService:
         return await self.stats.expansion_service.auto_link_nodes(node_id)
 
 
-    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: Optional[datetime] = None, request_id: Optional[str] = None, revision: Optional[int] = None):
+    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: datetime | None = None, request_id: str | None = None, revision: int | None = None):
         """
         Update node mastery with Outbox pattern and version checking to prevent race conditions
         """
+        def _to_utc_naive(dt: datetime | None) -> datetime | None:
+            if dt is None:
+                return None
+            if dt.tzinfo is not None:
+                return dt.astimezone(UTC).replace(tzinfo=None)
+            return dt
+
         # 1. Get current state from user_node_status
         query_current = text("""
             SELECT mastery_score, updated_at, revision
-            FROM user_node_status 
+            FROM user_node_status
             WHERE user_id = :user_id AND node_id = :node_id
         """)
         result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
         current = result.fetchone()
-        
+
         current_revision = 0
         if not current:
             # If status doesn't exist, create one (initial unlock)
@@ -380,20 +391,20 @@ class GalaxyService:
             # We skip version check for new entries or use a very old one
         else:
             old_mastery = current[0]
-            current_updated_at = current[1]
+            current_updated_at = _to_utc_naive(current[1])
             current_revision = current[2] or 0
-            
+
             # 2. Conflict Resolution (Logical Clock Priority)
             if revision is not None:
                 # Client provided a revision, ensure we are not overwriting a newer one (or equal, if not idempotent)
-                # Ideally, client revision should be base_revision + 1. 
+                # Ideally, client revision should be base_revision + 1.
                 # If client revision < current_revision, it's a stale update.
                 if revision <= current_revision:
                      logger.warning(f"Ignoring stale update (Revision) for node {node_id}. Client {revision} <= Server {current_revision}")
                      return {"success": False, "reason": "stale_revision", "current_revision": current_revision}
-            
+
             # Fallback to Physical Clock if revision not provided (Legacy)
-            elif version and current_updated_at and version <= current_updated_at:
+            elif version and current_updated_at and _to_utc_naive(version) <= current_updated_at:
                 logger.warning(f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}")
                 return {"success": False, "reason": "stale_update", "current_revision": current_revision}
 
@@ -401,7 +412,7 @@ class GalaxyService:
         new_revision = current_revision + 1
         if revision is not None and revision > current_revision:
              # Adopt client revision if it's logically ahead (or simply increment server's)
-             # To maintain strict monotonicity, usually server authoritative revision = max(client, server) + 1 
+             # To maintain strict monotonicity, usually server authoritative revision = max(client, server) + 1
              # But here we just want to increment.
              new_revision = current_revision + 1
 
@@ -412,8 +423,8 @@ class GalaxyService:
             is_new_spark = (old_mastery == 0 and new_mastery > 0)
             if is_new_spark:
                 global_update = text("""
-                    UPDATE knowledge_nodes 
-                    SET global_spark_count = global_spark_count + 1 
+                    UPDATE knowledge_nodes
+                    SET global_spark_count = global_spark_count + 1
                     WHERE id = :node_id
                 """)
                 await self.db.execute(global_update, {"node_id": node_id})
@@ -430,17 +441,17 @@ class GalaxyService:
                     is_unlocked = true,
                     revision = EXCLUDED.revision
             """)
-            
-            update_time = version or datetime.utcnow()
-            
+
+            update_time = _to_utc_naive(version) or datetime.utcnow()
+
             await self.db.execute(upsert_query, {
-                "user_id": user_id, 
-                "node_id": node_id, 
+                "user_id": user_id,
+                "node_id": node_id,
                 "mastery": new_mastery,
                 "updated_at": update_time,
                 "revision": new_revision
             })
-            
+
             # C. Audit Log
             audit_query = text("""
                 INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
@@ -455,11 +466,11 @@ class GalaxyService:
                 "request_id": request_id,
                 "revision": new_revision
             })
-            
+
             # 4. Invalidate Semantic Cache (User specific)
             from app.services.semantic_cache_service import semantic_cache_service
             if semantic_cache_service:
-                # We invalidate all cache for this user since we don't know which queries 
+                # We invalidate all cache for this user since we don't know which queries
                 # might be affected by this specific node's mastery change.
                 # In a more advanced version, we could use tags or query-to-node mapping.
                 # await semantic_cache_service.invalidate_user_cache(str(user_id))
@@ -467,7 +478,7 @@ class GalaxyService:
                 # Actually, mastery score might not change the retrieved nodes, just their status.
                 # Since status is re-fetched in hybrid_search, we might not need to invalidate nodes cache!
 
-            
+
             # 5. Add to Outbox
             outbox_query = text("""
                 INSERT INTO outbox_events (aggregate_id, event_type, payload, status, created_at)
@@ -485,7 +496,7 @@ class GalaxyService:
                 }),
                 "created_at": datetime.utcnow()
             })
-            
+
             await self.db.flush()
 
             # ========== Achievement Integration ==========
@@ -512,7 +523,7 @@ class GalaxyService:
                 "new_mastery": new_mastery,
                 "current_revision": new_revision
             }
-            
+
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Failed to update node mastery: {e}")
@@ -527,7 +538,7 @@ class GalaxyService:
         2. Deduplication Check (Notify if duplicate)
         """
         logger.info(f"Starting background processing for node {node_id}")
-        
+
         # We need a new session for background task as the original request session might be closed
         from app.db.session import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
@@ -535,7 +546,7 @@ class GalaxyService:
                 # 1. Generate Embedding
                 text = f"{title}\n{summary}"
                 embedding = await embedding_service.get_embedding(text)
-                
+
                 # Update Node
                 node = await session.get(KnowledgeNode, node_id)
                 if node:
@@ -543,18 +554,18 @@ class GalaxyService:
                     session.add(node)
                     await session.commit()
                     logger.info(f"Generated embedding for node {node_id}")
-                    
+
                     # 2. Check Deduplication (Post-creation check)
                     # Find similar nodes (excluding self)
                     retrieval = KnowledgeRetrievalService(session)
                     similar = await retrieval.semantic_search_nodes(title, limit=2, threshold=0.1)
-                    
+
                     for sim in similar:
                         if sim.id != node_id:
                             logger.warning(f"Potential duplicate found for {node_id}: {sim.id} ({sim.name})")
                             # TODO: Create Notification for user to merge
                             # notification_service.create_system_notification(...)
                             break
-                            
+
             except Exception as e:
                 logger.error(f"Background processing failed for node {node_id}: {e}")

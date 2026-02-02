@@ -1,13 +1,8 @@
 /// Notification analytics models
+library;
 
 /// Summary statistics for notifications
 class NotificationAnalyticsSummary {
-  final int totalSent;
-  final int totalViewed;
-  final int totalClicked;
-  final double viewRate;
-  final double clickRate;
-  final double avgTimeToAction;
 
   NotificationAnalyticsSummary({
     required this.totalSent,
@@ -18,8 +13,7 @@ class NotificationAnalyticsSummary {
     required this.avgTimeToAction,
   });
 
-  factory NotificationAnalyticsSummary.fromJson(Map<String, dynamic> json) {
-    return NotificationAnalyticsSummary(
+  factory NotificationAnalyticsSummary.fromJson(Map<String, dynamic> json) => NotificationAnalyticsSummary(
       totalSent: json['total_sent'] as int? ?? 0,
       totalViewed: json['total_viewed'] as int? ?? 0,
       totalClicked: json['total_clicked'] as int? ?? 0,
@@ -27,10 +21,14 @@ class NotificationAnalyticsSummary {
       clickRate: (json['click_rate'] as num?)?.toDouble() ?? 0.0,
       avgTimeToAction: (json['avg_time_to_action'] as num?)?.toDouble() ?? 0.0,
     );
-  }
+  final int totalSent;
+  final int totalViewed;
+  final int totalClicked;
+  final double viewRate;
+  final double clickRate;
+  final double avgTimeToAction;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'total_sent': totalSent,
       'total_viewed': totalViewed,
       'total_clicked': totalClicked,
@@ -38,17 +36,10 @@ class NotificationAnalyticsSummary {
       'click_rate': clickRate,
       'avg_time_to_action': avgTimeToAction,
     };
-  }
 }
 
 /// Statistics for a specific notification type
 class NotificationTypeStats {
-  final String type;
-  final int sent;
-  final int viewed;
-  final int clicked;
-  final double viewRate;
-  final double clickRate;
 
   NotificationTypeStats({
     required this.type,
@@ -59,8 +50,7 @@ class NotificationTypeStats {
     required this.clickRate,
   });
 
-  factory NotificationTypeStats.fromJson(Map<String, dynamic> json) {
-    return NotificationTypeStats(
+  factory NotificationTypeStats.fromJson(Map<String, dynamic> json) => NotificationTypeStats(
       type: json['type'] as String,
       sent: json['sent'] as int? ?? 0,
       viewed: json['viewed'] as int? ?? 0,
@@ -68,10 +58,14 @@ class NotificationTypeStats {
       viewRate: (json['view_rate'] as num?)?.toDouble() ?? 0.0,
       clickRate: (json['click_rate'] as num?)?.toDouble() ?? 0.0,
     );
-  }
+  final String type;
+  final int sent;
+  final int viewed;
+  final int clicked;
+  final double viewRate;
+  final double clickRate;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'type': type,
       'sent': sent,
       'viewed': viewed,
@@ -79,15 +73,10 @@ class NotificationTypeStats {
       'view_rate': viewRate,
       'click_rate': clickRate,
     };
-  }
 }
 
 /// Trend data point (date + metrics)
 class NotificationTrendData {
-  final String date;
-  final int sent;
-  final int viewed;
-  final int clicked;
 
   NotificationTrendData({
     required this.date,
@@ -96,34 +85,30 @@ class NotificationTrendData {
     required this.clicked,
   });
 
-  factory NotificationTrendData.fromJson(Map<String, dynamic> json) {
-    return NotificationTrendData(
+  factory NotificationTrendData.fromJson(Map<String, dynamic> json) => NotificationTrendData(
       date: json['date'] as String,
       sent: json['sent'] as int? ?? 0,
       viewed: json['viewed'] as int? ?? 0,
       clicked: json['clicked'] as int? ?? 0,
     );
-  }
+  final String date;
+  final int sent;
+  final int viewed;
+  final int clicked;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'date': date,
       'sent': sent,
       'viewed': viewed,
       'clicked': clicked,
     };
-  }
 
   /// Parse date
   DateTime get parsedDate => DateTime.parse(date);
 }
 
 /// Complete analytics response
-class NotificationAnalytics {
-  final NotificationAnalyticsSummary summary;
-  final Map<String, NotificationTypeStats> byType;
-  final List<NotificationTrendData> trends;
-  final List<int> hourlyDistribution; // 24 values
+class NotificationAnalytics { // 24 values
 
   NotificationAnalytics({
     required this.summary,
@@ -142,14 +127,14 @@ class NotificationAnalytics {
 
     final trendsList = <NotificationTrendData>[];
     if (json['trends'] != null) {
-      for (var item in json['trends'] as List) {
+      for (final item in json['trends'] as List) {
         trendsList.add(NotificationTrendData.fromJson(item as Map<String, dynamic>));
       }
     }
 
     final distributionList = <int>[];
     if (json['hourly_distribution'] != null) {
-      for (var item in json['hourly_distribution'] as List) {
+      for (final item in json['hourly_distribution'] as List) {
         distributionList.add(item as int);
       }
     }
@@ -161,15 +146,17 @@ class NotificationAnalytics {
       hourlyDistribution: distributionList,
     );
   }
+  final NotificationAnalyticsSummary summary;
+  final Map<String, NotificationTypeStats> byType;
+  final List<NotificationTrendData> trends;
+  final List<int> hourlyDistribution;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'summary': summary.toJson(),
       'by_type': byType.map((k, v) => MapEntry(k, v.toJson())),
       'trends': trends.map((t) => t.toJson()).toList(),
       'hourly_distribution': hourlyDistribution,
     };
-  }
 
   /// Get max value in hourly distribution
   int get maxHourlyActivity {
@@ -180,9 +167,9 @@ class NotificationAnalytics {
   /// Get most active hour (0-23)
   int get mostActiveHour {
     if (hourlyDistribution.isEmpty) return 0;
-    int maxVal = hourlyDistribution[0];
-    int maxHour = 0;
-    for (int i = 1; i < hourlyDistribution.length; i++) {
+    var maxVal = hourlyDistribution[0];
+    var maxHour = 0;
+    for (var i = 1; i < hourlyDistribution.length; i++) {
       if (hourlyDistribution[i] > maxVal) {
         maxVal = hourlyDistribution[i];
         maxHour = i;

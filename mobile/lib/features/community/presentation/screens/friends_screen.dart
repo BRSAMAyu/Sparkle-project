@@ -18,6 +18,10 @@ class FriendsScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
           title: Text(l10n.community),
           bottom: TabBar(
             tabs: [
@@ -27,8 +31,8 @@ class FriendsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: ContentConstraint(
-          child: const TabBarView(
+        body: const ContentConstraint(
+          child: TabBarView(
             children: [
               _MyFriendsTab(),
               _PendingRequestsTab(),
@@ -110,7 +114,7 @@ class _MyFriendsTab extends ConsumerWidget {
                         ),
                       ),
                       Icon(Icons.chevron_right,
-                          size: 20, color: DS.brandPrimary,),
+                          size: 20, color: DS.brandPrimaryConst,),
                     ],
                   ),
                 ),

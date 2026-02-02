@@ -133,7 +133,7 @@ void main() {
         // Should have some content
         final allContent = deltaResponses
             .map((r) => r['delta'] as String? ?? '')
-            .join('');
+            .join();
         expect(allContent.isNotEmpty, true);
 
         channel.sink.close();
@@ -144,7 +144,7 @@ void main() {
         channel = WebSocketChannel.connect(uri);
         await channel.ready;
 
-        final sessionId = 'test-context-session';
+        const sessionId = 'test-context-session';
 
         // First message
         channel.sink.add(jsonEncode({
@@ -152,7 +152,7 @@ void main() {
           'content': 'My favorite color is blue',
           'session_id': sessionId,
           'user_id': 'test-user-789',
-        }));
+        }),);
 
         // Wait for response
         await Future.delayed(const Duration(seconds: 20));
@@ -163,7 +163,7 @@ void main() {
           'content': 'What is my favorite color?',
           'session_id': sessionId,
           'user_id': 'test-user-789',
-        }));
+        }),);
 
         final responses = <Map<String, dynamic>>[];
         final subscription = channel.stream.listen(
@@ -182,7 +182,7 @@ void main() {
         final allContent = responses
             .where((r) => r['type'] == 'delta')
             .map((r) => r['delta'] as String? ?? '')
-            .join('');
+            .join();
 
         // Note: This depends on LLM behavior, may not always work
         print('Response content: $allContent');
@@ -196,8 +196,8 @@ void main() {
         await channel.ready;
 
         // Create two sessions
-        final session1 = 'test-concurrent-session-1';
-        final session2 = 'test-concurrent-session-2';
+        const session1 = 'test-concurrent-session-1';
+        const session2 = 'test-concurrent-session-2';
 
         // Send messages to both sessions
         channel.sink.add(jsonEncode({
@@ -205,7 +205,7 @@ void main() {
           'content': 'Session 1: Hello',
           'session_id': session1,
           'user_id': 'test-user-concurrent',
-        }));
+        }),);
 
         await Future.delayed(const Duration(seconds: 1));
 
@@ -214,7 +214,7 @@ void main() {
           'content': 'Session 2: Hi there',
           'session_id': session2,
           'user_id': 'test-user-concurrent',
-        }));
+        }),);
 
         final responses = <String, List<Map<String, dynamic>>>{};
         final subscription = channel.stream.listen(
@@ -256,9 +256,9 @@ void main() {
           'content': '制定一个学习计划并评审',
           'session_id': 'test-plan-review',
           'user_id': 'test-user-plan',
-        }));
+        }),);
 
-        bool reviewReceived = false;
+        var reviewReceived = false;
         Map<String, dynamic>? reviewData;
 
         final subscription = channel.stream.listen(
@@ -329,7 +329,7 @@ void main() {
         channel = WebSocketChannel.connect(uri);
         await channel.ready;
 
-        bool notificationReceived = false;
+        var notificationReceived = false;
         Map<String, dynamic>? notificationData;
 
         final subscription = channel.stream.listen(
@@ -366,7 +366,7 @@ void main() {
         channel = WebSocketChannel.connect(uri);
         await channel.ready;
 
-        bool notificationReceived = false;
+        var notificationReceived = false;
         Map<String, dynamic>? notificationData;
 
         final subscription = channel.stream.listen(
@@ -462,7 +462,7 @@ void main() {
           'content': 'Hello after error',
           'session_id': 'test-recovery',
           'user_id': 'test-user-recovery',
-        }));
+        }),);
 
         // Should receive valid response
         final response = await channel.stream.timeout(
@@ -492,7 +492,7 @@ void main() {
           'content': 'Hi',
           'session_id': 'test-ttft',
           'user_id': 'test-user-ttft',
-        }));
+        }),);
 
         DateTime? firstTokenTime;
 
@@ -531,7 +531,7 @@ void main() {
           'content': 'Explain what is machine learning',
           'session_id': 'test-tps',
           'user_id': 'test-user-tps',
-        }));
+        }),);
 
         final deltas = <String>[];
         final subscription = channel.stream.listen(
@@ -550,7 +550,7 @@ void main() {
         await Future.delayed(const Duration(seconds: 60));
         subscription.cancel();
 
-        final totalChars = deltas.join('').length;
+        final totalChars = deltas.join().length;
         final elapsedSeconds = stopwatch.elapsedMilliseconds.toDouble() / 1000;
         final cps = elapsedSeconds > 0 ? totalChars / elapsedSeconds : 0;
 
@@ -626,11 +626,9 @@ void main() {
 
 /// Custom timeout extension
 extension StreamTimeout<T> on Stream<T> {
-  Stream<T> timeout(Duration duration, {T? onTimeout}) {
-    return asyncMap((event) async {
+  Stream<T> timeout(Duration duration, {T? onTimeout}) => asyncMap((event) async {
       // This is a simplified version
       // In real implementation, would use proper timeout
       return event;
     });
-  }
 }

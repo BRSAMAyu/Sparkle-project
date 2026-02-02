@@ -2,24 +2,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.business_metrics import LTM_EVAL_TOTAL, LTM_EVAL_AVG_SCORE
+from app.core.business_metrics import LTM_EVAL_AVG_SCORE, LTM_EVAL_TOTAL
 from app.core.context_budget import DEFAULT_BUDGETS
 from app.models.context_pack import ContextBudgetProfile
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory
+from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.services.memory_jobs import MemoryJobsService
 
 
 @dataclass
 class ReleaseGateResult:
     ok: bool
-    reasons: List[str]
-    metrics: Dict[str, Any]
+    reasons: list[str]
+    metrics: dict[str, Any]
 
 
 class LtmReleaseGate:
@@ -27,8 +27,8 @@ class LtmReleaseGate:
         self.db = db
 
     async def check(self) -> ReleaseGateResult:
-        reasons: List[str] = []
-        metrics: Dict[str, Any] = {}
+        reasons: list[str] = []
+        metrics: dict[str, Any] = {}
 
         evidence_missing_rate = await self._evidence_missing_rate()
         metrics["evidence_missing_rate"] = evidence_missing_rate
@@ -112,10 +112,10 @@ class LtmReleaseGate:
             return None
         return ok / total
 
-    async def _budget_multipliers_within_bounds(self) -> Dict[str, Any]:
+    async def _budget_multipliers_within_bounds(self) -> dict[str, Any]:
         lower = settings.LTM_RELEASE_BUDGET_MULTIPLIER_MIN
         upper = settings.LTM_RELEASE_BUDGET_MULTIPLIER_MAX
-        details: Dict[str, Dict[str, float]] = {}
+        details: dict[str, dict[str, float]] = {}
         if not settings.ENABLE_BUDGET_TUNING:
             return {"ok": True, "details": details}
 
@@ -125,9 +125,9 @@ class LtmReleaseGate:
             details.setdefault(profile.intent, {})[profile.bucket] = profile.multiplier
 
         ok = True
-        for intent in DEFAULT_BUDGETS.keys():
+        for intent in DEFAULT_BUDGETS:
             buckets = details.get(intent, {})
-            for bucket in DEFAULT_BUDGETS[intent].keys():
+            for bucket in DEFAULT_BUDGETS[intent]:
                 value = buckets.get(bucket, 1.0)
                 if value < lower or value > upper:
                     ok = False

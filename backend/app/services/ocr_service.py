@@ -2,10 +2,8 @@
 OCR服务 - 使用DeepSeek OCR进行图片文字识别
 支持SiliconFlow API
 """
-from typing import Optional
-from loguru import logger
 from httpx import AsyncClient, HTTPError
-
+from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings

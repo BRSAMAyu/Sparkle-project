@@ -35,6 +35,10 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: TextField(
           controller: _searchController,
           autofocus: true,

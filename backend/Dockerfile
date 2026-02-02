@@ -38,7 +38,9 @@ RUN uv pip install --system --no-cache \
     langchain-community langchain-core langchain-text-splitters \
     langchain-huggingface dashscope \
     cryptography pydantic-settings tiktoken \
-    openpyxl python-multipart
+    openpyxl python-multipart \
+    # MDX词典依赖（python-lzo可选，Docker构建跳过）
+    readmdict beautifulsoup4 lxml
 # Final stage
 FROM python:3.11-slim
 

@@ -33,7 +33,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         isOfficial: null,
         visibility: _selectedVisibility,
         search: _searchController.text.isEmpty ? null : _searchController.text,
-      )).notifier);
+      ),).notifier,);
     });
   }
 
@@ -51,7 +51,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           isOfficial: null,
           visibility: _selectedVisibility,
           search: _searchController.text.isEmpty ? null : _searchController.text,
-        )).notifier)
+        ),).notifier,)
         .refresh(
       category: _selectedCategory,
       visibility: _selectedVisibility,
@@ -252,7 +252,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => SeedLibraryDetailScreen(
                     libraryId: library.id,
                   ),
@@ -266,7 +266,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _showFilterDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('筛选'),

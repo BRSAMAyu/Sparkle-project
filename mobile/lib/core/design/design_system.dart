@@ -21,7 +21,7 @@
 ///
 /// // 3. 在UI中使用设计令牌
 /// Container(
-///   color: DS.brandPrimary,
+///   color: DS.brandPrimaryConst,
 ///   padding: SpacingSystem.edgeLg,
 ///   child: SparkleButton.primary(
 ///     label: '点击',
@@ -277,6 +277,7 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfaceAmbient => _theme.colors.surfaceAmbient;
   static Color get surfacePrimaryElevated => _blend(
         surfacePrimary,
         surfaceTertiary,
@@ -362,12 +363,10 @@ class DS {
   static Color get successConst => success;
 
   // Special surfaces and accents
-  static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
-  static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
-  static Color get deepSpaceSurface =>
-      _blend(surfacePrimary, deepSpaceStart, 0.6);
+  // Deep space colors use surfaceAmbient and surfacePrimary for proper dark mode support
+  static Color get deepSpaceStart => _isDark ? _theme.colors.surfaceAmbient : _blend(neutral50, brandPrimary, 0.28);
+  static Color get deepSpaceEnd => _isDark ? _theme.colors.surfacePrimary : _blend(neutral100, brandSecondary, 0.24);
+  static Color get deepSpaceSurface => _isDark ? _theme.colors.surfacePrimary : _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
       surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
   static Color get glassBorder =>
@@ -578,6 +577,88 @@ class DS {
   // Galaxy专用颜色
   static Color get galaxyBackground => _theme.colors.galaxyBackground;
   static Color get galaxyShadow => _theme.colors.galaxyShadow;
+
+  // ============================================
+  // 稀有度系统颜色 (Rarity System)
+  // ============================================
+
+  /// 普通稀有度 - 灰色系
+  static Color get rarityCommon => neutral400;
+  static Color get rarityCommonBg => neutral200;
+  static Color get rarityCommonText => neutral700;
+
+  /// 稀有 - 金色系
+  static const Color rarityRare = Color(0xFFFFD700);
+  static Color get rarityRareBg => _isDark
+      ? const Color(0xFF3D3000)  // 深色模式下的暗金背景
+      : const Color(0xFFFFF8DC);
+  static const Color rarityRareText = Color(0xFFB8860B);
+
+  /// 史诗 - 紫色系
+  static const Color rarityEpic = Color(0xFF9B59B6);
+  static Color get rarityEpicBg => _isDark
+      ? const Color(0xFF2D1F3D)  // 深色模式下的暗紫背景
+      : const Color(0xFFF3E5F5);
+  static const Color rarityEpicText = Color(0xFF7B1FA2);
+
+  /// 传说 - 彩虹/红色系
+  static const Color rarityLegendary = Color(0xFFFF6B6B);
+  static Color get rarityLegendaryBg => _isDark
+      ? const Color(0xFF3D1F1F)  // 深色模式下的暗红背景
+      : const Color(0xFFFFEBEE);
+  static const Color rarityLegendaryText = Color(0xFFD32F2F);
+
+  /// 获取稀有度颜色
+  static Color getRarityColor(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'rare':
+        return rarityRare;
+      case 'epic':
+        return rarityEpic;
+      case 'legendary':
+        return rarityLegendary;
+      default:
+        return rarityCommon;
+    }
+  }
+
+  /// 获取稀有度背景色
+  static Color getRarityBackground(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'rare':
+        return rarityRareBg;
+      case 'epic':
+        return rarityEpicBg;
+      case 'legendary':
+        return rarityLegendaryBg;
+      default:
+        return rarityCommonBg;
+    }
+  }
+
+  // ============================================
+  // 连胜等级颜色 (Streak Tier System)
+  // ============================================
+
+  /// 入门级 (< 7天) - 使用 warning 色
+  static Color get streakBeginner => warning;
+
+  /// 进阶级 (7-13天) - 橙色
+  static const Color streakIntermediate = Color(0xFFFF9500);
+
+  /// 专家级 (14-29天) - 橙红色
+  static const Color streakExpert = Color(0xFFFF6B00);
+
+  /// 大师级 (30天+) - 金色
+  static const Color streakMaster = Color(0xFFFFD700);
+
+  /// 根据连胜天数获取火焰颜色
+  static Color getStreakColor(int streakDays) {
+    if (streakDays >= 30) return streakMaster;
+    if (streakDays >= 14) return streakExpert;
+    if (streakDays >= 7) return streakIntermediate;
+    return streakBeginner;
+  }
 
   // ============================================
   // 向后兼容属性（用于统计模块）

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart';
+import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
+import 'package:sparkle/features/notification_center/presentation/providers/notification_analytics_provider.dart' as providers;
 
 /// Notification Analytics Screen
 class NotificationAnalyticsScreen extends ConsumerStatefulWidget {
@@ -17,13 +18,13 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     super.initState();
     // Load analytics on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationAnalyticsProvider.notifier).loadAnalytics('7d');
+      ref.read(providers.notificationAnalyticsProvider.notifier).loadAnalytics('7d');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(notificationAnalyticsProvider);
+    final state = ref.watch(providers.notificationAnalyticsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,15 +34,13 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             value: state.period,
             underline: const SizedBox.shrink(),
             icon: const Icon(Icons.arrow_drop_down),
-            items: AnalyticsPeriod.all.map((period) {
-              return DropdownMenuItem(
+            items: providers.AnalyticsPeriod.all.map((period) => DropdownMenuItem(
                 value: period.value,
                 child: Text(period.label),
-              );
-            }).toList(),
+              ),).toList(),
             onChanged: (value) {
               if (value != null) {
-                ref.read(notificationAnalyticsProvider.notifier).setPeriod(value);
+                ref.read(providers.notificationAnalyticsProvider.notifier).setPeriod(value);
               }
             },
           ),
@@ -57,8 +56,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildError(String error) {
-    return Center(
+  Widget _buildError(String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -67,16 +65,14 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           Text('加载失败: $error'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => ref.read(notificationAnalyticsProvider.notifier).refresh(),
+            onPressed: () => ref.read(providers.notificationAnalyticsProvider.notifier).refresh(),
             child: const Text('重试'),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildContent(analytics) {
-    return SingleChildScrollView(
+  Widget _buildContent(NotificationAnalytics analytics) => SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: ContentConstraint(
         child: Column(
@@ -103,10 +99,8 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
       ),
       ),
     );
-  }
 
-  Widget _buildSummarySection(summary) {
-    return Column(
+  Widget _buildSummarySection(NotificationAnalyticsSummary summary) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -124,23 +118,21 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touchApp)),
+            Expanded(child: _buildStatCard('点击数', '${summary.totalClicked}', Icons.touch_app)),
             const SizedBox(width: 12),
             Expanded(child: _buildStatCard('查看率', '${summary.viewRate.toStringAsFixed(1)}%', Icons.pie_chart)),
           ],
         ),
       ],
     );
-  }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    return Container(
+  Widget _buildStatCard(String title, String value, IconData icon) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -168,10 +160,11 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         ],
       ),
     );
-  }
 
-  Widget _buildTypeDistributionSection(byType) {
-    return Column(
+  Widget _buildTypeDistributionSection(
+    Map<String, NotificationTypeStats> byType,
+  ) =>
+      Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -179,7 +172,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        ...byType.entries.map((entry) {
+        ...byType.entries.map((MapEntry<String, NotificationTypeStats> entry) {
           final stats = entry.value;
           return _buildTypeStatCard(
             entry.key == 'system' ? '系统通知' : '干预通知',
@@ -187,20 +180,18 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             stats.viewed,
             stats.viewRate,
           );
-        }).toList(),
+        }),
       ],
     );
-  }
 
-  Widget _buildTypeStatCard(String title, int sent, int viewed, double viewRate) {
-    return Container(
+  Widget _buildTypeStatCard(String title, int sent, int viewed, double viewRate) => Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -229,7 +220,6 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
         ],
       ),
     );
-  }
 
   Widget _buildProgressBar(String label, int value, double total) {
     final percentage = total > 0 ? (value / total * 100) : 0.0;
@@ -242,7 +232,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
           children: [
             Text(label, style: const TextStyle(fontSize: 12)),
             Text('$value (${percentage.toStringAsFixed(0)}%)',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),),
           ],
         ),
         const SizedBox(height: 4),
@@ -261,8 +251,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildTrendsSection(trends) {
-    return Column(
+  Widget _buildTrendsSection(List<NotificationTrendData> trends) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -277,21 +266,21 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: _buildTrendChart(trends),
         ),
       ],
     );
-  }
 
-  Widget _buildTrendChart(trends) {
+  Widget _buildTrendChart(List<NotificationTrendData> trends) {
     if (trends.isEmpty) {
       return const Center(child: Text('暂无趋势数据'));
     }
 
-    final maxValue = trends.map((t) => t.sent).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxValue =
+        trends.map((t) => t.sent).reduce((a, b) => a > b ? a : b).toDouble();
 
     return CustomPaint(
       size: const Size(double.infinity, double.infinity),
@@ -299,8 +288,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
     );
   }
 
-  Widget _buildHourlyDistributionSection(distribution) {
-    return Column(
+  Widget _buildHourlyDistributionSection(List<int> distribution) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -315,14 +303,13 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: _buildHourlyChart(distribution),
         ),
       ],
     );
-  }
 
   Widget _buildHourlyChart(List<int> distribution) {
     if (distribution.isEmpty) {
@@ -347,7 +334,7 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
               decoration: BoxDecoration(
                 color: index % 6 == 0
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    : Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -366,16 +353,15 @@ class _NotificationAnalyticsScreenState extends ConsumerState<NotificationAnalyt
 
 /// Custom painter for trend chart
 class _TrendChartPainter extends CustomPainter {
-  final List trends;
-  final double maxValue;
-
   _TrendChartPainter(this.trends, this.maxValue);
+  final List<NotificationTrendData> trends;
+  final double maxValue;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (trends.isEmpty || maxValue == 0) return;
 
-    final padding = 40.0;
+    const padding = 40.0;
     final chartWidth = size.width - padding * 2;
     final chartHeight = size.height - padding * 2;
 
@@ -385,12 +371,12 @@ class _TrendChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final fillPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.2)
+      ..color = Colors.blue.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
 
     final points = <Offset>[];
 
-    for (int i = 0; i < trends.length; i++) {
+    for (var i = 0; i < trends.length; i++) {
       final trend = trends[i];
       final x = padding + (i / (trends.length - 1)) * chartWidth;
       final y = size.height - padding - (trend.sent / maxValue) * chartHeight;
@@ -408,7 +394,7 @@ class _TrendChartPainter extends CustomPainter {
 
     // Draw line
     final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
+    for (var i = 1; i < points.length; i++) {
       path.lineTo(points[i].dx, points[i].dy);
     }
     canvas.drawPath(path, paint);

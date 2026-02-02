@@ -38,6 +38,7 @@ ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
       meta: json['meta'] == null
           ? null
           : MessageMeta.fromJson(json['meta'] as Map<String, dynamic>),
+      agentCollaboration: json['agentCollaboration'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>

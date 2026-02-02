@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
+import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
 part 'notification_center_repository.g.dart';
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -39,12 +38,12 @@ class LtmRolloutService:
         bucket = self._stable_bucket(user_id_str)
         return bucket < percent
 
-    async def _get_user(self, user_id: UUID) -> Optional[User]:
+    async def _get_user(self, user_id: UUID) -> User | None:
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
     def _has_cohort_tag(self, user: User, cohort_tags: set[str]) -> bool:
-        tag_sources: List[str] = []
+        tag_sources: list[str] = []
         tags_attr = getattr(user, "tags", None)
         if isinstance(tags_attr, list):
             tag_sources.extend(tags_attr)

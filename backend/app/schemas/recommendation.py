@@ -4,11 +4,12 @@ Collaborative Filtering Recommendation Schemas
 
 基于用户行为相似度的个性化推荐
 """
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 
 class RecommendationItemType(str, Enum):
@@ -24,11 +25,11 @@ class UserSimilarityScore(BaseModel):
     """用户相似度分数"""
     user_id: UUID = Field(description="相似用户ID")
     username: str = Field(description="用户名")
-    avatar_url: Optional[str] = Field(default=None, description="头像URL")
+    avatar_url: str | None = Field(default=None, description="头像URL")
     similarity: float = Field(..., ge=0.0, le=1.0, description="相似度 0-1")
     common_items: int = Field(description="共同学习物品数量")
-    common_subjects: List[str] = Field(default_factory=list, description="共同学科")
-    last_interaction: Optional[datetime] = Field(default=None, description="最后互动时间")
+    common_subjects: list[str] = Field(default_factory=list, description="共同学科")
+    last_interaction: datetime | None = Field(default=None, description="最后互动时间")
 
 
 class CollaborativeRecommendation(BaseModel):
@@ -36,13 +37,13 @@ class CollaborativeRecommendation(BaseModel):
     item_id: UUID = Field(description="物品ID")
     item_type: RecommendationItemType = Field(description="物品类型")
     title: str = Field(description="标题")
-    description: Optional[str] = Field(default=None, description="描述")
+    description: str | None = Field(default=None, description="描述")
     reason: str = Field(description="推荐理由")
-    similar_users: List[UUID] = Field(default_factory=list, description="相似用户ID列表")
-    similar_usernames: List[str] = Field(default_factory=list, description="相似用户名")
+    similar_users: list[UUID] = Field(default_factory=list, description="相似用户ID列表")
+    similar_usernames: list[str] = Field(default_factory=list, description="相似用户名")
     predicted_score: float = Field(description="预测兴趣分数 0-1")
     confidence: float = Field(..., ge=0.0, le=1.0, description="推荐置信度")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="额外元数据")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="额外元数据")
 
 
 class ItemSimilarity(BaseModel):
@@ -58,8 +59,8 @@ class CollaborativeFilteringRequest(BaseModel):
     """协同过滤推荐请求"""
     user_id: UUID = Field(description="用户ID")
     limit: int = Field(default=10, ge=1, le=50, description="推荐数量限制")
-    item_type: Optional[RecommendationItemType] = Field(default=None, description="筛选物品类型")
-    subject_id: Optional[UUID] = Field(default=None, description="筛选学科")
+    item_type: RecommendationItemType | None = Field(default=None, description="筛选物品类型")
+    subject_id: UUID | None = Field(default=None, description="筛选学科")
     min_similarity: float = Field(default=0.3, ge=0.0, le=1.0, description="最小用户相似度阈值")
 
 
@@ -88,8 +89,8 @@ class RecommendationStats(BaseModel):
 
 class CollaborativeFilteringResponse(BaseModel):
     """协同过滤推荐响应"""
-    recommendations: List[CollaborativeRecommendation] = Field(description="推荐列表")
-    similar_users: List[UserSimilarityScore] = Field(default_factory=list, description="相似用户列表")
+    recommendations: list[CollaborativeRecommendation] = Field(description="推荐列表")
+    similar_users: list[UserSimilarityScore] = Field(default_factory=list, description="相似用户列表")
     stats: RecommendationStats = Field(description="统计信息")
 
 
@@ -97,6 +98,6 @@ class UserInteractionSummary(BaseModel):
     """用户交互摘要"""
     user_id: UUID = Field(description="用户ID")
     total_items_learned: int = Field(description="学习的物品总数")
-    subjects: List[str] = Field(description="学习的学科列表")
-    recent_items: List[UUID] = Field(description="最近学习的物品ID")
-    mastery_levels: Dict[str, float] = Field(default_factory=dict, description="各学科掌握度")
+    subjects: list[str] = Field(description="学习的学科列表")
+    recent_items: list[UUID] = Field(description="最近学习的物品ID")
+    mastery_levels: dict[str, float] = Field(default_factory=dict, description="各学科掌握度")

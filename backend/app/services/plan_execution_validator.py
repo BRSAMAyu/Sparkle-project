@@ -3,16 +3,17 @@ PlanExecutionValidator - 方案执行验证服务
 
 负责验证方案执行结果是否符合预期
 """
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass, field
 from datetime import datetime
-from loguru import logger
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
+
+from loguru import logger
 
 if TYPE_CHECKING:
     from app.orchestration.schemas import ExecutablePlan
-    from app.tools.base import ToolResult
     from app.services.plan_execution_record_service import PlanExecutionRecordService
+    from app.tools.base import ToolResult
 
 
 @dataclass
@@ -25,12 +26,12 @@ class ExecutionValidationResult:
     plan_id: str
     validation_status: str  # passed, failed, partial
     quality_score: float  # 0-1
-    criteria_results: Dict[str, Any] = field(default_factory=dict)
-    tool_summary: Dict[str, int] = field(default_factory=dict)
-    issues: List[str] = field(default_factory=list)
+    criteria_results: dict[str, Any] = field(default_factory=dict)
+    tool_summary: dict[str, int] = field(default_factory=dict)
+    issues: list[str] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "plan_id": self.plan_id,
@@ -56,7 +57,7 @@ class PlanExecutionValidator:
     async def validate_and_record(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
+        tool_results: list["ToolResult"],
         user_id: UUID,
     ) -> ExecutionValidationResult:
         """
@@ -99,7 +100,7 @@ class PlanExecutionValidator:
     async def validate(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
+        tool_results: list["ToolResult"],
     ) -> ExecutionValidationResult:
         """
         验证方案执行结果 (不持久化)
@@ -151,8 +152,8 @@ class PlanExecutionValidator:
         )
 
     def _analyze_tool_results(
-        self, tool_results: List["ToolResult"]
-    ) -> Dict[str, int]:
+        self, tool_results: list["ToolResult"]
+    ) -> dict[str, int]:
         """分析工具执行结果"""
         total = len(tool_results)
         successful = sum(1 for r in tool_results if r.success)
@@ -168,8 +169,8 @@ class PlanExecutionValidator:
     async def _check_success_criteria(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
-    ) -> Dict[str, Any]:
+        tool_results: list["ToolResult"],
+    ) -> dict[str, Any]:
         """
         检查方案的成功标准
 
@@ -181,7 +182,7 @@ class PlanExecutionValidator:
         }
         """
         criteria = plan.success_criteria or {}
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "criteria_defined": bool(criteria),
             "checks": {},
         }
@@ -240,8 +241,8 @@ class PlanExecutionValidator:
 
     def _calculate_quality_score(
         self,
-        tool_summary: Dict[str, int],
-        criteria_results: Dict[str, Any],
+        tool_summary: dict[str, int],
+        criteria_results: dict[str, Any],
     ) -> float:
         """
         计算执行质量分数 (0-1)
@@ -273,7 +274,7 @@ class PlanExecutionValidator:
     def _determine_status(
         self,
         quality_score: float,
-        criteria_results: Dict[str, Any],
+        criteria_results: dict[str, Any],
     ) -> str:
         """
         确定验证状态
@@ -293,9 +294,9 @@ class PlanExecutionValidator:
 
     def _collect_issues(
         self,
-        tool_results: List["ToolResult"],
-        criteria_results: Dict[str, Any],
-    ) -> List[str]:
+        tool_results: list["ToolResult"],
+        criteria_results: dict[str, Any],
+    ) -> list[str]:
         """收集问题列表"""
         issues = []
 

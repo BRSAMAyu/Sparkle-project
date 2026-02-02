@@ -1,44 +1,45 @@
 """
 Sparkle Backend - FastAPI Application Entry Point
 """
-import os
 import asyncio
+import os
+import sys
 from contextlib import asynccontextmanager, suppress
-from fastapi import FastAPI, Request, HTTPException, Depends
+
+from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from prometheus_fastapi_instrumentator import Instrumentator
-from app.core.rate_limiting import setup_rate_limiting
-from app.config import settings
-from app.db.session import get_db, AsyncSessionLocal
-from app.db.init_db import init_db
-from app.services.job_service import JobService
-from app.services.subject_service import SubjectService
-from app.services.scheduler_service import scheduler_service
-from app.core.cache import cache_service
-from app.core.pending_actions import pending_actions_store
-from app.services.user_service import UserService
-from app.services.preference_event_consumer import PreferenceEventConsumer
-from app.services.galaxy_event_consumer import GalaxyEventConsumer
-from app.services.task_event_consumer import TaskEventConsumer
-from app.core.access_control import verify_token
-from app.core.idempotency import get_idempotency_store
-from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
-from app.api.v1.router import api_router
-from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
-from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
-from app.api.v1.health import set_start_time
-from app.core.websocket import manager
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from fastapi.responses import JSONResponse
+from app.api.middleware import IdempotencyMiddleware
+from app.api.v1.health import set_start_time
+from app.api.v1.router import api_router
+from app.config import settings
+from app.core.cache import cache_service
 from app.core.exceptions import SparkleException
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-import sys
+from app.core.idempotency import get_idempotency_store
+from app.core.pending_actions import pending_actions_store
+from app.core.rate_limiting import setup_rate_limiting
+from app.core.websocket import manager
+from app.db.init_db import init_db
+from app.db.session import AsyncSessionLocal
+from app.services.galaxy_event_consumer import GalaxyEventConsumer
+from app.services.job_service import JobService
+from app.services.preference_event_consumer import PreferenceEventConsumer
+from app.services.scheduler_service import scheduler_service
+from app.services.subject_service import SubjectService
+from app.services.task_event_consumer import TaskEventConsumer
+from app.services.user_service import UserService
+from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
+from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 
 # Configure Loguru
 logger.remove()
@@ -63,8 +64,8 @@ async def lifespan(app: FastAPI):
 
     # 版本兼容性检查 (passlib/bcrypt)
     try:
-        import passlib
         import bcrypt
+        import passlib
         logger.info(f"Auth deps: passlib={passlib.__version__}, bcrypt={bcrypt.__version__}")
         # 验证兼容性: passlib 1.7.4 与 bcrypt 5.0+ 不兼容
         if passlib.__version__.startswith("1.7."):
@@ -110,7 +111,6 @@ async def lifespan(app: FastAPI):
         app.state.task_consumer_task = task_consumer_task
 
     # Start Galaxy Services (Phase 4)
-    galaxy_streaming_task = None
     if cache_service.redis:
         from app.services.galaxy.streaming_service import init_galaxy_streaming_service
         try:
@@ -160,7 +160,7 @@ async def lifespan(app: FastAPI):
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()
-    
+
     # Stop preference event consumer
     preference_consumer_task = getattr(app.state, "preference_consumer_task", None)
     if preference_consumer_task:
@@ -322,6 +322,20 @@ else:
 # Make sure the directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """处理 Pydantic 验证错误"""
+    logger.error(f"Validation error for {request.method} {request.url}: {exc.errors()}")
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "error_code": "ValidationError",
+            "message": "请求数据格式不正确",
+            "detail": exc.errors()
+        },
+    )
 
 @app.exception_handler(SparkleException)
 async def sparkle_exception_handler(request: Request, exc: SparkleException):

@@ -2,7 +2,6 @@ import base64
 import hashlib
 import os
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from loguru import logger
 

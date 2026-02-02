@@ -3,16 +3,16 @@
 使用 LLM 自动拓展知识星图
 """
 import json
-from uuid import UUID
-from typing import List, Optional, Tuple
 from datetime import datetime, timedelta
-from sqlalchemy import select, and_, func
+from uuid import UUID
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.galaxy import KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus, ExpansionFeedback
-from app.core.llm_client import llm_client
-from app.services.embedding_service import embedding_service
 from app.config import settings
+from app.core.llm_client import llm_client
+from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
+from app.services.embedding_service import embedding_service
 
 
 class ExpansionService:
@@ -35,7 +35,7 @@ class ExpansionService:
     async def queue_expansion(
         self,
         trigger_node_id: UUID,
-        trigger_task_id: Optional[UUID],
+        trigger_task_id: UUID | None,
         user_id: UUID
     ) -> bool:
         """
@@ -112,9 +112,8 @@ class ExpansionService:
 
         return json.dumps(context, ensure_ascii=False)
 
-    async def _get_neighbor_nodes(self, node_id: UUID, limit: int = 10) -> List[Tuple[KnowledgeNode, str]]:
+    async def _get_neighbor_nodes(self, node_id: UUID, limit: int = 10) -> list[tuple[KnowledgeNode, str]]:
         """获取节点的邻居节点"""
-        from app.models.subject import Subject
 
         query = (
             select(KnowledgeNode, NodeRelation.relation_type)
@@ -132,7 +131,7 @@ class ExpansionService:
         result = await self.db.execute(query)
         return result.all()
 
-    async def _get_user_learned_nodes(self, user_id: UUID, limit: int = 50) -> List[KnowledgeNode]:
+    async def _get_user_learned_nodes(self, user_id: UUID, limit: int = 50) -> list[KnowledgeNode]:
         """获取用户已学习的节点"""
         query = (
             select(KnowledgeNode)
@@ -140,7 +139,7 @@ class ExpansionService:
             .where(
                 and_(
                     UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.is_unlocked == True
+                    UserNodeStatus.is_unlocked
                 )
             )
             .limit(limit)
@@ -149,7 +148,7 @@ class ExpansionService:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def process_expansion(self, queue_id: UUID) -> List[KnowledgeNode]:
+    async def process_expansion(self, queue_id: UUID) -> list[KnowledgeNode]:
         """
         处理拓展请求 (由 Worker 调用)
 
@@ -203,7 +202,7 @@ class ExpansionService:
             await self.db.commit()
             raise
 
-    def _build_expansion_prompt(self, context_json: str, prompt_version: Optional[str] = None) -> str:
+    def _build_expansion_prompt(self, context_json: str, prompt_version: str | None = None) -> str:
         """构建拓展 Prompt"""
         context = json.loads(context_json)
 
@@ -273,7 +272,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         expanded_data: dict,
         trigger_node_id: UUID,
         user_id: UUID
-    ) -> List[KnowledgeNode]:
+    ) -> list[KnowledgeNode]:
         """创建拓展的知识节点"""
         trigger_node = await self.db.get(KnowledgeNode, trigger_node_id)
         new_nodes = []
@@ -328,7 +327,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         await self.db.commit()
         return new_nodes
 
-    async def _find_semantic_duplicate(self, item: dict) -> Optional[KnowledgeNode]:
+    async def _find_semantic_duplicate(self, item: dict) -> KnowledgeNode | None:
         """基于向量的语义去重"""
         embedding_text = f"{item.get('name', '')} {item.get('description', '')}".strip()
         if not embedding_text:
@@ -380,12 +379,12 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         self,
         user_id: UUID,
         trigger_node_id: UUID,
-        expansion_queue_id: Optional[UUID],
-        rating: Optional[int],
-        implicit_score: Optional[float],
+        expansion_queue_id: UUID | None,
+        rating: int | None,
+        implicit_score: float | None,
         feedback_type: str,
-        prompt_version: Optional[str],
-        metadata: Optional[dict]
+        prompt_version: str | None,
+        metadata: dict | None
     ) -> UUID:
         """Record feedback for expansion quality."""
         if not prompt_version and expansion_queue_id:
@@ -408,7 +407,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         await self.db.commit()
         return feedback.id
 
-    async def _find_existing_node(self, name: str) -> Optional[KnowledgeNode]:
+    async def _find_existing_node(self, name: str) -> KnowledgeNode | None:
         """查找已存在的节点"""
         query = select(KnowledgeNode).where(KnowledgeNode.name == name)
         result = await self.db.execute(query)
@@ -444,10 +443,10 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
         target_node = await self.db.get(KnowledgeNode, node_id)
         if not target_node:
             return 0
-            
+
         links_created = 0
-        
-        # 1. Incoming Links (Reverse Lookup): 
+
+        # 1. Incoming Links (Reverse Lookup):
         # Find other nodes that have 'target_node.name' in their keywords.
         # This uses the GIN index on keywords: keywords @> '["Name"]'
         incoming_query = (
@@ -461,7 +460,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
             .limit(limit)
         )
         mentioning_nodes = (await self.db.execute(incoming_query)).scalars().all()
-        
+
         for source in mentioning_nodes:
             # Create link: source -> mentions -> target
             exists = await self._check_link_exists(source.id, target_node.id)
@@ -475,7 +474,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 )
                 self.db.add(link)
                 links_created += 1
-        
+
         # 2. Outgoing Links (Forward Lookup):
         # For each keyword in target_node, find nodes with that EXACT name.
         # This uses the B-Tree index on name.
@@ -484,7 +483,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
                 # Find nodes with exact name match
                 candidates_query = select(KnowledgeNode).where(KnowledgeNode.name == keyword)
                 candidates = (await self.db.execute(candidates_query)).scalars().all()
-                
+
                 for cand in candidates:
                     if cand.id != node_id:
                         exists = await self._check_link_exists(target_node.id, cand.id)
@@ -501,7 +500,7 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
 
         if links_created > 0:
             await self.db.commit()
-            
+
         return links_created
 
     async def _check_link_exists(self, u: UUID, v: UUID) -> bool:

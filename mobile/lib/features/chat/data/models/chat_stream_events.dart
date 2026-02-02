@@ -1,6 +1,6 @@
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
-import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 聊天流事件基类
@@ -294,8 +294,7 @@ class StateChangeEvent extends ChatStreamEvent {
   double get spaceFreedMb => (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
 
   /// Convert to InterventionPushMessage for display
-  InterventionPushMessage toInterventionMessage() {
-    return InterventionPushMessage(
+  InterventionPushMessage toInterventionMessage() => InterventionPushMessage(
       interventionId: changeId,
       level: _mapInterventionLevel(),
       content: InterventionContent(
@@ -314,7 +313,6 @@ class StateChangeEvent extends ChatStreamEvent {
       actions: _getActions(),
       expiresAt: DateTime.now().add(const Duration(hours: 24)),
     );
-  }
 
   InterventionLevel _mapInterventionLevel() {
     switch (interventionLevel) {
@@ -332,7 +330,7 @@ class StateChangeEvent extends ChatStreamEvent {
     // For plan changes, offer to view the plan
     if (planId != null && changeType.startsWith('plan_')) {
       return [
-        InterventionAction(
+        const InterventionAction(
           id: 'view_plan',
           label: '查看计划',
           type: 'navigation',
@@ -343,7 +341,7 @@ class StateChangeEvent extends ChatStreamEvent {
     // For settings changes, offer to view settings
     if (changeType == 'user_settings_updated') {
       return [
-        InterventionAction(
+        const InterventionAction(
           id: 'view_settings',
           label: '查看设置',
           type: 'navigation',
@@ -353,7 +351,7 @@ class StateChangeEvent extends ChatStreamEvent {
 
     // Default: just acknowledge
     return [
-      InterventionAction(
+      const InterventionAction(
         id: 'acknowledge',
         label: '知道了',
         type: 'secondary',
@@ -826,6 +824,169 @@ class TransparencyStep {
         return '已完成';
       case 'failed':
         return '失败';
+      default:
+        return status;
+    }
+  }
+
+  /// 格式化耗时
+  String? get formattedDuration {
+    if (durationMs == null) return null;
+    if (durationMs! < 1000) {
+      return '${durationMs}ms';
+    }
+    return '${(durationMs! / 1000).toStringAsFixed(1)}s';
+  }
+}
+
+/// ============================================
+/// Multi-Agent Collaboration Events
+/// ============================================
+
+/// Multi-Agent Collaboration Timeline Event
+/// Shows real-time collaboration between multiple AI agents
+class CollaborationTimelineEvent extends ChatStreamEvent {
+  CollaborationTimelineEvent({
+    required this.collaborationData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> collaborationData;
+
+  /// 工作流类型 (e.g., 'deep_analysis', 'study_plan', 'error_diagnosis')
+  String get workflowType => collaborationData['workflow_type'] as String? ?? 'unknown';
+
+  /// 总执行时间 (ms)
+  int get executionTimeMs => collaborationData['execution_time_ms'] as int? ?? 0;
+
+  /// 参与者数量
+  int get participantCount => collaborationData['participant_count'] as int? ?? 0;
+
+  /// 协作步骤列表
+  List<CollaborationStep> get steps {
+    final stepsList = collaborationData['steps'] as List<dynamic>?;
+    return stepsList
+            ?.map((e) => CollaborationStep.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
+  }
+
+  /// 格式化执行时间
+  String get formattedExecutionTime {
+    if (executionTimeMs < 1000) {
+      return '${executionTimeMs}ms';
+    }
+    return '${(executionTimeMs / 1000).toStringAsFixed(1)}s';
+  }
+
+  /// 转换为UI步骤列表
+  List<TimelineStep> toTimelineSteps() => steps.map((step) => TimelineStep(
+      agentName: step.agentName,
+      agentRole: step.agentRole,
+      action: step.action,
+      status: step.status,
+      startTimeMs: step.startTimeMs,
+      durationMs: step.durationMs,
+      outputSummary: step.outputSummary,
+      metadata: step.metadata,
+    ),).toList();
+}
+
+/// 协作步骤数据模型
+class CollaborationStep {
+  const CollaborationStep({
+    required this.agentName,
+    required this.agentRole,
+    required this.action,
+    required this.status,
+    required this.startTimeMs,
+    this.durationMs,
+    this.outputSummary,
+    this.metadata,
+  });
+
+  factory CollaborationStep.fromJson(Map<String, dynamic> json) => CollaborationStep(
+        agentName: json['agent_name'] as String? ?? 'Unknown',
+        agentRole: json['agent_role'] as String? ?? 'Agent',
+        action: json['action'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        startTimeMs: json['start_time_ms'] as int? ?? 0,
+        durationMs: json['duration_ms'] as int?,
+        outputSummary: json['output_summary'] as String?,
+        metadata: json['metadata'] as Map<String, dynamic>?,
+      );
+
+  final String agentName;
+  final String agentRole;
+  final String action;
+  final String status; // pending, in_progress, completed, failed
+  final int startTimeMs;
+  final int? durationMs;
+  final String? outputSummary;
+  final Map<String, dynamic>? metadata;
+
+  Map<String, dynamic> toJson() => {
+        'agent_name': agentName,
+        'agent_role': agentRole,
+        'action': action,
+        'status': status,
+        'start_time_ms': startTimeMs,
+        'duration_ms': durationMs,
+        'output_summary': outputSummary,
+        'metadata': metadata,
+      };
+}
+
+/// UI步骤模型 (用于渲染)
+class TimelineStep {
+  const TimelineStep({
+    required this.agentName,
+    required this.agentRole,
+    required this.action,
+    required this.status,
+    required this.startTimeMs,
+    this.durationMs,
+    this.outputSummary,
+    this.metadata,
+  });
+
+  final String agentName;
+  final String agentRole;
+  final String action;
+  final String status;
+  final int startTimeMs;
+  final int? durationMs;
+  final String? outputSummary;
+  final Map<String, dynamic>? metadata;
+
+  /// 获取状态颜色
+  String getStatusColor() {
+    switch (status) {
+      case 'completed':
+        return '#66BB6A';
+      case 'failed':
+        return '#EF5350';
+      case 'in_progress':
+        return '#42A5F5';
+      default:
+        return '#BDBDBD';
+    }
+  }
+
+  /// 获取本地化状态标签
+  String getStatusLabel() {
+    switch (status) {
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '失败';
+      case 'in_progress':
+        return '进行中';
+      case 'pending':
+        return '等待中';
       default:
         return status;
     }

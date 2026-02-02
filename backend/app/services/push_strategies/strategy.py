@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, time
-from typing import Dict, Any
+from datetime import datetime, time, timedelta
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task, TaskStatus
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
+from app.models.user import User
 from app.services.personalization import PushPolicyProfile
 
 
@@ -25,7 +25,7 @@ class PushStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         """获取推送上下文数据"""
         raise NotImplementedError
 
@@ -55,7 +55,7 @@ class MemoryStrategy(PushStrategy):
         result = await self.db.execute(query)
         return result.first() is not None
 
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         query = (
             select(UserNodeStatus, KnowledgeNode)
             .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
@@ -107,7 +107,7 @@ class SprintStrategy(PushStrategy):
         result = await self.db.execute(query)
         return result.first() is not None
 
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         now = datetime.utcnow()
         query = (
             select(Task)
@@ -147,5 +147,5 @@ class InactivityStrategy(PushStrategy):
         hours_inactive = (datetime.utcnow() - user.last_login_at).total_seconds() / 3600
         return hours_inactive >= 24
 
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         return {"reason": "长时间未学习"}

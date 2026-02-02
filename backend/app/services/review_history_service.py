@@ -13,22 +13,27 @@ Review History Service - Phase 2c
 
 import json
 import uuid
-from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
 from enum import Enum
-from loguru import logger
+from typing import Any
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.review_system import (
-    ReviewHistory as ReviewHistoryModel,
-    ReviewFeedback as ReviewFeedbackModel,
-    ReviewOverride as ReviewOverrideModel,
     ReviewAppeal as ReviewAppealModel,
 )
-
+from app.models.review_system import (
+    ReviewFeedback as ReviewFeedbackModel,
+)
+from app.models.review_system import (
+    ReviewHistory as ReviewHistoryModel,
+)
+from app.models.review_system import (
+    ReviewOverride as ReviewOverrideModel,
+)
 
 # ============================================
 # 数据模型
@@ -56,20 +61,20 @@ class ReviewHistoryEntry:
     # 审查结果
     decision: str                     # 'passed', 'failed', 'needs_refinement'
     overall_score: float
-    metrics: List[Dict[str, Any]]     # 审查指标列表
+    metrics: list[dict[str, Any]]     # 审查指标列表
     issues_count: int
     critical_count: int
     warning_count: int
 
     # 反思信息（如果有）
     reflection_round: int = 0
-    reflection_outcome: Optional[str] = None
+    reflection_outcome: str | None = None
     score_delta: float = 0.0
 
     # 用户反馈
-    user_feedback: Optional[str] = None
-    user_satisfied: Optional[bool] = None
-    feedback_timestamp: Optional[str] = None
+    user_feedback: str | None = None
+    user_satisfied: bool | None = None
+    feedback_timestamp: str | None = None
 
     # 审查元数据
     reviewer_model: str = ""
@@ -77,8 +82,8 @@ class ReviewHistoryEntry:
     requires_reflection: bool = False
 
     # 原始内容快照
-    user_query: Optional[str] = None
-    content_snapshot: Optional[str] = None
+    user_query: str | None = None
+    content_snapshot: str | None = None
 
 
 @dataclass
@@ -91,9 +96,9 @@ class FeedbackEntry:
     timestamp: str
 
     # 反馈详情
-    rating: Optional[int] = None      # 1-5评分
-    comment: Optional[str] = None     # 用户评论
-    issues_reported: List[str] = field(default_factory=list)
+    rating: int | None = None      # 1-5评分
+    comment: str | None = None     # 用户评论
+    issues_reported: list[str] = field(default_factory=list)
 
     # 上下文
     original_score: float = 0.0
@@ -132,7 +137,7 @@ class OverrideEntry:
     reason: str                        # 用户理由
 
     # 审计信息
-    was_correct: Optional[bool] = None # 后续验证：用户覆盖是否正确
+    was_correct: bool | None = None # 后续验证：用户覆盖是否正确
     admin_reviewed: bool = False       # 是否被管理员审查
 
 
@@ -146,21 +151,21 @@ class AppealEntry:
 
     # 申诉内容
     appeal_reason: str                 # 申诉理由
-    issues_with_review: List[str] = field(default_factory=list)  # 审查中的问题
+    issues_with_review: list[str] = field(default_factory=list)  # 审查中的问题
 
     # 状态追踪
     status: AppealStatus = AppealStatus.PENDING
-    assigned_to: Optional[str] = None  # 分配给谁处理
+    assigned_to: str | None = None  # 分配给谁处理
 
     # 二次审查结果
-    secondary_review_id: Optional[str] = None
-    secondary_decision: Optional[str] = None
-    secondary_score: Optional[float] = None
+    secondary_review_id: str | None = None
+    secondary_decision: str | None = None
+    secondary_score: float | None = None
 
     # 解决信息
-    resolution: Optional[str] = None   # 解决方案
-    resolved_by: Optional[str] = None  # 解决者
-    resolved_at: Optional[str] = None  # 解决时间
+    resolution: str | None = None   # 解决方案
+    resolved_by: str | None = None  # 解决者
+    resolved_at: str | None = None  # 解决时间
 
 
 @dataclass
@@ -185,7 +190,7 @@ class ReviewAggregation:
     satisfaction_rate: float = 0.0
 
     # 问题统计
-    common_issues: List[Dict[str, Any]] = field(default_factory=list)
+    common_issues: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -196,7 +201,7 @@ class ReviewTrend:
     current_avg: float
     previous_avg: float
     change_percent: float
-    data_points: List[float]          # 最近的数据点
+    data_points: list[float]          # 最近的数据点
 
 
 # ============================================
@@ -218,7 +223,7 @@ class ReviewHistoryService:
         self._db = db_session
 
     @staticmethod
-    def _parse_uuid(value: Optional[str]) -> Optional[uuid.UUID]:
+    def _parse_uuid(value: str | None) -> uuid.UUID | None:
         if not value:
             return None
         try:
@@ -227,7 +232,7 @@ class ReviewHistoryService:
             return None
 
     @staticmethod
-    def _format_dt(value: Optional[datetime]) -> Optional[str]:
+    def _format_dt(value: datetime | None) -> str | None:
         return value.isoformat() if value else None
 
     def _to_review_entry(self, model: ReviewHistoryModel) -> ReviewHistoryEntry:
@@ -322,15 +327,15 @@ class ReviewHistoryService:
         session_id: str,
         decision: str,
         overall_score: float,
-        metrics: List[Dict[str, Any]],
+        metrics: list[dict[str, Any]],
         issues_count: int,
         critical_count: int,
         warning_count: int,
         reviewer_model: str = "",
         review_duration_ms: int = 0,
         requires_reflection: bool = False,
-        content_snapshot: Optional[str] = None,
-        user_query: Optional[str] = None,
+        content_snapshot: str | None = None,
+        user_query: str | None = None,
         **kwargs
     ) -> ReviewHistoryEntry:
         """
@@ -423,15 +428,15 @@ class ReviewHistoryService:
         review_id: str,
         user_id: str,
         feedback_type: FeedbackType,
-        feedback_id: Optional[str] = None,
-        rating: Optional[int] = None,
-        comment: Optional[str] = None,
-        issues_reported: Optional[List[str]] = None,
-        was_helpful: Optional[bool] = None,
-        was_accurate: Optional[bool] = None,
-        inaccurate_points: Optional[List[str]] = None,
-        specificity_level: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        feedback_id: str | None = None,
+        rating: int | None = None,
+        comment: str | None = None,
+        issues_reported: list[str] | None = None,
+        was_helpful: bool | None = None,
+        was_accurate: bool | None = None,
+        inaccurate_points: list[str] | None = None,
+        specificity_level: str | None = None,
+        tags: list[str] | None = None,
     ) -> FeedbackEntry:
         """
         记录用户反馈
@@ -493,12 +498,12 @@ class ReviewHistoryService:
 
     async def get_review_history(
         self,
-        user_id: Optional[str] = None,
-        session_id: Optional[str] = None,
-        target_type: Optional[str] = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        target_type: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[ReviewHistoryEntry]:
+    ) -> list[ReviewHistoryEntry]:
         """
         获取审查历史
 
@@ -527,7 +532,7 @@ class ReviewHistoryService:
         models = result.scalars().all()
         return [self._to_review_entry(model) for model in models]
 
-    async def get_review_by_id(self, review_id: str) -> Optional[ReviewHistoryEntry]:
+    async def get_review_by_id(self, review_id: str) -> ReviewHistoryEntry | None:
         """根据ID获取审查记录"""
         result = await self._db.execute(
             select(ReviewHistoryModel).where(ReviewHistoryModel.review_id == review_id)
@@ -539,10 +544,10 @@ class ReviewHistoryService:
 
     async def get_feedback_history(
         self,
-        user_id: Optional[str] = None,
-        review_id: Optional[str] = None,
+        user_id: str | None = None,
+        review_id: str | None = None,
         limit: int = 100,
-    ) -> List[FeedbackEntry]:
+    ) -> list[FeedbackEntry]:
         """获取反馈历史"""
         valid_types = [ft.value for ft in FeedbackType]
         query = select(ReviewFeedbackModel).where(ReviewFeedbackModel.feedback_type.in_(valid_types))
@@ -565,9 +570,9 @@ class ReviewHistoryService:
     async def get_aggregation(
         self,
         period: str = "daily",
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        user_id: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        user_id: str | None = None,
     ) -> ReviewAggregation:
         """
         获取聚合统计
@@ -678,7 +683,7 @@ class ReviewHistoryService:
         self,
         metric_name: str,
         days: int = 7,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> ReviewTrend:
         """
         获取审查趋势
@@ -791,7 +796,7 @@ class ReviewHistoryService:
         self,
         threshold: float = 0.3,
         limit: int = 50,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取可能误判的审查记录
 
@@ -896,7 +901,7 @@ class ReviewHistoryService:
         review_id: str,
         user_id: str,
         appeal_reason: str,
-        issues_with_review: Optional[List[str]] = None,
+        issues_with_review: list[str] | None = None,
     ) -> AppealEntry:
         """
         记录审查申诉
@@ -934,9 +939,9 @@ class ReviewHistoryService:
 
     async def get_appeal_queue(
         self,
-        status: Optional[AppealStatus] = None,
+        status: AppealStatus | None = None,
         limit: int = 50,
-    ) -> List[AppealEntry]:
+    ) -> list[AppealEntry]:
         """
         获取待处理申诉队列
 
@@ -966,12 +971,12 @@ class ReviewHistoryService:
         self,
         appeal_id: str,
         status: AppealStatus,
-        resolution: Optional[str] = None,
-        resolved_by: Optional[str] = None,
-        secondary_review_id: Optional[str] = None,
-        secondary_decision: Optional[str] = None,
-        secondary_score: Optional[float] = None,
-    ) -> Optional[AppealEntry]:
+        resolution: str | None = None,
+        resolved_by: str | None = None,
+        secondary_review_id: str | None = None,
+        secondary_decision: str | None = None,
+        secondary_score: float | None = None,
+    ) -> AppealEntry | None:
         """
         更新申诉状态
 
@@ -1014,7 +1019,7 @@ class ReviewHistoryService:
         )
         return self._to_appeal_entry(model)
 
-    async def get_appeal_by_id(self, appeal_id: str) -> Optional[AppealEntry]:
+    async def get_appeal_by_id(self, appeal_id: str) -> AppealEntry | None:
         """根据ID获取申诉"""
         result = await self._db.execute(
             select(ReviewAppealModel).where(ReviewAppealModel.appeal_id == appeal_id)
@@ -1026,10 +1031,10 @@ class ReviewHistoryService:
 
     async def get_override_history(
         self,
-        user_id: Optional[str] = None,
-        review_id: Optional[str] = None,
+        user_id: str | None = None,
+        review_id: str | None = None,
         limit: int = 100,
-    ) -> List[OverrideEntry]:
+    ) -> list[OverrideEntry]:
         """获取覆盖历史"""
         query = select(ReviewOverrideModel)
         if user_id:
@@ -1046,9 +1051,9 @@ class ReviewHistoryService:
 
     async def get_override_patterns(
         self,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         分析用户覆盖模式
 
@@ -1062,7 +1067,7 @@ class ReviewHistoryService:
             覆盖模式分析
         """
         cutoff = datetime.utcnow() - timedelta(days=days)
-        cutoff_str = cutoff.isoformat()
+        cutoff.isoformat()
 
         query = select(ReviewOverrideModel).where(
             ReviewOverrideModel.created_at >= cutoff
@@ -1105,7 +1110,7 @@ class ReviewHistoryService:
 # 全局实例管理
 # ============================================
 
-_review_history_services: Dict[str, ReviewHistoryService] = {}
+_review_history_services: dict[str, ReviewHistoryService] = {}
 
 
 def get_review_history_service(db_session: AsyncSession) -> ReviewHistoryService:

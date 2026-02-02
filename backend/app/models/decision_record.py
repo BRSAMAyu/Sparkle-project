@@ -1,10 +1,10 @@
 """
 决策记录模型
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

@@ -8,17 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
 from app.core.business_metrics import CONTEXT_PACK_INTENT
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory
+from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normalize_budget
+from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
-from app.services.evidence_health_service import EvidenceHealthService
-from app.services.memory_jobs import MemoryJobsService
-from app.services.memory_eval_service import MemoryEvalService
 from app.services.budget_tuning_service import BudgetTuningService
-from app.services.memory_rank_policy_service import MemoryRankPolicyService
+from app.services.evidence_health_service import EvidenceHealthService
+from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
 from app.services.ltm_rollout_service import LtmRolloutService
-from app.services.ltm_health_snapshot import LtmHealthSnapshotService
-from app.core.context_budget import DEFAULT_BUDGETS, _normalize_budget, _apply_min_budget
+from app.services.memory_eval_service import MemoryEvalService
+from app.services.memory_jobs import MemoryJobsService
+from app.services.memory_rank_policy_service import MemoryRankPolicyService
 
 router = APIRouter(
     prefix="/admin/memory",
@@ -134,7 +134,7 @@ async def run_adjustments(db: AsyncSession = Depends(get_db)):
     tuning_status = "skipped"
     if settings.ENABLE_BUDGET_TUNING:
         tuning = BudgetTuningService(db)
-        for intent in DEFAULT_BUDGETS.keys():
+        for intent in DEFAULT_BUDGETS:
             await tuning.get_multipliers(intent)
         tuning_status = "ok"
     summary["budget_tuning_decay"] = tuning_status
@@ -264,7 +264,7 @@ async def reset_budget_profiles(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
     tuning = BudgetTuningService(db)
     payload = {}
-    for intent in DEFAULT_BUDGETS.keys():
+    for intent in DEFAULT_BUDGETS:
         multipliers = await tuning.reset_profiles(intent)
         payload[intent] = {"multipliers": multipliers}
     return payload

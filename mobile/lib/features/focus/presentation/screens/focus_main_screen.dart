@@ -16,7 +16,7 @@ class FocusMainScreen extends ConsumerWidget {
         .toList();
 
     return Scaffold(
-      backgroundColor: DS.deepSpaceStart,
+      backgroundColor: DS.surfacePrimary,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -25,7 +25,7 @@ class FocusMainScreen extends ConsumerWidget {
         title: const Text('选择专注任务'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: DS.brandPrimary,
+        foregroundColor: DS.textPrimary,
       ),
       body: SafeArea(
         child: ContentConstraint(
@@ -38,7 +38,7 @@ class FocusMainScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimaryConst,
+                  color: DS.textPrimary,
                 ),
               ),
             ),
@@ -68,11 +68,11 @@ class FocusMainScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.assignment_turned_in_outlined,
-                size: 64, color: DS.brandPrimary.withValues(alpha: 0.3),),
+                size: 64, color: DS.textSecondary.withValues(alpha: 0.3),),
             const SizedBox(height: DS.lg),
             Text(
               '没有待办任务',
-              style: TextStyle(color: DS.brandPrimary70Const, fontSize: 16),
+              style: TextStyle(color: DS.textSecondary, fontSize: 16),
             ),
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
@@ -83,22 +83,26 @@ class FocusMainScreen extends ConsumerWidget {
 
   Widget _buildTaskItem(BuildContext context, TaskModel task) => Card(
         margin: const EdgeInsets.only(bottom: 12),
-        color: DS.brandPrimary.withValues(alpha: 0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: DS.surfaceSecondary,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: DS.border, width: 0.5),
+        ),
         child: ListTile(
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           title: Text(
             task.title,
             style: TextStyle(
-                color: DS.brandPrimaryConst, fontWeight: FontWeight.bold,),
+                color: DS.textPrimary, fontWeight: FontWeight.w600,),
           ),
           subtitle: Text(
             '预计 ${task.estimatedMinutes} 分钟',
-            style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),
+            style: TextStyle(color: DS.textSecondary),
           ),
           trailing:
-              Icon(Icons.arrow_forward_ios, color: DS.brandPrimary54, size: 16),
+              Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
           onTap: () {
             context.push('/tasks/${task.id}/execute');
           },
@@ -128,8 +132,10 @@ class FocusMainScreen extends ConsumerWidget {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: DS.primaryBase,
-            foregroundColor: DS.brandPrimary,
+            foregroundColor: DS.textOnPrimary,
             minimumSize: const Size(double.infinity, 56),
+            elevation: 2,
+            shadowColor: DS.primaryBase.withValues(alpha: 0.3),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),

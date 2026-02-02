@@ -1,16 +1,17 @@
-from typing import List, Optional, Dict, Any
 from uuid import UUID
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import joinedload
 
 from app.models.community import (
-    SharedResource,
-    GroupMember,
-    SharedResourceType,
     Friendship,
     FriendshipStatus,
+    GroupMember,
+    SharedResource,
+    SharedResourceType,
 )
+
 
 class CollaborationService:
     @staticmethod
@@ -19,8 +20,8 @@ class CollaborationService:
         user_id: UUID,
         resource_type: SharedResourceType,
         resource_id: UUID,
-        target_group_id: Optional[UUID] = None,
-        target_user_id: Optional[UUID] = None,
+        target_group_id: UUID | None = None,
+        target_user_id: UUID | None = None,
         permission: str = "view",
         comment: str = None
     ) -> SharedResource:
@@ -68,7 +69,7 @@ class CollaborationService:
             group_id=target_group_id,
             target_user_id=target_user_id,
         )
-        
+
         # Adjusting assignment based on resource_type enum
         if resource_type == SharedResourceType.PLAN:
             shared.plan_id = resource_id
@@ -80,7 +81,7 @@ class CollaborationService:
             shared.curiosity_capsule_id = resource_id
         elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
             shared.behavior_pattern_id = resource_id
-        
+
         shared.permission = permission
         shared.comment = comment
 
@@ -91,24 +92,24 @@ class CollaborationService:
         if target_group_id:
             # Notify group members (this might be expensive for large groups, maybe just create a GroupMessage?)
             # Better: Create a GroupMessage of type *_SHARE
-            pass 
+            pass
             # We will handle message creation in the API layer or here.
-        
+
         return shared
 
     @staticmethod
     async def get_group_resources(
         db: AsyncSession,
         group_id: UUID,
-        resource_type: Optional[SharedResourceType] = None,
+        resource_type: SharedResourceType | None = None,
         limit: int = 50
-    ) -> List[SharedResource]:
+    ) -> list[SharedResource]:
         """Get resources shared with a group"""
         stmt = select(SharedResource).where(
             SharedResource.group_id == group_id,
             SharedResource.deleted_at.is_(None)
         )
-        
+
         if resource_type:
             if resource_type == SharedResourceType.PLAN:
                 stmt = stmt.where(SharedResource.plan_id.isnot(None))
@@ -120,9 +121,9 @@ class CollaborationService:
                 stmt = stmt.where(SharedResource.curiosity_capsule_id.isnot(None))
             elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
                 stmt = stmt.where(SharedResource.behavior_pattern_id.isnot(None))
-        
+
         stmt = stmt.order_by(SharedResource.created_at.desc()).limit(limit)
-        
+
         # Eager load relationships
         stmt = stmt.options(
             joinedload(SharedResource.sharer),
@@ -132,7 +133,7 @@ class CollaborationService:
             joinedload(SharedResource.curiosity_capsule),
             joinedload(SharedResource.behavior_pattern),
         )
-        
+
         result = await db.execute(stmt)
         return result.scalars().all()
 

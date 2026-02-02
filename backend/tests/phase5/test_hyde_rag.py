@@ -21,9 +21,10 @@ class MockDB:
         self.fragments = []
 
     async def execute(self, query):
+        fragments = self.fragments
         class MockResult:
             def scalar_one_or_none(self):
-                return self.fragments[0] if self.fragments else None
+                return fragments[0] if fragments else None
 
             def scalars(self):
                 class MockScalars:
@@ -33,7 +34,7 @@ class MockDB:
                     def all(self):
                         return self.items
 
-                return MockScalars(self.fragments)
+                return MockScalars(fragments)
 
         return MockResult()
 
@@ -44,11 +45,19 @@ class MockDB:
         pass
 
 
+@pytest.fixture(autouse=True)
+def disable_analysis_sync():
+    with patch("app.services.cognitive_service.settings") as mock_settings:
+        mock_settings.ANALYSIS_SYNC_ON_EVENT = False
+        yield
+
+
 @pytest.mark.asyncio
 async def test_hyde_enabled_for_short_queries():
     """测试：短查询应启用 HyDE"""
     db = MockDB()
     service = CognitiveService(db)
+    service.analytics_service.get_user_profile_summary = AsyncMock(return_value="")
 
     # 创建短查询片段
     short_content = "I feel anxious"  # < 100 chars
@@ -82,6 +91,7 @@ async def test_hyde_disabled_for_long_queries():
     """测试：长查询应禁用 HyDE"""
     db = MockDB()
     service = CognitiveService(db)
+    service.analytics_service.get_user_profile_summary = AsyncMock(return_value="")
 
     # 创建长查询片段
     long_content = "A" * 150  # > 100 chars
@@ -110,6 +120,7 @@ async def test_hyde_timeout_degradation():
     """测试：HyDE 超时应降级为 Raw Search"""
     db = MockDB()
     service = CognitiveService(db)
+    service.analytics_service.get_user_profile_summary = AsyncMock(return_value="")
 
     short_content = "anxious"
     fragment = CognitiveFragment(
@@ -154,6 +165,7 @@ async def test_hyde_latency_budget_configurable():
 
     db = MockDB()
     service = CognitiveService(db)
+    service.analytics_service.get_user_profile_summary = AsyncMock(return_value="")
 
     fragment = CognitiveFragment(
         id=uuid4(),
@@ -186,6 +198,7 @@ async def test_hyde_result_deduplication():
     """测试：HyDE 和 Raw 结果应正确去重"""
     db = MockDB()
     service = CognitiveService(db)
+    service.analytics_service.get_user_profile_summary = AsyncMock(return_value="")
 
     fragment = CognitiveFragment(
         id=uuid4(),

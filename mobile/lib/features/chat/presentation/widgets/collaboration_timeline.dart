@@ -344,12 +344,28 @@ class AgentTimelineStep {
 
   factory AgentTimelineStep.fromJson(Map<String, dynamic> json) =>
       AgentTimelineStep(
-        agentName: json['agent'] as String,
-        action: json['action'] as String,
-        agentIcon: _getAgentIcon(json['agent'] as String),
-        agentColor: _getAgentColor(json['agent'] as String),
-        timestamp: (json['timestamp'] as num?)?.toDouble(),
-        outputSummary: json['output_summary'] as String?,
+        agentName: (json['agent'] as String?) ??
+            (json['agent_name'] as String?) ??
+            'Agent',
+        action: (json['action'] as String?) ??
+            (json['step'] as String?) ??
+            '',
+        agentIcon: _getAgentIcon(
+          (json['agent'] as String?) ??
+              (json['agent_name'] as String?) ??
+              'Agent',
+        ),
+        agentColor: _getAgentColor(
+          (json['agent'] as String?) ??
+              (json['agent_name'] as String?) ??
+              'Agent',
+        ),
+        timestamp: (json['timestamp'] as num?)?.toDouble() ??
+            (json['start_time_ms'] is num
+                ? (json['start_time_ms'] as num).toDouble() / 1000.0
+                : null),
+        outputSummary: json['output_summary'] as String? ??
+            json['outputSummary'] as String?,
       );
   final String agentName;
   final String action;

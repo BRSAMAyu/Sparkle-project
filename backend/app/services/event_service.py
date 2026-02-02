@@ -1,28 +1,28 @@
 from __future__ import annotations
 
-from datetime import datetime
 import time
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.business_metrics import EVENT_DEDUPE_TOTAL, EVENT_INGEST_LATENCY, EVENT_INGEST_TOTAL
 from app.core.event_bus import EventBus
-from app.core.business_metrics import EVENT_INGEST_TOTAL, EVENT_INGEST_LATENCY, EVENT_DEDUPE_TOTAL
 from app.models.event import TrackingEvent
 
 
 class EventService:
-    def __init__(self, db: AsyncSession, event_bus: Optional[EventBus] = None):
+    def __init__(self, db: AsyncSession, event_bus: EventBus | None = None):
         self.db = db
         self.event_bus = event_bus or EventBus()
 
     async def ingest_events(
         self,
         user_id: UUID,
-        events: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        events: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         start_time = time.perf_counter()
         sources = {item.get("source") or "unknown" for item in events}
         source_label = list(sources)[0] if len(sources) == 1 else "mixed"
@@ -40,7 +40,7 @@ class EventService:
         failed = 0
         results = []
 
-        new_records: List[TrackingEvent] = []
+        new_records: list[TrackingEvent] = []
         now_ms = int(datetime.utcnow().timestamp() * 1000)
 
         for item in events:
@@ -97,7 +97,7 @@ class EventService:
             "results": results,
         }
 
-    async def get_event(self, user_id: UUID, event_id: str) -> Optional[TrackingEvent]:
+    async def get_event(self, user_id: UUID, event_id: str) -> TrackingEvent | None:
         result = await self.db.execute(
             select(TrackingEvent)
             .where(TrackingEvent.event_id == event_id)
@@ -115,7 +115,7 @@ class EventService:
         await self.db.commit()
         return True
 
-    async def _fetch_existing_event_ids(self, event_ids: List[str]) -> set[str]:
+    async def _fetch_existing_event_ids(self, event_ids: list[str]) -> set[str]:
         if not event_ids:
             return set()
         result = await self.db.execute(

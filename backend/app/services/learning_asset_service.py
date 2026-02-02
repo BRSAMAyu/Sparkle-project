@@ -10,30 +10,29 @@ Handles:
 """
 import json
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_, func, text
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy import and_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
+from app.core.fingerprint import (
+    DEFAULT_MATCH_PROFILE,
+    NORM_VERSION,
+    generate_fingerprints,
+    normalize_with_hint,
+)
+from app.core.fuzzy_match import build_provenance_json, find_provenance
 from app.models.learning_assets import (
-    LearningAsset,
-    AssetSuggestionLog,
-    AssetStatus,
     AssetKind,
+    AssetStatus,
+    AssetSuggestionLog,
+    LearningAsset,
     SuggestionDecision,
     UserSuggestionResponse,
 )
-from app.core.fingerprint import (
-    generate_fingerprints,
-    normalize_with_hint,
-    NORM_VERSION,
-    DEFAULT_MATCH_PROFILE,
-)
-from app.core.fuzzy_match import find_provenance, build_provenance_json
-from app.core.cache import cache_service
-
 
 # === Configuration ===
 INBOX_EXPIRY_DAYS = 7
@@ -64,13 +63,13 @@ class LearningAssetService:
         db: AsyncSession,
         user_id: UUID,
         selected_text: str,
-        translation: Optional[str] = None,
-        definition: Optional[str] = None,
-        example: Optional[str] = None,
-        source_file_id: Optional[UUID] = None,
-        context_before: Optional[str] = None,
-        context_after: Optional[str] = None,
-        page_no: Optional[int] = None,
+        translation: str | None = None,
+        definition: str | None = None,
+        example: str | None = None,
+        source_file_id: UUID | None = None,
+        context_before: str | None = None,
+        context_after: str | None = None,
+        page_no: int | None = None,
         language_code: str = "en",
         asset_kind: AssetKind = AssetKind.WORD,
         initial_status: AssetStatus = AssetStatus.INBOX,
@@ -200,7 +199,7 @@ class LearningAssetService:
         db: AsyncSession,
         user_id: UUID,
         selection_fp: str,
-    ) -> Optional[LearningAsset]:
+    ) -> LearningAsset | None:
         """
         Check if user already has an asset with this fingerprint.
 
@@ -299,9 +298,9 @@ class LearningAssetService:
         user_id: UUID,
         session_id: str,
         selected_text: str,
-        translation: Optional[str] = None,
-        source_file_id: Optional[UUID] = None,
-    ) -> Dict[str, Any]:
+        translation: str | None = None,
+        source_file_id: UUID | None = None,
+    ) -> dict[str, Any]:
         """
         Record a translation lookup and evaluate suggestion.
 
@@ -390,7 +389,7 @@ class LearningAssetService:
         session_id: str,
         selection_fp: str,
         lookup_count: int,
-    ) -> Tuple[bool, SuggestionDecision, str]:
+    ) -> tuple[bool, SuggestionDecision, str]:
         """
         Evaluate whether to suggest asset creation.
 
@@ -433,7 +432,7 @@ class LearningAssetService:
         user_id: UUID,
         suggestion_log_id: UUID,
         response: UserSuggestionResponse,
-        asset_id: Optional[UUID] = None,
+        asset_id: UUID | None = None,
     ) -> None:
         """
         Record user feedback on a suggestion.
@@ -481,10 +480,10 @@ class LearningAssetService:
         self,
         db: AsyncSession,
         user_id: UUID,
-        status: Optional[AssetStatus] = None,
+        status: AssetStatus | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[LearningAsset]:
+    ) -> list[LearningAsset]:
         """
         Get user's learning assets with optional status filter.
 
@@ -519,7 +518,7 @@ class LearningAssetService:
         db: AsyncSession,
         asset_id: UUID,
         user_id: UUID,
-    ) -> Optional[LearningAsset]:
+    ) -> LearningAsset | None:
         """
         Get a specific asset by ID, ensuring user ownership.
 
@@ -584,7 +583,7 @@ class LearningAssetService:
         aggregate_type: str,
         aggregate_id: UUID,
         event_type: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> None:
         """
         Write event to outbox for async processing.

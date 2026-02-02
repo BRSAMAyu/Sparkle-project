@@ -1,8 +1,14 @@
 import time
-from typing import Optional
+
 from loguru import logger
-from app.core.cache import cache_service
+
 from app.config.phase5_config import phase5_config
+from app.core.cache import cache_service
+
+# Fallback in-memory state when Redis isn't available.
+_LOCAL_FAILURES: dict[str, tuple[int, float]] = {}
+_LOCAL_OPEN: dict[str, float] = {}
+
 
 class CircuitBreakerOpenException(Exception):
     def __init__(self, provider: str, reset_at: float):
@@ -21,9 +27,9 @@ class RedisCircuitBreaker:
     - CIRCUIT_BREAKER_FAILURE_WINDOW: 失败窗口时间（秒）
     """
     def __init__(self,
-                 failure_threshold: Optional[int] = None,
-                 recovery_timeout: Optional[int] = None,
-                 failure_window: Optional[int] = None):
+                 failure_threshold: int | None = None,
+                 recovery_timeout: int | None = None,
+                 failure_window: int | None = None):
         self.failure_threshold = failure_threshold or phase5_config.CIRCUIT_BREAKER_FAILURE_THRESHOLD
         self.recovery_timeout = recovery_timeout or phase5_config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT
         self.failure_window = failure_window or phase5_config.CIRCUIT_BREAKER_FAILURE_WINDOW
@@ -36,11 +42,13 @@ class RedisCircuitBreaker:
         Check if the circuit is open. Raises CircuitBreakerOpenException if open.
         """
         if not cache_service.redis:
-            # Fallback if Redis is down: allow traffic
+            reset_at = _LOCAL_OPEN.get(provider)
+            if reset_at and time.time() < reset_at:
+                raise CircuitBreakerOpenException(provider, reset_at)
             return
 
         open_key = f"cb:open:{provider}"
-        
+
         # Check if open
         open_until = await cache_service.redis.get(open_key)
         if open_until:
@@ -56,6 +64,17 @@ class RedisCircuitBreaker:
         Record a failure. If threshold reached, open the circuit.
         """
         if not cache_service.redis:
+            now = time.time()
+            count, first_at = _LOCAL_FAILURES.get(provider, (0, now))
+            if now - first_at > self.failure_window:
+                count, first_at = 0, now
+            count += 1
+            _LOCAL_FAILURES[provider] = (count, first_at)
+            if count >= self.failure_threshold:
+                reset_at = now + self.recovery_timeout
+                _LOCAL_OPEN[provider] = reset_at
+                _LOCAL_FAILURES.pop(provider, None)
+                logger.warning(f"Circuit breaker OPENED for {provider} until {reset_at} (local)")
             return
 
         fail_key = f"cb:fail:{provider}"
@@ -81,10 +100,11 @@ class RedisCircuitBreaker:
         Record a success. Clears failure count (or could decay).
         """
         if not cache_service.redis:
+            _LOCAL_FAILURES.pop(provider, None)
             return
 
         fail_key = f"cb:fail:{provider}"
-        # Simple strategy: success clears failures. 
+        # Simple strategy: success clears failures.
         # Alternatively, could do nothing and let TTL expire, but clearing is faster recovery for sporadic errors.
         await cache_service.redis.delete(fail_key)
 

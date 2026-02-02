@@ -13,9 +13,8 @@ This module provides:
 """
 
 import json
-import asyncio
-from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from loguru import logger
 
 
@@ -60,7 +59,7 @@ class UserIntentProfiler:
         if not redis_client:
             logger.warning("UserIntentProfiler initialized without Redis (profiling disabled)")
 
-    async def get_user_profile(self, user_id: str) -> Dict:
+    async def get_user_profile(self, user_id: str) -> dict:
         """Get user's intent profile
 
         Returns intent distribution and calculated weights.
@@ -104,7 +103,7 @@ class UserIntentProfiler:
         self,
         user_id: str,
         intent: str,
-        metadata: Dict = None
+        metadata: dict = None
     ):
         """Update user's intent profile after classification
 
@@ -123,10 +122,7 @@ class UserIntentProfiler:
 
             # Get existing profile
             raw = await self.redis.get(key)
-            if raw:
-                profile = json.loads(raw)
-            else:
-                profile = self._get_default_profile(user_id)
+            profile = json.loads(raw) if raw else self._get_default_profile(user_id)
 
             # Update intent count
             if intent in profile["intents"]:
@@ -167,10 +163,10 @@ class UserIntentProfiler:
 
     def adjust_intent_scores(
         self,
-        scores: Dict[str, float],
-        user_profile: Dict,
+        scores: dict[str, float],
+        user_profile: dict,
         max_boost: float = 0.3
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Adjust intent scores based on user profile
 
         Boosts frequently used intents by up to 30%.
@@ -203,9 +199,9 @@ class UserIntentProfiler:
 
     def get_top_intents(
         self,
-        user_profile: Dict,
+        user_profile: dict,
         top_n: int = 3
-    ) -> List[str]:
+    ) -> list[str]:
         """Get user's most frequently used intents
 
         Args:
@@ -228,9 +224,9 @@ class UserIntentProfiler:
 
     def get_recent_intents(
         self,
-        user_profile: Dict,
+        user_profile: dict,
         last_n: int = 5
-    ) -> List[str]:
+    ) -> list[str]:
         """Get user's recent intents
 
         Args:
@@ -245,7 +241,7 @@ class UserIntentProfiler:
         # Extract intent names from recent list
         return [item["intent"] for item in recent[:last_n]]
 
-    async def get_user_stats(self, user_id: str) -> Dict:
+    async def get_user_stats(self, user_id: str) -> dict:
         """Get user's intent statistics
 
         Args:
@@ -297,7 +293,7 @@ class UserIntentProfiler:
         except Exception as e:
             logger.warning(f"Failed to reset user profile: {e}")
 
-    async def get_global_stats(self) -> Dict:
+    async def get_global_stats(self) -> dict:
         """Get global statistics across all users
 
         Returns:
@@ -328,7 +324,7 @@ class UserIntentProfiler:
 
             # Aggregate stats
             total_classifications = 0
-            intent_counts = {intent: 0 for intent in self.INTENT_CATEGORIES}
+            intent_counts = dict.fromkeys(self.INTENT_CATEGORIES, 0)
 
             for key in keys:
                 raw = await self.redis.get(key)
@@ -357,7 +353,7 @@ class UserIntentProfiler:
             logger.warning(f"Failed to get global stats: {e}")
             return {"error": str(e)}
 
-    def _calculate_weights(self, profile: Dict) -> Dict:
+    def _calculate_weights(self, profile: dict) -> dict:
         """Calculate intent weights and boost factors
 
         Args:
@@ -373,7 +369,7 @@ class UserIntentProfiler:
 
         intents = profile.get("intents", {})
 
-        for intent, data in intents.items():
+        for _intent, data in intents.items():
             count = data.get("count", 0)
             weight = count / total
 
@@ -385,7 +381,7 @@ class UserIntentProfiler:
 
         return profile
 
-    def _get_default_profile(self, user_id: str) -> Dict:
+    def _get_default_profile(self, user_id: str) -> dict:
         """Get default profile for new user
 
         Args:
@@ -407,7 +403,7 @@ class UserIntentProfiler:
 _user_profiler = None
 
 
-def get_user_profiler(redis_client) -> Optional[UserIntentProfiler]:
+def get_user_profiler(redis_client) -> UserIntentProfiler | None:
     """Get singleton user profiler instance
 
     Args:

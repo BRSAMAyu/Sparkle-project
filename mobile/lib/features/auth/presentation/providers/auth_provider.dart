@@ -59,8 +59,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> login(String usernameOrEmail, String password) async {
     state = state.copyWith(isLoading: true);
     try {
-      await _authRepository.login(usernameOrEmail, password);
-      final user = await _authRepository.getCurrentUser();
+      final user = await _authRepository.login(usernameOrEmail, password);
       state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());
@@ -72,20 +71,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> socialLogin({
     required String provider,
     required String token,
+    String? openid,
     String? email,
     String? nickname,
     String? avatarUrl,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
-      await _authRepository.socialLogin(
+      final user = await _authRepository.socialLogin(
         provider: provider,
         token: token,
+        openid: openid,
         email: email,
         nickname: nickname,
         avatarUrl: avatarUrl,
       );
-      final user = await _authRepository.getCurrentUser();
       state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
       state = state.copyWith(isAuthenticated: false, error: e.toString());

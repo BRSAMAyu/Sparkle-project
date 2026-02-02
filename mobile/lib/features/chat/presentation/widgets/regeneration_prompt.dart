@@ -266,7 +266,6 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
           AnimatedBuilder(
             animation: _progressAnimation,
             builder: (context, child) => LinearProgressIndicator(
-                value: null, // Indeterminate
                 backgroundColor:
                     theme.colorScheme.primary.withValues(alpha: 0.2),
               ),

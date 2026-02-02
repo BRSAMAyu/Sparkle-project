@@ -2,15 +2,13 @@
 A/B Test Experiment Models
 A/B测试实验模型 - 支持实验生命周期管理、变体配置、指标跟踪
 """
-import uuid
 from enum import Enum
-from typing import Optional, List, Any, Dict
-from datetime import datetime
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON, DateTime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

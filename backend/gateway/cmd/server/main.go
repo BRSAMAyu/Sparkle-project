@@ -163,6 +163,7 @@ func main() {
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
 	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
+	dashboardProxyHandler := handler.NewDashboardProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
 	// STT Handler for Speech-to-Text WebSocket proxy
@@ -409,7 +410,7 @@ func main() {
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
 
 		// Error Book Routes
-		errorBookHandler.RegisterRoutes(api)
+		errorBookHandler.RegisterRoutes(api, authMiddleware)
 
 		// Community Routes
 		commHandler.RegisterRoutes(api)
@@ -422,6 +423,9 @@ func main() {
 
 		// Intervention Routes (proxy to Python backend)
 		api.Any("/interventions/*path", authMiddleware, interventionProxyHandler.Proxy)
+
+		// Dashboard Routes (proxy to Python backend)
+		api.Any("/dashboard/*path", authMiddleware, dashboardProxyHandler.Proxy)
 	}
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
@@ -742,6 +746,10 @@ func main() {
 		userID := c.GetString("user_id")
 		if userID != "" {
 			c.Request.Header.Set("X-User-ID", userID)
+		}
+		// Ensure backend receives Authorization header for proxied routes
+		if token := c.GetString("auth_token"); token != "" {
+			c.Request.Header.Set("Authorization", "Bearer "+token)
 		}
 
 		// Assign A/B variant (if configured for this route) and forward headers.

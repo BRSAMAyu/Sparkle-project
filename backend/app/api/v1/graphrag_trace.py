@@ -4,17 +4,17 @@ GraphRAG 检索追踪 API - 必杀技 A
 用于前端实时可视化检索过程
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.api.deps import get_current_active_superuser
 from app.models.user import User
-from app.services.graphrag_trace_store import get_latest_trace, get_trace
-
+from app.services.graphrag_trace_store import get_latest_trace as fetch_latest_trace
+from app.services.graphrag_trace_store import get_trace
 
 router = APIRouter(prefix="/graphrag", tags=["graphrag"])
 
@@ -26,11 +26,11 @@ class GraphRAGTraceResponse(BaseModel):
     timestamp: datetime
 
     # 节点信息
-    nodes_retrieved: List[Dict[str, Any]]
-    node_sources: Dict[str, str]  # node_id -> source (vector/graph/user_interest)
+    nodes_retrieved: list[dict[str, Any]]
+    node_sources: dict[str, str]  # node_id -> source (vector/graph/user_interest)
 
     # 关系信息
-    relationships: List[Dict[str, Any]]
+    relationships: list[dict[str, Any]]
 
     # 检索方法详情
     vector_search_count: int
@@ -38,7 +38,7 @@ class GraphRAGTraceResponse(BaseModel):
     user_interest_count: int
 
     # 性能指标
-    timing: Dict[str, float]
+    timing: dict[str, float]
 
     class Config:
         from_attributes = True
@@ -61,7 +61,7 @@ async def get_latest_trace(
 
     logger.info(f"获取用户 {current_user.id} 的最新检索追踪")
 
-    trace = await get_latest_trace(str(current_user.id))
+    trace = await fetch_latest_trace(str(current_user.id))
     if not trace:
         raise HTTPException(
             status_code=404,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
@@ -61,6 +62,10 @@ class _LearningForecastScreenState
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text('学习预测洞察', style: TextStyle(color: DS.brandPrimary)),
@@ -156,7 +161,7 @@ class _LearningForecastScreenState
                 color: DS.brandPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.auto_graph, color: DS.brandPrimary, size: 32),
+              child: Icon(Icons.auto_graph, color: DS.brandPrimaryConst, size: 32),
             ),
             const SizedBox(width: DS.lg),
             Expanded(
@@ -166,7 +171,7 @@ class _LearningForecastScreenState
                   Text(
                     'AI 预测系统',
                     style: TextStyle(
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -188,7 +193,7 @@ class _LearningForecastScreenState
   Widget _buildSectionTitle(String title) => Text(
         title,
         style: TextStyle(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),

@@ -3,18 +3,28 @@ import 'package:json_annotation/json_annotation.dart';
 part 'task_model.g.dart';
 
 enum TaskType {
+  @JsonValue('LEARNING')
   learning,
+  @JsonValue('TRAINING')
   training,
+  @JsonValue('ERROR_FIX')
   errorFix,
+  @JsonValue('REFLECTION')
   reflection,
+  @JsonValue('SOCIAL')
   social,
+  @JsonValue('PLANNING')
   planning,
 }
 
 enum TaskStatus {
+  @JsonValue('PENDING')
   pending,
+  @JsonValue('IN_PROGRESS')
   inProgress,
+  @JsonValue('COMPLETED')
   completed,
+  @JsonValue('ABANDONED')
   abandoned,
 }
 

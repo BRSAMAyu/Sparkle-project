@@ -27,7 +27,6 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
 
 class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
-  bool _isTimerRunning = false;
   bool _showCelebration = false;
   TaskCompletionResult? _completionResult;
 
@@ -36,6 +35,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _currentTimerDuration = 0; // In seconds
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
+  bool _isTimerRunning = false;
 
   // Focus Protection State
   DateTime? _pageEnterTime;
@@ -230,6 +230,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           Scaffold(
             extendBodyBehindAppBar: true,
             appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () async {
+                  final shouldPop = await _onWillPop();
+                  if (mounted && shouldPop) {
+                    context.pop();
+                  }
+                },
+              ),
               backgroundColor: Colors.transparent,
               elevation: 0,
               iconTheme: IconThemeData(color: DS.neutral900),
@@ -322,7 +331,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // 2. Task Guide Area
                             DecoratedBox(
                               decoration: BoxDecoration(
-                                color: DS.brandPrimary,
+                                color: DS.brandPrimaryConst,
                                 borderRadius: DS.borderRadius16,
                                 boxShadow: DS.shadowMd,
                                 border: Border.all(
@@ -352,7 +361,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         ],
                                       ),
                                       child: Icon(Icons.description_outlined,
-                                          color: DS.brandPrimary, size: 22,),
+                                          color: DS.brandPrimaryConst, size: 22,),
                                     ),
                                     const SizedBox(width: DS.spacing12),
                                     Text(
@@ -472,7 +481,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           ),
                           child: Icon(
                             Icons.check_circle,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                             size: 80,
                           ),
                         ),
@@ -483,7 +492,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               .textTheme
                               .headlineMedium
                               ?.copyWith(
-                                color: DS.brandPrimary,
+                                color: DS.brandPrimaryConst,
                                 fontWeight: DS.fontWeightBold,
                               ),
                         ),
@@ -504,7 +513,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 .textTheme
                                 .titleLarge
                                 ?.copyWith(
-                                  color: DS.brandPrimary,
+                                  color: DS.brandPrimaryConst,
                                   fontWeight: DS.fontWeightBold,
                                 ),
                           ),
@@ -688,7 +697,7 @@ class _BottomControls extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_circle_outline,
-                  color: DS.brandPrimary, size: 24,),
+                  color: DS.brandPrimaryConst, size: 24,),
             ),
             const SizedBox(width: DS.spacing12),
             const Text(
@@ -787,7 +796,7 @@ class _BottomControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           boxShadow: [
             BoxShadow(
               color: DS.brandPrimary.withValues(alpha: 0.05),

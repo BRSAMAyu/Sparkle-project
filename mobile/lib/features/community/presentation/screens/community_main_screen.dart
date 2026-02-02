@@ -8,7 +8,6 @@ import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
-import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -36,8 +35,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   }
 
   void _showSearchOptions() {
-    final currentTabIndex = _tabController.index;
-
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
@@ -359,7 +356,7 @@ class _GroupsListTab extends ConsumerWidget {
                                         color: DS.neutral500, fontSize: 12,),),
                                 const SizedBox(width: DS.md),
                                 Icon(Icons.local_fire_department,
-                                    size: 14, color: DS.brandPrimary,),
+                                    size: 14, color: DS.brandPrimaryConst,),
                                 const SizedBox(width: DS.xs),
                                 Text('${g.totalFlamePower}',
                                     style: TextStyle(

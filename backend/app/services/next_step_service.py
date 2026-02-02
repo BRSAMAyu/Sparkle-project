@@ -1,20 +1,18 @@
-import json
 import asyncio
-from typing import List, Optional, Any, Dict
 from uuid import UUID
-from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
 from loguru import logger
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import Task, TaskType, TaskStatus
-from app.models.user import User
-from app.models.galaxy import UserNodeStatus
-from app.schemas.task import NextActionSuggestion, NextActionType
-from app.services.llm_service import get_llm_service
 from app.core.agent_profiles import AgentRole
 from app.core.config import settings
+from app.models.galaxy import UserNodeStatus
+from app.models.task import Task, TaskStatus
+from app.models.user import User
+from app.schemas.task import NextActionSuggestion, NextActionType
+from app.services.llm_service import get_llm_service
+
 
 class NextStepService:
     """
@@ -27,7 +25,7 @@ class NextStepService:
         completed_task: Task,
         user: User,
         db: AsyncSession
-    ) -> List[NextActionSuggestion]:
+    ) -> list[NextActionSuggestion]:
         """
         Suggest next actions based on the completed task.
         """
@@ -41,17 +39,16 @@ class NextStepService:
 
         # 3. Gather context (Plan & Galaxy)
         plan_context = None
-        related_node_name = None
-        
+
         if completed_task.plan_id:
             # Simple check if there are more pending tasks in the plan
-            # We can't easily import PlanService due to circular imports potential, 
+            # We can't easily import PlanService due to circular imports potential,
             # so we do a quick DB check or rely on passed info if we refactor.
             # For now, let's just note the plan ID.
             plan_context = {"plan_id": str(completed_task.plan_id)}
 
         if completed_task.knowledge_node_id:
-            # We would ideally get the node name. 
+            # We would ideally get the node name.
             # Assuming we might need to fetch it if not eager loaded.
             # For speed, if we don't have it, we skip name specific prompts or fetch it.
             # Let's try to fetch node name if possible, but keep it light.
@@ -64,7 +61,7 @@ class NextStepService:
                 self._generate_with_llm(completed_task, fatigue_ratio, plan_context, action_preferences),
                 timeout=3.0
             )
-        except (asyncio.TimeoutError, Exception) as e:
+        except (TimeoutError, Exception) as e:
             logger.warning(f"Next step generation failed or timed out: {e}. Using fallback.")
             return await self._rule_based_fallback(completed_task, fatigue_ratio, db, action_preferences)
 
@@ -72,25 +69,25 @@ class NextStepService:
         self,
         task: Task,
         fatigue_ratio: float,
-        plan_context: Optional[Dict],
-        action_preferences: Optional[Dict[str, float]] = None
-    ) -> List[NextActionSuggestion]:
-        
+        plan_context: dict | None,
+        action_preferences: dict[str, float] | None = None
+    ) -> list[NextActionSuggestion]:
+
         llm = get_llm_service(AgentRole.TIME_TUTOR)
-        
+
         prompt = f"""
         User just completed a task: "{task.title}" (Type: {task.type}).
         Stats: Estimated {task.estimated_minutes}m, Actual {task.actual_minutes}m. (Fatigue Ratio: {fatigue_ratio:.2f}).
         Difficulty: {task.difficulty}/5.
-        
+
         Based on this, suggest 2-3 next actions.
-        
+
         Principles:
         1. If Fatigue Ratio > 1.5 or Actual > 40m -> Suggest 'rest_break' first.
         2. If part of a plan -> Suggest 'continue_plan'.
         3. Otherwise -> 'quick_review' (quiz) or 'light_expand' (related knowledge).
         4. ALL suggestions must be <= 15 mins.
-        
+
         Return JSON list of objects matching this schema:
         {{
             "type": "str", // quick_review, light_expand, practice_apply, rest_break, continue_plan
@@ -115,7 +112,7 @@ class NextStepService:
             ],
             temperature=0.4
         )
-        
+
         suggestions = []
         if isinstance(response, list):
             items = response
@@ -131,7 +128,7 @@ class NextStepService:
                 suggestions.append(sug)
             except Exception as e:
                 logger.warning(f"Skipping invalid suggestion: {e}")
-                
+
         if not suggestions:
             raise ValueError("No valid suggestions generated")
 
@@ -141,7 +138,7 @@ class NextStepService:
         self,
         task: Task,
         db: AsyncSession
-    ) -> Optional[NextActionSuggestion]:
+    ) -> NextActionSuggestion | None:
         """获取计划内下一个待办任务"""
         # 查询同一计划下的 PENDING 任务
         query = select(Task).where(
@@ -216,13 +213,12 @@ class NextStepService:
         task: Task,
         db: AsyncSession,
         max_results: int = 2
-    ) -> List[NextActionSuggestion]:
+    ) -> list[NextActionSuggestion]:
         """基于知识图谱邻居节点推荐拓展任务"""
         if not task.knowledge_node_id:
             return []
 
         from app.services.galaxy_service import GalaxyService
-        from app.models.galaxy import NodeRelation
 
         galaxy = GalaxyService(db)
 
@@ -252,7 +248,7 @@ class NextStepService:
                 estimated_minutes=min(5 + int((100 - mastery) / 20), 15),
                 energy_cost=1,
                 difficulty=min(3, task.difficulty),
-                reason=f"基于你刚学的知识推荐相关延伸",
+                reason="基于你刚学的知识推荐相关延伸",
                 quick_create_params={
                     "title": f"学习：{node.name}",
                     "type": "learning",
@@ -324,8 +320,8 @@ class NextStepService:
         task: Task,
         fatigue_ratio: float,
         db: AsyncSession,
-        action_preferences: Optional[Dict[str, float]] = None
-    ) -> List[NextActionSuggestion]:
+        action_preferences: dict[str, float] | None = None
+    ) -> list[NextActionSuggestion]:
         """使用配置的规则引擎生成建议"""
         suggestions = []
 
@@ -364,9 +360,9 @@ class NextStepService:
 
     def _sort_by_preferences(
         self,
-        suggestions: List[NextActionSuggestion],
-        preferences: Dict[str, float]
-    ) -> List[NextActionSuggestion]:
+        suggestions: list[NextActionSuggestion],
+        preferences: dict[str, float]
+    ) -> list[NextActionSuggestion]:
         """
         根据用户偏好排序建议
 
@@ -389,7 +385,7 @@ class NextStepService:
         self,
         user_id: UUID,
         db: AsyncSession
-    ) -> Optional[Dict[str, float]]:
+    ) -> dict[str, float] | None:
         """
         获取用户对各类型action的选择偏好
 

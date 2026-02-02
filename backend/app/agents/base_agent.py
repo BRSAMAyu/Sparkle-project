@@ -5,9 +5,9 @@ Base Agent - 智能体基类
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class AgentRole(Enum):
@@ -25,14 +25,14 @@ class AgentContext:
     """智能体上下文"""
     user_id: str
     session_id: str
-    conversation_history: List[Dict[str, Any]]
+    conversation_history: list[dict[str, Any]]
     user_query: str
 
     # 可选上下文
-    knowledge_context: Optional[str] = None
-    user_preferences: Optional[Dict[str, Any]] = None
-    previous_agent_outputs: Optional[List[Dict[str, Any]]] = None
-    db_session: Optional[Any] = None
+    knowledge_context: str | None = None
+    user_preferences: dict[str, Any] | None = None
+    previous_agent_outputs: list[dict[str, Any]] | None = None
+    db_session: Any | None = None
 
 
 @dataclass
@@ -43,12 +43,12 @@ class AgentResponse:
     response_text: str
 
     # 可选输出
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    reasoning: Optional[str] = None  # 推理过程
-    confidence: Optional[float] = None  # 置信度 0-1
+    tool_calls: list[dict[str, Any]] | None = None
+    reasoning: str | None = None  # 推理过程
+    confidence: float | None = None  # 置信度 0-1
     needs_handoff: bool = False  # 是否需要移交给其他智能体
-    handoff_target: Optional[str] = None  # 移交目标智能体
-    metadata: Optional[Dict[str, Any]] = None
+    handoff_target: str | None = None  # 移交目标智能体
+    metadata: dict[str, Any] | None = None
 
 
 class BaseAgent(ABC):
@@ -58,7 +58,7 @@ class BaseAgent(ABC):
         self.role: AgentRole = AgentRole.ORCHESTRATOR
         self.name: str = "BaseAgent"
         self.description: str = "Base agent template"
-        self.capabilities: List[str] = []
+        self.capabilities: list[str] = []
 
     @abstractmethod
     async def process(self, context: AgentContext) -> AgentResponse:
@@ -103,7 +103,7 @@ with other specialist agents when needed.
     def format_response(
         self,
         text: str,
-        reasoning: Optional[str] = None,
+        reasoning: str | None = None,
         confidence: float = 0.9,
         **kwargs
     ) -> AgentResponse:

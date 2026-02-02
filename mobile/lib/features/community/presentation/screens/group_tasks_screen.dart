@@ -67,12 +67,12 @@ class GroupTasksScreen extends ConsumerWidget {
                           Row(
                             children: [
                               Icon(Icons.timer,
-                                  size: 14, color: DS.brandPrimary),
+                                  size: 14, color: DS.brandPrimaryConst,),
                               const SizedBox(width: DS.xs),
                               Text('${task.estimatedMinutes} min'),
                               const SizedBox(width: DS.md),
                               Icon(Icons.people,
-                                  size: 14, color: DS.brandPrimary),
+                                  size: 14, color: DS.brandPrimaryConst,),
                               const SizedBox(width: DS.xs),
                               Text('${task.totalClaims} claimed'),
                             ],
@@ -83,7 +83,7 @@ class GroupTasksScreen extends ConsumerWidget {
                           ? (task.myCompletionStatus ?? false
                               ? Icon(Icons.check_circle, color: DS.success)
                               : Icon(Icons.hourglass_bottom,
-                                  color: DS.brandPrimary))
+                                  color: DS.brandPrimaryConst,))
                           : SparkleButton.primary(
                               label: 'Claim',
                               onPressed: () {
@@ -115,8 +115,8 @@ class GroupTasksScreen extends ConsumerWidget {
   void _showCreateTaskDialog(BuildContext context, WidgetRef ref) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
-    int estimatedMinutes = 30;
-    int difficulty = 2;
+    var estimatedMinutes = 30;
+    var difficulty = 2;
 
     showDialog<void>(
       context: context,

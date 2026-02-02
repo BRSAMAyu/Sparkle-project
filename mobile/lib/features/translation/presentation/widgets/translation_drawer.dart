@@ -90,7 +90,7 @@ class TranslationDrawer extends ConsumerWidget {
     super.key,
   });
 
-  final Function(TranslationHistoryItem)? onSaveToKnowledge;
+  final void Function(TranslationHistoryItem)? onSaveToKnowledge;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -206,7 +206,7 @@ class TranslationDrawer extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: DS.xs),
@@ -239,7 +239,7 @@ class TranslationDrawer extends ConsumerWidget {
           ],
         ),
         trailing: item.isSaved
-            ? Icon(Icons.bookmark, color: DS.brandPrimary, size: 20)
+            ? Icon(Icons.bookmark, color: DS.brandPrimaryConst, size: 20)
             : (onSaveToKnowledge != null
                 ? IconButton(
                     icon: const Icon(Icons.bookmark_add_outlined, size: 20),
@@ -275,7 +275,7 @@ class TranslationDrawer extends ConsumerWidget {
   }
 
   void _showFullTextDialog(BuildContext context, TranslationHistoryItem item) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${item.sourceLang} → ${item.targetLang}'),
@@ -311,7 +311,7 @@ class TranslationDrawer extends ConsumerWidget {
                 item.translation,
                 style: TextStyle(
                   fontSize: 15,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ],
@@ -328,7 +328,7 @@ class TranslationDrawer extends ConsumerWidget {
   }
 
   void _showClearConfirmation(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('清空翻译历史'),

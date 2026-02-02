@@ -173,10 +173,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		log.Printf("Failed to upgrade WS: %v", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = conn.Close()
+	}()
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
+	if userID == "" {
+		// Fallback: Try query parameter (for Guest mode or WebSocket upgrade requests where headers might be stripped)
+		userID = c.Query("user_id")
+	}
+
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
@@ -184,6 +192,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	authToken := c.GetString("auth_token")
+	if authToken == "" {
+		authToken = c.Query("token")
+	}
 
 	log.Printf("WebSocket connected for user: %s", userID)
 	authMethod := c.GetString("ws_auth_method")
@@ -264,6 +275,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 				// Route based on message type
 				switch msgType {
+				case "ping":
+					conn.WriteJSON(gin.H{"type": "pong"})
+					return false
 				case "action_feedback":
 					h.handleActionFeedback(conn, msgMap, userID)
 					return false
@@ -511,7 +525,22 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
-func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
+func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
+	metadata := map[string]interface{}{}
+	for key, value := range resp.Metadata {
+		if key == "collaboration_timeline" {
+			var decoded interface{}
+			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
+				metadata[key] = decoded
+			} else {
+				log.Printf("Failed to decode collaboration_timeline: %v", err)
+				metadata[key] = value
+			}
+			continue
+		}
+		metadata[key] = value
+	}
+
 	result := map[string]interface{}{
 		"response_id":    resp.ResponseId,
 		"created_at":     resp.CreatedAt,
@@ -519,7 +548,8 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
-		"metadata":       resp.Metadata,
+		"session_id":     sessionID,
+		"metadata":       metadata,
 	}
 
 	// Handle oneof content field
@@ -653,6 +683,12 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			}
 		}
 		result["intervention"] = intervention
+	}
+	default:
+		// If no content field is set, add type "metadata" for responses with only metadata
+		if _, hasType := result["type"]; !hasType {
+			result["type"] = "metadata"
+		}
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {
@@ -1102,6 +1138,30 @@ func generateRequestID() string {
 	return "req_" + strings.ReplaceAll(id.String(), "-", "")
 }
 
+func (h *ChatOrchestrator) resolveUserUUID(ctx context.Context, userID string) (uuid.UUID, string, error) {
+	if parsed, err := uuid.Parse(userID); err == nil {
+		return parsed, userID, nil
+	}
+
+	if h.queries == nil {
+		return uuid.Nil, userID, nil
+	}
+
+	user, err := h.queries.GetUserByEmail(ctx, userID)
+	if err != nil {
+		return uuid.Nil, userID, nil
+	}
+	if !user.ID.Valid {
+		return uuid.Nil, userID, nil
+	}
+
+	parsed, err := uuid.FromBytes(user.ID.Bytes[:])
+	if err != nil {
+		return uuid.Nil, userID, nil
+	}
+	return parsed, parsed.String(), nil
+}
+
 func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder interface{}, userID string, input *chatInput, requestID string) bool {
 	tracer := otel.Tracer("chat-orchestrator")
 	span := trace.SpanFromContext(ctx)
@@ -1109,7 +1169,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		attribute.String("session_id", input.SessionID),
 	)
 
-	ctx, cancel := context.WithCancel(ctx)
+	// Set timeout for the entire chat message processing
+	// Default 60s, configurable via GRPC_TIMEOUT_SECONDS
+	timeoutSeconds := 60
+	if h.cfg != nil && h.cfg.GRPCTimeoutSeconds > 0 {
+		timeoutSeconds = h.cfg.GRPCTimeoutSeconds
+	}
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
@@ -1161,7 +1227,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			default:
 				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(convertResponseToJSON(resp))
+				conn.WriteJSON(convertResponseToJSON(resp, input.SessionID))
 				conn.WriteJSON(gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
@@ -1171,17 +1237,23 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				})
 			}
 
-			return true
+			return false
 		}
+	}
+
+	// Resolve user identity to UUID (token sub may be email)
+	userUUID, resolvedUserID, _ := h.resolveUserUUID(ctx, userID)
+	if resolvedUserID != "" {
+		userID = resolvedUserID
 	}
 
 	// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
 	userContextJSON := ""
 	var contextFetchLatency time.Duration
-	if h.userContext != nil {
+	if h.userContext != nil && userUUID != uuid.Nil {
 		ucCtx, ucSpan := tracer.Start(ctx, "user_context.fetch")
 		contextFetchStart := time.Now()
-		contextData, err := h.userContext.GetUserContextData(ucCtx, uuid.MustParse(userID))
+		contextData, err := h.userContext.GetUserContextData(ucCtx, userUUID)
 		contextFetchLatency = time.Since(contextFetchStart)
 		ucSpan.End()
 
@@ -1412,7 +1484,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		default:
 			conn := responder.(*websocket.Conn)
 			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp)
+			jsonResp := convertResponseToJSON(resp, input.SessionID)
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)

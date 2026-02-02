@@ -11,15 +11,15 @@ Tests performance characteristics and load handling across:
 - Token consumption tracking
 """
 
-import pytest
 import asyncio
-import time
-import statistics
-from typing import List, Dict, Any
-from unittest.mock import Mock, AsyncMock
-import psutil
 import os
+import statistics
+import time
+from typing import Any
+from unittest.mock import Mock
 
+import psutil
+import pytest
 
 # ============================================================
 # Performance Measurement Utilities
@@ -28,9 +28,9 @@ import os
 class PerformanceMetrics:
     """Captures and analyzes performance metrics"""
     def __init__(self):
-        self.latencies: List[float] = []
-        self.throughput: List[float] = []
-        self.memory_usage: List[float] = []
+        self.latencies: list[float] = []
+        self.throughput: list[float] = []
+        self.memory_usage: list[float] = []
         self.errors: int = 0
         self.start_time: float = 0
 
@@ -54,7 +54,7 @@ class PerformanceMetrics:
         index = int((percentile / 100.0) * len(sorted_latencies))
         return sorted_latencies[min(index, len(sorted_latencies) - 1)]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get comprehensive statistics"""
         if not self.latencies:
             return {}
@@ -78,7 +78,7 @@ class PerformanceMetrics:
 
 class MockOrchestratorForLoad:
     """Mock orchestrator for performance testing"""
-    async def process_chat(self, request: Dict[str, Any], latency_override: float = None) -> Dict[str, Any]:
+    async def process_chat(self, request: dict[str, Any], latency_override: float = None) -> dict[str, Any]:
         """Simulate chat processing with configurable latency"""
         # Simulate processing latency (50-200ms typically)
         if latency_override:
@@ -92,7 +92,7 @@ class MockOrchestratorForLoad:
             "processing_time_ms": latency_override or 100,
         }
 
-    async def execute_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
+    async def execute_tool(self, tool_name: str, **kwargs) -> dict[str, Any]:
         """Simulate tool execution"""
         await asyncio.sleep(0.05)  # 50ms
         return {"status": "success", "result": f"Tool {tool_name} executed"}
@@ -115,7 +115,7 @@ class MockDatabaseForLoad:
         """Simulate connection release"""
         self.connection_count -= 1
 
-    async def query(self, query: str) -> List[Dict]:
+    async def query(self, query: str) -> list[dict]:
         """Simulate query execution"""
         await asyncio.sleep(0.01)  # 10ms query time
         return [{"result": "data"}]
@@ -124,7 +124,7 @@ class MockDatabaseForLoad:
 class MockCacheForLoad:
     """Mock Redis cache for load testing"""
     def __init__(self):
-        self.cache: Dict[str, Any] = {}
+        self.cache: dict[str, Any] = {}
         self.hits = 0
         self.misses = 0
 
@@ -294,7 +294,7 @@ class TestMemoryProfiling:
         memory_before = process.memory_info().rss / 1024 / 1024  # Convert to MB
 
         # Do some work
-        data = [{"key": f"item-{i}", "value": f"data-{i}" * 100} for i in range(1000)]
+        [{"key": f"item-{i}", "value": f"data-{i}" * 100} for i in range(1000)]
         await asyncio.sleep(0.1)
 
         memory_after = process.memory_info().rss / 1024 / 1024
@@ -409,7 +409,7 @@ class TestDatabaseConnectionPool:
     async def test_connection_pool_recovery(self, database):
         """Test connection pool recovery after failures"""
         # Simulate multiple cycles of connection use
-        for cycle in range(5):
+        for _cycle in range(5):
             tasks = [
                 self._acquire_and_query(database)
                 for _ in range(10)

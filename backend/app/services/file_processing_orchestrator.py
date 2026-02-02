@@ -5,7 +5,6 @@ File processing orchestrator
 import json
 import os
 import tempfile
-from typing import Optional
 from uuid import UUID
 
 import httpx
@@ -32,7 +31,7 @@ class FileProcessingOrchestrator:
         download_url: str,
         file_name: str,
         mime_type: str,
-        thumbnail_upload_url: Optional[str] = None,
+        thumbnail_upload_url: str | None = None,
     ) -> dict:
         file_record = await self.db.get(StoredFile, file_id)
         if not file_record or file_record.user_id != user_id:
@@ -104,7 +103,7 @@ class FileProcessingOrchestrator:
             batch_texts = texts[index:index + batch_size]
             embeddings = await embedding_service.batch_embeddings(batch_texts)
             items = []
-            for offset, (chunk, embedding) in enumerate(zip(chunks[index:index + batch_size], embeddings)):
+            for offset, (chunk, embedding) in enumerate(zip(chunks[index:index + batch_size], embeddings, strict=False)):
                 items.append(DocumentChunk(
                     file_id=file_id,
                     user_id=user_id,
@@ -120,7 +119,7 @@ class FileProcessingOrchestrator:
             await self.db.commit()
             index += batch_size
 
-    async def _update_status(self, record: StoredFile, status: str, error_message: Optional[str] = None) -> None:
+    async def _update_status(self, record: StoredFile, status: str, error_message: str | None = None) -> None:
         record.status = status
         record.error_message = error_message
         self.db.add(record)
@@ -132,7 +131,7 @@ class FileProcessingOrchestrator:
         user_id: UUID,
         status: str,
         progress: int,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         if not cache_service.redis:
             await cache_service.init_redis()

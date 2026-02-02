@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);
@@ -86,7 +87,12 @@ class AuthInterceptor extends Interceptor {
         final authRepo = _ref.read(authRepositoryProvider);
         final newToken = await authRepo.refreshToken();
         // Clone the request and retry
-        final dio = Dio();
+        // Use a new Dio instance with the same base configuration
+        final dio = Dio(BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 30),
+        ));
         err.requestOptions.headers['Authorization'] =
             'Bearer ${newToken.accessToken}';
         final response = await dio.fetch<dynamic>(err.requestOptions);

@@ -1,13 +1,13 @@
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from typing import Any
 
-from app.models.galaxy import StudyRecord, KnowledgeNode, UserNodeStatus
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.focus import FocusSession, FocusStatus
-from app.models.task import Task, TaskStatus, TaskType
-from app.models.error_book import ErrorRecord
+from app.models.galaxy import StudyRecord
+from app.models.task import Task, TaskStatus
+
 
 class WeeklyStatsService:
     """
@@ -18,19 +18,19 @@ class WeeklyStatsService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_weekly_summary(self, user_id: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+    async def get_weekly_summary(self, user_id: str, start_date: datetime, end_date: datetime) -> dict[str, Any]:
         """
         Get high-level weekly summary stats.
         """
         # 1. Study Time
         total_study_minutes = await self._get_total_study_time(user_id, start_date, end_date)
-        
+
         # 2. Focus Sessions
         focus_stats = await self._get_focus_stats(user_id, start_date, end_date)
-        
+
         # 3. Tasks Completed
         tasks_completed = await self._get_tasks_completed_count(user_id, start_date, end_date)
-        
+
         # 4. Knowledge Mastery
         mastery_stats = await self._get_mastery_stats(user_id, start_date, end_date)
 
@@ -61,7 +61,7 @@ class WeeklyStatsService:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def _get_focus_stats(self, user_id: str, start_date: datetime, end_date: datetime) -> Dict[str, int]:
+    async def _get_focus_stats(self, user_id: str, start_date: datetime, end_date: datetime) -> dict[str, int]:
         """Get focus session count and total duration."""
         query = select(
             func.count(FocusSession.id),
@@ -87,7 +87,7 @@ class WeeklyStatsService:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def _get_mastery_stats(self, user_id: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+    async def _get_mastery_stats(self, user_id: str, start_date: datetime, end_date: datetime) -> dict[str, Any]:
         """Calculate total mastery points gained and unique nodes learned."""
         # Mastery Gain
         query_gain = select(func.sum(StudyRecord.mastery_delta)).where(
@@ -108,15 +108,15 @@ class WeeklyStatsService:
         nodes_count = result_nodes.scalar() or 0
 
         return {"gain": round(gain, 2), "nodes_count": nodes_count}
-    
+
     async def _get_active_days(self, user_id: str, start_date: datetime, end_date: datetime) -> int:
         """Count distinct days with any study activity."""
         # Check StudyRecords and FocusSessions
         # This is a simplified check; ideally check created_at::date
-        
+
         # Using a set of dates in python to aggregate from different sources might be easier if volume is low,
         # but SQL is better.
-        
+
         # Group by date(created_at)
         query = select(func.count(func.distinct(func.date(StudyRecord.created_at)))).where(
             StudyRecord.user_id == user_id,
@@ -126,28 +126,28 @@ class WeeklyStatsService:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def get_daily_activity_trend(self, user_id: str, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+    async def get_daily_activity_trend(self, user_id: str, start_date: datetime, end_date: datetime) -> list[dict[str, Any]]:
         """
         Get daily breakdown of study time and tasks for charts.
         """
         # Generate all dates in range
         delta = end_date - start_date
         dates = [(start_date + timedelta(days=i)).date() for i in range(delta.days + 1)]
-        
+
         # Query DB grouping by date
         # (Simplified: Iterate and query or single sophisticated query. For MVP, iteration is fine for 7 days)
         trend = []
         for d in dates:
             day_start = datetime.combine(d, datetime.min.time())
             day_end = datetime.combine(d, datetime.max.time())
-            
+
             study_min = await self._get_total_study_time(user_id, day_start, day_end)
             tasks = await self._get_tasks_completed_count(user_id, day_start, day_end)
-            
+
             trend.append({
                 "date": d.isoformat(),
                 "study_minutes": study_min,
                 "tasks_completed": tasks
             })
-            
+
         return trend

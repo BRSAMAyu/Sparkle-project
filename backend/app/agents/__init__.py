@@ -7,29 +7,24 @@ Version 2.0 - Enhanced with Knowledge Graph Integration
 """
 
 from typing import Dict, Type
-from .base_agent import BaseAgent, AgentContext, AgentResponse
-from .orchestrator_agent import OrchestratorAgent
-from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
-from .search_agent import SearchAgent
+
+from .base_agent import AgentContext, AgentResponse, BaseAgent
+from .collaboration_workflows import (
+    CollaborationResult,
+    ErrorDiagnosisWorkflow,
+    ProgressiveExplorationWorkflow,
+    TaskDecompositionWorkflow,
+)
 
 # Enhanced Agents (v2.0)
-from .enhanced_agents import (
-    StudyPlannerAgent,
-    ProblemSolverAgent,
-    EnhancedAgentContext,
-    EnhancedAgentRole
-)
+from .enhanced_agents import EnhancedAgentContext, EnhancedAgentRole, ProblemSolverAgent, StudyPlannerAgent
 from .enhanced_orchestrator import EnhancedOrchestratorAgent, create_enhanced_orchestrator
-from .collaboration_workflows import (
-    TaskDecompositionWorkflow,
-    ProgressiveExplorationWorkflow,
-    ErrorDiagnosisWorkflow,
-    CollaborationResult
-)
-
+from .orchestrator_agent import OrchestratorAgent
+from .search_agent import SearchAgent
+from .specialist_agents import CodeAgent, MathAgent, ScienceAgent, WritingAgent
 
 # Agent Registry
-AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
+AGENT_REGISTRY: dict[str, type[BaseAgent]] = {
     # Original Agents
     "orchestrator": OrchestratorAgent,
     "math": MathAgent,

@@ -22,11 +22,6 @@ class UnifiedSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
-  // Mock State
-  double _depth = 0.5;
-  double _curiosity = 0.5;
-  bool _notificationsEnabled = true;
-  bool _smartReminders = true;
   bool _isGenerating = false;
 
   @override
@@ -36,6 +31,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final transparentMode = ref.watch(transparentModeProvider);
     final transparencyLevel = ref.watch(transparencyLevelProvider);
     final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
+    final learningPrefs = ref.watch(learningPreferencesProvider);
+    final pushPrefs = ref.watch(pushPreferencesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -70,13 +67,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             LearningModeControl(
-              depth: _depth,
-              curiosity: _curiosity,
+              depth: learningPrefs.depth,
+              curiosity: learningPrefs.curiosity,
               onChanged: (d, c) {
-                setState(() {
-                  _depth = d;
-                  _curiosity = c;
-                });
+                ref.read(learningPreferencesProvider.notifier).updatePreferences(
+                      depth: d,
+                      curiosity: c,
+                    );
               },
             ),
             const SizedBox(height: DS.spacing32),
@@ -92,21 +89,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
             // 二维控制面板
             PreferenceController2D(
-              initialDepth: _depth,
-              initialCuriosity: _curiosity,
+              initialDepth: learningPrefs.depth,
+              initialCuriosity: learningPrefs.curiosity,
               onPreferenceChanged: (offset) {
-                setState(() {
-                  _curiosity = offset.dx;
-                  _depth = offset.dy;
-                });
+                ref.read(learningPreferencesProvider.notifier).updatePreferences(
+                      depth: offset.dy,
+                      curiosity: offset.dx,
+                    );
               },
             ),
             const SizedBox(height: DS.spacing16),
 
             // 生成预览卡片
             CapsuleGenerationPreview(
-              depthPreference: _depth,
-              curiosityPreference: _curiosity,
+              depthPreference: learningPrefs.depth,
+              curiosityPreference: learningPrefs.curiosity,
             ),
             const SizedBox(height: DS.spacing16),
 
@@ -144,8 +141,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
             const SizedBox(height: DS.spacing16),
             WeeklyAgendaGrid(
+              initialData: ref.watch(weeklyAgendaProvider),
               onChanged: (data) {
-                // Handle updates
+                ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
               },
             ),
             const SizedBox(height: DS.spacing32),
@@ -191,15 +189,22 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: DS.spacing16),
             SwitchListTile(
               title: Text(l10n.enableNotifications),
-              value: _notificationsEnabled,
-              onChanged: (v) => setState(() => _notificationsEnabled = v),
+              subtitle: const Text('接收智能推送和学习提醒'),
+              value: pushPrefs.enableCuriosity,
+              onChanged: (v) {
+                ref.read(pushPreferencesProvider.notifier).toggleEnableCuriosity();
+              },
               activeThumbColor: DS.primaryBase,
             ),
             SwitchListTile(
               title: Text(l10n.smartReminders),
               subtitle: Text(l10n.pushMicroTasks),
-              value: _smartReminders,
-              onChanged: (v) => setState(() => _smartReminders = v),
+              value: pushPrefs.dailyCap > 0,
+              onChanged: (v) {
+                ref.read(pushPreferencesProvider.notifier).updatePreferences(
+                      dailyCap: v ? 5 : 0,
+                    );
+              },
               activeThumbColor: DS.primaryBase,
             ),
             const SizedBox(height: DS.spacing32),
@@ -303,17 +308,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
     try {
       final notifier = ref.read(generationJobsProvider.notifier);
+      final learningPrefs = ref.read(learningPreferencesProvider);
 
       // 根据好奇心偏好计算生成数量
-      final requestedCount = _curiosity < 0.3
+      final requestedCount = learningPrefs.curiosity < 0.3
           ? 1
-          : _curiosity < 0.7
+          : learningPrefs.curiosity < 0.7
               ? 2
               : 3;
 
       final taskId = await notifier.requestBatchGeneration(
-        depthPreference: _depth,
-        curiosityPreference: _curiosity,
+        depthPreference: learningPrefs.depth,
+        curiosityPreference: learningPrefs.curiosity,
         requestedCount: requestedCount,
       );
 

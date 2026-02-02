@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
-import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -42,11 +40,38 @@ class DashboardScreen extends ConsumerWidget {
 
     // Dynamic bottom spacing based on visible predictions
     final hasPredictions = predictions.isNotEmpty;
-    // Updated spacing: OmniBar(16) + MultiAgentBar(~50) + IntentPredictionBar(~40) + margins
-    final bottomSpacing = hasPredictions ? 210.0 : 130.0;
+    final category = ResponsiveSystem.getCategory(context);
+    final isSmallScreen = category == DeviceCategory.phone ||
+        category == DeviceCategory.phablet ||
+        category == DeviceCategory.watch;
+
+    // Calculate spacing for floating components
+    final spacing = 8.0;
+
+    // Calculate cumulative bottom positions
+    final omniBarBottom = spacing; // 8
+
+    // IntentPredictionBar position (above OmniBar)
+    final intentBarBottom = omniBarBottom + 52.0 + spacing; // ~68
+
+    // Base position for MultiAgentBar (when no IntentPredictionBar)
+    final baseMultiAgentBarBottom = omniBarBottom + 52.0 + spacing; // ~68
+
+    // Adjust MultiAgentBar position based on whether IntentPredictionBar is shown
+    final showIntentBar = hasPredictions;
+    final finalMultiAgentBarBottom = showIntentBar
+        ? intentBarBottom + 36.0 + spacing // ~108 (IntentPredictionBar is ~36px)
+        : baseMultiAgentBarBottom;
+
+    // IntentPredictionBar only shows when has predictions
+    final finalIntentBarBottom = showIntentBar ? intentBarBottom : 0.0;
+
+    // Total bottom spacing
+    final totalBottomHeight = showIntentBar
+        ? finalMultiAgentBarBottom + 44.0 + spacing // ~156
+        : baseMultiAgentBarBottom + 44.0 + spacing; // ~120
 
     // Max width for floating components on larger screens
-    final category = ResponsiveSystem.getCategory(context);
     final floatingMaxWidth = switch (category) {
       DeviceCategory.tablet => DS.contentMaxWidthTablet,
       DeviceCategory.desktop => DS.contentMaxWidthDesktop,
@@ -55,42 +80,6 @@ class DashboardScreen extends ConsumerWidget {
       DeviceCategory.phone => double.infinity,
       DeviceCategory.phablet => double.infinity,
     };
-
-    // Listen for Edge AI Nudges
-    ref.listen(edgeAIStateProvider, (previous, next) {
-      next.whenData((state) {
-        if (state != null && state.shouldInterrupt) {
-          final theme = Theme.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.auto_awesome, color: theme.colorScheme.onPrimary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? l10n.aiNudgeGentle : l10n.aiNudgeFocus}',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: theme.colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: l10n.view,
-                textColor: theme.colorScheme.onPrimary,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EdgeAIStatusScreen(),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-      });
-    });
 
     return Scaffold(
       extendBody: true,
@@ -111,9 +100,9 @@ class DashboardScreen extends ConsumerWidget {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  // Top Overlay
+                  // Top Overlay with theme toggle button
                   SliverToBoxAdapter(
-                      child: _buildTopOverlay(context, user, l10n),),
+                      child: _buildTopOverlay(context, ref, user, l10n),),
 
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
@@ -140,50 +129,58 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SliverToBoxAdapter(child: ExpandedToolbarSection()),
 
-                  // Dynamic bottom spacing for prediction bar and OmniBar
-                  SliverToBoxAdapter(child: SizedBox(height: bottomSpacing)),
+                  // Dynamic bottom spacing for floating components
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: totalBottomHeight,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Layer 3: Intent Prediction Bar (above OmniBar)
+          // Layer 3: Intent Prediction Bar (only show when has predictions)
+          if (showIntentBar)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: finalIntentBarBottom,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: floatingMaxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                    child: const IntentPredictionBar(showIdle: true),
+                  ),
+                ),
+              ),
+            ),
+
+          // Layer 4: MultiAgent Bar (above OmniBar)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 88,
+            bottom: finalMultiAgentBarBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: IntentPredictionBar(),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? DS.spacing16 : DS.spacing16,
+                    vertical: DS.spacing4,
+                  ),
+                  child: const MultiAgentBar(),
                 ),
               ),
             ),
           ),
 
-          // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
+          // Layer 5: Omni-Bar (bottom)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 138,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: MultiAgentBar(),
-                ),
-              ),
-            ),
-          ),
-
-          // Layer 4: Omni-Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
+            bottom: omniBarBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
@@ -194,89 +191,63 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Theme Toggle Button
-        Positioned(
-          right: 20,
-          bottom: 130,
-          child: GestureDetector(
-            onTap: () {
-              ref.read(themeManagerProvider).toggleDarkMode();
-            },
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: DS.shadowLg,
-                color: DS.surfaceSecondary,
-                border: Border.all(color: DS.brandPrimary, width: 2),
-              ),
-              child: Icon(
-                Theme.of(context).brightness == Brightness.dark
-                    ? Icons.wb_sunny
-                    : Icons.nightlight_round,
-                size: 24,
-                color: DS.brandPrimary,
-              ),
-            ),
-          ),
-        ),
         ],
       ),
     );
   }
 
   Widget _buildTopOverlay(
-          BuildContext context, UserModel? user, AppLocalizations l10n,) =>
+          BuildContext context, WidgetRef ref, UserModel? user, AppLocalizations l10n,) =>
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage:
-                  user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-              backgroundColor: DS.primaryBase,
-              child: user?.avatarUrl == null
-                  ? Text((user?.nickname ?? 'U')[0].toUpperCase())
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Lv.${user?.flameLevel ?? 1}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.warning,
+            // Avatar and user info
+            Expanded(
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundImage:
+                        user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                    backgroundColor: DS.primaryBase,
+                    child: user?.avatarUrl == null
+                        ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                        : null,
                   ),
-                ),
-                Text(
-                  user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimary,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Lv.${user?.flameLevel ?? 1}',
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.warning,
+                          ),
+                        ),
+                        Text(
+                          user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            fontWeight: DS.fontWeightBold,
+                            color: DS.brandPrimaryConst,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const Spacer(),
-            // Edge AI Entry Point
-            IconButton(
-              icon: const Icon(Icons.psychology_outlined),
-              color: DS.brandPrimary,
-              tooltip: 'Qwen3 认知状态',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EdgeAIStatusScreen(),
-                  ),
-                );
-              },
-            ),
+            // Theme toggle button
+            _ThemeToggleButton(onTap: () {
+              ref.read(themeManagerProvider).toggleDarkMode();
+            }),
           ],
         ),
       );
@@ -305,10 +276,10 @@ class DashboardScreen extends ConsumerWidget {
           mainAxisSpacing: DS.spacing12,
           crossAxisSpacing: DS.spacing12,
           children: [
-          // Card A: Focus Core (2x1.5)
+          // Card A: Focus Core (2x1)
           StaggeredGridTile.count(
             crossAxisCellCount: 2,
-            mainAxisCellCount: 1.5,
+            mainAxisCellCount: 1,
             child: FocusCard(onTap: () => context.push('/focus')),
           ),
           // Card E: Calendar Heatmap (1x1)
@@ -412,4 +383,35 @@ class _StreakCard extends StatelessWidget {
         ),
       ),
     );
+}
+
+/// Theme toggle button widget
+class _ThemeToggleButton extends StatelessWidget {
+  const _ThemeToggleButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: DS.shadowSm,
+          color: DS.surfaceSecondary,
+          border: Border.all(color: DS.brandPrimaryConst, width: 1.5),
+        ),
+        child: Icon(
+          isDark ? Icons.wb_sunny : Icons.nightlight_round,
+          size: 20,
+          color: DS.brandPrimaryConst,
+        ),
+      ),
+    );
+  }
 }

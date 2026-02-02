@@ -4,19 +4,18 @@ TaskEventListener - 任务事件监听器
 监听任务相关事件并触发知识星图更新
 """
 import asyncio
-from typing import List, Optional
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
 from loguru import logger
-from sqlalchemy import select, and_, or_
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
-from app.models.task import Task, TaskStatus
 from app.models.error_book import ErrorRecord
-from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.galaxy import KnowledgeNode
+from app.models.task import Task
 from app.services.galaxy.feedback_service import GalaxyFeedbackService
-from app.db.session import AsyncSessionLocal
 
 
 class TaskEventListener:
@@ -111,7 +110,7 @@ class TaskEventListener:
 
             # 获取事件数据
             actual_minutes = event.get("actual_minutes", event.get("estimated_minutes", 15))
-            difficulty = event.get("difficulty", 3)
+            event.get("difficulty", 3)
 
             # 使用 GalaxyStatsService 批量更新节点
             from app.services.galaxy.stats_service import GalaxyStatsService
@@ -172,7 +171,6 @@ class TaskEventListener:
                 # 如果投入时间很少（<10分钟），说明可能是误操作，不惩罚
                 # 如果投入时间较多，则适当降低掌握度
                 if time_spent and time_spent >= 10:
-                    penalty_score = -0.2  # 轻微惩罚
                     await self.feedback_service.collect_implicit_feedback({
                         "type": "task_abandoned",
                         "user_id": user_id,
@@ -240,7 +238,7 @@ class TaskEventListener:
         except Exception as e:
             logger.error(f"Failed to handle error_created: {e}")
 
-    async def _get_task_related_nodes(self, task_id: UUID) -> List[UUID]:
+    async def _get_task_related_nodes(self, task_id: UUID) -> list[UUID]:
         """
         获取任务关联的知识节点
 
@@ -273,7 +271,7 @@ class TaskEventListener:
 
         return related_nodes
 
-    async def _get_error_related_nodes(self, error_id: UUID) -> List[str]:
+    async def _get_error_related_nodes(self, error_id: UUID) -> list[str]:
         """
         获取错误关联的知识节点
 
@@ -311,7 +309,7 @@ class TaskEventListener:
         self,
         text: str,
         limit: int = 5
-    ) -> List[UUID]:
+    ) -> list[UUID]:
         """
         根据关键词查找知识节点
 

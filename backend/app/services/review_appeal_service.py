@@ -12,24 +12,23 @@ Review Appeal Service - Phase 2e
 """
 
 import uuid
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any
+
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.review_history_service import (
-    get_review_history_service,
-    AppealStatus,
-    AppealEntry,
-)
-from app.services.llm_service import get_llm_service_for_task
 from app.core.agent_profiles import TaskType
 from app.models.chat import ChatMessage
-
+from app.services.llm_service import get_llm_service_for_task
+from app.services.review_history_service import (
+    AppealEntry,
+    AppealStatus,
+    get_review_history_service,
+)
 
 # ============================================
 # 数据模型
@@ -57,8 +56,8 @@ class AppealRequest:
     user_id: str
     review_id: str
     appeal_reason: str
-    issues_with_review: List[str] = field(default_factory=list)
-    evidence: Optional[Dict[str, Any]] = None
+    issues_with_review: list[str] = field(default_factory=list)
+    evidence: dict[str, Any] | None = None
     priority: AppealPriority = AppealPriority.NORMAL
 
 
@@ -68,7 +67,7 @@ class AppealDecisionResult:
     appeal_id: str
     decision: AppealDecision
     explanation: str
-    secondary_review_score: Optional[float] = None
+    secondary_review_score: float | None = None
     confidence: float = 0.0
     reviewed_by: str = "system"
     reviewed_at: str = ""
@@ -152,7 +151,7 @@ class AppealReviewService:
     async def process_secondary_review(
         self,
         appeal_id: str,
-        secondary_reviewer_model: Optional[str] = None,
+        secondary_reviewer_model: str | None = None,
     ) -> AppealDecisionResult:
         """
         处理二次审查
@@ -220,7 +219,7 @@ class AppealReviewService:
         original_review,
         appeal: AppealEntry,
         model: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         执行二次审查
 
@@ -269,7 +268,7 @@ class AppealReviewService:
                 "error": str(e),
             }
 
-    async def _get_review_content(self, original_review) -> tuple[Optional[str], Optional[str]]:
+    async def _get_review_content(self, original_review) -> tuple[str | None, str | None]:
         if getattr(original_review, "content_snapshot", None):
             return original_review.content_snapshot, getattr(original_review, "user_query", None)
 
@@ -304,7 +303,7 @@ class AppealReviewService:
         self,
         appeal: AppealEntry,
         original_review,
-        secondary_result: Dict[str, Any],
+        secondary_result: dict[str, Any],
     ) -> AppealDecisionResult:
         """
         根据一次和二次审查结果做出申诉决策
@@ -380,7 +379,7 @@ class AppealReviewService:
         }
         return mapping.get(decision, AppealStatus.RESOLVED)
 
-    async def get_appeal_status(self, appeal_id: str) -> Optional[Dict[str, Any]]:
+    async def get_appeal_status(self, appeal_id: str) -> dict[str, Any] | None:
         """
         获取申诉状态
 
@@ -417,7 +416,7 @@ class AppealReviewService:
     async def get_appeal_statistics(
         self,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取申诉统计
 
@@ -480,7 +479,7 @@ class AppealReviewService:
 # 全局实例管理
 # ============================================
 
-_appeal_services: Dict[int, AppealReviewService] = {}
+_appeal_services: dict[int, AppealReviewService] = {}
 
 
 def get_appeal_review_service(db_session: AsyncSession) -> AppealReviewService:

@@ -2,14 +2,11 @@
 Task Feedback Model
 """
 import enum
-import uuid
-from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, String, Text, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class TaskFeedbackCategory(enum.Enum):
@@ -56,7 +53,7 @@ class TaskFeedback(BaseModel):
     def __repr__(self):
         return f"<TaskFeedback(task_id={self.task_id}, completion_quality={self.completion_quality})>"
 
-    def calculate_preference_deltas(self) -> tuple[Optional[float], Optional[float]]:
+    def calculate_preference_deltas(self) -> tuple[float | None, float | None]:
         """
         根据反馈计算偏好变化
 

@@ -12,13 +12,12 @@ This module provides:
 """
 
 import asyncio
+
 import torch
-import json
-from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 try:
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -122,7 +121,7 @@ class BERTIntentClassifier:
         self,
         message: str,
         context: str = ""
-    ) -> Dict:
+    ) -> dict:
         """Classify intent with confidence score
 
         Args:
@@ -145,7 +144,7 @@ class BERTIntentClassifier:
             return {
                 "intent": "chat",
                 "confidence": 0.5,
-                "probabilities": {label: 0.1 for label in self.INTENT_LABELS}
+                "probabilities": dict.fromkeys(self.INTENT_LABELS, 0.1)
             }
 
         # Build input text with context
@@ -164,7 +163,7 @@ class BERTIntentClassifier:
             return {
                 "intent": "chat",
                 "confidence": 0.5,
-                "probabilities": {label: 0.1 for label in self.INTENT_LABELS}
+                "probabilities": dict.fromkeys(self.INTENT_LABELS, 0.1)
             }
 
     def _build_input_text(self, message: str, context: str) -> str:
@@ -186,7 +185,7 @@ class BERTIntentClassifier:
             # Without context: [CLS] message [SEP]
             return f"[CLS] {message} [SEP]"
 
-    def _infer(self, text: str) -> Dict:
+    def _infer(self, text: str) -> dict:
         """Run BERT inference (synchronous)
 
         Args:
@@ -240,9 +239,9 @@ class BERTIntentClassifier:
 
     async def classify_batch(
         self,
-        messages: List[str],
-        contexts: List[str] = None
-    ) -> List[Dict]:
+        messages: list[str],
+        contexts: list[str] = None
+    ) -> list[dict]:
         """Classify multiple messages in batch
 
         More efficient than individual classifications for large batches.
@@ -266,7 +265,7 @@ class BERTIntentClassifier:
             # Run batch inference
             batch_results = await asyncio.gather(*[
                 self.classify(msg, ctx)
-                for msg, ctx in zip(batch_messages, batch_contexts)
+                for msg, ctx in zip(batch_messages, batch_contexts, strict=False)
             ])
 
             results.extend(batch_results)
@@ -275,10 +274,10 @@ class BERTIntentClassifier:
 
     def adjust_scores_with_bert(
         self,
-        keyword_scores: Dict[str, float],
+        keyword_scores: dict[str, float],
         message: str,
         bert_weight: float = 0.4
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """Adjust keyword scores with BERT semantic understanding
 
         Combines fast keyword matching with accurate BERT classification.
@@ -334,7 +333,7 @@ class BERTIntentClassifier:
             max_intent = max(keyword_scores, key=keyword_scores.get)
             return max_intent, keyword_scores[max_intent]
 
-    def get_model_info(self) -> Dict:
+    def get_model_info(self) -> dict:
         """Get model information for monitoring
 
         Returns:
@@ -363,7 +362,7 @@ _bert_classifier = None
 def get_bert_classifier(
     model_name: str = None,
     force_reload: bool = False
-) -> Optional[BERTIntentClassifier]:
+) -> BERTIntentClassifier | None:
     """Get singleton BERT classifier instance
 
     Args:
@@ -393,7 +392,7 @@ def get_bert_classifier(
 async def classify_with_bert(
     message: str,
     context: str = ""
-) -> Optional[Dict]:
+) -> dict | None:
     """Convenience function to classify with BERT
 
     Args:

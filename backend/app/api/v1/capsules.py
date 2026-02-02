@@ -3,22 +3,21 @@ Curiosity Capsules API
 
 增强版API - 支持胶囊生成、反馈、收藏、分享等功能
 """
-from typing import List, Any, Optional
+from datetime import datetime
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
-from app.services.curiosity_capsule_service import curiosity_capsule_service
-from app.services.capsule_feedback_service import capsule_feedback_service
-from app.services.capsule_favorite_service import capsule_favorite_service
-from app.services.capsule_share_service import capsule_share_service
-from app.services.capsule_generation_service import capsule_generation_service
 from app.core.celery_app import celery_app
-from pydantic import BaseModel, Field
-from datetime import datetime
+from app.db.session import get_db
+from app.models.user import User
+from app.services.capsule_favorite_service import capsule_favorite_service
+from app.services.capsule_feedback_service import capsule_feedback_service
+from app.services.capsule_share_service import capsule_share_service
+from app.services.curiosity_capsule_service import curiosity_capsule_service
 
 router = APIRouter()
 
@@ -102,7 +101,7 @@ class CapsuleGenerationJobSchema(BaseModel):
     curiosity_preference: float
     requested_count: int
     actual_count: int | None
-    capsule_ids: List[UUID] | None
+    capsule_ids: list[UUID] | None
     progress: float
     error_message: str | None
     duration_ms: int | None
@@ -133,7 +132,7 @@ class CapsuleStatsSchema(BaseModel):
 # 原有端点（向后兼容）
 # =============================================================================
 
-@router.get("/today", response_model=List[CapsuleDetailSchema])
+@router.get("/today", response_model=list[CapsuleDetailSchema])
 async def get_today_capsules(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -198,7 +197,7 @@ async def generate_capsule(
 # 新增端点
 # =============================================================================
 
-@router.get("/favorites", response_model=List[CapsuleFavoriteSchema])
+@router.get("/favorites", response_model=list[CapsuleFavoriteSchema])
 async def get_favorites(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -296,7 +295,7 @@ async def share_capsule(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/generation/jobs", response_model=List[CapsuleGenerationJobSchema])
+@router.get("/generation/jobs", response_model=list[CapsuleGenerationJobSchema])
 async def get_generation_jobs(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -350,10 +349,10 @@ async def get_capsule_stats(
     """
     获取胶囊统计信息
     """
-    from sqlalchemy import select, func
-    from app.models.curiosity_capsule import CuriosityCapsule
-    from app.models.capsule_feedback import CapsuleFeedback
+    from sqlalchemy import func, select
+
     from app.models.capsule_favorite import CapsuleFavorite
+    from app.models.curiosity_capsule import CuriosityCapsule
 
     # 总接收数
     total_result = await db.execute(
@@ -367,7 +366,7 @@ async def get_capsule_stats(
     read_result = await db.execute(
         select(func.count(CuriosityCapsule.id)).where(
             CuriosityCapsule.user_id == current_user.id,
-            CuriosityCapsule.is_read == True
+            CuriosityCapsule.is_read
         )
     )
     total_read = read_result.scalar() or 0

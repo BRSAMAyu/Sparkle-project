@@ -101,7 +101,8 @@ class _UnselectedPill extends StatelessWidget {
         onTap: onTap,
         child: MaterialStyler(
           material: AppMaterials.ceramic.copyWith(
-            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+            // Use surfaceTertiary to match Dashboard ceramic cards
+            backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
           ),
           borderRadius: DS.borderRadius20,
           padding: const EdgeInsets.symmetric(
@@ -179,7 +180,7 @@ class _SelectedPill extends StatelessWidget {
                 child: Text(
                   plan.name,
                   style: TextStyle(
-                    color: isDark ? DS.neutral100 : DS.neutral900,
+                    color: isDark ? DS.textPrimary : DS.neutral900,
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightMedium,
                   ),
@@ -261,7 +262,7 @@ class _PlanSelectorSheet extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
+        color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(24),
         ),
@@ -295,7 +296,7 @@ class _PlanSelectorSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                   ),
                   const Spacer(),
@@ -364,7 +365,7 @@ class _ClearOptionTile extends ConsumerWidget {
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-                color: isDark ? DS.neutral100 : DS.neutral900,
+                color: isDark ? DS.textPrimary : DS.neutral900,
               ),
             ),
             const Spacer(),
@@ -443,7 +444,7 @@ class _PlanListTile extends ConsumerWidget {
                       fontSize: DS.fontSizeBase,
                       fontWeight:
                           isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

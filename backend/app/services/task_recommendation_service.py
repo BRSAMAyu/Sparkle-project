@@ -3,13 +3,12 @@
 """
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import nullsfirst, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, nullsfirst
 
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.personalization import PersonalizationEngine, TaskPlanProfile
 
 
@@ -35,14 +34,14 @@ class TaskRecommendationService:
         self,
         user_id: UUID,
         limit: int = 5,
-        context: Optional[str] = None,
-    ) -> List[TaskRecommendation]:
+        context: str | None = None,
+    ) -> list[TaskRecommendation]:
         """获取个性化任务推荐"""
         profile = await self.engine.get_task_plan_profile(user_id)
         review_nodes = await self._get_review_candidates(user_id, profile)
 
         review_count = int(limit * (1 - profile.exploration_ratio))
-        recommendations: List[TaskRecommendation] = []
+        recommendations: list[TaskRecommendation] = []
 
         for row in review_nodes[:review_count]:
             status, node = row
@@ -83,7 +82,7 @@ class TaskRecommendationService:
         status: UserNodeStatus,
         node: KnowledgeNode,
         profile: TaskPlanProfile,
-        context: Optional[str],
+        context: str | None,
     ) -> TaskRecommendation:
         """创建复习任务"""
         if context in ("commute", "lunch") and profile.micro_task_friendly:

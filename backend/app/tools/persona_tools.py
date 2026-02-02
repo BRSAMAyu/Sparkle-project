@@ -1,9 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from uuid import UUID
 
-from app.tools.base import BaseTool, ToolCategory, ToolResult
+from pydantic import BaseModel, Field
+
 from app.services.persona_service import PersonaService
+from app.tools.base import BaseTool, ToolCategory, ToolResult
 
 
 class PersonaRequest(BaseModel):
@@ -16,7 +16,7 @@ class PersonaTool(BaseTool):
     category = ToolCategory.QUERY
     parameters_schema = PersonaRequest
 
-    async def execute(self, params: PersonaRequest, user_id: str, db_session, tool_call_id: Optional[str] = None) -> ToolResult:
+    async def execute(self, params: PersonaRequest, user_id: str, db_session, tool_call_id: str | None = None) -> ToolResult:
         service = PersonaService(db_session)
         snapshot = await service.get_snapshot(UUID(user_id), params.purpose)
         return ToolResult(

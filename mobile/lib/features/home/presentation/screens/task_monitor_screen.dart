@@ -27,7 +27,6 @@ class BackgroundTaskState {
       case BackgroundTaskFilter.failed:
         return tasks.where((t) => t.isFailed).toList();
       case BackgroundTaskFilter.all:
-      default:
         return tasks;
     }
   }
@@ -187,7 +186,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           Icon(
             Icons.task_alt,
             size: 64,
-            color: DS.brandPrimary38,
+            color: DS.brandPrimary38Const,
           ),
           const SizedBox(height: DS.md),
           Text(
@@ -237,7 +236,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                     Text(
                       task.name,
                       style: TextStyle(
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -384,7 +383,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                   Container(
                     height: 4,
                     decoration: BoxDecoration(
-                      color: DS.brandPrimary10,
+                      color: DS.brandPrimary10Const,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -405,7 +404,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
             Text(
               '${task.progressPercent}%',
               style: TextStyle(
-                color: DS.brandPrimary70,
+                color: DS.brandPrimary70Const,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

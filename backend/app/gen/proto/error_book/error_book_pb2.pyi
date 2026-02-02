@@ -1,11 +1,12 @@
 import datetime
+from collections.abc import Iterable as _Iterable
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar
 
-from google.protobuf import timestamp_pb2 as _timestamp_pb2
-from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable, Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf.internal import containers as _containers
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -43,7 +44,7 @@ class ErrorRecord(_message.Message):
     knowledge_links: _containers.RepeatedCompositeFieldContainer[KnowledgeLinkBrief]
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., user_id: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., question_text: _Optional[str] = ..., question_image_url: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., mastery_level: _Optional[float] = ..., review_count: _Optional[int] = ..., next_review_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_reviewed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., latest_analysis: _Optional[_Union[ErrorAnalysisResult, _Mapping]] = ..., knowledge_links: _Optional[_Iterable[_Union[KnowledgeLinkBrief, _Mapping]]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., user_id: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., question_text: str | None = ..., question_image_url: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., mastery_level: float | None = ..., review_count: int | None = ..., next_review_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., last_reviewed_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., latest_analysis: ErrorAnalysisResult | _Mapping | None = ..., knowledge_links: _Iterable[KnowledgeLinkBrief | _Mapping] | None = ..., created_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ..., updated_at: datetime.datetime | _timestamp_pb2.Timestamp | _Mapping | None = ...) -> None: ...
 
 class ErrorAnalysisResult(_message.Message):
     __slots__ = ("error_type", "error_type_label", "root_cause", "correct_approach", "similar_traps", "recommended_knowledge", "study_suggestion", "ocr_text")
@@ -63,7 +64,7 @@ class ErrorAnalysisResult(_message.Message):
     recommended_knowledge: _containers.RepeatedScalarFieldContainer[str]
     study_suggestion: str
     ocr_text: str
-    def __init__(self, error_type: _Optional[str] = ..., error_type_label: _Optional[str] = ..., root_cause: _Optional[str] = ..., correct_approach: _Optional[str] = ..., similar_traps: _Optional[_Iterable[str]] = ..., recommended_knowledge: _Optional[_Iterable[str]] = ..., study_suggestion: _Optional[str] = ..., ocr_text: _Optional[str] = ...) -> None: ...
+    def __init__(self, error_type: str | None = ..., error_type_label: str | None = ..., root_cause: str | None = ..., correct_approach: str | None = ..., similar_traps: _Iterable[str] | None = ..., recommended_knowledge: _Iterable[str] | None = ..., study_suggestion: str | None = ..., ocr_text: str | None = ...) -> None: ...
 
 class KnowledgeLinkBrief(_message.Message):
     __slots__ = ("id", "name", "relevance", "is_primary")
@@ -75,7 +76,7 @@ class KnowledgeLinkBrief(_message.Message):
     name: str
     relevance: float
     is_primary: bool
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., relevance: _Optional[float] = ..., is_primary: bool = ...) -> None: ...
+    def __init__(self, id: str | None = ..., name: str | None = ..., relevance: float | None = ..., is_primary: bool = ...) -> None: ...
 
 class CreateErrorRequest(_message.Message):
     __slots__ = ("user_id", "question_text", "question_image_url", "user_answer", "correct_answer", "subject_code", "chapter")
@@ -93,7 +94,7 @@ class CreateErrorRequest(_message.Message):
     correct_answer: str
     subject_code: str
     chapter: str
-    def __init__(self, user_id: _Optional[str] = ..., question_text: _Optional[str] = ..., question_image_url: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., question_text: str | None = ..., question_image_url: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., subject_code: str | None = ..., chapter: str | None = ...) -> None: ...
 
 class ListErrorsRequest(_message.Message):
     __slots__ = ("user_id", "subject_code", "chapter", "error_type", "mastery_min", "mastery_max", "need_review", "keyword", "page", "page_size")
@@ -117,7 +118,7 @@ class ListErrorsRequest(_message.Message):
     keyword: str
     page: int
     page_size: int
-    def __init__(self, user_id: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., error_type: _Optional[str] = ..., mastery_min: _Optional[float] = ..., mastery_max: _Optional[float] = ..., need_review: bool = ..., keyword: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., error_type: str | None = ..., mastery_min: float | None = ..., mastery_max: float | None = ..., need_review: bool = ..., keyword: str | None = ..., page: int | None = ..., page_size: int | None = ...) -> None: ...
 
 class ListErrorsResponse(_message.Message):
     __slots__ = ("items", "total", "page", "page_size", "has_next")
@@ -131,7 +132,7 @@ class ListErrorsResponse(_message.Message):
     page: int
     page_size: int
     has_next: bool
-    def __init__(self, items: _Optional[_Iterable[_Union[ErrorRecord, _Mapping]]] = ..., total: _Optional[int] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., has_next: bool = ...) -> None: ...
+    def __init__(self, items: _Iterable[ErrorRecord | _Mapping] | None = ..., total: int | None = ..., page: int | None = ..., page_size: int | None = ..., has_next: bool = ...) -> None: ...
 
 class GetErrorRequest(_message.Message):
     __slots__ = ("error_id", "user_id")
@@ -139,7 +140,7 @@ class GetErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
 
 class UpdateErrorRequest(_message.Message):
     __slots__ = ("error_id", "user_id", "question_text", "user_answer", "correct_answer", "subject_code", "chapter", "question_image_url")
@@ -159,7 +160,7 @@ class UpdateErrorRequest(_message.Message):
     subject_code: str
     chapter: str
     question_image_url: str
-    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ..., question_text: _Optional[str] = ..., user_answer: _Optional[str] = ..., correct_answer: _Optional[str] = ..., subject_code: _Optional[str] = ..., chapter: _Optional[str] = ..., question_image_url: _Optional[str] = ...) -> None: ...
+    def __init__(self, error_id: str | None = ..., user_id: str | None = ..., question_text: str | None = ..., user_answer: str | None = ..., correct_answer: str | None = ..., subject_code: str | None = ..., chapter: str | None = ..., question_image_url: str | None = ...) -> None: ...
 
 class DeleteErrorRequest(_message.Message):
     __slots__ = ("error_id", "user_id")
@@ -167,7 +168,7 @@ class DeleteErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
 
 class DeleteErrorResponse(_message.Message):
     __slots__ = ("success",)
@@ -181,13 +182,13 @@ class AnalyzeErrorRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     error_id: str
     user_id: str
-    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, error_id: str | None = ..., user_id: str | None = ...) -> None: ...
 
 class AnalyzeErrorResponse(_message.Message):
     __slots__ = ("message",)
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str
-    def __init__(self, message: _Optional[str] = ...) -> None: ...
+    def __init__(self, message: str | None = ...) -> None: ...
 
 class SubmitReviewRequest(_message.Message):
     __slots__ = ("error_id", "user_id", "performance", "time_spent_seconds")
@@ -199,13 +200,13 @@ class SubmitReviewRequest(_message.Message):
     user_id: str
     performance: str
     time_spent_seconds: int
-    def __init__(self, error_id: _Optional[str] = ..., user_id: _Optional[str] = ..., performance: _Optional[str] = ..., time_spent_seconds: _Optional[int] = ...) -> None: ...
+    def __init__(self, error_id: str | None = ..., user_id: str | None = ..., performance: str | None = ..., time_spent_seconds: int | None = ...) -> None: ...
 
 class GetReviewStatsRequest(_message.Message):
     __slots__ = ("user_id",)
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
-    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ...) -> None: ...
 
 class ReviewStatsResponse(_message.Message):
     __slots__ = ("total_errors", "mastered_count", "need_review_count", "review_streak_days", "subject_distribution")
@@ -215,7 +216,7 @@ class ReviewStatsResponse(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: int
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: int | None = ...) -> None: ...
     TOTAL_ERRORS_FIELD_NUMBER: _ClassVar[int]
     MASTERED_COUNT_FIELD_NUMBER: _ClassVar[int]
     NEED_REVIEW_COUNT_FIELD_NUMBER: _ClassVar[int]
@@ -226,7 +227,7 @@ class ReviewStatsResponse(_message.Message):
     need_review_count: int
     review_streak_days: int
     subject_distribution: _containers.ScalarMap[str, int]
-    def __init__(self, total_errors: _Optional[int] = ..., mastered_count: _Optional[int] = ..., need_review_count: _Optional[int] = ..., review_streak_days: _Optional[int] = ..., subject_distribution: _Optional[_Mapping[str, int]] = ...) -> None: ...
+    def __init__(self, total_errors: int | None = ..., mastered_count: int | None = ..., need_review_count: int | None = ..., review_streak_days: int | None = ..., subject_distribution: _Mapping[str, int] | None = ...) -> None: ...
 
 class GetTodayReviewsRequest(_message.Message):
     __slots__ = ("user_id", "page", "page_size")
@@ -236,4 +237,4 @@ class GetTodayReviewsRequest(_message.Message):
     user_id: str
     page: int
     page_size: int
-    def __init__(self, user_id: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    def __init__(self, user_id: str | None = ..., page: int | None = ..., page_size: int | None = ...) -> None: ...

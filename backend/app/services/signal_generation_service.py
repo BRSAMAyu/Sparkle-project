@@ -6,7 +6,8 @@ This service converts feature extraction results into actionable signals
 with confidence scores and explainable reasons.
 """
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import Any
+
 from loguru import logger
 
 from app.services.feature_extraction_service import FeatureExtractResult
@@ -18,9 +19,9 @@ class Signal:
     type: str  # Signal type identifier
     confidence: float  # 0.0-1.0
     reason: str  # Explainable reason in Chinese
-    metadata: Dict[str, Any]  # Additional context
+    metadata: dict[str, Any]  # Additional context
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "type": self.type,
@@ -34,9 +35,9 @@ class Signal:
 class Signals:
     """Complete signal generation result"""
     version: str  # "sig_v1"
-    signals: List[Signal]
+    signals: list[Signal]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "version": self.version,
@@ -115,7 +116,7 @@ class SignalGenerationService:
         if features.rhythm.deviating_from_plan and not features.energy.late_night_fatigue:
             signals.append(Signal(
                 type="best_next_action_window",
-                confidence=0.60,
+                confidence=0.65,
                 reason="偏离计划但精力状态尚可，适合重新规划",
                 metadata={
                     "deviation": features.rhythm.deviating_from_plan,
@@ -178,7 +179,7 @@ class SignalGenerationService:
 
         return Signals(version=self.VERSION, signals=filtered_signals)
 
-    def generate_from_dict(self, features_dict: Dict[str, Any]) -> Signals:
+    def generate_from_dict(self, features_dict: dict[str, Any]) -> Signals:
         """
         Generate signals from feature dictionary.
 
@@ -190,11 +191,11 @@ class SignalGenerationService:
         """
         # Reconstruct FeatureExtractResult from dict
         from app.services.feature_extraction_service import (
-            LearningRhythm,
-            UnderstandingFriction,
             EnergyState,
-            TaskRisk,
             FeatureExtractResult,
+            LearningRhythm,
+            TaskRisk,
+            UnderstandingFriction,
         )
 
         rhythm_data = features_dict.get("rhythm", {})

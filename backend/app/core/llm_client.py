@@ -2,7 +2,6 @@
 LLM Client Wrapper
 Provides a unified interface for different LLM providers (Qwen, DeepSeek, OpenAI)
 """
-from typing import List, Dict, Any, Optional
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -12,22 +11,50 @@ from app.config import settings
 class LLMClient:
     """
     统一的 LLM 客户端接口
-    支持多个提供商：Qwen, DeepSeek, OpenAI
+    支持多个提供商：Qwen, DeepSeek, OpenAI, Xiaomi, Zhipu
     """
 
     def __init__(self):
         self.provider = settings.LLM_PROVIDER
+        
+        # Initialize defaults
+        self.api_key = settings.LLM_API_KEY
+        self.base_url = settings.LLM_API_BASE_URL
+        self.model_name = settings.LLM_MODEL_NAME
+        self.chat_model_name = settings.LLM_MODEL_NAME
+        self.reason_model_name = settings.LLM_REASON_MODEL_NAME
+
+        # Provider specific overrides
         if self.provider == "deepseek":
             self.api_key = settings.DEEPSEEK_API_KEY
             self.base_url = settings.DEEPSEEK_BASE_URL
             self.model_name = settings.DEEPSEEK_CHAT_MODEL
-        else:
-            self.api_key = settings.LLM_API_KEY
-            self.base_url = settings.LLM_API_BASE_URL
-            self.model_name = settings.LLM_MODEL_NAME
+            self.chat_model_name = settings.DEEPSEEK_CHAT_MODEL
+            self.reason_model_name = settings.DEEPSEEK_REASON_MODEL
+        elif self.provider == "dashscope":
+            self.api_key = settings.DASHSCOPE_API_KEY
+            self.base_url = settings.DASHSCOPE_BASE_URL_COMPATIBLE
+            self.model_name = settings.DASHSCOPE_CHAT_MODEL
+            self.chat_model_name = settings.DASHSCOPE_CHAT_MODEL
+            self.reason_model_name = settings.DASHSCOPE_REASON_MODEL
+        elif self.provider == "xiaomi":
+            self.api_key = settings.XIAOMI_MIMO_API_KEY
+            self.base_url = settings.XIAOMI_MIMO_BASE_URL
+            self.model_name = settings.XIAOMI_CHAT_MODEL
+            self.chat_model_name = settings.XIAOMI_CHAT_MODEL
+            self.reason_model_name = settings.XIAOMI_CHAT_MODEL  # Xiaomi使用相同模型，通过tag控制
+        elif self.provider == "zhipu":
+            self.api_key = settings.ZHIPU_API_KEY
+            self.base_url = settings.ZHIPU_BASE_URL
+            self.model_name = settings.ZHIPU_CHAT_MODEL
+            self.chat_model_name = settings.ZHIPU_CHAT_MODEL
+            self.reason_model_name = settings.ZHIPU_CHAT_MODEL  # Zhipu使用相同模型，通过tag控制
 
-        self.chat_model_name = settings.DEEPSEEK_CHAT_MODEL or settings.LLM_MODEL_NAME
-        self.reason_model_name = settings.DEEPSEEK_REASON_MODEL or settings.LLM_REASON_MODEL_NAME
+        # Fallback if specific model names are not set
+        if not self.chat_model_name:
+            self.chat_model_name = self.model_name
+        if not self.reason_model_name:
+            self.reason_model_name = self.chat_model_name
 
     @retry(
         stop=stop_after_attempt(3),
@@ -35,12 +62,12 @@ class LLMClient:
     )
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        response_format: Optional[Dict[str, str]] = None,
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None,
         stream: bool = False,
-        model: Optional[str] = None
+        model: str | None = None
     ) -> str:
         """
         调用 LLM Chat Completion API
@@ -76,9 +103,20 @@ class LLMClient:
             if stream:
                 payload["stream"] = True
 
-            # 统一的 OpenAI 兼容 API 格式
+            # 构建 API URL
+            # 1. 如果 base_url 已经包含完整路径 (ending in /chat/completions)，直接使用
+            # 2. 如果 base_url 包含版本号 (v1, v4)，直接追加 /chat/completions
+            # 3. 否则默认追加 /v1/chat/completions
+            url = self.base_url.rstrip("/")
+            if url.endswith("/chat/completions"):
+                pass
+            elif url.endswith("/v1") or url.endswith("/v4"):
+                url = f"{url}/chat/completions"
+            else:
+                url = f"{url}/v1/chat/completions"
+
             response = await client.post(
-                f"{self.base_url}/v1/chat/completions" if not self.base_url.endswith("/chat/completions") else self.base_url,
+                url,
                 headers=headers,
                 json=payload
             )
@@ -94,10 +132,10 @@ class LLMClient:
 
     async def reason_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.2,
-        max_tokens: Optional[int] = None,
-        response_format: Optional[Dict[str, str]] = None
+        max_tokens: int | None = None,
+        response_format: dict[str, str] | None = None
     ) -> str:
         """
         调用 LLM Reasoning 模型
@@ -110,7 +148,7 @@ class LLMClient:
             model=self.reason_model_name
         )
 
-    async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """
         生成文本向量 (批量)
 
@@ -131,8 +169,20 @@ class LLMClient:
                 "input": texts
             }
 
+            # 构建 API URL (与 chat_completion 保持一致的逻辑)
+            # 1. 如果 base_url 已经包含完整路径 (ending in /embeddings)，直接使用
+            # 2. 如果 base_url 包含版本号 (v1, v4)，直接追加 /embeddings
+            # 3. 否则默认追加 /v1/embeddings
+            url = self.base_url.rstrip("/")
+            if url.endswith("/embeddings"):
+                pass
+            elif url.endswith("/v1") or url.endswith("/v4"):
+                url = f"{url}/embeddings"
+            else:
+                url = f"{url}/v1/embeddings"
+
             response = await client.post(
-                f"{self.base_url}/v1/embeddings" if not self.base_url.endswith("/embeddings") else self.base_url,
+                url,
                 headers=headers,
                 json=payload
             )

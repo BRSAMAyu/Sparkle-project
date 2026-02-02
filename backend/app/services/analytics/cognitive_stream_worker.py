@@ -3,23 +3,23 @@ import hashlib
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.business_metrics import EVENT_STREAM_LAG
 from app.core.event_bus import EventBus
-from app.models.cognitive import CognitiveFragment, AnalysisStatus
-from app.models.user import User
+from app.models.cognitive import AnalysisStatus, CognitiveFragment
 from app.models.compliance import DlqReplayAuditLog
-from app.services.analytics.normalization import BehaviorNormalizer
+from app.models.user import User
 from app.services.analytics.bkt_service import BKTService
 from app.services.analytics.irt_service import IRTService
 from app.services.analytics.model_metrics import record_bkt_auc, record_irt_rmse
+from app.services.analytics.normalization import BehaviorNormalizer
 from app.services.compliance.age_gate import AgeGateService
 from app.services.compliance.crypto_erase import CryptoEraseManager
-from app.core.business_metrics import EVENT_STREAM_LAG
 
 
 class ShadowKafkaWriter:
@@ -32,7 +32,7 @@ class ShadowKafkaWriter:
         self._producer = None
         self._lock = asyncio.Lock()
 
-    async def write(self, event: Dict[str, Any]) -> None:
+    async def write(self, event: dict[str, Any]) -> None:
         if not self.enabled:
             return
 
@@ -78,7 +78,7 @@ class CognitiveStreamWorker:
     SENSITIVE_TAGS = {"anxiety_high", "distraction_high", "depression_risk"}
     SENSITIVE_SENTIMENTS = {"anxious", "depressed", "burnout"}
 
-    def __init__(self, db: AsyncSession, redis_client, event_bus: Optional[EventBus] = None):
+    def __init__(self, db: AsyncSession, redis_client, event_bus: EventBus | None = None):
         self.db = db
         self.redis = redis_client
         self.event_bus = event_bus or EventBus()
@@ -96,7 +96,7 @@ class CognitiveStreamWorker:
             callback=self.handle_event
         )
 
-    async def handle_event(self, event: Dict[str, Any]) -> None:
+    async def handle_event(self, event: dict[str, Any]) -> None:
         try:
             self._record_stream_lag(event)
             await self.shadow_writer.write(event)
@@ -105,7 +105,7 @@ class CognitiveStreamWorker:
             logger.error(f"CognitiveStreamWorker failed: {exc}")
             await self._send_to_dlq(event, error=str(exc))
 
-    def _record_stream_lag(self, event: Dict[str, Any]) -> None:
+    def _record_stream_lag(self, event: dict[str, Any]) -> None:
         ts_ms = event.get("ts_ms")
         if ts_ms is None:
             return
@@ -115,7 +115,7 @@ class CognitiveStreamWorker:
             return
         EVENT_STREAM_LAG.labels(stream=self.STREAM_NAME).set(lag_seconds)
 
-    async def _process_event(self, event: Dict[str, Any]) -> None:
+    async def _process_event(self, event: dict[str, Any]) -> None:
         event_name = event.get("event_name") or event.get("event_type")
         payload = event.get("payload") or {}
         if isinstance(payload, str):
@@ -140,7 +140,7 @@ class CognitiveStreamWorker:
         await self._create_fragment(user_id, event, payload, decision.should_collect_sensitive)
         await self.db.commit()
 
-    def _record_model_metrics(self, payload: Dict[str, Any], event: Dict[str, Any]) -> None:
+    def _record_model_metrics(self, payload: dict[str, Any], event: dict[str, Any]) -> None:
         metrics = payload.get("evaluation_metrics")
         if not isinstance(metrics, dict):
             return
@@ -154,7 +154,7 @@ class CognitiveStreamWorker:
         if metrics.get("irt_rmse") is not None:
             record_irt_rmse(float(metrics["irt_rmse"]), age_bucket, device_tier, subject_id)
 
-    async def _handle_question_submit(self, user_id: UUID, event: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    async def _handle_question_submit(self, user_id: UUID, event: dict[str, Any], payload: dict[str, Any]) -> None:
         node_id = event.get("node_id")
         question_id = event.get("question_id")
         correct = bool(payload.get("correct"))
@@ -180,8 +180,8 @@ class CognitiveStreamWorker:
     async def _create_fragment(
         self,
         user_id: UUID,
-        event: Dict[str, Any],
-        payload: Dict[str, Any],
+        event: dict[str, Any],
+        payload: dict[str, Any],
         allow_sensitive: bool
     ) -> None:
         tags = payload.get("tags") or []
@@ -221,7 +221,7 @@ class CognitiveStreamWorker:
 
         self.db.add(fragment)
 
-    async def _send_to_dlq(self, event: Dict[str, Any], error: str) -> None:
+    async def _send_to_dlq(self, event: dict[str, Any], error: str) -> None:
         if not self.redis:
             return
         payload = {
@@ -231,7 +231,7 @@ class CognitiveStreamWorker:
         }
         await self.redis.xadd(self.DLQ_STREAM, {"data": json.dumps(payload)})
 
-    async def replay_dlq_event(self, dlq_event: Dict[str, Any], audit_headers: Dict[str, str]) -> None:
+    async def replay_dlq_event(self, dlq_event: dict[str, Any], audit_headers: dict[str, str]) -> None:
         admin_id = audit_headers.get("x-audit-admin-id")
         approver_id = audit_headers.get("x-audit-approver-id")
         reason_code = audit_headers.get("x-audit-reason-code")

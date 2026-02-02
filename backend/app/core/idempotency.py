@@ -3,27 +3,29 @@
 Idempotency Store - 用于管理幂等性键
 """
 import json
-from typing import Optional, Any, Dict
 from datetime import datetime, timedelta
+from typing import Any
 from uuid import uuid4
+
+import redis.asyncio as redis
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-import redis.asyncio as redis
 
-from app.models.idempotency_key import IdempotencyKey
-from app.db.session import AsyncSessionLocal
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
-from loguru import logger
+from app.db.session import AsyncSessionLocal
+from app.models.idempotency_key import IdempotencyKey
+
 
 class IdempotencyStore:
     """
     幂等性存储基类
     """
-    async def get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def get(self, key: str) -> dict[str, Any] | None:
         raise NotImplementedError
 
-    async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
+    async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         raise NotImplementedError
 
     async def lock(self, key: str) -> bool:
@@ -38,21 +40,21 @@ class MemoryIdempotencyStore(IdempotencyStore):
     内存幂等性存储 (仅用于开发/测试)
     """
     def __init__(self):
-        self._cache: Dict[str, Any] = {}
-        self._locks: Dict[str, bool] = {}
+        self._cache: dict[str, Any] = {}
+        self._locks: dict[str, bool] = {}
 
-    async def get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def get(self, key: str) -> dict[str, Any] | None:
         data = self._cache.get(key)
         if not data:
             return None
-        
+
         if datetime.utcnow() > data["expires_at"]:
             del self._cache[key]
             return None
-            
+
         return data["value"]
 
-    async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
+    async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         self._cache[key] = {
             "value": value,
             "expires_at": datetime.utcnow() + timedelta(seconds=ttl)
@@ -74,7 +76,7 @@ class RedisIdempotencyStore(IdempotencyStore):
     Redis-based idempotency store (recommended for production)
     """
 
-    def __init__(self, redis_url: Optional[str] = None, prefix: str = "idempotency"):
+    def __init__(self, redis_url: str | None = None, prefix: str = "idempotency"):
         resolved_password, _ = resolve_redis_password(redis_url or settings.REDIS_URL, settings.REDIS_PASSWORD)
         self._redis = redis.from_url(
             redis_url or settings.REDIS_URL,
@@ -82,7 +84,7 @@ class RedisIdempotencyStore(IdempotencyStore):
             password=resolved_password,
         )
         self._prefix = prefix
-        self._lock_tokens: Dict[str, str] = {}
+        self._lock_tokens: dict[str, str] = {}
         self._lock_ttl = 30  # seconds
 
     def _key(self, key: str) -> str:
@@ -91,7 +93,7 @@ class RedisIdempotencyStore(IdempotencyStore):
     def _lock_key(self, key: str) -> str:
         return f"{self._prefix}:lock:{key}"
 
-    async def get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def get(self, key: str) -> dict[str, Any] | None:
         try:
             raw = await self._redis.get(self._key(key))
         except Exception as exc:
@@ -106,7 +108,7 @@ class RedisIdempotencyStore(IdempotencyStore):
             logger.warning(f"Redis idempotency decode failed: {exc}")
             return None
 
-    async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
+    async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         try:
             payload = json.dumps(value, ensure_ascii=False)
             await self._redis.set(self._key(key), payload, ex=ttl)
@@ -155,28 +157,28 @@ class DBIdempotencyStore(IdempotencyStore):
     """
     def __init__(self):
         # 简单的内存锁，防止单实例并发 (多实例需用 Redis/DB 锁)
-        self._local_locks: Dict[str, bool] = {}
+        self._local_locks: dict[str, bool] = {}
 
-    async def get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def get(self, key: str) -> dict[str, Any] | None:
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(IdempotencyKey).where(IdempotencyKey.key == key)
             )
             record = result.scalar_one_or_none()
-            
+
             if not record:
                 return None
-            
+
             # 检查过期
             # 注意: record.expires_at 是带时区的
             if record.expires_at < datetime.now(record.expires_at.tzinfo):
                 await db.delete(record)
                 await db.commit()
                 return None
-                
+
             return record.response
 
-    async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
+    async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         user_id = value.get("user_id")
         if not user_id:
             logger.warning("DB idempotency store skipped: missing user_id")

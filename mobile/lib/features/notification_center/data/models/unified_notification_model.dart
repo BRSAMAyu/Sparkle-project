@@ -1,33 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Unified notification model combining system and intervention notifications
 class UnifiedNotification {
-  final String id;
-  final String sourceType; // 'system' or 'intervention'
-  final String title;
-  final String content;
-  final String? type;
-  final String priority; // 'low', 'medium', 'high'
-  final bool isRead;
-  final DateTime createdAt;
-  final DateTime? readAt;
-  final Map<String, dynamic> metadata;
 
   UnifiedNotification({
     required this.id,
     required this.sourceType,
     required this.title,
     required this.content,
-    this.type,
-    required this.priority,
-    required this.isRead,
-    required this.createdAt,
+    required this.priority, required this.isRead, required this.createdAt, this.type,
     this.readAt,
     this.metadata = const {},
   });
 
-  factory UnifiedNotification.fromJson(Map<String, dynamic> json) {
-    return UnifiedNotification(
+  factory UnifiedNotification.fromJson(Map<String, dynamic> json) => UnifiedNotification(
       id: json['id'] as String,
       sourceType: json['source_type'] as String,
       title: json['title'] as String,
@@ -41,10 +25,18 @@ class UnifiedNotification {
           : null,
       metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     );
-  }
+  final String id;
+  final String sourceType; // 'system' or 'intervention'
+  final String title;
+  final String content;
+  final String? type;
+  final String priority; // 'low', 'medium', 'high'
+  final bool isRead;
+  final DateTime createdAt;
+  final DateTime? readAt;
+  final Map<String, dynamic> metadata;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'source_type': sourceType,
       'title': title,
@@ -56,7 +48,6 @@ class UnifiedNotification {
       if (readAt != null) 'read_at': readAt!.toIso8601String(),
       'metadata': metadata,
     };
-  }
 
   /// Get icon based on notification type
   String get icon {
@@ -138,8 +129,7 @@ class UnifiedNotification {
     DateTime? createdAt,
     DateTime? readAt,
     Map<String, dynamic>? metadata,
-  }) {
-    return UnifiedNotification(
+  }) => UnifiedNotification(
       id: id ?? this.id,
       sourceType: sourceType ?? this.sourceType,
       title: title ?? this.title,
@@ -151,5 +141,4 @@ class UnifiedNotification {
       readAt: readAt ?? this.readAt,
       metadata: metadata ?? this.metadata,
     );
-  }
 }

@@ -1,38 +1,44 @@
 """
 Plans API Endpoints - Full CRUD operations
 """
-from typing import Dict, Any, List, Optional
-from uuid import UUID
 from datetime import date, datetime
+from typing import Any
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from loguru import logger
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
-from app.models.plan import Plan, PlanType, PlanPriority
-from app.models.task import Task, TaskStatus
-from app.schemas.plan import (
-    PlanCreate, PlanUpdate, PlanDetail, PlanProgress, PlanBase,
-    PlanQuotaStatus, SetPrimaryPlanRequest, PlanPriorityUpdate
-)
-from app.services.plan_service import PlanService
-from app.services.plan_quota_service import PlanQuotaService
-from app.services.plan_state_service import PlanStateService
-from app.models.plan_state import PlanStateStatus
 from app.core.cache import cache_service
-from app.core.exceptions import NotFoundError, AuthorizationError, QuotaExceededError
+from app.core.exceptions import QuotaExceededError
+from app.db.session import get_db
+from app.models.plan import Plan, PlanType
+from app.models.plan_state import PlanStateStatus
+from app.models.task import Task, TaskStatus
+from app.models.user import User
+from app.schemas.plan import (
+    PlanCreate,
+    PlanDetail,
+    PlanPriorityUpdate,
+    PlanProgress,
+    PlanQuotaStatus,
+    PlanUpdate,
+    SetPrimaryPlanRequest,
+)
+from app.services.plan_quota_service import PlanQuotaService
+from app.services.plan_service import PlanService
+from app.services.plan_state_service import PlanStateService
 from app.services.state_notification_service import state_notification_service
 
 router = APIRouter()
 
 
-@router.get("", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
 async def list_plans(
-    type: Optional[PlanType] = Query(None, description="Filter by plan type"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    type: PlanType | None = Query(None, description="Filter by plan type"),
+    is_active: bool | None = Query(None, description="Filter by active status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     current_user: User = Depends(get_current_user),
@@ -151,12 +157,14 @@ async def create_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
         "priority": plan.priority.value if plan.priority else "normal",
         "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": 0,
         "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
     }
 
 
@@ -202,12 +210,14 @@ async def get_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
         "priority": plan.priority.value if plan.priority else "normal",
         "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": completed_count,
         "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
     }
 
 
@@ -256,12 +266,14 @@ async def update_plan(
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
         "is_active": plan.is_active,
+        "plan_stage": plan.plan_stage.value if plan.plan_stage else "daily",
         "priority": plan.priority.value if plan.priority else "normal",
         "is_primary": plan.is_primary if hasattr(plan, 'is_primary') else False,
         "user_id": plan.user_id,
         "task_count": task_count,
         "completed_task_count": completed_count,
         "created_at": plan.created_at,
+        "updated_at": plan.updated_at,
     }
 
 
@@ -312,7 +324,7 @@ async def delete_plan(
         # Don't fail the request if notification fails
 
 
-@router.post("/{plan_id}/archive", response_model=Dict[str, Any])
+@router.post("/{plan_id}/archive", response_model=dict[str, Any])
 async def archive_plan_state(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -456,7 +468,7 @@ async def archive_plan_state(
     return response
 
 
-@router.post("/{plan_id}/restore", response_model=Dict[str, Any])
+@router.post("/{plan_id}/restore", response_model=dict[str, Any])
 async def restore_plan_state(
     plan_id: UUID = Path(..., description="Plan ID"),
     current_user: User = Depends(get_current_user),
@@ -567,7 +579,7 @@ async def get_plan_progress(
     }
 
 
-@router.get("/stats/summary", response_model=Dict[str, Any])
+@router.get("/stats/summary", response_model=dict[str, Any])
 async def get_plans_summary(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -579,7 +591,7 @@ async def get_plans_summary(
     total = (await db.execute(total_query)).scalar() or 0
 
     active_query = select(func.count(Plan.id)).where(
-        and_(Plan.user_id == current_user.id, Plan.is_active == True)
+        and_(Plan.user_id == current_user.id, Plan.is_active)
     )
     active = (await db.execute(active_query)).scalar() or 0
 
@@ -630,7 +642,7 @@ async def get_quota_status(
     }
 
 
-@router.get("/primary", response_model=Dict[str, Any])
+@router.get("/primary", response_model=dict[str, Any])
 async def get_primary_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -670,7 +682,7 @@ async def get_primary_plan(
     }
 
 
-@router.post("/primary", response_model=Dict[str, Any])
+@router.post("/primary", response_model=dict[str, Any])
 async def set_primary_plan(
     request: SetPrimaryPlanRequest,
     current_user: User = Depends(get_current_user),
@@ -699,7 +711,7 @@ async def set_primary_plan(
     }
 
 
-@router.patch("/{plan_id}/priority", response_model=Dict[str, Any])
+@router.patch("/{plan_id}/priority", response_model=dict[str, Any])
 async def update_plan_priority(
     plan_id: UUID = Path(..., description="Plan ID"),
     request: PlanPriorityUpdate = None,
@@ -731,7 +743,7 @@ async def update_plan_priority(
     }
 
 
-@router.get("/archived", response_model=Dict[str, Any])
+@router.get("/archived", response_model=dict[str, Any])
 async def list_archived_plans(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),

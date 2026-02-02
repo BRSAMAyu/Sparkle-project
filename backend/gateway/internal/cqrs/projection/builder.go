@@ -136,7 +136,7 @@ func (b *Builder) RebuildFromEventStore(
 		for _, evt := range events {
 			eventData, err := json.Marshal(evt)
 			if err != nil {
-				eventID := fmt.Sprintf("%d", evt.ID)
+				eventID := fmt.Sprintf("%v", evt.ID)
 				b.logger.Error("Failed to marshal event",
 					zap.Error(err),
 					zap.String("event_id", eventID),
@@ -145,7 +145,7 @@ func (b *Builder) RebuildFromEventStore(
 			}
 
 			if err := handler.HandleEvent(ctx, eventData); err != nil {
-				eventID := fmt.Sprintf("%d", evt.ID)
+				eventID := fmt.Sprintf("%v", evt.ID)
 				b.logger.Error("Failed to handle event during rebuild",
 					zap.Error(err),
 					zap.String("event_id", eventID),

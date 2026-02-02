@@ -2,19 +2,19 @@
 生词本与词典 API
 Vocabulary & Dictionary API
 """
-from typing import List, Optional, Dict, Any
-from uuid import UUID
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Body
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
+from uuid import UUID
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.models.user import User
-from app.services.vocabulary_service import vocabulary_service
-from app.services.mdx_dictionary_service import create_mdx_service
 from app.config.settings import settings
+from app.db.session import get_db
+from app.models.user import User
+from app.services.mdx_dictionary_service import create_mdx_service
+from app.services.vocabulary_service import vocabulary_service
 from app.utils.helpers import read_upload_file
 
 router = APIRouter()
@@ -45,12 +45,12 @@ class WordBookAdd(BaseModel):
     """添加生词到生词本"""
     word: str = Field(..., min_length=1, max_length=100)
     definition: str = Field(..., min_length=1)
-    phonetic: Optional[str] = Field(None, max_length=100)
-    context_sentence: Optional[str] = Field(None, max_length=1000)
-    task_id: Optional[UUID] = None
+    phonetic: str | None = Field(None, max_length=100)
+    context_sentence: str | None = Field(None, max_length=1000)
+    task_id: UUID | None = None
     importance: int = Field(3, ge=1, le=5, description="1-5 星，5 星为最需要复习的词汇")
-    part_of_speech: Optional[str] = Field(None, max_length=50)
-    source_translation_id: Optional[str] = Field(None, max_length=100)
+    part_of_speech: str | None = Field(None, max_length=50)
+    source_translation_id: str | None = Field(None, max_length=100)
 
 
 class ReviewRecord(BaseModel):
@@ -74,18 +74,18 @@ class WordBookResponse(BaseModel):
     """生词本条目响应"""
     id: UUID
     word: str
-    phonetic: Optional[str]
+    phonetic: str | None
     definition: str
     importance: int
     consecutive_correct: int
     correct_review_count: int
     review_count: int
     next_review_at: datetime
-    last_review_at: Optional[datetime]
+    last_review_at: datetime | None
     accuracy_rate: float
-    part_of_speech: Optional[str] = None
-    source_translation_id: Optional[str] = None
-    context_sentence: Optional[str] = None
+    part_of_speech: str | None = None
+    source_translation_id: str | None = None
+    context_sentence: str | None = None
 
     class Config:
         from_attributes = True
@@ -96,7 +96,7 @@ class VocabularyStats(BaseModel):
     total_words: int
     due_for_review: int
     accuracy_rate: float
-    by_importance: Dict[str, int]
+    by_importance: dict[str, int]
 
 
 # ============ Endpoints ============
@@ -178,7 +178,7 @@ async def add_to_wordbook(
     )
 
 
-@router.get("/wordbook/review", summary="获取复习列表", response_model=List[WordBookResponse])
+@router.get("/wordbook/review", summary="获取复习列表", response_model=list[WordBookResponse])
 async def get_review_list(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -353,7 +353,7 @@ async def associate_word(word: str = Query(..., min_length=1, max_length=100)):
 @router.get("/llm/sentence", summary="例句生成")
 async def generate_sentence(
     word: str = Query(..., min_length=1, max_length=100),
-    context: Optional[str] = Query(None, max_length=500)
+    context: str | None = Query(None, max_length=500)
 ):
     """通过 LLM 生成单词例句"""
     sentence = await vocabulary_service.generate_example_sentence(word, context)

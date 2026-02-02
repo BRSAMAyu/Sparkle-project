@@ -10,21 +10,20 @@ Security Monitoring Service
 
 import asyncio
 import json
-import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from uuid import UUID
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any
+from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from app.models.user import User, LoginAttempt
-from app.models.audit_log import SecurityAuditLog
-from app.core.redis import redis_client
 from app.config import settings
+from app.core.redis import redis_client
+from app.models.audit_log import SecurityAuditLog
+from app.models.user import LoginAttempt
 
 
 class SecurityEventType(Enum):
@@ -52,12 +51,12 @@ class ThreatLevel(Enum):
 class SecurityEvent:
     """安全事件数据类"""
     event_type: SecurityEventType
-    user_id: Optional[UUID] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    resource: Optional[str] = None
-    action: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
+    user_id: UUID | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    resource: str | None = None
+    action: str | None = None
+    details: dict[str, Any] | None = None
     threat_level: ThreatLevel = ThreatLevel.LOW
     timestamp: datetime = None
 
@@ -65,7 +64,7 @@ class SecurityEvent:
         if self.timestamp is None:
             self.timestamp = datetime.utcnow()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         data = asdict(self)
         data['event_type'] = self.event_type.value
@@ -104,7 +103,7 @@ class SecurityMonitor:
 
     async def record_login_attempt(
         self,
-        user_id: Optional[UUID],
+        user_id: UUID | None,
         username: str,
         ip_address: str,
         user_agent: str,
@@ -195,8 +194,8 @@ class SecurityMonitor:
         resource_type: str,
         resource_id: str,
         action: str,
-        old_value: Optional[Dict],
-        new_value: Dict,
+        old_value: dict | None,
+        new_value: dict,
         ip_address: str,
         user_agent: str,
         db: AsyncSession
@@ -231,7 +230,7 @@ class SecurityMonitor:
     async def check_suspicious_activity(
         self,
         ip_address: str,
-        user_id: Optional[UUID] = None
+        user_id: UUID | None = None
     ) -> bool:
         """检查可疑活动"""
         if not self._monitoring_enabled:
@@ -271,8 +270,8 @@ class SecurityMonitor:
         alert_type: str,
         message: str,
         threat_level: ThreatLevel,
-        details: Optional[Dict] = None,
-        db: Optional[AsyncSession] = None
+        details: dict | None = None,
+        db: AsyncSession | None = None
     ) -> None:
         """触发安全告警"""
         if not self._alerts_enabled:
@@ -313,14 +312,14 @@ class SecurityMonitor:
         self,
         db: AsyncSession,
         hours: int = 24
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """获取安全统计信息"""
         try:
             since_time = datetime.utcnow() - timedelta(hours=hours)
 
             # 查询失败登录次数
             failed_logins_stmt = select(func.count(LoginAttempt.id)).where(
-                LoginAttempt.success == False,
+                not LoginAttempt.success,
                 LoginAttempt.attempted_at >= since_time
             )
             failed_logins_result = await db.execute(failed_logins_stmt)
@@ -328,7 +327,7 @@ class SecurityMonitor:
 
             # 查询成功登录次数
             success_logins_stmt = select(func.count(LoginAttempt.id)).where(
-                LoginAttempt.success == True,
+                LoginAttempt.success,
                 LoginAttempt.attempted_at >= since_time
             )
             success_logins_result = await db.execute(success_logins_stmt)
@@ -361,7 +360,7 @@ class SecurityMonitor:
             logger.error(f"获取安全统计失败: {e}")
             return {}
 
-    async def run_compliance_check(self, db: AsyncSession) -> Dict[str, Any]:
+    async def run_compliance_check(self, db: AsyncSession) -> dict[str, Any]:
         """运行合规性检查"""
         try:
             checks = {}
@@ -530,7 +529,7 @@ class SecurityMonitor:
         alert_type: str,
         message: str,
         threat_level: ThreatLevel,
-        details: Optional[Dict] = None
+        details: dict | None = None
     ):
         """发送告警通知"""
         # 这里可以集成邮件、Slack、Webhook等通知方式
@@ -559,7 +558,7 @@ class SecurityMonitor:
             logger.error(f"获取可疑IP数量失败: {e}")
             return 0
 
-    async def _check_password_policy(self, db: AsyncSession) -> Dict[str, Any]:
+    async def _check_password_policy(self, db: AsyncSession) -> dict[str, Any]:
         """检查密码策略合规性"""
         try:
             # 这里可以检查密码强度、过期时间等
@@ -573,7 +572,7 @@ class SecurityMonitor:
                 "message": f"密码策略检查失败: {e}"
             }
 
-    async def _check_user_permissions(self, db: AsyncSession) -> Dict[str, Any]:
+    async def _check_user_permissions(self, db: AsyncSession) -> dict[str, Any]:
         """检查用户权限合规性"""
         try:
             # 这里可以检查用户权限分配是否合理
@@ -587,7 +586,7 @@ class SecurityMonitor:
                 "message": f"用户权限检查失败: {e}"
             }
 
-    async def _check_audit_logs(self, db: AsyncSession) -> Dict[str, Any]:
+    async def _check_audit_logs(self, db: AsyncSession) -> dict[str, Any]:
         """检查审计日志合规性"""
         try:
             # 检查审计日志是否完整
@@ -608,7 +607,7 @@ class SecurityMonitor:
                 "message": f"审计日志检查失败: {e}"
             }
 
-    async def _check_security_config(self) -> Dict[str, Any]:
+    async def _check_security_config(self) -> dict[str, Any]:
         """检查安全配置合规性"""
         try:
             checks = []
@@ -665,10 +664,10 @@ class SecurityMonitor:
 
     def update_config(
         self,
-        failed_login_threshold: Optional[int] = None,
-        failed_login_window: Optional[int] = None,
-        suspicious_ip_threshold: Optional[int] = None,
-        alert_cooldown: Optional[int] = None
+        failed_login_threshold: int | None = None,
+        failed_login_window: int | None = None,
+        suspicious_ip_threshold: int | None = None,
+        alert_cooldown: int | None = None
     ):
         """更新监控配置"""
         if failed_login_threshold is not None:

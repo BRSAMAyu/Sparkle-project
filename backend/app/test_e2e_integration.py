@@ -11,12 +11,12 @@ Tests cover:
 - Tool execution and result aggregation
 """
 
-import pytest
-import json
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from typing import Dict, Any
+import json
 from datetime import datetime
+from typing import Any
+
+import pytest
 
 # ============================================================
 # Mock Services for E2E Testing
@@ -35,7 +35,7 @@ class MockFlutterClient:
         self.connected = True
         return True
 
-    async def send_message(self, message: str) -> Dict[str, Any]:
+    async def send_message(self, message: str) -> dict[str, Any]:
         """Send message via WebSocket"""
         if not self.connected:
             raise Exception("Not connected")
@@ -47,7 +47,7 @@ class MockFlutterClient:
             "timestamp": datetime.now().isoformat(),
         }
 
-    async def receive_response(self) -> Dict[str, Any]:
+    async def receive_response(self) -> dict[str, Any]:
         """Receive response from server"""
         if not self.connected:
             raise Exception("Not connected")
@@ -65,7 +65,7 @@ class MockFlutterClient:
 
 class MockGoGateway:
     """Simulates Go Gateway (orchestrates flow)"""
-    async def handle_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_message(self, message: dict[str, Any]) -> dict[str, Any]:
         """Handle incoming message from Flutter"""
         return {
             "status": "received",
@@ -73,7 +73,7 @@ class MockGoGateway:
             "forwarded_to": "python-backend",
         }
 
-    async def forward_to_python(self, message: Dict[str, Any]) -> Dict[str, Any]:
+    async def forward_to_python(self, message: dict[str, Any]) -> dict[str, Any]:
         """Forward message to Python backend via gRPC"""
         return {
             "status": "forwarded",
@@ -84,7 +84,7 @@ class MockGoGateway:
 
 class MockPythonBackend:
     """Simulates Python Backend (Orchestrator)"""
-    async def process_chat(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_chat(self, request: dict[str, Any]) -> dict[str, Any]:
         """Process chat request"""
         return {
             "status": "processing",
@@ -102,7 +102,7 @@ class MockPythonBackend:
             },
         ]
 
-    async def execute_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
+    async def execute_tool(self, tool_name: str, **kwargs) -> dict[str, Any]:
         """Execute a tool"""
         return {
             "tool": tool_name,
@@ -156,7 +156,7 @@ class MockDatabase:
         }
         return session_id
 
-    async def save_message(self, session_id: str, message: Dict[str, Any]) -> bool:
+    async def save_message(self, session_id: str, message: dict[str, Any]) -> bool:
         """Save message to database"""
         if session_id in self.sessions:
             self.sessions[session_id]["messages"].append(message)
@@ -448,10 +448,6 @@ class TestAuthenticationFlow:
     @pytest.mark.asyncio
     async def test_login_flow(self):
         """Test login authentication flow"""
-        credentials = {
-            "username": "user@example.com",
-            "password": "secure_password",
-        }
 
         # Mock login
         token = "jwt_token_123"
@@ -526,9 +522,9 @@ class TestE2EPerformance:
 
         # Full flow
         message = await flutter_client.send_message("Quick test")
-        gw_response = await go_gateway.handle_message(message)
+        await go_gateway.handle_message(message)
         forwarded = await go_gateway.forward_to_python(message)
-        py_response = await python_backend.process_chat(forwarded)
+        await python_backend.process_chat(forwarded)
 
         elapsed = time.time() - start
 
@@ -576,7 +572,7 @@ class TestFullE2EIntegration:
         flutter_msg = await flutter_client.send_message(user_message)
 
         # Gateway handling
-        gw_response = await go_gateway.handle_message(flutter_msg)
+        await go_gateway.handle_message(flutter_msg)
         forwarded = await go_gateway.forward_to_python(flutter_msg)
 
         # Python processing

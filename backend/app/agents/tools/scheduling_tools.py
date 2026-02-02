@@ -1,13 +1,12 @@
-from typing import List, Dict, Optional, Type
+from datetime import datetime
+
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from datetime import datetime, timedelta, date
+from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal
 from app.models.plan import Plan, PlanType
-from app.models.task import Task, TaskType, TaskStatus
-from app.models.user import User
-from sqlalchemy import select
+from app.models.task import Task, TaskStatus, TaskType
 
 # --- Input Models ---
 
@@ -23,52 +22,52 @@ class CreatePlanInput(BaseModel):
     subject: str = Field(..., description="Subject name.")
     plan_name: str = Field(..., description="Name of the plan (e.g. 'Calculus Sprint').")
     target_date_str: str = Field(..., description="Exam date (YYYY-MM-DD).")
-    tasks: List[TaskItem] = Field(..., description="List of tasks to create.")
+    tasks: list[TaskItem] = Field(..., description="List of tasks to create.")
 
 # --- Tool ---
 
 class StudyPlanCreatorTool(BaseTool):
     name: str = "create_study_plan"
     description: str = "Creates a structural Study Plan with detailed Tasks in TimeTutor."
-    args_schema: Type[BaseModel] = CreatePlanInput
+    args_schema: type[BaseModel] = CreatePlanInput
 
-    def _run(self, user_id: str, subject: str, plan_name: str, target_date_str: str, tasks: List[TaskItem]) -> str:
+    def _run(self, user_id: str, subject: str, plan_name: str, target_date_str: str, tasks: list[TaskItem]) -> str:
         # Sync wrapper not implemented for DB operations
         raise NotImplementedError("Use async _arun")
 
-    async def _arun(self, user_id: str, subject: str, plan_name: str, target_date_str: str, tasks: List[TaskItem]) -> str:
+    async def _arun(self, user_id: str, subject: str, plan_name: str, target_date_str: str, tasks: list[TaskItem]) -> str:
         async with AsyncSessionLocal() as db:
             try:
                 # 0. Check for duplicate active plan and handle naming collision
                 base_name = plan_name
                 counter = 1
-                
+
                 while True:
                     # Check if plan_name already exists
                     existing_plan_stmt = select(Plan).where(
                         Plan.user_id == user_id,
                         Plan.name == plan_name,
-                        Plan.is_active == True
+                        Plan.is_active
                     )
                     result = await db.execute(existing_plan_stmt)
                     if not result.scalar_one_or_none():
                         break # No collision, safe to use this name
-                    
+
                     # Collision found, try next version
                     counter += 1
                     plan_name = f"{base_name} (v{counter})"
-                    
+
                     # Safety break to prevent infinite loops
-                    if counter > 20: 
+                    if counter > 20:
                         return f"Error: Too many active plans with base name '{base_name}'. Please clear some old plans."
 
                 # 1. Parse Date
                 target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
-                
+
                 # 2. Create Plan
                 # Check if active plan exists for this subject to avoid duplicates?
                 # For now, we assume Agent Logic handles duplication checks or we create a new sprint.
-                
+
                 new_plan = Plan(
                     user_id=user_id,
                     name=plan_name,
@@ -80,7 +79,7 @@ class StudyPlanCreatorTool(BaseTool):
                 )
                 db.add(new_plan)
                 await db.flush() # Get ID
-                
+
                 # 3. Create Tasks
                 created_count = 0
                 for item in tasks:
@@ -88,10 +87,10 @@ class StudyPlanCreatorTool(BaseTool):
                     t_type = TaskType.LEARNING
                     if item.type.upper() == "TRAINING":
                         t_type = TaskType.TRAINING
-                    
-                    # Resolve Knowledge Node (Simplified: we won't do a graph lookup here, 
+
+                    # Resolve Knowledge Node (Simplified: we won't do a graph lookup here,
                     # but in production we should query KnowledgeNode by name)
-                    
+
                     new_task = Task(
                         user_id=user_id,
                         plan_id=new_plan.id,
@@ -105,10 +104,10 @@ class StudyPlanCreatorTool(BaseTool):
                     )
                     db.add(new_task)
                     created_count += 1
-                
+
                 await db.commit()
                 return f"Successfully created Plan '{plan_name}' with {created_count} tasks."
-                
+
             except Exception as e:
                 await db.rollback()
                 return f"Error creating plan: {str(e)}"

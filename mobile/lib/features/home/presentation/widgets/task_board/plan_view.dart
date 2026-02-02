@@ -88,7 +88,7 @@ class _PlanSection extends ConsumerWidget {
               Icon(
                 Icons.folder_rounded,
                 size: 16,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               const SizedBox(width: DS.spacing8),
               Text(
@@ -113,7 +113,7 @@ class _PlanSection extends ConsumerWidget {
                 child: Text(
                   '${tasks.length}',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

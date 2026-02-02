@@ -292,7 +292,7 @@ class _SeedLibraryDetailScreenState
   void _showDeleteDialog(
     BuildContext context,
   ) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除种子库'),

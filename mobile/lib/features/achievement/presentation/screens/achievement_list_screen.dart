@@ -130,7 +130,7 @@ class _AchievementListScreenState
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => context.pop(),
                 ),
                 const SizedBox(width: DS.spacing8),
                 Expanded(
@@ -555,7 +555,7 @@ class _AchievementListScreenState
   }
 
   void _showFilterSheet(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -578,7 +578,7 @@ class _AchievementListScreenState
   }
 
   void _showStreakDetails(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

@@ -1,9 +1,11 @@
+from collections.abc import Iterable as _Iterable
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar
+
 import agent_service_pb2 as _agent_service_pb2
-from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable, Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from google.protobuf.internal import containers as _containers
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -21,7 +23,7 @@ class WebSocketMessage(_message.Message):
     trace_id: str
     request_id: str
     timestamp: int
-    def __init__(self, version: _Optional[str] = ..., type: _Optional[str] = ..., payload: _Optional[bytes] = ..., trace_id: _Optional[str] = ..., request_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(self, version: str | None = ..., type: str | None = ..., payload: bytes | None = ..., trace_id: str | None = ..., request_id: str | None = ..., timestamp: int | None = ...) -> None: ...
 
 class ChatMessage(_message.Message):
     __slots__ = ("session_id", "user_id", "message", "tool_calls")
@@ -33,7 +35,7 @@ class ChatMessage(_message.Message):
     user_id: str
     message: str
     tool_calls: _containers.RepeatedCompositeFieldContainer[_agent_service_pb2.ToolCall]
-    def __init__(self, session_id: _Optional[str] = ..., user_id: _Optional[str] = ..., message: _Optional[str] = ..., tool_calls: _Optional[_Iterable[_Union[_agent_service_pb2.ToolCall, _Mapping]]] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., user_id: str | None = ..., message: str | None = ..., tool_calls: _Iterable[_agent_service_pb2.ToolCall | _Mapping] | None = ...) -> None: ...
 
 class UpdateNodeMasteryRequest(_message.Message):
     __slots__ = ("node_id", "mastery", "timestamp", "request_id", "revision")
@@ -47,7 +49,7 @@ class UpdateNodeMasteryRequest(_message.Message):
     timestamp: int
     request_id: str
     revision: int
-    def __init__(self, node_id: _Optional[str] = ..., mastery: _Optional[int] = ..., timestamp: _Optional[int] = ..., request_id: _Optional[str] = ..., revision: _Optional[int] = ...) -> None: ...
+    def __init__(self, node_id: str | None = ..., mastery: int | None = ..., timestamp: int | None = ..., request_id: str | None = ..., revision: int | None = ...) -> None: ...
 
 class InterventionPushMessage(_message.Message):
     __slots__ = ("intervention_id", "level", "content", "actions", "expires_at")
@@ -61,7 +63,7 @@ class InterventionPushMessage(_message.Message):
     content: InterventionContent
     actions: _containers.RepeatedCompositeFieldContainer[InterventionAction]
     expires_at: int
-    def __init__(self, intervention_id: _Optional[str] = ..., level: _Optional[str] = ..., content: _Optional[_Union[InterventionContent, _Mapping]] = ..., actions: _Optional[_Iterable[_Union[InterventionAction, _Mapping]]] = ..., expires_at: _Optional[int] = ...) -> None: ...
+    def __init__(self, intervention_id: str | None = ..., level: str | None = ..., content: InterventionContent | _Mapping | None = ..., actions: _Iterable[InterventionAction | _Mapping] | None = ..., expires_at: int | None = ...) -> None: ...
 
 class InterventionContent(_message.Message):
     __slots__ = ("rendered_message", "intent_type", "template_id", "scaffolding_level", "context_variables")
@@ -71,7 +73,7 @@ class InterventionContent(_message.Message):
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
         value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+        def __init__(self, key: str | None = ..., value: str | None = ...) -> None: ...
     RENDERED_MESSAGE_FIELD_NUMBER: _ClassVar[int]
     INTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -82,7 +84,7 @@ class InterventionContent(_message.Message):
     template_id: str
     scaffolding_level: int
     context_variables: _containers.ScalarMap[str, str]
-    def __init__(self, rendered_message: _Optional[str] = ..., intent_type: _Optional[str] = ..., template_id: _Optional[str] = ..., scaffolding_level: _Optional[int] = ..., context_variables: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    def __init__(self, rendered_message: str | None = ..., intent_type: str | None = ..., template_id: str | None = ..., scaffolding_level: int | None = ..., context_variables: _Mapping[str, str] | None = ...) -> None: ...
 
 class InterventionAction(_message.Message):
     __slots__ = ("id", "label", "type")
@@ -92,4 +94,4 @@ class InterventionAction(_message.Message):
     id: str
     label: str
     type: str
-    def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., type: _Optional[str] = ...) -> None: ...
+    def __init__(self, id: str | None = ..., label: str | None = ..., type: str | None = ...) -> None: ...

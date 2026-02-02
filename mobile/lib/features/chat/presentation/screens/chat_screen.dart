@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
@@ -78,7 +77,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final transparentMode = ref.watch(transparentModeProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -90,9 +88,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
+                    (isDark ? DS.surfaceAmbient : DS.surfacePrimary)
                         .withValues(alpha: 0.9),
-                    (isDark ? DS.deepSpaceEnd : DS.neutral50)
+                    (isDark ? DS.surfacePrimary : DS.neutral50)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
@@ -129,7 +127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   'AI学习助手',
                   style: TextStyle(
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
+                    color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                     fontSize: DS.fontSizeBase,
                   ),
@@ -137,7 +135,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   '随时为你解答',
                   style: TextStyle(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                    color: DS.textSecondary,
                     fontSize: DS.fontSizeXs,
                   ),
                 ),
@@ -147,13 +145,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.history,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
+            icon: Icon(Icons.history, color: DS.textSecondary),
             onPressed: () => _showHistoryBottomSheet(context),
           ),
           IconButton(
-            icon: Icon(Icons.add_comment_outlined,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
+            icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
             tooltip: 'New Chat',
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
           ),
@@ -161,10 +157,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
+          // Use three-layer gradient matching Dashboard WeatherHeader style
           gradient: isDark
-              ? DS.deepSpaceGradient
+              ? LinearGradient(
+                  colors: [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
               : LinearGradient(
-                  colors: [DS.neutral50, DS.neutral100],
+                  colors: [DS.neutral50, DS.neutral100, DS.neutral200],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -191,9 +192,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           : ListView.builder(
                               controller: _scrollController,
                               reverse: true,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 20.0,
+                              padding: EdgeInsets.only(
+                                left: 16.0,
+                                right: 16.0,
+                                top: 20.0,
+                                bottom: _calculateBottomPadding(context, chatState),
                               ),
                               cacheExtent: 600,
                               itemCount: chatState.listItemCount,
@@ -345,51 +348,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                         ),
                       ),
-                    if (transparentMode)
-                      TransparencyPanel(
-                        status: chatState.aiStatus,
-                        details: chatState.aiStatusDetails,
-                        promptTokens: chatState.lastPromptTokens,
-                        completionTokens: chatState.lastCompletionTokens,
-                        totalTokens: chatState.lastTotalTokens,
-                        currentAgentName: chatState.currentAgentName,
-                        activeAgentType: chatState.activeAgentType,
-                        activeTools: chatState.activeTools,
-                        dailyTokens: chatState.dailyTokens,
-                        dailyTokenLimit: chatState.dailyTokenLimit,
-                        dailyCostMicroUsd: chatState.dailyCostMicroUsd,
-                        transparencyData: chatState.transparencyData,
-                        currentStepIndex: chatState.currentStepIndex,
-                      ),
-                    if (transparentMode)
-                      const SizedBox(height: DS.spacing12),
-                    const PlanSelectorPill(),
-                    const ChatModeSelectorPill(),
-                    const IntentPredictionBar(showIdle: false),
-                    ChatInput(
-                      enabled: !chatState.isSending,
-                      onTextChanged: (text) {
-                        ref
-                            .read(intentPredictionProvider.notifier)
-                            .onInputChanged(text);
-                      },
-                      onFileUploaded: (StoredFile file) {
-                        if (file.status != 'processed') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('文件处理中，完成后可用于对话')),
-                          );
-                          return;
-                        }
-                        ref.read(chatProvider.notifier).addAttachment(file);
-                      },
-                      onSend: (text, {replyToId}) => unawaited(
-                        ref.read(chatProvider.notifier).sendMessage(text),
-                      ),
+                    // Bottom input area - wrapped to prevent overflow
+                    LayoutBuilder(
+                      builder: (context, constraints) => _buildBottomInputArea(context, chatState, constraints),
                     ),
-                    if (chatState.graphragTrace != null)
-                      GraphRAGVisualizer(
-                        trace: chatState.graphragTrace,
-                      ),
                   ],
                 ),
               ),
@@ -424,7 +386,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             maxChildSize: maxChildSize,
             builder: (context, scrollController) => DecoratedBox(
               decoration: BoxDecoration(
-                color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
+                // Use surfaceSecondary to match Dashboard ceramic cards
+                color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(24)),
               ),
@@ -437,7 +400,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       height: 4,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? DS.neutral700 : DS.neutral300,
+                        color: DS.surfaceTertiary,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -452,7 +415,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? DS.brandPrimary : DS.neutral900,
+                              color: DS.textPrimary,
                             ),
                           ),
                         ],
@@ -520,9 +483,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   decoration: BoxDecoration(
                                     color: isCurrent
                                         ? DS.primaryBase.withValues(alpha: 0.1)
-                                        : (isDark
-                                            ? DS.neutral800
-                                            : DS.neutral100),
+                                        : DS.surfaceTertiary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -530,14 +491,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     size: 18,
                                     color: isCurrent
                                         ? DS.primaryBase
-                                        : DS.neutral500,
+                                        : DS.textSecondary,
                                   ),
                                 ),
                                 title: Text(
                                   (session['title'] as String?) ?? '未命名会话',
                                   style: TextStyle(
-                                    color:
-                                        isDark ? DS.brandPrimary : DS.neutral900,
+                                    color: DS.textPrimary,
                                     fontWeight: isCurrent
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -581,88 +541,88 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: DS.primaryBase.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+  Widget _buildQuickActions(BuildContext context) => Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: DS.primaryBase.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
               ),
-              child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
-            ),
-            const SizedBox(height: DS.xl),
-            Text(
-              '你好，我是你的 AI 导师',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
-                  ),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              '今天想做点什么？',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
-                  ),
-            ),
-            const SizedBox(height: 40),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _QuickActionChip(
-                      icon: Icons.add_task_rounded,
-                      label: '新建微任务',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我创建一个新的微任务'),
-                      ),
+              const SizedBox(height: DS.xl),
+              Text(
+                '你好，我是你的 AI 导师',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: DS.textPrimary,
                     ),
-                    _QuickActionChip(
-                      icon: Icons.calendar_month_rounded,
-                      label: '生成长期计划',
-                      color: DS.capsuleAccent,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我生成一个长期学习计划'),
-                      ),
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                '今天想做点什么？',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: DS.textSecondary,
                     ),
-                    _QuickActionChip(
-                      icon: Icons.bug_report_rounded,
-                      label: '错误归因',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('我想分析一下最近的错误原因'),
+              ),
+              const SizedBox(height: 40),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _QuickActionChip(
+                        icon: Icons.add_task_rounded,
+                        label: '新建微任务',
+                        color: DS.brandPrimaryConst,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('帮我创建一个新的微任务'),
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+                      _QuickActionChip(
+                        icon: Icons.calendar_month_rounded,
+                        label: '生成长期计划',
+                        color: DS.capsuleAccent,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('帮我生成一个长期学习计划'),
+                        ),
+                      ),
+                      _QuickActionChip(
+                        icon: Icons.bug_report_rounded,
+                        label: '错误归因',
+                        color: DS.brandPrimaryConst,
+                        isNarrow: isNarrow,
+                        onTap: () => unawaited(
+                          ref
+                              .read(chatProvider.notifier)
+                              .sendMessage('我想分析一下最近的错误原因'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
 
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
@@ -671,6 +631,122 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  /// Calculate bottom padding for ListView to prevent messages being hidden
+  /// behind fixed components at the bottom.
+  double _calculateBottomPadding(BuildContext context, ChatState chatState) {
+    // Use a more generous calculation based on actual screen height
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
+    // Base padding
+    var padding = isSmallScreen ? 40.0 : 60.0;
+
+    // PlanSelectorPill height (can vary with content)
+    padding += isSmallScreen ? 44.0 : 52.0;
+
+    // ChatModeSelectorPill height
+    padding += isSmallScreen ? 36.0 : 44.0;
+
+    // IntentPredictionBar height (when visible)
+    if (chatState.aiStatus != null) {
+      padding += isSmallScreen ? 48.0 : 56.0;
+    }
+
+    // ChatInput base height + expansion buffer
+    padding += isSmallScreen ? 80.0 : 100.0;
+
+    // TransparencyPanel (conditional)
+    if (ref.watch(transparentModeProvider)) {
+      padding += isSmallScreen ? 140.0 : 160.0;
+    }
+
+    // GraphRAG visualizer
+    if (chatState.graphragTrace != null) {
+      padding += 80.0;
+    }
+
+    // SafeArea bottom padding - use actual value with more buffer
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    padding += bottomPadding.clamp(0.0, 50.0);
+
+    // Add extra buffer for safety
+    padding += isSmallScreen ? 40.0 : 20.0;
+
+    return padding;
+  }
+
+  /// Build the bottom input area with proper overflow handling.
+  /// Uses SingleChildScrollView to prevent overflow when components expand.
+  Widget _buildBottomInputArea(
+    BuildContext context,
+    ChatState chatState,
+    BoxConstraints constraints,
+  ) {
+    final transparentMode = ref.watch(transparentModeProvider);
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (transparentMode)
+            Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              child: TransparencyPanel(
+                status: chatState.aiStatus,
+                details: chatState.aiStatusDetails,
+                promptTokens: chatState.lastPromptTokens,
+                completionTokens: chatState.lastCompletionTokens,
+                totalTokens: chatState.lastTotalTokens,
+                currentAgentName: chatState.currentAgentName,
+                activeAgentType: chatState.activeAgentType,
+                activeTools: chatState.activeTools,
+                dailyTokens: chatState.dailyTokens,
+                dailyTokenLimit: chatState.dailyTokenLimit,
+                dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                transparencyData: chatState.transparencyData,
+                currentStepIndex: chatState.currentStepIndex,
+              ),
+            ),
+          const PlanSelectorPill(),
+          const ChatModeSelectorPill(),
+          const IntentPredictionBar(showIdle: false),
+          ChatInput(
+            enabled: !chatState.isSending,
+            onTextChanged: (text) {
+              if (mounted) {
+                ref
+                    .read(intentPredictionProvider.notifier)
+                    .onInputChanged(text);
+              }
+            },
+            onFileUploaded: (StoredFile file) {
+              if (file.status != 'processed') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('文件处理中，完成后可用于对话')),
+                );
+                return;
+              }
+              ref.read(chatProvider.notifier).addAttachment(file);
+            },
+            onSend: (text, {replyToId}) => unawaited(
+              ref.read(chatProvider.notifier).sendMessage(text),
+            ),
+          ),
+          if (chatState.graphragTrace != null)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing8),
+              child: GraphRAGVisualizer(
+                trace: chatState.graphragTrace,
+              ),
+            ),
+          // Bottom safe area padding
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }
@@ -699,12 +775,10 @@ class _QuickActionChipState extends State<_QuickActionChip> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Fix: Use neutral background for light mode instead of brandPrimary (orange)
-    final backgroundColor = isDark ? DS.neutral800 : DS.neutral100;
-    // Use contrast-safe text color
-    final labelColor = isDark ? DS.textPrimary : DS.neutral900;
+    // Use surfaceTertiary background for consistent theming
+    final backgroundColor = DS.surfaceTertiary;
+    // Use textPrimary for proper contrast in both modes
+    final labelColor = DS.textPrimary;
     final horizontalPadding = widget.isNarrow ? 12.0 : DS.spacing16;
 
     return GestureDetector(
@@ -779,11 +853,9 @@ class _StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final textColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    );
+    // Use a lighter color for better contrast in dark mode
+    final bubbleColor = isDark ? const Color(0xFF2A2A2A) : DS.brandPrimary;
+    final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -800,7 +872,7 @@ class _StreamingBubble extends StatelessWidget {
             bottomLeft: Radius.circular(4),
           ),
           boxShadow: DS.shadowSm,
-          border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+          border: Border.all(color: isDark ? const Color(0xFF3A3A3A) : DS.neutral200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -897,11 +969,11 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final dotColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    ).withValues(alpha: 0.7);
+    // Use a lighter color for better contrast in dark mode
+    final bubbleColor = isDark ? const Color(0xFF2A2A2A) : DS.brandPrimary;
+    final dotColor = isDark
+        ? DS.textPrimary.withValues(alpha: 0.7)
+        : DS.onBrandPrimary.withValues(alpha: 0.7);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -913,7 +985,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           bottomLeft: Radius.circular(4),
         ),
         boxShadow: DS.shadowSm,
-        border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
+        border: Border.all(color: isDark ? const Color(0xFF3A3A3A) : DS.neutral200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

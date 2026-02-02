@@ -4,10 +4,7 @@ import 'package:sparkle/features/notification_center/data/models/unified_notific
 /// Unified Notification Card Widget
 class UnifiedNotificationCard extends StatelessWidget {
   const UnifiedNotificationCard({
-    super.key,
-    required this.notification,
-    required this.onRead,
-    required this.onDelete,
+    required this.notification, required this.onRead, required this.onDelete, super.key,
   });
 
   final UnifiedNotification notification;
@@ -15,8 +12,7 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    return Dismissible(
+  Widget build(BuildContext context) => Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onDelete(),
@@ -52,7 +48,7 @@ class UnifiedNotificationCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -152,7 +148,6 @@ class UnifiedNotificationCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildSourceBadge(BuildContext context) {
     Color badgeColor;
@@ -162,11 +157,9 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'system':
         badgeColor = Colors.blue;
         badgeLabel = '系统';
-        break;
       case 'intervention':
         badgeColor = Colors.orange;
         badgeLabel = '干预';
-        break;
       default:
         badgeColor = Colors.grey;
         badgeLabel = '通知';
@@ -175,9 +168,9 @@ class UnifiedNotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.1),
+        color: badgeColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: badgeColor.withOpacity(0.3)),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
       ),
       child: Text(
         badgeLabel,
@@ -201,7 +194,6 @@ class UnifiedNotificationCard extends StatelessWidget {
           // Navigate to plan detail
           // TODO: Implement navigation
         }
-        break;
 
       case 'settings_updated':
         // Navigate to settings
@@ -216,12 +208,11 @@ class UnifiedNotificationCard extends StatelessWidget {
       default:
         // Show detail dialog
         _showDetailDialog(context);
-        break;
     }
   }
 
   void _showDetailDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(notification.title),

@@ -33,6 +33,9 @@ class UserModel {
     this.status = UserStatus.offline,
     this.schedulePreferences,
     this.pushPreferences,
+    this.photonBalance = 0,
+    this.equippedSkin,
+    this.equippedTitle,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -63,12 +66,18 @@ class UserModel {
   final UserStatus status;
   @JsonKey(name: 'schedule_preferences')
   final Map<String, dynamic>? schedulePreferences;
-  @JsonKey(name: 'push_preference')
+  @JsonKey(name: 'push_preferences')
   final PushPreferences? pushPreferences;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
+  @JsonKey(name: 'photon_balance')
+  final int photonBalance;
+  @JsonKey(name: 'equipped_skin')
+  final String? equippedSkin;
+  @JsonKey(name: 'equipped_title')
+  final String? equippedTitle;
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }
 

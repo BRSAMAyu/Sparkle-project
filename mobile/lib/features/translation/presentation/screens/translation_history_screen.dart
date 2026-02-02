@@ -43,7 +43,7 @@ class _TranslationHistoryScreenState
   void _showRatingDialog(Id id, int currentRating) {
     _selectedRatings[id] = currentRating;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(

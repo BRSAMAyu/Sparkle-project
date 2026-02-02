@@ -1,12 +1,12 @@
 from datetime import datetime
-import json
-from typing import Optional, List
+
 import y_py as Y
-from sqlalchemy import select, update, insert
-from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
-from app.models.galaxy import CRDTSnapshot, CollaborativeGalaxy, CRDTOperationLog
-from loguru import logger
+from sqlalchemy import insert, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
+
 
 class CRDTPersistenceManager:
     """
@@ -28,7 +28,7 @@ class CRDTPersistenceManager:
         update_data = Y.encode_state_as_update(ydoc)
 
         # Redis 持久化 (TTL 24h)
-        # 注意: 如果 redis_client 设置了 decode_responses=True, 
+        # 注意: 如果 redis_client 设置了 decode_responses=True,
         # 这里存储 bytes 可能会有问题。
         # 建议使用独立的 redis 实例或确保可以处理 bytes。
         key = f"crdt:snapshot:{galaxy_id}"
@@ -47,7 +47,7 @@ class CRDTPersistenceManager:
         Redis -> PostgreSQL (Low-frequency, scheduled task)
         """
         update_data = Y.encode_state_as_update(ydoc)
-        
+
         # Upsert 到数据库
         stmt = insert(CRDTSnapshot).values(
             galaxy_id=galaxy_id,
@@ -61,7 +61,7 @@ class CRDTPersistenceManager:
                 'updated_at': datetime.utcnow()
             }
         )
-        
+
         await self.db.execute(stmt)
         await self.db.commit()
 
@@ -73,14 +73,14 @@ class CRDTPersistenceManager:
         # 优先从 Redis 恢复 (最新)
         key = f"crdt:snapshot:{galaxy_id}"
         redis_data = await self.redis.get(key)
-        
+
         ydoc = Y.YDoc()
         if redis_data:
-            # 如果 redis_client 设置了 decode_responses=True, 
+            # 如果 redis_client 设置了 decode_responses=True,
             # redis_data 可能是 string, 需要转回 bytes
             if isinstance(redis_data, str):
                 redis_data = redis_data.encode('latin-1') # Or appropriate encoding
-            
+
             Y.apply_update(ydoc, redis_data)
             return ydoc
 

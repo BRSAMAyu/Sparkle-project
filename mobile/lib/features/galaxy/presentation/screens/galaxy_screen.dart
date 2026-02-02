@@ -103,8 +103,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Use standard Matrix4 methods to avoid deprecation warnings
     // T * S transformation
     _transformationController.value = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(initialScale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(initialScale, initialScale, 1, 1);
   }
 
   void _recenterForResize({
@@ -123,8 +123,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final ty = newSize.height / 2 - canvasPoint.dy * scale;
 
     _transformationController.value = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(scale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
   }
 
   @override
@@ -467,63 +467,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
-  void _animateToBounds(Rect bounds) {
-    if (bounds.isEmpty) return;
-    final screenSize = MediaQuery.of(context).size;
-    final padded = bounds.inflate(80);
-
-    final targetWidth = padded.width;
-    final targetHeight = padded.height;
-    if (targetWidth <= 0 || targetHeight <= 0) return;
-
-    final scaleX = screenSize.width / targetWidth;
-    final scaleY = screenSize.height / targetHeight;
-    var targetScale = scaleX < scaleY ? scaleX : scaleY;
-    final galaxyState = ref.read(galaxyProvider);
-    final minScale =
-        galaxyState.aggregationLevel == AggregationLevel.universe ? 0.1 : 0.15;
-    targetScale = targetScale.clamp(minScale, 1.5);
-
-    final canvasCenter = galaxyState.canvasCenter;
-    final centeredBounds = padded.shift(Offset(canvasCenter, canvasCenter));
-    final boundsCenter = centeredBounds.center;
-
-    final tx = screenSize.width / 2 - boundsCenter.dx * targetScale;
-    final ty = screenSize.height / 2 - boundsCenter.dy * targetScale;
-
-    final targetMatrix = Matrix4.identity()..setTranslationRaw(tx, ty, 0.0);
-    targetMatrix[0] = targetScale;
-    targetMatrix[5] = targetScale;
-    targetMatrix[10] = 1.0;
-
-    final controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _transientControllers.add(controller);
-
-    final animation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: targetMatrix,
-    ).animate(
-      CurvedAnimation(
-        parent: controller,
-        curve: Curves.easeInOutCubic,
-      ),
-    );
-
-    animation.addListener(() {
-      _transformationController.value = animation.value;
-    });
-
-    controller.forward().whenComplete(() {
-      if (_isDisposing) return;
-      if (_transientControllers.remove(controller)) {
-        controller.dispose();
-      }
-    });
-  }
-
   void _resetToInitialView() {
     final size = MediaQuery.of(context).size;
     if (size.width <= 0 || size.height <= 0) return;
@@ -533,8 +476,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final ty = size.height / 2 - _canvasCenter * targetScale;
 
     final targetMatrix = Matrix4.identity()
-      ..translate(tx, ty)
-      ..scale(targetScale);
+      ..translateByDouble(tx, ty, 0, 1)
+      ..scaleByDouble(targetScale, targetScale, 1, 1);
 
     final controller = AnimationController(
       vsync: this,
@@ -602,13 +545,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           desktop: 48.0,
           wide: 56.0,
         );
-    final minimapSize = ResponsiveSystem.resolve(
+    final minimapSizeBase = ResponsiveSystem.resolve(
       context: context,
       mobile: 96.0,
       tablet: 120.0,
       desktop: 140.0,
       wide: 160.0,
     );
+    final minimapSize =
+        isLandscapeMobile ? minimapSizeBase * 0.8 : minimapSizeBase;
     final zoomSliderHeight = ResponsiveSystem.resolve(
       context: context,
       mobile: isLandscapeMobile ? 96.0 : 140.0,
@@ -628,9 +573,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodePreviewBottomInset = nodePreviewBottomInset
           .clamp(bottomInset + 40, bottomInset + 200);
     }
+    // Zoom controls should be positioned above the spark button (bottomInset)
+    // and reset button (bottomInset + 56). Adding 56 for reset button height + 12 gap.
     final zoomControlsBottom = isLandscapeMobile
-        ? bottomInset + 56
-        : bottomInset + minimapSize / 2;
+        ? bottomInset + 56 + 48 + 12  // Above reset button with gap
+        : bottomInset + 56 + 48 + 12; // Same for portrait - consistent positioning
 
     return Scaffold(
       backgroundColor: DS.galaxyBackground, // Deep space background
@@ -717,9 +664,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 onLongPressStart: _handleLongPressStart,
                 child: InteractiveViewer(
                   transformationController: _transformationController,
+                  alignment: Alignment.topLeft,
                   boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
                   minScale: 0.1,
-                  maxScale: 3.0,
+                  maxScale: 5.0,
                   constrained: false, // Infinite canvas
                   child: SizedBox(
                     width: _canvasSize,
@@ -824,35 +772,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       ],
                     );
 
-                    // DPR Scaling Logic
-                    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-                    final currentDpr = PerformanceService.instance.currentDpr.value;
-                    final renderScale = (currentDpr / devicePixelRatio).clamp(0.1, 1.0);
-
-                    if (renderScale > 0.99) {
-                      return content;
-                    }
-
-                    // Render at lower resolution and scale up
-                    return Transform.scale(
-                      scale: 1 / renderScale,
-                      alignment: Alignment.topLeft,
-                      transformHitTests: false,
-                      child: RepaintBoundary(
-                        child: SizedBox(
-                          width: canvasSize * renderScale,
-                          height: canvasSize * renderScale,
-                          child: FittedBox(
-                            fit: BoxFit.fill,
-                            child: SizedBox(
-                              width: canvasSize,
-                              height: canvasSize,
-                              child: content,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
+                    return content;
                   },
                 ),
               ),
@@ -882,8 +802,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 final tx = size.width / 2 - canvasCenter * targetScale;
                 final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
-                  ..translate(tx, ty)
-                  ..scale(targetScale);
+                  ..translateByDouble(tx, ty, 0, 1)
+                  ..scaleByDouble(targetScale, targetScale, 1, 1);
 
                 final animation = Matrix4Tween(
                   begin: startMatrix,
@@ -967,7 +887,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         _showDebugOverlay
                             ? Icons.bug_report
                             : Icons.bug_report_outlined,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                       ),
                       tooltip: 'Toggle LOD Debug Overlay',
                       onPressed: () {
@@ -1000,7 +920,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ),
 
           // 6. Mini Map (Bottom Left)
-          if (!_isEntering && !isLandscapeMobile)
+          if (!_isEntering)
             Positioned(
               bottom: bottomInset,
               left: overlayInset,
@@ -1013,7 +933,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ),
 
           // 6.1 Guide Button (Above Mini Map)
-          if (!_isEntering && !isLandscapeMobile)
+          if (!_isEntering)
             Positioned(
               bottom: bottomInset + minimapSize + 12,
               left: overlayInset + 8,
@@ -1092,9 +1012,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     : Colors.white.withValues(alpha: 0.9),
                 foregroundColor: DS.brandPrimary,
                 elevation: 3,
-                child: const Icon(Icons.public),
                 onPressed: _resetToInitialView,
                 tooltip: '回到全局视图',
+                child: const Icon(Icons.public),
               ),
             ),
 

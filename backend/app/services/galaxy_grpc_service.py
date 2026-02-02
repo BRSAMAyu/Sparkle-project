@@ -1,5 +1,6 @@
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
 import grpc
 from loguru import logger
 
@@ -13,11 +14,10 @@ except ImportError:
     galaxy_service_pb2 = None
     galaxy_service_pb2_grpc = None
 
-from app.services.galaxy_service import GalaxyService
+from app.core.cache import cache_service
 from app.services.galaxy.collaborative_service import CollaborativeGalaxyService
 from app.services.galaxy.crdt_persistence import CRDTPersistenceManager
-from app.core.cache import cache_service
-from app.db.session import AsyncSessionLocal
+from app.services.galaxy_service import GalaxyService
 
 # Memory cache for active YDocs to avoid reloading from DB every time
 _active_collaborative_sessions = {}
@@ -32,13 +32,13 @@ class GalaxyGrpcServiceImpl:
         """
         async with self.db_session_factory() as db:
             galaxy_service = GalaxyService(db)
-            
+
             try:
                 # Convert proto Timestamp to Python datetime
                 version = None
                 if request.version:
                     version = datetime.fromtimestamp(request.version.seconds + request.version.nanos / 1e9)
-                
+
                 result = await galaxy_service.update_node_mastery(
                     user_id=UUID(request.user_id),
                     node_id=UUID(request.node_id),
@@ -48,7 +48,7 @@ class GalaxyGrpcServiceImpl:
                     request_id=request.request_id,
                     revision=request.revision
                 )
-                
+
                 if not result.get("success"):
                     # For gRPC, we can return status code but also the current revision for the client to sync
                     # Use custom response fields
@@ -66,7 +66,7 @@ class GalaxyGrpcServiceImpl:
                     request_id=request.request_id,
                     current_revision=result.get("current_revision", 0)
                 )
-                
+
             except Exception as e:
                 logger.error(f"gRPC UpdateNodeMastery failed: {e}")
                 context.set_code(grpc.StatusCode.INTERNAL)
@@ -84,7 +84,7 @@ class GalaxyGrpcServiceImpl:
 
         async with self.db_session_factory() as db:
             persistence_manager = CRDTPersistenceManager(cache_service.redis, db)
-            
+
             # 1. Get or create collaborative session
             if galaxy_id in _active_collaborative_sessions:
                 collab_service = _active_collaborative_sessions[galaxy_id]
@@ -99,7 +99,7 @@ class GalaxyGrpcServiceImpl:
                 # 2. Apply client update
                 if partial_update:
                     collab_service.apply_update(partial_update)
-                    
+
                     # Log the operation
                     await persistence_manager.log_operation(
                         galaxy_id=galaxy_id,

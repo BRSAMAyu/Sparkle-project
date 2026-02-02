@@ -1,10 +1,10 @@
 """
 用户偏好中心 - Single Source of Truth
 """
-from sqlalchemy import Column, DateTime, Integer, JSON, ForeignKey
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

@@ -30,7 +30,7 @@ class SeedItemCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _getItemTypeColor().withOpacity(0.15),
+                  color: _getItemTypeColor().withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -67,7 +67,7 @@ class SeedItemCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _getDifficultyColor().withOpacity(0.2),
+                              color: _getDifficultyColor().withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: _getDifficultyColor(),
@@ -230,7 +230,7 @@ class SeedItemCard extends StatelessWidget {
   }
 
   void _showDeleteDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除内容'),

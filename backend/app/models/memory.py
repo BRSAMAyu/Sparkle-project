@@ -1,12 +1,12 @@
 """
 Memory models for long-term memory storage.
 """
-from sqlalchemy import Column, String, Integer, Float, Date, DateTime, ForeignKey, JSON, Index, Boolean
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from pgvector.sqlalchemy import Vector
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")

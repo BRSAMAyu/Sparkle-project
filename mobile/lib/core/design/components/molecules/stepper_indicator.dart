@@ -239,7 +239,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
                 ),
               ],
             ),
-          )).toList(),
+          ),).toList(),
       ),
     );
 

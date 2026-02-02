@@ -10,13 +10,15 @@ Supported Modes:
 - error_diagnosis: Error diagnosis loop
 """
 
-import asyncio
-from typing import AsyncGenerator, Dict, Any, Optional
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING, Any
+
 from loguru import logger
-from google.protobuf.timestamp import Timestamp
 
 from app.gen.agent.v1 import agent_service_pb2
 
+if TYPE_CHECKING:
+    from app.orchestration.orchestrator import ChatOrchestrator
 
 class MultiAgentWorkflowAdapter:
     """
@@ -44,7 +46,7 @@ class MultiAgentWorkflowAdapter:
         message: str,
         user_id: str,
         session_id: str,
-        context_data: Dict[str, Any],
+        context_data: dict[str, Any],
         stream_callback,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
@@ -136,7 +138,7 @@ class MultiAgentWorkflowAdapter:
         message: str,
         user_id: str,
         session_id: str,
-        context_data: Dict[str, Any],
+        context_data: dict[str, Any],
         stream_callback,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
@@ -228,7 +230,7 @@ class MultiAgentWorkflowAdapter:
         message: str,
         user_id: str,
         session_id: str,
-        context_data: Dict[str, Any],
+        context_data: dict[str, Any],
         stream_callback,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
@@ -329,7 +331,7 @@ async def execute_multi_agent_workflow(
     message: str,
     user_id: str,
     session_id: str,
-    context_data: Dict[str, Any],
+    context_data: dict[str, Any],
     stream_callback,
 ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
     """

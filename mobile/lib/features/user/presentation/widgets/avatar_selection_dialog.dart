@@ -18,9 +18,11 @@ class AvatarSelectionDialog extends StatelessWidget {
     required this.onAvatarSelected,
     super.key,
     this.currentAvatarUrl,
+    this.closeOnSelect = true,
   });
   final String? currentAvatarUrl;
   final ValueChanged<String> onAvatarSelected;
+  final bool closeOnSelect;
 
   static const List<AvatarOption> presets = [
     AvatarOption(
@@ -86,7 +88,9 @@ class AvatarSelectionDialog extends StatelessWidget {
             return GestureDetector(
               onTap: () {
                 onAvatarSelected(option.url);
-                Navigator.pop(context);
+                if (closeOnSelect) {
+                  Navigator.pop(context, option.url);
+                }
               },
               child: Column(
                 children: [

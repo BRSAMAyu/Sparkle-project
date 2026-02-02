@@ -167,7 +167,12 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	cd backend && python grpc_server.py
+	@bash backend/scripts/run_grpc_with_env.sh
+
+# Python FastAPI 服务
+api-server:
+	@echo "🚀 Starting Python FastAPI Server..."
+	cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."
@@ -268,9 +273,10 @@ dev-all:
 	@echo "✅ Step 1 Complete! Infrastructure is ready."
 	@echo ""
 	@echo "Next steps (run in separate terminals):"
-	@echo "  2️⃣  make celery-up      # Start Celery task queue"
-	@echo "  3️⃣  make grpc-server    # Start Python gRPC server"
-	@echo "  4️⃣  make gateway-run    # Start Go Gateway"
+	@echo "  2️⃣  make api-server     # Start Python FastAPI server"
+	@echo "  3️⃣  make celery-up      # Start Celery task queue"
+	@echo "  4️⃣  make grpc-server    # Start Python gRPC server"
+	@echo "  5️⃣  make gateway-run    # Start Go Gateway"
 	@echo ""
 	@echo "📊 Monitoring:"
 	@echo "   - Flower: http://localhost:5555"

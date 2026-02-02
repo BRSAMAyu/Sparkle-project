@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.core.cache import cache_service
 from app.learning.prompt_bandit import PromptBandit
-from app.services.template_registry import TemplateRegistry, TemplateVariant, TemplateEntry
+from app.services.template_registry import TemplateEntry, TemplateRegistry, TemplateVariant
 
 
 @dataclass
@@ -26,7 +26,7 @@ class _SafeDict(dict):
 
 
 class TemplateService:
-    def __init__(self, registry: TemplateRegistry, bandit: Optional[PromptBandit] = None):
+    def __init__(self, registry: TemplateRegistry, bandit: PromptBandit | None = None):
         self.registry = registry
         self.bandit = bandit
 
@@ -89,5 +89,5 @@ class TemplateService:
         await cache_service.set(recent_key, updated, ttl=86400)
         return selected
 
-    def render(self, template: SelectedTemplate, variables: Dict[str, Any]) -> str:
+    def render(self, template: SelectedTemplate, variables: dict[str, Any]) -> str:
         return template.content.format_map(_SafeDict(variables))

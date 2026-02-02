@@ -1,7 +1,6 @@
 """
 Redis connection helpers.
 """
-from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 PLACEHOLDER_PASSWORDS = {
@@ -14,7 +13,7 @@ PLACEHOLDER_PASSWORDS = {
 }
 
 
-def normalize_redis_password(value: Optional[str]) -> Optional[str]:
+def normalize_redis_password(value: str | None) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
@@ -27,7 +26,7 @@ def normalize_redis_password(value: Optional[str]) -> Optional[str]:
     return stripped
 
 
-def resolve_redis_password(redis_url: str, redis_password: Optional[str]) -> Tuple[Optional[str], str]:
+def resolve_redis_password(redis_url: str, redis_password: str | None) -> tuple[str | None, str]:
     try:
         parsed = urlparse(redis_url or "")
         if parsed.password is not None:

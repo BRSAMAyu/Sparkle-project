@@ -12,42 +12,41 @@ ChatOrchestrator - 生产级实现
 8. ✅ 健康检查: 内置健康状态
 """
 
-import json
 import asyncio
+import json
 import time
-from typing import AsyncGenerator, List, Dict, Optional, Any, Set
-from datetime import datetime
 import uuid
+from collections.abc import AsyncGenerator
+from datetime import datetime
+from typing import Any
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from opentelemetry import trace
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Prometheus metrics
 try:
-    from prometheus_client import Counter, Histogram, Gauge
+    from prometheus_client import Counter, Gauge, Histogram
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
     logger.warning("Prometheus not available, metrics disabled")
 
-from app.services.llm_service import llm_service
-from app.services.knowledge_service import KnowledgeService
-from app.services.galaxy_service import GalaxyService
-from app.services.graph_knowledge_service import GraphKnowledgeService
-from app.services.user_service import UserService
-from app.orchestration.prompts import build_system_prompt
-from app.orchestration.executor import ToolExecutor
-from app.orchestration.state_manager import SessionStateManager
-from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-from app.orchestration.validator import RequestValidator, ValidationResult
+from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
+from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.prompts import build_system_prompt
+from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.token_tracker import TokenTracker
+from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
-from app.gen.agent.v1 import agent_service_pb2
-from app.config import settings
+from app.services.galaxy_service import GalaxyService
+from app.services.graph_knowledge_service import GraphKnowledgeService
+from app.services.knowledge_service import KnowledgeService
+from app.services.llm_service import llm_service
+from app.services.user_service import UserService
 
 TRACER = trace.get_tracer(__name__)
 
@@ -152,7 +151,7 @@ class MessageTracker:
     """消息 ID 追踪器 - 防止并发重复处理，支持 TTL 清理"""
 
     def __init__(self, max_size: int = 10000, ttl_seconds: int = 3600):
-        self.processed_messages: Dict[str, float] = {}
+        self.processed_messages: dict[str, float] = {}
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
         self.lock = asyncio.Lock()
@@ -214,7 +213,7 @@ class ProductionChatOrchestrator:
 
     def __init__(
         self,
-        db_session: Optional[AsyncSession] = None,
+        db_session: AsyncSession | None = None,
         redis_client=None,
         # 熔断器配置
         circuit_breaker_threshold: int = 5,
@@ -244,7 +243,7 @@ class ProductionChatOrchestrator:
         self.enable_metrics = enable_metrics and PROMETHEUS_AVAILABLE
         self.enable_circuit_breaker = enable_circuit_breaker
         self.max_concurrent_sessions = max_concurrent_sessions
-        self.active_sessions: Set[str] = set()
+        self.active_sessions: set[str] = set()
         self.session_lock = asyncio.Lock()
 
         # 初始化可选组件
@@ -323,7 +322,7 @@ class ProductionChatOrchestrator:
         except Exception as e:
             logger.warning(f"Failed to update state: {e}")
 
-    async def _check_idempotency(self, session_id: str, request_id: str) -> Optional[Dict[str, Any]]:
+    async def _check_idempotency(self, session_id: str, request_id: str) -> dict[str, Any] | None:
         """检查幂等性（带降级）"""
         if not self.state_manager:
             return None
@@ -360,7 +359,7 @@ class ProductionChatOrchestrator:
         except Exception as e:
             logger.warning(f"Lock release failed: {e}")
 
-    async def _cache_response(self, session_id: str, request_id: str, response_data: Dict[str, Any]):
+    async def _cache_response(self, session_id: str, request_id: str, response_data: dict[str, Any]):
         """缓存响应（带降级）"""
         if not self.state_manager:
             return
@@ -370,7 +369,7 @@ class ProductionChatOrchestrator:
         except Exception as e:
             logger.warning(f"Response caching failed: {e}")
 
-    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """构建用户上下文（带错误处理和降级）"""
         try:
             user_service = UserService(db_session, self.redis)
@@ -420,7 +419,7 @@ class ProductionChatOrchestrator:
             logger.error(f"Failed to build user context: {e}")
             return self._get_fallback_context()
 
-    def _get_fallback_context(self) -> Dict[str, Any]:
+    def _get_fallback_context(self) -> dict[str, Any]:
         """获取降级上下文"""
         return {
             "user_context": None,
@@ -430,7 +429,7 @@ class ProductionChatOrchestrator:
             "llm_profile": None,
         }
 
-    async def _build_conversation_context(self, session_id: str, user_id: str) -> Dict[str, Any]:
+    async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
         """构建对话上下文（带错误处理）"""
         if not self.context_pruner:
             logger.warning("ContextPruner not available")
@@ -453,7 +452,7 @@ class ProductionChatOrchestrator:
             logger.error(f"Failed to prune conversation: {e}")
             return {"messages": [], "summary": None}
 
-    async def _get_tools_schema(self) -> List[Dict[str, Any]]:
+    async def _get_tools_schema(self) -> list[dict[str, Any]]:
         """获取工具模式（带错误处理）"""
         try:
             return dynamic_tool_registry.get_openai_tools_schema()
@@ -499,7 +498,7 @@ class ProductionChatOrchestrator:
         user_id: str,
         duration: float,
         status: str,
-        error: Optional[str] = None
+        error: str | None = None
     ):
         """结构化日志"""
         log_data = {
@@ -520,8 +519,8 @@ class ProductionChatOrchestrator:
     async def process_stream(
         self,
         request: agent_service_pb2.ChatRequest,
-        db_session: Optional[AsyncSession] = None,
-        context_data: Dict[str, Any] = None
+        db_session: AsyncSession | None = None,
+        context_data: dict[str, Any] = None
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
         处理聊天请求（生产级实现）
@@ -596,6 +595,9 @@ class ProductionChatOrchestrator:
 
         active_db = db_session or self.db_session
 
+        lock_acquired = False
+        lock_renewal_task: asyncio.Task | None = None
+        lock_renewal_stop: asyncio.Event | None = None
         try:
             # 验证请求
             with TRACER.start_as_current_span("request.validate"):
@@ -631,6 +633,11 @@ class ProductionChatOrchestrator:
             if not lock_acquired:
                 raise ValueError("Another request is processing for this session")
 
+            # Start lock renewal for long-running requests
+            lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
+                session_id, request_id, interval=10.0
+            )
+
             # 构建上下文
             with TRACER.start_as_current_span("context.build"):
                 with REQUEST_DURATION.labels(operation="context_building").time():
@@ -647,6 +654,7 @@ class ProductionChatOrchestrator:
                         if plan_id_str and active_db:
                             try:
                                 from uuid import UUID
+
                                 from app.core.plan_context import PlanContextBuilder
                                 plan_id = UUID(plan_id_str)
                                 plan_builder = PlanContextBuilder(active_db, self.redis)
@@ -847,9 +855,21 @@ class ProductionChatOrchestrator:
             )
             llm_profile_meta = {}
             if isinstance(user_context_data, dict):
-                llm_profile_meta = user_context_data.get("llm_profile") or {}
-                if not isinstance(llm_profile_meta, dict):
-                    llm_profile_meta = {}
+                llm_profile = user_context_data.get("llm_profile")
+                if llm_profile:
+                    # Handle both dict and JSON string cases
+                    if isinstance(llm_profile, str):
+                        try:
+                            import json
+                            llm_profile_meta = json.loads(llm_profile)
+                        except (json.JSONDecodeError, TypeError):
+                            logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
+                            llm_profile_meta = {}
+                    elif isinstance(llm_profile, dict):
+                        llm_profile_meta = llm_profile
+                    else:
+                        logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
+                        llm_profile_meta = {}
             response_metadata = {
                 "response_id": response_id,
                 "trace_id": trace_id,
@@ -861,19 +881,20 @@ class ProductionChatOrchestrator:
             try:
                 from app.services.decision_record_service import DecisionRecordService
 
-                decision_service = DecisionRecordService(self.db)
-                await decision_service.record_decision(
-                    user_id=uuid.UUID(str(user_id)),
-                    module="ai",
-                    action="generate_response",
-                    preference_version=(user_context_data or {}).get("preference_version", 0),
-                    preferences_snapshot={
-                        "verbosity": llm_profile_meta.get("verbosity_target"),
-                        "temperature": llm_profile_meta.get("temperature"),
-                        "tone": llm_profile_meta.get("tone"),
-                    },
-                    outcome=f"Generated response with {len(full_response)} chars",
-                )
+                if self.db_session is not None:
+                    decision_service = DecisionRecordService(self.db_session)
+                    await decision_service.record_decision(
+                        user_id=uuid.UUID(str(user_id)),
+                        module="ai",
+                        action="generate_response",
+                        preference_version=(user_context_data or {}).get("preference_version", 0),
+                        preferences_snapshot={
+                            "verbosity": llm_profile_meta.get("verbosity_target"),
+                            "temperature": llm_profile_meta.get("temperature"),
+                            "tone": llm_profile_meta.get("tone"),
+                        },
+                        outcome=f"Generated response with {len(full_response)} chars",
+                    )
             except Exception as e:
                 logger.warning(f"Failed to record decision: {e}")
 
@@ -934,11 +955,18 @@ class ProductionChatOrchestrator:
             )
 
         finally:
-            # 清理会话
-            await self._release_session_lock(session_id, request_id)
+            # Stop lock renewal task
+            if lock_renewal_task and lock_renewal_stop:
+                try:
+                    await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
+                except Exception as e:
+                    logger.warning(f"Failed to stop lock renewal: {e}")
+            # 清理会话 - only release lock if it was acquired
+            if lock_acquired:
+                await self._release_session_lock(session_id, request_id)
             await self._track_session(session_id, add=False)
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """获取健康状态"""
         return {
             "healthy": self._healthy,

@@ -1,23 +1,24 @@
-from uuid import UUID
 from datetime import date, datetime, timedelta
-from typing import Dict, Any, List, Optional
-from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, desc
+from uuid import UUID
 
-from app.models.user import User
-from app.models.task import Task, TaskStatus
-from app.models.galaxy import StudyRecord
+from loguru import logger
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.analytics import UserDailyMetric
 from app.models.chat import ChatMessage, MessageRole
 from app.models.cognitive import CognitiveFragment
-from app.models.analytics import UserDailyMetric
+from app.models.galaxy import StudyRecord
+from app.models.task import Task, TaskStatus
+from app.models.user import User
 from app.services.compliance.crypto_erase import CryptoEraseManager
+
 
 class AnalyticsService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def calculate_daily_metrics(self, user_id: UUID, target_date: date) -> Optional[UserDailyMetric]:
+    async def calculate_daily_metrics(self, user_id: UUID, target_date: date) -> UserDailyMetric | None:
         """
         Calculate and store/update daily metrics for a specific user and date.
         """
@@ -93,7 +94,7 @@ class AnalyticsService:
             )
             cog_result = await self.db.execute(cog_query)
             fragments = cog_result.scalars().all()
-            
+
             anxiety_score = 0.0
             if fragments:
                 crypto = CryptoEraseManager(self.db)
@@ -140,7 +141,7 @@ class AnalyticsService:
             metric.review_count = review_count
             metric.anxiety_score = anxiety_score
             metric.chat_messages_count = chat_count
-            
+
             await self.db.commit()
             await self.db.refresh(metric)
             logger.info(f"Daily metrics calculated successfully for user {user_id}")
@@ -159,7 +160,7 @@ class AnalyticsService:
             user_query = select(User).where(User.id == user_id)
             user_result = await self.db.execute(user_query)
             user = user_result.scalar_one_or_none()
-            
+
             if not user:
                 logger.warning(f"User {user_id} not found when generating summary")
                 return "User not found."
@@ -172,7 +173,7 @@ class AnalyticsService:
                     UserDailyMetric.date >= seven_days_ago
                 )
             ).order_by(desc(UserDailyMetric.date))
-            
+
             metrics_result = await self.db.execute(metrics_query)
             recent_metrics = metrics_result.scalars().all()
 
@@ -181,13 +182,13 @@ class AnalyticsService:
             avg_focus = total_focus / len(recent_metrics) if recent_metrics else 0
             total_completed = sum(m.tasks_completed for m in recent_metrics)
             avg_anxiety = sum(m.anxiety_score for m in recent_metrics) / len(recent_metrics) if recent_metrics else 0
-            
+
             # Format Text
             summary = f"""
             [User Profile Analysis]
             - Flame Level: {user.flame_level} (Brightness: {user.flame_brightness:.2f})
             - Learning Style: Depth Preference {user.depth_preference:.2f}, Curiosity {user.curiosity_preference:.2f}
-            
+
             [Recent Activity (Last 7 Days)]
             - Total Focus Time: {total_focus} minutes (Avg {avg_focus:.1f} min/day)
             - Tasks Completed: {total_completed}

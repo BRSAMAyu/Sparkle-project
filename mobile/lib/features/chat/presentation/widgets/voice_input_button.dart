@@ -67,7 +67,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
   /// 显示权限申请对话框
   void _showPermissionDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('需要麦克风权限'),
@@ -104,7 +104,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       _isRecording = true;
       _isProcessing = false;
       _recordingDuration = 0;
-      _currentTranscription = null;
     });
 
     _animationController?.forward();
@@ -285,7 +284,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         height: 22,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
         ),
       );
     }
@@ -296,14 +295,14 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         children: [
           Icon(
             Icons.mic,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             size: 20,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
               fontSize: 8,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontWeight: DS.fontWeightBold,
             ),
           ),

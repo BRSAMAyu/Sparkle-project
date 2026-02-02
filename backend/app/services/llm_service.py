@@ -1,19 +1,24 @@
-import json
-import inspect
-import uuid
-from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator, Union
 import asyncio
-from loguru import logger
+import inspect
+import json
+import uuid
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
+from typing import Any
+
+from fastapi import HTTPException
+from loguru import logger
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.agent_profiles import AgentRole, TaskType
+from app.core.llm_router import LLMSelection, llm_router
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
-from app.core.llm_router import llm_router, LLMSelection, select_model_for_agent
-from app.core.agent_profiles import AgentRole, TaskType
-from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
+from app.services.llm.fallback import FallbackReason, llm_fallback_manager
+from app.services.llm.concurrency import llm_concurrency
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -26,7 +31,7 @@ from app.services.circuit_breaker import circuit_breaker_service, CircuitBreaker
 # 2. 可以按需添加更多关键词和响应
 # ==========================================
 
-DEMO_MOCK_RESPONSES: Dict[str, str] = {
+DEMO_MOCK_RESPONSES: dict[str, str] = {
     "帮我制定高数复习计划": """好的！基于你的学习情况，我为你制定了一个高效的高数复习计划。
 
 📚 **高数冲刺复习计划**
@@ -112,21 +117,21 @@ DEMO_MOCK_RESPONSES: Dict[str, str] = {
 @dataclass
 class LLMResponse:
     content: str
-    tool_calls: Optional[List[Dict]] = None
+    tool_calls: list[dict] | None = None
     finish_reason: str = "stop"
 
 @dataclass
 class StreamChunk:
     type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage"
-    content: Optional[str] = None
-    tool_call_id: Optional[str] = None
-    tool_name: Optional[str] = None
-    arguments: Optional[str] = None # For tool_call_chunk
-    full_arguments: Optional[Dict] = None # For tool_call_end
+    content: str | None = None
+    tool_call_id: str | None = None
+    tool_name: str | None = None
+    arguments: str | None = None # For tool_call_chunk
+    full_arguments: dict | None = None # For tool_call_end
     # Token usage fields
-    prompt_tokens: Optional[int] = None
-    completion_tokens: Optional[int] = None
-    total_tokens: Optional[int] = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
 
 tracer = trace.get_tracer(__name__)
 
@@ -147,7 +152,7 @@ class LLMService:
 
     def __init__(
         self,
-        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
+        agent_role: AgentRole | str | Any = AgentRole.GENERATION,
         enable_dynamic_routing: bool = True,
     ):
         """
@@ -160,16 +165,19 @@ class LLMService:
         self.enable_dynamic_routing = enable_dynamic_routing
         self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False))
 
+        # 并发安全保护
+        self._state_lock = asyncio.Lock()
+
         # 当前选中的模型配置
-        self._current_selection: Optional[LLMSelection] = None
-        self._provider: Optional[LLMProvider] = None
+        self._current_selection: LLMSelection | None = None
+        self._provider: LLMProvider | None = None
 
         # 向后兼容：保留原有的模型名称
         self.chat_model: str = ""
         self.reason_model: str = ""
 
         # GLM 特有参数
-        self._extra_body: Optional[Dict[str, Any]] = None
+        self._extra_body: dict[str, Any] | None = None
 
         if enable_dynamic_routing:
             # 使用新的 LLMRouter
@@ -236,6 +244,22 @@ class LLMService:
 
         logger.info(f"[Legacy] LLMService initialized with provider={provider_type}")
 
+    async def _get_state_snapshot(self) -> dict[str, Any]:
+        """
+        获取状态快照（线程安全）
+
+        Returns:
+            Dict with provider, chat_model, reason_model, extra_body, current_selection
+        """
+        async with self._state_lock:
+            return {
+                "provider": self._provider,
+                "chat_model": self.chat_model,
+                "reason_model": self.reason_model,
+                "extra_body": self._extra_body,
+                "current_selection": self._current_selection,
+            }
+
     @property
     def provider(self) -> LLMProvider:
         """获取当前provider（向后兼容）"""
@@ -248,9 +272,9 @@ class LLMService:
         """获取默认模型（向后兼容）"""
         return self.chat_model
 
-    def switch_model_for_task(self, task_type: TaskType):
+    async def switch_model_for_task(self, task_type: TaskType):
         """
-        根据任务类型动态切换模型
+        根据任务类型动态切换模型（线程安全）
 
         Args:
             task_type: 任务类型（如 TaskType.DEEP_REASONING）
@@ -259,27 +283,30 @@ class LLMService:
             logger.warning("Dynamic routing is disabled, cannot switch model")
             return
 
-        selection = llm_router.select_model(self.agent_role, task_type)
-        kwargs = llm_router.get_openai_client_kwargs(selection)
+        # 保护状态变更
+        async with self._state_lock:
+            selection = llm_router.select_model(self.agent_role, task_type)
+            kwargs = llm_router.get_openai_client_kwargs(selection)
 
-        self._provider = OpenAICompatibleProvider(
-            api_key=kwargs["api_key"],
-            base_url=kwargs["base_url"]
-        )
-        self.chat_model = kwargs["model"]
-        self.reason_model = kwargs["model"]
-        self._current_selection = selection
+            self._provider = OpenAICompatibleProvider(
+                api_key=kwargs["api_key"],
+                base_url=kwargs["base_url"]
+            )
+            self.chat_model = kwargs["model"]
+            self.reason_model = kwargs["model"]
+            self._current_selection = selection
+            self._extra_body = kwargs.get("extra_body")
 
-        logger.info(
-            f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
-        )
+            logger.info(
+                f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
+            )
 
-    def get_current_selection(self) -> Optional[LLMSelection]:
+    def get_current_selection(self) -> LLMSelection | None:
         """获取当前的模型选择（用于观测）"""
         return self._current_selection
 
     @staticmethod
-    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+    def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
         if isinstance(agent_role, AgentRole):
             return agent_role
         if isinstance(agent_role, str):
@@ -315,7 +342,7 @@ class LLMService:
                 return AgentRole.GENERATION
         return AgentRole.GENERATION
 
-    def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
+    def _check_demo_match(self, messages: list[dict[str, str]]) -> str | None:
         """
         检查是否匹配演示关键词
 
@@ -355,24 +382,19 @@ class LLMService:
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> str:
         """
-        Send a chat request to the LLM.
+        Send a chat request to the LLM with automatic fallback support.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
-            
+
             # 🎭 Demo Mode 拦截
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -381,42 +403,106 @@ class LLMService:
                 await asyncio.sleep(1.0)
                 return mock_response
 
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
+
             logger.debug(f"Sending chat request to model: {model}")
-            
+
+            # 使用回退管理器执行请求
+            async def _call_with_selection(selection: LLMSelection) -> str:
+                # 获取 provider 名称用于并发控制
+                provider_name = selection.config.provider.value
+
+                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
+                # 否则回退到 DeepSeek 时会继续使用 Zhipu 的 base_url
+                current_provider = self.provider
+                if selection != self._current_selection:
+                    kwargs = llm_router.get_openai_client_kwargs(selection)
+                    current_provider = OpenAICompatibleProvider(
+                        api_key=kwargs["api_key"],
+                        base_url=kwargs["base_url"]
+                    )
+
+                try:
+                    async with llm_concurrency.acquire(provider_name):
+                        response = await current_provider.chat(
+                            messages,
+                            model=selection.config.model_name,
+                            temperature=selection.config.temperature,
+                            **kwargs if 'kwargs' in locals() else {}
+                        )
+                        return response
+                except Exception as e:
+                    # 让回退管理器判断是否需要重试
+                    reason = llm_fallback_manager._detect_fallback_reason(e)
+                    if reason:
+                        logger.warning(
+                            f"[LLM] Request to {selection.config.model_name} failed: "
+                            f"reason={reason.value}, will attempt fallback"
+                        )
+                    raise e
+
             try:
-                # Circuit Breaker Check
+                # 检查熔断器
                 await circuit_breaker_service.check("primary_llm")
-                
-                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
-                
-                # Record Success
-                await circuit_breaker_service.record_success("primary_llm")
-                return response
+
+                # 使用回退管理器执行
+                if self._current_selection:
+                    response = await llm_fallback_manager.execute_with_fallback(
+                        self._current_selection,
+                        _call_with_selection,
+                        operation_type="chat",
+                    )
+
+                    # 记录成功
+                    await circuit_breaker_service.record_success("primary_llm")
+                    return response
+                else:
+                    # 没有当前选择，直接调用
+                    response = await _call_with_selection(
+                        type('obj', (object,), {'config': type('obj', (object,), {
+                            'model_name': model,
+                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url(), 'temperature': temperature})
+                        })})
+                    )
+                    await circuit_breaker_service.record_success("primary_llm")
+                    return response
+
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                # Optional: Return a degraded response if possible, or re-raise
                 raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
             except Exception as e:
-                # Record Failure
                 await circuit_breaker_service.record_failure("primary_llm")
-                logger.error(f"LLM Chat Error (Circuit Breaker recording): {e}")
+                logger.error(f"LLM Chat Error: {e}")
                 raise e
+
+    def _get_provider_name_from_url(self) -> str:
+        """从 provider 获取提供商名称"""
+        if hasattr(self.provider, 'base_url'):
+            url_lower = self.provider.base_url.lower()
+            if "bigmodel" in url_lower or "zhipu" in url_lower:
+                return "zhipu"
+            elif "deepseek" in url_lower:
+                return "deepseek"
+            elif "xiaomi" in url_lower or "mimo" in url_lower:
+                return "xiaomi"
+            elif "dashscope" in url_lower or "aliyun" in url_lower:
+                return "dashscope"
+        return "default"
 
     async def reason(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.2,
         **kwargs
     ) -> str:
         """
         Send a deep reasoning request to the LLM.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
         model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", model)
@@ -426,6 +512,12 @@ class LLMService:
                 span.set_attribute("llm.demo_mode", True)
                 await asyncio.sleep(1.0)
                 return mock_response
+
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
 
             try:
                 await circuit_breaker_service.check("primary_llm")
@@ -442,8 +534,8 @@ class LLMService:
 
     async def reason_json(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.2,
         **kwargs
     ) -> Any:
@@ -453,7 +545,7 @@ class LLMService:
         raw = await self.reason(messages, model=model, temperature=temperature, **kwargs)
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
-        def _extract_json_block(text: str) -> Optional[str]:
+        def _extract_json_block(text: str) -> str | None:
             for start, end in (("{", "}"), ("[", "]")):
                 if start in text and end in text:
                     return text[text.find(start):text.rfind(end) + 1]
@@ -470,8 +562,8 @@ class LLMService:
 
     async def chat_json(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.3,
         **kwargs
     ) -> Any:
@@ -481,7 +573,7 @@ class LLMService:
         raw = await self.chat(messages, model=model, temperature=temperature, **kwargs)
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
-        def _extract_json_block(text: str) -> Optional[str]:
+        def _extract_json_block(text: str) -> str | None:
             for start, end in (("{", "}"), ("[", "]")):
                 if start in text and end in text:
                     return text[text.find(start):text.rfind(end) + 1]
@@ -498,26 +590,16 @@ class LLMService:
 
     async def stream_chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
-        user_context: Optional[Dict[str, Any]] = None,
+        user_context: dict[str, Any] | None = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
-        Stream chat response from the LLM.
+        Stream chat response from the LLM with automatic fallback support.
         """
-        if not self.provider:
-            raise HTTPException(
-                status_code=501,
-                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
-            )
-        model = model or self.chat_model
-        temperature = self._resolve_temperature(user_context, temperature)
         with tracer.start_as_current_span("llm_stream_chat") as span:
-            span.set_attribute("llm.model", model)
-            span.set_attribute("llm.temperature", temperature)
-            
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
             mock_response = self._check_demo_match(messages)
             if mock_response:
@@ -531,21 +613,156 @@ class LLMService:
                     await asyncio.sleep(0.03)
                 return
 
-            logger.debug(f"Starting stream chat with model: {model}")
-            stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
-            if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
-                stream = await stream
-            if not hasattr(stream, "__aiter__"):
-                raise TypeError("stream_chat must return an async iterator")
-            async for chunk in stream:
-                yield chunk
+            if self.demo_mode and not self.provider:
+                span.set_attribute("llm.demo_mode", True)
+                fallback = "（演示模式）当前未配置可用的 LLM 服务，请稍后再试。"
+                chunk_size = 10
+                for i in range(0, len(fallback), chunk_size):
+                    yield fallback[i:i + chunk_size]
+                    await asyncio.sleep(0.03)
+                return
+
+            if not self.provider:
+                raise HTTPException(
+                    status_code=501,
+                    detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+                )
+
+            import time as _time
+            model = model or self.chat_model
+            temperature = self._resolve_temperature(user_context, temperature)
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
+
+            # Performance logging
+            start_time = _time.perf_counter()
+            first_chunk_time = None
+            chunk_count = 0
+            logger.info(f"[LLM] stream_chat START: model={model}, clear_thinking={self._extra_body}")
+
+            # 定义流式调用函数
+            async def _stream_with_selection(selection: LLMSelection) -> AsyncGenerator[str, None]:
+                # 获取 provider 名称用于并发控制
+                provider_name = selection.config.provider.value
+
+                # 💡 核心修复：为回退后的模型创建对应的 Provider 实例
+                current_provider = self.provider
+                if selection != self._current_selection:
+                    kwargs = llm_router.get_openai_client_kwargs(selection)
+                    current_provider = OpenAICompatibleProvider(
+                        api_key=kwargs["api_key"],
+                        base_url=kwargs["base_url"]
+                    )
+
+                try:
+                    async with llm_concurrency.acquire(provider_name):
+                        async for chunk in current_provider.stream_chat(
+                            messages,
+                            model=selection.config.model_name,
+                            temperature=selection.config.temperature,
+                            **kwargs if 'kwargs' in locals() else {}
+                        ):
+                            yield chunk
+                except Exception as e:
+                    logger.error(f"[LLM] Stream processing failed for model {selection.config.model_name}: {e}")
+                    raise e
+
+            try:
+                await circuit_breaker_service.check("primary_llm")
+
+                # 流式回退处理（只在首次连接前）
+                if self._current_selection:
+                    # 使用回退管理器的流式方法
+                    last_error = None
+                    tried_models = set()
+
+                    # 尝试原始模型
+                    for attempt in range(llm_fallback_manager.max_fallback_attempts):
+                        selection = self._current_selection
+
+                        # 如果不是第一次尝试，获取回退候选
+                        if attempt > 0:
+                            candidates = llm_fallback_manager._get_fallback_candidates(
+                                self._current_selection,
+                                tried_models,
+                            )
+                            if not candidates:
+                                break
+                            selection = candidates[0]
+                            tried_models.add(selection.config.model_name)
+                            logger.info(f"[LLM] Fallback attempt {attempt}: trying {selection.config.model_name}")
+
+                        try:
+                            async for chunk in _stream_with_selection(selection):
+                                chunk_count += 1
+                                if first_chunk_time is None:
+                                    first_chunk_time = _time.perf_counter()
+                                    ttfc = (first_chunk_time - start_time) * 1000
+                                    logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={selection.config.model_name}, ttfc={ttfc:.0f}ms")
+                                yield chunk
+
+                            # 成功完成流式传输
+                            await circuit_breaker_service.record_success("primary_llm")
+
+                            # 记录回退成功
+                            if attempt > 0:
+                                logger.success(
+                                    f"[LLM] Stream fallback SUCCESS: "
+                                    f"final_model={selection.config.model_name}"
+                                )
+                            return  # 退出函数
+
+                        except Exception as e:
+                            last_error = e
+                            reason = llm_fallback_manager._detect_fallback_reason(e)
+                            if reason:
+                                logger.warning(
+                                    f"[LLM] Stream attempt {attempt + 1} failed: "
+                                    f"model={selection.config.model_name}, reason={reason.value}"
+                                )
+                                model_key = llm_fallback_manager._get_model_key_from_selection(selection)
+                                await llm_fallback_manager.health_tracker.record_failure(model_key, reason)
+                                tried_models.add(model_key)
+                                # 短暂延迟后重试
+                                await asyncio.sleep(llm_fallback_manager._calculate_backoff_delay(attempt))
+                            else:
+                                # 非回退类型错误，直接抛出
+                                raise e
+
+                    # 所有尝试都失败
+                    await circuit_breaker_service.record_failure("primary_llm")
+                    if last_error:
+                        raise last_error
+                    raise HTTPException(status_code=503, detail="All LLM models unavailable")
+
+                else:
+                    # 没有当前选择，直接调用
+                    async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                        chunk_count += 1
+                        if first_chunk_time is None:
+                            first_chunk_time = _time.perf_counter()
+                            ttfc = (first_chunk_time - start_time) * 1000
+                            logger.info(f"[LLM] stream_chat FIRST_CHUNK: model={model}, ttfc={ttfc:.0f}ms")
+                        yield chunk
+                    await circuit_breaker_service.record_success("primary_llm")
+
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Stream Chat Error: {e}")
+                raise e
+            finally:
+                elapsed = (_time.perf_counter() - start_time) * 1000
+                logger.info(f"[LLM] stream_chat END: model={model}, elapsed={elapsed:.0f}ms, chunks={chunk_count}")
 
     async def chat_with_tools(
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        conversation_history: Optional[List[Dict]] = None
+        tools: list[dict[str, Any]],
+        conversation_history: list[dict] | None = None
     ) -> LLMResponse:
         """
         带工具调用的聊天
@@ -581,10 +798,10 @@ class LLMService:
                     request_params["extra_body"] = self._extra_body
 
                 response = await self.provider.client.chat.completions.create(**request_params)
-                
+
                 choice = response.choices[0]
                 message = choice.message
-                
+
                 if response.usage:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
@@ -608,11 +825,11 @@ class LLMService:
                 )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
-    
+
     async def continue_with_tool_results(
         self,
-        conversation_history: List[Dict],
-        tool_results: List[Dict]
+        conversation_history: list[dict],
+        tool_results: list[dict]
     ) -> LLMResponse:
         """
         将工具执行结果反馈给 LLM，获取最终回复
@@ -623,7 +840,7 @@ class LLMService:
                 "role": "tool",
                 "content": json.dumps(result, ensure_ascii=False)
             })
-        
+
         if not self.provider:
             raise HTTPException(
                 status_code=501,
@@ -648,7 +865,7 @@ class LLMService:
                 response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
-                
+
                 if response.usage:
                     span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
@@ -661,13 +878,13 @@ class LLMService:
                 )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
-    
+
     async def chat_stream_with_tools(
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        user_context: Optional[Dict[str, Any]] = None,
+        tools: list[dict[str, Any]],
+        user_context: dict[str, Any] | None = None,
         temperature: float = 0.7,
     ) -> AsyncIterator[StreamChunk]:
         """
@@ -758,7 +975,7 @@ class LLMService:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
     @staticmethod
-    def _resolve_temperature(user_context: Optional[Dict[str, Any]], default: float) -> float:
+    def _resolve_temperature(user_context: dict[str, Any] | None, default: float) -> float:
         if not user_context or not isinstance(user_context, dict):
             return default
         llm_profile = user_context.get("llm_profile", {}) or {}
@@ -769,15 +986,24 @@ class LLMService:
         except (TypeError, ValueError):
             return default
 
+    def is_thinking_mode(self) -> bool:
+        """
+        检查当前模型是否启用了思考模式 (clear_thinking=False)
+
+        Returns:
+            True 如果使用思考模式，False 否则
+        """
+        return self._extra_body is not None and self._extra_body.get("clear_thinking") is False
+
     async def generate_push_content(
         self,
         user_nickname: str,
         persona: str,
         trigger_type: str,
-        context_data: Dict,
+        context_data: dict,
         depth_preference: float = 0.5,
         curiosity_preference: float = 0.5,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Generate "irresistible" push notification content based on persona.
         """
@@ -801,7 +1027,7 @@ class LLMService:
         selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"])
         if exploration_instruction:
             selected_persona_prompt = f"{selected_persona_prompt} {exploration_instruction}"
-        
+
         trigger_desc = ""
         if trigger_type == "memory":
             nodes = ", ".join(context_data.get("nodes", []))
@@ -810,19 +1036,19 @@ class LLMService:
             trigger_desc = f"Deadline approaching for plan '{context_data.get('plan_name')}'."
         elif trigger_type == "inactivity":
             trigger_desc = "User hasn't studied for over 24 hours."
-        
+
         system_prompt = f"You are Sparkle, an AI Learning Assistant. {selected_persona_prompt} Context: {trigger_desc}"
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Generate push notification now."}
         ]
-        
+
         try:
             with tracer.start_as_current_span("llm_generate_push") as span:
                 span.set_attribute("llm.persona", persona)
                 span.set_attribute("llm.trigger", trigger_type)
-                
+
                 response_text = await self.chat(messages, temperature=0.8)
                 cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
                 content = json.loads(cleaned_text)
@@ -839,7 +1065,7 @@ class LLMService:
 llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 
 # 创建专用角色的服务实例（按需使用）
-def get_llm_service(agent_role: Union[AgentRole, str]) -> LLMService:
+def get_llm_service(agent_role: AgentRole | str) -> LLMService:
     """
     获取指定角色的LLM服务实例
 
@@ -879,10 +1105,10 @@ async def build_prompt_with_seed_examples(
     system_prompt: str,
     user_message: str,
     user_id: str,
-    subject: Optional[str] = None,
-    db: Optional[AsyncSession] = None,
+    subject: str | None = None,
+    db: AsyncSession | None = None,
     count: int = 3,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     使用种子库的 few-shot 示例增强 prompt
 
@@ -897,8 +1123,8 @@ async def build_prompt_with_seed_examples(
     Returns:
         增强后的消息列表
     """
-    from app.services.seed_library_service import SeedLibraryService
     from app.db.session import get_db
+    from app.services.seed_library_service import SeedLibraryService
 
     messages = [{"role": "system", "content": system_prompt}]
 
@@ -945,8 +1171,8 @@ async def get_reply_template(
     template_key: str,
     user_id: str,
     language: str = "zh",
-    db: Optional[AsyncSession] = None,
-) -> Optional[str]:
+    db: AsyncSession | None = None,
+) -> str | None:
     """
     获取回复模板
 
@@ -959,8 +1185,8 @@ async def get_reply_template(
     Returns:
         模板内容或 None
     """
-    from app.services.seed_library_service import SeedLibraryService
     from app.db.session import get_db
+    from app.services.seed_library_service import SeedLibraryService
 
     if db is None:
         db_gen = get_db()

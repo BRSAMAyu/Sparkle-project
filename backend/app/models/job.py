@@ -3,13 +3,12 @@
 Job Model - 用于处理耗时的后台任务
 """
 import enum
-from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, DateTime, JSON, Index
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.sql import func
-import uuid
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
+
 
 class JobType(str, enum.Enum):
     """任务类型枚举"""
@@ -46,16 +45,16 @@ class Job(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     type = Column(String(50), nullable=False)
     status = Column(String(20), nullable=False, default=JobStatus.PENDING)
-    
+
     params = Column(JSON, default={}, nullable=True)
     result = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
-    
+
     progress = Column(Integer, default=0)
-    
+
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     # 🆕 v2.1: 超时时间
     timeout_at = Column(DateTime(timezone=True), nullable=True)
 

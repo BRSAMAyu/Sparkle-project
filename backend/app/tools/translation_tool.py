@@ -2,16 +2,14 @@
 Translation Tool
 Provides text translation with segmentation, caching, and glossary support
 """
-from typing import Optional, List, Any
-from pydantic import BaseModel, Field
+from typing import Any
+
 from loguru import logger
+from pydantic import BaseModel, Field
+
+from app.services.translation_service import translation_service
 
 from .base import BaseTool, ToolCategory, ToolResult
-from app.services.translation_service import (
-    translation_service,
-    TranslationSegment
-)
-
 
 # Language mapping: natural language → ISO code
 LANGUAGE_MAP = {
@@ -61,11 +59,11 @@ class TranslateTextParams(BaseModel):
         default="natural",
         description="Style: 'concise', 'literal', 'natural'"
     )
-    glossary_id: Optional[str] = Field(
+    glossary_id: str | None = Field(
         default=None,
         description="Glossary ID for terminology (e.g., 'cs_terms_v1')"
     )
-    fingerprint: Optional[str] = Field(
+    fingerprint: str | None = Field(
         default=None,
         description="Content fingerprint for signal tracking (v2)"
     )
@@ -104,7 +102,7 @@ class TranslateTextTool(BaseTool):
         params: TranslateTextParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         """
         Execute translation with segmentation and caching

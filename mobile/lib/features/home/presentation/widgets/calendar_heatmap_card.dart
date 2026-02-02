@@ -35,13 +35,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
     // Load task data for current month
     final now = DateTime.now();
     final calendarState = ref.watch(taskCalendarProvider);
-
-    // Only load if the current month's data hasn't been loaded yet
-    // This prevents unnecessary reloads on every rebuild
-    final currentMonthKey = DateTime(now.year, now.month);
-    final hasCurrentMonthData = calendarState.taskSummaries.keys.any((date) =>
-        date.year == now.year && date.month == now.month,);
-    if (!hasCurrentMonthData) {
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    if (!calendarState.loadedMonths.contains(monthKey)) {
       ref.read(taskCalendarProvider.notifier).loadTasksForMonth(now);
     }
 
@@ -252,7 +247,9 @@ class _DayCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
       onTap: hasTasks ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -272,18 +269,29 @@ class _DayCell extends StatelessWidget {
               : null,
         ),
         alignment: Alignment.center,
-        child: isToday
-            ? Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w600,
-                  color: DS.brandPrimary70,
-                ),
-              )
-            : null,
+        child: Text(
+          '$day',
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+            color: _getTextColor(isDark, intensity),
+          ),
+        ),
       ),
     );
+  }
+
+  Color _getTextColor(bool isDark, int intensity) {
+    // High intensity (3-4) or selected = white text
+    if (intensity >= 3 || isSelected) {
+      return Colors.white;
+    }
+    // Low intensity (0-2) = use contrast color based on theme
+    if (isDark) {
+      return isToday ? DS.primaryBase : DS.textSecondary;
+    }
+    return isToday ? DS.primaryBase : DS.textPrimary;
+  }
 
   Border? _buildBorder() {
     if (isSelected) {

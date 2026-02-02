@@ -11,10 +11,10 @@ Sparkle Celery 应用配置
 创建时间: 2026-01-03
 """
 
-import os
-from celery import Celery
-from typing import List, Optional
 import logging
+import os
+
+from celery import Celery
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,14 @@ celery_app.conf.update(
     # 任务配置
     task_track_started=True,
     task_send_sent_event=True,
+    task_ignore_result=False,
 
     # 重试配置
     task_reject_on_worker_lost=True,
     task_acks_late=True,
+
+    # 任务名称配置（支持短名称和完整路径）
+    task_create_missing_queues=True,
 
     # 队列配置
     task_queues={
@@ -81,6 +85,7 @@ celery_app.conf.update(
         "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
         "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
         "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
+        "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -104,7 +109,7 @@ from app.core import celery_tasks  # noqa: F401
 # =============================================================================
 
 @celery_app.task(bind=True, max_retries=3, name="generate_embedding")
-def generate_embedding(self, node_id: str, text: str, user_id: Optional[str] = None):
+def generate_embedding(self, node_id: str, text: str, user_id: str | None = None):
     """
     生成节点 Embedding (长时任务)
 
@@ -117,10 +122,12 @@ def generate_embedding(self, node_id: str, text: str, user_id: Optional[str] = N
         dict: 包含embedding和状态
     """
     import asyncio
-    from app.db.session import AsyncSessionLocal
-    from app.services.embedding_service import embedding_service
-    from app.models.galaxy import KnowledgeNode
+
     from loguru import logger
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.galaxy import KnowledgeNode
+    from app.services.embedding_service import embedding_service
 
     async def _generate():
         async with AsyncSessionLocal() as session:
@@ -156,7 +163,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: Optional[str] = N
 
 
 @celery_app.task(bind=True, max_retries=3, name="batch_error_analysis")
-def batch_error_analysis(self, error_ids: List[str], user_id: str):
+def batch_error_analysis(self, error_ids: list[str], user_id: str):
     """
     批量错题分析
 
@@ -169,9 +176,11 @@ def batch_error_analysis(self, error_ids: List[str], user_id: str):
     """
     import asyncio
     from uuid import UUID
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.services.error_book_service import ErrorBookService
-    from loguru import logger
 
     async def _analyze():
         async with AsyncSessionLocal() as session:
@@ -215,9 +224,11 @@ def cleanup_old_data(self, days_to_keep: int = 30):
     """
     import asyncio
     from datetime import datetime, timedelta
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.models.idempotency_key import IdempotencyKey
-    from loguru import logger
 
     async def _cleanup():
         async with AsyncSessionLocal() as session:
@@ -258,9 +269,11 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
         notification_type: 通知类型
     """
     import asyncio
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.services.notification_service import NotificationService
-    from loguru import logger
 
     async def _notify():
         async with AsyncSessionLocal() as session:
@@ -292,9 +305,11 @@ def daily_report(self):
         dict: 报告摘要
     """
     import asyncio
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.services.dashboard_service import DashboardService
-    from loguru import logger
 
     async def _generate():
         async with AsyncSessionLocal() as session:
@@ -343,10 +358,12 @@ def generate_capsules_batch(
     """
     import asyncio
     from uuid import UUID
+
+    from loguru import logger
+
     from app.db.session import AsyncSessionLocal
     from app.services.capsule_generation_service import capsule_generation_service
     from app.services.notification_service import NotificationService
-    from loguru import logger
 
     async def _generate():
         async with AsyncSessionLocal() as session:
@@ -404,7 +421,7 @@ def update_knowledge_galaxy(
     user_id: str,
     plan_id: str,
     trigger_type: str = "plan_complete",
-    milestone_data: Optional[dict] = None,
+    milestone_data: dict | None = None,
 ):
     """
     P1: 知识星图自动更新 (Celery 任务)
@@ -431,8 +448,10 @@ def update_knowledge_galaxy(
     """
     import asyncio
     from uuid import UUID
-    from app.db.session import AsyncSessionLocal
+
     from loguru import logger
+
+    from app.db.session import AsyncSessionLocal
 
     async def _update_galaxy():
         async with AsyncSessionLocal() as session:
@@ -546,7 +565,7 @@ def update_knowledge_galaxy(
                 logger.error(f"❌ Celery: Failed to update galaxy for plan {plan_id}: {e}")
                 raise
 
-    async def _extract_plan_concepts(plan, milestone_data: Optional[dict]) -> List[dict]:
+    async def _extract_plan_concepts(plan, milestone_data: dict | None) -> list[dict]:
         """Extract knowledge concepts from plan and milestone data"""
         concepts = []
 
@@ -609,8 +628,10 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
     """
     import asyncio
     from uuid import UUID
-    from app.db.session import AsyncSessionLocal
+
     from loguru import logger
+
+    from app.db.session import AsyncSessionLocal
 
     async def _sync():
         async with AsyncSessionLocal() as session:
@@ -673,10 +694,12 @@ def generate_daily_capsules_for_all(self):
         dict: 生成统计
     """
     import asyncio
-    from app.db.session import AsyncSessionLocal
-    from app.services.user_service import get_active_users
-    from app.services.personalization.preference_service import PreferenceService
+
     from loguru import logger
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.personalization.preference_service import PreferenceService
+    from app.services.user_service import get_active_users
 
     async def _generate():
         async with AsyncSessionLocal() as session:

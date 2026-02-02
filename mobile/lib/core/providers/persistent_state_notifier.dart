@@ -420,7 +420,7 @@ PersistentProvider<T> makePersistentProvider<T>({
       deserializer: deserializer,
       debounce: debounce,
       enabled: enabled,
-    ));
+    ),);
 
 // ==================== Specialized Notifiers ====================
 

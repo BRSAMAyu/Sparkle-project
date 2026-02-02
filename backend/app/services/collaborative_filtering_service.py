@@ -6,37 +6,31 @@ Collaborative Filtering Recommendation Service
 使用 Jaccard 相似度计算用户相似度
 """
 import time
-from typing import List, Dict, Any, Optional, Set, Tuple
-from uuid import UUID
-from datetime import datetime, timedelta
-from loguru import logger
 from collections import defaultdict
+from datetime import datetime, timedelta
+from uuid import UUID
 
+from loguru import logger
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc
 
+from app.models.galaxy import KnowledgeNode
+from app.models.recommendation import ItemSimilarity as ItemSimilarityModel
+from app.models.recommendation import RecommendationCache, UserItemInteraction, UserSimilarity
+from app.models.task import Task
+from app.models.user import User
 from app.schemas.recommendation import (
-    RecommendationItemType,
-    UserSimilarityScore,
+    CollaborativeFilteringRequest,
+    CollaborativeFilteringResponse,
     CollaborativeRecommendation,
     ItemSimilarity,
-    CollaborativeFilteringRequest,
-    SimilarUsersRequest,
-    SimilarItemsRequest,
-    CollaborativeFilteringResponse,
+    RecommendationItemType,
     RecommendationStats,
-    UserInteractionSummary
+    SimilarItemsRequest,
+    SimilarUsersRequest,
+    UserInteractionSummary,
+    UserSimilarityScore,
 )
-from app.models.recommendation import (
-    UserSimilarity,
-    ItemSimilarity as ItemSimilarityModel,
-    UserItemInteraction,
-    UserLearningProfile,
-    RecommendationCache
-)
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
-from app.models.user import User
-from app.models.task import Task
 
 
 class CollaborativeFilteringService:
@@ -76,7 +70,6 @@ class CollaborativeFilteringService:
             CollaborativeFilteringResponse: 推荐结果
         """
         start_time = time.time()
-        cache_hit = False
 
         # 检查缓存
         cached = await self._get_cached_recommendations(
@@ -84,7 +77,6 @@ class CollaborativeFilteringService:
             request.item_type
         )
         if cached:
-            cache_hit = True
             return CollaborativeFilteringResponse(
                 recommendations=[
                     CollaborativeRecommendation(**item)
@@ -142,7 +134,7 @@ class CollaborativeFilteringService:
     async def get_similar_users(
         self,
         request: SimilarUsersRequest
-    ) -> List[UserSimilarityScore]:
+    ) -> list[UserSimilarityScore]:
         """
         获取相似用户列表
 
@@ -153,7 +145,7 @@ class CollaborativeFilteringService:
             List[UserSimilarityScore]: 相似用户列表
         """
         # 规范化用户ID顺序
-        user_id_str = str(request.user_id)
+        str(request.user_id)
 
         # 查询缓存相似度
         query = select(UserSimilarity, User).join(
@@ -187,7 +179,7 @@ class CollaborativeFilteringService:
     async def get_similar_items(
         self,
         request: SimilarItemsRequest
-    ) -> List[ItemSimilarity]:
+    ) -> list[ItemSimilarity]:
         """
         获取相似物品列表
 
@@ -244,7 +236,7 @@ class CollaborativeFilteringService:
         item_type: str,
         interaction_type: str,
         weight: float = 1.0,
-        subject_id: Optional[UUID] = None
+        subject_id: UUID | None = None
     ) -> UserItemInteraction:
         """
         记录用户-物品交互
@@ -328,7 +320,7 @@ class CollaborativeFilteringService:
         self,
         user_id: UUID,
         limit: int = 50
-    ) -> List[UserSimilarityScore]:
+    ) -> list[UserSimilarityScore]:
         """获取相似用户（内部方法）"""
         # 先尝试从缓存获取
         query = select(UserSimilarity, User).join(
@@ -372,7 +364,7 @@ class CollaborativeFilteringService:
     async def _get_user_learned_items(
         self,
         user_id: UUID
-    ) -> Set[UUID]:
+    ) -> set[UUID]:
         """获取用户已学习的物品ID集合"""
         query = select(UserItemInteraction.item_id).where(
             UserItemInteraction.user_id == user_id,
@@ -386,12 +378,12 @@ class CollaborativeFilteringService:
     async def _generate_recommendations_from_users(
         self,
         user_id: UUID,
-        similar_users: List[UserSimilarityScore],
-        learned_items: Set[UUID],
-        item_type: Optional[RecommendationItemType],
-        subject_id: Optional[UUID],
+        similar_users: list[UserSimilarityScore],
+        learned_items: set[UUID],
+        item_type: RecommendationItemType | None,
+        subject_id: UUID | None,
         limit: int
-    ) -> List[CollaborativeRecommendation]:
+    ) -> list[CollaborativeRecommendation]:
         """基于相似用户生成推荐"""
         recommendations = []
         item_scores = defaultdict(float)
@@ -450,7 +442,7 @@ class CollaborativeFilteringService:
                 item_type=RecommendationItemType(await self._get_item_type(item_id)),
                 title=details.get("title", "推荐内容"),
                 description=details.get("description"),
-                reason=f"和你进度相似的同学也在学",
+                reason="和你进度相似的同学也在学",
                 similar_users=list(item_users[item_id]),
                 similar_usernames=similar_usernames,
                 predicted_score=min(score / len(similar_users), 1.0),
@@ -462,8 +454,8 @@ class CollaborativeFilteringService:
     async def _get_cached_recommendations(
         self,
         user_id: UUID,
-        item_type: Optional[RecommendationItemType]
-    ) -> Optional[RecommendationCache]:
+        item_type: RecommendationItemType | None
+    ) -> RecommendationCache | None:
         """获取缓存的推荐"""
         query = select(RecommendationCache).where(
             RecommendationCache.user_id == user_id,
@@ -478,8 +470,8 @@ class CollaborativeFilteringService:
     async def _cache_recommendations(
         self,
         user_id: UUID,
-        recommendations: List[CollaborativeRecommendation],
-        item_type: Optional[RecommendationItemType]
+        recommendations: list[CollaborativeRecommendation],
+        item_type: RecommendationItemType | None
     ) -> None:
         """缓存推荐结果"""
         cache = RecommendationCache(
@@ -493,7 +485,7 @@ class CollaborativeFilteringService:
         self.db.add(cache)
         await self.db.flush()
 
-    async def _get_item_title(self, item_id: UUID) -> Optional[str]:
+    async def _get_item_title(self, item_id: UUID) -> str | None:
         """获取物品标题"""
         # 尝试从 KnowledgeNode 获取
         node = await self.db.get(KnowledgeNode, item_id)
@@ -507,7 +499,7 @@ class CollaborativeFilteringService:
 
         return None
 
-    async def _get_item_description(self, item_id: UUID) -> Optional[str]:
+    async def _get_item_description(self, item_id: UUID) -> str | None:
         """获取物品描述"""
         node = await self.db.get(KnowledgeNode, item_id)
         if node:
@@ -519,7 +511,7 @@ class CollaborativeFilteringService:
 
         return None
 
-    async def _get_item_type(self, item_id: UUID) -> Optional[str]:
+    async def _get_item_type(self, item_id: UUID) -> str | None:
         """获取物品类型"""
         node = await self.db.get(KnowledgeNode, item_id)
         if node:
@@ -531,7 +523,7 @@ class CollaborativeFilteringService:
 
         return "unknown"
 
-    async def _get_item_subject(self, item_id: UUID) -> Optional[UUID]:
+    async def _get_item_subject(self, item_id: UUID) -> UUID | None:
         """获取物品所属学科"""
         node = await self.db.get(KnowledgeNode, item_id)
         if node:
@@ -543,7 +535,7 @@ class CollaborativeFilteringService:
 
         return None
 
-    async def _get_usernames(self, user_ids: List[UUID]) -> List[str]:
+    async def _get_usernames(self, user_ids: list[UUID]) -> list[str]:
         """获取用户名列表"""
         if not user_ids:
             return []
@@ -558,8 +550,8 @@ async def get_collaborative_recommendations(
     db: AsyncSession,
     user_id: UUID,
     limit: int = 10,
-    item_type: Optional[RecommendationItemType] = None
-) -> List[CollaborativeRecommendation]:
+    item_type: RecommendationItemType | None = None
+) -> list[CollaborativeRecommendation]:
     """获取协同过滤推荐的便捷函数"""
     service = CollaborativeFilteringService(db)
     request = CollaborativeFilteringRequest(

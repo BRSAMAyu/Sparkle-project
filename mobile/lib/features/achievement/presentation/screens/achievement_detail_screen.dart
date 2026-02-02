@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
@@ -83,7 +84,8 @@ class _AchievementDetailScreenState
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildHeader(BuildContext context, AchievementWithProgress achievement) {
@@ -133,7 +135,7 @@ class _AchievementDetailScreenState
         ),
         child: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       actions: [

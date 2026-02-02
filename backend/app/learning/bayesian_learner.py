@@ -1,16 +1,15 @@
-from typing import Dict
-from dataclasses import dataclass, field
-import math
+from dataclasses import dataclass
+
 
 @dataclass
 class RouteStats:
     alpha: float = 1.0  # Successes + 1
     beta: float = 1.0   # Failures + 1
-    
+
     @property
     def mean(self) -> float:
         return self.alpha / (self.alpha + self.beta)
-        
+
     @property
     def variance(self) -> float:
         return (self.alpha * self.beta) / (
@@ -24,7 +23,7 @@ class BayesianLearner:
     """
     def __init__(self):
         # Map (source_node, target_node) -> RouteStats
-        self.stats: Dict[str, RouteStats] = {}
+        self.stats: dict[str, RouteStats] = {}
 
     def _get_key(self, source: str, target: str) -> str:
         return f"{source}->{target}"
@@ -34,7 +33,7 @@ class BayesianLearner:
         key = self._get_key(source, target)
         if key not in self.stats:
             self.stats[key] = RouteStats()
-            
+
         stats = self.stats[key]
         if success:
             stats.alpha += 1
@@ -46,7 +45,7 @@ class BayesianLearner:
         key = self._get_key(source, target)
         if key not in self.stats:
             return 0.5 # Prior assumption (uniform)
-        
+
         return self.stats[key].mean
 
     async def sample(self, source: str, target: str) -> float:

@@ -191,7 +191,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      onSubmitted: enterToSend ? (_) => _submit() : null,
+                      // Avoid implicit submits from some IMEs on Android.
+                      onSubmitted: null,
+                      textInputAction: TextInputAction.newline,
+                      keyboardType: TextInputType.text,
+                      maxLines: 1,
                       style: context.sparkleTypography.bodyLarge.copyWith(
                         color: DS.textPrimary,
                       ),
@@ -226,7 +230,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   else if (_controller.text.isEmpty && !_isListening)
                     IconButton(
                       icon: Icon(Icons.mic,
-                          color: DS.brandPrimary, size: iconSize,),
+                          color: DS.brandPrimaryConst, size: iconSize,),
                       onPressed: _toggleListening,
                       tooltip: '语音输入',
                       padding: EdgeInsets.zero,

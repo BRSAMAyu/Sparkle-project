@@ -1,6 +1,5 @@
 import hashlib
 from dataclasses import dataclass
-from typing import Optional
 
 from loguru import logger
 
@@ -20,15 +19,15 @@ class RedisRateLimiter:
         self.redis = redis_client
         self.daily_limit = daily_limit
         self.ttl_seconds = ttl_seconds
-        self._script_sha: Optional[str] = None
+        self._script_sha: str | None = None
 
-    async def _load_script(self) -> Optional[str]:
+    async def _load_script(self) -> str | None:
         if not self.redis:
             return None
         if self._script_sha:
             return self._script_sha
         try:
-            with open(RATE_LIMIT_LUA_PATH, "r", encoding="utf-8") as handle:
+            with open(RATE_LIMIT_LUA_PATH, encoding="utf-8") as handle:
                 script = handle.read()
             self._script_sha = await self.redis.script_load(script)
         except Exception as exc:

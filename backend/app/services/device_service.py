@@ -2,20 +2,20 @@
 用户设备服务
 User Device Service - 管理用户设备和推送令牌
 """
-from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+import redis.asyncio as redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import UserDevice
 from app.core.websocket import manager
-import redis.asyncio as redis
+from app.models.user import UserDevice
 
 
 class DeviceService:
     """用户设备令牌管理服务"""
 
-    def __init__(self, redis_client: Optional[redis.Redis] = None):
+    def __init__(self, redis_client: redis.Redis | None = None):
         self.redis = redis_client
 
     async def register_device(
@@ -26,10 +26,10 @@ class DeviceService:
         push_token: str,
         platform: str,
         token_type: str = "fcm",
-        device_name: Optional[str] = None,
-        app_version: Optional[str] = None,
-        os_version: Optional[str] = None,
-        device_metadata: Optional[dict] = None,
+        device_name: str | None = None,
+        app_version: str | None = None,
+        os_version: str | None = None,
+        device_metadata: dict | None = None,
     ) -> UserDevice:
         """
         注册或更新用户设备
@@ -46,7 +46,7 @@ class DeviceService:
         )
         device = result.scalar_one_or_none()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if device:
             # 更新现有设备
@@ -61,8 +61,8 @@ class DeviceService:
                 device.app_version = app_version
             if os_version:
                 device.os_version = os_version
-            if metadata:
-                device.metadata = metadata
+            if device_metadata:
+                device.metadata = device_metadata
         else:
             # 创建新设备
             device = UserDevice(
@@ -74,7 +74,7 @@ class DeviceService:
                 device_name=device_name,
                 app_version=app_version,
                 os_version=os_version,
-                device_metadata=metadata,
+                device_metadata=device_metadata,
                 is_active=True,
                 last_used_at=now,
             )
@@ -95,13 +95,13 @@ class DeviceService:
         db: AsyncSession,
         user_id: str,
         active_only: bool = True,
-    ) -> List[UserDevice]:
+    ) -> list[UserDevice]:
         """
         获取用户的所有设备
         """
         query = select(UserDevice).where(UserDevice.user_id == user_id)
         if active_only:
-            query = query.where(UserDevice.is_active == True)
+            query = query.where(UserDevice.is_active)
 
         result = await db.execute(query.order_by(UserDevice.last_used_at.desc()))
         return list(result.scalars().all())
@@ -140,7 +140,7 @@ class DeviceService:
         db: AsyncSession,
         user_id: str,
         active_only: bool = True,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         获取用户的所有活跃设备推送令牌
 
@@ -160,7 +160,7 @@ class DeviceService:
         # 查询数据库
         query = select(UserDevice.push_token).where(UserDevice.user_id == user_id)
         if active_only:
-            query = query.where(UserDevice.is_active == True)
+            query = query.where(UserDevice.is_active)
 
         result = await db.execute(query)
         tokens = [row[0] for row in result.all()]
@@ -201,12 +201,12 @@ class DeviceService:
         """
         from datetime import timedelta
 
-        threshold_date = datetime.now(timezone.utc) - timedelta(days=days_threshold)
+        threshold_date = datetime.now(UTC) - timedelta(days=days_threshold)
 
         result = await db.execute(
             select(UserDevice).where(
                 UserDevice.last_used_at < threshold_date,
-                UserDevice.is_active == True,
+                UserDevice.is_active,
             )
         )
         devices = result.scalars().all()
@@ -221,7 +221,7 @@ class DeviceService:
 
 
 # 全局设备服务实例（延迟初始化）
-_device_service: Optional[DeviceService] = None
+_device_service: DeviceService | None = None
 
 
 def get_device_service() -> DeviceService:

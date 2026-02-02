@@ -689,6 +689,7 @@ message AgentStatus {
         SEARCHING = 2;
         EXECUTING_TOOL = 3;
         GENERATING = 4;
+        IDLE = 5;
     }
     State state = 1;
     string details = 2;

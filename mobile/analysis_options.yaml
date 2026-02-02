@@ -107,6 +107,9 @@ analyzer:
     - ".dart_tool/**"
     - "lib/generated/**"
     - "lib/core/network/proto/**"
+    - "test/performance/**"
+    - "test/integration/**"
+    - "test/goldens/**"
 
   errors:
     invalid_annotation_target: ignore

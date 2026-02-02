@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
-    show
-        TaskNotificationScheduler,
-        TaskReminderConfig,
-        taskNotificationSchedulerProvider,
-        taskReminderConfigProvider;
+    show TaskReminderConfig, taskNotificationSchedulerProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
-import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
-    show taskListProvider;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart' show taskReminderConfigProvider;
 
 /// Screen for configuring task reminder settings
 class TaskReminderSettingsScreen extends ConsumerStatefulWidget {
@@ -129,8 +124,9 @@ class _TaskReminderSettingsScreenState
       ),
       value: config.enabled,
       onChanged: (value) {
-        ref.read(taskReminderConfigProvider.notifier).state =
-            config.copyWith(enabled: value);
+        ref.read(taskReminderConfigProvider.notifier).updateConfig(
+              enabled: value,
+            );
       },
       activeThumbColor: DS.primaryBase,
     );
@@ -143,7 +139,7 @@ class _TaskReminderSettingsScreenState
           child: Text(
             '提醒时间',
             style: TextStyle(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -166,8 +162,9 @@ class _TaskReminderSettingsScreenState
                     } else {
                       newReminders.remove(minutes);
                     }
-                    ref.read(taskReminderConfigProvider.notifier).state =
-                        config.copyWith(reminders: newReminders);
+                    ref.read(taskReminderConfigProvider.notifier).updateConfig(
+                      reminders: newReminders,
+                    );
                   }
                 : null,
             activeColor: DS.primaryBase,
@@ -210,7 +207,7 @@ class _TaskReminderSettingsScreenState
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary10,
+          color: DS.brandPrimary10Const,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -223,7 +220,7 @@ class _TaskReminderSettingsScreenState
                 Text(
                   '关于任务提醒',
                   style: TextStyle(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -236,7 +233,7 @@ class _TaskReminderSettingsScreenState
               '• 完成或删除任务会自动取消提醒\n'
               '• 建议开启系统通知权限以接收提醒',
               style: TextStyle(
-                color: DS.brandPrimary70,
+                color: DS.brandPrimary70Const,
                 fontSize: 13,
                 height: 1.5,
               ),

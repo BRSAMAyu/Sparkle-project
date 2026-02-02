@@ -3,12 +3,11 @@ Capsule Favorite Service
 
 处理胶囊收藏功能
 """
-from typing import List, Optional
 from uuid import UUID
-from loguru import logger
 
+from loguru import logger
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, delete
 
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.curiosity_capsule import CuriosityCapsule
@@ -30,7 +29,7 @@ class CapsuleFavoriteService:
         user_id: UUID,
         capsule_id: UUID,
         db: AsyncSession,
-        note: Optional[str] = None,
+        note: str | None = None,
     ) -> CapsuleFavorite:
         """
         收藏胶囊
@@ -129,7 +128,7 @@ class CapsuleFavoriteService:
         db: AsyncSession,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """
         获取用户的收藏列表
 
@@ -192,7 +191,7 @@ class CapsuleFavoriteService:
         user_id: UUID,
         capsule_id: UUID,
         db: AsyncSession,
-        note: Optional[str] = None,
+        note: str | None = None,
     ) -> dict:
         """
         切换收藏状态

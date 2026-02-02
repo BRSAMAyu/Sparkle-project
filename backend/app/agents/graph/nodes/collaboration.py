@@ -6,9 +6,10 @@ Responsibilities:
 2. Coordinate multiple agents in sequential execution
 3. Aggregate tool_calls from each agent
 """
-from typing import List, Dict, Any, Optional
+from typing import Any
+
+from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 
 from app.agents.graph.state import SparkleState
 
@@ -84,7 +85,7 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
     return state
 
 
-def _get_latest_human_message(messages: List[BaseMessage]) -> str:
+def _get_latest_human_message(messages: list[BaseMessage]) -> str:
     """Return the most recent HumanMessage content (fallback to last message)."""
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
@@ -92,7 +93,7 @@ def _get_latest_human_message(messages: List[BaseMessage]) -> str:
     return messages[-1].content if messages else ""
 
 
-def _analyze_collaboration_needs(message: str) -> Dict[str, Any]:
+def _analyze_collaboration_needs(message: str) -> dict[str, Any]:
     """Analyze if message needs multi-agent collaboration
 
     Returns:

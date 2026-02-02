@@ -304,11 +304,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               ),
                                             ],
                                           )
-                                        : AppMaterials.ceramic.copyWith(
-                                            glowColor: context
-                                                .sparkleColors.glowPrimary
-                                                .withValues(alpha: 0.2),
-                                          ),
+                                        : _getAIMessageMaterial(context),
                                     shapeBorder: ContinuousRectangleBorder(
                                       borderRadius: BorderRadius.circular(24),
                                     ),
@@ -359,38 +355,62 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                           as ChatMessageModel,),
                                             ),
                                           ),
-                                        MarkdownBody(
-                                          data: _content,
-                                          styleSheet: _getMarkdownStyle(
-                                              context, isUser,),
-                                          onTapLink: (text, href, title) async {
-                                            if (href == null) return;
-                                            final uri = Uri.tryParse(href);
-                                            if (uri == null) return;
+                                        // Use constrained height for long messages
+                                        LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            // Calculate max height based on screen size
+                                            final maxHeight =
+                                                                                MediaQuery.of(context).size.height * 0.5;
+                                            final contentWidget = MarkdownBody(
+                                              data: _content,
+                                              styleSheet: _getMarkdownStyle(
+                                                  context, isUser,),
+                                              onTapLink: (text, href, title) async {
+                                                if (href == null) return;
+                                                final uri = Uri.tryParse(href);
+                                                if (uri == null) return;
 
-                                            final scheme =
-                                                uri.scheme.toLowerCase();
-                                            const allowedSchemes = [
-                                              'http',
-                                              'https',
-                                            ];
-                                            if (!allowedSchemes
-                                                .contains(scheme)) {
-                                              return;
+                                                final scheme =
+                                                    uri.scheme.toLowerCase();
+                                                const allowedSchemes = [
+                                                  'http',
+                                                  'https',
+                                                ];
+                                                if (!allowedSchemes
+                                                    .contains(scheme)) {
+                                                  return;
+                                                }
+
+                                                try {
+                                                  if (await canLaunchUrl(uri)) {
+                                                    await launchUrl(
+                                                      uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication,
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      'Failed to launch URL: $e',);
+                                                }
+                                              },
+                                            );
+
+                                            // Try to estimate content height and decide if scrolling is needed
+                                            // For long content (heuristic: >500 chars), use constrained scrollable
+                                            final shouldConstrain = _content.length > 500;
+
+                                            if (!shouldConstrain) {
+                                              return contentWidget;
                                             }
 
-                                            try {
-                                              if (await canLaunchUrl(uri)) {
-                                                await launchUrl(
-                                                  uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication,
-                                                );
-                                              }
-                                            } catch (e) {
-                                              debugPrint(
-                                                  'Failed to launch URL: $e',);
-                                            }
+                                            return SizedBox(
+                                              height: maxHeight,
+                                              child: SingleChildScrollView(
+                                                physics: const ClampingScrollPhysics(),
+                                                child: contentWidget,
+                                              ),
+                                            );
                                           },
                                         ),
                                       ],
@@ -636,14 +656,13 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                           fontWeight: FontWeight.bold,
                           color: isUser
                               ? DS.onBrandPrimary
-                              : DS.onBrandPrimary,),),),
+                              : Colors.white,),),),
         ),
       ),
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
-      MarkdownStyleSheet(
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
         p: TextStyle(
             color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
@@ -655,22 +674,19 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         code: TextStyle(
             backgroundColor: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-                : context.sparkleColors.surfaceTertiary,
+                : DS.surfaceTertiary,
             fontFamily: 'monospace',
             fontSize: 14,
-            color:
-                isUser ? DS.chatBubbleUserText : context.sparkleColors.brandSecondary,),
+            color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,),
         codeblockDecoration: BoxDecoration(
             color: isUser
                 ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-                : context.sparkleColors.surfaceTertiary,
+                : DS.surfaceTertiary,
             borderRadius: BorderRadius.circular(12),),
         a: TextStyle(
-            color: isUser ? DS.chatBubbleUserText : context.sparkleColors.brandPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
             decoration: TextDecoration.underline,),
       );
-
-
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
@@ -700,6 +716,29 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     }
 
     return null;
+  }
+
+  /// Get the material for AI message bubbles with proper contrast in dark mode
+  ///
+  /// Dark mode: Uses a lighter gray (#2A2A2A) for better contrast
+  /// Light mode: Uses standard ceramic material
+  SparkleMaterial _getAIMessageMaterial(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDark) {
+      // Use a lighter color than surfaceSecondary for better contrast
+      // surfaceAmbient (#0D0D0D) < surfacePrimary (#121212) < surfaceSecondary (#1E1E1E) < this (#2A2A2A)
+      return const SparkleMaterial(
+        backgroundColor: Color(0xFF2A2A2A),
+        borderColor: Color(0xFF3A3A3A),
+      );
+    }
+
+    // Light mode: use neutral100 for the AI bubble
+    return SparkleMaterial(
+      backgroundColor: DS.neutral100,
+      glowColor: DS.brandPrimary.withValues(alpha: 0.1),
+    );
   }
 
   Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(

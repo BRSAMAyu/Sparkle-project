@@ -5,18 +5,18 @@ Handles automatic task generation when milestones are achieved.
 """
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.llm_service import llm_service, get_llm_service_for_task
 from app.core.agent_profiles import TaskType
 from app.models.task import TaskType as ModelTaskType
+from app.services.llm_service import get_llm_service_for_task
+
 
 class ProposalDecision(str, Enum):
     GENERATE = "generate"
@@ -30,9 +30,9 @@ class TaskGenerationProposal:
     plan_id: str
     reasoning: str
     suggested_count: int
-    proposed_tasks: List[Dict[str, Any]]
+    proposed_tasks: list[dict[str, Any]]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 class MilestoneHandler:
@@ -57,10 +57,10 @@ class MilestoneHandler:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
+        milestone: dict[str, Any],
         pending_task_count: int,
-        current_plan_context: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
+        current_plan_context: dict[str, Any] | None = None,
+    ) -> str | None:
         """
         Handle a newly achieved milestone.
 
@@ -112,7 +112,7 @@ class MilestoneHandler:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
+        milestone: dict[str, Any],
         trigger_type: str = "milestone_reached",
     ):
         """
@@ -172,9 +172,9 @@ class MilestoneHandler:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
-        context: Optional[Dict[str, Any]],
-    ) -> Optional[TaskGenerationProposal]:
+        milestone: dict[str, Any],
+        context: dict[str, Any] | None,
+    ) -> TaskGenerationProposal | None:
         """
         Use LLM to generate task proposal.
         """
@@ -241,9 +241,9 @@ class MilestoneHandler:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
-        context: Optional[Dict[str, Any]],
-    ) -> Optional[TaskGenerationProposal]:
+        milestone: dict[str, Any],
+        context: dict[str, Any] | None,
+    ) -> TaskGenerationProposal | None:
         """
         Rule-based fallback for task generation when LLM fails.
         """
@@ -255,11 +255,11 @@ class MilestoneHandler:
             completed = context.get("task_index", {}).get("completed", 0)
 
         if completed < 15:
-            difficulty, task_difficulty = "easy", 2
+            _difficulty, task_difficulty = "easy", 2
         elif completed < 35:
-            difficulty, task_difficulty = "medium", 3
+            _difficulty, task_difficulty = "medium", 3
         else:
-            difficulty, task_difficulty = "hard", 4
+            _difficulty, task_difficulty = "hard", 4
 
         # Get plan title for context
         plan_title = "学习内容"
@@ -328,13 +328,13 @@ class MilestoneHandler:
         self,
         proposal_id: str,
         user_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         User confirms proposal - create actual tasks.
         """
         from app.core.pending_actions import pending_actions_store
-        from app.services.task_service import TaskService
         from app.schemas.task import TaskCreate
+        from app.services.task_service import TaskService
 
         # Get proposal from pending_actions
         action = await pending_actions_store.get(proposal_id, user_id)

@@ -4,14 +4,13 @@ Budget Optimization Service
 
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
-from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from loguru import logger
 
-from app.models.context_pack import ContextPackRun, ContextBudgetProfile
-from app.models.memory import MemoryPreference
+from loguru import logger
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.context_pack import ContextPackRun
 from app.services.budget_tuning_service import BudgetTuningService
 
 
@@ -26,9 +25,9 @@ class BudgetOptimizationService:
         self,
         user_id: str,
         total_budget: int,
-        context_packs: List[str],
+        context_packs: list[str],
         performance_window_days: int = 7,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         优化预算分配
 
@@ -73,9 +72,9 @@ class BudgetOptimizationService:
     async def _get_pack_performance(
         self,
         user_id: str,
-        context_pack_ids: List[str],
+        context_pack_ids: list[str],
         days: int,
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> dict[str, dict[str, float]]:
         """
         获取上下文包性能数据
 
@@ -141,8 +140,8 @@ class BudgetOptimizationService:
     async def _ucb1_allocate(
         self,
         total_budget: int,
-        performance: Dict[str, Dict[str, float]],
-    ) -> Dict[str, int]:
+        performance: dict[str, dict[str, float]],
+    ) -> dict[str, int]:
         """
         使用UCB1算法分配预算
 
@@ -190,11 +189,11 @@ class BudgetOptimizationService:
 
     async def _apply_constraints(
         self,
-        allocation: Dict[str, int],
+        allocation: dict[str, int],
         total_budget: int,
         min_budget_per_pack: int,
         max_budget_per_pack: int,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         应用约束条件
 
@@ -232,7 +231,7 @@ class BudgetOptimizationService:
         user_id: str,
         context_pack_id: str,
         days: int = 30,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         评估预算使用ROI (投资回报率)
 

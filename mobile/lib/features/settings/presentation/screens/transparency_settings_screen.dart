@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'transparency_settings_screen.g.dart';
 
@@ -34,7 +34,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 ),
                 value: prefs.enabled,
                 onChanged: (value) {
-                  ref.read(transparencyPreferencesProvider.notifier).setEnabled(value);
+                  ref.read(transparencyPreferencesNotifierProvider).setEnabled(value);
                 },
               ),
             ),
@@ -60,7 +60,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showTokenUsage,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowTokenUsage(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowTokenUsage(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -72,7 +72,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showAgentSwitching,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowAgentSwitching(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowAgentSwitching(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -84,7 +84,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showReasoningSteps,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowReasoningSteps(value);
+                        ref.read(transparencyPreferencesNotifierProvider).setShowReasoningSteps(value);
                       },
                     ),
                   ],
@@ -147,21 +147,19 @@ class TransparencySettingsScreen extends ConsumerWidget {
 
 /// Transparency preferences model
 class TransparencyPreferences {
-
-  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) {
-    return TransparencyPreferences(
-      enabled: json['enabled'] ?? false,
-      showTokenUsage: json['showTokenUsage'] ?? true,
-      showAgentSwitching: json['showAgentSwitching'] ?? true,
-      showReasoningSteps: json['showReasoningSteps'] ?? true,
-    );
-  }
   const TransparencyPreferences({
     required this.enabled,
     required this.showTokenUsage,
     required this.showAgentSwitching,
     required this.showReasoningSteps,
   });
+
+  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) => TransparencyPreferences(
+      enabled: json['enabled'] ?? false,
+      showTokenUsage: json['showTokenUsage'] ?? true,
+      showAgentSwitching: json['showAgentSwitching'] ?? true,
+      showReasoningSteps: json['showReasoningSteps'] ?? true,
+    );
 
   final bool enabled;
   final bool showTokenUsage;

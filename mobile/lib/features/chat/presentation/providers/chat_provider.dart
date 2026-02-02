@@ -586,6 +586,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       String? promptVersion;
     String? lastAiStatus;
     final accumulatedWidgets = <WidgetPayload>[];
+    Map<String, dynamic>? accumulatedCollaboration;
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -843,6 +844,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
           flushPending();
+        } else if (event is CollaborationTimelineEvent) {
+          accumulatedCollaboration = event.collaborationData;
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -855,7 +859,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       _streamDebouncer.cancel();
       // 流结束后，将累积的内容转为正式消息
-      if (accumulatedContent.isNotEmpty || accumulatedWidgets.isNotEmpty) {
+      if (accumulatedContent.isNotEmpty ||
+          accumulatedWidgets.isNotEmpty ||
+          accumulatedCollaboration != null) {
         // Calculate total duration if reasoning steps exist
         String? reasoningSummary;
         if (accumulatedReasoningSteps.isNotEmpty &&
@@ -874,6 +880,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           content: accumulatedContent,
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
+          agentCollaboration: accumulatedCollaboration,
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
           reasoningSteps: accumulatedReasoningSteps.isNotEmpty
               ? accumulatedReasoningSteps

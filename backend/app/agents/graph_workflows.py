@@ -1,11 +1,11 @@
-from typing import List, Dict, Any
 import asyncio
+
 from loguru import logger
 
-from app.orchestration.statechart_engine import StateGraph, WorkflowState
-from app.agents.enhanced_agents import StudyPlannerAgent, ProblemSolverAgent
-from app.agents.specialist_agents import MathAgent, CodeAgent, WritingAgent
 from app.agents.base_agent import AgentContext
+from app.agents.enhanced_agents import StudyPlannerAgent
+from app.agents.specialist_agents import CodeAgent, MathAgent
+from app.orchestration.statechart_engine import StateGraph, WorkflowState
 
 # ==========================================
 # Graph-based Task Decomposition Workflow
@@ -22,16 +22,16 @@ def _create_context(state: WorkflowState, query: str) -> AgentContext:
 async def planner_node(state: WorkflowState) -> WorkflowState:
     logger.info("🤖 Planner: Analyzing request...")
     planner = StudyPlannerAgent()
-    
+
     # Adapt WorkflowState to AgentContext
     query = state.messages[-1]["content"]
     context = _create_context(state, query)
-    
+
     response = await planner.process(context)
-    
+
     state.context_data["plan"] = response
     state.append_message("planner", response.response_text)
-    
+
     # Determine required specialists
     # (Simplified logic from original workflow)
     needed = []
@@ -39,7 +39,7 @@ async def planner_node(state: WorkflowState) -> WorkflowState:
         needed.append("math_agent")
     if "code" in state.messages[-1]["content"].lower():
         needed.append("code_agent")
-        
+
     state.context_data["needed_agents"] = needed
     return state
 
@@ -66,20 +66,20 @@ async def synthesizer_node(state: WorkflowState) -> WorkflowState:
     for msg in state.messages:
         if msg["role"] not in ["user", "system"]:
             summary += f"### {msg['role']}\n{msg['content']}\n\n"
-            
+
     state.append_message("assistant", summary)
     return state
 
 def create_task_decomposition_graph() -> StateGraph:
     graph = StateGraph("TaskDecomposition")
-    
+
     graph.add_node("planner", planner_node)
     graph.add_node("math_agent", math_node)
     graph.add_node("code_agent", code_node)
     graph.add_node("synthesizer", synthesizer_node)
-    
+
     graph.set_entry_point("planner")
-    
+
     # Dynamic Router for Parallel Execution
     # Since StateGraph engine supports parallel execution if next_step is a list
     # But currently add_conditional_edge expects a string return.
@@ -89,14 +89,14 @@ def create_task_decomposition_graph() -> StateGraph:
     # The transition logic:
     # if callable(edge): next_node = edge(state)
     # The loop: current_node_name = next_node.
-    
+
     # To support dynamic parallel fan-out, the engine needs to handle list of next nodes.
     # Currently my engine's `invoke` loop handles one `current_node_name`.
     # It does NOT support dynamic parallel branching (Fork) in the transition logic yet.
-    
+
     # Workaround: A "Dispatcher" node that calls the agents in parallel using asyncio.gather
     # inside the node itself, effectively embedding the parallel logic.
-    
+
     async def dispatcher_node(state: WorkflowState) -> WorkflowState:
         needed = state.context_data.get("needed_agents", [])
         tasks = []
@@ -104,7 +104,7 @@ def create_task_decomposition_graph() -> StateGraph:
             tasks.append(math_node(state.clone())) # Use clone for safety
         if "code_agent" in needed:
             tasks.append(code_node(state.clone()))
-            
+
         if tasks:
             results = await asyncio.gather(*tasks)
             # Merge results
@@ -112,13 +112,13 @@ def create_task_decomposition_graph() -> StateGraph:
                 # Merge messages
                 new_msgs = res.messages[len(state.messages):]
                 state.messages.extend(new_msgs)
-        
+
         return state
 
     graph.add_node("dispatcher", dispatcher_node)
-    
+
     graph.add_edge("planner", "dispatcher")
     graph.add_edge("dispatcher", "synthesizer")
     graph.add_edge("synthesizer", "__end__")
-    
+
     return graph

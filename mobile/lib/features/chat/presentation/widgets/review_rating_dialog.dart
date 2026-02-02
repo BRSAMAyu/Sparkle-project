@@ -431,7 +431,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   },
                 ),
               ),
-            )).toList(),
+            ),).toList(),
         ),
       ],
     );
@@ -541,7 +541,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   });
                 },
                 deleteIcon: const Icon(Icons.close, size: 16),
-              )).toList(),
+              ),).toList(),
           ),
         ],
       ],

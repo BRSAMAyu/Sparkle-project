@@ -25,7 +25,10 @@ class LongTermPlanCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, GrowthData growth) => Column(
+  Widget _buildContent(BuildContext context, GrowthData growth) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -60,7 +63,9 @@ class LongTermPlanCard extends ConsumerWidget {
                   width: 60,
                   child: LinearProgressIndicator(
                     value: growth.progress,
-                    backgroundColor: DS.brandPrimary.withValues(alpha: 0.15),
+                    backgroundColor: isDark
+                        ? DS.neutral800
+                        : DS.neutral200,
                     valueColor: AlwaysStoppedAnimation<Color>(DS.success),
                     borderRadius: BorderRadius.circular(2),
                   ),
@@ -89,12 +94,19 @@ class LongTermPlanCard extends ConsumerWidget {
           ),
         ],
       );
+  }
 
-  Widget _buildEmptyState(BuildContext context) => Column(
+  Widget _buildEmptyState(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_circle_outline,
-              color: DS.textSecondary.withValues(alpha: 0.5), size: 32,),
+          Icon(
+            Icons.add_circle_outline,
+            color: isDark ? DS.neutral500 : DS.neutral400,
+            size: 32,
+          ),
           const SizedBox(height: DS.smConst),
           Text(
             '创建长期计划',
@@ -102,4 +114,5 @@ class LongTermPlanCard extends ConsumerWidget {
           ),
         ],
       );
+  }
 }

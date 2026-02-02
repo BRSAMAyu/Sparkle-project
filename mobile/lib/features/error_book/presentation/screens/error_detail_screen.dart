@@ -292,7 +292,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                       runSpacing: 8,
                       children: summary.strategies
                           .map((strategy) =>
-                              _buildTagChip(context, strategy.title))
+                              _buildTagChip(context, strategy.title),)
                           .toList(),
                     ),
                     const SizedBox(height: 12),
@@ -648,6 +648,7 @@ class ErrorDetailScreen extends ConsumerWidget {
 
   Widget _buildReviewStatsSection(BuildContext context, ErrorRecord error) {
     final theme = Theme.of(context);
+    final isMobile = context.isMobile;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -661,20 +662,18 @@ class ErrorDetailScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
+          if (isMobile)
+            Column(
+              children: [
+                _buildStatCard(
                   context: context,
                   label: '复习次数',
                   value: error.reviewCount.toString(),
                   icon: Icons.repeat,
                   color: Colors.blue,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
+                const SizedBox(height: 12),
+                _buildStatCard(
                   context: context,
                   label: '掌握度',
                   value: '${(error.masteryLevel * 100).toInt()}%',
@@ -685,9 +684,36 @@ class ErrorDetailScreen extends ConsumerWidget {
                           ? Colors.orange
                           : Colors.red,
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context: context,
+                    label: '复习次数',
+                    value: error.reviewCount.toString(),
+                    icon: Icons.repeat,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    context: context,
+                    label: '掌握度',
+                    value: '${(error.masteryLevel * 100).toInt()}%',
+                    icon: Icons.trending_up,
+                    color: error.masteryLevel >= 0.8
+                        ? Colors.green
+                        : error.masteryLevel >= 0.5
+                            ? Colors.orange
+                            : Colors.red,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 12),
           if (error.lastReviewedAt != null)
             _buildInfoRow(

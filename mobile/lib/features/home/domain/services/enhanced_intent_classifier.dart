@@ -33,7 +33,7 @@ class EnhancedIntentClassifier {
     if (text.isEmpty) return null;
 
     final lower = text.toLowerCase();
-    double maxScore = 0.0;
+    var maxScore = 0.0;
     EnhancedIntentType? bestType;
 
     // === 优先级1: 特殊模式（高置信度关键词）===
@@ -185,7 +185,7 @@ class EnhancedIntentClassifier {
 
   /// Calculate score based on keyword matches
   static double _calculateScore(String text, Map<String, double> keywords) {
-    double score = 0.0;
+    var score = 0.0;
     for (final entry in keywords.entries) {
       if (text.contains(entry.key)) {
         score = score > entry.value ? score : entry.value;
@@ -195,7 +195,5 @@ class EnhancedIntentClassifier {
   }
 
   /// Check if text contains any of the keywords
-  static bool _containsAny(String text, List<String> keywords) {
-    return keywords.any((keyword) => text.contains(keyword));
-  }
+  static bool _containsAny(String text, List<String> keywords) => keywords.any((keyword) => text.contains(keyword));
 }

@@ -57,8 +57,6 @@ func BenchmarkConnectionPool_AcquireRelease(b *testing.B) {
 }
 
 func BenchmarkDatabase_QuerySerialization(b *testing.B) {
-	ctx := context.Background()
-
 	b.Run("simple_query", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -281,7 +279,6 @@ func BenchmarkPgxPool_Acquire(b *testing.B) {
 
 	b.Run("pool_with_max_conns", func(b *testing.B) {
 		b.ReportAllocs()
-		ctx := context.Background()
 		maxConns := 20
 
 		activeConns := 0
@@ -469,7 +466,6 @@ func BenchmarkPoolConfig(b *testing.B) {
 				MaxConnLifetime: 2 * time.Hour,
 				MaxConnIdleTime: 15 * time.Minute,
 				HealthCheckPeriod: 30 * time.Second,
-				ConnectTimeout:   10 * time.Second,
 			}
 		}
 	})

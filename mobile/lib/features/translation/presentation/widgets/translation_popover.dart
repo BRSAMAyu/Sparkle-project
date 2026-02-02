@@ -239,7 +239,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -357,14 +357,14 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: DS.brandPrimary.withOpacity(0.1),
+              color: DS.brandPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               firstNote,
               style: TextStyle(
                 fontSize: 11,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -403,7 +403,7 @@ void showTranslationPopover(
   String? sourceDocumentId,
   VoidCallback? onSaved,
 }) {
-  showDialog(
+  showDialog<void>(
     context: context,
     barrierColor: Colors.black26,
     builder: (context) => Dialog(

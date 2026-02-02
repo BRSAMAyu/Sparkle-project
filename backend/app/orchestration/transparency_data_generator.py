@@ -7,11 +7,11 @@ This module captures execution steps, agent switching, tool calls, and resource 
 """
 import time
 import uuid
-from typing import Optional, Dict, List, Any
-from datetime import datetime
-from enum import Enum
-from loguru import logger
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
+
+from loguru import logger
 
 
 class StepType(str, Enum):
@@ -39,14 +39,14 @@ class TransparencyStep:
     step_type: StepType = StepType.THINKING
     status: StepStatus = StepStatus.PENDING
     start_time: float = field(default_factory=time.time)
-    end_time: Optional[float] = None
+    end_time: float | None = None
     duration_ms: int = 0
-    agent_type: Optional[str] = None
-    result: Optional[str] = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    agent_type: str | None = None
+    result: str | None = None
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         duration_ms = 0
         if self.end_time:
@@ -71,7 +71,7 @@ class TransparencyStep:
         self.status = StepStatus.IN_PROGRESS
         self.start_time = time.time()
 
-    def mark_completed(self, result: Optional[str] = None):
+    def mark_completed(self, result: str | None = None):
         """Mark step as completed"""
         self.status = StepStatus.COMPLETED
         self.end_time = time.time()
@@ -103,7 +103,7 @@ class TransparencyDataGenerator:
         """
         self.request_id = request_id
         self.enabled = enabled
-        self.steps: List[TransparencyStep] = []
+        self.steps: list[TransparencyStep] = []
         self.current_step_index = 0
         self.total_tokens = 0
         self.start_time = time.time()
@@ -112,8 +112,8 @@ class TransparencyDataGenerator:
         self,
         name: str,
         step_type: StepType,
-        agent_type: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        agent_type: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> TransparencyStep:
         """
         Create a new transparency step.
@@ -151,8 +151,8 @@ class TransparencyDataGenerator:
     def complete_step(
         self,
         step: TransparencyStep,
-        result: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        result: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Mark a step as completed"""
         if not self.enabled:
@@ -168,7 +168,7 @@ class TransparencyDataGenerator:
         self,
         step: TransparencyStep,
         error: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Mark a step as failed"""
         if not self.enabled:
@@ -180,7 +180,7 @@ class TransparencyDataGenerator:
 
         logger.debug(f"[Transparency] Step failed: {step.name} - {error}")
 
-    def get_step_event(self) -> Optional[Dict[str, Any]]:
+    def get_step_event(self) -> dict[str, Any] | None:
         """
         Get the next step event to send to frontend.
 
@@ -202,7 +202,7 @@ class TransparencyDataGenerator:
             },
         }
 
-    def get_complete_event(self) -> Optional[Dict[str, Any]]:
+    def get_complete_event(self) -> dict[str, Any] | None:
         """
         Get the transparency_complete event with all steps.
 
@@ -258,7 +258,7 @@ def track_planning_phase(
 def track_tool_execution(
     generator: TransparencyDataGenerator,
     tool_name: str,
-    agent_type: Optional[str] = None,
+    agent_type: str | None = None,
 ) -> TransparencyStep:
     """
     Track a tool execution.
@@ -273,8 +273,8 @@ def track_tool_execution(
     """
     # Map tool name to agent type if not provided
     if agent_type is None:
-        from app.orchestration.orchestrator import get_agent_type_for_tool
         from app.gen.agent.v1 import agent_service_pb2
+        from app.orchestration.orchestrator import get_agent_type_for_tool
         agent_int = get_agent_type_for_tool(tool_name)
         agent_type = agent_service_pb2.AgentType.Name(agent_int)
 
@@ -291,7 +291,7 @@ def track_tool_execution(
 def track_agent_thinking(
     generator: TransparencyDataGenerator,
     agent_type: str,
-    context: Optional[str] = None,
+    context: str | None = None,
 ) -> TransparencyStep:
     """
     Track agent thinking/reasoning.

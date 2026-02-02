@@ -6,13 +6,12 @@ Server-Sent Events (SSE) Manager
 import asyncio
 import json
 import time
-from typing import Dict, Set, Optional
 from uuid import UUID
-from fastapi import Request
-from fastapi.responses import StreamingResponse
+
 from loguru import logger
-from app.core.cache import cache_service
+
 from app.config.phase5_config import phase5_config
+from app.core.cache import cache_service
 
 
 class SSEManager:
@@ -24,9 +23,9 @@ class SSEManager:
 
     def __init__(self):
         # {user_id: Set[queue]}
-        self.connections: Dict[str, Set[asyncio.Queue]] = {}
+        self.connections: dict[str, set[asyncio.Queue]] = {}
 
-    async def connect(self, user_id: str, last_event_id: Optional[str] = None) -> asyncio.Queue:
+    async def connect(self, user_id: str, last_event_id: str | None = None) -> asyncio.Queue:
         """
         创建新的 SSE 连接
 
@@ -99,15 +98,15 @@ class SSEManager:
 
         logger.info(f"SSE connection closed for user {user_id}")
 
-    async def send_to_user(self, user_id: str, event_type: str, data: dict, trace_id: Optional[str] = None, is_done: bool = False):
+    async def send_to_user(self, user_id: str, event_type: str, data: dict, trace_id: str | None = None, is_done: bool = False):
         """
         向特定用户推送事件
         """
         user_id_str = str(user_id) if isinstance(user_id, UUID) else user_id
-        
+
         # Generate Sequence ID (Timestamp in ms for simplicity)
         seq = int(time.time() * 1000)
-        
+
         event_data = {
             "type": event_type,
             "data": data,
@@ -115,7 +114,7 @@ class SSEManager:
             "trace_id": trace_id,
             "done": is_done
         }
-        
+
         # 1. Store in Redis for Replay (使用配置的缓冲区大小和 TTL)
         if cache_service.redis:
             try:
@@ -149,7 +148,7 @@ class SSEManager:
     async def broadcast(self, event_type: str, data: dict):
         """
         向所有连接的用户广播事件
-        (Broadcast typically doesn't support replay per user easily unless we duplicate, 
+        (Broadcast typically doesn't support replay per user easily unless we duplicate,
          skipping replay for broadcast for now or using a global channel)
         """
         event_data = {
@@ -199,7 +198,7 @@ async def event_generator(queue: asyncio.Queue):
             # SSE Standard: id field for reconciliation
             if seq is not None:
                 yield f"id: {seq}\n"
-            
+
             yield f"event: {event_type}\n"
             yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 

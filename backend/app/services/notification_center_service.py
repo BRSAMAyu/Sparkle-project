@@ -3,23 +3,21 @@ Notification Center Service
 
 Provides unified access to system notifications and intervention requests.
 """
-from typing import List, Optional, Dict, Any
+from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, desc, func
-from loguru import logger
 
-from app.models.notification import Notification
+from loguru import logger
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.intervention import InterventionRequest
+from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.schemas.unified_notification import (
-    UnifiedNotificationResponse,
-    NotificationInteractionCreate,
-    NotificationInteractionResponse,
-    NotificationPreferencesUpdate,
-    NotificationPreferencesResponse,
     NotificationHistoryFilters,
+    NotificationPreferencesUpdate,
+    UnifiedNotificationResponse,
 )
 
 
@@ -37,8 +35,8 @@ class NotificationCenterService:
         skip: int = 0,
         limit: int = 50,
         unread_only: bool = False,
-        source_type: Optional[str] = None
-    ) -> List[UnifiedNotificationResponse]:
+        source_type: str | None = None
+    ) -> list[UnifiedNotificationResponse]:
         """
         Get unified list of notifications (system + interventions).
 
@@ -59,7 +57,7 @@ class NotificationCenterService:
             system_stmt = select(Notification).where(Notification.user_id == user_id)
 
             if unread_only:
-                system_stmt = system_stmt.where(Notification.is_read == False)
+                system_stmt = system_stmt.where(not Notification.is_read)
 
             system_stmt = system_stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
             system_result = await self.db.execute(system_stmt)
@@ -86,7 +84,7 @@ class NotificationCenterService:
             # Don't show expired interventions
             intervention_stmt = intervention_stmt.where(
                 or_(
-                    InterventionRequest.expires_at == None,
+                    InterventionRequest.expires_at is None,
                     InterventionRequest.expires_at > datetime.utcnow()
                 )
             )
@@ -202,7 +200,7 @@ class NotificationCenterService:
             system_stmt = select(Notification).where(
                 and_(
                     Notification.user_id == user_id,
-                    Notification.is_read == False
+                    not Notification.is_read
                 )
             )
             result = await self.db.execute(system_stmt)
@@ -326,7 +324,7 @@ class NotificationCenterService:
             stmt = select(Notification).where(
                 and_(
                     Notification.user_id == user_id,
-                    Notification.is_read == True
+                    Notification.is_read
                 )
             )
             result = await self.db.execute(stmt)
@@ -349,8 +347,8 @@ class NotificationCenterService:
         user_id: UUID,
         page: int = 1,
         page_size: int = 50,
-        filters: Optional[NotificationHistoryFilters] = None
-    ) -> Dict[str, Any]:
+        filters: NotificationHistoryFilters | None = None
+    ) -> dict[str, Any]:
         """
         Get paginated notification history with filters.
 

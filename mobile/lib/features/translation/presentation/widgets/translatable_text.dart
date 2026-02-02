@@ -37,7 +37,7 @@ class TranslatableText extends ConsumerStatefulWidget {
   final String targetLang;
   final String domain;
   final TextStyle? style;
-  final Function(String selectedText, String translation)? onSaveToKnowledge;
+  final void Function(String selectedText, String translation)? onSaveToKnowledge;
 
   @override
   ConsumerState<TranslatableText> createState() => _TranslatableTextState();
@@ -96,7 +96,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   void _showTranslationSheet(String selectedText) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
-import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
+import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
 
 /// Notification Center Screen
 class NotificationCenterScreen extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           // Mark all as read button
           if (state.unreadCount > 0)
             TextButton.icon(
-              onPressed: () => _markAllAsRead(),
+              onPressed: _markAllAsRead,
               icon: const Icon(Icons.done_all, size: 20),
               label: Text('全部已读 (${state.unreadCount})'),
             ),
@@ -81,15 +81,13 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     );
   }
 
-  Widget _buildFilterBar() {
-    return Container(
+  Widget _buildFilterBar() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorCode.surface,
+        color: Theme.of(context).colorScheme.colorCode.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorCode.borderSubtle,
-            width: 1,
+            color: Theme.of(context).colorScheme.colorCode.borderSubtle,
           ),
         ),
       ),
@@ -100,13 +98,11 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: NotificationFilter.values.map((filter) {
-                return NotificationFilterChip(
+              children: NotificationFilter.values.map((filter) => NotificationFilterChip(
                   label: _getFilterLabel(filter),
                   isSelected: _filter == filter,
                   onTap: () => _setFilter(filter),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           ),
 
@@ -116,19 +112,16 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: SourceTypeFilter.values.map((filter) {
-                return NotificationFilterChip(
+              children: SourceTypeFilter.values.map((filter) => NotificationFilterChip(
                   label: _getSourceFilterLabel(filter),
                   isSelected: _sourceFilter == filter,
                   onTap: () => _setSourceFilter(filter),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           ),
         ],
       ),
     );
-  }
 
   Widget _buildContent(NotificationCenterState state) {
     if (state.isLoading && state.notifications.isEmpty) {
@@ -150,7 +143,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     }
 
     return RefreshIndicator(
-      onRefresh: () => _refresh(),
+      onRefresh: _refresh,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: filteredNotifications.length,
@@ -166,8 +159,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     );
   }
 
-  Widget _buildError(String error) {
-    return Center(
+  Widget _buildError(String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -181,16 +173,14 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
           Text(error),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _refresh(),
+            onPressed: _refresh,
             child: const Text('重试'),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildEmpty() {
-    return Center(
+  Widget _buildEmpty() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -210,7 +200,6 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         ],
       ),
     );
-  }
 
   List<UnifiedNotification> _filterNotifications(List<UnifiedNotification> notifications) {
     var filtered = notifications;
@@ -219,10 +208,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     switch (_filter) {
       case NotificationFilter.unread:
         filtered = filtered.where((n) => !n.isRead).toList();
-        break;
       case NotificationFilter.read:
         filtered = filtered.where((n) => n.isRead).toList();
-        break;
       case NotificationFilter.all:
         break;
     }
@@ -231,10 +218,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     switch (_sourceFilter) {
       case SourceTypeFilter.system:
         filtered = filtered.where((n) => n.sourceType == 'system').toList();
-        break;
       case SourceTypeFilter.intervention:
         filtered = filtered.where((n) => n.sourceType == 'intervention').toList();
-        break;
       case SourceTypeFilter.all:
         break;
     }
@@ -319,7 +304,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       await ref.read(notificationCenterProvider.notifier).clearReadNotifications();
 
       if (mounted) {
@@ -341,10 +326,10 @@ extension ColorSchemeExtension on ColorScheme {
 }
 
 class _CustomColors {
-  final ColorScheme colorScheme;
 
   _CustomColors(this.colorScheme);
+  final ColorScheme colorScheme;
 
   Color get surface => colorScheme.surface;
-  Color get borderSubtle => colorScheme.outline.withOpacity(0.3);
+  Color get borderSubtle => colorScheme.outline.withValues(alpha: 0.3);
 }

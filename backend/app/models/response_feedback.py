@@ -1,7 +1,7 @@
-from sqlalchemy import Column, String, SmallInteger, Index, UniqueConstraint, JSON, Integer
+from sqlalchemy import JSON, Column, Index, Integer, SmallInteger, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class ResponseFeedback(BaseModel):

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
 from uuid import UUID
 
 from app.config import settings
 
-
-DEFAULT_BUDGETS: Dict[str, Dict[str, int]] = {
+DEFAULT_BUDGETS: dict[str, dict[str, int]] = {
     "learning": {"preferences": 160, "goals": 220, "episodic": 320},
     "chat": {"preferences": 120, "goals": 180, "episodic": 260},
     "planning": {"preferences": 140, "goals": 260, "episodic": 200},
@@ -16,13 +14,13 @@ DEFAULT_BUDGETS: Dict[str, Dict[str, int]] = {
 class ContextBudgetScheduler:
     def __init__(
         self,
-        budgets: Optional[Dict[str, Dict[str, int]]] = None,
-        db: Optional[object] = None,
+        budgets: dict[str, dict[str, int]] | None = None,
+        db: object | None = None,
     ) -> None:
         self.budgets = budgets or DEFAULT_BUDGETS
         self.db = db
 
-    async def allocate(self, intent: str, user_id: Optional[UUID] = None) -> Dict[str, int]:
+    async def allocate(self, intent: str, user_id: UUID | None = None) -> dict[str, int]:
         intent_key = intent or "chat"
         base = dict(self.budgets.get(intent_key, self.budgets["chat"]))
         if not settings.ENABLE_BUDGET_TUNING or self.db is None:
@@ -44,7 +42,7 @@ class ContextBudgetScheduler:
         return {bucket: int(round(value)) for bucket, value in tuned.items()}
 
 
-def _normalize_budget(budgets: Dict[str, float], target_total: float) -> Dict[str, float]:
+def _normalize_budget(budgets: dict[str, float], target_total: float) -> dict[str, float]:
     total = sum(budgets.values())
     if total <= 0:
         return budgets
@@ -52,7 +50,7 @@ def _normalize_budget(budgets: Dict[str, float], target_total: float) -> Dict[st
     return {bucket: value * scale for bucket, value in budgets.items()}
 
 
-def _apply_min_budget(budgets: Dict[str, float], min_value: int) -> Dict[str, float]:
+def _apply_min_budget(budgets: dict[str, float], min_value: int) -> dict[str, float]:
     adjusted = dict(budgets)
     below = {bucket for bucket, value in adjusted.items() if value < min_value}
     if not below:

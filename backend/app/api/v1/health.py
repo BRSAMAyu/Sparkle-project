@@ -3,14 +3,14 @@ Health Check API
 健康检查端点 - 包含数据库连接状态检查
 """
 from datetime import datetime
-from typing import Optional
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db, engine
 from app.config import settings
+from app.db.session import engine, get_db
 
 router = APIRouter()
 
@@ -18,10 +18,10 @@ router = APIRouter()
 class DatabaseHealth(BaseModel):
     """数据库健康状态"""
     connected: bool
-    latency_ms: Optional[float] = None
-    pool_size: Optional[int] = None
-    pool_checked_out: Optional[int] = None
-    error: Optional[str] = None
+    latency_ms: float | None = None
+    pool_size: int | None = None
+    pool_checked_out: int | None = None
+    error: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -30,11 +30,11 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     version: str
     database: DatabaseHealth
-    uptime_seconds: Optional[float] = None
+    uptime_seconds: float | None = None
 
 
 # 记录启动时间
-_start_time: Optional[datetime] = None
+_start_time: datetime | None = None
 
 
 def set_start_time():
@@ -43,7 +43,7 @@ def set_start_time():
     _start_time = datetime.utcnow()
 
 
-def get_uptime_seconds() -> Optional[float]:
+def get_uptime_seconds() -> float | None:
     """获取运行时间（秒）"""
     if _start_time is None:
         return None

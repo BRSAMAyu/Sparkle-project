@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.models.user import User
 
 
 @dataclass
 class AgeGateDecision:
-    is_minor: Optional[bool]
+    is_minor: bool | None
     should_collect_sensitive: bool
-    source: Optional[str]
+    source: str | None
 
 
 class AgeGateService:
@@ -18,7 +18,7 @@ class AgeGateService:
     """
 
     @staticmethod
-    def evaluate(user: User, payload: Dict[str, Any]) -> AgeGateDecision:
+    def evaluate(user: User, payload: dict[str, Any]) -> AgeGateDecision:
         declared_age = payload.get("declared_age")
         parent_mode = payload.get("parental_control_enabled")
         registration_verified = payload.get("registration_age_verified")

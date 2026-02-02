@@ -17,10 +17,12 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
-from typing import Dict, Optional, Any
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.plan_context import merge_plan_context
 
+class _SafeFormatDict(dict):
+    def __missing__(self, key: str) -> str:
+        return ""
 
 # ============================================
 # 通用 Agent Prompt 模板
@@ -222,7 +224,7 @@ def build_system_prompt(
 
     plan_context_section = _format_plan_context(plan_context)
 
-    
+
 
     # 2.6 格式化意图指令 (Vision Item 4b)
 
@@ -240,23 +242,16 @@ def build_system_prompt(
     # 3. 如果是通用模板，进行完整渲染
 
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
-
-        prompt = base_prompt.format(
-
-            user_context=formatted_user_context,
-
-            conversation_history_section=conversation_history_section,
-
-            preference_instructions=preference_instructions,
-
-            plan_context_section=plan_context_section,
-
-            intent_section=intent_section,
-
-            task_awareness_section=TASK_AWARENESS_SECTION,
-
-            cognitive_prism_section=cognitive_prism_section,
-
+        prompt = base_prompt.format_map(
+            _SafeFormatDict(
+                user_context=formatted_user_context,
+                conversation_history_section=conversation_history_section,
+                preference_instructions=preference_instructions,
+                plan_context_section=plan_context_section,
+                intent_section=intent_section,
+                task_awareness_section=TASK_AWARENESS_SECTION,
+                cognitive_prism_section=cognitive_prism_section,
+            )
         )
 
     else:
@@ -265,12 +260,11 @@ def build_system_prompt(
 
         # Note: specialized prompts might not support intent_section yet, so we append it if present
 
-        prompt = base_prompt.format(
-
-            user_context=formatted_user_context,
-
-            query=user_context.get("current_query", ""),
-
+        prompt = base_prompt.format_map(
+            _SafeFormatDict(
+                user_context=formatted_user_context,
+                query=user_context.get("current_query", ""),
+            )
         )
 
         if intent_instruction:

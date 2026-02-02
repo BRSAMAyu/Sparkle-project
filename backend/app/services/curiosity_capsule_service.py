@@ -4,23 +4,22 @@ Curiosity Capsule Service
 整合新的胶囊生成服务，保持向后兼容
 """
 import random
-from typing import List, Optional
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+
 from loguru import logger
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.user import User
 from app.models.task import Task
-from app.core.llm_client import llm_client
-from app.services.personalization.preference_service import PreferenceService
+from app.models.user import User
+from app.services.capsule_favorite_service import capsule_favorite_service
+from app.services.capsule_feedback_service import capsule_feedback_service
 
 # 导入新的增强服务
 from app.services.capsule_generation_service import capsule_generation_service
-from app.services.capsule_feedback_service import capsule_feedback_service
-from app.services.capsule_favorite_service import capsule_favorite_service
 from app.services.capsule_share_service import capsule_share_service
+from app.services.personalization.preference_service import PreferenceService
 
 
 class CuriosityCapsuleService:
@@ -40,7 +39,7 @@ class CuriosityCapsuleService:
         db: AsyncSession,
         depth_preference: float = 0.5,
         curiosity_preference: float = 0.5,
-    ) -> Optional[CuriosityCapsule]:
+    ) -> CuriosityCapsule | None:
         """
         Generate a daily curiosity capsule for the user based on recent activity.
 
@@ -99,7 +98,7 @@ class CuriosityCapsuleService:
         user_id: UUID,
         db: AsyncSession,
         user: User,
-    ) -> Optional[CuriosityCapsule]:
+    ) -> CuriosityCapsule | None:
         """
         原有的胶囊生成逻辑（作为降级方案）
         """
@@ -121,14 +120,6 @@ class CuriosityCapsuleService:
             topic = related_task.title
 
         # Generate content using LLM
-        prompt = f"""
-        Generate a short, interesting 'Curiosity Capsule' (100-150 words) related to: "{topic}".
-        Target audience: A college student.
-        Tone: Engaging, inspiring, slightly surprising.
-        Format: Markdown.
-        Title: A catchy title.
-        Content: The body text.
-        """
 
         # For prototype speed, we'll use static generation
         title = f"Did you know about {topic}?"
@@ -150,13 +141,13 @@ class CuriosityCapsuleService:
 
         return capsule
 
-    async def get_today_capsules(self, user_id: UUID, db: AsyncSession) -> List[CuriosityCapsule]:
+    async def get_today_capsules(self, user_id: UUID, db: AsyncSession) -> list[CuriosityCapsule]:
         """
         Get unread capsules for today/recent.
         """
         result = await db.execute(
             select(CuriosityCapsule)
-            .where(CuriosityCapsule.user_id == user_id, CuriosityCapsule.is_read == False)
+            .where(CuriosityCapsule.user_id == user_id, not CuriosityCapsule.is_read)
             .order_by(desc(CuriosityCapsule.created_at))
         )
         return result.scalars().all()
@@ -176,7 +167,7 @@ class CuriosityCapsuleService:
         depth_preference: float = 0.5,
         curiosity_preference: float = 0.5,
         generation_type: str = "manual",
-        requested_count: Optional[int] = None,
+        requested_count: int | None = None,
     ):
         """
         批量生成胶囊（委托给生成服务）
@@ -195,10 +186,10 @@ class CuriosityCapsuleService:
         user_id: UUID,
         capsule_id: UUID,
         db: AsyncSession,
-        rating: Optional[int] = None,
-        helpful: Optional[bool] = None,
-        category: Optional[str] = None,
-        comment: Optional[str] = None,
+        rating: int | None = None,
+        helpful: bool | None = None,
+        category: str | None = None,
+        comment: str | None = None,
     ):
         """提交反馈（委托给反馈服务）"""
         return await capsule_feedback_service.submit_feedback(
@@ -216,7 +207,7 @@ class CuriosityCapsuleService:
         user_id: UUID,
         capsule_id: UUID,
         db: AsyncSession,
-        note: Optional[str] = None,
+        note: str | None = None,
     ):
         """切换收藏状态（委托给收藏服务）"""
         return await capsule_favorite_service.toggle_favorite(
@@ -247,7 +238,7 @@ class CuriosityCapsuleService:
         capsule_id: UUID,
         group_id: UUID,
         db: AsyncSession,
-        message: Optional[str] = None,
+        message: str | None = None,
     ):
         """分享到群组（委托给分享服务）"""
         return await capsule_share_service.share_to_group(

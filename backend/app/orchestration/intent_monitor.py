@@ -12,15 +12,12 @@ This module provides:
 - Export metrics for Grafana dashboard integration
 """
 
-import time
-import json
-from typing import Dict, Optional, List
 from collections import defaultdict
-from datetime import datetime, timedelta
+
 from loguru import logger
 
 try:
-    from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry
+    from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
@@ -315,7 +312,7 @@ class IntentMonitor:
         except Exception:
             return 0.0
 
-    def get_intent_distribution(self) -> Dict[str, int]:
+    def get_intent_distribution(self) -> dict[str, int]:
         """Get current intent distribution
 
         Returns:
@@ -323,7 +320,7 @@ class IntentMonitor:
         """
         return dict(self._intent_distribution)
 
-    def get_metrics_summary(self) -> Dict:
+    def get_metrics_summary(self) -> dict:
         """Get summary of all metrics
 
         Returns:
@@ -432,7 +429,7 @@ Intent Distribution:
             return "# Monitoring disabled\n"
 
         try:
-            from prometheus_client import generate_latest, REGISTRY
+            from prometheus_client import generate_latest
 
             # Generate from our custom registry
             return generate_latest(self.registry).decode('utf-8')
@@ -446,7 +443,7 @@ Intent Distribution:
 _intent_monitor = None
 
 
-def get_intent_monitor(enabled: bool = True) -> Optional[IntentMonitor]:
+def get_intent_monitor(enabled: bool = True) -> IntentMonitor | None:
     """Get singleton intent monitor instance
 
     Args:
@@ -499,7 +496,7 @@ def record_cache_result(hit: bool, latency_ms: float = 0):
             monitor.record_cache_miss()
 
 
-def get_metrics_summary() -> Dict:
+def get_metrics_summary() -> dict:
     """Convenience function to get metrics summary"""
     monitor = get_intent_monitor()
     if monitor:

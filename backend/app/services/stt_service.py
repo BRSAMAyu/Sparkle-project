@@ -1,11 +1,10 @@
 import os
-import shutil
 import uuid
-import tempfile
-from typing import Optional, List, Dict, Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
+
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
-import asyncio
 
 from app.config import settings
 from app.services.llm_service import llm_service
@@ -18,12 +17,17 @@ class STTService:
         os.makedirs(self.upload_dir, exist_ok=True)
 
         # Initialize STT Provider based on configuration
-        self.provider: Optional[STTProvider] = None
+        self.provider: STTProvider | None = None
         self._init_provider()
 
     def _init_provider(self):
         """根据配置初始化STT Provider"""
-        # 默认只支持讯飞
+        provider_name = (settings.STT_PROVIDER or "xunfei").lower()
+        if provider_name != "xunfei":
+            logger.warning(f"STT Provider not supported: {provider_name}")
+            self.provider = None
+            return
+
         try:
             from app.services.stt.providers.xunfei_provider import XunFeiProvider
             self.provider = XunFeiProvider()
@@ -32,7 +36,7 @@ class STTService:
             logger.error(f"Failed to initialize XunFeiProvider: {e}")
             self.provider = None
 
-    async def transcribe_file(self, file_path: str, language: Optional[str] = None) -> Dict[str, Any]:
+    async def transcribe_file(self, file_path: str, language: str | None = None) -> dict[str, Any]:
         """
         Transcribe an audio file using configured STT Provider.
         """
@@ -68,7 +72,7 @@ class STTService:
         system_prompt = """
         You are a professional transcript editor.
         Task: Optimize the following Automatic Speech Recognition (ASR) text.
-        
+
         Requirements:
         1. Correct punctuation and capitalization.
         2. Fix obvious homophone errors (typos).
@@ -76,12 +80,12 @@ class STTService:
         4. Keep the original meaning and tone.
         5. Output ONLY the corrected text.
         """
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ]
-        
+
         try:
             enhanced_text = await llm_service.chat(messages, temperature=0.3)
             return enhanced_text.strip()

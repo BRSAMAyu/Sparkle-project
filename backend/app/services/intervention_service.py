@@ -1,36 +1,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, time, timedelta
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import httpx
-
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.learning.prompt_bandit import PromptBandit
 from app.models.intervention import (
-    InterventionRequest,
     InterventionAuditLog,
     InterventionFeedback,
+    InterventionRequest,
     UserInterventionSettings,
-)
-from app.schemas.intervention import (
-    InterventionLevel,
-    InterventionRequestCreate,
-    InterventionFeedbackType,
 )
 from app.scaffolding.intent_generator import IntentGenerator
 from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
+from app.schemas.intervention import (
+    InterventionFeedbackType,
+    InterventionLevel,
+    InterventionRequestCreate,
+)
 from app.services.template_registry import TemplateRegistry
 from app.services.template_service import TemplateService
-from app.learning.prompt_bandit import PromptBandit
-
 
 _NON_SILENT_LEVELS = {
     InterventionLevel.TOAST.value,
@@ -43,21 +41,21 @@ _NON_SILENT_LEVELS = {
 class GuardrailDecision:
     action: str
     final_level: str
-    reasons: List[str]
+    reasons: list[str]
 
 
 @dataclass
 class DeliveryResult:
     delivered: bool
     method: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class InterventionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_or_create_settings(self, user_id: UUID, timezone_name: Optional[str]) -> UserInterventionSettings:
+    async def get_or_create_settings(self, user_id: UUID, timezone_name: str | None) -> UserInterventionSettings:
         result = await self.db.execute(
             select(UserInterventionSettings).where(UserInterventionSettings.user_id == user_id)
         )
@@ -88,7 +86,7 @@ class InterventionService:
     async def update_settings(
         self,
         settings_row: UserInterventionSettings,
-        updates: Dict[str, Any],
+        updates: dict[str, Any],
     ) -> UserInterventionSettings:
         for field, value in updates.items():
             if value is None:
@@ -98,8 +96,8 @@ class InterventionService:
         await self.db.refresh(settings_row)
         return settings_row
 
-    def validate_contract(self, payload: InterventionRequestCreate) -> List[str]:
-        errors: List[str] = []
+    def validate_contract(self, payload: InterventionRequestCreate) -> list[str]:
+        errors: list[str] = []
         if settings.INTERVENTION_REQUIRE_EVIDENCE and not payload.reason.evidence_refs:
             errors.append("missing_evidence")
         if payload.reason.confidence < settings.INTERVENTION_MIN_CONFIDENCE:
@@ -115,7 +113,7 @@ class InterventionService:
         actor_id: UUID,
         actor_is_admin: bool,
         payload: InterventionRequestCreate,
-        default_timezone: Optional[str],
+        default_timezone: str | None,
     ) -> InterventionRequest:
         target_user_id = payload.user_id or actor_id
         if payload.user_id and payload.user_id != actor_id and not actor_is_admin:
@@ -184,7 +182,7 @@ class InterventionService:
         await self.db.refresh(request)
         return request
 
-    async def list_recent(self, user_id: UUID, limit: int = 20) -> List[InterventionRequest]:
+    async def list_recent(self, user_id: UUID, limit: int = 20) -> list[InterventionRequest]:
         result = await self.db.execute(
             select(InterventionRequest)
             .where(InterventionRequest.user_id == user_id)
@@ -198,8 +196,8 @@ class InterventionService:
         request: InterventionRequest,
         user_id: UUID,
         feedback_type: InterventionFeedbackType,
-        extra_data: Optional[Dict[str, Any]],
-        idempotency_key: Optional[str] = None,
+        extra_data: dict[str, Any] | None,
+        idempotency_key: str | None = None,
     ) -> InterventionFeedback:
         dedupe_key = idempotency_key or f"{request.id}:{feedback_type.value}"
 
@@ -249,7 +247,7 @@ class InterventionService:
         user_id: UUID,
         feedback_type: str,
         idempotency_key: str,
-    ) -> Optional[InterventionFeedback]:
+    ) -> InterventionFeedback | None:
         result = await self.db.execute(
             select(InterventionFeedback)
             .where(InterventionFeedback.request_id == request_id)
@@ -264,8 +262,8 @@ class InterventionService:
         user_id: UUID,
         trigger_event: str,
         urgency: float,
-        context: Dict[str, Any],
-        edge_state: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any],
+        edge_state: dict[str, Any] | None = None,
     ) -> tuple[InterventionRequest, DeliveryResult]:
         fsm = ScaffoldingFSM(self.db)
         scaffolding_state = await fsm.get_state(user_id)
@@ -389,7 +387,7 @@ class InterventionService:
         settings_row: UserInterventionSettings,
         now: datetime,
     ) -> GuardrailDecision:
-        reasons: List[str] = []
+        reasons: list[str] = []
         final_level = payload.level.value
 
         if settings_row.do_not_disturb:
@@ -420,7 +418,7 @@ class InterventionService:
 
         return GuardrailDecision(action=action, final_level=final_level, reasons=reasons)
 
-    def _is_quiet_hours(self, now: datetime, quiet_hours: Optional[Dict[str, Any]]) -> bool:
+    def _is_quiet_hours(self, now: datetime, quiet_hours: dict[str, Any] | None) -> bool:
         if not quiet_hours:
             return False
 
@@ -431,9 +429,9 @@ class InterventionService:
             return False
 
         try:
-            tz = ZoneInfo(timezone_name) if timezone_name else timezone.utc
+            tz = ZoneInfo(timezone_name) if timezone_name else UTC
         except Exception:
-            tz = timezone.utc
+            tz = UTC
 
         local_time = now.astimezone(tz).time()
         start = self._parse_time(start_str)
@@ -445,7 +443,7 @@ class InterventionService:
             return start <= local_time <= end
         return local_time >= start or local_time <= end
 
-    def _parse_time(self, time_str: str) -> Optional[time]:
+    def _parse_time(self, time_str: str) -> time | None:
         try:
             return datetime.strptime(time_str, "%H:%M").time()
         except Exception:
@@ -485,9 +483,7 @@ class InterventionService:
         topic_key = f"intervention:cooldown:{user_id}:{topic}"
         if await cache_service.get(global_key):
             return True
-        if await cache_service.get(topic_key):
-            return True
-        return False
+        return bool(await cache_service.get(topic_key))
 
     async def _apply_feedback_policy(
         self,
@@ -519,7 +515,7 @@ class InterventionService:
         request: InterventionRequest,
         user_id: UUID,
         feedback_type: InterventionFeedbackType,
-        extra_data: Optional[Dict[str, Any]],
+        extra_data: dict[str, Any] | None,
     ) -> None:
         success_actions = {
             InterventionFeedbackType.ACCEPT,
@@ -555,7 +551,7 @@ class InterventionService:
             return InterventionLevel.TOAST
         return InterventionLevel.SILENT_MARKER
 
-    def _default_actions(self, intent_type: Optional[str]) -> List[Dict[str, str]]:
+    def _default_actions(self, intent_type: str | None) -> list[dict[str, str]]:
         if intent_type == "suggest_break":
             return [
                 {"id": "start_now", "label": "开始", "type": "primary"},
@@ -566,10 +562,10 @@ class InterventionService:
             {"id": "dismiss", "label": "关闭", "type": "secondary"},
         ]
 
-    def _sanitize_extra_data(self, extra_data: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _sanitize_extra_data(self, extra_data: dict[str, Any] | None) -> dict[str, Any] | None:
         if not extra_data:
             return extra_data
-        sanitized: Dict[str, Any] = {}
+        sanitized: dict[str, Any] = {}
         for key, value in extra_data.items():
             if isinstance(value, (str, int, float, bool)) or value is None:
                 sanitized[key] = value

@@ -20,6 +20,9 @@ spec:
           name: grpc
         - containerPort: 8000
           name: http
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://tempo:4317"
         envFrom:
         - secretRef:
             name: backend-secrets

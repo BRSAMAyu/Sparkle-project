@@ -118,6 +118,46 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Check if this delta contains collaboration timeline data
+        if (metadata != null) {
+          final collaborationData =
+              metadata['collaboration_timeline'] as Map<String, dynamic>?;
+
+          if (collaborationData != null) {
+            return CollaborationTimelineEvent(
+              collaborationData: collaborationData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+
+          final visualization = metadata['visualization'] as Map<String, dynamic>?;
+          final timeline = visualization?['timeline'] as List<dynamic>?;
+          if (timeline != null && timeline.isNotEmpty) {
+            final workflowType = (metadata['workflow'] as String?) ??
+                (visualization?['workflow_type'] as String?) ??
+                'unknown';
+            final executionTime = metadata['execution_time'];
+            final executionTimeMs = executionTime is num
+                ? (executionTime * 1000).round()
+                : 0;
+
+            return CollaborationTimelineEvent(
+              collaborationData: {
+                'workflow_type': workflowType,
+                'execution_time_ms': executionTimeMs,
+                'steps': timeline,
+              },
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         // Check if this delta contains plan review data
         if (metadata != null && _isTrue(metadata['requires_review'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;
@@ -873,16 +913,21 @@ class WebSocketChatServiceV2 {
         isProduction: isProduction,
       );
 
-      // Token in headers only - never in URL query
-      final query = 'user_id=$userId';
+      // Add token to query parameter for WebSocket authentication
+      // (Authorization header may not be preserved during WebSocket upgrade)
+      final query = effectiveToken != null
+          ? 'user_id=$userId&token=$effectiveToken'
+          : 'user_id=$userId';
 
       final wsUrl = '$effectiveBaseUrl/ws/chat?$query';
       _log('🔌 Connecting to: $wsUrl');
 
+      // Note: We still send Authorization header for reference, but WS uses query param
       final headers = <String, dynamic>{};
       if (effectiveToken != null && effectiveToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $effectiveToken';
       }
+      // Headers are included but query param token is used as fallback
 
       if (_channelFactory != null) {
         _channel = _channelFactory!(
@@ -1071,6 +1116,7 @@ class WebSocketChatServiceV2 {
 
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
+    _log('📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

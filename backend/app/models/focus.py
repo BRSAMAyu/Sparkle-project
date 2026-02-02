@@ -3,12 +3,11 @@
 Focus Models - 番茄钟会话记录
 """
 import enum
-from sqlalchemy import (
-    Column, Integer, ForeignKey, DateTime, Enum, Index
-)
+
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class FocusType(str, enum.Enum):

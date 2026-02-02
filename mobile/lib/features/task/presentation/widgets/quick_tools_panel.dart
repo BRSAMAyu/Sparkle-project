@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/features/tools/presentation/widgets/breathing_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/calculator_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/flash_capsule_tool.dart';
@@ -30,11 +29,7 @@ class QuickToolsPanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = SparkleContextExtension(context).colors;
-
-    return Wrap(
+  Widget build(BuildContext context) => Wrap(
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
@@ -90,7 +85,6 @@ class QuickToolsPanel extends StatelessWidget {
           ),
         ],
       );
-  }
 }
 
 class _ToolButton extends StatelessWidget {

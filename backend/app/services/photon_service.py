@@ -2,15 +2,19 @@
 光子积分服务
 Photon Service - 处理光子积分的发放、扣除和余额查询
 """
-from typing import Optional, Dict, Any
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from loguru import logger
+from typing import Any
+from uuid import uuid4
 
-from app.models.user import User
-from app.core.cache import cache_service
+from loguru import logger
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.shop import PhotonTransactionHistory
+from app.models.shop import PhotonTransactionType as DBPhotonTransactionType
+from app.models.user import User
 
 
 class PhotonTransactionType:
@@ -42,7 +46,8 @@ class PhotonService:
         self,
         user_id: str,
         amount: int,
-        delete_cache: bool = True
+        delete_cache: bool = True,
+        lock_for_update: bool = True,
     ) -> tuple[int, int, User]:
         """
         内部方法：更新用户光子余额（不提交事务）
@@ -57,6 +62,8 @@ class PhotonService:
         """
         # 获取用户
         query = select(User).where(User.id == user_id)
+        if lock_for_update:
+            query = query.with_for_update()
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()
 
@@ -90,8 +97,8 @@ class PhotonService:
         amount: int,
         source: str,
         transaction_type: str = PhotonTransactionType.GRANT_ACHIEVEMENT,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        extra_data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         发放光子积分
 
@@ -100,7 +107,7 @@ class PhotonService:
             amount: 积分数量（必须大于0）
             source: 来源说明（如 "achievement:ach_001"）
             transaction_type: 交易类型
-            metadata: 额外元数据
+            extra_data: 额外元数据
 
         Returns:
             交易结果，包含新余额
@@ -137,9 +144,9 @@ class PhotonService:
         amount: int,
         reason: str,
         transaction_type: str = PhotonTransactionType.DEDUCT_CONTRACT,
-        metadata: Optional[Dict[str, Any]] = None,
+        extra_data: dict[str, Any] | None = None,
         allow_negative: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         扣除光子积分
 
@@ -148,7 +155,7 @@ class PhotonService:
             amount: 积分数量（必须大于0）
             reason: 扣除原因
             transaction_type: 交易类型
-            metadata: 额外元数据
+            extra_data: 额外元数据
             allow_negative: 是否允许负余额（默认不允许）
 
         Returns:
@@ -237,7 +244,7 @@ class PhotonService:
         to_user_id: str,
         amount: int,
         reason: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         在用户之间转移光子积分
 
@@ -283,6 +290,28 @@ class PhotonService:
                 await cache_service.delete(cache_key_from)
                 await cache_service.delete(cache_key_to)
 
+                # 记录转出用户交易历史（修复bug：转账未记录交易）
+                await self.record_transaction(
+                    user_id=from_user_id,
+                    transaction_type="transfer_out",
+                    amount=-amount,
+                    balance_before=old_from,
+                    balance_after=new_from,
+                    source=f"Transfer to {to_user_id}",
+                    extra_data={"recipient_id": to_user_id, "reason": reason}
+                )
+
+                # 记录转入用户交易历史
+                await self.record_transaction(
+                    user_id=to_user_id,
+                    transaction_type="transfer_in",
+                    amount=amount,
+                    balance_before=old_to,
+                    balance_after=new_to,
+                    source=f"Transfer from {from_user_id}",
+                    extra_data={"sender_id": from_user_id, "reason": reason}
+                )
+
             # 事务已自动提交
             logger.info(
                 f"Transferred {amount} photons from {from_user_id} to {to_user_id}, "
@@ -301,9 +330,191 @@ class PhotonService:
             logger.error(f"Transfer failed: {e}")
             raise
 
+    async def record_transaction(
+        self,
+        user_id: str,
+        transaction_type: str,
+        amount: int,
+        balance_before: int,
+        balance_after: int,
+        source: str | None = None,
+        related_item_id: str | None = None,
+        extra_data: dict[str, Any] | None = None
+    ) -> PhotonTransactionHistory:
+        """
+        记录光子交易历史
+
+        Args:
+            user_id: 用户ID
+            transaction_type: 交易类型
+            amount: 变动数量
+            balance_before: 交易前余额
+            balance_after: 交易后余额
+            source: 来源描述
+            related_item_id: 相关物品ID
+            extra_data: 额外元数据
+
+        Returns:
+            交易历史记录
+        """
+        # 映射交易类型字符串到枚举
+        try:
+            db_transaction_type = DBPhotonTransactionType(transaction_type)
+        except ValueError:
+            # 如果不在枚举中，使用默认值
+            logger.warning(f"Unknown transaction type: {transaction_type}, using admin_adjustment")
+            db_transaction_type = DBPhotonTransactionType.ADMIN_ADJUSTMENT
+
+        transaction = PhotonTransactionHistory(
+            id=str(uuid4()),
+            user_id=user_id,
+            transaction_type=db_transaction_type,
+            amount=amount,
+            balance_before=balance_before,
+            balance_after=balance_after,
+            source=source,
+            related_item_id=related_item_id,
+            extra_data=extra_data
+        )
+
+        self.db.add(transaction)
+        await self.db.flush()
+
+        return transaction
+
+    async def get_transaction_history(
+        self,
+        user_id: str,
+        transaction_type: str | None = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> dict[str, Any]:
+        """
+        查询用户交易历史
+
+        Args:
+            user_id: 用户ID
+            transaction_type: 可选的交易类型筛选
+            limit: 返回数量限制
+            offset: 偏移量
+
+        Returns:
+            交易历史列表和分页信息
+        """
+        # 构建查询
+
+        query = select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == user_id
+        )
+
+        if transaction_type:
+            try:
+                db_transaction_type = DBPhotonTransactionType(transaction_type)
+                query = query.where(PhotonTransactionHistory.transaction_type == db_transaction_type)
+            except ValueError:
+                logger.warning(f"Unknown transaction type filter: {transaction_type}")
+
+        # 按时间倒序
+        query = query.order_by(desc(PhotonTransactionHistory.created_at))
+        query = query.limit(limit).offset(offset)
+
+        result = await self.db.execute(query)
+        transactions = result.scalars().all()
+
+        # 查询总数
+        count_query = select(func.count(PhotonTransactionHistory.id)).where(
+            PhotonTransactionHistory.user_id == user_id
+        )
+        if transaction_type:
+            try:
+                db_transaction_type = DBPhotonTransactionType(transaction_type)
+                count_query = count_query.where(
+                    PhotonTransactionHistory.transaction_type == db_transaction_type
+                )
+            except ValueError:
+                pass
+
+        count_result = await self.db.execute(count_query)
+        total_count = count_result.scalar_one()
+
+        # 转换为字典列表
+        transactions_data = []
+        for t in transactions:
+            transactions_data.append({
+                "id": str(t.id),
+                "transaction_type": t.transaction_type,
+                "amount": t.amount,
+                "balance_before": t.balance_before,
+                "balance_after": t.balance_after,
+                "source": t.source,
+                "related_item_id": t.related_item_id,
+                "extra_data": t.extra_data,
+                "created_at": t.created_at.isoformat() if t.created_at else None
+            })
+
+        return {
+            "transactions": transactions_data,
+            "total_count": total_count,
+            "limit": limit,
+            "offset": offset
+        }
+
+    async def get_transaction_summary(
+        self,
+        user_id: str,
+        days: int = 30
+    ) -> dict[str, Any]:
+        """
+        获取交易汇总统计
+
+        Args:
+            user_id: 用户ID
+            days: 统计最近多少天
+
+        Returns:
+            汇总统计数据
+        """
+        from datetime import timedelta
+
+        since_date = datetime.utcnow() - timedelta(days=days)
+
+        # 查询交易历史
+        query = select(PhotonTransactionHistory).where(
+            and_(
+                PhotonTransactionHistory.user_id == user_id,
+                PhotonTransactionHistory.created_at >= since_date
+            )
+        )
+
+        result = await self.db.execute(query)
+        transactions = result.scalars().all()
+
+        # 统计
+        total_income = sum(t.amount for t in transactions if t.amount > 0)
+        total_expense = sum(abs(t.amount) for t in transactions if t.amount < 0)
+        net_change = total_income - total_expense
+
+        # 按类型分组
+        by_type = {}
+        for t in transactions:
+            # Handle both enum and string types
+            type_key = t.transaction_type.value if hasattr(t.transaction_type, 'value') else str(t.transaction_type)
+            if type_key not in by_type:
+                by_type[type_key] = 0
+            by_type[type_key] += t.amount
+
+        return {
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "net_change": net_change,
+            "transaction_count": len(transactions),
+            "by_type": by_type,
+            "period_days": days
+        }
+
 
 # 全局单例获取函数（需要在有 db session 的情况下使用）
-async def get_photon_service(db: AsyncSession) -> PhotonService:
+def get_photon_service(db: AsyncSession) -> PhotonService:
     """
     获取光子积分服务实例
 

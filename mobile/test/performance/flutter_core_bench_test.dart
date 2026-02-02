@@ -1,5 +1,6 @@
 /// Flutter Core Performance Benchmarks
 /// Flutter核心性能基准测试
+library;
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -15,7 +16,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: Container(
-                child: Text('Hello'),
+                child: const Text('Hello'),
               ),
             ),
           ),
@@ -84,11 +85,9 @@ void main() {
           home: Scaffold(
             body: ListView.builder(
               itemCount: 100,
-              itemBuilder: (context, index) {
-                return ListTile(
+              itemBuilder: (context, index) => ListTile(
                   title: Text('Item $index'),
-                );
-              },
+                ),
             ),
           ),
         ),
@@ -109,12 +108,10 @@ void main() {
           home: Scaffold(
             body: ListView.builder(
               itemCount: 100,
-              itemBuilder: (context, index) {
-                return ListTile(
+              itemBuilder: (context, index) => ListTile(
                   title: Text('Item $index'),
                   subtitle: Text('Subtitle $index'),
-                );
-              },
+                ),
             ),
           ),
         ),
@@ -315,15 +312,17 @@ void main() {
       print('=========================\n');
 
       // Verify all are within acceptable limits
-      expect(results['Text']!, lessThan(20));
-      expect(results['ListView']!, lessThan(200));
-      expect(results['Column']!, lessThan(50));
+      expect(results['Text'], lessThan(20));
+      expect(results['ListView'], lessThan(200));
+      expect(results['Column'], lessThan(50));
     });
   });
 }
 
 // Helper widgets for testing
 class TestWidget extends StatefulWidget {
+  const TestWidget({super.key});
+
   @override
   State<TestWidget> createState() => _TestWidgetState();
 }
@@ -338,12 +337,12 @@ class _TestWidgetState extends State<TestWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Text('Count: $_counter');
-  }
+  Widget build(BuildContext context) => Text('Count: $_counter');
 }
 
 class TestFadeWidget extends StatefulWidget {
+  const TestFadeWidget({super.key});
+
   @override
   State<TestFadeWidget> createState() => _TestFadeWidgetState();
 }
@@ -358,11 +357,9 @@ class _TestFadeWidgetState extends State<TestFadeWidget> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
+  Widget build(BuildContext context) => AnimatedOpacity(
       opacity: _opacity,
       duration: const Duration(milliseconds: 300),
       child: const Text('Fade In'),
     );
-  }
 }

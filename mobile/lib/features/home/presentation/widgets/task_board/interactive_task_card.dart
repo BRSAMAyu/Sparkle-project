@@ -328,7 +328,7 @@ class InteractiveTaskCard extends ConsumerWidget {
   }
 
   void _confirmAbandon(BuildContext context, WidgetRef ref, TaskModel task) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('放弃任务'),

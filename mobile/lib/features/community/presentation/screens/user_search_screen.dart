@@ -101,6 +101,10 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: TextField(
           controller: _searchController,
           autofocus: true,
@@ -185,25 +189,24 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (user.flameLevel != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: DS.warning.shade100,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Lv.${user.flameLevel}',
-                                style: TextStyle(
-                                  color: DS.warning.shade700,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: DS.warning.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Lv.${user.flameLevel}',
+                              style: TextStyle(
+                                color: DS.warning.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                          ),
                           const SizedBox(width: DS.sm),
                           Icon(Icons.chevron_right, color: DS.brandPrimary),
                         ],

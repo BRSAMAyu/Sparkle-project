@@ -6,10 +6,6 @@ part 'notification_center_provider.g.dart';
 
 /// Notification Center State
 class NotificationCenterState {
-  final List<UnifiedNotification> notifications;
-  final bool isLoading;
-  final String? error;
-  final int unreadCount;
 
   const NotificationCenterState({
     this.notifications = const [],
@@ -17,20 +13,22 @@ class NotificationCenterState {
     this.error,
     this.unreadCount = 0,
   });
+  final List<UnifiedNotification> notifications;
+  final bool isLoading;
+  final String? error;
+  final int unreadCount;
 
   NotificationCenterState copyWith({
     List<UnifiedNotification>? notifications,
     bool? isLoading,
     String? error,
     int? unreadCount,
-  }) {
-    return NotificationCenterState(
+  }) => NotificationCenterState(
       notifications: notifications ?? this.notifications,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       unreadCount: unreadCount ?? this.unreadCount,
     );
-  }
 }
 
 /// Notification Center Notifier
@@ -49,7 +47,7 @@ class NotificationCenter extends _$NotificationCenter {
     bool unreadOnly = false,
     String? sourceType,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final notifications = await _repository.getNotifications(
@@ -102,9 +100,7 @@ class NotificationCenter extends _$NotificationCenter {
       await _repository.markAllAsRead();
 
       // Update local state
-      final updatedNotifications = state.notifications.map((n) {
-        return n.copyWith(isRead: true);
-      }).toList();
+      final updatedNotifications = state.notifications.map((n) => n.copyWith(isRead: true)).toList();
 
       state = state.copyWith(
         notifications: updatedNotifications,

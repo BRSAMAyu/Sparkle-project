@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InterventionLevel(str, Enum):
@@ -34,87 +34,87 @@ class InterventionFeedbackType(str, Enum):
 class EvidenceRef(BaseModel):
     type: str
     id: str
-    schema_version: Optional[str] = None
+    schema_version: str | None = None
     user_deleted: bool = False
 
 
 class InterventionReason(BaseModel):
-    trigger_event_id: Optional[str] = None
+    trigger_event_id: str | None = None
     explanation_text: str
     confidence: float = Field(..., ge=0.0, le=1.0)
-    evidence_refs: List[EvidenceRef] = Field(default_factory=list)
-    decision_trace: List[str] = Field(default_factory=list)
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    decision_trace: list[str] = Field(default_factory=list)
 
 
 class CoolDownPolicy(BaseModel):
     policy: str
-    until_ms: Optional[int] = None
+    until_ms: int | None = None
 
 
 class InterventionDecisionContext(BaseModel):
-    interruptibility: Optional[float] = Field(None, ge=0.0, le=1.0)
-    focus_mode: Optional[bool] = None
-    sprint_mode: Optional[bool] = None
-    risk_level: Optional[str] = None
+    interruptibility: float | None = Field(None, ge=0.0, le=1.0)
+    focus_mode: bool | None = None
+    sprint_mode: bool | None = None
+    risk_level: str | None = None
 
 
 class InterventionRequestCreate(BaseModel):
-    user_id: Optional[UUID] = None
-    dedupe_key: Optional[str] = None
-    topic: Optional[str] = None
-    expires_at: Optional[datetime] = None
+    user_id: UUID | None = None
+    dedupe_key: str | None = None
+    topic: str | None = None
+    expires_at: datetime | None = None
     is_retractable: bool = True
-    supersedes_id: Optional[UUID] = None
+    supersedes_id: UUID | None = None
     schema_version: str = "intervention.v1"
-    policy_version: Optional[str] = None
-    model_version: Optional[str] = None
+    policy_version: str | None = None
+    model_version: str | None = None
     reason: InterventionReason
     level: InterventionLevel
-    cooldown_policy: Optional[CoolDownPolicy] = None
-    content: Optional[Dict[str, Any]] = None
-    context: Optional[InterventionDecisionContext] = None
-    delivery_method: Optional[str] = None
-    template_id: Optional[str] = None
-    template_variant_id: Optional[str] = None
-    scaffolding_level: Optional[int] = None
-    intent_type: Optional[str] = None
+    cooldown_policy: CoolDownPolicy | None = None
+    content: dict[str, Any] | None = None
+    context: InterventionDecisionContext | None = None
+    delivery_method: str | None = None
+    template_id: str | None = None
+    template_variant_id: str | None = None
+    scaffolding_level: int | None = None
+    intent_type: str | None = None
 
 
 class InterventionRequestResponse(BaseModel):
     id: UUID
     user_id: UUID
-    dedupe_key: Optional[str] = None
-    topic: Optional[str] = None
+    dedupe_key: str | None = None
+    topic: str | None = None
     requested_level: InterventionLevel
     final_level: InterventionLevel
     status: InterventionStatus
-    reason: Optional[Dict[str, Any]] = None
-    content: Optional[Dict[str, Any]] = None
-    cooldown_policy: Optional[Dict[str, Any]] = None
-    delivery_method: Optional[str] = None
-    template_id: Optional[str] = None
-    template_variant_id: Optional[str] = None
-    scaffolding_level: Optional[int] = None
-    intent_type: Optional[str] = None
+    reason: dict[str, Any] | None = None
+    content: dict[str, Any] | None = None
+    cooldown_policy: dict[str, Any] | None = None
+    delivery_method: str | None = None
+    template_id: str | None = None
+    template_variant_id: str | None = None
+    scaffolding_level: int | None = None
+    intent_type: str | None = None
     schema_version: str
-    policy_version: Optional[str] = None
-    model_version: Optional[str] = None
-    expires_at: Optional[datetime] = None
+    policy_version: str | None = None
+    model_version: str | None = None
+    expires_at: datetime | None = None
     is_retractable: bool
-    supersedes_id: Optional[UUID] = None
+    supersedes_id: UUID | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class InterventionSettingsUpdate(BaseModel):
-    interrupt_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
-    daily_interrupt_budget: Optional[int] = Field(None, ge=0, le=100)
-    cooldown_minutes: Optional[int] = Field(None, ge=0, le=1440)
-    quiet_hours: Optional[Dict[str, Any]] = None
-    topic_allowlist: Optional[List[str]] = None
-    topic_blocklist: Optional[List[str]] = None
-    do_not_disturb: Optional[bool] = None
+    interrupt_threshold: float | None = Field(None, ge=0.0, le=1.0)
+    daily_interrupt_budget: int | None = Field(None, ge=0, le=100)
+    cooldown_minutes: int | None = Field(None, ge=0, le=1440)
+    quiet_hours: dict[str, Any] | None = None
+    topic_allowlist: list[str] | None = None
+    topic_blocklist: list[str] | None = None
+    do_not_disturb: bool | None = None
 
 
 class InterventionSettingsResponse(BaseModel):
@@ -122,9 +122,9 @@ class InterventionSettingsResponse(BaseModel):
     interrupt_threshold: float
     daily_interrupt_budget: int
     cooldown_minutes: int
-    quiet_hours: Optional[Dict[str, Any]] = None
-    topic_allowlist: Optional[List[str]] = None
-    topic_blocklist: Optional[List[str]] = None
+    quiet_hours: dict[str, Any] | None = None
+    topic_allowlist: list[str] | None = None
+    topic_blocklist: list[str] | None = None
     do_not_disturb: bool
     updated_at: datetime
 
@@ -133,8 +133,8 @@ class InterventionSettingsResponse(BaseModel):
 
 class InterventionFeedbackRequest(BaseModel):
     feedback_type: InterventionFeedbackType
-    extra_data: Optional[Dict[str, Any]] = None
-    idempotency_key: Optional[str] = None
+    extra_data: dict[str, Any] | None = None
+    idempotency_key: str | None = None
 
 
 class InterventionFeedbackResponse(BaseModel):
@@ -142,8 +142,8 @@ class InterventionFeedbackResponse(BaseModel):
     request_id: UUID
     user_id: UUID
     feedback_type: InterventionFeedbackType
-    extra_data: Optional[Dict[str, Any]] = None
-    idempotency_key: Optional[str] = None
+    extra_data: dict[str, Any] | None = None
+    idempotency_key: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -154,44 +154,44 @@ class InterventionAuditResponse(BaseModel):
     request_id: UUID
     user_id: UUID
     action: str
-    guardrail_result: Optional[Dict[str, Any]] = None
-    decision_trace: Optional[Dict[str, Any]] = None
-    evidence_refs: Optional[Dict[str, Any]] = None
+    guardrail_result: dict[str, Any] | None = None
+    decision_trace: dict[str, Any] | None = None
+    evidence_refs: dict[str, Any] | None = None
     requested_level: InterventionLevel
     final_level: InterventionLevel
-    policy_version: Optional[str] = None
-    model_version: Optional[str] = None
-    schema_version: Optional[str] = None
+    policy_version: str | None = None
+    model_version: str | None = None
+    schema_version: str | None = None
     occurred_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class EdgeStatePayload(BaseModel):
-    focus_score: Optional[float] = None
-    switching_rate: Optional[float] = None
-    is_foreground: Optional[bool] = None
-    session_seconds: Optional[int] = None
-    stress_score: Optional[float] = None
-    fatigue_score: Optional[float] = None
-    interrupt_score: Optional[float] = None
-    attention_score: Optional[float] = None
-    debug: Optional[Dict[str, Any]] = None
+    focus_score: float | None = None
+    switching_rate: float | None = None
+    is_foreground: bool | None = None
+    session_seconds: int | None = None
+    stress_score: float | None = None
+    fatigue_score: float | None = None
+    interrupt_score: float | None = None
+    attention_score: float | None = None
+    debug: dict[str, Any] | None = None
 
 
 class InterventionTriggerRequest(BaseModel):
     type: str
     urgency: float = Field(..., ge=0.0, le=1.0)
-    context: Dict[str, Any] = Field(default_factory=dict)
-    edge_state: Optional[EdgeStatePayload] = None
-    gate_decision: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] = Field(default_factory=dict)
+    edge_state: EdgeStatePayload | None = None
+    gate_decision: dict[str, Any] | None = None
 
 
 class PassiveSignalRequest(BaseModel):
     signal_type: str
-    intervention_id: Optional[UUID] = None
-    context: Optional[Dict[str, Any]] = None
-    timestamp: Optional[datetime] = None
+    intervention_id: UUID | None = None
+    context: dict[str, Any] | None = None
+    timestamp: datetime | None = None
 
 
 class BehavioralOutcomeRequest(BaseModel):
@@ -199,4 +199,4 @@ class BehavioralOutcomeRequest(BaseModel):
     outcome_type: str
     time_to_outcome: int = Field(..., ge=0)
     success: bool
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None

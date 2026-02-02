@@ -5,22 +5,22 @@ Provides structured associations between tasks and learning resources,
 seed content, and knowledge graph nodes.
 """
 import enum
+
 from sqlalchemy import (
-    Column,
-    String,
-    Integer,
-    Text,
+    JSON,
     Boolean,
+    Column,
     Float,
     ForeignKey,
     Index,
-    Enum,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from sqlalchemy import JSON
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
@@ -47,7 +47,7 @@ class TaskResourceLink(BaseModel):
     title = Column(String(255), nullable=True)
     url = Column(String(500), nullable=True)
     summary = Column(Text, nullable=True)
-    resource_metadata = Column(JSONBCompat, nullable=True)
+    resource_metadata = Column("metadata", JSONBCompat, nullable=True)
 
     order_index = Column(Integer, default=0, nullable=False)
     is_primary = Column(Boolean, default=False, nullable=False)

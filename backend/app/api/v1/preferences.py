@@ -2,7 +2,7 @@
 偏好 API - 预览和生效证明
 """
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -12,14 +12,14 @@ from app.api.deps import get_current_user
 from app.core.cache import cache_service
 from app.db.session import get_db
 from app.models.user import User
-from app.services.personalization import get_personalization_engine
 from app.services.llm_service import llm_service
+from app.services.personalization import get_personalization_engine
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
 
 
 class PreferencePreviewRequest(BaseModel):
-    preview_preferences: Dict[str, Any]
+    preview_preferences: dict[str, Any]
 
 
 class PreferencePreviewResponse(BaseModel):
@@ -83,7 +83,7 @@ async def _generate_ai_sample(llm_profile) -> str:
         return f"[预览生成失败: {e}]"
 
 
-async def _generate_push_sample(prefs: Dict[str, Any]) -> str:
+async def _generate_push_sample(prefs: dict[str, Any]) -> str:
     """生成推送内容示例"""
     persona = prefs.get("persona_type", "coach")
     depth = prefs.get("depth_preference", 0.5)
@@ -110,9 +110,9 @@ def _generate_task_summary(profile) -> str:
     )
 
 
-def _generate_effect_summary(prefs: Dict[str, Any]) -> str:
+def _generate_effect_summary(prefs: dict[str, Any]) -> str:
     """生成效果总结"""
-    summaries: List[str] = []
+    summaries: list[str] = []
 
     depth = prefs.get("depth_preference", 0.5)
     if depth > 0.7:
@@ -147,9 +147,9 @@ class DecisionRecord(BaseModel):
 
 
 class EffectivenessResponse(BaseModel):
-    records: List[DecisionRecord]
+    records: list[DecisionRecord]
     total_decisions: int
-    modules_summary: Dict[str, int]
+    modules_summary: dict[str, int]
 
 
 @router.get("/effectiveness", response_model=EffectivenessResponse)
@@ -166,7 +166,7 @@ async def get_preference_effectiveness(
     service = DecisionRecordService(db)
     records = await service.get_recent_records(current_user.id, limit)
 
-    modules_summary: Dict[str, int] = {}
+    modules_summary: dict[str, int] = {}
     for record in records:
         modules_summary[record.module] = modules_summary.get(record.module, 0) + 1
 

@@ -1,50 +1,52 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 import json
-import asyncio
+from typing import Any
 from uuid import UUID
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from loguru import logger
+from pydantic import BaseModel
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
-from app.models.user import User
-from app.services.llm_service import llm_service, LLMResponse, StreamChunk
-from app.services.analytics_service import AnalyticsService
 from app.config import settings
-from app.tools.registry import tool_registry
-from app.orchestration.executor import ToolExecutor
-from app.orchestration.composer import ResponseComposer
-from app.orchestration.prompts import build_system_prompt
-from app.orchestration.error_handler import AgentErrorHandler
-from app.core.pending_actions import pending_actions_store
 from app.core.business_metrics import HITL_APPROVED, HITL_REJECTED
 from app.core.cache import cache_service
+from app.core.pending_actions import pending_actions_store
+from app.db.session import get_db
 from app.models.chat import ChatMessage, MessageRole
+from app.models.user import User
+from app.orchestration.composer import ResponseComposer
+from app.orchestration.error_handler import AgentErrorHandler
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.prompts import build_system_prompt
+from app.services.analytics_service import AnalyticsService
+from app.services.llm_service import LLMResponse, llm_service
+from app.tools.registry import tool_registry
 
 router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
-    conversation_id: Optional[str] = None
-    context: Optional[Dict[str, Any]] = None  # 前端传递的额外上下文
+    conversation_id: str | None = None
+    context: dict[str, Any] | None = None  # 前端传递的额外上下文
 
 class ChatResponse(BaseModel):
     message: str
     conversation_id: str
-    widgets: List[Dict[str, Any]] = []        # 需要渲染的组件列表
-    tool_results: List[Dict[str, Any]] = []   # 工具执行结果
+    widgets: list[dict[str, Any]] = []        # 需要渲染的组件列表
+    tool_results: list[dict[str, Any]] = []   # 工具执行结果
     has_errors: bool = False
-    errors: Optional[List[Dict[str, str]]] = None
+    errors: list[dict[str, str]] | None = None
     requires_confirmation: bool = False
-    confirmation_data: Optional[Dict] = None
+    confirmation_data: dict | None = None
 
 @router.post("/task/{task_id}", response_model=ChatResponse)
 async def chat_with_task_context(
     task_id: UUID,
     request: ChatRequest,
+    req_raw: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -53,7 +55,8 @@ async def chat_with_task_context(
     Binds conversation to a task and injects task context.
     """
     from app.models.task import Task
-    
+    logger.info(f"Chat request headers: {req_raw.headers}")
+
     # 1. Verify Task Ownership
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
@@ -61,11 +64,11 @@ async def chat_with_task_context(
 
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
-    error_handler = AgentErrorHandler()
-    
+    AgentErrorHandler()
+
     # 2. Build Context
     user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
-    
+
     # Inject Task Context specifically
     task_context = {
         "id": str(task.id),
@@ -77,11 +80,11 @@ async def chat_with_task_context(
         "current_focus": "The user is currently working on this task."
     }
     user_context["current_task"] = task_context
-    
+
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
-    
+
     llm_conversation_history = [
         {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
     ]
@@ -93,24 +96,24 @@ async def chat_with_task_context(
     # 4. LLM Call (Standard Flow)
     # This duplicates the logic of the main chat endpoint but simplifies for this phase
     # Ideally, refactor common logic into a service method. For now, we inline for safety.
-    
+
     llm_response: LLMResponse = await llm_service.chat_with_tools(
         system_prompt=system_prompt,
         user_message=request.message,
         tools=tool_registry.get_openai_tools_schema(),
         conversation_history=llm_conversation_history
     )
-    
+
     # ... (Simplified tool handling same as main chat, omitting complex confirm/retry for brevity unless needed)
     # For Phase 1.3, we'll implement basic response first.
-    
+
     llm_text = llm_response.content
     tool_results = []
-    
+
     # ... (If we want full tool support here, copy logic from /chat. Let's assume basic chat for now or minimal tools)
     # Re-using the exact logic from /chat is best.
     # Let's just delegate to a common handler or copy the critical parts.
-    
+
     # Copying critical parts for tool execution support:
     if llm_response.tool_calls:
         tool_results = await tool_executor.execute_tool_calls(
@@ -118,18 +121,18 @@ async def chat_with_task_context(
             user_id=str(current_user.id),
             db_session=db
         )
-        # We skip the complex confirmation/retry loop for this specific endpoint for now 
+        # We skip the complex confirmation/retry loop for this specific endpoint for now
         # to keep it simple, or we can copy it.
         # Let's do a simple follow-up if tools were called.
-        
+
         if tool_results:
              # Append LLM's initial response
             llm_response_for_history = {
                 "role": "assistant",
                 "content": llm_response.content,
-                "tool_calls": llm_response.tool_calls 
+                "tool_calls": llm_response.tool_calls
             }
-            
+
             tool_messages_for_history = []
             for tr in tool_results:
                  tool_messages_for_history.append({
@@ -146,22 +149,22 @@ async def chat_with_task_context(
             )
             llm_text = final_llm_response.content
 
-    # 5. Save Message (linked to task? Schema doesn't have task_id on ChatMessage yet, 
-    # but the Plan says "Task.chat_messages = relationship...". 
+    # 5. Save Message (linked to task? Schema doesn't have task_id on ChatMessage yet,
+    # but the Plan says "Task.chat_messages = relationship...".
     # Let's check ChatMessage model in `app/models/chat.py` to see if it has task_id).
     # I'll check it in a separate read if needed, but for now I'll just save it as normal chat.
     # Actually, the user requirement says "Modify backend/app/api/v1/chat.py - Bind conversation to task".
-    
+
     # If ChatMessage doesn't have task_id, we might need to add it or just rely on session_id being tracked elsewhere.
     # For now, we return the response.
-    
+
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,
         requires_confirmation=False,
         confirmation_data=None
     )
-    
+
     # Save standard chat message
     await save_chat_message(
         db=db,
@@ -177,6 +180,7 @@ async def chat_with_task_context(
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    req_raw: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -184,16 +188,17 @@ async def chat(
     Agent 模式的聊天接口
     支持工具调用和结构化响应
     """
+    logger.info(f"Main chat request headers: {req_raw.headers}")
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
     error_handler = AgentErrorHandler()
-    
+
     # 1. 构建上下文和对话历史
     user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
-    
+
     # Pre-format for LLM
     llm_conversation_history = [
         {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
@@ -201,7 +206,7 @@ async def chat(
 
     # 2. 构建 System Prompt
     system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
-    
+
     # 3. 调用 LLM（带工具定义）
     llm_response: LLMResponse = await llm_service.chat_with_tools(
         system_prompt=system_prompt,
@@ -209,7 +214,7 @@ async def chat(
         tools=tool_registry.get_openai_tools_schema(),
         conversation_history=llm_conversation_history
     )
-    
+
     # 4. 处理工具调用
     tool_results = []
     requires_confirmation = False
@@ -262,7 +267,7 @@ async def chat(
                 db_session=db
             )
             tool_results = corrected_results
-        
+
         # 5. 将工具执行结果反馈给 LLM，获取最终回复
         if requires_confirmation:
             # 如果需要确认，直接使用 LLM 的初始回复，提示用户确认
@@ -295,7 +300,7 @@ async def chat(
             llm_text = llm_response.content
     else:
         llm_text = llm_response.content
-    
+
     # 6. 组装响应
     response_data = response_composer.compose_response(
         llm_text=llm_text,
@@ -303,7 +308,7 @@ async def chat(
         requires_confirmation=requires_confirmation,
         confirmation_data=confirmation_data
     )
-    
+
     # 7. 保存消息到数据库
     await save_chat_message(
         db=db,
@@ -313,7 +318,7 @@ async def chat(
         assistant_message=llm_text,
         tool_results=[tr.model_dump() for tr in tool_results] # save tool results in message
     )
-    
+
     return ChatResponse(**response_data, conversation_id=request.conversation_id or "new")
 
 @router.post("/chat/stream")
@@ -329,9 +334,9 @@ async def chat_stream(
     async def event_generator():
         tool_executor = ToolExecutor()
         error_handler = AgentErrorHandler()
-        
+
         user_id_uuid = current_user.id
-        
+
         # Build context
         user_context = await get_user_context(db, user_id_uuid, payload={"context": request.context})
         conversation_history_raw = await get_conversation_history(
@@ -340,17 +345,17 @@ async def chat_stream(
         llm_conversation_history = [
             {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
         ]
-        
+
         system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
 
         collected_text_content = ""
-        collected_tool_calls_raw = [] # Raw tool calls from LLM (function_call format) 
-        
+        collected_tool_calls_raw = [] # Raw tool calls from LLM (function_call format)
+
         # Keep track of messages for history
         message_history_for_llm_callback = llm_conversation_history + [
             {"role": "user", "content": request.message} # Add user message to history
         ]
-        
+
         async for chunk in llm_service.chat_stream_with_tools(
             system_prompt=system_prompt,
             user_message=request.message,
@@ -360,14 +365,14 @@ async def chat_stream(
             if chunk.type == "text":
                 collected_text_content += chunk.content
                 yield f"data: {json.dumps({'type': 'text', 'content': chunk.content})}\\n\n"
-            
+
             elif chunk.type == "tool_call_chunk":
                 # For now, we only care about the tool_call_end for execution
                 # We can send tool_start event when tool_name is first received
                 if chunk.tool_name and collected_tool_calls_raw and \
                    collected_tool_calls_raw[-1].get("function", {}).get("name") != chunk.tool_name:
                     yield f"data: {json.dumps({'type': 'tool_start', 'tool': chunk.tool_name})}\\n\n"
-                
+
                 # Append raw chunks to reconstruct full tool call later
                 if not collected_tool_calls_raw or collected_tool_calls_raw[-1]["id"] != chunk.tool_call_id:
                     collected_tool_calls_raw.append({
@@ -411,11 +416,11 @@ async def chat_stream(
                     )
 
                 yield f"data: {json.dumps({'type': 'tool_result', 'result': result.model_dump()})}\\n\n"
-                
+
                 # If there's a widget, send it separately
                 if result.widget_type:
                     yield f"data: {json.dumps({'type': 'widget', 'widget_type': result.widget_type, 'widget_data': result.widget_data})}\\n\n"
-                
+
                 # If tool was successfully executed, send tool result back to LLM to continue conversation
                 # This requires an extra turn to LLM
                 # Add LLM's initial response (which contained tool calls) to history
@@ -445,7 +450,7 @@ async def chat_stream(
                 final_text = final_llm_response.content
                 yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\\n\n"
                 collected_text_content += final_text
-                
+
         # If no tool calls were made, just final text from first LLM call
         if not collected_tool_calls_raw and collected_text_content:
              # Already yielded content above, but ensuring consistency
@@ -459,11 +464,11 @@ async def chat_stream(
             user_message=request.message,
             assistant_message=collected_text_content,
             # tool_results should be collected during the stream, but simplified here
-            tool_results=[] 
+            tool_results=[]
         )
-        
+
         yield f"data: {json.dumps({'type': 'done'})}\\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream"
@@ -583,17 +588,18 @@ async def confirm_action(
         await pending_actions_store.delete(action_id, str(current_user.id))
         raise HTTPException(status_code=500, detail=f"执行操作时出错: {str(e)}")
 
-# ============辅助函数 ============ 
+# ============辅助函数 ============
 
-async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Dict[str, Any]] = None) -> dict:
+async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, Any] | None = None) -> dict:
     """
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
     """
     from datetime import datetime, timedelta
-    from app.models.task import Task
-    from app.models.plan import Plan
+
     from app.models.galaxy import UserNodeStatus
+    from app.models.plan import Plan
+    from app.models.task import Task
 
     context = {
         "recent_tasks": [],
@@ -699,7 +705,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
             .where(
                 and_(
                     Plan.user_id == user_id,
-                    Plan.is_completed == False
+                    not Plan.is_completed
                 )
             )
             .order_by(Plan.created_at.desc())
@@ -744,14 +750,14 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
     return context
 
 async def get_conversation_history(
-    db: AsyncSession, 
-    user_id: UUID, 
-    conversation_id: Optional[str]
-) -> List[Dict[str, str]]:
+    db: AsyncSession,
+    user_id: UUID,
+    conversation_id: str | None
+) -> list[dict[str, str]]:
     """获取对话历史"""
     if not conversation_id:
         return []
-    
+
     try:
         session_id = UUID(conversation_id)
     except ValueError:
@@ -784,14 +790,14 @@ async def get_conversation_history(
 async def save_chat_message(
     db: AsyncSession,
     user_id: UUID,
-    conversation_id: Optional[str],
+    conversation_id: str | None,
     user_message: str,
     assistant_message: str,
-    tool_results: List[Dict]
+    tool_results: list[dict]
 ):
     """保存聊天消息"""
-    session_id_uuid = UUID(conversation_id) if conversation_id else UUID('00000000-0000-0000-0000-000000000000') 
-    
+    session_id_uuid = UUID(conversation_id) if conversation_id else UUID('00000000-0000-0000-0000-000000000000')
+
     # Save user message
     user_msg_db = ChatMessage(
         user_id=user_id,
@@ -811,5 +817,5 @@ async def save_chat_message(
         actions=tool_results if tool_results else None, # Store tool results as actions
     )
     db.add(assistant_msg_db)
-    
+
     await db.commit()
