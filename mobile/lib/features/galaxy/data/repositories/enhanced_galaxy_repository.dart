@@ -271,15 +271,16 @@ class EnhancedGalaxyRepository {
   /// 获取事件流
   Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) {
     if (DemoDataService.isDemoMode) {
+      debugPrint('🌌 Demo mode: returning empty galaxy events stream');
       return const Stream.empty();
     }
+
+    debugPrint('🌌 Connecting to galaxy events stream (SSE)...');
     final headers = <String, dynamic>{};
     if (lastEventId != null) {
       headers['Last-Event-ID'] = lastEventId;
     }
-    // Assuming api_client.getStream supports options/headers. 
-    // If not, this is a placeholder for the actual implementation in ApiClient.
-    // Based on typical Dio wrapper:
+
     return _apiClient.getStream(
       ApiEndpoints.galaxyEvents,
       headers: headers,

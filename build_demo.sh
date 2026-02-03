@@ -16,6 +16,11 @@ flutter clean
 flutter pub get
 echo ""
 
+# 修复 isar SDK 兼容性
+echo "🔧 Fixing isar_flutter_libs compatibility..."
+bash fix_isar_sdk.sh
+echo ""
+
 # Android APK
 echo "📱 Building Android APK (Release)..."
 flutter build apk \

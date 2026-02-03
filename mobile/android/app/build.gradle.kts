@@ -21,7 +21,7 @@ val applicationIdValue =
 
 android {
     namespace = applicationIdValue
-    compileSdk = 34  // Updated to support newer Android libraries
+    compileSdk = 36  // Updated to support newer Android libraries (required by plugins)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

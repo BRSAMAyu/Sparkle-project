@@ -1,63 +1,67 @@
 #!/bin/bash
-# 真机演示安装脚本
-# 用于安装app到真机并配置正确的后端IP
+# Sparkle Demo 版本安装脚本
+# 用途: 一键设置 Demo 开发环境
 
-# 获取Mac的IP地址
-MAC_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
+set -e
 
-if [ -z "$MAC_IP" ]; then
-    echo "❌ 无法获取Mac的IP地址"
-    exit 1
-fi
-
-echo "🔧 检测到Mac IP: $MAC_IP"
-echo "📱 将安装app并连接到后端: http://$MAC_IP:8080"
+echo "🎯 Sparkle Demo Environment Setup"
+echo "=================================="
 echo ""
 
-# 检测设备类型
-DEVICE_ID=$(flutter devices | grep -v "Wireless" | grep -m 1 -oE "[a-z0-9]{12,}")
-
-if [ -z "$DEVICE_ID" ]; then
-    echo "❌ 未检测到连接的设备"
-    echo "请确保已连接真机或模拟器"
-    flutter devices
-    exit 1
+# 检查 Flutter 是否安装
+if ! command -v flutter &> /dev/null; then
+  echo "❌ Flutter is not installed"
+  echo "   Please install Flutter first: https://flutter.dev/docs/get-started/install"
+  exit 1
 fi
 
-echo "✅ 检测到设备: $DEVICE_ID"
+echo "✅ Flutter detected: $(flutter --version | head -1)"
 echo ""
-echo "🚀 开始构建并安装..."
 
-# 构建并安装，指定API_BASE_URL
-flutter build apk --debug \
-  --dart-define=API_BASE_URL=http://$MAC_IP:8080 \
-  --dart-define=IOS_DEVICE_URL=http://$MAC_IP:8080 \
-  --dart-define=ANDROID_DEVICE_URL=http://$MAC_IP:8080
+# 进入项目目录
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$SCRIPT_DIR"
 
-if [ $? -ne 0 ]; then
-    echo "❌ 构建失败"
-    exit 1
-fi
-
+# 1. 安装依赖
+echo "📦 Installing dependencies..."
+flutter pub get
 echo ""
-echo "📲 安装到设备..."
 
-flutter install --debug -d $DEVICE_ID
+# 2. 修复 isar SDK 兼容性
+echo "🔧 Fixing isar_flutter_libs compatibility..."
+bash fix_isar_sdk.sh
+echo ""
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ 安装成功！"
-    echo ""
-    echo "📋 测试清单："
-    echo "1. 点击「演示账号登录」"
-    echo "2. 确认看到数据库中的真实数据（42个任务、11个胶囊等）"
-    echo "3. 测试LLM聊天功能是否正常"
-    echo ""
-    echo "🔍 如果看不到数据，请检查："
-    echo "- 后端是否在 http://$MAC_IP:8080 运行"
-    echo "- 数据库中chat_test账号是否有数据"
-    echo "- App日志中的API请求地址"
-else
-    echo "❌ 安装失败"
-    exit 1
+# 3. 生成代码 (可选)
+read -p "🤔 Run code generation (build_runner)? This may take a while. [y/N]: " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  echo "⚙️  Running build_runner..."
+  flutter pub run build_runner build --delete-conflicting-outputs
+  echo ""
 fi
+
+# 4. 检查设备
+echo "📱 Checking available devices..."
+flutter devices
+echo ""
+
+# 5. 提示后续步骤
+echo "✅ Demo environment setup complete!"
+echo ""
+echo "🚀 Next steps:"
+echo ""
+echo "   Run on device/emulator:"
+echo "   $ flutter run --dart-define=DEMO_MODE=true"
+echo ""
+echo "   Build Android APK:"
+echo "   $ flutter build apk --dart-define=DEMO_MODE=true --release --split-per-abi"
+echo ""
+echo "   Build for iOS (macOS only):"
+echo "   $ flutter build ios --dart-define=DEMO_MODE=true --release --no-codesign"
+echo ""
+echo "   Build for Web:"
+echo "   $ flutter build web --dart-define=DEMO_MODE=true --release"
+echo ""
+echo "📝 Note: DEMO_MODE=true enables mock data and disables backend requirements"
+echo ""
