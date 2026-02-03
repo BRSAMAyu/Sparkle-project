@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// Shop Repository
@@ -14,16 +15,6 @@ class ShopRepository {
     final errorMessage = e.response?.data?['detail'] ??
         'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
-  }
-
-  Map<String, dynamic> _unwrapResponseMap(dynamic data, {String? action}) {
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-    if (data == null) {
-      throw Exception('${action ?? "Operation"} response is empty');
-    }
-    throw Exception('Unexpected response format');
   }
 
   /// Get shop items list
@@ -47,7 +38,7 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getShopItems');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getShopItems');
       final dataList = payload['data'] as List<dynamic>?;
 
       if (dataList == null) {
@@ -70,7 +61,7 @@ class ShopRepository {
         '${ApiEndpoints.shopItems}/$itemId',
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getShopItemDetail');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getShopItemDetail');
       final data = payload['data'] as Map<String, dynamic>?;
 
       if (data == null) {
@@ -96,7 +87,7 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'purchaseItem');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'purchaseItem');
       final data = payload['data'] as Map<String, dynamic>?;
 
       if (data == null) {
@@ -126,7 +117,7 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getPurchaseHistory');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPurchaseHistory');
       final dataList = payload['data'] as List<dynamic>?;
 
       if (dataList == null) {
@@ -149,7 +140,7 @@ class ShopRepository {
         ApiEndpoints.inventory,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getInventory');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getInventory');
       final data = payload['data'] as Map<String, dynamic>?;
 
       if (data == null) {
@@ -197,7 +188,7 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'equipItem');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'equipItem');
       final data = payload['data'] as Map<String, dynamic>?;
 
       if (data == null) {
@@ -223,7 +214,7 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getOwnedItems');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getOwnedItems');
       final data = payload['data'] as List<dynamic>?;
 
       if (data == null) {
@@ -249,7 +240,7 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'useConsumable');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'useConsumable');
       final data = payload['data'] as Map<String, dynamic>?;
 
       if (data == null) {

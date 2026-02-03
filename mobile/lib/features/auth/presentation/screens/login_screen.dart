@@ -261,6 +261,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                   ),
+
+                  // Demo Account Mode
+                  TextButton(
+                    onPressed: authState.isLoading ? null : () async {
+                      await ref.read(authProvider.notifier).loginAsDemoAccount();
+                    },
+                    child: authState.isLoading
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            '演示账号登录',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),

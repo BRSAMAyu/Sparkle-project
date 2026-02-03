@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
@@ -154,6 +155,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             taskCreate,
             generateGuide: _generateGuide,
           );
+
+      // 🔧 修复：刷新任务列表以确保任务看板显示新任务
+      await ref.read(taskListProvider.notifier).refreshTasks();
 
       if (mounted) {
         if (result.nudges.isNotEmpty) {
@@ -332,7 +336,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     return Column(
                       children: [
                         DropdownButtonFormField<int>(
-                          value: _estimatedMinutes,
+                          initialValue: _estimatedMinutes,
                           decoration: const InputDecoration(
                             labelText: '预计时长',
                             border: OutlineInputBorder(),
@@ -380,7 +384,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _estimatedMinutes,
+                          initialValue: _estimatedMinutes,
                           decoration: const InputDecoration(
                             labelText: '预计时长',
                             border: OutlineInputBorder(),
@@ -631,6 +635,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         return Icons.people;
       case TaskType.planning:
         return Icons.map;
+      case TaskType.ocr:
+        return Icons.document_scanner_outlined;
     }
   }
 
@@ -648,6 +654,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         return '社交';
       case TaskType.planning:
         return '规划';
+      case TaskType.ocr:
+        return 'OCR';
     }
   }
 }

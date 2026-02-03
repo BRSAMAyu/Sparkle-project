@@ -4,12 +4,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 import 'package:uuid/uuid.dart';
 
 // WebSocket connection state enum
@@ -28,6 +30,12 @@ final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
 // Global Community Events Stream
 final communityEventsStreamProvider =
     Provider.autoDispose<Stream<dynamic>>((ref) {
+  // 🔧 Demo 模式下禁用 WebSocket，使用 Mock 数据
+  if (DemoDataService.isDemoMode) {
+    debugPrint('🎭 Demo Mode: Using mock community data, WebSocket disabled');
+    return const Stream.empty();
+  }
+
   final wsService = WebSocketService();
   final tokenAsync = ref.watch(_wsTokenProvider);
 

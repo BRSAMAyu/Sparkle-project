@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -109,7 +110,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> loginAsGuest() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 使用真实API获取游客token
+      // ✅ 始终启用演示模式以展示完整的 Mock 数据
+      // 这样可以展示丰富的预设内容（任务、星图、成就等）
+      // 同时保持核心功能（LLM对话、任务创建）真实可用
+      DemoDataService.isDemoMode = true;
+      debugPrint('🎭 Demo Mode enabled for guest login');
+
+      // 使用真实API获取游客token（保持核心功能可用）
       final user = await _authRepository.guestLogin('guest_user');
       state = state.copyWith(
         isLoading: false,
@@ -117,13 +124,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
       );
     } catch (e) {
-      // 如果API失败，回退到Demo模式
-      DemoDataService.isDemoMode = true;
+      // API 失败时仍然使用演示模式
+      debugPrint('⚠️ Guest API failed, using demo data: $e');
       final guestUser = DemoDataService().demoUser;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: true,
         user: guestUser,
+      );
+    }
+  }
+
+  Future<void> loginAsDemoAccount() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      // ✅ 演示账号登录：使用真实账户chat_test + 预设数据库数据
+      // 必须关闭DemoMode以确保从后端API读取真实数据
+      DemoDataService.isDemoMode = false;
+      debugPrint('🎬 Demo account login (real data from backend)');
+
+      final user = await _authRepository.login('chat_test', 'Chat123456');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        user: user,
+      );
+      debugPrint('✅ Demo account login successful, fetching real data from API');
+    } catch (e) {
+      debugPrint('⚠️ Demo account login failed: $e');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        error: e.toString(),
       );
     }
   }

@@ -9,6 +9,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -136,6 +137,38 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     });
   }
 
+  void _handleTap(BuildContext context) {
+    if (_isRevoked || !mounted) return;
+
+    // 只为ChatMessageModel类型的消息打开详情视图
+    if (widget.message is ChatMessageModel) {
+      final chatMessage = widget.message as ChatMessageModel;
+
+      // 如果消息内容太短（少于100个字符），不需要放大查看
+      if (chatMessage.content.length < 100) return;
+
+      // 生成唯一的Hero tag
+      final heroTag = 'message_${chatMessage.id ?? chatMessage.createdAt.millisecondsSinceEpoch}';
+
+      // 打开详情视图
+      Navigator.of(context).push(
+        PageRouteBuilder<void>(
+          opaque: false, // 使用半透明背景
+          barrierColor: Colors.transparent,
+          pageBuilder: (context, animation, secondaryAnimation) =>
+            FadeTransition(
+              opacity: animation,
+              child: MessageDetailView(
+                message: chatMessage,
+                heroTag: heroTag,
+              ),
+            ),
+          transitionDuration: const Duration(milliseconds: 250),
+        ),
+      );
+    }
+  }
+
   void _showContextMenu(BuildContext context) {
     if (_isRevoked || !mounted) return;
 
@@ -253,6 +286,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   if (!isUser && !widget.showAvatar) const SizedBox(width: 44),
                   Flexible(
                     child: GestureDetector(
+                      onTap: () => _handleTap(context),
                       onDoubleTap: _handleDoubleTap,
                       onLongPress: () => _showContextMenu(context),
                       onTapDown: (_) {

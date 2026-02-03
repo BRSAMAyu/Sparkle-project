@@ -167,7 +167,11 @@ class InteractiveTaskCard extends ConsumerWidget {
                 child: _ActionButton(
                   icon: Icons.play_arrow_rounded,
                   label: '开始',
-                  onTap: () => context.push('/tasks/${task.id}/execute'),
+                  onTap: () {
+                    // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+                    ref.read(activeTaskProvider.notifier).state = task;
+                    context.push('/tasks/${task.id}/execute');
+                  },
                   color: DS.success,
                 ),
               ),
@@ -223,6 +227,7 @@ class InteractiveTaskCard extends ConsumerWidget {
       TaskType.reflection => ('反思', DS.prismPurple),
       TaskType.social => ('社交', DS.info),
       TaskType.planning => ('规划', DS.warning),
+      TaskType.ocr => ('OCR', Colors.grey),
     };
 
     return Container(

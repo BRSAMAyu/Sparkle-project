@@ -38,6 +38,7 @@ import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
@@ -66,8 +67,13 @@ class AppThemes {
   }
 
   static ThemeData _buildThemeData(
-          SparkleThemeData theme, Brightness brightness,) =>
-      ThemeData(
+          SparkleThemeData theme, Brightness brightness,) {
+    // 🔧 根据亮度选择正确的 SparkleThemeExtension
+    final sparkleExtension = brightness == Brightness.light
+        ? SparkleThemeExtension.light()
+        : SparkleThemeExtension.dark();
+
+    return ThemeData(
         useMaterial3: true,
         brightness: brightness,
         primaryColor: theme.colors.brandPrimary,
@@ -86,8 +92,10 @@ class AppThemes {
         inputDecorationTheme: _buildInputTheme(theme),
         extensions: [
           _SparkleThemeExtension(theme),
+          sparkleExtension, // 🔧 修复：注册公开的 SparkleThemeExtension
         ],
       );
+  }
 
   static TextTheme _buildTextTheme(SparkleThemeData theme) => TextTheme(
         displayLarge: theme.typography.displayLarge,

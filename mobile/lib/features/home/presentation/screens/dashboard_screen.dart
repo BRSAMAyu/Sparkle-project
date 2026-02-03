@@ -46,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
         category == DeviceCategory.watch;
 
     // Calculate spacing for floating components
-    final spacing = 8.0;
+    const spacing = 8.0;
 
     // Calculate cumulative bottom positions
     final omniBarBottom = spacing; // 8
@@ -149,9 +149,9 @@ class DashboardScreen extends ConsumerWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                    child: const IntentPredictionBar(showIdle: true),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+                    child: IntentPredictionBar(),
                   ),
                 ),
               ),
@@ -247,7 +247,7 @@ class DashboardScreen extends ConsumerWidget {
             // Theme toggle button
             _ThemeToggleButton(onTap: () {
               ref.read(themeManagerProvider).toggleDarkMode();
-            }),
+            },),
           ],
         ),
       );
@@ -282,10 +282,9 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisCellCount: 1,
             child: FocusCard(onTap: () => context.push('/focus')),
           ),
-          // Card E: Calendar Heatmap (1x1)
-          const StaggeredGridTile.count(
+          // Card E: Calendar Heatmap (fit height to avoid overlap when expanded)
+          const StaggeredGridTile.fit(
             crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
             child: CalendarHeatmapCard(),
           ),
           // Card B: Cognitive Prism (1x1)

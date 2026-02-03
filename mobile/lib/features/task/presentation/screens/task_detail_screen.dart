@@ -118,6 +118,11 @@ class _TaskDetailView extends ConsumerWidget {
             colors: [Colors.teal.shade50, DS.brandPrimary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,);
+      case TaskType.ocr:
+        return LinearGradient(
+            colors: [Colors.grey.shade50, Colors.grey.shade400],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,);
     }
   }
 

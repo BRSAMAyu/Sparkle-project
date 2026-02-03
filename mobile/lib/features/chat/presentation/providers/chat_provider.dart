@@ -631,6 +631,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
 
+    // 🔧 P1-1: 使用 finally 确保 isSending 总是被重置
+    var shouldResetSending = true;
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
@@ -729,6 +731,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             clearAiStatus: true,
             clearReasoning: true,
           );
+          shouldResetSending = false; // 已经重置过了
           return; // 提前退出
         } else if (event is WidgetEvent) {
           if (event.widgetType == 'system_update' &&
@@ -854,6 +857,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
           if (state.activeTools.isNotEmpty) {
             state = state.copyWith(activeTools: []);
           }
+          // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
+          state = state.copyWith(
+            clearAiStatus: true,
+            streamingContent: '',
+          );
+          // 🔧 修复：立即退出流循环，确保执行清理代码（设置 isSending: false）
+          break;
         }
       }
 
@@ -923,6 +933,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
         errorCode: 'UNKNOWN',
         isErrorRetryable: true, // 未知错误默认可重试
       );
+      shouldResetSending = false; // 已经重置过了
+    } finally {
+      // 🔧 P1-1: 确保 isSending 总是被重置（如果还没被重置）
+      if (shouldResetSending && mounted && state.isSending) {
+        state = state.copyWith(isSending: false);
+      }
     }
   }
 
@@ -1783,7 +1799,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
 // 3. Provider
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return ChatRepository(apiClient.dio);
+  return ChatRepository(
+    apiClient.dio,
+    container: ref.container,
+  );
 });
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>(

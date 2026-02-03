@@ -15,6 +15,8 @@ enum TaskType {
   social,
   @JsonValue('PLANNING')
   planning,
+  @JsonValue('OCR')
+  ocr,
 }
 
 enum TaskStatus {

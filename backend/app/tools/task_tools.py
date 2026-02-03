@@ -71,12 +71,17 @@ class CreateTaskTool(BaseTool):
                 widget_data={
                     "id": str(task.id),
                     "title": task.title,
-                    "description": task.guide_content,
+                    "guide_content": task.guide_content,  # 🔧 修复：字段名改为guide_content以匹配前端
                     "type": task.type.value,
                     "status": task.status.value,
                     "estimated_minutes": task.estimated_minutes,
                     "priority": task.priority,
-                    "created_at": task.created_at.isoformat()
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 }
             )
         except Exception as e:
@@ -137,8 +142,18 @@ class UpdateTaskStatusTool(BaseTool):
                 widget_data={
                     "id": str(task.id),
                     "title": task.title,
+                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
+                    "type": task.type.value,
                     "status": task.status.value,
-                    "actual_minutes": task.actual_minutes
+                    "estimated_minutes": task.estimated_minutes,
+                    "priority": task.priority,
+                    "actual_minutes": task.actual_minutes,
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 }
             )
         except Exception as e:
@@ -194,8 +209,17 @@ class BatchCreateTasksTool(BaseTool):
                 created_tasks.append({
                     "id": str(task.id),
                     "title": task.title,
+                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
                     "type": task.type.value,
-                    "status": task.status.value
+                    "status": task.status.value,
+                    "estimated_minutes": task.estimated_minutes,
+                    "priority": task.priority,
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 })
 
             return ToolResult(

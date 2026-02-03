@@ -327,7 +327,7 @@ class MockCommunityRepository implements CommunityRepository {
         avatarUrl:
             'https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed ?? name}',
         flameLevel: level,
-        flameBrightness: 0.5 + (level / 20.0),
+        flameBrightness: (0.5 + (level / 40.0)).clamp(0.0, 1.0),  // 🔧 修复：确保不超过1.0
         status: status,
       );
 

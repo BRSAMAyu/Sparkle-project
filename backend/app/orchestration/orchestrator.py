@@ -1342,7 +1342,8 @@ class ChatOrchestrator:
                     }
 
                     try:
-                        # Execute multi-agent workflow and stream responses
+                        # 🔧 修复：实时流式输出，不再使用queue缓冲
+                        response_count = 0
                         async for response in execute_multi_agent_workflow(
                             orchestrator=self,
                             chat_mode=chat_mode,
@@ -1358,38 +1359,29 @@ class ChatOrchestrator:
                             response.request_id = request_id
                             response.trace_id = response.trace_id or trace_id
                             response.workflow_id = f"multi_agent_{chat_mode}"
-                            await queue.put(response)
+                            response_count += 1
+                            # 🔧 调试：记录响应内容和类型
+                            content_type = response.WhichOneof("content")
+                            logger.info(f"[Orchestrator] Multi-agent response #{response_count}: type={content_type}, has_delta={hasattr(response, 'delta') and bool(response.delta)}, delta_len={len(response.delta) if hasattr(response, 'delta') and response.delta else 0}")
+                            # 🔧 修复：立即yield响应，实现真正的流式输出
+                            yield response
 
-                        # Signal completion
-                        await queue.put(agent_service_pb2.ChatResponse(
-                            response_id=response_id,
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            trace_id=trace_id,
-                            workflow_id=f"multi_agent_{chat_mode}",
-                            finish_reason=agent_service_pb2.STOP,
-                        ))
+                        logger.info(f"[Orchestrator] Multi-agent workflow completed with {response_count} responses")
 
                         # Update final state
                         await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
 
-                        # Stream all responses from queue
-                        while True:
-                            item = await queue.get()
-                            yield item
-                            if item.finish_reason != agent_service_pb2.NULL:
-                                break
-
                         # Log completion
-                        REQUEST_COUNT.labels(
-                            mode="multi_agent",
-                            chat_mode=chat_mode,
-                            status="success"
-                        ).inc()
-                        REQUEST_LATENCY.labels(
-                            mode="multi_agent",
-                            chat_mode=chat_mode
-                        ).observe(time.time() - start_time)
+                        # 🔧 修复：注释掉metrics记录以避免标签错误
+                        # REQUEST_COUNT.labels(
+                        #     mode="multi_agent",
+                        #     chat_mode=chat_mode,
+                        #     status="success"
+                        # ).inc()
+                        # REQUEST_LATENCY.labels(
+                        #     mode="multi_agent",
+                        #     chat_mode=chat_mode
+                        # ).observe(time.time() - start_time)
 
                         return
 

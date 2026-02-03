@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -138,9 +139,12 @@ class AuthRepository {
     return data.toString();
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool keepDemoMode = false}) async {
     if (DemoDataService.isDemoMode) {
-      DemoDataService.isDemoMode = false;
+      if (!keepDemoMode) {
+        DemoDataService.isDemoMode = false;
+      }
+      await clearTokens();
       return;
     }
     // In a real app, you might want to call a server endpoint to invalidate the token
@@ -148,13 +152,6 @@ class AuthRepository {
   }
 
   Future<TokenResponse> refreshToken() async {
-    if (DemoDataService.isDemoMode) {
-      return TokenResponse(
-        accessToken: 'demo',
-        refreshToken: 'demo',
-        expiresIn: 3600,
-      );
-    }
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) {
       throw Exception('No refresh token available.');
@@ -289,17 +286,11 @@ class AuthRepository {
   }
 
   /// Guest login - 获取访客模式的JWT token
+  /// 🎭 演示模式：仍然尝试获取真实token以保证LLM功能可用
+  /// 只有历史数据使用预设内容
   Future<UserModel> guestLogin(String guestId) async {
     try {
-      if (DemoDataService.isDemoMode) {
-        await saveTokens(TokenResponse(
-          accessToken: 'demo',
-          refreshToken: 'demo',
-          expiresIn: 3600,
-        ),);
-        return DemoDataService().demoUser;
-      }
-
+      // 🎭 始终尝试获取真实token，保证LLM对话功能可用
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/guest',
         data: {'guest_id': guestId},
@@ -313,11 +304,26 @@ class AuthRepository {
       final tokenResponse = TokenResponse.fromJson(tokenData);
       await saveTokens(tokenResponse);
 
+      // 如果是演示模式，返回演示用户，但使用真实token
+      if (DemoDataService.isDemoMode) {
+        return DemoDataService().demoUser;
+      }
+
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
+      // 🎭 如果API失败但处于演示模式，返回演示用户（没有有效token）
+      if (DemoDataService.isDemoMode) {
+        debugPrint('⚠️ Guest API failed, using demo user without token: $e');
+        return DemoDataService().demoUser;
+      }
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? '访客登录失败');
     } catch (e) {
+      // 🎭 如果API失败但处于演示模式，返回演示用户（没有有效token）
+      if (DemoDataService.isDemoMode) {
+        debugPrint('⚠️ Guest API failed, using demo user without token: $e');
+        return DemoDataService().demoUser;
+      }
       throw Exception('An unexpected error occurred: $e');
     }
   }

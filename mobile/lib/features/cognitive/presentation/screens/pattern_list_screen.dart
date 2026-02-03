@@ -22,7 +22,11 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPatterns();
+    // 🔧 Riverpod修复：使用addPostFrameCallback在widget构建完成后加载数据
+    // 避免在build过程中修改provider状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPatterns();
+    });
   }
 
   Future<void> _loadPatterns() async {

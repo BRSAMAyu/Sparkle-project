@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -44,7 +45,7 @@ class FocusMainScreen extends ConsumerWidget {
             ),
             Expanded(
               child: todayTasks.isEmpty
-                  ? _buildEmptyState(context)
+                  ? _buildEmptyState(context, ref)
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: todayTasks.length,
@@ -54,7 +55,7 @@ class FocusMainScreen extends ConsumerWidget {
                       },
                     ),
             ),
-            _buildQuickFocusButton(context),
+            _buildQuickFocusButton(context, ref),
             const SizedBox(height: 20),
           ],
         ),
@@ -63,7 +64,7 @@ class FocusMainScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) => Center(
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -74,9 +75,50 @@ class FocusMainScreen extends ConsumerWidget {
               '没有待办任务',
               style: TextStyle(color: DS.textSecondary, fontSize: 16),
             ),
+            const SizedBox(height: DS.md),
+            Text(
+              '不过你依然可以直接开始专注！',
+              style: TextStyle(color: DS.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: DS.lg),
+            // 🆕 在空状态下也显示快速专注按钮
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final dummyTask = TaskModel(
+                    id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
+                    userId: '',
+                    title: '自由专注',
+                    type: TaskType.learning,
+                    estimatedMinutes: 25,
+                    difficulty: 1,
+                    energyCost: 1,
+                    priority: 1,
+                    tags: [],
+                    status: TaskStatus.pending,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  );
+                  // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+                  ref.read(activeTaskProvider.notifier).state = dummyTask;
+                  context.push('/tasks/${dummyTask.id}/execute');
+                },
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('立即开始专注'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DS.primaryBase,
+                  foregroundColor: DS.textOnPrimary,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
-                label: '创建一个新任务', onPressed: () => context.push('/tasks/new'),),
+                label: '或者创建一个新任务', onPressed: () => context.push('/tasks/new'),),
           ],
         ),
       );
@@ -89,33 +131,37 @@ class FocusMainScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: DS.border, width: 0.5),
         ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          title: Text(
-            task.title,
-            style: TextStyle(
-                color: DS.textPrimary, fontWeight: FontWeight.w600,),
+        child: Consumer(
+          builder: (context, ref, child) => ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            title: Text(
+              task.title,
+              style: TextStyle(
+                  color: DS.textPrimary, fontWeight: FontWeight.w600,),
+            ),
+            subtitle: Text(
+              '预计 ${task.estimatedMinutes} 分钟',
+              style: TextStyle(color: DS.textSecondary),
+            ),
+            trailing:
+                Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
+            onTap: () {
+              // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+              ref.read(activeTaskProvider.notifier).state = task;
+              context.push('/tasks/${task.id}/execute');
+            },
           ),
-          subtitle: Text(
-            '预计 ${task.estimatedMinutes} 分钟',
-            style: TextStyle(color: DS.textSecondary),
-          ),
-          trailing:
-              Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
-          onTap: () {
-            context.push('/tasks/${task.id}/execute');
-          },
         ),
       );
 
-  Widget _buildQuickFocusButton(BuildContext context) => Padding(
+  Widget _buildQuickFocusButton(BuildContext context, WidgetRef ref) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: ElevatedButton(
           onPressed: () {
             // Create a dummy task for quick focus if needed, or just push a generic task
             final dummyTask = TaskModel(
-              id: 'quick_focus',
+              id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
               userId: '',
               title: '快速专注',
               type: TaskType.learning,
@@ -128,6 +174,8 @@ class FocusMainScreen extends ConsumerWidget {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
+            // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+            ref.read(activeTaskProvider.notifier).state = dummyTask;
             context.push('/tasks/${dummyTask.id}/execute');
           },
           style: ElevatedButton.styleFrom(

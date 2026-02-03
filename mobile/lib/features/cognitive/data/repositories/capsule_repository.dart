@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_stats_model.dart';
@@ -14,14 +16,19 @@ class CapsuleRepository {
 
   /// 获取今日胶囊
   Future<List<CuriosityCapsuleModel>> getTodayCapsules() async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoCuriosityCapsules;
+    }
     final response = await _apiClient.get<dynamic>('/capsules/today');
-    return (response.data as List)
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getTodayCapsules');
+    return data
         .map((e) => CuriosityCapsuleModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   /// 标记为已读
   Future<void> markAsRead(String id) async {
+    if (DemoDataService.isDemoMode) return;
     await _apiClient.post<dynamic>('/capsules/$id/read');
   }
 
@@ -29,8 +36,14 @@ class CapsuleRepository {
 
   /// 获取胶囊详情
   Future<CuriosityCapsuleModel> getCapsuleDetail(String id) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService()
+          .demoCuriosityCapsules
+          .firstWhere((c) => c.id == id, orElse: () => DemoDataService().demoCuriosityCapsules.first,);
+    }
     final response = await _apiClient.get<dynamic>('/capsules/$id');
-    return CuriosityCapsuleModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getCapsuleDetail');
+    return CuriosityCapsuleModel.fromJson(payload);
   }
 
   /// 获取收藏列表
@@ -38,11 +51,22 @@ class CapsuleRepository {
     int limit = 50,
     int offset = 0,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      final favorites = DemoDataService()
+          .demoCuriosityCapsules
+          .where((c) => c.isFavorite)
+          .toList();
+      return favorites
+          .skip(offset)
+          .take(limit)
+          .map((c) => c.toJson())
+          .toList();
+    }
     final response = await _apiClient.get<dynamic>('/capsules/favorites', queryParameters: {
       'limit': limit,
       'offset': offset,
     },);
-    return response.data as List;
+    return ApiResponseParser.unwrapList(response.data, action: 'getFavorites');
   }
 
   /// 收藏/取消收藏胶囊
@@ -50,10 +74,20 @@ class CapsuleRepository {
     String id, {
     String? note,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      final capsule = DemoDataService()
+          .demoCuriosityCapsules
+          .firstWhere((c) => c.id == id, orElse: () => DemoDataService().demoCuriosityCapsules.first,);
+      return {
+        'capsule_id': capsule.id,
+        'is_favorited': !capsule.isFavorite,
+        if (note != null) 'note': note,
+      };
+    }
     final response = await _apiClient.post<dynamic>('/capsules/$id/favorite', queryParameters: {
       if (note != null) 'note': note,
     },);
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'toggleFavorite');
   }
 
   /// 提交反馈
@@ -64,6 +98,17 @@ class CapsuleRepository {
     String? category,
     String? comment,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      return CapsuleFeedbackModel(
+        id: 'demo_feedback_${DateTime.now().millisecondsSinceEpoch}',
+        capsuleId: id,
+        createdAt: DateTime.now(),
+        rating: rating,
+        helpful: helpful,
+        category: category,
+        comment: comment,
+      );
+    }
     final response = await _apiClient.post<dynamic>(
       '/capsules/$id/feedback',
       data: {
@@ -73,7 +118,8 @@ class CapsuleRepository {
         if (comment != null) 'comment': comment,
       },
     );
-    return CapsuleFeedbackModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'submitFeedback');
+    return CapsuleFeedbackModel.fromJson(payload);
   }
 
   /// 分享胶囊
@@ -83,6 +129,15 @@ class CapsuleRepository {
     String? friendId,
     String? message,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'capsule_id': id,
+        'shared': true,
+        if (groupId != null) 'group_id': groupId,
+        if (friendId != null) 'friend_id': friendId,
+        if (message != null) 'message': message,
+      };
+    }
     final response = await _apiClient.post<dynamic>(
       '/capsules/$id/share',
       data: {
@@ -91,17 +146,39 @@ class CapsuleRepository {
         if (message != null) 'message': message,
       },
     );
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'shareCapsule');
   }
 
   /// 获取生成任务列表
   Future<List<CapsuleGenerationJobModel>> getGenerationJobs({
     int limit = 20,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      return [
+        CapsuleGenerationJobModel(
+          id: 'demo_job_1',
+          status: JobStatus.completed.value,
+          generationType: GenerationType.daily.value,
+          depthPreference: 0.7,
+          curiosityPreference: 0.6,
+          requestedCount: 6,
+          actualCount: 6,
+          capsuleIds: DemoDataService()
+              .demoCuriosityCapsules
+              .map((c) => c.id)
+              .toList(),
+          progress: 1.0,
+          durationMs: 4200,
+          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+          completedAt: DateTime.now().subtract(const Duration(hours: 2, minutes: 50)),
+        ),
+      ];
+    }
     final response = await _apiClient.get<dynamic>('/capsules/generation/jobs', queryParameters: {
       'limit': limit,
     },);
-    return (response.data as List)
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getGenerationJobs');
+    return data
         .map((e) => CapsuleGenerationJobModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -112,6 +189,13 @@ class CapsuleRepository {
     double curiosityPreference = 0.5,
     int? requestedCount,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'task_id': 'demo_capsule_batch_${DateTime.now().millisecondsSinceEpoch}',
+        'requested_count': requestedCount ?? 3,
+        'status': 'queued',
+      };
+    }
     final response = await _apiClient.post<dynamic>(
       '/capsules/generate/batch',
       data: {
@@ -120,19 +204,33 @@ class CapsuleRepository {
         if (requestedCount != null) 'requested_count': requestedCount,
       },
     );
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'requestBatchGeneration');
   }
 
   /// 获取统计信息
   Future<CapsuleStatsModel> getStats() async {
+    if (DemoDataService.isDemoMode) {
+      return CapsuleStatsModel(
+        totalReceived: 42,
+        totalRead: 31,
+        totalFavorited: 7,
+        totalFeedbackGiven: 9,
+        averageRatingGiven: 4.6,
+      );
+    }
     final response = await _apiClient.get<dynamic>('/capsules/stats');
-    return CapsuleStatsModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getStats');
+    return CapsuleStatsModel.fromJson(payload);
   }
 
   /// 手动生成胶囊
   Future<CuriosityCapsuleModel> generateCapsule() async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoCuriosityCapsules.first;
+    }
     final response = await _apiClient.post<dynamic>('/capsules/generate');
-    return CuriosityCapsuleModel.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'generateCapsule');
+    return CuriosityCapsuleModel.fromJson(payload);
   }
 }
 

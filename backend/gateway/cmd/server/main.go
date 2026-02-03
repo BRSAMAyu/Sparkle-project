@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -167,7 +168,10 @@ func main() {
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
 	// STT Handler for Speech-to-Text WebSocket proxy
-	sttHandler := handler.NewSTTHandler(cfg.BackendURL+"/api/v1/stt/stream", logger.Log)
+	// Convert HTTP URL to WebSocket URL
+	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
+	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
+	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger.Log)
 
 	// WebSocket Proxy for Python Community WebSocket
 	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger.Log)
@@ -710,6 +714,27 @@ func main() {
 		// Inject OTel Trace Context into headers for full-link tracing
 		otel.GetTextMapPropagator().Inject(req.Context(), propagation.HeaderCarrier(req.Header))
 	}
+
+	// 🔧 配置代理以支持 SSE (Server-Sent Events)
+	// 禁用响应缓冲，确保流式传输（如 /api/v1/galaxy/events）
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		// 🔧 禁用连接复用，确保 SSE 连接保持活跃
+		DisableKeepAlives: false,
+		// 强制 HTTP/2（如果后端支持）
+		ForceAttemptHTTP2: true,
+	}
+	proxy.Transport = transport
+	// 🔧 设置 FlushInterval 为 -1 禁用自动刷新，让数据立即流式传输
+	proxy.FlushInterval = -1
 
 	// Forward all other requests to Python Backend
 	// This covers /api/v1/groups, /api/v1/users, etc.

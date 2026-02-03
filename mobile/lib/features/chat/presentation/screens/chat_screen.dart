@@ -46,6 +46,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
+    ref.listenManual(chatProvider.select((state) => state.error), (previous, next) {
+      if (next != null && next != previous) {
+        Future.delayed(const Duration(seconds: 10), () {
+          if (mounted) {
+            final currentError = ref.read(chatProvider).error;
+            if (currentError == next) {
+              // 错误仍然相同，自动清除
+              // 🔧 修复：正确使用StateNotifier更新状态
+              final notifier = ref.read(chatProvider.notifier);
+              notifier.state = notifier.state.copyWith(clearError: true);
+            }
+          }
+        });
+      }
+    });
+
+    // 🔧 修复：将ref.listen移到initState，避免在build中监听
+    ref.listenManual(
+      chatProvider.select((state) => state.lastActionStatus),
+      (previous, next) {
+        if (next != null && next != previous) {
+          final message = ref.read(chatProvider).lastActionMessage;
+          if (message != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: next == 'failed' || next == 'error'
+                    ? DS.error
+                    : DS.primaryBase,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      },
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
       unawaited(ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
@@ -54,25 +93,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for action status updates to show SnackBar
-    ref.listen(chatProvider.select((state) => state.lastActionStatus),
-        (previous, next) {
-      if (next != null && next != previous) {
-        final message = ref.read(chatProvider).lastActionMessage;
-        if (message != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: next == 'failed' || next == 'error'
-                  ? DS.error
-                  : DS.primaryBase,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
 
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
@@ -313,10 +333,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(DS.sm),
                         color: DS.error.withValues(alpha: 0.1),
-                        child: Text(
-                          'Error: ${chatState.error}',
-                          style: TextStyle(color: DS.error),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chatState.error!,
+                                style: TextStyle(color: DS.error, fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.close, size: 18, color: DS.error),
+                              onPressed: () {
+                                // Clear error
+                                // 🔧 修复：正确使用StateNotifier更新状态
+                                final notifier = ref.read(chatProvider.notifier);
+                                notifier.state = notifier.state.copyWith(clearError: true);
+                              },
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(4),
+                            ),
+                          ],
                         ),
                       ),
                     if (chatState.attachedFiles.isNotEmpty)

@@ -166,19 +166,26 @@ class MockApiClient extends _i1.Mock implements _i5.ApiClient {
   _i4.Future<_i2.Response<T>> put<T>(
     String? path, {
     Object? data,
+    Map<String, dynamic>? queryParameters,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #put,
           [path],
-          {#data: data},
+          {
+            #data: data,
+            #queryParameters: queryParameters,
+          },
         ),
         returnValue: _i4.Future<_i2.Response<T>>.value(_FakeResponse_1<T>(
           this,
           Invocation.method(
             #put,
             [path],
-            {#data: data},
+            {
+              #data: data,
+              #queryParameters: queryParameters,
+            },
           ),
         )),
       ) as _i4.Future<_i2.Response<T>>);
@@ -205,16 +212,22 @@ class MockApiClient extends _i1.Mock implements _i5.ApiClient {
       ) as _i4.Future<_i2.Response<T>>);
 
   @override
-  _i4.Future<_i2.Response<T>> delete<T>(String? path) => (super.noSuchMethod(
+  _i4.Future<_i2.Response<T>> delete<T>(
+    String? path, {
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #delete,
           [path],
+          {#queryParameters: queryParameters},
         ),
         returnValue: _i4.Future<_i2.Response<T>>.value(_FakeResponse_1<T>(
           this,
           Invocation.method(
             #delete,
             [path],
+            {#queryParameters: queryParameters},
           ),
         )),
       ) as _i4.Future<_i2.Response<T>>);

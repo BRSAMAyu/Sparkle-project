@@ -37,9 +37,18 @@ class MultiAgentWorkflowAdapter:
         """
         self.orchestrator = orchestrator
         self.logger = logger
-        # Access LLM service directly
-        from app.services.llm_service import llm_service
-        self.llm_service = llm_service
+        # 🔧 修复：创建新的 LLMService 实例而不是使用全局实例
+        # 这确保在运行时使用最新的环境变量配置
+        from app.services.llm_service import LLMService
+        from app.core.agent_profiles import AgentRole
+        try:
+            self.llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+            logger.info(f"[MultiAgent] LLMService initialized with model: {self.llm_service.chat_model}")
+        except Exception as e:
+            logger.error(f"[MultiAgent] Failed to initialize LLMService: {e}", exc_info=True)
+            # Fallback to global instance
+            from app.services.llm_service import llm_service
+            self.llm_service = llm_service
 
     async def execute_progressive_exploration(
         self,
@@ -114,23 +123,59 @@ class MultiAgentWorkflowAdapter:
 
         # Phase 3: Generate and stream response
         try:
+            logger.info(f"[DeepAnalysis] Calling LLM service with {len(messages)} messages")
+            chunk_count = 0
+            first_chunk = True
             async for chunk in self.llm_service.stream_chat(
                 messages=messages,
                 model=None,  # Use default model
                 temperature=0.7,
             ):
                 if chunk:
-                    yield agent_service_pb2.ChatResponse(
-                        delta=chunk,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.GENERATING,
-                            active_agent=agent_service_pb2.ORCHESTRATOR,
-                        ),
-                    )
-        except Exception as e:
-            logger.error(f"[DeepAnalysis] LLM error: {e}")
+                    chunk_count += 1
+                    if chunk_count == 1:
+                        logger.info(f"[DeepAnalysis] Received first chunk from LLM: '{chunk[:50]}...'")
+                    # 🔧 调试：每10个chunk记录一次
+                    if chunk_count % 10 == 0:
+                        logger.info(f"[DeepAnalysis] Processed {chunk_count} chunks, current: '{chunk[:30]}...'")
+
+                    # 🔧 修复：在第一个chunk之前发送GENERATING状态（oneof要求分开发送）
+                    if first_chunk:
+                        yield agent_service_pb2.ChatResponse(
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.GENERATING,
+                                details="正在生成深度分析...",
+                                active_agent=agent_service_pb2.ORCHESTRATOR,
+                            ),
+                        )
+                        first_chunk = False
+
+                    # 🔧 修复：只设置 delta，不设置 status_update（它们是 oneof，会互相覆盖）
+                    response = agent_service_pb2.ChatResponse(delta=chunk)
+                    logger.debug(f"[DeepAnalysis] Yielding response {chunk_count} with delta length: {len(chunk)}")
+                    yield response
+
+            logger.info(f"[DeepAnalysis] LLM stream completed with {chunk_count} chunks")
+
+            # 🔧 修复：如果没有生成任何内容，提供默认回复
+            if chunk_count == 0:
+                logger.error(f"[DeepAnalysis] No chunks received from LLM! Check LLM service configuration.")
+                yield agent_service_pb2.ChatResponse(
+                    delta="⚠️ 深度解析模式暂时无法生成回复。LLM 服务可能未正确配置，请检查 API 密钥和网络连接。",
+                )
+
+            # 🔧 修复：发送流结束信号，清除前端状态（isSending, aiStatus等）
             yield agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 深度解析服务暂时不可用: {str(e)}"
+                finish_reason=agent_service_pb2.STOP,
+            )
+            logger.info(f"[DeepAnalysis] Sent finish_reason=STOP signal")
+
+        except Exception as e:
+            logger.error(f"[DeepAnalysis] LLM error: {e}", exc_info=True)
+            logger.error(f"[DeepAnalysis] Messages sent: {messages}")
+            yield agent_service_pb2.ChatResponse(
+                delta=f"\n\n⚠️ 深度解析服务暂时不可用: {str(e)}\n\n请检查后端日志获取详细信息。",
+                finish_reason=agent_service_pb2.ERROR,
             )
 
     async def execute_task_decomposition(
@@ -206,23 +251,38 @@ class MultiAgentWorkflowAdapter:
 
         # Phase 3: Generate and stream response
         try:
+            first_chunk = True
             async for chunk in self.llm_service.stream_chat(
                 messages=messages,
                 model=None,  # Use default model
                 temperature=0.7,
             ):
                 if chunk:
-                    yield agent_service_pb2.ChatResponse(
-                        delta=chunk,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.GENERATING,
-                            active_agent=agent_service_pb2.ORCHESTRATOR,
-                        ),
-                    )
+                    # 🔧 修复：在第一个chunk之前发送GENERATING状态（oneof要求分开发送）
+                    if first_chunk:
+                        yield agent_service_pb2.ChatResponse(
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.GENERATING,
+                                details="正在生成学习计划...",
+                                active_agent=agent_service_pb2.ORCHESTRATOR,
+                            ),
+                        )
+                        first_chunk = False
+
+                    # 🔧 修复：只设置 delta，不设置 status_update（它们是 oneof，会互相覆盖）
+                    yield agent_service_pb2.ChatResponse(delta=chunk)
+
+            # 🔧 修复：发送流结束信号，清除前端状态
+            yield agent_service_pb2.ChatResponse(
+                finish_reason=agent_service_pb2.STOP,
+            )
+            logger.info(f"[StudyPlan] Sent finish_reason=STOP signal")
+
         except Exception as e:
             logger.error(f"[StudyPlan] LLM error: {e}")
             yield agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 学习计划服务暂时不可用: {str(e)}"
+                delta=f"\n\n⚠️ 学习计划服务暂时不可用: {str(e)}",
+                finish_reason=agent_service_pb2.ERROR,
             )
 
     async def execute_error_diagnosis(
@@ -298,23 +358,38 @@ class MultiAgentWorkflowAdapter:
 
         # Phase 3: Generate and stream response
         try:
+            first_chunk = True
             async for chunk in self.llm_service.stream_chat(
                 messages=messages,
                 model=None,  # Use default model
                 temperature=0.7,
             ):
                 if chunk:
-                    yield agent_service_pb2.ChatResponse(
-                        delta=chunk,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.GENERATING,
-                            active_agent=agent_service_pb2.ORCHESTRATOR,
-                        ),
-                    )
+                    # 🔧 修复：在第一个chunk之前发送GENERATING状态（oneof要求分开发送）
+                    if first_chunk:
+                        yield agent_service_pb2.ChatResponse(
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.GENERATING,
+                                details="正在分析错题...",
+                                active_agent=agent_service_pb2.ORCHESTRATOR,
+                            ),
+                        )
+                        first_chunk = False
+
+                    # 🔧 修复：只设置 delta，不设置 status_update（它们是 oneof，会互相覆盖）
+                    yield agent_service_pb2.ChatResponse(delta=chunk)
+
+            # 🔧 修复：发送流结束信号，清除前端状态
+            yield agent_service_pb2.ChatResponse(
+                finish_reason=agent_service_pb2.STOP,
+            )
+            logger.info(f"[ErrorDiagnosis] Sent finish_reason=STOP signal")
+
         except Exception as e:
             logger.error(f"[ErrorDiagnosis] LLM error: {e}")
             yield agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 错题分析服务暂时不可用: {str(e)}"
+                delta=f"\n\n⚠️ 错题分析服务暂时不可用: {str(e)}",
+                finish_reason=agent_service_pb2.ERROR,
             )
 
 

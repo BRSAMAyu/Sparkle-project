@@ -75,7 +75,7 @@ class SecureLLMService:
         # 安全包装器
         security_config = SecurityConfig(
             enable_input_filter=True,
-            enable_quota_check=True,
+            enable_quota_check=settings.LLM_QUOTA_ENABLED,
             enable_output_validation=True,
             enable_monitoring=True,
             strict_mode=True,

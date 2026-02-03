@@ -108,6 +108,9 @@ var stringBuilderPool = sync.Pool{
 // sanitizerPool reuses bluemonday policies (they are thread-safe once created)
 var sanitizer = bluemonday.UGCPolicy()
 
+// 🔧 P1-2: 消息长度限制（防止OOM和滥用）
+const maxMessageLength = 4000
+
 type ChatOrchestrator struct {
 	agentClient   *agent.Client
 	galaxyClient  *galaxy.Client
@@ -326,6 +329,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 
+				// 🔧 P1-2: 消息长度检查
+				if len(input.Message) > maxMessageLength {
+					conn.WriteJSON(gin.H{
+						"type":    "error",
+						"message": fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength),
+					})
+					return false
+				}
+
+				// 🔧 P1-2: XSS 过滤
+				input.Message = sanitizer.Sanitize(input.Message)
+
 				msgCtx := c.Request.Context()
 				if traceIDFromClient != "" {
 					msgCtx = agent.WithTraceID(msgCtx, traceIDFromClient)
@@ -375,6 +390,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid chat_request payload", false)
 					return false
 				}
+
+				// 🔧 P1-2: 消息长度检查
+				if len(input.Message) > maxMessageLength {
+					responder.SendError("invalid_argument",
+						fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength), false)
+					return false
+				}
+
 				return h.handleChatMessage(msgCtx, responder, userID, input, envelope.RequestID)
 			case "action_feedback":
 				msgMap, err := decodePayloadMap(envelope.Payload["action_feedback"])
