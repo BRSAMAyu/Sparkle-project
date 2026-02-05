@@ -389,6 +389,17 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'meta':
+      case 'metadata':
+        // Gateway telemetry (latency_ms, is_cache_hit, etc.) — no UI action needed
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'reasoning_step':
         final step = data['step'] as Map<String, dynamic>?;
         if (step != null) {
@@ -832,6 +843,7 @@ class WebSocketChatServiceV2 {
   void sendPlanReviewFeedback({
     required String reviewId,
     required String userDecision,
+    String? planId,
     String? userComment,
     Map<String, dynamic>? modifications,
   }) {
@@ -839,6 +851,8 @@ class WebSocketChatServiceV2 {
       'type': 'plan_review_feedback',
       'review_id': reviewId,
       'user_decision': userDecision, // 'approve', 'reject', 'modify'
+      if (planId != null && planId.isNotEmpty)
+        'plan_id': planId,
       if (userComment != null && userComment.isNotEmpty)
         'user_comment': userComment,
       if (modifications != null && modifications.isNotEmpty)

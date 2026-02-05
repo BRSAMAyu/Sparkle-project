@@ -1093,11 +1093,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void sendPlanReviewFeedback({
     required String reviewId,
     required String userDecision,
+    String? planId,
     String? userComment,
   }) {
     _chatRepository.sendPlanReviewFeedback(
       reviewId: reviewId,
       userDecision: userDecision,
+      planId: planId,
       userComment: userComment,
     );
     debugPrint('📤 Plan review feedback sent: $userDecision for $reviewId');

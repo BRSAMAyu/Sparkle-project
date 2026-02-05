@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.prompts import build_system_prompt
 
 if TYPE_CHECKING:
     from app.orchestration.orchestrator import ChatOrchestrator
@@ -88,14 +89,29 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for deep analysis
-        system_prompt = """你是深度解析模式的AI助手。你擅长：
-1. 多角度分析问题
-2. 识别问题的深层逻辑
-3. 整合相关知识领域
-4. 提供可操作的建议
+        # Build system prompt for deep analysis (inject user context)
+        base_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+        )
+        system_prompt = f"""{base_prompt}
 
-请用结构化的方式回复，包含：问题分析、关键因素、解决方案。使用markdown格式。"""
+## 深度解析模式指令
+目标：帮助用户获得深层、可验证、可执行的理解与方案。
+原则：
+1. 先澄清问题边界与假设，必要时列出需补充的信息
+2. 结构化拆解问题（因果、约束、权衡、关键变量）
+3. 多视角验证（反例、风险、替代路径）
+4. 输出可执行建议，并说明验证方式
+
+输出要求（Markdown）：
+- 问题复述与边界
+- 关键因素/约束
+- 分析过程（可用要点或小节）
+- 结论与可执行方案
+- 风险与验证步骤（含可观测指标/验收标准）"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -216,14 +232,29 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for study planning
-        system_prompt = """你是学习计划模式的AI助手。你擅长：
-1. 将复杂的学习目标分解为可执行的小任务
-2. 估算每个阶段的学习时间
-3. 提供结构化的学习路径
-4. 给出实用的学习建议
+        # Build system prompt for study planning (inject user context)
+        base_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+        )
+        system_prompt = f"""{base_prompt}
 
-请用结构化的markdown格式回复，包含：学习目标分解、时间估算、学习建议。"""
+## 学习计划模式指令
+目标：把学习目标转化为可执行、可跟踪、可调整的计划。
+原则：
+1. 明确学习目标与评估标准（能做什么/达到什么水平）
+2. 自顶向下拆解为阶段与任务，并标注先后依赖
+3. 给出时间估算与每周节奏（可调整）
+4. 加入复盘与纠错机制，避免只学不练
+
+输出要求（Markdown）：
+- 目标与评估标准
+- 阶段拆解（阶段目标/任务/产出）
+- 时间安排（每周节奏与里程碑）
+- 学习建议（资源类型、练习方式、复盘机制）
+- 风险与应对（可能掉队的点与补救方式）"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -323,14 +354,29 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for error diagnosis
-        system_prompt = """你是错题分析模式的AI助手。你擅长：
-1. 识别错误类型（概念理解型、计算错误型、方法应用型等）
-2. 分析错误的根本原因
-3. 提供具体的改进方案
-4. 给出预防策略
+        # Build system prompt for error diagnosis (inject user context)
+        base_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+        )
+        system_prompt = f"""{base_prompt}
 
-请用结构化的markdown格式回复，包含：错误类型识别、根本原因分析、改进方案、预防策略。"""
+## 错题分析模式指令
+目标：定位错误根因并形成可执行的改进闭环。
+原则：
+1. 先复述题意与用户思路，确保对齐
+2. 明确错误类型与触发点（概念/计算/方法/审题/步骤遗漏）
+3. 给出可操作的修正步骤与通用化方法
+4. 提供防错清单与练习策略
+
+输出要求（Markdown）：
+- 题意与思路对齐
+- 错误类型与触发点
+- 根因分析
+- 修正步骤（含正确解法/关键步骤）
+- 防错清单与训练建议"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])

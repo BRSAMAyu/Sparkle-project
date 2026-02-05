@@ -1913,12 +1913,18 @@ class ChatOrchestrator:
                                     )
 
                                     # Send review result to client
+                                    # Serialize full review data as JSON string for proto map<string,string>
+                                    # Go gateway will decode this back to a Map for Flutter
+                                    review_data_dict = review_result.to_dict()
+                                    review_data_dict["action_id"] = action_id  # Flutter needs action_id for feedback submission
+
                                     review_metadata = {
                                         "requires_review": "true",
                                         "review_action_id": action_id,
                                         "review_decision": review_result.decision,
                                         "review_id": review_result.review_id,
                                         "plan_id": review_result.plan_id,
+                                        "review_data": json.dumps(review_data_dict),
                                     }
 
                                     # Format review message for display
