@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.prompts import build_system_prompt
 
 if TYPE_CHECKING:
     from app.orchestration.orchestrator import ChatOrchestrator
@@ -88,14 +89,15 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for deep analysis
-        system_prompt = """你是深度解析模式的AI助手。你擅长：
-1. 多角度分析问题
-2. 识别问题的深层逻辑
-3. 整合相关知识领域
-4. 提供可操作的建议
-
-请用结构化的方式回复，包含：问题分析、关键因素、解决方案。使用markdown格式。"""
+        # Build system prompt for deep analysis (inject user context)
+        system_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+            context_level="light",
+            chat_mode=CHAT_MODE_DEEP_ANALYSIS,
+        )
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -216,14 +218,15 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for study planning
-        system_prompt = """你是学习计划模式的AI助手。你擅长：
-1. 将复杂的学习目标分解为可执行的小任务
-2. 估算每个阶段的学习时间
-3. 提供结构化的学习路径
-4. 给出实用的学习建议
-
-请用结构化的markdown格式回复，包含：学习目标分解、时间估算、学习建议。"""
+        # Build system prompt for study planning (inject user context)
+        system_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+            context_level="light",
+            chat_mode=CHAT_MODE_STUDY_PLAN,
+        )
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -323,14 +326,15 @@ class MultiAgentWorkflowAdapter:
             ),
         )
 
-        # Build system prompt for error diagnosis
-        system_prompt = """你是错题分析模式的AI助手。你擅长：
-1. 识别错误类型（概念理解型、计算错误型、方法应用型等）
-2. 分析错误的根本原因
-3. 提供具体的改进方案
-4. 给出预防策略
-
-请用结构化的markdown格式回复，包含：错误类型识别、根本原因分析、改进方案、预防策略。"""
+        # Build system prompt for error diagnosis (inject user context)
+        system_prompt = build_system_prompt(
+            context_data.get("user_context") or {},
+            conversation_history=context_data.get("conversation_context") or {},
+            prompt_version=context_data.get("prompt_version") or "v1",
+            plan_context=context_data.get("plan_context"),
+            context_level="light",
+            chat_mode=CHAT_MODE_ERROR_DIAGNOSIS,
+        )
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
