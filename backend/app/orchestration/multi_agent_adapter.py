@@ -95,6 +95,7 @@ class MultiAgentWorkflowAdapter:
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
+            context_level="light",
         )
         system_prompt = f"""{base_prompt}
 
@@ -238,6 +239,7 @@ class MultiAgentWorkflowAdapter:
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
+            context_level="light",
         )
         system_prompt = f"""{base_prompt}
 
@@ -360,6 +362,7 @@ class MultiAgentWorkflowAdapter:
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
+            context_level="light",
         )
         system_prompt = f"""{base_prompt}
 
