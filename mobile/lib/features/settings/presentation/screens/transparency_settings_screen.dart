@@ -34,7 +34,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 ),
                 value: prefs.enabled,
                 onChanged: (value) {
-                  ref.read(transparencyPreferencesNotifierProvider).setEnabled(value);
+                  ref.read(transparencyPreferencesNotifierProvider.notifier).setEnabled(value);
                 },
               ),
             ),
@@ -60,7 +60,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showTokenUsage,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesNotifierProvider).setShowTokenUsage(value);
+                        ref.read(transparencyPreferencesNotifierProvider.notifier).setShowTokenUsage(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -72,7 +72,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showAgentSwitching,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesNotifierProvider).setShowAgentSwitching(value);
+                        ref.read(transparencyPreferencesNotifierProvider.notifier).setShowAgentSwitching(value);
                       },
                     ),
                     const Divider(height: 1),
@@ -84,7 +84,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       value: prefs.showReasoningSteps,
                       onChanged: (value) {
-                        ref.read(transparencyPreferencesNotifierProvider).setShowReasoningSteps(value);
+                        ref.read(transparencyPreferencesNotifierProvider.notifier).setShowReasoningSteps(value);
                       },
                     ),
                   ],
@@ -155,10 +155,10 @@ class TransparencyPreferences {
   });
 
   factory TransparencyPreferences.fromJson(Map<String, dynamic> json) => TransparencyPreferences(
-      enabled: json['enabled'] ?? false,
-      showTokenUsage: json['showTokenUsage'] ?? true,
-      showAgentSwitching: json['showAgentSwitching'] ?? true,
-      showReasoningSteps: json['showReasoningSteps'] ?? true,
+      enabled: json['enabled'] as bool? ?? false,
+      showTokenUsage: json['showTokenUsage'] as bool? ?? true,
+      showAgentSwitching: json['showAgentSwitching'] as bool? ?? true,
+      showReasoningSteps: json['showReasoningSteps'] as bool? ?? true,
     );
 
   final bool enabled;

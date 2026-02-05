@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
+import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
 
 /// 皮肤应用服务
 ///
@@ -10,22 +12,27 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
   SkinNotifier(
     this._themeManager,
     this._shopRepository,
-    this._authNotifier,
+    this._ref,
   ) : super(null) {
     // 监听认证状态变化
-    _authNotifier.addListener(_onAuthStateChanged);
-    // 初始加载
-    _onAuthStateChanged();
+    _authStateSubscription = _ref.listen<AuthState>(
+      authProvider,
+      (previous, next) {
+        _onAuthStateChanged(next);
+      },
+      fireImmediately: true,
+    );
   }
 
   final ThemeManager _themeManager;
   final ShopRepository _shopRepository;
-  final AuthNotifier _authNotifier;
+  final Ref _ref;
   String? _currentSkinId;
+  ProviderSubscription? _authStateSubscription;
 
   /// 当认证状态变化时，应用用户的装备皮肤
-  void _onAuthStateChanged() {
-    final user = _authNotifier.state.user;
+  void _onAuthStateChanged(AuthState authState) {
+    final user = authState.user;
     if (user != null) {
       // 用户已登录，应用装备的皮肤
       _applyUserSkin(user.equippedSkin);
@@ -100,7 +107,7 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
 
   @override
   void dispose() {
-    _authNotifier.removeListener(_onAuthStateChanged);
+    _authStateSubscription?.close();
     super.dispose();
   }
 }
@@ -109,12 +116,11 @@ class SkinNotifier extends StateNotifier<Map<String, dynamic>?> {
 final skinProvider = StateNotifierProvider<SkinNotifier, Map<String, dynamic>?>((ref) {
   final themeManager = ref.watch<ThemeManager>(themeManagerProvider);
   final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
-  final authNotifier = ref.watch<AuthNotifier>(authProvider.notifier);
 
   return SkinNotifier(
     themeManager,
     shopRepository,
-    authNotifier,
+    ref,
   );
 });
 

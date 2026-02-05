@@ -31,15 +31,8 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		if cfg.IsDevelopment() {
-			log.Printf("Auth token received: len=%d", len(tokenString))
-		}
-
 		userID, isAdmin, err := validateJWT(cfg, tokenString)
 		if err != nil {
-			if cfg.IsDevelopment() {
-				log.Printf("Auth secret debug: len=%d", len(cfg.JWTSecret))
-			}
 			log.Printf("Auth failed: invalid token (err=%v)", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return

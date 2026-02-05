@@ -7,6 +7,8 @@
 /// - User preferences
 library;
 
+import 'enhanced_intent_classifier.dart';
+
 class ContextAwareIntentClassifier {
   const ContextAwareIntentClassifier._();
 

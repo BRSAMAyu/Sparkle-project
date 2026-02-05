@@ -204,7 +204,7 @@ class SeedLibraryCard extends StatelessWidget {
       case LibraryCategory.teachingContent:
         return Icons.school;
       case LibraryCategory.replyTemplate:
-        return Icons.template;
+        return Icons.note;
       case LibraryCategory.custom:
         return Icons.folder;
     }

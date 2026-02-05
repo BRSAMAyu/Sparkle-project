@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from contextlib import suppress
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime
@@ -134,6 +135,7 @@ class EventBus:
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.redis: redis.Redis | None = None
         self._consumers = []
+        self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
 
     async def connect(self):
@@ -167,6 +169,12 @@ class EventBus:
     async def close(self):
         """Close connection and stop consumers"""
         self._running = False
+        for task in self._consumer_tasks:
+            task.cancel()
+        for task in self._consumer_tasks:
+            with suppress(asyncio.CancelledError):
+                await task
+        self._consumer_tasks.clear()
         if self.redis:
             await self.redis.close()
             self.redis = None
@@ -245,7 +253,8 @@ class EventBus:
 
         # 2. Start Consumption Loop
         self._running = True
-        asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        self._consumer_tasks.append(task)
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")

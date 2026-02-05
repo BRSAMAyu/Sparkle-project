@@ -117,14 +117,14 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
     POSTGRES_PORT: int = Field(5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
     POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
-    POSTGRES_PASSWORD: str = Field("change-me", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
+    POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
     REDIS_HOST: str = Field("sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
     REDIS_PORT: int = Field(6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
-    REDIS_PASSWORD: str = "change-me"
+    REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
 
     @property
@@ -196,6 +196,11 @@ class Settings(BaseSettings):
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
+
+    # Prompt Snapshot (debug observability)
+    PROMPT_SNAPSHOT_ENABLED: bool = False
+    PROMPT_SNAPSHOT_SAMPLE_RATE: float = 0.0
+    PROMPT_SNAPSHOT_MAX_CHARS: int = 1200
 
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
