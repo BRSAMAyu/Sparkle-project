@@ -17,6 +17,8 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
+from typing import Any
+
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.plan_context import merge_plan_context
 
@@ -134,6 +136,8 @@ def build_system_prompt(
 
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
 
+    context_level: str = "full",  # full | light
+
 ) -> str:
 
     """
@@ -196,7 +200,7 @@ def build_system_prompt(
 
     # 2. 格式化上下文
 
-    formatted_user_context = format_user_context(user_context)
+    formatted_user_context = format_user_context(user_context, context_level=context_level)
 
 
 
@@ -289,6 +293,7 @@ def get_system_prompt_for_role(
     user_context: dict,
     query: str = "",
     conversation_history: dict = None,
+    context_level: str = "full",
 ) -> str:
     """
     获取指定角色的系统 Prompt
@@ -322,7 +327,7 @@ def get_system_prompt_for_role(
         )
 
     # 格式化上下文
-    formatted_user_context = format_user_context(user_context)
+    formatted_user_context = format_user_context(user_context, context_level=context_level)
 
     # 渲染角色专用模板
     try:
@@ -343,6 +348,7 @@ def get_system_prompt(
     user_context: dict,
     conversation_history: dict = None,
     prompt_version: str = "v1",
+    context_level: str = "full",
 ) -> str:
     """
     向后兼容的函数名
@@ -354,6 +360,7 @@ def get_system_prompt(
         conversation_history=conversation_history,
         prompt_version=prompt_version,
         agent_role=AgentRole.GENERATION,
+        context_level=context_level,
     )
 
 
@@ -543,82 +550,123 @@ def _format_plan_context(plan_context: dict = None) -> str:
     return "\n".join(lines)
 
 
-def format_user_context(context: dict) -> str:
+def format_user_context(context: dict, context_level: str = "full") -> str:
     """格式化用户上下文"""
     lines = []
 
+    normalized = _normalize_user_context(context)
+
     # 用户基本信息
-    if context.get("user_context"):
-        user_ctx = context["user_context"]
-        if hasattr(user_ctx, "model_dump"):
-            user_ctx = user_ctx.model_dump()
-        lines.append(f"用户昵称: {user_ctx.get('nickname', '未知')}")
-        lines.append(f"时区: {user_ctx.get('timezone', 'Asia/Shanghai')}")
-        lines.append(f"Pro状态: {'是' if user_ctx.get('is_pro') else '否'}")
+    identity = normalized.get("identity")
+    if identity:
+        lines.append("【身份信息】")
+        lines.append(f"- 昵称: {identity.get('nickname', '未知')}")
+        lines.append(f"- 时区: {identity.get('timezone', 'Asia/Shanghai')}")
+        lines.append(f"- Pro状态: {'是' if identity.get('is_pro') else '否'}")
 
     # 分析摘要
-    if context.get("analytics_summary"):
-        analytics = context["analytics_summary"]
-        # Handle both dict and string formats for analytics_summary
+    if normalized.get("analytics_summary"):
+        analytics = normalized["analytics_summary"]
         if isinstance(analytics, dict):
-            lines.append("-" * 20)
+            lines.append("【分析摘要】")
             if analytics.get("is_active"):
                 lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
                 lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
             else:
                 lines.append("状态: 不活跃")
         elif isinstance(analytics, str) and analytics:
-            # If it's a string summary, just append it
-            lines.append("-" * 20)
+            lines.append("【分析摘要】")
             lines.append(f"分析摘要: {analytics}")
 
     # 火花等级
-    if context.get("user_context") and context["user_context"].get("preferences"):
-        prefs = context["user_context"]["preferences"]
-        if "flame_level" in prefs:
-            lines.append(f"火花等级: {prefs['flame_level']}")
+    if identity and identity.get("flame_level") is not None:
+        lines.append(f"火花等级: {identity['flame_level']}")
 
     # 学习偏好
-    if context.get("preferences"):
-        prefs = context["preferences"]
-        lines.append("-" * 20)
-        lines.append(f"学习偏好 - 深度: {prefs.get('depth_preference', 0.5):.1f}, 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+    if normalized.get("preferences"):
+        prefs = normalized["preferences"]
+        lines.append("【学习偏好】")
+        lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
+        lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
     # 碎片时间推荐线索：待办任务
-    if context.get("next_actions"):
-        lines.append("-" * 20)
-        lines.append("待办任务(Top 3):")
-        for task in context["next_actions"][:3]:
+    next_actions = normalized.get("next_actions") or []
+    if next_actions:
+        lines.append("【待办任务】")
+        limit = 1 if context_level == "light" else 3
+        lines.append(f"Top {limit}:")
+        for task in next_actions[:limit]:
             lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
 
     # 专注统计
-    if context.get("focus_stats"):
-        stats = context["focus_stats"]
-        lines.append("-" * 20)
-        lines.append(f"今日专注: {stats.get('total_minutes', 0)} 分钟, 番茄钟次数: {stats.get('pomodoro_count', 0)}")
+    if normalized.get("focus_stats"):
+        stats = normalized["focus_stats"]
+        lines.append("【专注统计】")
+        lines.append(f"- 今日专注: {stats.get('total_minutes', 0)} 分钟")
+        lines.append(f"- 番茄钟次数: {stats.get('pomodoro_count', 0)}")
 
     # 活跃计划
-    if context.get("active_plans"):
-        lines.append("-" * 20)
-        lines.append("活跃计划:")
-        for plan in context["active_plans"][:3]:
+    active_plans = normalized.get("active_plans") or []
+    if active_plans:
+        lines.append("【活跃计划】")
+        limit = 1 if context_level == "light" else 3
+        for plan in active_plans[:limit]:
             lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
 
     # 工具偏好 (P4)
-    if context.get("preferred_tools"):
-        lines.append("-" * 20)
-        lines.append(f"工具偏好 (用户历史常用): {', '.join(context['preferred_tools'])}")
+    if normalized.get("preferred_tools"):
+        lines.append("【工具偏好】")
+        lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
 
     # 考试紧迫度
-    if isinstance(context.get("exam_urgency"), dict):
-        urgency = context["exam_urgency"]
+    if isinstance(normalized.get("exam_urgency"), dict):
+        urgency = normalized["exam_urgency"]
         days_left = urgency.get("days_left")
         if days_left is not None:
-            lines.append("-" * 20)
+            lines.append("【考试紧迫度】")
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
     return "\n".join(lines) if lines else "暂无上下文信息"
+
+
+def _normalize_user_context(context: dict) -> dict:
+    """统一用户画像结构，避免字段重复与冲突"""
+    normalized: dict[str, Any] = {}
+
+    user_ctx = context.get("user_context")
+    if user_ctx:
+        if hasattr(user_ctx, "model_dump"):
+            user_ctx = user_ctx.model_dump()
+        normalized["identity"] = {
+            "nickname": user_ctx.get("nickname", "未知"),
+            "timezone": user_ctx.get("timezone", "Asia/Shanghai"),
+            "is_pro": user_ctx.get("is_pro", False),
+            "flame_level": (user_ctx.get("preferences") or {}).get("flame_level"),
+        }
+
+    if context.get("preferences"):
+        normalized["preferences"] = context["preferences"]
+
+    if context.get("analytics_summary"):
+        normalized["analytics_summary"] = context["analytics_summary"]
+
+    if context.get("next_actions"):
+        normalized["next_actions"] = context["next_actions"]
+
+    if context.get("focus_stats"):
+        normalized["focus_stats"] = context["focus_stats"]
+
+    if context.get("active_plans"):
+        normalized["active_plans"] = context["active_plans"]
+
+    if context.get("preferred_tools"):
+        normalized["preferred_tools"] = context["preferred_tools"]
+
+    if context.get("exam_urgency"):
+        normalized["exam_urgency"] = context["exam_urgency"]
+
+    return normalized
 
 
 def _format_cognitive_prism_section(user_context: dict) -> str:
