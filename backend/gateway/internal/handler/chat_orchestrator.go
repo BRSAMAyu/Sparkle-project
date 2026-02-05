@@ -205,7 +205,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	h.registerConnection(userID, conn)
-	defer h.unregisterConnection(userID)
+	defer h.unregisterConnection(userID, conn)
 
 	readLimit := int64(0)
 	msgRate := 0.0
@@ -2328,9 +2328,9 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 	}
 }
 
-func (h *ChatOrchestrator) unregisterConnection(userID string) {
+func (h *ChatOrchestrator) unregisterConnection(userID string, conn *websocket.Conn) {
 	if h.wsRegistry != nil {
-		h.wsRegistry.Unregister(userID)
+		h.wsRegistry.Unregister(userID, conn)
 	}
 }
 
@@ -2364,7 +2364,7 @@ func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.In
 	}
 
 	if err := conn.WriteJSON(message); err != nil {
-		h.unregisterConnection(userID)
+		h.unregisterConnection(userID, conn)
 		return fmt.Errorf("failed to send intervention: %w", err)
 	}
 	return nil

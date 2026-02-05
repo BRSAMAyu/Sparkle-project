@@ -81,7 +81,7 @@ class FocusService:
             hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
             event_type = AchievementEvent.STUDY_MINUTES_ACCUMULATED
 
-            if hour >= 23 or hour <= 5:
+            if hour >= 23 or hour < 5:
                 # Night study special event
                 event_type = AchievementEvent.NIGHT_STUDY
             elif 5 <= hour <= 8:
