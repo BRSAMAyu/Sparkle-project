@@ -47,9 +47,9 @@ class KnowledgeIntegrationService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        debugPrint('✅ Vocabulary node created/updated: ${response.data['node_id']}');
-        return VocabularyNodeResult.fromJson(response.data as Map<String, dynamic>);
+      if (response.statusCode == 200 && response.data?['success'] == true) {
+        debugPrint('✅ Vocabulary node created/updated: ${response.data?['node_id']}');
+        return VocabularyNodeResult.fromJson(response.data! as Map<String, dynamic>);
       } else {
         debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
         return null;
@@ -108,7 +108,7 @@ class KnowledgeIntegrationService {
 
       final response = await _dio.delete<Map<String, dynamic>>('/galaxy/node/$nodeId/draft');
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data?['success'] == true) {
         debugPrint('✅ Draft node deleted: $nodeId');
         return true;
       } else {
@@ -140,7 +140,7 @@ class KnowledgeIntegrationService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data?['success'] == true) {
         debugPrint('✅ Node content updated: $nodeId');
         return true;
       } else {

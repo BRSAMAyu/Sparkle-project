@@ -18,9 +18,13 @@ Prompt 管理系统 - 统一的Agent Prompt管理
 """
 
 from typing import Any
+import random
+
+from loguru import logger
 
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.plan_context import merge_plan_context
+from app.config import settings
 
 class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
@@ -98,16 +102,17 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 1. 始终遵循用户的偏好设置，这是最重要的
 2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
 
-3. 根据 verbosity 目标调整回答长度
+4. 根据 verbosity 目标调整回答长度
 
-4. 根据 exploration_level 决定是否扩展话题
+5. 根据 exploration_level 决定是否扩展话题
 
-5. 保持角色一致性
+6. 保持角色一致性
 
-6. 提供准确、有帮助的回答
+7. 提供准确、有帮助的回答
 
-7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 
 """
 
@@ -171,16 +176,17 @@ MODE_SYSTEM_PROMPTS = {
 
 1. 始终遵循用户的偏好设置，这是最重要的
 2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
 
-3. 根据 verbosity 目标调整回答长度
+4. 根据 verbosity 目标调整回答长度
 
-4. 根据 exploration_level 决定是否扩展话题
+5. 根据 exploration_level 决定是否扩展话题
 
-5. 保持角色一致性
+6. 保持角色一致性
 
-6. 提供准确、有帮助的回答
+7. 提供准确、有帮助的回答
 
-7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 """,
     "study_plan": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
@@ -240,16 +246,17 @@ MODE_SYSTEM_PROMPTS = {
 
 1. 始终遵循用户的偏好设置，这是最重要的
 2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
 
-3. 根据 verbosity 目标调整回答长度
+4. 根据 verbosity 目标调整回答长度
 
-4. 根据 exploration_level 决定是否扩展话题
+5. 根据 exploration_level 决定是否扩展话题
 
-5. 保持角色一致性
+6. 保持角色一致性
 
-6. 提供准确、有帮助的回答
+7. 提供准确、有帮助的回答
 
-7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 """,
     "error_diagnosis": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
@@ -309,16 +316,17 @@ MODE_SYSTEM_PROMPTS = {
 
 1. 始终遵循用户的偏好设置，这是最重要的
 2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
 
-3. 根据 verbosity 目标调整回答长度
+4. 根据 verbosity 目标调整回答长度
 
-4. 根据 exploration_level 决定是否扩展话题
+5. 根据 exploration_level 决定是否扩展话题
 
-5. 保持角色一致性
+6. 保持角色一致性
 
-6. 提供准确、有帮助的回答
+7. 提供准确、有帮助的回答
 
-7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 """,
 }
 
@@ -496,7 +504,13 @@ def build_system_prompt(
 
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
 
-
+    _maybe_log_prompt_snapshot(
+        prompt,
+        user_context=user_context,
+        chat_mode=chat_mode,
+        context_level=context_level,
+        prompt_version=prompt_version,
+    )
 
     return prompt
 
@@ -997,3 +1011,41 @@ def _extract_llm_profile(user_context: dict) -> dict:
         return llm_profile
     llm_profile = user_context.get("llm_profile")
     return llm_profile if isinstance(llm_profile, dict) else {}
+
+
+def _maybe_log_prompt_snapshot(
+    prompt: str,
+    *,
+    user_context: dict,
+    chat_mode: str,
+    context_level: str,
+    prompt_version: str,
+) -> None:
+    if not settings.PROMPT_SNAPSHOT_ENABLED:
+        return
+    sample_rate = settings.PROMPT_SNAPSHOT_SAMPLE_RATE or 0.0
+    if sample_rate > 0.0 and random.random() > sample_rate:
+        return
+
+    max_chars = max(200, int(settings.PROMPT_SNAPSHOT_MAX_CHARS or 1200))
+    if len(prompt) <= max_chars:
+        snapshot = prompt
+    else:
+        head = prompt[: max_chars // 2]
+        tail = prompt[-(max_chars // 2):]
+        snapshot = f"{head}\n...<truncated>...\n{tail}"
+
+    user_id = None
+    base_ctx = user_context.get("user_context")
+    if isinstance(base_ctx, dict):
+        user_id = base_ctx.get("user_id")
+
+    logger.info(
+        "[PromptSnapshot] user_id={user_id} chat_mode={chat_mode} context_level={context_level} prompt_version={prompt_version} size={size}\n{snapshot}",
+        user_id=user_id or "unknown",
+        chat_mode=chat_mode,
+        context_level=context_level,
+        prompt_version=prompt_version,
+        size=len(prompt),
+        snapshot=snapshot,
+    )

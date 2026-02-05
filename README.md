@@ -350,10 +350,13 @@ sparkle-flutter/
 | 文档 | 说明 |
 |:-----|:-----|
 | [CLAUDE.md](CLAUDE.md) | 开发指南 · 架构规范 · 代码模式 |
+| [快速入门](docs/快速入门.md) | 本地开发与常用命令 |
 | [技术架构](docs/00_项目概览/02_技术架构.md) | 三层架构详解 |
 | [认知引擎](docs/09_Cognitive_Nexus/) | 四维画像设计 |
 | [知识星图](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG 实现 |
 | [API 参考](docs/02_技术设计文档/03_API参考.md) | gRPC + WebSocket |
+| [ADR 记录](docs/adr/) | 架构决策记录 |
+| [性能基准测试](docs/性能基准测试.md) | Benchmark 运行说明 |
 
 <br>
 

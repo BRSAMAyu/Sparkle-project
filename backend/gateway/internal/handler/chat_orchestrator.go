@@ -126,8 +126,7 @@ type ChatOrchestrator struct {
 	backendURL    string
 	signalHub     *service.SignalHub
 	httpClient    *http.Client
-	wsConnections map[string]*websocket.Conn
-	wsMutex       sync.RWMutex
+	wsRegistry    *ConnectionRegistry
 }
 
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
@@ -148,7 +147,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		wsConnections: make(map[string]*websocket.Conn),
+		wsRegistry: NewConnectionRegistry(signalHub, ch),
 	}
 }
 
@@ -2324,48 +2323,22 @@ func (h *ChatOrchestrator) sendError(conn *websocket.Conn, opType, nodeID, versi
 }
 
 func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn) {
-	h.wsMutex.Lock()
-	defer h.wsMutex.Unlock()
-	if existing, ok := h.wsConnections[userID]; ok && existing != conn {
-		_ = existing.Close()
-	}
-	h.wsConnections[userID] = conn
-	if h.signalHub != nil {
-		h.signalHub.Register(userID, conn)
-	}
-
-	// Publish connection event to Redis for cross-instance synchronization
-	if h.chatHistory != nil {
-		go func() {
-			ctx := context.Background()
-			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "connected")
-		}()
+	if h.wsRegistry != nil {
+		h.wsRegistry.Register(userID, conn)
 	}
 }
 
 func (h *ChatOrchestrator) unregisterConnection(userID string) {
-	h.wsMutex.Lock()
-	conn := h.wsConnections[userID]
-	delete(h.wsConnections, userID)
-	h.wsMutex.Unlock()
-	if h.signalHub != nil && conn != nil {
-		h.signalHub.Unregister(userID, conn)
-	}
-
-	// Publish disconnection event to Redis for cross-instance synchronization
-	if h.chatHistory != nil {
-		go func() {
-			ctx := context.Background()
-			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "disconnected")
-		}()
+	if h.wsRegistry != nil {
+		h.wsRegistry.Unregister(userID)
 	}
 }
 
 func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) {
-	h.wsMutex.RLock()
-	defer h.wsMutex.RUnlock()
-	conn, ok := h.wsConnections[userID]
-	return conn, ok
+	if h.wsRegistry == nil {
+		return nil, false
+	}
+	return h.wsRegistry.Get(userID)
 }
 
 // PushIntervention sends an intervention push message to a connected WebSocket client.

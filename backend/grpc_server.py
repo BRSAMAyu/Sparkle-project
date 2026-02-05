@@ -47,8 +47,9 @@ logger.add(
 class GracefulShutdown:
     """优雅关闭处理器"""
 
-    def __init__(self, server: grpc.aio.Server):
+    def __init__(self, server: grpc.aio.Server, orchestrator: ChatOrchestrator | None = None):
         self.server = server
+        self.orchestrator = orchestrator
         self.is_shutting_down = False
 
     async def shutdown(self, sig=None):
@@ -64,6 +65,8 @@ class GracefulShutdown:
 
         logger.info("Stopping gRPC server...")
         await self.server.stop(grace=5.0)  # 5 秒优雅关闭
+        if self.orchestrator:
+            await self.orchestrator.shutdown()
         await cache_service.close()
         logger.info("gRPC server stopped successfully")
 
@@ -159,7 +162,7 @@ async def serve():
     logger.success("✅ gRPC server started successfully!")
 
     # 设置优雅关闭
-    shutdown_handler = GracefulShutdown(server)
+    shutdown_handler = GracefulShutdown(server, orchestrator=orchestrator)
 
     # 注册信号处理
     loop = asyncio.get_event_loop()

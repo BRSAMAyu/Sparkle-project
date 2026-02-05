@@ -349,7 +349,7 @@ func Load() *Config {
 	viper.SetDefault("POSTGRES_HOST", "sparkle_db")
 	viper.SetDefault("POSTGRES_PORT", 5432)
 	viper.SetDefault("POSTGRES_USER", "postgres")
-	viper.SetDefault("POSTGRES_PASSWORD", "change-me")
+	viper.SetDefault("POSTGRES_PASSWORD", "")
 	viper.SetDefault("POSTGRES_DB", "sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("AGENT_TLS_ENABLED", false)
@@ -370,7 +370,7 @@ func Load() *Config {
 	viper.SetDefault("REDIS_URL", "")
 	viper.SetDefault("REDIS_HOST", "sparkle_redis")
 	viper.SetDefault("REDIS_PORT", 6379)
-	viper.SetDefault("REDIS_PASSWORD", "change-me")
+	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)
@@ -438,6 +438,9 @@ func Load() *Config {
 	}
 	if !cfg.IsDevelopment() && isInsecureSecret(cfg.AdminSecret) {
 		log.Fatal("ADMIN_SECRET is using an insecure default. Set a high-entropy value via ADMIN_SECRET.")
+	}
+	if !cfg.IsDevelopment() && cfg.AgentTLSInsecure {
+		log.Fatal("AGENT_TLS_INSECURE must be false in non-development environments.")
 	}
 
 	if cfg.DatabaseURL == "" {

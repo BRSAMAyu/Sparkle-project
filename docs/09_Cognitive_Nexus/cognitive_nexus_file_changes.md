@@ -33,7 +33,7 @@
     *   [ ] 优化 System Prompt 模板，支持动态插入 Context。
 
 ### 接口层
-*   **`proto/agent_service_v2.proto`**:
+*   **`proto/agent_service.proto`**:
     *   [ ] 定义新的 gRPC 消息类型，用于跨服务查询（如 Go Gateway 查询 Galaxy 状态）。
 
 ## 2. 后端 (Gateway Go)

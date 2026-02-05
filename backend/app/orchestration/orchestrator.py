@@ -157,6 +157,7 @@ class ChatOrchestrator:
         self.redis = redis_client
         self.redis_client = redis_client
         self.user_id = user_id
+        self._bg_tasks: set[asyncio.Task] = set()
 
         # Initialize components
         self.state_manager = SessionStateManager(redis_client)
@@ -228,7 +229,7 @@ class ChatOrchestrator:
             redis_client=redis_client
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
-        asyncio.create_task(self.langgraph_breaker.initialize())
+        self._track_task(asyncio.create_task(self.langgraph_breaker.initialize()))
 
         # Phase 3: Observability
         self.observability = observability_logger
@@ -252,6 +253,19 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+    def _track_task(self, task: asyncio.Task) -> None:
+        """Track background tasks for graceful shutdown."""
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+
+    async def shutdown(self) -> None:
+        """Cancel background tasks started by the orchestrator."""
+        for task in list(self._bg_tasks):
+            task.cancel()
+        if self._bg_tasks:
+            await asyncio.gather(*self._bg_tasks, return_exceptions=True)
+        self._bg_tasks.clear()
 
     async def _emit_system_updates(self, user_id: str) -> list[agent_service_pb2.ChatResponse]:
         updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)

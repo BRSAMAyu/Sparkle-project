@@ -115,6 +115,11 @@ class ProductionSettings(BaseSettings):
     LOG_FILE: str | None = Field(default=None, env="LOG_FILE")
     LOG_RETENTION_DAYS: int = Field(default=7, env="LOG_RETENTION_DAYS")
 
+    # Prompt Snapshot (debug observability)
+    PROMPT_SNAPSHOT_ENABLED: bool = Field(default=False, env="PROMPT_SNAPSHOT_ENABLED")
+    PROMPT_SNAPSHOT_SAMPLE_RATE: float = Field(default=0.0, env="PROMPT_SNAPSHOT_SAMPLE_RATE")
+    PROMPT_SNAPSHOT_MAX_CHARS: int = Field(default=1200, env="PROMPT_SNAPSHOT_MAX_CHARS")
+
     # ==================== 监控配置 ====================
     ENABLE_METRICS: bool = Field(default=True, env="ENABLE_METRICS")
     ENABLE_TRACING: bool = Field(default=True, env="ENABLE_TRACING")
