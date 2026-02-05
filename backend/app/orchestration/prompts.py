@@ -97,18 +97,230 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 ## 核心原则
 
 1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
 
-2. 根据 verbosity 目标调整回答长度
+3. 根据 verbosity 目标调整回答长度
 
-3. 根据 exploration_level 决定是否扩展话题
+4. 根据 exploration_level 决定是否扩展话题
 
-4. 保持角色一致性
+5. 保持角色一致性
 
-5. 提供准确、有帮助的回答
+6. 提供准确、有帮助的回答
 
-6. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 
 """
+
+MODE_SYSTEM_PROMPTS = {
+    "standard": AGENT_SYSTEM_PROMPT,
+    "deep_analysis": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 深度解析模式指令
+
+目标：帮助用户获得深层、可验证、可执行的理解与方案。
+原则：
+1. 先澄清问题边界与假设，必要时列出需补充的信息
+2. 结构化拆解问题（因果、约束、权衡、关键变量）
+3. 多视角验证（反例、风险、替代路径）
+4. 输出可执行建议，并说明验证方式
+
+输出要求（Markdown）：
+- 问题复述与边界
+- 关键因素/约束
+- 分析过程（可用要点或小节）
+- 结论与可执行方案
+- 风险与验证步骤（含可观测指标/验收标准）
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+
+3. 根据 verbosity 目标调整回答长度
+
+4. 根据 exploration_level 决定是否扩展话题
+
+5. 保持角色一致性
+
+6. 提供准确、有帮助的回答
+
+7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+    "study_plan": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 学习计划模式指令
+
+目标：把学习目标转化为可执行、可跟踪、可调整的计划。
+原则：
+1. 明确学习目标与评估标准（能做什么/达到什么水平）
+2. 自顶向下拆解为阶段与任务，并标注先后依赖
+3. 给出时间估算与每周节奏（可调整）
+4. 加入复盘与纠错机制，避免只学不练
+
+输出要求（Markdown）：
+- 目标与评估标准
+- 阶段拆解（阶段目标/任务/产出）
+- 时间安排（每周节奏与里程碑）
+- 学习建议（资源类型、练习方式、复盘机制）
+- 风险与应对（可能掉队的点与补救方式）
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+
+3. 根据 verbosity 目标调整回答长度
+
+4. 根据 exploration_level 决定是否扩展话题
+
+5. 保持角色一致性
+
+6. 提供准确、有帮助的回答
+
+7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+    "error_diagnosis": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 错题分析模式指令
+
+目标：定位错误根因并形成可执行的改进闭环。
+原则：
+1. 先复述题意与用户思路，确保对齐
+2. 明确错误类型与触发点（概念/计算/方法/审题/步骤遗漏）
+3. 给出可操作的修正步骤与通用化方法
+4. 提供防错清单与练习策略
+
+输出要求（Markdown）：
+- 题意与思路对齐
+- 错误类型与触发点
+- 根因分析
+- 修正步骤（含正确解法/关键步骤）
+- 防错清单与训练建议
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+
+3. 根据 verbosity 目标调整回答长度
+
+4. 根据 exploration_level 决定是否扩展话题
+
+5. 保持角色一致性
+
+6. 提供准确、有帮助的回答
+
+7. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+}
 
 
 
@@ -137,6 +349,8 @@ def build_system_prompt(
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
 
     context_level: str = "full",  # full | light
+
+    chat_mode: str = "standard",
 
 ) -> str:
 
@@ -194,7 +408,10 @@ def build_system_prompt(
 
     profile = agent_profile_registry.get_profile(agent_role)
 
-    base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
+    if profile.system_prompt_template:
+        base_prompt = profile.system_prompt_template
+    else:
+        base_prompt = MODE_SYSTEM_PROMPTS.get(chat_mode, AGENT_SYSTEM_PROMPT)
 
 
 
@@ -204,11 +421,7 @@ def build_system_prompt(
 
 
 
-    llm_profile = user_context.get("llm_profile")
-
-    if llm_profile is None:
-
-        llm_profile = {}
+    llm_profile = _extract_llm_profile(user_context)
 
     preference_instructions = llm_profile.get(
 
@@ -294,6 +507,7 @@ def get_system_prompt_for_role(
     query: str = "",
     conversation_history: dict = None,
     context_level: str = "full",
+    chat_mode: str = "standard",
 ) -> str:
     """
     获取指定角色的系统 Prompt
@@ -324,6 +538,8 @@ def get_system_prompt_for_role(
             user_context=user_context,
             conversation_history=conversation_history,
             agent_role=agent_role,
+            chat_mode=chat_mode,
+            context_level=context_level,
         )
 
     # 格式化上下文
@@ -349,6 +565,7 @@ def get_system_prompt(
     conversation_history: dict = None,
     prompt_version: str = "v1",
     context_level: str = "full",
+    chat_mode: str = "standard",
 ) -> str:
     """
     向后兼容的函数名
@@ -361,6 +578,7 @@ def get_system_prompt(
         prompt_version=prompt_version,
         agent_role=AgentRole.GENERATION,
         context_level=context_level,
+        chat_mode=chat_mode,
     )
 
 
@@ -422,7 +640,7 @@ def _format_conversation_history(conversation_history: dict = None) -> str:
 
 def _get_default_preference_instructions(user_context: dict) -> str:
     """默认的偏好指令（兜底）"""
-    prefs = user_context.get("preferences", {})
+    prefs = _extract_preferences(user_context)
     depth = prefs.get("depth_preference", 0.5)
     curiosity = prefs.get("curiosity_preference", 0.5)
 
@@ -627,6 +845,40 @@ def format_user_context(context: dict, context_level: str = "full") -> str:
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
+    if context_level == "full":
+        context_pack = normalized.get("context_pack") or {}
+        metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
+        evidence = metadata.get("evidence_summary") if isinstance(metadata, dict) else None
+        if isinstance(evidence, dict):
+            lines.append("【画像证据摘要】")
+            prefs = evidence.get("preferences") or []
+            if prefs:
+                lines.append("偏好证据(Top 3):")
+                for item in prefs[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    updated = item.get("updated_at")
+                    lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
+            goals = evidence.get("goals") or []
+            if goals:
+                lines.append("目标证据(Top 3):")
+                for item in goals[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    updated = item.get("updated_at")
+                    lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
+            episodic = evidence.get("episodic") or []
+            if episodic:
+                lines.append("事件证据(Top 3):")
+                for item in episodic[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    occurred = item.get("occurred_at")
+                    lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
+
     return "\n".join(lines) if lines else "暂无上下文信息"
 
 
@@ -645,7 +897,16 @@ def _normalize_user_context(context: dict) -> dict:
             "flame_level": (user_ctx.get("preferences") or {}).get("flame_level"),
         }
 
-    if context.get("preferences"):
+    profile = context.get("profile")
+    if isinstance(profile, dict):
+        identity = profile.get("identity")
+        if isinstance(identity, dict):
+            normalized["identity"] = identity
+        prefs = profile.get("preferences")
+        if isinstance(prefs, dict):
+            normalized["preferences"] = prefs
+
+    if context.get("preferences") and "preferences" not in normalized:
         normalized["preferences"] = context["preferences"]
 
     if context.get("analytics_summary"):
@@ -665,6 +926,9 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("exam_urgency"):
         normalized["exam_urgency"] = context["exam_urgency"]
+
+    if context.get("context_pack"):
+        normalized["context_pack"] = context["context_pack"]
 
     return normalized
 
@@ -710,3 +974,26 @@ def _format_cognitive_prism_section(user_context: dict) -> str:
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 
     return "\n".join(lines)
+
+
+def _extract_profile(user_context: dict) -> dict:
+    profile = user_context.get("profile")
+    return profile if isinstance(profile, dict) else {}
+
+
+def _extract_preferences(user_context: dict) -> dict:
+    profile = _extract_profile(user_context)
+    prefs = profile.get("preferences")
+    if isinstance(prefs, dict):
+        return prefs
+    prefs = user_context.get("preferences")
+    return prefs if isinstance(prefs, dict) else {}
+
+
+def _extract_llm_profile(user_context: dict) -> dict:
+    profile = _extract_profile(user_context)
+    llm_profile = profile.get("llm_profile")
+    if isinstance(llm_profile, dict):
+        return llm_profile
+    llm_profile = user_context.get("llm_profile")
+    return llm_profile if isinstance(llm_profile, dict) else {}

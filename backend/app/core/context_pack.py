@@ -445,6 +445,46 @@ class ContextPackBuilder:
         goal_source_records = resolved_goals if conflict_enabled else goals
         episodic_source_records = resolved_episodic if conflict_enabled else episodic
 
+        def _iso(dt_value):
+            return dt_value.isoformat() if dt_value else None
+
+        def _top_by_score(items, limit=3):
+            return sorted(items, key=lambda item: getattr(item, "evidence_score", 0.0), reverse=True)[:limit]
+
+        evidence_summary = {
+            "preferences": [
+                {
+                    "key": item.pref_key,
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                }
+                for item in _top_by_score(preference_source_records)
+            ],
+            "goals": [
+                {
+                    "id": str(item.id),
+                    "title": item.title,
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                    "target_date": _iso(item.target_date),
+                }
+                for item in _top_by_score(goal_source_records)
+            ],
+            "episodic": [
+                {
+                    "id": str(item.id),
+                    "summary": item.summary[:60],
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                    "occurred_at": _iso(item.occurred_at),
+                }
+                for item in _top_by_score(episodic_source_records)
+            ],
+        }
+
+        if evidence_summary["preferences"] or evidence_summary["goals"] or evidence_summary["episodic"]:
+            metadata["evidence_summary"] = evidence_summary
+
         pack_id = None
         if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
             trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}

@@ -591,6 +591,43 @@ class ChatOrchestrator:
 
         return {"has_cognitive_patterns": False}
 
+    def _build_profile_payload(
+        self,
+        user_context_data: dict[str, Any] | None,
+        preferences: dict[str, Any] | None,
+        llm_profile_data: dict[str, Any] | None,
+        preference_version: int,
+    ) -> dict[str, Any]:
+        identity: dict[str, Any] = {}
+        if isinstance(user_context_data, dict):
+            flame_level = None
+            prefs = user_context_data.get("preferences")
+            if isinstance(prefs, dict):
+                flame_level = prefs.get("flame_level")
+            identity = {
+                "nickname": user_context_data.get("nickname", "未知"),
+                "timezone": user_context_data.get("timezone", "Asia/Shanghai"),
+                "language": user_context_data.get("language", "zh-CN"),
+                "is_pro": user_context_data.get("is_pro", False),
+                "persona_type": user_context_data.get("persona_type"),
+                "flame_level": flame_level,
+            }
+
+        prefs = preferences
+        if not isinstance(prefs, dict) and isinstance(user_context_data, dict):
+            prefs = user_context_data.get("preferences")
+        if not isinstance(prefs, dict):
+            prefs = {}
+
+        llm_profile = llm_profile_data if isinstance(llm_profile_data, dict) else {}
+
+        return {
+            "identity": identity,
+            "preferences": prefs,
+            "llm_profile": llm_profile,
+            "preference_version": preference_version,
+        }
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -675,6 +712,13 @@ class ChatOrchestrator:
                 # P0: 认知棱镜上下文注入
                 cognitive_insights = await self._get_cognitive_insights(user_id, db_session)
 
+                profile_payload = self._build_profile_payload(
+                    user_context_data=user_context_data,
+                    preferences=cognitive_context.preferences,
+                    llm_profile_data=llm_profile_data,
+                    preference_version=preference_version,
+                )
+
                 return {
                     "user_context": user_context_data, # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics or {},
@@ -685,6 +729,7 @@ class ChatOrchestrator:
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
                     "task_status_summary": task_status_summary,
+                    "profile": profile_payload,
 
                     # New field for full context injection
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
@@ -775,6 +820,13 @@ class ChatOrchestrator:
                     else:
                         preferences_dict = {"depth_preference": 0.5, "curiosity_preference": 0.5}
 
+                profile_payload = self._build_profile_payload(
+                    user_context_data=user_context_data,
+                    preferences=preferences_dict,
+                    llm_profile_data=llm_profile_data,
+                    preference_version=preference_version,
+                )
+
                 return {
                     "user_context": user_context_data,
                     "analytics_summary": analytics,
@@ -788,10 +840,17 @@ class ChatOrchestrator:
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
                     "task_status_summary": task_status_summary,
+                    "profile": profile_payload,
                 }
             else:
                 # Fallback to basic context
                 logger.warning(f"User {user_id} not found, using fallback context")
+                profile_payload = self._build_profile_payload(
+                    user_context_data=None,
+                    preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
+                    llm_profile_data=llm_profile_data,
+                    preference_version=preference_version,
+                )
                 return {
                     "user_context": None,
                     "analytics_summary": {"is_active": True, "engagement_level": "medium"},
@@ -802,6 +861,7 @@ class ChatOrchestrator:
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
                     "task_status_summary": task_status_summary,
+                    "profile": profile_payload,
                 }
 
         except Exception as e:
@@ -813,6 +873,12 @@ class ChatOrchestrator:
                 "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
                 "preference_version": 0,
                 "llm_profile": None,
+                "profile": self._build_profile_payload(
+                    user_context_data=None,
+                    preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
+                    llm_profile_data=None,
+                    preference_version=0,
+                ),
             }
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
