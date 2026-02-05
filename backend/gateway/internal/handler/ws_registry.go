@@ -43,9 +43,15 @@ func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn) {
 	}
 }
 
-func (r *ConnectionRegistry) Unregister(userID string) {
+func (r *ConnectionRegistry) Unregister(userID string, conn *websocket.Conn) {
 	r.mu.Lock()
-	conn := r.connections[userID]
+	// Only remove if the stored connection is the same one being unregistered.
+	// Guard against the reconnect race: Register replaces and closes the old conn;
+	// the old goroutine's deferred Unregister must not evict the replacement.
+	if r.connections[userID] != conn {
+		r.mu.Unlock()
+		return
+	}
 	delete(r.connections, userID)
 	r.mu.Unlock()
 
