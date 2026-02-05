@@ -398,6 +398,12 @@ class ProductionChatOrchestrator:
                 logger.warning(f"Failed to build LLM profile: {e}")
 
             if user_context:
+                profile_payload = self._build_profile_payload(
+                    user_context_data=user_context.model_dump() if hasattr(user_context, "model_dump") else user_context,
+                    preferences=user_context.preferences if hasattr(user_context, "preferences") else None,
+                    llm_profile_data=llm_profile_data,
+                    preference_version=preference_version,
+                )
                 return {
                     "user_context": user_context,
                     "analytics_summary": analytics,
@@ -407,27 +413,73 @@ class ProductionChatOrchestrator:
                     },
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "profile": profile_payload,
                 }
             else:
                 logger.warning(f"User {user_id} not found, using fallback")
                 fallback = self._get_fallback_context()
                 fallback["preference_version"] = preference_version
                 fallback["llm_profile"] = llm_profile_data
+                fallback["profile"] = self._build_profile_payload(
+                    user_context_data=None,
+                    preferences=fallback.get("preferences"),
+                    llm_profile_data=llm_profile_data,
+                    preference_version=preference_version,
+                )
                 return fallback
 
         except Exception as e:
             logger.error(f"Failed to build user context: {e}")
             return self._get_fallback_context()
 
+    def _build_profile_payload(
+        self,
+        user_context_data: dict[str, Any] | None,
+        preferences: dict[str, Any] | None,
+        llm_profile_data: dict[str, Any] | None,
+        preference_version: int,
+    ) -> dict[str, Any]:
+        identity: dict[str, Any] = {}
+        if isinstance(user_context_data, dict):
+            flame_level = None
+            prefs = user_context_data.get("preferences")
+            if isinstance(prefs, dict):
+                flame_level = prefs.get("flame_level")
+            identity = {
+                "nickname": user_context_data.get("nickname", "未知"),
+                "timezone": user_context_data.get("timezone", "Asia/Shanghai"),
+                "language": user_context_data.get("language", "zh-CN"),
+                "is_pro": user_context_data.get("is_pro", False),
+                "persona_type": user_context_data.get("persona_type"),
+                "flame_level": flame_level,
+            }
+
+        prefs = preferences if isinstance(preferences, dict) else {}
+        llm_profile = llm_profile_data if isinstance(llm_profile_data, dict) else {}
+
+        return {
+            "identity": identity,
+            "preferences": prefs,
+            "llm_profile": llm_profile,
+            "preference_version": preference_version,
+        }
+
     def _get_fallback_context(self) -> dict[str, Any]:
         """获取降级上下文"""
-        return {
+        fallback = {
             "user_context": None,
             "analytics_summary": {"is_active": True, "engagement_level": "medium"},
             "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
             "preference_version": 0,
             "llm_profile": None,
         }
+        fallback["profile"] = self._build_profile_payload(
+            user_context_data=None,
+            preferences=fallback.get("preferences"),
+            llm_profile_data=None,
+            preference_version=0,
+        )
+        return fallback
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> dict[str, Any]:
         """构建对话上下文（带错误处理）"""

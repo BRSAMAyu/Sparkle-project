@@ -90,29 +90,14 @@ class MultiAgentWorkflowAdapter:
         )
 
         # Build system prompt for deep analysis (inject user context)
-        base_prompt = build_system_prompt(
+        system_prompt = build_system_prompt(
             context_data.get("user_context") or {},
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
             context_level="light",
+            chat_mode=CHAT_MODE_DEEP_ANALYSIS,
         )
-        system_prompt = f"""{base_prompt}
-
-## 深度解析模式指令
-目标：帮助用户获得深层、可验证、可执行的理解与方案。
-原则：
-1. 先澄清问题边界与假设，必要时列出需补充的信息
-2. 结构化拆解问题（因果、约束、权衡、关键变量）
-3. 多视角验证（反例、风险、替代路径）
-4. 输出可执行建议，并说明验证方式
-
-输出要求（Markdown）：
-- 问题复述与边界
-- 关键因素/约束
-- 分析过程（可用要点或小节）
-- 结论与可执行方案
-- 风险与验证步骤（含可观测指标/验收标准）"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -234,29 +219,14 @@ class MultiAgentWorkflowAdapter:
         )
 
         # Build system prompt for study planning (inject user context)
-        base_prompt = build_system_prompt(
+        system_prompt = build_system_prompt(
             context_data.get("user_context") or {},
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
             context_level="light",
+            chat_mode=CHAT_MODE_STUDY_PLAN,
         )
-        system_prompt = f"""{base_prompt}
-
-## 学习计划模式指令
-目标：把学习目标转化为可执行、可跟踪、可调整的计划。
-原则：
-1. 明确学习目标与评估标准（能做什么/达到什么水平）
-2. 自顶向下拆解为阶段与任务，并标注先后依赖
-3. 给出时间估算与每周节奏（可调整）
-4. 加入复盘与纠错机制，避免只学不练
-
-输出要求（Markdown）：
-- 目标与评估标准
-- 阶段拆解（阶段目标/任务/产出）
-- 时间安排（每周节奏与里程碑）
-- 学习建议（资源类型、练习方式、复盘机制）
-- 风险与应对（可能掉队的点与补救方式）"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
@@ -357,29 +327,14 @@ class MultiAgentWorkflowAdapter:
         )
 
         # Build system prompt for error diagnosis (inject user context)
-        base_prompt = build_system_prompt(
+        system_prompt = build_system_prompt(
             context_data.get("user_context") or {},
             conversation_history=context_data.get("conversation_context") or {},
             prompt_version=context_data.get("prompt_version") or "v1",
             plan_context=context_data.get("plan_context"),
             context_level="light",
+            chat_mode=CHAT_MODE_ERROR_DIAGNOSIS,
         )
-        system_prompt = f"""{base_prompt}
-
-## 错题分析模式指令
-目标：定位错误根因并形成可执行的改进闭环。
-原则：
-1. 先复述题意与用户思路，确保对齐
-2. 明确错误类型与触发点（概念/计算/方法/审题/步骤遗漏）
-3. 给出可操作的修正步骤与通用化方法
-4. 提供防错清单与练习策略
-
-输出要求（Markdown）：
-- 题意与思路对齐
-- 错误类型与触发点
-- 根因分析
-- 修正步骤（含正确解法/关键步骤）
-- 防错清单与训练建议"""
 
         # Build context from user data
         conversation_history = context_data.get('conversation_context', {}).get('messages', [])
