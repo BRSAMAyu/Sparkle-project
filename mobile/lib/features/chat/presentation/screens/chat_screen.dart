@@ -11,6 +11,7 @@ import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.d
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -355,6 +356,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               padding: const EdgeInsets.all(4),
                             ),
                           ],
+                        ),
+                      ),
+                    if (chatState.pendingPlanReview != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.lg,
+                          vertical: DS.sm,
+                        ),
+                        child: PlanReviewCard(
+                          review: chatState.pendingPlanReview!,
+                          onDecision: (decision, {userComment, meta}) =>
+                            ref.read(chatProvider.notifier).submitPlanReview(
+                              decision: decision,
+                              userComment: userComment,
+                              meta: meta,
+                            ),
                         ),
                       ),
                     if (chatState.attachedFiles.isNotEmpty)

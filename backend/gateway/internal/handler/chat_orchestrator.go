@@ -291,7 +291,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
 					return false
 				case "plan_review_feedback":
-					h.handlePlanReviewFeedback(conn, msgMap, userID)
+					h.handlePlanReviewFeedback(conn, msgMap, userID, c.Request.Context())
 					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID)
@@ -445,7 +445,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid plan_review_feedback payload", false)
 					return false
 				}
-				h.handlePlanReviewFeedbackWithResponder(responder, msgMap, userID)
+				h.handlePlanReviewFeedbackWithResponder(msgCtx, responder, msgMap, userID)
 				return false
 			default:
 				responder.SendError("invalid_argument", "Unknown payload type", false)
@@ -547,16 +547,26 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 	}
 }
 
+// jsonMetadataKeys lists metadata keys whose values are JSON-serialized objects.
+// Proto map<string,string> forces all values to strings; these are decoded back
+// to structured objects so Flutter receives them as Maps.
+var jsonMetadataKeys = map[string]bool{
+	"collaboration_timeline": true,
+	"review_data":            true,
+	"state_change_event":     true,
+	"visualization":          true,
+}
+
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
-		if key == "collaboration_timeline" {
+		if jsonMetadataKeys[key] {
 			var decoded interface{}
 			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
 				metadata[key] = decoded
 			} else {
-				log.Printf("Failed to decode collaboration_timeline: %v", err)
+				log.Printf("Failed to decode metadata key %s: %v", key, err)
 				metadata[key] = value
 			}
 			continue
@@ -2166,12 +2176,13 @@ func (h *ChatOrchestrator) handleResponseFeedback(conn *websocket.Conn, msgMap m
 }
 
 // handlePlanReviewFeedback processes user feedback on plan reviews (legacy wrapper)
-func (h *ChatOrchestrator) handlePlanReviewFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
-	h.handlePlanReviewFeedbackWithResponder(legacyPlanReviewStatusSender{conn: conn}, msgMap, userID)
+func (h *ChatOrchestrator) handlePlanReviewFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handlePlanReviewFeedbackWithResponder(ctx, legacyPlanReviewStatusSender{conn: conn}, msgMap, userID)
 }
 
 // handlePlanReviewFeedbackWithResponder processes user feedback on plan reviews
-func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(sender planReviewStatusSender, msgMap map[string]interface{}, userID string) {
+// and forwards the decision to the Python engine via gRPC.
+func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Context, sender planReviewStatusSender, msgMap map[string]interface{}, userID string) {
 	reviewID, ok := msgMap["review_id"].(string)
 	if !ok {
 		log.Printf("Invalid plan review feedback: missing review_id field")
@@ -2184,30 +2195,78 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(sender planRevi
 		return
 	}
 
+	planID, _ := msgMap["plan_id"].(string)
 	userComment, _ := msgMap["user_comment"].(string)
 
-	log.Printf("Plan review feedback from user %s: review_id=%s, decision=%s, comment=%s",
-		userID, reviewID, userDecision, userComment)
+	log.Printf("Plan review feedback from user %s: review_id=%s, plan_id=%s, decision=%s, comment=%s",
+		userID, reviewID, planID, userDecision, userComment)
 
-	// For now, we just acknowledge the feedback
-	// In the future, this could trigger re-planning or execution
-	status := "acknowledged"
-	message := ""
+	// Map string decision to proto enum
+	var decision agentv1.PlanReviewDecision
+	var status, message string
 
 	switch userDecision {
 	case "approve":
+		decision = agentv1.PlanReviewDecision_APPROVE
 		status = "approved"
 		message = "计划已批准，正在执行..."
 	case "reject":
+		decision = agentv1.PlanReviewDecision_REJECT
 		status = "rejected"
 		message = "计划已取消"
 	case "modify":
+		decision = agentv1.PlanReviewDecision_MODIFY
 		status = "modify_requested"
 		message = "请提供修改要求..."
 	default:
-		log.Printf("Unknown user decision: %s", userDecision)
-		status = "unknown"
-		message = "未知操作"
+		decision = agentv1.PlanReviewDecision_ACKNOWLEDGE
+		status = "acknowledged"
+		message = "已确认"
+	}
+
+	// Extract optional meta fields
+	meta := map[string]string{}
+	if raw, ok := msgMap["meta"].(map[string]interface{}); ok {
+		for key, val := range raw {
+			meta[key] = fmt.Sprint(val)
+		}
+	}
+
+	if h.agentClient == nil {
+		log.Printf("Agent client not initialized for plan review feedback")
+		sender.SendPlanReviewStatus(reviewID, "failed", map[string]interface{}{
+			"message":   "service unavailable",
+			"timestamp": time.Now().Unix(),
+		})
+		return
+	}
+
+	req := &agentv1.PlanReviewRequest{
+		UserId:      userID,
+		PlanId:      planID,
+		ReviewId:    reviewID,
+		Decision:    decision,
+		UserComment: userComment,
+		Meta:        meta,
+	}
+
+	reviewCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	resp, err := h.agentClient.SubmitPlanReview(reviewCtx, req)
+	if err != nil || resp == nil || !resp.Success {
+		log.Printf("Failed to submit plan review to agent: %v", err)
+		sender.SendPlanReviewStatus(reviewID, "failed", map[string]interface{}{
+			"message":       message,
+			"user_decision": userDecision,
+			"timestamp":     time.Now().Unix(),
+		})
+		return
+	}
+
+	// Use backend-returned message if available, otherwise use local default
+	if resp.Message != "" {
+		message = resp.Message
 	}
 
 	sender.SendPlanReviewStatus(reviewID, status, map[string]interface{}{

@@ -140,6 +140,14 @@ class _OmniBarState extends ConsumerState<OmniBar>
     }
   }
 
+  void _submitIfNotComposing() {
+    final composing = _controller.value.composing;
+    if (composing.isValid && !composing.isCollapsed) {
+      return;
+    }
+    _submit();
+  }
+
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
@@ -185,86 +193,90 @@ class _OmniBarState extends ConsumerState<OmniBar>
                 horizontal: horizontalPadding,
                 vertical: verticalPadding,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      textInputAction: enterToSend
-                          ? TextInputAction.send
-                          : TextInputAction.newline,
-                      onSubmitted: enterToSend ? (_) => _submit() : null,
-                      keyboardType: TextInputType.text,
-                      style: context.sparkleTypography.bodyLarge.copyWith(
-                        color: DS.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: _isListening
-                            ? 'Listening...'
-                            : (widget.hintText ?? 'Tell me what you think...'),
-                        hintStyle: context.sparkleTypography.bodyLarge.copyWith(
-                          color: _isListening
-                              ? DS.brandPrimary
-                              : DS.textSecondary.withValues(alpha: 0.5),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      cursorColor: DS.brandPrimary,
+              child: child,
+            );
+          },
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  textInputAction: enterToSend
+                      ? TextInputAction.send
+                      : TextInputAction.newline,
+                  onSubmitted: enterToSend ? (_) => _submitIfNotComposing() : null,
+                  keyboardType: TextInputType.text,
+                  style: context.sparkleTypography.bodyLarge.copyWith(
+                    color: DS.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: _isListening
+                        ? 'Listening...'
+                        : (widget.hintText ?? 'Tell me what you think...'),
+                    hintStyle: context.sparkleTypography.bodyLarge.copyWith(
+                      color: _isListening
+                          ? DS.brandPrimary
+                          : DS.textSecondary.withValues(alpha: 0.5),
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  cursorColor: DS.brandPrimary,
+                ),
+              ),
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(DS.brandPrimary),
                     ),
                   ),
-                  if (_isLoading)
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(DS.brandPrimary),
-                        ),
-                      ),
-                    )
-                  else if (_controller.text.isEmpty && !_isListening)
-                    IconButton(
-                      icon: Icon(Icons.mic,
-                          color: DS.brandPrimaryConst, size: iconSize,),
-                      onPressed: _toggleListening,
-                      tooltip: '语音输入',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: DS.touchTargetMinSize,
-                        minHeight: DS.touchTargetMinSize,
-                      ),
-                    )
-                  else
-                    IconButton(
-                      icon: Icon(
-                        _isListening
-                            ? Icons.stop_circle_outlined
+                )
+              else if (_controller.text.isEmpty && !_isListening)
+                IconButton(
+                  icon: Icon(
+                    Icons.mic,
+                    color: DS.brandPrimaryConst,
+                    size: iconSize,
+                  ),
+                  onPressed: _toggleListening,
+                  tooltip: '语音输入',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: DS.touchTargetMinSize,
+                    minHeight: DS.touchTargetMinSize,
+                  ),
+                )
+              else
+                IconButton(
+                  icon: Icon(
+                    _isListening
+                        ? Icons.stop_circle_outlined
                         : (_intentType == EnhancedIntentType.chat
                             ? Icons.auto_awesome
                             : Icons.arrow_upward_rounded),
-                        color: _isListening
-                            ? DS.error
-                            : (_intentType != null
-                                ? color
-                                : DS.textSecondary.withValues(alpha: 0.7)),
-                        size: iconSize,
-                      ),
-                      onPressed: _isListening ? _toggleListening : _submit,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: DS.touchTargetMinSize,
-                        minHeight: DS.touchTargetMinSize,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
+                    color: _isListening
+                        ? DS.error
+                        : (_intentType != null
+                            ? _getIntentColor()
+                            : DS.textSecondary.withValues(alpha: 0.7)),
+                    size: iconSize,
+                  ),
+                  onPressed: _isListening ? _toggleListening : _submit,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: DS.touchTargetMinSize,
+                    minHeight: DS.touchTargetMinSize,
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );

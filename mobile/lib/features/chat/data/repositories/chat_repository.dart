@@ -175,11 +175,13 @@ class ChatRepository {
   void sendPlanReviewFeedback({
     required String reviewId,
     required String userDecision,
+    String? planId,
     String? userComment,
   }) {
     _wsService.sendPlanReviewFeedback(
       reviewId: reviewId,
       userDecision: userDecision,
+      planId: planId,
       userComment: userComment,
     );
   }
