@@ -51,7 +51,6 @@ func (r *envelopeResponder) SendError(code, message string, retryable bool) {
 	payload := map[string]json.RawMessage{}
 	enumCode := parseErrorCode(code)
 	errBody := map[string]interface{}{
-		"code":       code,
 		"error_code": normalizeErrorCodeString(enumCode),
 		"message":    message,
 		"retryable":  retryable,
@@ -250,7 +249,6 @@ func (r *protobufResponder) SendError(code, message string, retryable bool) {
 	// For now, sending JSON error inside protobuf wrapper to be compatible with clients expecting structured error
 	enumCode := parseErrorCode(code)
 	errBody := map[string]interface{}{
-		"code":       code,
 		"error_code": normalizeErrorCodeString(enumCode),
 		"message":    message,
 		"retryable":  retryable,

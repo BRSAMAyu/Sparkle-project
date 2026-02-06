@@ -25,14 +25,6 @@ const WebSocketMessage$json = {
     {'1': 'trace_id', '3': 4, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'request_id', '3': 5, '4': 1, '5': 9, '10': 'requestId'},
     {
-      '1': 'timestamp',
-      '3': 6,
-      '4': 1,
-      '5': 3,
-      '8': {'3': true},
-      '10': 'timestamp',
-    },
-    {
       '1': 'event_time',
       '3': 7,
       '4': 1,
@@ -41,15 +33,19 @@ const WebSocketMessage$json = {
       '10': 'eventTime'
     },
   ],
+  '9': [
+    {'1': 6, '2': 7},
+  ],
+  '10': ['timestamp'],
 };
 
 /// Descriptor for `WebSocketMessage`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List webSocketMessageDescriptor = $convert.base64Decode(
     'ChBXZWJTb2NrZXRNZXNzYWdlEhgKB3ZlcnNpb24YASABKAlSB3ZlcnNpb24SEgoEdHlwZRgCIA'
     'EoCVIEdHlwZRIYCgdwYXlsb2FkGAMgASgMUgdwYXlsb2FkEhkKCHRyYWNlX2lkGAQgASgJUgd0'
-    'cmFjZUlkEh0KCnJlcXVlc3RfaWQYBSABKAlSCXJlcXVlc3RJZBIgCgl0aW1lc3RhbXAYBiABKA'
-    'NCAhgBUgl0aW1lc3RhbXASOQoKZXZlbnRfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5U'
-    'aW1lc3RhbXBSCWV2ZW50VGltZQ==');
+    'cmFjZUlkEh0KCnJlcXVlc3RfaWQYBSABKAlSCXJlcXVlc3RJZBI5CgpldmVudF90aW1lGAcgAS'
+    'gLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJZXZlbnRUaW1lSgQIBhAHUgl0aW1lc3Rh'
+    'bXA=');
 
 @$core.Deprecated('Use chatMessageDescriptor instead')
 const ChatMessage$json = {
@@ -81,14 +77,6 @@ const UpdateNodeMasteryRequest$json = {
   '2': [
     {'1': 'node_id', '3': 1, '4': 1, '5': 9, '10': 'nodeId'},
     {'1': 'mastery', '3': 2, '4': 1, '5': 5, '10': 'mastery'},
-    {
-      '1': 'timestamp',
-      '3': 3,
-      '4': 1,
-      '5': 3,
-      '8': {'3': true},
-      '10': 'timestamp',
-    },
     {'1': 'request_id', '3': 4, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'revision', '3': 5, '4': 1, '5': 5, '10': 'revision'},
     {
@@ -100,15 +88,18 @@ const UpdateNodeMasteryRequest$json = {
       '10': 'eventTime'
     },
   ],
+  '9': [
+    {'1': 3, '2': 4},
+  ],
+  '10': ['timestamp'],
 };
 
 /// Descriptor for `UpdateNodeMasteryRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List updateNodeMasteryRequestDescriptor = $convert.base64Decode(
     'ChhVcGRhdGVOb2RlTWFzdGVyeVJlcXVlc3QSFwoHbm9kZV9pZBgBIAEoCVIGbm9kZUlkEhgKB2'
-    '1hc3RlcnkYAiABKAVSB21hc3RlcnkSIAoJdGltZXN0YW1wGAMgASgDQgIYAVIJdGltZXN0YW1w'
-    'Eh0KCnJlcXVlc3RfaWQYBCABKAlSCXJlcXVlc3RJZBIaCghyZXZpc2lvbhgFIAEoBVIIcmV2aX'
-    'Npb24SOQoKZXZlbnRfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCWV2'
-    'ZW50VGltZQ==');
+    '1hc3RlcnkYAiABKAVSB21hc3RlcnkSHQoKcmVxdWVzdF9pZBgEIAEoCVIJcmVxdWVzdElkEhoK'
+    'CHJldmlzaW9uGAUgASgFUghyZXZpc2lvbhI5CgpldmVudF90aW1lGAYgASgLMhouZ29vZ2xlLn'
+    'Byb3RvYnVmLlRpbWVzdGFtcFIJZXZlbnRUaW1lSgQIAxAEUgl0aW1lc3RhbXA=');
 
 @$core.Deprecated('Use interventionPushMessageDescriptor instead')
 const InterventionPushMessage$json = {

@@ -451,3 +451,12 @@ jobs:
             echo "${{ steps.proto_changes.outputs.changed_proto }}"
             exit 1
           fi
+
+      - name: Enforce Proto ADR Update
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -Eq '^docs/adr/.*proto.*\.md$'; then
+            echo "Proto files changed but no proto ADR was updated."
+            echo "Please add or update an ADR file under docs/adr/ with 'proto' in file name."
+            exit 1
+          fi

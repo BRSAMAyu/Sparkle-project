@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	redisv9 "github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/agent"
 	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"github.com/sparkle/gateway/internal/chaos"
@@ -30,7 +31,7 @@ import (
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/handler"
 	otelinfra "github.com/sparkle/gateway/internal/infra/otel"
-	"github.com/sparkle/gateway/internal/infra/redis"
+	redisinfra "github.com/sparkle/gateway/internal/infra/redis"
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/sparkle/gateway/internal/worker"
@@ -44,10 +45,10 @@ import (
 )
 
 type databaseHandles struct {
-	pool        *pgxpool.Pool
-	conn        *pgx.Conn
-	sqlDB       *sql.DB
-	queries     *db.Queries
+	pool         *pgxpool.Pool
+	conn         *pgx.Conn
+	sqlDB        *sql.DB
+	queries      *db.Queries
 	chaosManager *chaos.Manager
 }
 
@@ -100,7 +101,7 @@ type cqrsBundle struct {
 }
 
 type proxyBundle struct {
-	proxy           *httputil.ReverseProxy
+	proxy            *httputil.ReverseProxy
 	abTestMiddleware *middleware.ABTestMiddleware
 }
 
@@ -131,19 +132,19 @@ func initDatabase(ctx context.Context, cfg *config.Config) (*databaseHandles, er
 	queries := db.New(chaosManager)
 
 	return &databaseHandles{
-		pool:        pool,
-		conn:        conn,
-		sqlDB:       sqlDB,
-		queries:     queries,
+		pool:         pool,
+		conn:         conn,
+		sqlDB:        sqlDB,
+		queries:      queries,
 		chaosManager: chaosManager,
 	}, nil
 }
 
-func initRedis(cfg *config.Config) (*redis.Client, error) {
-	return redis.NewClient(cfg)
+func initRedis(cfg *config.Config) (*redisv9.Client, error) {
+	return redisinfra.NewClient(cfg)
 }
 
-func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, log *zap.Logger) (*serviceBundle, error) {
+func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, logger *zap.Logger) (*serviceBundle, error) {
 	quotaService := service.NewQuotaService(rdb)
 	chatHistoryTTL := cfg.CacheStrategy.GoRedisCache.ChatHistoryTTL
 	if chatHistoryTTL == 0 {
@@ -156,7 +157,7 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, l
 	taskCommandService := service.NewTaskCommandService(dbh.pool)
 	fileMetadataService := service.NewFileMetadataService(dbh.pool)
 	fileProcessingClient := service.NewFileProcessingClient(cfg.BackendURL, cfg.InternalAPIKey)
-	fileStorageService, err := service.NewFileStorageService(cfg, log)
+	fileStorageService, err := service.NewFileStorageService(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +200,7 @@ func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book
 	return agentClient, galaxyClient, errorBookClient, nil
 }
 
-func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, services *serviceBundle, agentClient *agent.Client, galaxyClient *galaxy.Client, errorBookClient *error_book.Client, log *zap.Logger) (*handlerBundle, error) {
+func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, agentClient *agent.Client, galaxyClient *galaxy.Client, errorBookClient *error_book.Client, logger *zap.Logger) (*handlerBundle, error) {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	fileEventHandler := handler.NewFileEventHandler(wsFactory, services.fileEventHub, cfg)
@@ -230,9 +231,9 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, s
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
-	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", log)
+	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger)
 
-	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, log)
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger)
 
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {
@@ -260,30 +261,30 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, s
 	}, nil
 }
 
-func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, services *serviceBundle, log *zap.Logger) *cqrsBundle {
+func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, logger *zap.Logger) *cqrsBundle {
 	cqrsMetrics := metrics.NewCQRSMetrics("sparkle")
 	eventBus := cqrsEvent.NewRedisEventBus(rdb)
 	outboxRepo := outbox.NewPostgresRepository(dbh.pool)
-	outboxPublisher := outbox.NewPublisher(outboxRepo, eventBus, cqrsMetrics, log)
-	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, log)
-	dlqHandler := cqrsWorker.NewDLQHandler(rdb, log)
-	dlqCleaner := cqrsWorker.NewDLQCleaner(dlqHandler, 24*time.Hour, log)
+	outboxPublisher := outbox.NewPublisher(outboxRepo, eventBus, cqrsMetrics, logger)
+	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, logger)
+	dlqHandler := cqrsWorker.NewDLQHandler(rdb, logger)
+	dlqCleaner := cqrsWorker.NewDLQCleaner(dlqHandler, 24*time.Hour, logger)
 
-	projectionManager := projection.NewManager(dbh.pool, log)
-	snapshotManager := projection.NewSnapshotManager(dbh.pool, log)
-	projectionBuilder := projection.NewBuilder(dbh.pool, projectionManager, snapshotManager, cqrsMetrics, log)
+	projectionManager := projection.NewManager(dbh.pool, logger)
+	snapshotManager := projection.NewSnapshotManager(dbh.pool, logger)
+	projectionBuilder := projection.NewBuilder(dbh.pool, projectionManager, snapshotManager, cqrsMetrics, logger)
 
-	communityProjectionHandler := projection.NewCommunityProjectionHandler(rdb, dbh.pool, log)
+	communityProjectionHandler := projection.NewCommunityProjectionHandler(rdb, dbh.pool, logger)
 	if err := projectionManager.RegisterHandler(communityProjectionHandler); err != nil {
-		log.Error("Failed to register community projection handler", zap.Error(err))
+		logger.Error("Failed to register community projection handler", zap.Error(err))
 	}
-	taskProjectionHandler := projection.NewTaskProjectionHandler(rdb, dbh.pool, log)
+	taskProjectionHandler := projection.NewTaskProjectionHandler(rdb, dbh.pool, logger)
 	if err := projectionManager.RegisterHandler(taskProjectionHandler); err != nil {
-		log.Error("Failed to register task projection handler", zap.Error(err))
+		logger.Error("Failed to register task projection handler", zap.Error(err))
 	}
-	galaxyProjectionHandler := projection.NewGalaxyProjectionHandler(rdb, dbh.pool, log)
+	galaxyProjectionHandler := projection.NewGalaxyProjectionHandler(rdb, dbh.pool, logger)
 	if err := projectionManager.RegisterHandler(galaxyProjectionHandler); err != nil {
-		log.Error("Failed to register galaxy projection handler", zap.Error(err))
+		logger.Error("Failed to register galaxy projection handler", zap.Error(err))
 	}
 
 	commCmdService := service.NewCommunityCommandService(dbh.pool)
@@ -291,33 +292,33 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	_ = commCmdService
 	_ = commQueryService
 
-	commSyncWorker := worker.NewCommunitySyncWorker(rdb, dbh.pool, cqrsMetrics, log)
-	taskSyncWorker := worker.NewTaskSyncWorker(rdb, dbh.pool, cqrsMetrics, log)
-	galaxySyncWorker := worker.NewGalaxySyncWorker(rdb, dbh.pool, cqrsMetrics, log)
+	commSyncWorker := worker.NewCommunitySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
+	taskSyncWorker := worker.NewTaskSyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
+	galaxySyncWorker := worker.NewGalaxySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
 
-	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, log)
+	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, logger)
 	go func() {
 		if err := fileEventSubscriber.Run(context.Background()); err != nil {
-			log.Error("File event subscriber stopped", zap.Error(err))
+			logger.Error("File event subscriber stopped", zap.Error(err))
 		}
 	}()
 
-	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, log)
+	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, logger)
 	go func() {
 		if err := fileGC.Run(context.Background()); err != nil {
-			log.Error("File GC stopped", zap.Error(err))
+			logger.Error("File GC stopped", zap.Error(err))
 		}
 	}()
 
 	if cfg.RabbitMQURL != "" {
-		galaxyOutboxRelay, err := worker.NewOutboxRelay(dbh.sqlDB, cfg.RabbitMQURL, log, cqrsMetrics)
+		galaxyOutboxRelay, err := worker.NewOutboxRelay(dbh.sqlDB, cfg.RabbitMQURL, logger, cqrsMetrics)
 		if err != nil {
-			log.Error("Failed to initialize Galaxy Outbox Relay", zap.Error(err))
+			logger.Error("Failed to initialize Galaxy Outbox Relay", zap.Error(err))
 		} else {
 			go galaxyOutboxRelay.Start(ctx)
 		}
 	} else {
-		log.Info("Skipping Galaxy Outbox Relay (RABBITMQ_URL not set)")
+		logger.Info("Skipping Galaxy Outbox Relay (RABBITMQ_URL not set)")
 	}
 
 	return &cqrsBundle{
@@ -332,17 +333,17 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		galaxySyncWorker:  galaxySyncWorker,
 		outboxPublisherRun: func() {
 			if err := outboxPublisher.Run(context.Background()); err != nil {
-				log.Error("Outbox publisher stopped", zap.Error(err))
+				logger.Error("Outbox publisher stopped", zap.Error(err))
 			}
 		},
 		outboxCleanerRun: func() {
 			if err := outboxCleaner.Run(context.Background()); err != nil {
-				log.Error("Outbox cleaner stopped", zap.Error(err))
+				logger.Error("Outbox cleaner stopped", zap.Error(err))
 			}
 		},
 		dlqCleanerRun: func() {
 			if err := dlqCleaner.Run(context.Background()); err != nil {
-				log.Error("DLQ cleaner stopped", zap.Error(err))
+				logger.Error("DLQ cleaner stopped", zap.Error(err))
 			}
 		},
 	}
@@ -370,7 +371,7 @@ func startCQRSWorkers(cqrs *cqrsBundle, log *zap.Logger) {
 	}()
 }
 
-func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle) *gin.Engine {
+func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle) *gin.Engine {
 	r := gin.Default()
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
@@ -543,15 +544,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, se
 				opts := projection.DefaultRebuildOptions()
 				progress, err := cqrs.projectionBuilder.RebuildFromEventStore(ctx, name, aggregateType, opts)
 				if err != nil {
-					log.Error("Projection rebuild failed",
-						zap.String("projection", name),
-						zap.Error(err),
-					)
+					log.Printf("Projection rebuild failed: projection=%s err=%v", name, err)
 				} else {
-					log.Info("Projection rebuild completed",
-						zap.String("projection", name),
-						zap.Int64("processed", progress.ProcessedEvents),
-						zap.Duration("duration", progress.Duration),
+					log.Printf(
+						"Projection rebuild completed: projection=%s processed=%d duration=%s",
+						name,
+						progress.ProcessedEvents,
+						progress.Duration,
 					)
 				}
 			}()
@@ -583,15 +582,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redis.Client, se
 				opts := projection.DefaultRebuildOptions()
 				progress, err := cqrs.projectionBuilder.RebuildFromSnapshot(ctx, name, aggregateType, opts)
 				if err != nil {
-					log.Error("Projection rebuild from snapshot failed",
-						zap.String("projection", name),
-						zap.Error(err),
-					)
+					log.Printf("Projection rebuild from snapshot failed: projection=%s err=%v", name, err)
 				} else {
-					log.Info("Projection rebuild from snapshot completed",
-						zap.String("projection", name),
-						zap.Int64("processed", progress.ProcessedEvents),
-						zap.Duration("duration", progress.Duration),
+					log.Printf(
+						"Projection rebuild from snapshot completed: projection=%s processed=%d duration=%s",
+						name,
+						progress.ProcessedEvents,
+						progress.Duration,
 					)
 				}
 			}()
@@ -764,7 +761,7 @@ func setupProxy(cfg *config.Config) (*proxyBundle, error) {
 	proxy.FlushInterval = -1
 
 	return &proxyBundle{
-		proxy:           proxy,
+		proxy:            proxy,
 		abTestMiddleware: abTestMiddleware,
 	}, nil
 }

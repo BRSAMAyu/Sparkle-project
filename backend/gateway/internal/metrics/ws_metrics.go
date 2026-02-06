@@ -71,4 +71,21 @@ var (
 		Name: "ws_community_duplicate_messages_total",
 		Help: "Total number of duplicate messages detected and dropped",
 	})
+
+	// ========== Proto v2 Migration Metrics ==========
+
+	ProtoFieldReadTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_proto_field_read_total",
+		Help: "Total protocol field reads by source during v1/v2 migration",
+	}, []string{"field", "source"})
+
+	ProtoDualWriteTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_proto_dual_write_total",
+		Help: "Total dual-write operations for legacy compatibility fields",
+	}, []string{"field"})
+
+	ProtoErrorCodeFallbackTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_proto_error_code_fallback_total",
+		Help: "Total error-code fallback operations during protocol migration",
+	}, []string{"direction"})
 )

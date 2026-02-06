@@ -903,7 +903,6 @@ class ChatResponse extends $pb.GeneratedMessage {
     $core.String? requestId,
     CitationBlock? citations,
     ToolResultPayload? toolResult,
-    @$core.Deprecated('This field is deprecated.') $fixnum.Int64? timestamp,
     InterventionPayload? intervention,
     $core.String? traceId,
     $core.String? workflowId,
@@ -924,7 +923,6 @@ class ChatResponse extends $pb.GeneratedMessage {
     if (requestId != null) result.requestId = requestId;
     if (citations != null) result.citations = citations;
     if (toolResult != null) result.toolResult = toolResult;
-    if (timestamp != null) result.timestamp = timestamp;
     if (intervention != null) result.intervention = intervention;
     if (traceId != null) result.traceId = traceId;
     if (workflowId != null) result.workflowId = workflowId;
@@ -978,7 +976,6 @@ class ChatResponse extends $pb.GeneratedMessage {
         subBuilder: CitationBlock.create)
     ..aOM<ToolResultPayload>(12, _omitFieldNames ? '' : 'toolResult',
         subBuilder: ToolResultPayload.create)
-    ..aInt64(13, _omitFieldNames ? '' : 'timestamp')
     ..aOM<InterventionPayload>(14, _omitFieldNames ? '' : 'intervention',
         subBuilder: InterventionPayload.create)
     ..aOS(15, _omitFieldNames ? '' : 'traceId')
@@ -1165,77 +1162,63 @@ class ChatResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(12)
   ToolResultPayload ensureToolResult() => $_ensure(11);
 
-  /// Deprecated (remove_after: M3): legacy milliseconds timestamp.
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(13)
-  $fixnum.Int64 get timestamp => $_getI64(12);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(13)
-  set timestamp($fixnum.Int64 value) => $_setInt64(12, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(13)
-  $core.bool hasTimestamp() => $_has(12);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(13)
-  void clearTimestamp() => $_clearField(13);
-
   /// Intervention payload (contract-based UI).
   @$pb.TagNumber(14)
-  InterventionPayload get intervention => $_getN(13);
+  InterventionPayload get intervention => $_getN(12);
   @$pb.TagNumber(14)
   set intervention(InterventionPayload value) => $_setField(14, value);
   @$pb.TagNumber(14)
-  $core.bool hasIntervention() => $_has(13);
+  $core.bool hasIntervention() => $_has(12);
   @$pb.TagNumber(14)
   void clearIntervention() => $_clearField(14);
   @$pb.TagNumber(14)
-  InterventionPayload ensureIntervention() => $_ensure(13);
+  InterventionPayload ensureIntervention() => $_ensure(12);
 
   /// Trace ID for end-to-end logging correlation.
   @$pb.TagNumber(15)
-  $core.String get traceId => $_getSZ(14);
+  $core.String get traceId => $_getSZ(13);
   @$pb.TagNumber(15)
-  set traceId($core.String value) => $_setString(14, value);
+  set traceId($core.String value) => $_setString(13, value);
   @$pb.TagNumber(15)
-  $core.bool hasTraceId() => $_has(14);
+  $core.bool hasTraceId() => $_has(13);
   @$pb.TagNumber(15)
   void clearTraceId() => $_clearField(15);
 
   /// Workflow identifier for this response.
   @$pb.TagNumber(16)
-  $core.String get workflowId => $_getSZ(15);
+  $core.String get workflowId => $_getSZ(14);
   @$pb.TagNumber(16)
-  set workflowId($core.String value) => $_setString(15, value);
+  set workflowId($core.String value) => $_setString(14, value);
   @$pb.TagNumber(16)
-  $core.bool hasWorkflowId() => $_has(15);
+  $core.bool hasWorkflowId() => $_has(14);
   @$pb.TagNumber(16)
   void clearWorkflowId() => $_clearField(16);
 
   /// Prompt version used to generate this response.
   @$pb.TagNumber(17)
-  $core.String get promptVersion => $_getSZ(16);
+  $core.String get promptVersion => $_getSZ(15);
   @$pb.TagNumber(17)
-  set promptVersion($core.String value) => $_setString(16, value);
+  set promptVersion($core.String value) => $_setString(15, value);
   @$pb.TagNumber(17)
-  $core.bool hasPromptVersion() => $_has(16);
+  $core.bool hasPromptVersion() => $_has(15);
   @$pb.TagNumber(17)
   void clearPromptVersion() => $_clearField(17);
 
   /// Additional response metadata (e.g., preference version).
   @$pb.TagNumber(18)
-  $pb.PbMap<$core.String, $core.String> get metadata => $_getMap(17);
+  $pb.PbMap<$core.String, $core.String> get metadata => $_getMap(16);
 
   /// Preferred event timestamp for new clients.
   @$pb.TagNumber(19)
-  $2.Timestamp get eventTime => $_getN(18);
+  $2.Timestamp get eventTime => $_getN(17);
   @$pb.TagNumber(19)
   set eventTime($2.Timestamp value) => $_setField(19, value);
   @$pb.TagNumber(19)
-  $core.bool hasEventTime() => $_has(18);
+  $core.bool hasEventTime() => $_has(17);
   @$pb.TagNumber(19)
   void clearEventTime() => $_clearField(19);
   @$pb.TagNumber(19)
-  $2.Timestamp ensureEventTime() => $_ensure(18);
+  $2.Timestamp ensureEventTime() => $_ensure(17);
 }
 
 class ResponseFeedbackRequest extends $pb.GeneratedMessage {
@@ -5294,14 +5277,12 @@ class AgentStatus extends $pb.GeneratedMessage {
 
 class Error extends $pb.GeneratedMessage {
   factory Error({
-    @$core.Deprecated('This field is deprecated.') $core.String? code,
     $core.String? message,
     $core.bool? retryable,
     $core.Iterable<$core.MapEntry<$core.String, $core.String>>? details,
     ErrorCode? errorCode,
   }) {
     final result = create();
-    if (code != null) result.code = code;
     if (message != null) result.message = message;
     if (retryable != null) result.retryable = retryable;
     if (details != null) result.details.addEntries(details);
@@ -5322,7 +5303,6 @@ class Error extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'Error',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'agent.v1'),
       createEmptyInstance: create)
-    ..aOS(1, _omitFieldNames ? '' : 'code')
     ..aOS(2, _omitFieldNames ? '' : 'message')
     ..aOB(3, _omitFieldNames ? '' : 'retryable')
     ..m<$core.String, $core.String>(4, _omitFieldNames ? '' : 'details',
@@ -5352,47 +5332,33 @@ class Error extends $pb.GeneratedMessage {
       _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Error>(create);
   static Error? _defaultInstance;
 
-  /// Deprecated (remove_after: M3): legacy string error code.
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(1)
-  $core.String get code => $_getSZ(0);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(1)
-  set code($core.String value) => $_setString(0, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(1)
-  $core.bool hasCode() => $_has(0);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(1)
-  void clearCode() => $_clearField(1);
-
   @$pb.TagNumber(2)
-  $core.String get message => $_getSZ(1);
+  $core.String get message => $_getSZ(0);
   @$pb.TagNumber(2)
-  set message($core.String value) => $_setString(1, value);
+  set message($core.String value) => $_setString(0, value);
   @$pb.TagNumber(2)
-  $core.bool hasMessage() => $_has(1);
+  $core.bool hasMessage() => $_has(0);
   @$pb.TagNumber(2)
   void clearMessage() => $_clearField(2);
 
   @$pb.TagNumber(3)
-  $core.bool get retryable => $_getBF(2);
+  $core.bool get retryable => $_getBF(1);
   @$pb.TagNumber(3)
-  set retryable($core.bool value) => $_setBool(2, value);
+  set retryable($core.bool value) => $_setBool(1, value);
   @$pb.TagNumber(3)
-  $core.bool hasRetryable() => $_has(2);
+  $core.bool hasRetryable() => $_has(1);
   @$pb.TagNumber(3)
   void clearRetryable() => $_clearField(3);
 
   @$pb.TagNumber(4)
-  $pb.PbMap<$core.String, $core.String> get details => $_getMap(3);
+  $pb.PbMap<$core.String, $core.String> get details => $_getMap(2);
 
   @$pb.TagNumber(5)
-  ErrorCode get errorCode => $_getN(4);
+  ErrorCode get errorCode => $_getN(3);
   @$pb.TagNumber(5)
   set errorCode(ErrorCode value) => $_setField(5, value);
   @$pb.TagNumber(5)
-  $core.bool hasErrorCode() => $_has(4);
+  $core.bool hasErrorCode() => $_has(3);
   @$pb.TagNumber(5)
   void clearErrorCode() => $_clearField(5);
 }

@@ -24,14 +24,12 @@ class CollaborativeGalaxyUpdate extends $pb.GeneratedMessage {
     $core.String? galaxyId,
     $core.List<$core.int>? yjsUpdate,
     $core.String? userId,
-    @$core.Deprecated('This field is deprecated.') $fixnum.Int64? timestamp,
     $1.Timestamp? eventTime,
   }) {
     final result = create();
     if (galaxyId != null) result.galaxyId = galaxyId;
     if (yjsUpdate != null) result.yjsUpdate = yjsUpdate;
     if (userId != null) result.userId = userId;
-    if (timestamp != null) result.timestamp = timestamp;
     if (eventTime != null) result.eventTime = eventTime;
     return result;
   }
@@ -53,7 +51,6 @@ class CollaborativeGalaxyUpdate extends $pb.GeneratedMessage {
     ..a<$core.List<$core.int>>(
         2, _omitFieldNames ? '' : 'yjsUpdate', $pb.PbFieldType.OY)
     ..aOS(3, _omitFieldNames ? '' : 'userId')
-    ..aInt64(4, _omitFieldNames ? '' : 'timestamp')
     ..aOM<$1.Timestamp>(5, _omitFieldNames ? '' : 'eventTime',
         subBuilder: $1.Timestamp.create)
     ..hasRequiredFields = false;
@@ -105,29 +102,16 @@ class CollaborativeGalaxyUpdate extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearUserId() => $_clearField(3);
 
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  $fixnum.Int64 get timestamp => $_getI64(3);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  set timestamp($fixnum.Int64 value) => $_setInt64(3, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  $core.bool hasTimestamp() => $_has(3);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  void clearTimestamp() => $_clearField(4);
-
   @$pb.TagNumber(5)
-  $1.Timestamp get eventTime => $_getN(4);
+  $1.Timestamp get eventTime => $_getN(3);
   @$pb.TagNumber(5)
   set eventTime($1.Timestamp value) => $_setField(5, value);
   @$pb.TagNumber(5)
-  $core.bool hasEventTime() => $_has(4);
+  $core.bool hasEventTime() => $_has(3);
   @$pb.TagNumber(5)
   void clearEventTime() => $_clearField(5);
   @$pb.TagNumber(5)
-  $1.Timestamp ensureEventTime() => $_ensure(4);
+  $1.Timestamp ensureEventTime() => $_ensure(3);
 }
 
 class SyncCollaborativeGalaxyRequest extends $pb.GeneratedMessage {
@@ -288,7 +272,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
     $core.String? userId,
     $core.String? nodeId,
     $core.int? mastery,
-    @$core.Deprecated('This field is deprecated.') $1.Timestamp? version,
     $core.String? reason,
     $core.String? requestId,
     $fixnum.Int64? revision,
@@ -297,7 +280,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
     if (userId != null) result.userId = userId;
     if (nodeId != null) result.nodeId = nodeId;
     if (mastery != null) result.mastery = mastery;
-    if (version != null) result.version = version;
     if (reason != null) result.reason = reason;
     if (requestId != null) result.requestId = requestId;
     if (revision != null) result.revision = revision;
@@ -320,8 +302,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'userId')
     ..aOS(2, _omitFieldNames ? '' : 'nodeId')
     ..aI(3, _omitFieldNames ? '' : 'mastery')
-    ..aOM<$1.Timestamp>(4, _omitFieldNames ? '' : 'version',
-        subBuilder: $1.Timestamp.create)
     ..aOS(5, _omitFieldNames ? '' : 'reason')
     ..aOS(6, _omitFieldNames ? '' : 'requestId')
     ..aInt64(7, _omitFieldNames ? '' : 'revision')
@@ -374,46 +354,30 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearMastery() => $_clearField(3);
 
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  $1.Timestamp get version => $_getN(3);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  set version($1.Timestamp value) => $_setField(4, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  $core.bool hasVersion() => $_has(3);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  void clearVersion() => $_clearField(4);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(4)
-  $1.Timestamp ensureVersion() => $_ensure(3);
-
   @$pb.TagNumber(5)
-  $core.String get reason => $_getSZ(4);
+  $core.String get reason => $_getSZ(3);
   @$pb.TagNumber(5)
-  set reason($core.String value) => $_setString(4, value);
+  set reason($core.String value) => $_setString(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasReason() => $_has(4);
+  $core.bool hasReason() => $_has(3);
   @$pb.TagNumber(5)
   void clearReason() => $_clearField(5);
 
   @$pb.TagNumber(6)
-  $core.String get requestId => $_getSZ(5);
+  $core.String get requestId => $_getSZ(4);
   @$pb.TagNumber(6)
-  set requestId($core.String value) => $_setString(5, value);
+  set requestId($core.String value) => $_setString(4, value);
   @$pb.TagNumber(6)
-  $core.bool hasRequestId() => $_has(5);
+  $core.bool hasRequestId() => $_has(4);
   @$pb.TagNumber(6)
   void clearRequestId() => $_clearField(6);
 
   @$pb.TagNumber(7)
-  $fixnum.Int64 get revision => $_getI64(6);
+  $fixnum.Int64 get revision => $_getI64(5);
   @$pb.TagNumber(7)
-  set revision($fixnum.Int64 value) => $_setInt64(6, value);
+  set revision($fixnum.Int64 value) => $_setInt64(5, value);
   @$pb.TagNumber(7)
-  $core.bool hasRevision() => $_has(6);
+  $core.bool hasRevision() => $_has(5);
   @$pb.TagNumber(7)
   void clearRevision() => $_clearField(7);
 }

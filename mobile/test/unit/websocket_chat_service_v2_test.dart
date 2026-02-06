@@ -146,8 +146,9 @@ void main() {
       service.sendMessage(message: 'Hello', userId: 'user1');
 
       expect(mockChannel.mockSink.sentData.length, 1);
-      final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
-          as Map<String, dynamic>;
+      final sentJson =
+          json.decode(mockChannel.mockSink.sentData.first as String)
+              as Map<String, dynamic>;
       expect(sentJson['message'], 'Hello');
     });
 
@@ -166,8 +167,9 @@ void main() {
       );
 
       expect(mockChannel.mockSink.sentData.length, 1);
-      final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
-          as Map<String, dynamic>;
+      final sentJson =
+          json.decode(mockChannel.mockSink.sentData.first as String)
+              as Map<String, dynamic>;
       expect(sentJson['type'], 'response_feedback');
       expect(sentJson['response_id'], 'resp-1');
       expect(sentJson['feedback_type'], 'up');
@@ -183,8 +185,9 @@ void main() {
 
       // With a synchronous mock connection, the message is sent immediately.
       expect(mockChannel.mockSink.sentData.length, 1);
-      final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
-          as Map<String, dynamic>;
+      final sentJson =
+          json.decode(mockChannel.mockSink.sentData.first as String)
+              as Map<String, dynamic>;
       expect(sentJson['message'], 'Queued Message');
       expect(service.pendingMessages.isEmpty, true);
     });
@@ -208,6 +211,60 @@ void main() {
       expect(events.length, 1);
       expect(events.first, isA<TextEvent>());
       expect((events.first as TextEvent).content, 'Hello World');
+
+      await sub.cancel();
+    });
+
+    test('Parses v2 error_code with higher priority than legacy code',
+        () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'error',
+        'error': {
+          'error_code': 'rate_limited',
+          'code': 'internal_error',
+          'message': 'Quota exceeded',
+          'retryable': true,
+        },
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<ErrorEvent>());
+      final event = events.first as ErrorEvent;
+      expect(event.code, 'rate_limited');
+      expect(event.message, 'Quota exceeded');
+      expect(event.retryable, true);
+
+      await sub.cancel();
+    });
+
+    test('Defaults to UNKNOWN when v2 error_code is absent', () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'error',
+        'error': {
+          'code': 'legacy_timeout',
+          'message': 'Timeout',
+          'retryable': false,
+        },
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<ErrorEvent>());
+      final event = events.first as ErrorEvent;
+      expect(event.code, 'UNKNOWN');
+      expect(event.message, 'Timeout');
+      expect(event.retryable, false);
 
       await sub.cancel();
     });
@@ -259,7 +316,9 @@ void main() {
     // ============================================================================
 
     // 1. ✅ Token安全测试
-    test('Token is passed in both query param and header for WebSocket compatibility', () {
+    test(
+        'Token is passed in both query param and header for WebSocket compatibility',
+        () {
       // WebSocket authentication strategy:
       // 1. Token in query parameter (primary - survives WebSocket upgrade)
       // 2. Token in Authorization header (fallback for compatibility)
@@ -377,7 +436,8 @@ void main() {
 
       test('Parses plan review from delta metadata', () async {
         // Connect
-        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            planService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -419,7 +479,8 @@ void main() {
       });
 
       test('Parses regular delta without plan review metadata', () async {
-        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            planService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -442,7 +503,8 @@ void main() {
       });
 
       test('Parses delta with metadata but no review flag', () async {
-        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            planService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -461,13 +523,15 @@ void main() {
 
         expect(events.length, 1);
         expect(events.first, isA<TextEvent>());
-        expect((events.first as TextEvent).metadata?['some_other_field'], 'value');
+        expect(
+            (events.first as TextEvent).metadata?['some_other_field'], 'value');
 
         await sub.cancel();
       });
 
       test('Handles incomplete review data gracefully', () async {
-        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            planService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -491,7 +555,8 @@ void main() {
         // Should still emit PlanReviewWidgetEvent with available data
         expect(events.length, 1);
         expect(events.first, isA<PlanReviewWidgetEvent>());
-        expect((events.first as PlanReviewWidgetEvent).reviewData['plan_id'], 'plan-123');
+        expect((events.first as PlanReviewWidgetEvent).reviewData['plan_id'],
+            'plan-123');
 
         await sub.cancel();
       });
@@ -524,7 +589,8 @@ void main() {
 
       test('Parses transparency_step from delta metadata', () async {
         // Connect
-        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            transparencyService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -535,22 +601,21 @@ void main() {
           'delta': '',
           'metadata': {
             'event_type': 'transparency',
-            'event_payload':
-                json.encode({
-                  'type': 'transparency_step',
-                  'data': {
-                    'currentStep': 1,
-                    'totalSteps': 3,
-                    'step': {
-                      'stepId': 'step-001',
-                      'name': '加载工具配置',
-                      'type': 'planning',
-                      'status': 'in_progress',
-                      'durationMs': 150,
-                      'agentType': 'ORCHESTRATOR',
-                    },
-                  },
-                }),
+            'event_payload': json.encode({
+              'type': 'transparency_step',
+              'data': {
+                'currentStep': 1,
+                'totalSteps': 3,
+                'step': {
+                  'stepId': 'step-001',
+                  'name': '加载工具配置',
+                  'type': 'planning',
+                  'status': 'in_progress',
+                  'durationMs': 150,
+                  'agentType': 'ORCHESTRATOR',
+                },
+              },
+            }),
           },
         });
         transparencyChannel.simulateIncomingMessage(incomingJson);
@@ -572,7 +637,8 @@ void main() {
       });
 
       test('Parses transparency_complete from delta metadata', () async {
-        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            transparencyService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -583,41 +649,40 @@ void main() {
           'delta': '',
           'metadata': {
             'event_type': 'transparency',
-            'event_payload':
-                json.encode({
-                  'type': 'transparency_complete',
-                  'data': {
-                    'requestId': 'req-123',
-                    'totalDurationMs': 2500,
-                    'totalTokens': 450,
-                    'steps': [
-                      {
-                        'stepId': 'step-001',
-                        'name': '加载工具配置',
-                        'type': 'planning',
-                        'status': 'completed',
-                        'durationMs': 150,
-                        'agentType': 'ORCHESTRATOR',
-                      },
-                      {
-                        'stepId': 'step-002',
-                        'name': '执行工具: calculator',
-                        'type': 'executing_tool',
-                        'status': 'completed',
-                        'durationMs': 1200,
-                        'agentType': 'MATH',
-                      },
-                      {
-                        'stepId': 'step-003',
-                        'name': '生成回复',
-                        'type': 'generating',
-                        'status': 'completed',
-                        'durationMs': 800,
-                        'agentType': 'ORCHESTRATOR',
-                      },
-                    ],
+            'event_payload': json.encode({
+              'type': 'transparency_complete',
+              'data': {
+                'requestId': 'req-123',
+                'totalDurationMs': 2500,
+                'totalTokens': 450,
+                'steps': [
+                  {
+                    'stepId': 'step-001',
+                    'name': '加载工具配置',
+                    'type': 'planning',
+                    'status': 'completed',
+                    'durationMs': 150,
+                    'agentType': 'ORCHESTRATOR',
                   },
-                }),
+                  {
+                    'stepId': 'step-002',
+                    'name': '执行工具: calculator',
+                    'type': 'executing_tool',
+                    'status': 'completed',
+                    'durationMs': 1200,
+                    'agentType': 'MATH',
+                  },
+                  {
+                    'stepId': 'step-003',
+                    'name': '生成回复',
+                    'type': 'generating',
+                    'status': 'completed',
+                    'durationMs': 800,
+                    'agentType': 'ORCHESTRATOR',
+                  },
+                ],
+              },
+            }),
           },
         });
         transparencyChannel.simulateIncomingMessage(incomingJson);
@@ -640,7 +705,8 @@ void main() {
       });
 
       test('Handles transparency events with step progress tracking', () async {
-        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            transparencyService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -702,13 +768,16 @@ void main() {
         expect((events[0] as TransparencyStepEvent).stepName, '制定计划');
 
         expect((events[1] as TransparencyStepEvent).currentStep, 2);
-        expect((events[1] as TransparencyStepEvent).stepName, '执行工具: calculator');
+        expect(
+            (events[1] as TransparencyStepEvent).stepName, '执行工具: calculator');
 
         await sub.cancel();
       });
 
-      test('Falls back to TextEvent for malformed transparency events', () async {
-        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+      test('Falls back to TextEvent for malformed transparency events',
+          () async {
+        final stream =
+            transparencyService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);
@@ -735,7 +804,8 @@ void main() {
       });
 
       test('Handles transparency_step with missing optional fields', () async {
-        final stream = transparencyService.sendMessage(message: 'init', userId: 'user1');
+        final stream =
+            transparencyService.sendMessage(message: 'init', userId: 'user1');
 
         final events = <ChatStreamEvent>[];
         final sub = stream.listen(events.add);

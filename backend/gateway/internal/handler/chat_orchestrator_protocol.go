@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
+	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -35,7 +36,6 @@ var jsonMetadataKeys = map[string]bool{
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[string]interface{} {
-	writeDual := protoWriteDual()
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if jsonMetadataKeys[key] {
@@ -63,10 +63,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 	}
 	if ts := responseEventTimeMillis(resp); ts > 0 {
 		result["event_time"] = ts
-		if writeDual {
-			// Legacy key retained during dual-stack migration.
-			result["timestamp"] = ts
-		}
+		wsmetrics.ProtoFieldReadTotal.WithLabelValues("chat_response.event_time", "new").Inc()
 	}
 
 	// Handle oneof content field
@@ -95,17 +92,13 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 	case *agentv1.ChatResponse_Error:
 		result["type"] = "error"
 		enumCode := normalizeErrorCodeString(content.Error.ErrorCode)
-		legacyCode := strings.TrimSpace(content.Error.Code)
-		if legacyCode == "" && enumCode != "" {
-			legacyCode = enumCode
+		if enumCode == "" {
+			wsmetrics.ProtoErrorCodeFallbackTotal.WithLabelValues("enum_missing").Inc()
 		}
 		errorBody := map[string]interface{}{
 			"error_code": enumCode,
 			"message":    content.Error.Message,
 			"retryable":  content.Error.Retryable,
-		}
-		if writeDual {
-			errorBody["code"] = legacyCode
 		}
 		result["error"] = errorBody
 	case *agentv1.ChatResponse_Usage:
@@ -393,12 +386,11 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 
 	if h.galaxyClient == nil {
 		log.Printf("Galaxy gRPC client not initialized")
-		responder.SendUpdateNodeError(req.NodeId, fmt.Sprintf("%d", req.Timestamp), "Internal service error")
+		responder.SendUpdateNodeError(req.NodeId, req.RequestId, "Internal service error")
 		return
 	}
 
-	// Dual-stack timestamp read: prefer event_time, fallback to legacy timestamp (millis).
-	version := requestEventTime(req.EventTime, req.Timestamp)
+	version := requestEventTime(req.EventTime)
 	versionToken := fmt.Sprintf("%d", version.UnixMilli())
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -431,42 +423,9 @@ func getEnvInt64(key string, fallback int64) int64 {
 	return val
 }
 
-func getEnvBool(key string, fallback bool) bool {
-	raw := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
-	switch raw {
-	case "":
-		return fallback
-	case "1", "true", "yes", "on":
-		return true
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return fallback
-	}
-}
-
-func protoReadNewFirst() bool {
-	return getEnvBool("PROTO_READ_NEW_FIRST", true)
-}
-
-func protoWriteDual() bool {
-	return getEnvBool("PROTO_WRITE_DUAL", true)
-}
-
-func requestEventTime(eventTime *timestamppb.Timestamp, legacyMillis int64) time.Time {
-	if protoReadNewFirst() {
-		if eventTime != nil && eventTime.IsValid() {
-			return eventTime.AsTime()
-		}
-		if legacyMillis > 0 {
-			return time.UnixMilli(legacyMillis)
-		}
-		return time.Now()
-	}
-	if legacyMillis > 0 {
-		return time.UnixMilli(legacyMillis)
-	}
+func requestEventTime(eventTime *timestamppb.Timestamp) time.Time {
 	if eventTime != nil && eventTime.IsValid() {
+		wsmetrics.ProtoFieldReadTotal.WithLabelValues("request.event_time", "new").Inc()
 		return eventTime.AsTime()
 	}
 	return time.Now()
@@ -476,19 +435,8 @@ func responseEventTimeMillis(resp *agentv1.ChatResponse) int64 {
 	if resp == nil {
 		return 0
 	}
-	if protoReadNewFirst() {
-		if resp.EventTime != nil && resp.EventTime.IsValid() {
-			return resp.EventTime.AsTime().UnixMilli()
-		}
-		if resp.Timestamp > 0 {
-			return resp.Timestamp
-		}
-		return 0
-	}
-	if resp.Timestamp > 0 {
-		return resp.Timestamp
-	}
 	if resp.EventTime != nil && resp.EventTime.IsValid() {
+		wsmetrics.ProtoFieldReadTotal.WithLabelValues("chat_response.event_time", "new").Inc()
 		return resp.EventTime.AsTime().UnixMilli()
 	}
 	return 0
@@ -525,6 +473,7 @@ func parseErrorCode(code string) agentv1.ErrorCode {
 	case "unknown":
 		return agentv1.ErrorCode_ERROR_CODE_UNKNOWN
 	default:
+		wsmetrics.ProtoErrorCodeFallbackTotal.WithLabelValues("unknown_legacy_string").Inc()
 		return agentv1.ErrorCode_ERROR_CODE_UNSPECIFIED
 	}
 }

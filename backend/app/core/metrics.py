@@ -122,6 +122,28 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     'Number of pending events in the outbox table'
 )
 
+# 5b. Proto v2 Migration Metrics
+PROTO_FIELD_READ_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_field_read_total',
+    'Total protocol field reads by source during v1/v2 migration',
+    ['service', 'field', 'source']
+)
+
+PROTO_DUAL_WRITE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_dual_write_total',
+    'Total dual-write operations for legacy compatibility fields',
+    ['service', 'field']
+)
+
+PROTO_ERROR_CODE_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_error_code_fallback_total',
+    'Total error code fallback operations during v1/v2 migration',
+    ['service', 'direction']
+)
+
 # 6. Response Feedback & Bandit
 RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
     Counter,

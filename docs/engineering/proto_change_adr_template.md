@@ -22,10 +22,10 @@ Describe why this protocol change is needed.
 - Remove-after milestone(s):
 - Rollback plan:
 
-## Runtime Flags
+## Runtime Behavior
 
-- `PROTO_READ_NEW_FIRST` expected value:
-- `PROTO_WRITE_DUAL` expected value:
+- Read/write behavior by milestone:
+- Feature flags (if any) and planned removal milestone:
 
 ## Verification
 
