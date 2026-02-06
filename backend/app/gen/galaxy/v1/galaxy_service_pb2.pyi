@@ -9,16 +9,18 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CollaborativeGalaxyUpdate(_message.Message):
-    __slots__ = ("galaxy_id", "yjs_update", "user_id", "timestamp")
+    __slots__ = ("galaxy_id", "yjs_update", "user_id", "timestamp", "event_time")
     GALAXY_ID_FIELD_NUMBER: _ClassVar[int]
     YJS_UPDATE_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    EVENT_TIME_FIELD_NUMBER: _ClassVar[int]
     galaxy_id: str
     yjs_update: bytes
     user_id: str
     timestamp: int
-    def __init__(self, galaxy_id: _Optional[str] = ..., yjs_update: _Optional[bytes] = ..., user_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    event_time: _timestamp_pb2.Timestamp
+    def __init__(self, galaxy_id: _Optional[str] = ..., yjs_update: _Optional[bytes] = ..., user_id: _Optional[str] = ..., timestamp: _Optional[int] = ..., event_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class SyncCollaborativeGalaxyRequest(_message.Message):
     __slots__ = ("galaxy_id", "partial_update", "user_id")

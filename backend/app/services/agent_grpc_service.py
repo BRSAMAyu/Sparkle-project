@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timedelta
 
 import grpc
+from google.protobuf import timestamp_pb2
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +33,46 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self.orchestrator = orchestrator
         self.db_session_factory = db_session_factory
         logger.info("AgentServiceImpl initialized with injected dependencies")
+
+    @staticmethod
+    def _to_error_code(code: str) -> int:
+        normalized = (code or "").strip().upper()
+        mapping = {
+            "UNKNOWN": agent_service_pb2.ERROR_CODE_UNKNOWN,
+            "INVALID_ARGUMENT": agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
+            "VALIDATION_ERROR": agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
+            "UNAUTHORIZED": agent_service_pb2.ERROR_CODE_UNAUTHORIZED,
+            "FORBIDDEN": agent_service_pb2.ERROR_CODE_FORBIDDEN,
+            "NOT_FOUND": agent_service_pb2.ERROR_CODE_NOT_FOUND,
+            "CONFLICT": agent_service_pb2.ERROR_CODE_CONFLICT,
+            "DUPLICATE_REQUEST": agent_service_pb2.ERROR_CODE_CONFLICT,
+            "RATE_LIMIT": agent_service_pb2.ERROR_CODE_RATE_LIMITED,
+            "RATE_LIMITED": agent_service_pb2.ERROR_CODE_RATE_LIMITED,
+            "RESOURCE_EXHAUSTED": agent_service_pb2.ERROR_CODE_RATE_LIMITED,
+            "UNAVAILABLE": agent_service_pb2.ERROR_CODE_UNAVAILABLE,
+            "CIRCUIT_BREAKER_OPEN": agent_service_pb2.ERROR_CODE_UNAVAILABLE,
+            "TIMEOUT": agent_service_pb2.ERROR_CODE_TIMEOUT,
+            "DEADLINE_EXCEEDED": agent_service_pb2.ERROR_CODE_TIMEOUT,
+            "INTERNAL_ERROR": agent_service_pb2.ERROR_CODE_INTERNAL,
+            "INTERNAL": agent_service_pb2.ERROR_CODE_INTERNAL,
+            "MULTI_AGENT_ERROR": agent_service_pb2.ERROR_CODE_INTERNAL,
+        }
+        return mapping.get(normalized, agent_service_pb2.ERROR_CODE_UNSPECIFIED)
+
+    @staticmethod
+    def _enrich_dual_stack_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
+        # Timestamp dual-stack: keep legacy timestamp and populate event_time when absent.
+        if response.timestamp and not response.HasField("event_time"):
+            ts = timestamp_pb2.Timestamp()
+            ts.FromMilliseconds(response.timestamp)
+            response.event_time.CopyFrom(ts)
+
+        # Error code dual-stack: keep string code and populate enum when absent.
+        if response.HasField("error") and response.error.error_code == agent_service_pb2.ERROR_CODE_UNSPECIFIED:
+            mapped = AgentServiceImpl._to_error_code(response.error.code)
+            if mapped != agent_service_pb2.ERROR_CODE_UNSPECIFIED:
+                response.error.error_code = mapped
+        return response
 
     async def _require_admin(
         self,
@@ -141,7 +182,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             response.workflow_id = workflow_id
                         if not response.prompt_version:
                             response.prompt_version = prompt_version
-                        yield response
+                        yield self._enrich_dual_stack_response(response)
                     await db_session.commit()
                 except Exception:
                     await db_session.rollback()
@@ -152,9 +193,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     f"StreamChat completed without text content for trace={trace_id}, "
                     f"session={request.session_id}"
                 )
-                yield agent_service_pb2.ChatResponse(
+                fallback = agent_service_pb2.ChatResponse(
                     response_id=str(uuid.uuid4()),
                     created_at=int(datetime.now().timestamp()),
+                    timestamp=int(datetime.now().timestamp() * 1000),
                     request_id=request.request_id,
                     trace_id=trace_id,
                     workflow_id=workflow_id,
@@ -162,14 +204,17 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
+                fallback.event_time.FromDatetime(datetime.utcnow())
+                yield fallback
 
             logger.info(f"StreamChat completed for trace={trace_id}")
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
-            yield agent_service_pb2.ChatResponse(
+            response = agent_service_pb2.ChatResponse(
                 response_id=str(uuid.uuid4()),
                 created_at=int(datetime.now().timestamp()),
+                timestamp=int(datetime.now().timestamp() * 1000),
                 request_id=request.request_id,
                 trace_id=trace_id,
                 workflow_id=workflow_id,
@@ -177,10 +222,13 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 error=agent_service_pb2.Error(
                     code="INTERNAL_ERROR",
                     message=str(e),
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                 ),
                 finish_reason=agent_service_pb2.STOP # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
             )
+            response.event_time.FromDatetime(datetime.utcnow())
+            yield response
 
     async def SubmitResponseFeedback(
         self,

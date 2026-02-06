@@ -112,11 +112,15 @@ smoke:
 proto-gen:
 	@echo "🚀 Generating Protobuf Code with Buf..."
 	@if command -v buf >/dev/null 2>&1; then \
-		buf generate; \
-		echo "✅ Protobuf code generated successfully via Buf!"; \
+		if buf generate; then \
+			echo "✅ Protobuf code generated successfully via Buf!"; \
+		else \
+			echo "❌ Buf generation failed, falling back to legacy protoc pipeline..."; \
+			$(MAKE) proto-gen-legacy; \
+		fi; \
 	else \
 		echo "⚠️  Buf not installed, falling back to protoc..."; \
-		make proto-gen-legacy; \
+		$(MAKE) proto-gen-legacy; \
 	fi
 
 # Buf linting and breaking change detection
@@ -162,6 +166,23 @@ proto-gen-legacy:
 	       --grpc_python_out=backend/app/gen/galaxy/v1 \
 	       --pyi_out=backend/app/gen/galaxy/v1 \
 	       proto/galaxy_service.proto
+	python -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen \
+	       --pyi_out=backend/app/gen \
+	       proto/websocket.proto
+	@echo "  → Dart..."
+	@if [ -x "$$HOME/.pub-cache/bin/protoc-gen-dart" ]; then \
+		if PATH="$$HOME/.pub-cache/bin:$$PATH" protoc --proto_path=proto \
+			--dart_out=grpc:mobile/lib/gen \
+			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto; then \
+			echo "✅ Dart protobuf generated"; \
+		else \
+			echo "⚠️  Dart protobuf generation failed in current environment"; \
+		fi; \
+	else \
+		echo "⚠️  protoc-gen-dart not found; skipped Dart generation"; \
+	fi
 	@echo "✅ Protobuf code generated successfully!"
 
 # Python gRPC 服务相关命令

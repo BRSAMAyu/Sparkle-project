@@ -249,10 +249,11 @@ class SyncEngine {
     // P3: Use Protobuf Binary Protocol
     final traceId = item.traceId ?? TracingService.instance.createTraceId();
     final requestId = item.uuid ?? item.id.toString();
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     final request = UpdateNodeMasteryRequest(
       nodeId: payload['nodeId'] as String,
       mastery: payload['mastery'] as int,
-      timestamp: Int64(DateTime.now().millisecondsSinceEpoch),
+      timestamp: Int64(nowMs),
       requestId: requestId,
       // revision: payload['revision'] as int? ?? 0, 
     );
@@ -261,7 +262,7 @@ class SyncEngine {
       version: '2.0',
       type: 'update_node_mastery',
       payload: request.writeToBuffer(),
-      timestamp: Int64(DateTime.now().millisecondsSinceEpoch),
+      timestamp: Int64(nowMs),
       requestId: requestId,
       traceId: traceId,
     );
