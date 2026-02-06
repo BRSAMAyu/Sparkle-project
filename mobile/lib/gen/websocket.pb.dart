@@ -29,7 +29,6 @@ class WebSocketMessage extends $pb.GeneratedMessage {
     $core.List<$core.int>? payload,
     $core.String? traceId,
     $core.String? requestId,
-    @$core.Deprecated('This field is deprecated.') $fixnum.Int64? timestamp,
     $0.Timestamp? eventTime,
   }) {
     final result = create();
@@ -38,7 +37,6 @@ class WebSocketMessage extends $pb.GeneratedMessage {
     if (payload != null) result.payload = payload;
     if (traceId != null) result.traceId = traceId;
     if (requestId != null) result.requestId = requestId;
-    if (timestamp != null) result.timestamp = timestamp;
     if (eventTime != null) result.eventTime = eventTime;
     return result;
   }
@@ -62,7 +60,6 @@ class WebSocketMessage extends $pb.GeneratedMessage {
         3, _omitFieldNames ? '' : 'payload', $pb.PbFieldType.OY)
     ..aOS(4, _omitFieldNames ? '' : 'traceId')
     ..aOS(5, _omitFieldNames ? '' : 'requestId')
-    ..aInt64(6, _omitFieldNames ? '' : 'timestamp')
     ..aOM<$0.Timestamp>(7, _omitFieldNames ? '' : 'eventTime',
         subBuilder: $0.Timestamp.create)
     ..hasRequiredFields = false;
@@ -131,29 +128,16 @@ class WebSocketMessage extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearRequestId() => $_clearField(5);
 
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(6)
-  $fixnum.Int64 get timestamp => $_getI64(5);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(6)
-  set timestamp($fixnum.Int64 value) => $_setInt64(5, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(6)
-  $core.bool hasTimestamp() => $_has(5);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(6)
-  void clearTimestamp() => $_clearField(6);
-
   @$pb.TagNumber(7)
-  $0.Timestamp get eventTime => $_getN(6);
+  $0.Timestamp get eventTime => $_getN(5);
   @$pb.TagNumber(7)
   set eventTime($0.Timestamp value) => $_setField(7, value);
   @$pb.TagNumber(7)
-  $core.bool hasEventTime() => $_has(6);
+  $core.bool hasEventTime() => $_has(5);
   @$pb.TagNumber(7)
   void clearEventTime() => $_clearField(7);
   @$pb.TagNumber(7)
-  $0.Timestamp ensureEventTime() => $_ensure(6);
+  $0.Timestamp ensureEventTime() => $_ensure(5);
 }
 
 /// ChatMessage represents a user chat message payload
@@ -246,7 +230,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
   factory UpdateNodeMasteryRequest({
     $core.String? nodeId,
     $core.int? mastery,
-    @$core.Deprecated('This field is deprecated.') $fixnum.Int64? timestamp,
     $core.String? requestId,
     $core.int? revision,
     $0.Timestamp? eventTime,
@@ -254,7 +237,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
     final result = create();
     if (nodeId != null) result.nodeId = nodeId;
     if (mastery != null) result.mastery = mastery;
-    if (timestamp != null) result.timestamp = timestamp;
     if (requestId != null) result.requestId = requestId;
     if (revision != null) result.revision = revision;
     if (eventTime != null) result.eventTime = eventTime;
@@ -276,7 +258,6 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
       createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'nodeId')
     ..aI(2, _omitFieldNames ? '' : 'mastery')
-    ..aInt64(3, _omitFieldNames ? '' : 'timestamp')
     ..aOS(4, _omitFieldNames ? '' : 'requestId')
     ..aI(5, _omitFieldNames ? '' : 'revision')
     ..aOM<$0.Timestamp>(6, _omitFieldNames ? '' : 'eventTime',
@@ -321,47 +302,34 @@ class UpdateNodeMasteryRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearMastery() => $_clearField(2);
 
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(3)
-  $fixnum.Int64 get timestamp => $_getI64(2);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(3)
-  set timestamp($fixnum.Int64 value) => $_setInt64(2, value);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(3)
-  $core.bool hasTimestamp() => $_has(2);
-  @$core.Deprecated('This field is deprecated.')
-  @$pb.TagNumber(3)
-  void clearTimestamp() => $_clearField(3);
-
   @$pb.TagNumber(4)
-  $core.String get requestId => $_getSZ(3);
+  $core.String get requestId => $_getSZ(2);
   @$pb.TagNumber(4)
-  set requestId($core.String value) => $_setString(3, value);
+  set requestId($core.String value) => $_setString(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasRequestId() => $_has(3);
+  $core.bool hasRequestId() => $_has(2);
   @$pb.TagNumber(4)
   void clearRequestId() => $_clearField(4);
 
   @$pb.TagNumber(5)
-  $core.int get revision => $_getIZ(4);
+  $core.int get revision => $_getIZ(3);
   @$pb.TagNumber(5)
-  set revision($core.int value) => $_setSignedInt32(4, value);
+  set revision($core.int value) => $_setSignedInt32(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasRevision() => $_has(4);
+  $core.bool hasRevision() => $_has(3);
   @$pb.TagNumber(5)
   void clearRevision() => $_clearField(5);
 
   @$pb.TagNumber(6)
-  $0.Timestamp get eventTime => $_getN(5);
+  $0.Timestamp get eventTime => $_getN(4);
   @$pb.TagNumber(6)
   set eventTime($0.Timestamp value) => $_setField(6, value);
   @$pb.TagNumber(6)
-  $core.bool hasEventTime() => $_has(5);
+  $core.bool hasEventTime() => $_has(4);
   @$pb.TagNumber(6)
   void clearEventTime() => $_clearField(6);
   @$pb.TagNumber(6)
-  $0.Timestamp ensureEventTime() => $_ensure(5);
+  $0.Timestamp ensureEventTime() => $_ensure(4);
 }
 
 /// Intervention push messages for real-time adaptive interventions

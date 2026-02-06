@@ -501,14 +501,6 @@ const ChatResponse$json = {
       '10': 'finishReason'
     },
     {
-      '1': 'timestamp',
-      '3': 13,
-      '4': 1,
-      '5': 3,
-      '8': {'3': true},
-      '10': 'timestamp',
-    },
-    {
       '1': 'event_time',
       '3': 19,
       '4': 1,
@@ -521,6 +513,10 @@ const ChatResponse$json = {
   '8': [
     {'1': 'content'},
   ],
+  '9': [
+    {'1': 13, '2': 14},
+  ],
+  '10': ['timestamp'],
 };
 
 @$core.Deprecated('Use chatResponseDescriptor instead')
@@ -548,10 +544,10 @@ final $typed_data.Uint8List chatResponseDescriptor = $convert.base64Decode(
     'Q2l0YXRpb25CbG9ja0gAUgljaXRhdGlvbnMSPgoLdG9vbF9yZXN1bHQYDCABKAsyGy5hZ2VudC'
     '52MS5Ub29sUmVzdWx0UGF5bG9hZEgAUgp0b29sUmVzdWx0EkMKDGludGVydmVudGlvbhgOIAEo'
     'CzIdLmFnZW50LnYxLkludGVydmVudGlvblBheWxvYWRIAFIMaW50ZXJ2ZW50aW9uEjsKDWZpbm'
-    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhIg'
-    'Cgl0aW1lc3RhbXAYDSABKANCAhgBUgl0aW1lc3RhbXASOQoKZXZlbnRfdGltZRgTIAEoCzIaLm'
-    'dvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCWV2ZW50VGltZRo7Cg1NZXRhZGF0YUVudHJ5EhAK'
-    'A2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAFCCQoHY29udGVudA==');
+    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhI5'
+    'CgpldmVudF90aW1lGBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJZXZlbnRUaW'
+    '1lGjsKDU1ldGFkYXRhRW50cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZh'
+    'bHVlOgI4AUIJCgdjb250ZW50SgQIDRAOUgl0aW1lc3RhbXA=');
 
 @$core.Deprecated('Use responseFeedbackRequestDescriptor instead')
 const ResponseFeedbackRequest$json = {
@@ -1715,14 +1711,6 @@ final $typed_data.Uint8List agentStatusDescriptor = $convert.base64Decode(
 const Error$json = {
   '1': 'Error',
   '2': [
-    {
-      '1': 'code',
-      '3': 1,
-      '4': 1,
-      '5': 9,
-      '8': {'3': true},
-      '10': 'code',
-    },
     {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
     {'1': 'retryable', '3': 3, '4': 1, '5': 8, '10': 'retryable'},
     {
@@ -1743,6 +1731,10 @@ const Error$json = {
     },
   ],
   '3': [Error_DetailsEntry$json],
+  '9': [
+    {'1': 1, '2': 2},
+  ],
+  '10': ['code'],
 };
 
 @$core.Deprecated('Use errorDescriptor instead')
@@ -1757,11 +1749,11 @@ const Error_DetailsEntry$json = {
 
 /// Descriptor for `Error`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List errorDescriptor = $convert.base64Decode(
-    'CgVFcnJvchIWCgRjb2RlGAEgASgJQgIYAVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYW'
-    'dlEhwKCXJldHJ5YWJsZRgDIAEoCFIJcmV0cnlhYmxlEjYKB2RldGFpbHMYBCADKAsyHC5hZ2Vu'
-    'dC52MS5FcnJvci5EZXRhaWxzRW50cnlSB2RldGFpbHMSMgoKZXJyb3JfY29kZRgFIAEoDjITLm'
-    'FnZW50LnYxLkVycm9yQ29kZVIJZXJyb3JDb2RlGjoKDERldGFpbHNFbnRyeRIQCgNrZXkYASAB'
-    'KAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgB');
+    'CgVFcnJvchIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEhwKCXJldHJ5YWJsZRgDIAEoCFIJcm'
+    'V0cnlhYmxlEjYKB2RldGFpbHMYBCADKAsyHC5hZ2VudC52MS5FcnJvci5EZXRhaWxzRW50cnlS'
+    'B2RldGFpbHMSMgoKZXJyb3JfY29kZRgFIAEoDjITLmFnZW50LnYxLkVycm9yQ29kZVIJZXJyb3'
+    'JDb2RlGjoKDERldGFpbHNFbnRyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIF'
+    'dmFsdWU6AjgBSgQIARACUgRjb2Rl');
 
 @$core.Deprecated('Use usageDescriptor instead')
 const Usage$json = {

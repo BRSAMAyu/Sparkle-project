@@ -1001,9 +1001,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             error=agent_service_pb2.Error(
-                                code="VALIDATION_ERROR",
                                 message=validation_result.error_message,
-                                retryable=False
+                                retryable=False,
+                                error_code=agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
                             ),
                             finish_reason=agent_service_pb2.ERROR
                         )
@@ -1047,9 +1047,9 @@ class ChatOrchestrator:
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         error=agent_service_pb2.Error(
-                            code="CONFLICT",
                             message="会话正在处理另一个请求，请稍候",
-                            retryable=True
+                            retryable=True,
+                            error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
                         ),
                         finish_reason=agent_service_pb2.ERROR
                     )
@@ -1472,9 +1472,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             error=agent_service_pb2.Error(
-                                code="MULTI_AGENT_ERROR",
                                 message=f"多Agent协作模式执行失败: {str(e)}",
                                 retryable=True,
+                                error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                             ),
                             finish_reason=agent_service_pb2.ERROR,
                         )
@@ -2324,9 +2324,9 @@ class ChatOrchestrator:
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(
-                        code="INTERNAL_ERROR",
                         message=str(e),
-                        retryable=True
+                        retryable=True,
+                        error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                     ),
                     finish_reason=agent_service_pb2.ERROR
                 )

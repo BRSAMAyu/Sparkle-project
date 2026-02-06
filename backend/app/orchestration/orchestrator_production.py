@@ -604,9 +604,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="DUPLICATE_REQUEST",
                     message="Request already processed",
-                    retryable=False
+                    retryable=False,
+                    error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -621,9 +621,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="CIRCUIT_BREAKER_OPEN",
                     message=f"Service temporarily unavailable (circuit breaker: {state})",
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_UNAVAILABLE,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -637,9 +637,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="RATE_LIMIT",
                     message="Too many concurrent sessions",
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_RATE_LIMITED,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -999,9 +999,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="INTERNAL_ERROR",
                     message=str(e),
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )

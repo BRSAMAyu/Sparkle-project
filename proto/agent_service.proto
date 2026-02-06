@@ -236,8 +236,8 @@ message ChatResponse {
   // Indicates why the generation finished.
   FinishReason finish_reason = 9;
 
-  // Deprecated (remove_after: M3): legacy milliseconds timestamp.
-  int64 timestamp = 13 [deprecated = true];
+  reserved 13;
+  reserved "timestamp";
   // Preferred event timestamp for new clients.
   google.protobuf.Timestamp event_time = 19;
 }
@@ -714,8 +714,8 @@ enum ErrorCode {
 }
 
 message Error {
-    // Deprecated (remove_after: M3): legacy string error code.
-    string code = 1 [deprecated = true];
+    reserved 1;
+    reserved "code";
     string message = 2;
     bool retryable = 3;
     map<string, string> details = 4;

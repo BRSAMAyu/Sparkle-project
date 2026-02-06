@@ -4,10 +4,11 @@ import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
+import 'package:protobuf/well_known_types/google/protobuf/timestamp.pb.dart'
+    as $ts;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -15,7 +16,6 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_metadata.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
-import 'package:sparkle/gen/google/protobuf/timestamp.pb.dart' as $ts;
 import 'package:sparkle/gen/websocket.pb.dart';
 import 'package:uuid/uuid.dart';
 
@@ -30,7 +30,7 @@ class SyncEngine {
   final Random _random = Random();
   Future<SharedPreferences>? _prefsFuture;
   final Connectivity _connectivity = Connectivity();
-  
+
   StreamSubscription<void>? _subscription;
   bool _isProcessing = false;
   static const int _batchSize = 20;
@@ -38,8 +38,6 @@ class SyncEngine {
   static const int _baseBackoffMs = 800;
   static const int _maxBackoffMs = 30000;
   static const Duration _waitingAckTtl = Duration(seconds: 30);
-  static const bool _protoWriteDual =
-      bool.fromEnvironment('PROTO_WRITE_DUAL', defaultValue: true);
 
   void start() {
     // Listen for new outbox items
@@ -51,7 +49,7 @@ class SyncEngine {
     _subscription = outboxStream.listen((_) {
       _processOutbox();
     });
-    
+
     // Also listen for connectivity changes
     _connectivity.onConnectivityChanged.listen((result) {
       if (!result.contains(ConnectivityResult.none)) {
@@ -93,7 +91,7 @@ class SyncEngine {
     await _localDb.isar.writeTxn(() async {
       await _localDb.isar.outboxItems.put(item);
     });
-    
+
     // Trigger processing immediately just in case watch doesn't catch it instantly
     _processOutbox();
   }
@@ -107,13 +105,15 @@ class SyncEngine {
     );
   }
 
-  Future<void> processNow({bool force = false, bool skipConnectivity = false}) async {
+  Future<void> processNow(
+      {bool force = false, bool skipConnectivity = false}) async {
     await _processOutbox(force: force, skipConnectivity: skipConnectivity);
   }
 
-  Future<void> _processOutbox({bool force = false, bool skipConnectivity = false}) async {
+  Future<void> _processOutbox(
+      {bool force = false, bool skipConnectivity = false}) async {
     if (_isProcessing) return;
-    
+
     // Check connectivity
     if (!skipConnectivity) {
       final connectivity = await _connectivity.checkConnectivity();
@@ -127,25 +127,20 @@ class SyncEngine {
       while (true) {
         final now = DateTime.now();
         final baseQuery = force
-                ? _localDb.isar.outboxItems.filter().group(
-                      (q) => q
-                          .statusEqualTo(SyncStatus.pending)
-                          .or()
-                          .statusEqualTo(SyncStatus.failed),
-                    )
-                : _localDb.isar.outboxItems
-                    .filter()
-                    .statusEqualTo(SyncStatus.pending);
+            ? _localDb.isar.outboxItems.filter().group(
+                  (q) => q
+                      .statusEqualTo(SyncStatus.pending)
+                      .or()
+                      .statusEqualTo(SyncStatus.failed),
+                )
+            : _localDb.isar.outboxItems
+                .filter()
+                .statusEqualTo(SyncStatus.pending);
 
         var itemsQuery = baseQuery;
         if (!force) {
-          itemsQuery = itemsQuery
-              .and()
-              .group(
-                (q) => q
-                    .nextAttemptAtIsNull()
-                    .or()
-                    .nextAttemptAtLessThan(now),
+          itemsQuery = itemsQuery.and().group(
+                (q) => q.nextAttemptAtIsNull().or().nextAttemptAtLessThan(now),
               );
         }
 
@@ -178,7 +173,7 @@ class SyncEngine {
 
       final payloadJson = item.payloadJson ?? '{}';
       final payload = jsonDecode(payloadJson) as Map<String, dynamic>;
-      
+
       final descriptor = _describeItem(item);
       _logger.d(
         'Processing outbox item: ${descriptor.topic}/${descriptor.opType} (${item.id})',
@@ -227,10 +222,9 @@ class SyncEngine {
         await _localDb.isar.outboxItems.put(current);
       });
       await _recordSuccess();
-
     } catch (e) {
       _logger.e('Failed to process outbox item ${item.id}: $e');
-      
+
       await _localDb.isar.writeTxn(() async {
         item.attemptCount++;
         item.retryCount = item.attemptCount;
@@ -248,24 +242,20 @@ class SyncEngine {
     }
   }
 
-  Future<void> _sendMasteryUpdate(Map<String, dynamic> payload, OutboxItem item) async {
+  Future<void> _sendMasteryUpdate(
+      Map<String, dynamic> payload, OutboxItem item) async {
     // P3: Use Protobuf Binary Protocol
     final traceId = item.traceId ?? TracingService.instance.createTraceId();
     final requestId = item.uuid ?? item.id.toString();
     final now = DateTime.now().toUtc();
-    final nowMs = now.millisecondsSinceEpoch;
     final nowEvent = $ts.Timestamp.fromDateTime(now);
     final request = UpdateNodeMasteryRequest(
       nodeId: payload['nodeId'] as String,
       mastery: payload['mastery'] as int,
       eventTime: nowEvent,
       requestId: requestId,
-      // revision: payload['revision'] as int? ?? 0, 
+      // revision: payload['revision'] as int? ?? 0,
     );
-    if (_protoWriteDual) {
-      // ignore: deprecated_member_use_from_same_package
-      request.timestamp = Int64(nowMs);
-    }
 
     final wsMsg = WebSocketMessage(
       version: '2.0',
@@ -275,10 +265,6 @@ class SyncEngine {
       requestId: requestId,
       traceId: traceId,
     );
-    if (_protoWriteDual) {
-      // ignore: deprecated_member_use_from_same_package
-      wsMsg.timestamp = Int64(nowMs);
-    }
 
     _wsService.send(wsMsg);
 
@@ -287,14 +273,14 @@ class SyncEngine {
       onTimeout: () => throw SyncFailure('ACK_TIMEOUT', 'Ack timeout'),
     );
   }
-  
+
   Future<void> _sendCrdtUpdate(Map<String, dynamic> payload) async {
-      final traceId = TracingService.instance.createTraceId();
-      _wsService.send({
-        'type': 'crdt_update',
-        'trace_id': traceId,
-        'payload': payload,
-      });
+    final traceId = TracingService.instance.createTraceId();
+    _wsService.send({
+      'type': 'crdt_update',
+      'trace_id': traceId,
+      'payload': payload,
+    });
   }
 
   Future<void> _sendCognitiveFragmentCreate(
@@ -332,7 +318,8 @@ class SyncEngine {
     );
   }
 
-  Future<void> _sendInterventionPassiveSignal(Map<String, dynamic> payload) async {
+  Future<void> _sendInterventionPassiveSignal(
+      Map<String, dynamic> payload) async {
     await _apiClient.post<dynamic>(
       ApiEndpoints.interventionsPassiveSignals,
       data: payload,

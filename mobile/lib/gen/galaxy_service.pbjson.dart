@@ -23,14 +23,6 @@ const CollaborativeGalaxyUpdate$json = {
     {'1': 'yjs_update', '3': 2, '4': 1, '5': 12, '10': 'yjsUpdate'},
     {'1': 'user_id', '3': 3, '4': 1, '5': 9, '10': 'userId'},
     {
-      '1': 'timestamp',
-      '3': 4,
-      '4': 1,
-      '5': 3,
-      '8': {'3': true},
-      '10': 'timestamp',
-    },
-    {
       '1': 'event_time',
       '3': 5,
       '4': 1,
@@ -39,14 +31,18 @@ const CollaborativeGalaxyUpdate$json = {
       '10': 'eventTime'
     },
   ],
+  '9': [
+    {'1': 4, '2': 5},
+  ],
+  '10': ['timestamp'],
 };
 
 /// Descriptor for `CollaborativeGalaxyUpdate`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List collaborativeGalaxyUpdateDescriptor = $convert.base64Decode(
     'ChlDb2xsYWJvcmF0aXZlR2FsYXh5VXBkYXRlEhsKCWdhbGF4eV9pZBgBIAEoCVIIZ2FsYXh5SW'
     'QSHQoKeWpzX3VwZGF0ZRgCIAEoDFIJeWpzVXBkYXRlEhcKB3VzZXJfaWQYAyABKAlSBnVzZXJJ'
-    'ZBIgCgl0aW1lc3RhbXAYBCABKANCAhgBUgl0aW1lc3RhbXASOQoKZXZlbnRfdGltZRgFIAEoCz'
-    'IaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCWV2ZW50VGltZQ==');
+    'ZBI5CgpldmVudF90aW1lGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJZXZlbn'
+    'RUaW1lSgQIBBAFUgl0aW1lc3RhbXA=');
 
 @$core.Deprecated('Use syncCollaborativeGalaxyRequestDescriptor instead')
 const SyncCollaborativeGalaxyRequest$json = {
@@ -87,28 +83,22 @@ const UpdateNodeMasteryRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'node_id', '3': 2, '4': 1, '5': 9, '10': 'nodeId'},
     {'1': 'mastery', '3': 3, '4': 1, '5': 5, '10': 'mastery'},
-    {
-      '1': 'version',
-      '3': 4,
-      '4': 1,
-      '5': 11,
-      '6': '.google.protobuf.Timestamp',
-      '8': {'3': true},
-      '10': 'version',
-    },
     {'1': 'reason', '3': 5, '4': 1, '5': 9, '10': 'reason'},
     {'1': 'request_id', '3': 6, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'revision', '3': 7, '4': 1, '5': 3, '10': 'revision'},
   ],
+  '9': [
+    {'1': 4, '2': 5},
+  ],
+  '10': ['version'],
 };
 
 /// Descriptor for `UpdateNodeMasteryRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List updateNodeMasteryRequestDescriptor = $convert.base64Decode(
     'ChhVcGRhdGVOb2RlTWFzdGVyeVJlcXVlc3QSFwoHdXNlcl9pZBgBIAEoCVIGdXNlcklkEhcKB2'
-    '5vZGVfaWQYAiABKAlSBm5vZGVJZBIYCgdtYXN0ZXJ5GAMgASgFUgdtYXN0ZXJ5EjgKB3ZlcnNp'
-    'b24YBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgIYAVIHdmVyc2lvbhIWCgZyZW'
-    'Fzb24YBSABKAlSBnJlYXNvbhIdCgpyZXF1ZXN0X2lkGAYgASgJUglyZXF1ZXN0SWQSGgoIcmV2'
-    'aXNpb24YByABKANSCHJldmlzaW9u');
+    '5vZGVfaWQYAiABKAlSBm5vZGVJZBIYCgdtYXN0ZXJ5GAMgASgFUgdtYXN0ZXJ5EhYKBnJlYXNv'
+    'bhgFIAEoCVIGcmVhc29uEh0KCnJlcXVlc3RfaWQYBiABKAlSCXJlcXVlc3RJZBIaCghyZXZpc2'
+    'lvbhgHIAEoA1IIcmV2aXNpb25KBAgEEAVSB3ZlcnNpb24=');
 
 @$core.Deprecated('Use updateNodeMasteryResponseDescriptor instead')
 const UpdateNodeMasteryResponse$json = {
