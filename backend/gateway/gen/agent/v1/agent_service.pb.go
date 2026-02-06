@@ -429,6 +429,79 @@ func (AgentType) EnumDescriptor() ([]byte, []int) {
 	return file_agent_service_proto_rawDescGZIP(), []int{6}
 }
 
+type ErrorCode int32
+
+const (
+	ErrorCode_ERROR_CODE_UNSPECIFIED      ErrorCode = 0
+	ErrorCode_ERROR_CODE_UNKNOWN          ErrorCode = 1
+	ErrorCode_ERROR_CODE_INVALID_ARGUMENT ErrorCode = 2
+	ErrorCode_ERROR_CODE_UNAUTHORIZED     ErrorCode = 3
+	ErrorCode_ERROR_CODE_FORBIDDEN        ErrorCode = 4
+	ErrorCode_ERROR_CODE_NOT_FOUND        ErrorCode = 5
+	ErrorCode_ERROR_CODE_CONFLICT         ErrorCode = 6
+	ErrorCode_ERROR_CODE_RATE_LIMITED     ErrorCode = 7
+	ErrorCode_ERROR_CODE_UNAVAILABLE      ErrorCode = 8
+	ErrorCode_ERROR_CODE_TIMEOUT          ErrorCode = 9
+	ErrorCode_ERROR_CODE_INTERNAL         ErrorCode = 10
+)
+
+// Enum value maps for ErrorCode.
+var (
+	ErrorCode_name = map[int32]string{
+		0:  "ERROR_CODE_UNSPECIFIED",
+		1:  "ERROR_CODE_UNKNOWN",
+		2:  "ERROR_CODE_INVALID_ARGUMENT",
+		3:  "ERROR_CODE_UNAUTHORIZED",
+		4:  "ERROR_CODE_FORBIDDEN",
+		5:  "ERROR_CODE_NOT_FOUND",
+		6:  "ERROR_CODE_CONFLICT",
+		7:  "ERROR_CODE_RATE_LIMITED",
+		8:  "ERROR_CODE_UNAVAILABLE",
+		9:  "ERROR_CODE_TIMEOUT",
+		10: "ERROR_CODE_INTERNAL",
+	}
+	ErrorCode_value = map[string]int32{
+		"ERROR_CODE_UNSPECIFIED":      0,
+		"ERROR_CODE_UNKNOWN":          1,
+		"ERROR_CODE_INVALID_ARGUMENT": 2,
+		"ERROR_CODE_UNAUTHORIZED":     3,
+		"ERROR_CODE_FORBIDDEN":        4,
+		"ERROR_CODE_NOT_FOUND":        5,
+		"ERROR_CODE_CONFLICT":         6,
+		"ERROR_CODE_RATE_LIMITED":     7,
+		"ERROR_CODE_UNAVAILABLE":      8,
+		"ERROR_CODE_TIMEOUT":          9,
+		"ERROR_CODE_INTERNAL":         10,
+	}
+)
+
+func (x ErrorCode) Enum() *ErrorCode {
+	p := new(ErrorCode)
+	*p = x
+	return p
+}
+
+func (x ErrorCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_service_proto_enumTypes[7].Descriptor()
+}
+
+func (ErrorCode) Type() protoreflect.EnumType {
+	return &file_agent_service_proto_enumTypes[7]
+}
+
+func (x ErrorCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorCode.Descriptor instead.
+func (ErrorCode) EnumDescriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{7}
+}
+
 type AgentStatus_State int32
 
 const (
@@ -471,11 +544,11 @@ func (x AgentStatus_State) String() string {
 }
 
 func (AgentStatus_State) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_service_proto_enumTypes[7].Descriptor()
+	return file_agent_service_proto_enumTypes[8].Descriptor()
 }
 
 func (AgentStatus_State) Type() protoreflect.EnumType {
-	return &file_agent_service_proto_enumTypes[7]
+	return &file_agent_service_proto_enumTypes[8]
 }
 
 func (x AgentStatus_State) Number() protoreflect.EnumNumber {
@@ -1189,7 +1262,9 @@ type ChatResponse struct {
 	// Indicates why the generation finished.
 	FinishReason FinishReason `protobuf:"varint,9,opt,name=finish_reason,json=finishReason,proto3,enum=agent.v1.FinishReason" json:"finish_reason,omitempty"`
 	// Timestamp of response generation
-	Timestamp     int64 `protobuf:"varint,13,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp int64 `protobuf:"varint,13,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Preferred event timestamp for new clients.
+	EventTime     *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1373,6 +1448,13 @@ func (x *ChatResponse) GetTimestamp() int64 {
 		return x.Timestamp
 	}
 	return 0
+}
+
+func (x *ChatResponse) GetEventTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EventTime
+	}
+	return nil
 }
 
 type isChatResponse_Content interface {
@@ -4470,6 +4552,7 @@ type Error struct {
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Retryable     bool                   `protobuf:"varint,3,opt,name=retryable,proto3" json:"retryable,omitempty"`
 	Details       map[string]string      `protobuf:"bytes,4,rep,name=details,proto3" json:"details,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ErrorCode     ErrorCode              `protobuf:"varint,5,opt,name=error_code,json=errorCode,proto3,enum=agent.v1.ErrorCode" json:"error_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4530,6 +4613,13 @@ func (x *Error) GetDetails() map[string]string {
 		return x.Details
 	}
 	return nil
+}
+
+func (x *Error) GetErrorCode() ErrorCode {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ErrorCode_ERROR_CODE_UNSPECIFIED
 }
 
 type Usage struct {
@@ -4954,7 +5044,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2#.agent.v1.ChatMessage.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xed\x06\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa8\a\n" +
 	"\fChatResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -4979,7 +5069,9 @@ const file_agent_service_proto_rawDesc = "" +
 	"toolResult\x12C\n" +
 	"\fintervention\x18\x0e \x01(\v2\x1d.agent.v1.InterventionPayloadH\x00R\fintervention\x12;\n" +
 	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReason\x12\x1c\n" +
-	"\ttimestamp\x18\r \x01(\x03R\ttimestamp\x1a;\n" +
+	"\ttimestamp\x18\r \x01(\x03R\ttimestamp\x129\n" +
+	"\n" +
+	"event_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\teventTime\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\t\n" +
@@ -5301,12 +5393,14 @@ const file_agent_service_proto_rawDesc = "" +
 	"\x0eEXECUTING_TOOL\x10\x03\x12\x0e\n" +
 	"\n" +
 	"GENERATING\x10\x04\x12\b\n" +
-	"\x04IDLE\x10\x05\"\xc7\x01\n" +
+	"\x04IDLE\x10\x05\"\xfb\x01\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
 	"\tretryable\x18\x03 \x01(\bR\tretryable\x126\n" +
-	"\adetails\x18\x04 \x03(\v2\x1c.agent.v1.Error.DetailsEntryR\adetails\x1a:\n" +
+	"\adetails\x18\x04 \x03(\v2\x1c.agent.v1.Error.DetailsEntryR\adetails\x122\n" +
+	"\n" +
+	"error_code\x18\x05 \x01(\x0e2\x13.agent.v1.ErrorCodeR\terrorCode\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa2\x01\n" +
@@ -5396,6 +5490,19 @@ const file_agent_service_proto_rawDesc = "" +
 	"\x05AUDIO\x10\b\x12\v\n" +
 	"\aWRITING\x10\t\x12\r\n" +
 	"\tREASONING\x10\n" +
+	"*\xb4\x02\n" +
+	"\tErrorCode\x12\x1a\n" +
+	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12ERROR_CODE_UNKNOWN\x10\x01\x12\x1f\n" +
+	"\x1bERROR_CODE_INVALID_ARGUMENT\x10\x02\x12\x1b\n" +
+	"\x17ERROR_CODE_UNAUTHORIZED\x10\x03\x12\x18\n" +
+	"\x14ERROR_CODE_FORBIDDEN\x10\x04\x12\x18\n" +
+	"\x14ERROR_CODE_NOT_FOUND\x10\x05\x12\x17\n" +
+	"\x13ERROR_CODE_CONFLICT\x10\x06\x12\x1b\n" +
+	"\x17ERROR_CODE_RATE_LIMITED\x10\a\x12\x1a\n" +
+	"\x16ERROR_CODE_UNAVAILABLE\x10\b\x12\x16\n" +
+	"\x12ERROR_CODE_TIMEOUT\x10\t\x12\x17\n" +
+	"\x13ERROR_CODE_INTERNAL\x10\n" +
 	"2\x89\f\n" +
 	"\fAgentService\x12=\n" +
 	"\n" +
@@ -5429,7 +5536,7 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 	return file_agent_service_proto_rawDescData
 }
 
-var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 65)
 var file_agent_service_proto_goTypes = []any{
 	(FeedbackType)(0),                         // 0: agent.v1.FeedbackType
@@ -5439,162 +5546,165 @@ var file_agent_service_proto_goTypes = []any{
 	(FinishReason)(0),                         // 4: agent.v1.FinishReason
 	(InterventionLevel)(0),                    // 5: agent.v1.InterventionLevel
 	(AgentType)(0),                            // 6: agent.v1.AgentType
-	(AgentStatus_State)(0),                    // 7: agent.v1.AgentStatus.State
-	(*ChatRequest)(nil),                       // 8: agent.v1.ChatRequest
-	(*UserProfile)(nil),                       // 9: agent.v1.UserProfile
-	(*ProfileRequest)(nil),                    // 10: agent.v1.ProfileRequest
-	(*WeeklyReportRequest)(nil),               // 11: agent.v1.WeeklyReportRequest
-	(*WeeklyReport)(nil),                      // 12: agent.v1.WeeklyReport
-	(*ToolResult)(nil),                        // 13: agent.v1.ToolResult
-	(*ChatConfig)(nil),                        // 14: agent.v1.ChatConfig
-	(*ChatMessage)(nil),                       // 15: agent.v1.ChatMessage
-	(*ChatResponse)(nil),                      // 16: agent.v1.ChatResponse
-	(*ResponseFeedbackRequest)(nil),           // 17: agent.v1.ResponseFeedbackRequest
-	(*ResponseFeedbackResponse)(nil),          // 18: agent.v1.ResponseFeedbackResponse
-	(*PlanReviewRequest)(nil),                 // 19: agent.v1.PlanReviewRequest
-	(*PlanReviewResponse)(nil),                // 20: agent.v1.PlanReviewResponse
-	(*ContentReviewFeedbackRequest)(nil),      // 21: agent.v1.ContentReviewFeedbackRequest
-	(*ContentReviewFeedbackResponse)(nil),     // 22: agent.v1.ContentReviewFeedbackResponse
-	(*ReviewOverrideRequest)(nil),             // 23: agent.v1.ReviewOverrideRequest
-	(*ReviewOverrideResponse)(nil),            // 24: agent.v1.ReviewOverrideResponse
-	(*ReviewAppealRequest)(nil),               // 25: agent.v1.ReviewAppealRequest
-	(*ReviewAppealResponse)(nil),              // 26: agent.v1.ReviewAppealResponse
-	(*AppealStatusRequest)(nil),               // 27: agent.v1.AppealStatusRequest
-	(*AppealStatusResponse)(nil),              // 28: agent.v1.AppealStatusResponse
-	(*ReviewFeedbackRequest)(nil),             // 29: agent.v1.ReviewFeedbackRequest
-	(*ReviewFeedbackResponse)(nil),            // 30: agent.v1.ReviewFeedbackResponse
-	(*RegenerationRequest)(nil),               // 31: agent.v1.RegenerationRequest
-	(*RegenerationResponse)(nil),              // 32: agent.v1.RegenerationResponse
-	(*FeedbackStatisticsRequest)(nil),         // 33: agent.v1.FeedbackStatisticsRequest
-	(*FeedbackStatisticsResponse)(nil),        // 34: agent.v1.FeedbackStatisticsResponse
-	(*GetArbitrationQueueRequest)(nil),        // 35: agent.v1.GetArbitrationQueueRequest
-	(*ArbitrationCaseInfo)(nil),               // 36: agent.v1.ArbitrationCaseInfo
-	(*GetArbitrationQueueResponse)(nil),       // 37: agent.v1.GetArbitrationQueueResponse
-	(*AssignArbitrationCaseRequest)(nil),      // 38: agent.v1.AssignArbitrationCaseRequest
-	(*AssignArbitrationCaseResponse)(nil),     // 39: agent.v1.AssignArbitrationCaseResponse
-	(*SubmitArbitrationDecisionRequest)(nil),  // 40: agent.v1.SubmitArbitrationDecisionRequest
-	(*SubmitArbitrationDecisionResponse)(nil), // 41: agent.v1.SubmitArbitrationDecisionResponse
-	(*GetArbitrationQueueStatsRequest)(nil),   // 42: agent.v1.GetArbitrationQueueStatsRequest
-	(*ArbitrationQueueStatsInfo)(nil),         // 43: agent.v1.ArbitrationQueueStatsInfo
-	(*GetArbitrationQueueStatsResponse)(nil),  // 44: agent.v1.GetArbitrationQueueStatsResponse
-	(*CitationBlock)(nil),                     // 45: agent.v1.CitationBlock
-	(*Citation)(nil),                          // 46: agent.v1.Citation
-	(*ToolCall)(nil),                          // 47: agent.v1.ToolCall
-	(*ToolResultPayload)(nil),                 // 48: agent.v1.ToolResultPayload
-	(*EvidenceRef)(nil),                       // 49: agent.v1.EvidenceRef
-	(*CoolDownPolicy)(nil),                    // 50: agent.v1.CoolDownPolicy
-	(*InterventionReason)(nil),                // 51: agent.v1.InterventionReason
-	(*InterventionRequest)(nil),               // 52: agent.v1.InterventionRequest
-	(*InterventionPayload)(nil),               // 53: agent.v1.InterventionPayload
-	(*AgentStatus)(nil),                       // 54: agent.v1.AgentStatus
-	(*Error)(nil),                             // 55: agent.v1.Error
-	(*Usage)(nil),                             // 56: agent.v1.Usage
-	(*MemoryQuery)(nil),                       // 57: agent.v1.MemoryQuery
-	(*MemoryFilter)(nil),                      // 58: agent.v1.MemoryFilter
-	(*MemoryResult)(nil),                      // 59: agent.v1.MemoryResult
-	(*MemoryItem)(nil),                        // 60: agent.v1.MemoryItem
-	nil,                                       // 61: agent.v1.UserProfile.PreferencesEntry
-	nil,                                       // 62: agent.v1.ChatMessage.MetadataEntry
-	nil,                                       // 63: agent.v1.ChatResponse.MetadataEntry
-	nil,                                       // 64: agent.v1.ResponseFeedbackRequest.MetaEntry
-	nil,                                       // 65: agent.v1.PlanReviewRequest.MetaEntry
-	nil,                                       // 66: agent.v1.ContentReviewFeedbackRequest.MetaEntry
-	nil,                                       // 67: agent.v1.ReviewOverrideRequest.MetaEntry
-	nil,                                       // 68: agent.v1.ReviewAppealRequest.MetaEntry
-	nil,                                       // 69: agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry
-	nil,                                       // 70: agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry
-	nil,                                       // 71: agent.v1.Error.DetailsEntry
-	nil,                                       // 72: agent.v1.MemoryItem.MetadataEntry
-	(*structpb.Struct)(nil),                   // 73: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),             // 74: google.protobuf.Timestamp
+	(ErrorCode)(0),                            // 7: agent.v1.ErrorCode
+	(AgentStatus_State)(0),                    // 8: agent.v1.AgentStatus.State
+	(*ChatRequest)(nil),                       // 9: agent.v1.ChatRequest
+	(*UserProfile)(nil),                       // 10: agent.v1.UserProfile
+	(*ProfileRequest)(nil),                    // 11: agent.v1.ProfileRequest
+	(*WeeklyReportRequest)(nil),               // 12: agent.v1.WeeklyReportRequest
+	(*WeeklyReport)(nil),                      // 13: agent.v1.WeeklyReport
+	(*ToolResult)(nil),                        // 14: agent.v1.ToolResult
+	(*ChatConfig)(nil),                        // 15: agent.v1.ChatConfig
+	(*ChatMessage)(nil),                       // 16: agent.v1.ChatMessage
+	(*ChatResponse)(nil),                      // 17: agent.v1.ChatResponse
+	(*ResponseFeedbackRequest)(nil),           // 18: agent.v1.ResponseFeedbackRequest
+	(*ResponseFeedbackResponse)(nil),          // 19: agent.v1.ResponseFeedbackResponse
+	(*PlanReviewRequest)(nil),                 // 20: agent.v1.PlanReviewRequest
+	(*PlanReviewResponse)(nil),                // 21: agent.v1.PlanReviewResponse
+	(*ContentReviewFeedbackRequest)(nil),      // 22: agent.v1.ContentReviewFeedbackRequest
+	(*ContentReviewFeedbackResponse)(nil),     // 23: agent.v1.ContentReviewFeedbackResponse
+	(*ReviewOverrideRequest)(nil),             // 24: agent.v1.ReviewOverrideRequest
+	(*ReviewOverrideResponse)(nil),            // 25: agent.v1.ReviewOverrideResponse
+	(*ReviewAppealRequest)(nil),               // 26: agent.v1.ReviewAppealRequest
+	(*ReviewAppealResponse)(nil),              // 27: agent.v1.ReviewAppealResponse
+	(*AppealStatusRequest)(nil),               // 28: agent.v1.AppealStatusRequest
+	(*AppealStatusResponse)(nil),              // 29: agent.v1.AppealStatusResponse
+	(*ReviewFeedbackRequest)(nil),             // 30: agent.v1.ReviewFeedbackRequest
+	(*ReviewFeedbackResponse)(nil),            // 31: agent.v1.ReviewFeedbackResponse
+	(*RegenerationRequest)(nil),               // 32: agent.v1.RegenerationRequest
+	(*RegenerationResponse)(nil),              // 33: agent.v1.RegenerationResponse
+	(*FeedbackStatisticsRequest)(nil),         // 34: agent.v1.FeedbackStatisticsRequest
+	(*FeedbackStatisticsResponse)(nil),        // 35: agent.v1.FeedbackStatisticsResponse
+	(*GetArbitrationQueueRequest)(nil),        // 36: agent.v1.GetArbitrationQueueRequest
+	(*ArbitrationCaseInfo)(nil),               // 37: agent.v1.ArbitrationCaseInfo
+	(*GetArbitrationQueueResponse)(nil),       // 38: agent.v1.GetArbitrationQueueResponse
+	(*AssignArbitrationCaseRequest)(nil),      // 39: agent.v1.AssignArbitrationCaseRequest
+	(*AssignArbitrationCaseResponse)(nil),     // 40: agent.v1.AssignArbitrationCaseResponse
+	(*SubmitArbitrationDecisionRequest)(nil),  // 41: agent.v1.SubmitArbitrationDecisionRequest
+	(*SubmitArbitrationDecisionResponse)(nil), // 42: agent.v1.SubmitArbitrationDecisionResponse
+	(*GetArbitrationQueueStatsRequest)(nil),   // 43: agent.v1.GetArbitrationQueueStatsRequest
+	(*ArbitrationQueueStatsInfo)(nil),         // 44: agent.v1.ArbitrationQueueStatsInfo
+	(*GetArbitrationQueueStatsResponse)(nil),  // 45: agent.v1.GetArbitrationQueueStatsResponse
+	(*CitationBlock)(nil),                     // 46: agent.v1.CitationBlock
+	(*Citation)(nil),                          // 47: agent.v1.Citation
+	(*ToolCall)(nil),                          // 48: agent.v1.ToolCall
+	(*ToolResultPayload)(nil),                 // 49: agent.v1.ToolResultPayload
+	(*EvidenceRef)(nil),                       // 50: agent.v1.EvidenceRef
+	(*CoolDownPolicy)(nil),                    // 51: agent.v1.CoolDownPolicy
+	(*InterventionReason)(nil),                // 52: agent.v1.InterventionReason
+	(*InterventionRequest)(nil),               // 53: agent.v1.InterventionRequest
+	(*InterventionPayload)(nil),               // 54: agent.v1.InterventionPayload
+	(*AgentStatus)(nil),                       // 55: agent.v1.AgentStatus
+	(*Error)(nil),                             // 56: agent.v1.Error
+	(*Usage)(nil),                             // 57: agent.v1.Usage
+	(*MemoryQuery)(nil),                       // 58: agent.v1.MemoryQuery
+	(*MemoryFilter)(nil),                      // 59: agent.v1.MemoryFilter
+	(*MemoryResult)(nil),                      // 60: agent.v1.MemoryResult
+	(*MemoryItem)(nil),                        // 61: agent.v1.MemoryItem
+	nil,                                       // 62: agent.v1.UserProfile.PreferencesEntry
+	nil,                                       // 63: agent.v1.ChatMessage.MetadataEntry
+	nil,                                       // 64: agent.v1.ChatResponse.MetadataEntry
+	nil,                                       // 65: agent.v1.ResponseFeedbackRequest.MetaEntry
+	nil,                                       // 66: agent.v1.PlanReviewRequest.MetaEntry
+	nil,                                       // 67: agent.v1.ContentReviewFeedbackRequest.MetaEntry
+	nil,                                       // 68: agent.v1.ReviewOverrideRequest.MetaEntry
+	nil,                                       // 69: agent.v1.ReviewAppealRequest.MetaEntry
+	nil,                                       // 70: agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry
+	nil,                                       // 71: agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry
+	nil,                                       // 72: agent.v1.Error.DetailsEntry
+	nil,                                       // 73: agent.v1.MemoryItem.MetadataEntry
+	(*structpb.Struct)(nil),                   // 74: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),             // 75: google.protobuf.Timestamp
 }
 var file_agent_service_proto_depIdxs = []int32{
-	13, // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
-	9,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
-	73, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
-	15, // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
-	14, // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
-	61, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
-	62, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
-	63, // 7: agent.v1.ChatResponse.metadata:type_name -> agent.v1.ChatResponse.MetadataEntry
-	47, // 8: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
-	54, // 9: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
-	55, // 10: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
-	56, // 11: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
-	45, // 12: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
-	48, // 13: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
-	53, // 14: agent.v1.ChatResponse.intervention:type_name -> agent.v1.InterventionPayload
+	14, // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
+	10, // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
+	74, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
+	16, // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
+	15, // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
+	62, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
+	63, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
+	64, // 7: agent.v1.ChatResponse.metadata:type_name -> agent.v1.ChatResponse.MetadataEntry
+	48, // 8: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
+	55, // 9: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
+	56, // 10: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
+	57, // 11: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
+	46, // 12: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
+	49, // 13: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
+	54, // 14: agent.v1.ChatResponse.intervention:type_name -> agent.v1.InterventionPayload
 	4,  // 15: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
-	0,  // 16: agent.v1.ResponseFeedbackRequest.feedback_type:type_name -> agent.v1.FeedbackType
-	1,  // 17: agent.v1.ResponseFeedbackRequest.reasons:type_name -> agent.v1.FeedbackReason
-	64, // 18: agent.v1.ResponseFeedbackRequest.meta:type_name -> agent.v1.ResponseFeedbackRequest.MetaEntry
-	2,  // 19: agent.v1.PlanReviewRequest.decision:type_name -> agent.v1.PlanReviewDecision
-	65, // 20: agent.v1.PlanReviewRequest.meta:type_name -> agent.v1.PlanReviewRequest.MetaEntry
-	3,  // 21: agent.v1.ContentReviewFeedbackRequest.feedback_type:type_name -> agent.v1.ContentReviewFeedbackType
-	66, // 22: agent.v1.ContentReviewFeedbackRequest.meta:type_name -> agent.v1.ContentReviewFeedbackRequest.MetaEntry
-	67, // 23: agent.v1.ReviewOverrideRequest.meta:type_name -> agent.v1.ReviewOverrideRequest.MetaEntry
-	68, // 24: agent.v1.ReviewAppealRequest.meta:type_name -> agent.v1.ReviewAppealRequest.MetaEntry
-	36, // 25: agent.v1.GetArbitrationQueueResponse.cases:type_name -> agent.v1.ArbitrationCaseInfo
-	69, // 26: agent.v1.ArbitrationQueueStatsInfo.by_priority:type_name -> agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry
-	70, // 27: agent.v1.ArbitrationQueueStatsInfo.by_reason:type_name -> agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry
-	43, // 28: agent.v1.GetArbitrationQueueStatsResponse.stats:type_name -> agent.v1.ArbitrationQueueStatsInfo
-	46, // 29: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
-	73, // 30: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
-	73, // 31: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
-	49, // 32: agent.v1.InterventionReason.evidence_refs:type_name -> agent.v1.EvidenceRef
-	51, // 33: agent.v1.InterventionRequest.reason:type_name -> agent.v1.InterventionReason
-	5,  // 34: agent.v1.InterventionRequest.level:type_name -> agent.v1.InterventionLevel
-	50, // 35: agent.v1.InterventionRequest.on_reject:type_name -> agent.v1.CoolDownPolicy
-	73, // 36: agent.v1.InterventionRequest.content:type_name -> google.protobuf.Struct
-	52, // 37: agent.v1.InterventionPayload.request:type_name -> agent.v1.InterventionRequest
-	7,  // 38: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
-	6,  // 39: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
-	71, // 40: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
-	58, // 41: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
-	74, // 42: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
-	74, // 43: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
-	60, // 44: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
-	74, // 45: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
-	72, // 46: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
-	8,  // 47: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
-	57, // 48: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
-	10, // 49: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
-	11, // 50: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
-	17, // 51: agent.v1.AgentService.SubmitResponseFeedback:input_type -> agent.v1.ResponseFeedbackRequest
-	19, // 52: agent.v1.AgentService.SubmitPlanReview:input_type -> agent.v1.PlanReviewRequest
-	21, // 53: agent.v1.AgentService.SubmitContentReviewFeedback:input_type -> agent.v1.ContentReviewFeedbackRequest
-	23, // 54: agent.v1.AgentService.SubmitReviewOverride:input_type -> agent.v1.ReviewOverrideRequest
-	25, // 55: agent.v1.AgentService.SubmitReviewAppeal:input_type -> agent.v1.ReviewAppealRequest
-	27, // 56: agent.v1.AgentService.GetAppealStatus:input_type -> agent.v1.AppealStatusRequest
-	29, // 57: agent.v1.AgentService.SubmitReviewFeedback:input_type -> agent.v1.ReviewFeedbackRequest
-	31, // 58: agent.v1.AgentService.RequestRegeneration:input_type -> agent.v1.RegenerationRequest
-	33, // 59: agent.v1.AgentService.GetFeedbackStatistics:input_type -> agent.v1.FeedbackStatisticsRequest
-	35, // 60: agent.v1.AgentService.GetArbitrationQueue:input_type -> agent.v1.GetArbitrationQueueRequest
-	38, // 61: agent.v1.AgentService.AssignArbitrationCase:input_type -> agent.v1.AssignArbitrationCaseRequest
-	40, // 62: agent.v1.AgentService.SubmitArbitrationDecision:input_type -> agent.v1.SubmitArbitrationDecisionRequest
-	42, // 63: agent.v1.AgentService.GetArbitrationQueueStats:input_type -> agent.v1.GetArbitrationQueueStatsRequest
-	16, // 64: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
-	59, // 65: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
-	9,  // 66: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
-	12, // 67: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
-	18, // 68: agent.v1.AgentService.SubmitResponseFeedback:output_type -> agent.v1.ResponseFeedbackResponse
-	20, // 69: agent.v1.AgentService.SubmitPlanReview:output_type -> agent.v1.PlanReviewResponse
-	22, // 70: agent.v1.AgentService.SubmitContentReviewFeedback:output_type -> agent.v1.ContentReviewFeedbackResponse
-	24, // 71: agent.v1.AgentService.SubmitReviewOverride:output_type -> agent.v1.ReviewOverrideResponse
-	26, // 72: agent.v1.AgentService.SubmitReviewAppeal:output_type -> agent.v1.ReviewAppealResponse
-	28, // 73: agent.v1.AgentService.GetAppealStatus:output_type -> agent.v1.AppealStatusResponse
-	30, // 74: agent.v1.AgentService.SubmitReviewFeedback:output_type -> agent.v1.ReviewFeedbackResponse
-	32, // 75: agent.v1.AgentService.RequestRegeneration:output_type -> agent.v1.RegenerationResponse
-	34, // 76: agent.v1.AgentService.GetFeedbackStatistics:output_type -> agent.v1.FeedbackStatisticsResponse
-	37, // 77: agent.v1.AgentService.GetArbitrationQueue:output_type -> agent.v1.GetArbitrationQueueResponse
-	39, // 78: agent.v1.AgentService.AssignArbitrationCase:output_type -> agent.v1.AssignArbitrationCaseResponse
-	41, // 79: agent.v1.AgentService.SubmitArbitrationDecision:output_type -> agent.v1.SubmitArbitrationDecisionResponse
-	44, // 80: agent.v1.AgentService.GetArbitrationQueueStats:output_type -> agent.v1.GetArbitrationQueueStatsResponse
-	64, // [64:81] is the sub-list for method output_type
-	47, // [47:64] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	75, // 16: agent.v1.ChatResponse.event_time:type_name -> google.protobuf.Timestamp
+	0,  // 17: agent.v1.ResponseFeedbackRequest.feedback_type:type_name -> agent.v1.FeedbackType
+	1,  // 18: agent.v1.ResponseFeedbackRequest.reasons:type_name -> agent.v1.FeedbackReason
+	65, // 19: agent.v1.ResponseFeedbackRequest.meta:type_name -> agent.v1.ResponseFeedbackRequest.MetaEntry
+	2,  // 20: agent.v1.PlanReviewRequest.decision:type_name -> agent.v1.PlanReviewDecision
+	66, // 21: agent.v1.PlanReviewRequest.meta:type_name -> agent.v1.PlanReviewRequest.MetaEntry
+	3,  // 22: agent.v1.ContentReviewFeedbackRequest.feedback_type:type_name -> agent.v1.ContentReviewFeedbackType
+	67, // 23: agent.v1.ContentReviewFeedbackRequest.meta:type_name -> agent.v1.ContentReviewFeedbackRequest.MetaEntry
+	68, // 24: agent.v1.ReviewOverrideRequest.meta:type_name -> agent.v1.ReviewOverrideRequest.MetaEntry
+	69, // 25: agent.v1.ReviewAppealRequest.meta:type_name -> agent.v1.ReviewAppealRequest.MetaEntry
+	37, // 26: agent.v1.GetArbitrationQueueResponse.cases:type_name -> agent.v1.ArbitrationCaseInfo
+	70, // 27: agent.v1.ArbitrationQueueStatsInfo.by_priority:type_name -> agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry
+	71, // 28: agent.v1.ArbitrationQueueStatsInfo.by_reason:type_name -> agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry
+	44, // 29: agent.v1.GetArbitrationQueueStatsResponse.stats:type_name -> agent.v1.ArbitrationQueueStatsInfo
+	47, // 30: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
+	74, // 31: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
+	74, // 32: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
+	50, // 33: agent.v1.InterventionReason.evidence_refs:type_name -> agent.v1.EvidenceRef
+	52, // 34: agent.v1.InterventionRequest.reason:type_name -> agent.v1.InterventionReason
+	5,  // 35: agent.v1.InterventionRequest.level:type_name -> agent.v1.InterventionLevel
+	51, // 36: agent.v1.InterventionRequest.on_reject:type_name -> agent.v1.CoolDownPolicy
+	74, // 37: agent.v1.InterventionRequest.content:type_name -> google.protobuf.Struct
+	53, // 38: agent.v1.InterventionPayload.request:type_name -> agent.v1.InterventionRequest
+	8,  // 39: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
+	6,  // 40: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
+	72, // 41: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
+	7,  // 42: agent.v1.Error.error_code:type_name -> agent.v1.ErrorCode
+	59, // 43: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
+	75, // 44: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
+	75, // 45: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
+	61, // 46: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
+	75, // 47: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
+	73, // 48: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
+	9,  // 49: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
+	58, // 50: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
+	11, // 51: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
+	12, // 52: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
+	18, // 53: agent.v1.AgentService.SubmitResponseFeedback:input_type -> agent.v1.ResponseFeedbackRequest
+	20, // 54: agent.v1.AgentService.SubmitPlanReview:input_type -> agent.v1.PlanReviewRequest
+	22, // 55: agent.v1.AgentService.SubmitContentReviewFeedback:input_type -> agent.v1.ContentReviewFeedbackRequest
+	24, // 56: agent.v1.AgentService.SubmitReviewOverride:input_type -> agent.v1.ReviewOverrideRequest
+	26, // 57: agent.v1.AgentService.SubmitReviewAppeal:input_type -> agent.v1.ReviewAppealRequest
+	28, // 58: agent.v1.AgentService.GetAppealStatus:input_type -> agent.v1.AppealStatusRequest
+	30, // 59: agent.v1.AgentService.SubmitReviewFeedback:input_type -> agent.v1.ReviewFeedbackRequest
+	32, // 60: agent.v1.AgentService.RequestRegeneration:input_type -> agent.v1.RegenerationRequest
+	34, // 61: agent.v1.AgentService.GetFeedbackStatistics:input_type -> agent.v1.FeedbackStatisticsRequest
+	36, // 62: agent.v1.AgentService.GetArbitrationQueue:input_type -> agent.v1.GetArbitrationQueueRequest
+	39, // 63: agent.v1.AgentService.AssignArbitrationCase:input_type -> agent.v1.AssignArbitrationCaseRequest
+	41, // 64: agent.v1.AgentService.SubmitArbitrationDecision:input_type -> agent.v1.SubmitArbitrationDecisionRequest
+	43, // 65: agent.v1.AgentService.GetArbitrationQueueStats:input_type -> agent.v1.GetArbitrationQueueStatsRequest
+	17, // 66: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
+	60, // 67: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
+	10, // 68: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
+	13, // 69: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
+	19, // 70: agent.v1.AgentService.SubmitResponseFeedback:output_type -> agent.v1.ResponseFeedbackResponse
+	21, // 71: agent.v1.AgentService.SubmitPlanReview:output_type -> agent.v1.PlanReviewResponse
+	23, // 72: agent.v1.AgentService.SubmitContentReviewFeedback:output_type -> agent.v1.ContentReviewFeedbackResponse
+	25, // 73: agent.v1.AgentService.SubmitReviewOverride:output_type -> agent.v1.ReviewOverrideResponse
+	27, // 74: agent.v1.AgentService.SubmitReviewAppeal:output_type -> agent.v1.ReviewAppealResponse
+	29, // 75: agent.v1.AgentService.GetAppealStatus:output_type -> agent.v1.AppealStatusResponse
+	31, // 76: agent.v1.AgentService.SubmitReviewFeedback:output_type -> agent.v1.ReviewFeedbackResponse
+	33, // 77: agent.v1.AgentService.RequestRegeneration:output_type -> agent.v1.RegenerationResponse
+	35, // 78: agent.v1.AgentService.GetFeedbackStatistics:output_type -> agent.v1.FeedbackStatisticsResponse
+	38, // 79: agent.v1.AgentService.GetArbitrationQueue:output_type -> agent.v1.GetArbitrationQueueResponse
+	40, // 80: agent.v1.AgentService.AssignArbitrationCase:output_type -> agent.v1.AssignArbitrationCaseResponse
+	42, // 81: agent.v1.AgentService.SubmitArbitrationDecision:output_type -> agent.v1.SubmitArbitrationDecisionResponse
+	45, // 82: agent.v1.AgentService.GetArbitrationQueueStats:output_type -> agent.v1.GetArbitrationQueueStatsResponse
+	66, // [66:83] is the sub-list for method output_type
+	49, // [49:66] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -5622,7 +5732,7 @@ func file_agent_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
-			NumEnums:      8,
+			NumEnums:      9,
 			NumMessages:   65,
 			NumExtensions: 0,
 			NumServices:   1,

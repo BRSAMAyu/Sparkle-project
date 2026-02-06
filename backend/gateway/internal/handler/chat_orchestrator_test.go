@@ -3,10 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestChatInputUnmarshalWithFiles(t *testing.T) {
@@ -126,4 +128,41 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
+}
+
+func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-4",
+		RequestId:  "req-4",
+		Timestamp:  1,
+		EventTime:  timestamppb.New(now),
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "hello",
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	assert.Equal(t, now.UnixMilli(), result["event_time"])
+	assert.Equal(t, now.UnixMilli(), result["timestamp"])
+}
+
+func TestConvertResponseToJSONErrorIncludesEnumAndLegacyCode(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-5",
+		RequestId:  "req-5",
+		Content: &agentv1.ChatResponse_Error{
+			Error: &agentv1.Error{
+				Message:   "Quota exhausted",
+				Retryable: false,
+				ErrorCode: agentv1.ErrorCode_ERROR_CODE_RATE_LIMITED,
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	errObj, ok := result["error"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "rate_limited", errObj["error_code"])
+	assert.Equal(t, "rate_limited", errObj["code"])
 }

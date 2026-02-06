@@ -20,6 +20,7 @@ message CollaborativeGalaxyUpdate {
   bytes yjs_update = 2; // Yjs binary update
   string user_id = 3;
   int64 timestamp = 4;
+  google.protobuf.Timestamp event_time = 5;
 }
 
 message SyncCollaborativeGalaxyRequest {

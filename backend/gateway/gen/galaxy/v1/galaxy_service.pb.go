@@ -28,6 +28,7 @@ type CollaborativeGalaxyUpdate struct {
 	YjsUpdate     []byte                 `protobuf:"bytes,2,opt,name=yjs_update,json=yjsUpdate,proto3" json:"yjs_update,omitempty"` // Yjs binary update
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	EventTime     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -88,6 +89,13 @@ func (x *CollaborativeGalaxyUpdate) GetTimestamp() int64 {
 		return x.Timestamp
 	}
 	return 0
+}
+
+func (x *CollaborativeGalaxyUpdate) GetEventTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EventTime
+	}
+	return nil
 }
 
 type SyncCollaborativeGalaxyRequest struct {
@@ -382,13 +390,15 @@ var File_galaxy_service_proto protoreflect.FileDescriptor
 
 const file_galaxy_service_proto_rawDesc = "" +
 	"\n" +
-	"\x14galaxy_service.proto\x12\tgalaxy.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x01\n" +
+	"\x14galaxy_service.proto\x12\tgalaxy.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x01\n" +
 	"\x19CollaborativeGalaxyUpdate\x12\x1b\n" +
 	"\tgalaxy_id\x18\x01 \x01(\tR\bgalaxyId\x12\x1d\n" +
 	"\n" +
 	"yjs_update\x18\x02 \x01(\fR\tyjsUpdate\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1c\n" +
-	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\"}\n" +
+	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x129\n" +
+	"\n" +
+	"event_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\teventTime\"}\n" +
 	"\x1eSyncCollaborativeGalaxyRequest\x12\x1b\n" +
 	"\tgalaxy_id\x18\x01 \x01(\tR\bgalaxyId\x12%\n" +
 	"\x0epartial_update\x18\x02 \x01(\fR\rpartialUpdate\x12\x17\n" +
@@ -441,16 +451,17 @@ var file_galaxy_service_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),           // 5: google.protobuf.Timestamp
 }
 var file_galaxy_service_proto_depIdxs = []int32{
-	5, // 0: galaxy.v1.UpdateNodeMasteryRequest.version:type_name -> google.protobuf.Timestamp
-	3, // 1: galaxy.v1.GalaxyService.UpdateNodeMastery:input_type -> galaxy.v1.UpdateNodeMasteryRequest
-	1, // 2: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:input_type -> galaxy.v1.SyncCollaborativeGalaxyRequest
-	4, // 3: galaxy.v1.GalaxyService.UpdateNodeMastery:output_type -> galaxy.v1.UpdateNodeMasteryResponse
-	2, // 4: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:output_type -> galaxy.v1.SyncCollaborativeGalaxyResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 0: galaxy.v1.CollaborativeGalaxyUpdate.event_time:type_name -> google.protobuf.Timestamp
+	5, // 1: galaxy.v1.UpdateNodeMasteryRequest.version:type_name -> google.protobuf.Timestamp
+	3, // 2: galaxy.v1.GalaxyService.UpdateNodeMastery:input_type -> galaxy.v1.UpdateNodeMasteryRequest
+	1, // 3: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:input_type -> galaxy.v1.SyncCollaborativeGalaxyRequest
+	4, // 4: galaxy.v1.GalaxyService.UpdateNodeMastery:output_type -> galaxy.v1.UpdateNodeMasteryResponse
+	2, // 5: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:output_type -> galaxy.v1.SyncCollaborativeGalaxyResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_galaxy_service_proto_init() }

@@ -5,6 +5,7 @@ package sparkle.ws;
 option go_package = "github.com/sparkle/gateway/gen/ws;ws";
 
 import "agent_service.proto";
+import "google/protobuf/timestamp.proto";
 
 // WebSocketMessage represents the envelope for all WebSocket communications
 message WebSocketMessage {
@@ -14,6 +15,7 @@ message WebSocketMessage {
   string trace_id = 4; // OpenTelemetry Trace ID
   string request_id = 5; // Idempotency / Request ID
   int64 timestamp = 6; // Unix timestamp in milliseconds
+  google.protobuf.Timestamp event_time = 7; // Preferred timestamp for new clients
 }
 
 // ChatMessage represents a user chat message payload
@@ -30,6 +32,7 @@ message UpdateNodeMasteryRequest {
   int64 timestamp = 3;
   string request_id = 4;
   int32 revision = 5;
+  google.protobuf.Timestamp event_time = 6;
 }
 
 // Intervention push messages for real-time adaptive interventions

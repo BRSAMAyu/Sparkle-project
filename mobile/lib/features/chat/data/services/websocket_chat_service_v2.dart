@@ -318,8 +318,11 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'error':
         final error = data['error'] as Map<String, dynamic>?;
         if (error != null) {
+          final code = (error['error_code'] as String?) ??
+              (error['code'] as String?) ??
+              'UNKNOWN';
           return ErrorEvent(
-            code: error['code'] as String? ?? 'UNKNOWN',
+            code: code,
             message: error['message'] as String? ?? 'Unknown error',
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
