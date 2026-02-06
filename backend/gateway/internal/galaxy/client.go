@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Client struct {
@@ -65,12 +64,12 @@ func (c *Client) Close() {
 
 func (c *Client) UpdateNodeMastery(ctx context.Context, userID, nodeID string, mastery int32, version time.Time, reason string) (*galaxyv1.UpdateNodeMasteryResponse, error) {
 	req := &galaxyv1.UpdateNodeMasteryRequest{
-		UserId:  userID,
-		NodeId:  nodeID,
-		Mastery: mastery,
-		Version: timestamppb.New(version),
-		Reason:  reason,
+		UserId:   userID,
+		NodeId:   nodeID,
+		Mastery:  mastery,
+		Revision: version.UnixMilli(),
+		Reason:   reason,
 	}
-	
+
 	return c.api.UpdateNodeMastery(ctx, req)
 }

@@ -99,7 +99,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				PromptVersion: "v1",
 				Content:       &agentv1.ChatResponse_FullText{FullText: cachedResp},
 				FinishReason:  agentv1.FinishReason_STOP,
-				Timestamp:     now.UnixMilli(),
 				EventTime:     timestamppb.New(now),
 			}
 

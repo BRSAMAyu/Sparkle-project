@@ -4,13 +4,15 @@ version: v2
 plugins:
   # Go code generation
   - remote: buf.build/protocolbuffers/go
-    out: backend/gateway/gen
+    out: backend/gateway
     opt:
-      - paths=source_relative
+      - paths=import
+      - module=github.com/sparkle/gateway
   - remote: buf.build/grpc/go
-    out: backend/gateway/gen
+    out: backend/gateway
     opt:
-      - paths=source_relative
+      - paths=import
+      - module=github.com/sparkle/gateway
 
   # Python code generation (remote plugins)
   - remote: buf.build/protocolbuffers/python

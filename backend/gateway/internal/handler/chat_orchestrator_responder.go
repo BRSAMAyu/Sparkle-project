@@ -342,7 +342,6 @@ func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
 		Payload:   payload,
 		TraceId:   r.msg.TraceId,
 		RequestId: r.msg.RequestId,
-		Timestamp: now.UnixMilli(),
 		EventTime: timestamppb.New(now),
 	}
 	data, err := proto.Marshal(resp)
