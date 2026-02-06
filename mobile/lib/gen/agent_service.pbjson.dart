@@ -1,13 +1,15 @@
+// This is a generated file - do not edit.
 //
-//  Generated code. Do not modify.
-//  source: agent_service.proto
-//
-// @dart = 2.12
+// Generated from agent_service.proto.
+
+// @dart = 3.3
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_final_fields
-// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
+// ignore_for_file: constant_identifier_names
+// ignore_for_file: curly_braces_in_flow_control_structures
+// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
+// ignore_for_file: unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -81,9 +83,10 @@ const ContentReviewFeedbackType$json = {
 };
 
 /// Descriptor for `ContentReviewFeedbackType`. Decode as a `google.protobuf.EnumDescriptorProto`.
-final $typed_data.Uint8List contentReviewFeedbackTypeDescriptor = $convert.base64Decode(
-    'ChlDb250ZW50UmV2aWV3RmVlZGJhY2tUeXBlEg0KCVNBVElTRklFRBAAEg8KC1VOU0FUSVNGSU'
-    'VEEAESDAoITU9ESUZJRUQQAhISCg5SRVBPUlRFRF9FUlJPUhADEgsKB1NLSVBQRUQQBA==');
+final $typed_data.Uint8List contentReviewFeedbackTypeDescriptor =
+    $convert.base64Decode(
+        'ChlDb250ZW50UmV2aWV3RmVlZGJhY2tUeXBlEg0KCVNBVElTRklFRBAAEg8KC1VOU0FUSVNGSU'
+        'VEEAESDAoITU9ESUZJRUQQAhISCg5SRVBPUlRFRF9FUlJPUhADEgsKB1NLSVBQRUQQBA==');
 
 @$core.Deprecated('Use finishReasonDescriptor instead')
 const FinishReason$json = {
@@ -144,6 +147,33 @@ final $typed_data.Uint8List agentTypeDescriptor = $convert.base64Decode(
     'TEFUSU9OEAYSCQoFSU1BR0UQBxIJCgVBVURJTxAIEgsKB1dSSVRJTkcQCRINCglSRUFTT05JTk'
     'cQCg==');
 
+@$core.Deprecated('Use errorCodeDescriptor instead')
+const ErrorCode$json = {
+  '1': 'ErrorCode',
+  '2': [
+    {'1': 'ERROR_CODE_UNSPECIFIED', '2': 0},
+    {'1': 'ERROR_CODE_UNKNOWN', '2': 1},
+    {'1': 'ERROR_CODE_INVALID_ARGUMENT', '2': 2},
+    {'1': 'ERROR_CODE_UNAUTHORIZED', '2': 3},
+    {'1': 'ERROR_CODE_FORBIDDEN', '2': 4},
+    {'1': 'ERROR_CODE_NOT_FOUND', '2': 5},
+    {'1': 'ERROR_CODE_CONFLICT', '2': 6},
+    {'1': 'ERROR_CODE_RATE_LIMITED', '2': 7},
+    {'1': 'ERROR_CODE_UNAVAILABLE', '2': 8},
+    {'1': 'ERROR_CODE_TIMEOUT', '2': 9},
+    {'1': 'ERROR_CODE_INTERNAL', '2': 10},
+  ],
+};
+
+/// Descriptor for `ErrorCode`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List errorCodeDescriptor = $convert.base64Decode(
+    'CglFcnJvckNvZGUSGgoWRVJST1JfQ09ERV9VTlNQRUNJRklFRBAAEhYKEkVSUk9SX0NPREVfVU'
+    '5LTk9XThABEh8KG0VSUk9SX0NPREVfSU5WQUxJRF9BUkdVTUVOVBACEhsKF0VSUk9SX0NPREVf'
+    'VU5BVVRIT1JJWkVEEAMSGAoURVJST1JfQ09ERV9GT1JCSURERU4QBBIYChRFUlJPUl9DT0RFX0'
+    '5PVF9GT1VORBAFEhcKE0VSUk9SX0NPREVfQ09ORkxJQ1QQBhIbChdFUlJPUl9DT0RFX1JBVEVf'
+    'TElNSVRFRBAHEhoKFkVSUk9SX0NPREVfVU5BVkFJTEFCTEUQCBIWChJFUlJPUl9DT0RFX1RJTU'
+    'VPVVQQCRIXChNFUlJPUl9DT0RFX0lOVEVSTkFMEAo=');
+
 @$core.Deprecated('Use chatRequestDescriptor instead')
 const ChatRequest$json = {
   '1': 'ChatRequest',
@@ -151,14 +181,56 @@ const ChatRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'session_id', '3': 2, '4': 1, '5': 9, '10': 'sessionId'},
     {'1': 'message', '3': 3, '4': 1, '5': 9, '9': 0, '10': 'message'},
-    {'1': 'tool_result', '3': 7, '4': 1, '5': 11, '6': '.agent.v1.ToolResult', '9': 0, '10': 'toolResult'},
-    {'1': 'user_profile', '3': 4, '4': 1, '5': 11, '6': '.agent.v1.UserProfile', '10': 'userProfile'},
-    {'1': 'extra_context', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'extraContext'},
-    {'1': 'history', '3': 6, '4': 3, '5': 11, '6': '.agent.v1.ChatMessage', '10': 'history'},
-    {'1': 'config', '3': 8, '4': 1, '5': 11, '6': '.agent.v1.ChatConfig', '10': 'config'},
+    {
+      '1': 'tool_result',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolResult',
+      '9': 0,
+      '10': 'toolResult'
+    },
+    {
+      '1': 'user_profile',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.UserProfile',
+      '10': 'userProfile'
+    },
+    {
+      '1': 'extra_context',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'extraContext'
+    },
+    {
+      '1': 'history',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatMessage',
+      '10': 'history'
+    },
+    {
+      '1': 'config',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ChatConfig',
+      '10': 'config'
+    },
     {'1': 'request_id', '3': 9, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'file_ids', '3': 10, '4': 3, '5': 9, '10': 'fileIds'},
-    {'1': 'include_references', '3': 11, '4': 1, '5': 8, '10': 'includeReferences'},
+    {
+      '1': 'include_references',
+      '3': 11,
+      '4': 1,
+      '5': 8,
+      '10': 'includeReferences'
+    },
     {'1': 'active_tools', '3': 12, '4': 3, '5': 9, '10': 'activeTools'},
     {'1': 'chat_mode', '3': 13, '4': 1, '5': 9, '10': 'chatMode'},
   ],
@@ -188,7 +260,14 @@ const UserProfile$json = {
     {'1': 'timezone', '3': 2, '4': 1, '5': 9, '10': 'timezone'},
     {'1': 'language', '3': 3, '4': 1, '5': 9, '10': 'language'},
     {'1': 'is_pro', '3': 4, '4': 1, '5': 8, '10': 'isPro'},
-    {'1': 'preferences', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.UserProfile.PreferencesEntry', '10': 'preferences'},
+    {
+      '1': 'preferences',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.UserProfile.PreferencesEntry',
+      '10': 'preferences'
+    },
     {'1': 'extra_context', '3': 6, '4': 1, '5': 9, '10': 'extraContext'},
     {'1': 'level', '3': 7, '4': 1, '5': 5, '10': 'level'},
     {'1': 'avatar_url', '3': 8, '4': 1, '5': 9, '10': 'avatarUrl'},
@@ -225,8 +304,8 @@ const ProfileRequest$json = {
 };
 
 /// Descriptor for `ProfileRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List profileRequestDescriptor = $convert.base64Decode(
-    'Cg5Qcm9maWxlUmVxdWVzdBIXCgd1c2VyX2lkGAEgASgJUgZ1c2VySWQ=');
+final $typed_data.Uint8List profileRequestDescriptor = $convert
+    .base64Decode('Cg5Qcm9maWxlUmVxdWVzdBIXCgd1c2VyX2lkGAEgASgJUgZ1c2VySWQ=');
 
 @$core.Deprecated('Use weeklyReportRequestDescriptor instead')
 const WeeklyReportRequest$json = {
@@ -300,7 +379,14 @@ const ChatMessage$json = {
     {'1': 'content', '3': 2, '4': 1, '5': 9, '10': 'content'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'tool_call_id', '3': 4, '4': 1, '5': 9, '10': 'toolCallId'},
-    {'1': 'metadata', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.ChatMessage.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatMessage.MetadataEntry',
+      '10': 'metadata'
+    },
   ],
   '3': [ChatMessage_MetadataEntry$json],
 };
@@ -333,18 +419,103 @@ const ChatResponse$json = {
     {'1': 'trace_id', '3': 15, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'workflow_id', '3': 16, '4': 1, '5': 9, '10': 'workflowId'},
     {'1': 'prompt_version', '3': 17, '4': 1, '5': 9, '10': 'promptVersion'},
-    {'1': 'metadata', '3': 18, '4': 3, '5': 11, '6': '.agent.v1.ChatResponse.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 18,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatResponse.MetadataEntry',
+      '10': 'metadata'
+    },
     {'1': 'delta', '3': 3, '4': 1, '5': 9, '9': 0, '10': 'delta'},
-    {'1': 'tool_call', '3': 4, '4': 1, '5': 11, '6': '.agent.v1.ToolCall', '9': 0, '10': 'toolCall'},
-    {'1': 'status_update', '3': 5, '4': 1, '5': 11, '6': '.agent.v1.AgentStatus', '9': 0, '10': 'statusUpdate'},
+    {
+      '1': 'tool_call',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolCall',
+      '9': 0,
+      '10': 'toolCall'
+    },
+    {
+      '1': 'status_update',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.AgentStatus',
+      '9': 0,
+      '10': 'statusUpdate'
+    },
     {'1': 'full_text', '3': 6, '4': 1, '5': 9, '9': 0, '10': 'fullText'},
-    {'1': 'error', '3': 7, '4': 1, '5': 11, '6': '.agent.v1.Error', '9': 0, '10': 'error'},
-    {'1': 'usage', '3': 8, '4': 1, '5': 11, '6': '.agent.v1.Usage', '9': 0, '10': 'usage'},
-    {'1': 'citations', '3': 11, '4': 1, '5': 11, '6': '.agent.v1.CitationBlock', '9': 0, '10': 'citations'},
-    {'1': 'tool_result', '3': 12, '4': 1, '5': 11, '6': '.agent.v1.ToolResultPayload', '9': 0, '10': 'toolResult'},
-    {'1': 'intervention', '3': 14, '4': 1, '5': 11, '6': '.agent.v1.InterventionPayload', '9': 0, '10': 'intervention'},
-    {'1': 'finish_reason', '3': 9, '4': 1, '5': 14, '6': '.agent.v1.FinishReason', '10': 'finishReason'},
-    {'1': 'timestamp', '3': 13, '4': 1, '5': 3, '10': 'timestamp'},
+    {
+      '1': 'error',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.Error',
+      '9': 0,
+      '10': 'error'
+    },
+    {
+      '1': 'usage',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.Usage',
+      '9': 0,
+      '10': 'usage'
+    },
+    {
+      '1': 'citations',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.CitationBlock',
+      '9': 0,
+      '10': 'citations'
+    },
+    {
+      '1': 'tool_result',
+      '3': 12,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolResultPayload',
+      '9': 0,
+      '10': 'toolResult'
+    },
+    {
+      '1': 'intervention',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionPayload',
+      '9': 0,
+      '10': 'intervention'
+    },
+    {
+      '1': 'finish_reason',
+      '3': 9,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.FinishReason',
+      '10': 'finishReason'
+    },
+    {
+      '1': 'timestamp',
+      '3': 13,
+      '4': 1,
+      '5': 3,
+      '8': {'3': true},
+      '10': 'timestamp',
+    },
+    {
+      '1': 'event_time',
+      '3': 19,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'eventTime'
+    },
   ],
   '3': [ChatResponse_MetadataEntry$json],
   '8': [
@@ -377,9 +548,10 @@ final $typed_data.Uint8List chatResponseDescriptor = $convert.base64Decode(
     'Q2l0YXRpb25CbG9ja0gAUgljaXRhdGlvbnMSPgoLdG9vbF9yZXN1bHQYDCABKAsyGy5hZ2VudC'
     '52MS5Ub29sUmVzdWx0UGF5bG9hZEgAUgp0b29sUmVzdWx0EkMKDGludGVydmVudGlvbhgOIAEo'
     'CzIdLmFnZW50LnYxLkludGVydmVudGlvblBheWxvYWRIAFIMaW50ZXJ2ZW50aW9uEjsKDWZpbm'
-    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhIc'
-    'Cgl0aW1lc3RhbXAYDSABKANSCXRpbWVzdGFtcBo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tleRgBIA'
-    'EoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAFCCQoHY29udGVudA==');
+    'lzaF9yZWFzb24YCSABKA4yFi5hZ2VudC52MS5GaW5pc2hSZWFzb25SDGZpbmlzaFJlYXNvbhIg'
+    'Cgl0aW1lc3RhbXAYDSABKANCAhgBUgl0aW1lc3RhbXASOQoKZXZlbnRfdGltZRgTIAEoCzIaLm'
+    'dvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCWV2ZW50VGltZRo7Cg1NZXRhZGF0YUVudHJ5EhAK'
+    'A2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAFCCQoHY29udGVudA==');
 
 @$core.Deprecated('Use responseFeedbackRequestDescriptor instead')
 const ResponseFeedbackRequest$json = {
@@ -388,12 +560,33 @@ const ResponseFeedbackRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'response_id', '3': 2, '4': 1, '5': 9, '10': 'responseId'},
     {'1': 'trace_id', '3': 3, '4': 1, '5': 9, '10': 'traceId'},
-    {'1': 'feedback_type', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.FeedbackType', '10': 'feedbackType'},
-    {'1': 'reasons', '3': 5, '4': 3, '5': 14, '6': '.agent.v1.FeedbackReason', '10': 'reasons'},
+    {
+      '1': 'feedback_type',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.FeedbackType',
+      '10': 'feedbackType'
+    },
+    {
+      '1': 'reasons',
+      '3': 5,
+      '4': 3,
+      '5': 14,
+      '6': '.agent.v1.FeedbackReason',
+      '10': 'reasons'
+    },
     {'1': 'free_text', '3': 6, '4': 1, '5': 9, '10': 'freeText'},
     {'1': 'workflow_id', '3': 7, '4': 1, '5': 9, '10': 'workflowId'},
     {'1': 'prompt_version', '3': 8, '4': 1, '5': 9, '10': 'promptVersion'},
-    {'1': 'meta', '3': 9, '4': 3, '5': 11, '6': '.agent.v1.ResponseFeedbackRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ResponseFeedbackRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [ResponseFeedbackRequest_MetaEntry$json],
 };
@@ -442,12 +635,26 @@ const PlanReviewRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'plan_id', '3': 2, '4': 1, '5': 9, '10': 'planId'},
     {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
-    {'1': 'decision', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.PlanReviewDecision', '10': 'decision'},
+    {
+      '1': 'decision',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.PlanReviewDecision',
+      '10': 'decision'
+    },
     {'1': 'user_comment', '3': 5, '4': 1, '5': 9, '10': 'userComment'},
     {'1': 'trace_id', '3': 6, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'workflow_id', '3': 7, '4': 1, '5': 9, '10': 'workflowId'},
     {'1': 'prompt_version', '3': 8, '4': 1, '5': 9, '10': 'promptVersion'},
-    {'1': 'meta', '3': 9, '4': 3, '5': 11, '6': '.agent.v1.PlanReviewRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.PlanReviewRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [PlanReviewRequest_MetaEntry$json],
 };
@@ -497,12 +704,26 @@ const ContentReviewFeedbackRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
     {'1': 'response_id', '3': 3, '4': 1, '5': 9, '10': 'responseId'},
-    {'1': 'feedback_type', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.ContentReviewFeedbackType', '10': 'feedbackType'},
+    {
+      '1': 'feedback_type',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.ContentReviewFeedbackType',
+      '10': 'feedbackType'
+    },
     {'1': 'rating', '3': 5, '4': 1, '5': 5, '10': 'rating'},
     {'1': 'comment', '3': 6, '4': 1, '5': 9, '10': 'comment'},
     {'1': 'issues_reported', '3': 7, '4': 3, '5': 9, '10': 'issuesReported'},
     {'1': 'session_id', '3': 8, '4': 1, '5': 9, '10': 'sessionId'},
-    {'1': 'meta', '3': 9, '4': 3, '5': 11, '6': '.agent.v1.ContentReviewFeedbackRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ContentReviewFeedbackRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [ContentReviewFeedbackRequest_MetaEntry$json],
 };
@@ -539,10 +760,11 @@ const ContentReviewFeedbackResponse$json = {
 };
 
 /// Descriptor for `ContentReviewFeedbackResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List contentReviewFeedbackResponseDescriptor = $convert.base64Decode(
-    'Ch1Db250ZW50UmV2aWV3RmVlZGJhY2tSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
-    'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USHwoLZmVlZGJhY2tfaWQYAyABKAlSCmZlZWRi'
-    'YWNrSWQ=');
+final $typed_data.Uint8List contentReviewFeedbackResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1Db250ZW50UmV2aWV3RmVlZGJhY2tSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
+        'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USHwoLZmVlZGJhY2tfaWQYAyABKAlSCmZlZWRi'
+        'YWNrSWQ=');
 
 @$core.Deprecated('Use reviewOverrideRequestDescriptor instead')
 const ReviewOverrideRequest$json = {
@@ -550,11 +772,24 @@ const ReviewOverrideRequest$json = {
   '2': [
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
-    {'1': 'original_decision', '3': 3, '4': 1, '5': 9, '10': 'originalDecision'},
+    {
+      '1': 'original_decision',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '10': 'originalDecision'
+    },
     {'1': 'new_decision', '3': 4, '4': 1, '5': 9, '10': 'newDecision'},
     {'1': 'reason', '3': 5, '4': 1, '5': 9, '10': 'reason'},
     {'1': 'session_id', '3': 6, '4': 1, '5': 9, '10': 'sessionId'},
-    {'1': 'meta', '3': 7, '4': 3, '5': 11, '6': '.agent.v1.ReviewOverrideRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ReviewOverrideRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [ReviewOverrideRequest_MetaEntry$json],
 };
@@ -600,9 +835,22 @@ const ReviewAppealRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'review_id', '3': 2, '4': 1, '5': 9, '10': 'reviewId'},
     {'1': 'appeal_reason', '3': 3, '4': 1, '5': 9, '10': 'appealReason'},
-    {'1': 'issues_with_review', '3': 4, '4': 3, '5': 9, '10': 'issuesWithReview'},
+    {
+      '1': 'issues_with_review',
+      '3': 4,
+      '4': 3,
+      '5': 9,
+      '10': 'issuesWithReview'
+    },
     {'1': 'session_id', '3': 5, '4': 1, '5': 9, '10': 'sessionId'},
-    {'1': 'meta', '3': 6, '4': 3, '5': 11, '6': '.agent.v1.ReviewAppealRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ReviewAppealRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [ReviewAppealRequest_MetaEntry$json],
 };
@@ -669,7 +917,13 @@ const AppealStatusResponse$json = {
     {'1': 'resolution', '3': 6, '4': 1, '5': 9, '10': 'resolution'},
     {'1': 'resolved_by', '3': 7, '4': 1, '5': 9, '10': 'resolvedBy'},
     {'1': 'resolved_at', '3': 8, '4': 1, '5': 9, '10': 'resolvedAt'},
-    {'1': 'secondary_decision', '3': 9, '4': 1, '5': 9, '10': 'secondaryDecision'},
+    {
+      '1': 'secondary_decision',
+      '3': 9,
+      '4': 1,
+      '5': 9,
+      '10': 'secondaryDecision'
+    },
     {'1': 'secondary_score', '3': 10, '4': 1, '5': 1, '10': 'secondaryScore'},
   ],
 };
@@ -694,8 +948,20 @@ const ReviewFeedbackRequest$json = {
     {'1': 'rating', '3': 4, '4': 1, '5': 5, '10': 'rating'},
     {'1': 'was_helpful', '3': 5, '4': 1, '5': 8, '10': 'wasHelpful'},
     {'1': 'was_accurate', '3': 6, '4': 1, '5': 8, '10': 'wasAccurate'},
-    {'1': 'inaccurate_points', '3': 7, '4': 3, '5': 9, '10': 'inaccuratePoints'},
-    {'1': 'specificity_level', '3': 8, '4': 1, '5': 9, '10': 'specificityLevel'},
+    {
+      '1': 'inaccurate_points',
+      '3': 7,
+      '4': 3,
+      '5': 9,
+      '10': 'inaccuratePoints'
+    },
+    {
+      '1': 'specificity_level',
+      '3': 8,
+      '4': 1,
+      '5': 9,
+      '10': 'specificityLevel'
+    },
     {'1': 'comments', '3': 9, '4': 1, '5': 9, '10': 'comments'},
     {'1': 'tags', '3': 10, '4': 3, '5': 9, '10': 'tags'},
   ],
@@ -731,12 +997,36 @@ const RegenerationRequest$json = {
   '1': 'RegenerationRequest',
   '2': [
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
-    {'1': 'original_content_id', '3': 2, '4': 1, '5': 9, '10': 'originalContentId'},
+    {
+      '1': 'original_content_id',
+      '3': 2,
+      '4': 1,
+      '5': 9,
+      '10': 'originalContentId'
+    },
     {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
-    {'1': 'regeneration_type', '3': 4, '4': 1, '5': 9, '10': 'regenerationType'},
-    {'1': 'improvement_hints', '3': 5, '4': 3, '5': 9, '10': 'improvementHints'},
+    {
+      '1': 'regeneration_type',
+      '3': 4,
+      '4': 1,
+      '5': 9,
+      '10': 'regenerationType'
+    },
+    {
+      '1': 'improvement_hints',
+      '3': 5,
+      '4': 3,
+      '5': 9,
+      '10': 'improvementHints'
+    },
     {'1': 'focus_areas', '3': 6, '4': 3, '5': 9, '10': 'focusAreas'},
-    {'1': 'custom_instructions', '3': 7, '4': 1, '5': 9, '10': 'customInstructions'},
+    {
+      '1': 'custom_instructions',
+      '3': 7,
+      '4': 1,
+      '5': 9,
+      '10': 'customInstructions'
+    },
   ],
 };
 
@@ -757,10 +1047,28 @@ const RegenerationResponse$json = {
     {'1': 'request_id', '3': 2, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'new_content', '3': 3, '4': 1, '5': 9, '10': 'newContent'},
     {'1': 'new_content_id', '3': 4, '4': 1, '5': 9, '10': 'newContentId'},
-    {'1': 'improvement_summary', '3': 5, '4': 1, '5': 9, '10': 'improvementSummary'},
+    {
+      '1': 'improvement_summary',
+      '3': 5,
+      '4': 1,
+      '5': 9,
+      '10': 'improvementSummary'
+    },
     {'1': 'changes_made', '3': 6, '4': 3, '5': 9, '10': 'changesMade'},
-    {'1': 'score_improvement', '3': 7, '4': 1, '5': 1, '10': 'scoreImprovement'},
-    {'1': 'generation_time_ms', '3': 8, '4': 1, '5': 5, '10': 'generationTimeMs'},
+    {
+      '1': 'score_improvement',
+      '3': 7,
+      '4': 1,
+      '5': 1,
+      '10': 'scoreImprovement'
+    },
+    {
+      '1': 'generation_time_ms',
+      '3': 8,
+      '4': 1,
+      '5': 5,
+      '10': 'generationTimeMs'
+    },
   ],
 };
 
@@ -783,9 +1091,10 @@ const FeedbackStatisticsRequest$json = {
 };
 
 /// Descriptor for `FeedbackStatisticsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List feedbackStatisticsRequestDescriptor = $convert.base64Decode(
-    'ChlGZWVkYmFja1N0YXRpc3RpY3NSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIfCg'
-    'twZXJpb2RfZGF5cxgCIAEoBVIKcGVyaW9kRGF5cw==');
+final $typed_data.Uint8List feedbackStatisticsRequestDescriptor =
+    $convert.base64Decode(
+        'ChlGZWVkYmFja1N0YXRpc3RpY3NSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIfCg'
+        'twZXJpb2RfZGF5cxgCIAEoBVIKcGVyaW9kRGF5cw==');
 
 @$core.Deprecated('Use feedbackStatisticsResponseDescriptor instead')
 const FeedbackStatisticsResponse$json = {
@@ -795,8 +1104,20 @@ const FeedbackStatisticsResponse$json = {
     {'1': 'avg_rating', '3': 2, '4': 1, '5': 1, '10': 'avgRating'},
     {'1': 'helpful_rate', '3': 3, '4': 1, '5': 1, '10': 'helpfulRate'},
     {'1': 'accuracy_rate', '3': 4, '4': 1, '5': 1, '10': 'accuracyRate'},
-    {'1': 'regeneration_requests', '3': 5, '4': 1, '5': 5, '10': 'regenerationRequests'},
-    {'1': 'successful_regenerations', '3': 6, '4': 1, '5': 5, '10': 'successfulRegenerations'},
+    {
+      '1': 'regeneration_requests',
+      '3': 5,
+      '4': 1,
+      '5': 5,
+      '10': 'regenerationRequests'
+    },
+    {
+      '1': 'successful_regenerations',
+      '3': 6,
+      '4': 1,
+      '5': 5,
+      '10': 'successfulRegenerations'
+    },
     {'1': 'period_days', '3': 7, '4': 1, '5': 5, '10': 'periodDays'},
   ],
 };
@@ -821,10 +1142,11 @@ const GetArbitrationQueueRequest$json = {
 };
 
 /// Descriptor for `GetArbitrationQueueRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getArbitrationQueueRequestDescriptor = $convert.base64Decode(
-    'ChpHZXRBcmJpdHJhdGlvblF1ZXVlUmVxdWVzdBIUCgVsaW1pdBgBIAEoBVIFbGltaXQSJwoPcH'
-    'Jpb3JpdHlfZmlsdGVyGAIgASgJUg5wcmlvcml0eUZpbHRlchIjCg1zdGF0dXNfZmlsdGVyGAMg'
-    'ASgJUgxzdGF0dXNGaWx0ZXI=');
+final $typed_data.Uint8List getArbitrationQueueRequestDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRBcmJpdHJhdGlvblF1ZXVlUmVxdWVzdBIUCgVsaW1pdBgBIAEoBVIFbGltaXQSJwoPcH'
+        'Jpb3JpdHlfZmlsdGVyGAIgASgJUg5wcmlvcml0eUZpbHRlchIjCg1zdGF0dXNfZmlsdGVyGAMg'
+        'ASgJUgxzdGF0dXNGaWx0ZXI=');
 
 @$core.Deprecated('Use arbitrationCaseInfoDescriptor instead')
 const ArbitrationCaseInfo$json = {
@@ -834,15 +1156,39 @@ const ArbitrationCaseInfo$json = {
     {'1': 'appeal_id', '3': 2, '4': 1, '5': 9, '10': 'appealId'},
     {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
     {'1': 'user_id', '3': 4, '4': 1, '5': 9, '10': 'userId'},
-    {'1': 'escalation_reason', '3': 5, '4': 1, '5': 9, '10': 'escalationReason'},
+    {
+      '1': 'escalation_reason',
+      '3': 5,
+      '4': 1,
+      '5': 9,
+      '10': 'escalationReason'
+    },
     {'1': 'priority', '3': 6, '4': 1, '5': 9, '10': 'priority'},
     {'1': 'created_at', '3': 7, '4': 1, '5': 9, '10': 'createdAt'},
     {'1': 'status', '3': 8, '4': 1, '5': 9, '10': 'status'},
     {'1': 'assigned_to', '3': 9, '4': 1, '5': 9, '10': 'assignedTo'},
     {'1': 'assigned_at', '3': 10, '4': 1, '5': 9, '10': 'assignedAt'},
-    {'1': 'original_review_score', '3': 11, '4': 1, '5': 1, '10': 'originalReviewScore'},
-    {'1': 'secondary_review_score', '3': 12, '4': 1, '5': 1, '10': 'secondaryReviewScore'},
-    {'1': 'score_discrepancy', '3': 13, '4': 1, '5': 1, '10': 'scoreDiscrepancy'},
+    {
+      '1': 'original_review_score',
+      '3': 11,
+      '4': 1,
+      '5': 1,
+      '10': 'originalReviewScore'
+    },
+    {
+      '1': 'secondary_review_score',
+      '3': 12,
+      '4': 1,
+      '5': 1,
+      '10': 'secondaryReviewScore'
+    },
+    {
+      '1': 'score_discrepancy',
+      '3': 13,
+      '4': 1,
+      '5': 1,
+      '10': 'scoreDiscrepancy'
+    },
     {'1': 'resolution', '3': 14, '4': 1, '5': 9, '10': 'resolution'},
     {'1': 'final_decision', '3': 15, '4': 1, '5': 9, '10': 'finalDecision'},
     {'1': 'resolved_at', '3': 16, '4': 1, '5': 9, '10': 'resolvedAt'},
@@ -870,16 +1216,24 @@ final $typed_data.Uint8List arbitrationCaseInfoDescriptor = $convert.base64Decod
 const GetArbitrationQueueResponse$json = {
   '1': 'GetArbitrationQueueResponse',
   '2': [
-    {'1': 'cases', '3': 1, '4': 3, '5': 11, '6': '.agent.v1.ArbitrationCaseInfo', '10': 'cases'},
+    {
+      '1': 'cases',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationCaseInfo',
+      '10': 'cases'
+    },
     {'1': 'total_count', '3': 2, '4': 1, '5': 5, '10': 'totalCount'},
   ],
 };
 
 /// Descriptor for `GetArbitrationQueueResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getArbitrationQueueResponseDescriptor = $convert.base64Decode(
-    'ChtHZXRBcmJpdHJhdGlvblF1ZXVlUmVzcG9uc2USMwoFY2FzZXMYASADKAsyHS5hZ2VudC52MS'
-    '5BcmJpdHJhdGlvbkNhc2VJbmZvUgVjYXNlcxIfCgt0b3RhbF9jb3VudBgCIAEoBVIKdG90YWxD'
-    'b3VudA==');
+final $typed_data.Uint8List getArbitrationQueueResponseDescriptor =
+    $convert.base64Decode(
+        'ChtHZXRBcmJpdHJhdGlvblF1ZXVlUmVzcG9uc2USMwoFY2FzZXMYASADKAsyHS5hZ2VudC52MS'
+        '5BcmJpdHJhdGlvbkNhc2VJbmZvUgVjYXNlcxIfCgt0b3RhbF9jb3VudBgCIAEoBVIKdG90YWxD'
+        'b3VudA==');
 
 @$core.Deprecated('Use assignArbitrationCaseRequestDescriptor instead')
 const AssignArbitrationCaseRequest$json = {
@@ -892,10 +1246,11 @@ const AssignArbitrationCaseRequest$json = {
 };
 
 /// Descriptor for `AssignArbitrationCaseRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List assignArbitrationCaseRequestDescriptor = $convert.base64Decode(
-    'ChxBc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXF1ZXN0EhcKB2Nhc2VfaWQYASABKAlSBmNhc2VJZB'
-    'IjCg1hcmJpdHJhdG9yX2lkGAIgASgJUgxhcmJpdHJhdG9ySWQSJwoPYXJiaXRyYXRvcl9yb2xl'
-    'GAMgASgJUg5hcmJpdHJhdG9yUm9sZQ==');
+final $typed_data.Uint8List assignArbitrationCaseRequestDescriptor =
+    $convert.base64Decode(
+        'ChxBc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXF1ZXN0EhcKB2Nhc2VfaWQYASABKAlSBmNhc2VJZB'
+        'IjCg1hcmJpdHJhdG9yX2lkGAIgASgJUgxhcmJpdHJhdG9ySWQSJwoPYXJiaXRyYXRvcl9yb2xl'
+        'GAMgASgJUg5hcmJpdHJhdG9yUm9sZQ==');
 
 @$core.Deprecated('Use assignArbitrationCaseResponseDescriptor instead')
 const AssignArbitrationCaseResponse$json = {
@@ -907,9 +1262,10 @@ const AssignArbitrationCaseResponse$json = {
 };
 
 /// Descriptor for `AssignArbitrationCaseResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List assignArbitrationCaseResponseDescriptor = $convert.base64Decode(
-    'Ch1Bc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
-    'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2U=');
+final $typed_data.Uint8List assignArbitrationCaseResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1Bc3NpZ25BcmJpdHJhdGlvbkNhc2VSZXNwb25zZRIYCgdzdWNjZXNzGAEgASgIUgdzdWNjZX'
+        'NzEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2U=');
 
 @$core.Deprecated('Use submitArbitrationDecisionRequestDescriptor instead')
 const SubmitArbitrationDecisionRequest$json = {
@@ -920,7 +1276,13 @@ const SubmitArbitrationDecisionRequest$json = {
     {'1': 'explanation', '3': 3, '4': 1, '5': 9, '10': 'explanation'},
     {'1': 'arbitrator_id', '3': 4, '4': 1, '5': 9, '10': 'arbitratorId'},
     {'1': 'arbitrator_role', '3': 5, '4': 1, '5': 9, '10': 'arbitratorRole'},
-    {'1': 'feedback_for_model', '3': 6, '4': 1, '5': 9, '10': 'feedbackForModel'},
+    {
+      '1': 'feedback_for_model',
+      '3': 6,
+      '4': 1,
+      '5': 9,
+      '10': 'feedbackForModel'
+    },
   ],
 };
 
@@ -943,10 +1305,11 @@ const SubmitArbitrationDecisionResponse$json = {
 };
 
 /// Descriptor for `SubmitArbitrationDecisionResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List submitArbitrationDecisionResponseDescriptor = $convert.base64Decode(
-    'CiFTdWJtaXRBcmJpdHJhdGlvbkRlY2lzaW9uUmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3'
-    'VjY2VzcxIfCgtkZWNpc2lvbl9pZBgCIAEoCVIKZGVjaXNpb25JZBIYCgdtZXNzYWdlGAMgASgJ'
-    'UgdtZXNzYWdl');
+final $typed_data.Uint8List submitArbitrationDecisionResponseDescriptor =
+    $convert.base64Decode(
+        'CiFTdWJtaXRBcmJpdHJhdGlvbkRlY2lzaW9uUmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3'
+        'VjY2VzcxIfCgtkZWNpc2lvbl9pZBgCIAEoCVIKZGVjaXNpb25JZBIYCgdtZXNzYWdlGAMgASgJ'
+        'UgdtZXNzYWdl');
 
 @$core.Deprecated('Use getArbitrationQueueStatsRequestDescriptor instead')
 const GetArbitrationQueueStatsRequest$json = {
@@ -954,8 +1317,8 @@ const GetArbitrationQueueStatsRequest$json = {
 };
 
 /// Descriptor for `GetArbitrationQueueStatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getArbitrationQueueStatsRequestDescriptor = $convert.base64Decode(
-    'Ch9HZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXF1ZXN0');
+final $typed_data.Uint8List getArbitrationQueueStatsRequestDescriptor =
+    $convert.base64Decode('Ch9HZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXF1ZXN0');
 
 @$core.Deprecated('Use arbitrationQueueStatsInfoDescriptor instead')
 const ArbitrationQueueStatsInfo$json = {
@@ -964,12 +1327,41 @@ const ArbitrationQueueStatsInfo$json = {
     {'1': 'total_pending', '3': 1, '4': 1, '5': 5, '10': 'totalPending'},
     {'1': 'total_assigned', '3': 2, '4': 1, '5': 5, '10': 'totalAssigned'},
     {'1': 'total_in_review', '3': 3, '4': 1, '5': 5, '10': 'totalInReview'},
-    {'1': 'total_resolved_today', '3': 4, '4': 1, '5': 5, '10': 'totalResolvedToday'},
-    {'1': 'avg_resolution_time_hours', '3': 5, '4': 1, '5': 1, '10': 'avgResolutionTimeHours'},
-    {'1': 'by_priority', '3': 6, '4': 3, '5': 11, '6': '.agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry', '10': 'byPriority'},
-    {'1': 'by_reason', '3': 7, '4': 3, '5': 11, '6': '.agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry', '10': 'byReason'},
+    {
+      '1': 'total_resolved_today',
+      '3': 4,
+      '4': 1,
+      '5': 5,
+      '10': 'totalResolvedToday'
+    },
+    {
+      '1': 'avg_resolution_time_hours',
+      '3': 5,
+      '4': 1,
+      '5': 1,
+      '10': 'avgResolutionTimeHours'
+    },
+    {
+      '1': 'by_priority',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo.ByPriorityEntry',
+      '10': 'byPriority'
+    },
+    {
+      '1': 'by_reason',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo.ByReasonEntry',
+      '10': 'byReason'
+    },
   ],
-  '3': [ArbitrationQueueStatsInfo_ByPriorityEntry$json, ArbitrationQueueStatsInfo_ByReasonEntry$json],
+  '3': [
+    ArbitrationQueueStatsInfo_ByPriorityEntry$json,
+    ArbitrationQueueStatsInfo_ByReasonEntry$json
+  ],
 };
 
 @$core.Deprecated('Use arbitrationQueueStatsInfoDescriptor instead')
@@ -1009,20 +1401,35 @@ final $typed_data.Uint8List arbitrationQueueStatsInfoDescriptor = $convert.base6
 const GetArbitrationQueueStatsResponse$json = {
   '1': 'GetArbitrationQueueStatsResponse',
   '2': [
-    {'1': 'stats', '3': 1, '4': 1, '5': 11, '6': '.agent.v1.ArbitrationQueueStatsInfo', '10': 'stats'},
+    {
+      '1': 'stats',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ArbitrationQueueStatsInfo',
+      '10': 'stats'
+    },
   ],
 };
 
 /// Descriptor for `GetArbitrationQueueStatsResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getArbitrationQueueStatsResponseDescriptor = $convert.base64Decode(
-    'CiBHZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXNwb25zZRI5CgVzdGF0cxgBIAEoCzIjLmFnZW'
-    '50LnYxLkFyYml0cmF0aW9uUXVldWVTdGF0c0luZm9SBXN0YXRz');
+final $typed_data.Uint8List getArbitrationQueueStatsResponseDescriptor =
+    $convert.base64Decode(
+        'CiBHZXRBcmJpdHJhdGlvblF1ZXVlU3RhdHNSZXNwb25zZRI5CgVzdGF0cxgBIAEoCzIjLmFnZW'
+        '50LnYxLkFyYml0cmF0aW9uUXVldWVTdGF0c0luZm9SBXN0YXRz');
 
 @$core.Deprecated('Use citationBlockDescriptor instead')
 const CitationBlock$json = {
   '1': 'CitationBlock',
   '2': [
-    {'1': 'citations', '3': 1, '4': 3, '5': 11, '6': '.agent.v1.Citation', '10': 'citations'},
+    {
+      '1': 'citations',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.Citation',
+      '10': 'citations'
+    },
   ],
 };
 
@@ -1077,11 +1484,25 @@ const ToolResultPayload$json = {
   '2': [
     {'1': 'tool_name', '3': 1, '4': 1, '5': 9, '10': 'toolName'},
     {'1': 'success', '3': 2, '4': 1, '5': 8, '10': 'success'},
-    {'1': 'data', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'data'},
+    {
+      '1': 'data',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'data'
+    },
     {'1': 'error_message', '3': 4, '4': 1, '5': 9, '10': 'errorMessage'},
     {'1': 'suggestion', '3': 5, '4': 1, '5': 9, '10': 'suggestion'},
     {'1': 'widget_type', '3': 6, '4': 1, '5': 9, '10': 'widgetType'},
-    {'1': 'widget_data', '3': 7, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'widgetData'},
+    {
+      '1': 'widget_data',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'widgetData'
+    },
     {'1': 'tool_call_id', '3': 8, '4': 1, '5': 9, '10': 'toolCallId'},
   ],
 };
@@ -1133,7 +1554,14 @@ const InterventionReason$json = {
     {'1': 'trigger_event_id', '3': 1, '4': 1, '5': 9, '10': 'triggerEventId'},
     {'1': 'explanation_text', '3': 2, '4': 1, '5': 9, '10': 'explanationText'},
     {'1': 'confidence', '3': 3, '4': 1, '5': 2, '10': 'confidence'},
-    {'1': 'evidence_refs', '3': 4, '4': 3, '5': 11, '6': '.agent.v1.EvidenceRef', '10': 'evidenceRefs'},
+    {
+      '1': 'evidence_refs',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.EvidenceRef',
+      '10': 'evidenceRefs'
+    },
     {'1': 'decision_trace', '3': 5, '4': 3, '5': 9, '10': 'decisionTrace'},
   ],
 };
@@ -1160,10 +1588,38 @@ const InterventionRequest$json = {
     {'1': 'schema_version', '3': 8, '4': 1, '5': 9, '10': 'schemaVersion'},
     {'1': 'policy_version', '3': 9, '4': 1, '5': 9, '10': 'policyVersion'},
     {'1': 'model_version', '3': 10, '4': 1, '5': 9, '10': 'modelVersion'},
-    {'1': 'reason', '3': 11, '4': 1, '5': 11, '6': '.agent.v1.InterventionReason', '10': 'reason'},
-    {'1': 'level', '3': 12, '4': 1, '5': 14, '6': '.agent.v1.InterventionLevel', '10': 'level'},
-    {'1': 'on_reject', '3': 13, '4': 1, '5': 11, '6': '.agent.v1.CoolDownPolicy', '10': 'onReject'},
-    {'1': 'content', '3': 14, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'content'},
+    {
+      '1': 'reason',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionReason',
+      '10': 'reason'
+    },
+    {
+      '1': 'level',
+      '3': 12,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.InterventionLevel',
+      '10': 'level'
+    },
+    {
+      '1': 'on_reject',
+      '3': 13,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.CoolDownPolicy',
+      '10': 'onReject'
+    },
+    {
+      '1': 'content',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'content'
+    },
   ],
 };
 
@@ -1185,7 +1641,14 @@ final $typed_data.Uint8List interventionRequestDescriptor = $convert.base64Decod
 const InterventionPayload$json = {
   '1': 'InterventionPayload',
   '2': [
-    {'1': 'request', '3': 1, '4': 1, '5': 11, '6': '.agent.v1.InterventionRequest', '10': 'request'},
+    {
+      '1': 'request',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionRequest',
+      '10': 'request'
+    },
   ],
 };
 
@@ -1198,10 +1661,30 @@ final $typed_data.Uint8List interventionPayloadDescriptor = $convert.base64Decod
 const AgentStatus$json = {
   '1': 'AgentStatus',
   '2': [
-    {'1': 'state', '3': 1, '4': 1, '5': 14, '6': '.agent.v1.AgentStatus.State', '10': 'state'},
+    {
+      '1': 'state',
+      '3': 1,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.AgentStatus.State',
+      '10': 'state'
+    },
     {'1': 'details', '3': 2, '4': 1, '5': 9, '10': 'details'},
-    {'1': 'current_agent_name', '3': 3, '4': 1, '5': 9, '10': 'currentAgentName'},
-    {'1': 'active_agent', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.AgentType', '10': 'activeAgent'},
+    {
+      '1': 'current_agent_name',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '10': 'currentAgentName'
+    },
+    {
+      '1': 'active_agent',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.AgentType',
+      '10': 'activeAgent'
+    },
   ],
   '4': [AgentStatus_State$json],
 };
@@ -1215,6 +1698,7 @@ const AgentStatus_State$json = {
     {'1': 'SEARCHING', '2': 2},
     {'1': 'EXECUTING_TOOL', '2': 3},
     {'1': 'GENERATING', '2': 4},
+    {'1': 'IDLE', '2': 5},
   ],
 };
 
@@ -1223,18 +1707,40 @@ final $typed_data.Uint8List agentStatusDescriptor = $convert.base64Decode(
     'CgtBZ2VudFN0YXR1cxIxCgVzdGF0ZRgBIAEoDjIbLmFnZW50LnYxLkFnZW50U3RhdHVzLlN0YX'
     'RlUgVzdGF0ZRIYCgdkZXRhaWxzGAIgASgJUgdkZXRhaWxzEiwKEmN1cnJlbnRfYWdlbnRfbmFt'
     'ZRgDIAEoCVIQY3VycmVudEFnZW50TmFtZRI2CgxhY3RpdmVfYWdlbnQYBCABKA4yEy5hZ2VudC'
-    '52MS5BZ2VudFR5cGVSC2FjdGl2ZUFnZW50IlUKBVN0YXRlEgsKB1VOS05PV04QABIMCghUSElO'
+    '52MS5BZ2VudFR5cGVSC2FjdGl2ZUFnZW50Il8KBVN0YXRlEgsKB1VOS05PV04QABIMCghUSElO'
     'S0lORxABEg0KCVNFQVJDSElORxACEhIKDkVYRUNVVElOR19UT09MEAMSDgoKR0VORVJBVElORx'
-    'AE');
+    'AEEggKBElETEUQBQ==');
 
 @$core.Deprecated('Use errorDescriptor instead')
 const Error$json = {
   '1': 'Error',
   '2': [
-    {'1': 'code', '3': 1, '4': 1, '5': 9, '10': 'code'},
+    {
+      '1': 'code',
+      '3': 1,
+      '4': 1,
+      '5': 9,
+      '8': {'3': true},
+      '10': 'code',
+    },
     {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
     {'1': 'retryable', '3': 3, '4': 1, '5': 8, '10': 'retryable'},
-    {'1': 'details', '3': 4, '4': 3, '5': 11, '6': '.agent.v1.Error.DetailsEntry', '10': 'details'},
+    {
+      '1': 'details',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.Error.DetailsEntry',
+      '10': 'details'
+    },
+    {
+      '1': 'error_code',
+      '3': 5,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.ErrorCode',
+      '10': 'errorCode'
+    },
   ],
   '3': [Error_DetailsEntry$json],
 };
@@ -1251,17 +1757,24 @@ const Error_DetailsEntry$json = {
 
 /// Descriptor for `Error`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List errorDescriptor = $convert.base64Decode(
-    'CgVFcnJvchISCgRjb2RlGAEgASgJUgRjb2RlEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2USHA'
-    'oJcmV0cnlhYmxlGAMgASgIUglyZXRyeWFibGUSNgoHZGV0YWlscxgEIAMoCzIcLmFnZW50LnYx'
-    'LkVycm9yLkRldGFpbHNFbnRyeVIHZGV0YWlscxo6CgxEZXRhaWxzRW50cnkSEAoDa2V5GAEgAS'
-    'gJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4AQ==');
+    'CgVFcnJvchIWCgRjb2RlGAEgASgJQgIYAVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYW'
+    'dlEhwKCXJldHJ5YWJsZRgDIAEoCFIJcmV0cnlhYmxlEjYKB2RldGFpbHMYBCADKAsyHC5hZ2Vu'
+    'dC52MS5FcnJvci5EZXRhaWxzRW50cnlSB2RldGFpbHMSMgoKZXJyb3JfY29kZRgFIAEoDjITLm'
+    'FnZW50LnYxLkVycm9yQ29kZVIJZXJyb3JDb2RlGjoKDERldGFpbHNFbnRyeRIQCgNrZXkYASAB'
+    'KAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgB');
 
 @$core.Deprecated('Use usageDescriptor instead')
 const Usage$json = {
   '1': 'Usage',
   '2': [
     {'1': 'prompt_tokens', '3': 1, '4': 1, '5': 5, '10': 'promptTokens'},
-    {'1': 'completion_tokens', '3': 2, '4': 1, '5': 5, '10': 'completionTokens'},
+    {
+      '1': 'completion_tokens',
+      '3': 2,
+      '4': 1,
+      '5': 5,
+      '10': 'completionTokens'
+    },
     {'1': 'total_tokens', '3': 3, '4': 1, '5': 5, '10': 'totalTokens'},
     {'1': 'cost_micro_usd', '3': 4, '4': 1, '5': 3, '10': 'costMicroUsd'},
   ],
@@ -1281,7 +1794,14 @@ const MemoryQuery$json = {
     {'1': 'query_text', '3': 2, '4': 1, '5': 9, '10': 'queryText'},
     {'1': 'limit', '3': 3, '4': 1, '5': 5, '10': 'limit'},
     {'1': 'min_score', '3': 4, '4': 1, '5': 2, '10': 'minScore'},
-    {'1': 'filter', '3': 5, '4': 1, '5': 11, '6': '.agent.v1.MemoryFilter', '10': 'filter'},
+    {
+      '1': 'filter',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.MemoryFilter',
+      '10': 'filter'
+    },
     {'1': 'hybrid_alpha', '3': 6, '4': 1, '5': 2, '10': 'hybridAlpha'},
   ],
 };
@@ -1298,8 +1818,22 @@ const MemoryFilter$json = {
   '1': 'MemoryFilter',
   '2': [
     {'1': 'tags', '3': 1, '4': 3, '5': 9, '10': 'tags'},
-    {'1': 'start_time', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'startTime'},
-    {'1': 'end_time', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'endTime'},
+    {
+      '1': 'start_time',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'startTime'
+    },
+    {
+      '1': 'end_time',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'endTime'
+    },
     {'1': 'source_types', '3': 4, '4': 3, '5': 9, '10': 'sourceTypes'},
   ],
 };
@@ -1315,7 +1849,14 @@ final $typed_data.Uint8List memoryFilterDescriptor = $convert.base64Decode(
 const MemoryResult$json = {
   '1': 'MemoryResult',
   '2': [
-    {'1': 'items', '3': 1, '4': 3, '5': 11, '6': '.agent.v1.MemoryItem', '10': 'items'},
+    {
+      '1': 'items',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.MemoryItem',
+      '10': 'items'
+    },
     {'1': 'total_found', '3': 2, '4': 1, '5': 5, '10': 'totalFound'},
   ],
 };
@@ -1332,8 +1873,22 @@ const MemoryItem$json = {
     {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
     {'1': 'content', '3': 2, '4': 1, '5': 9, '10': 'content'},
     {'1': 'score', '3': 3, '4': 1, '5': 2, '10': 'score'},
-    {'1': 'created_at', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAt'},
-    {'1': 'metadata', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.MemoryItem.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'created_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+    {
+      '1': 'metadata',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.MemoryItem.MetadataEntry',
+      '10': 'metadata'
+    },
   ],
   '3': [MemoryItem_MetadataEntry$json],
 };
@@ -1355,4 +1910,3 @@ final $typed_data.Uint8List memoryItemDescriptor = $convert.base64Decode(
     'YnVmLlRpbWVzdGFtcFIJY3JlYXRlZEF0Ej4KCG1ldGFkYXRhGAUgAygLMiIuYWdlbnQudjEuTW'
     'Vtb3J5SXRlbS5NZXRhZGF0YUVudHJ5UghtZXRhZGF0YRo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tl'
     'eRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
-

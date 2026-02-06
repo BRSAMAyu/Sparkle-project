@@ -1,8 +1,9 @@
-.PHONY: dev-up sync-db proto-gen db-migrate db-dump db-sqlc db-validate env-check smoke
+.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
+PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -107,30 +108,33 @@ smoke:
 	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
 	echo "✅ Smoke checks passed."
 
-# 生成 Protobuf 代码 (使用 Buf 工具链)
-# P1: Modernized protocol management with buf.build
+# Build proto toolchain container image (single source of truth for local + CI)
+proto-tools-build:
+	@echo "🐳 Building proto toolchain image $(PROTO_TOOLCHAIN_IMAGE)..."
+	docker build -f docker/proto-toolchain.Dockerfile -t $(PROTO_TOOLCHAIN_IMAGE) .
+
+# 生成 Protobuf 代码 (默认使用容器化工具链)
 proto-gen:
-	@echo "🚀 Generating Protobuf Code with Buf..."
-	@if command -v buf >/dev/null 2>&1; then \
-		if buf generate; then \
-			echo "✅ Protobuf code generated successfully via Buf!"; \
-		else \
-			echo "❌ Buf generation failed, falling back to legacy protoc pipeline..."; \
-			$(MAKE) proto-gen-legacy; \
-		fi; \
-	else \
-		echo "⚠️  Buf not installed, falling back to protoc..."; \
-		$(MAKE) proto-gen-legacy; \
-	fi
+	@echo "🚀 Generating Protobuf Code via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh gen
+	@echo "✅ Protobuf code generated successfully."
 
 # Buf linting and breaking change detection
 proto-lint:
-	@echo "🔍 Linting Protobuf files..."
-	buf lint
+	@echo "🔍 Linting Protobuf files via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh lint
 
 proto-breaking:
-	@echo "🔍 Checking for breaking changes..."
-	buf breaking --against '.git#branch=main'
+	@echo "🔍 Checking for breaking changes via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+proto-check-generated:
+	@echo "🔍 Verifying generated code is up-to-date..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh check-generated
+
+proto-deprecation-check:
+	@echo "🔍 Validating proto deprecation windows..."
+	python3 scripts/check_proto_deprecated_windows.py
 
 # Legacy proto generation (fallback if buf not installed)
 proto-gen-legacy:

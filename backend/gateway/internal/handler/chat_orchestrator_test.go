@@ -131,6 +131,7 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 }
 
 func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
+	t.Setenv("PROTO_WRITE_DUAL", "true")
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	resp := &agentv1.ChatResponse{
 		ResponseId: "resp-4",
@@ -148,6 +149,7 @@ func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
 }
 
 func TestConvertResponseToJSONErrorIncludesEnumAndLegacyCode(t *testing.T) {
+	t.Setenv("PROTO_WRITE_DUAL", "true")
 	resp := &agentv1.ChatResponse{
 		ResponseId: "resp-5",
 		RequestId:  "req-5",
@@ -165,4 +167,34 @@ func TestConvertResponseToJSONErrorIncludesEnumAndLegacyCode(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "rate_limited", errObj["error_code"])
 	assert.Equal(t, "rate_limited", errObj["code"])
+}
+
+func TestConvertResponseToJSONCanDisableLegacyFields(t *testing.T) {
+	t.Setenv("PROTO_WRITE_DUAL", "false")
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-6",
+		RequestId:  "req-6",
+		Timestamp:  now.UnixMilli(),
+		EventTime:  timestamppb.New(now),
+		Content: &agentv1.ChatResponse_Error{
+			Error: &agentv1.Error{
+				Code:      "RATE_LIMITED",
+				Message:   "Quota exhausted",
+				Retryable: false,
+				ErrorCode: agentv1.ErrorCode_ERROR_CODE_RATE_LIMITED,
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	if _, ok := result["timestamp"]; ok {
+		t.Fatal("did not expect legacy timestamp when PROTO_WRITE_DUAL=false")
+	}
+	errObj, ok := result["error"].(map[string]interface{})
+	assert.True(t, ok)
+	if _, ok := errObj["code"]; ok {
+		t.Fatal("did not expect legacy error.code when PROTO_WRITE_DUAL=false")
+	}
+	assert.Equal(t, "rate_limited", errObj["error_code"])
 }

@@ -305,7 +305,10 @@ make mobile-run
 ### 常用命令
 
 ```bash
-make proto-gen       # 生成 Protobuf 代码
+make proto-tools-build      # 构建统一 Proto 工具链镜像
+make proto-gen              # 生成 Protobuf 代码 (容器优先，自动降级)
+make proto-check-generated  # 校验生成代码是否已提交
+make proto-deprecation-check # 校验 deprecated 字段移除里程碑
 make sync-db         # 数据库迁移 + SQLC
 make smoke           # 服务健康检查
 make celery-up       # 启动异步任务队列

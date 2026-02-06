@@ -127,6 +127,7 @@ func TestExtractTraceContextFromEnvelopeRejectsOversizedTraceparent(t *testing.T
 }
 
 func TestResponseEventTimeMillisPrefersEventTime(t *testing.T) {
+	t.Setenv("PROTO_READ_NEW_FIRST", "true")
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	resp := &agentv1.ChatResponse{
 		Timestamp: 123,
@@ -135,6 +136,19 @@ func TestResponseEventTimeMillisPrefersEventTime(t *testing.T) {
 	got := responseEventTimeMillis(resp)
 	if got != now.UnixMilli() {
 		t.Fatalf("expected event_time millis %d, got %d", now.UnixMilli(), got)
+	}
+}
+
+func TestResponseEventTimeMillisCanPreferLegacyTimestamp(t *testing.T) {
+	t.Setenv("PROTO_READ_NEW_FIRST", "false")
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	resp := &agentv1.ChatResponse{
+		Timestamp: 456,
+		EventTime: timestamppb.New(now),
+	}
+	got := responseEventTimeMillis(resp)
+	if got != 456 {
+		t.Fatalf("expected legacy timestamp 456, got %d", got)
 	}
 }
 
