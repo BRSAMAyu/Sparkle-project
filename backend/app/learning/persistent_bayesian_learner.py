@@ -16,6 +16,7 @@ class PersistentBayesianLearner(BayesianLearner):
         self.user_id = user_id
         self.ttl = ttl  # 7 days expiration
         self._loaded = False
+        self._pending_saves: set[asyncio.Task] = set()
 
     async def _load_from_redis(self):
         """Lazy load learning history from Redis."""
@@ -60,7 +61,7 @@ class PersistentBayesianLearner(BayesianLearner):
         """Override update to auto-persist."""
         await self._load_from_redis()
         await super().update(source, target, success)
-        asyncio.create_task(self._save_to_redis())
+        self._schedule_save()
 
     async def get_probability(self, source: str, target: str) -> float:
         """Get probability (ensuring loaded)."""
@@ -74,6 +75,28 @@ class PersistentBayesianLearner(BayesianLearner):
             key: {'alpha': stats.alpha, 'beta': stats.beta, 'mean': stats.mean}
             for key, stats in self.stats.items()
         }
+
+    def _schedule_save(self):
+        """Track async persistence tasks to avoid fire-and-forget leakage."""
+        task = asyncio.create_task(self._save_to_redis())
+        self._pending_saves.add(task)
+        task.add_done_callback(self._on_save_done)
+
+    def _on_save_done(self, task: asyncio.Task):
+        self._pending_saves.discard(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            logger.debug(f"Learner save task cancelled for user {self.user_id}")
+        except Exception as e:
+            logger.error(f"Learner save task failed for user {self.user_id}: {e}")
+
+    async def drain_pending_saves(self):
+        """Flush all outstanding save tasks before shutdown."""
+        if not self._pending_saves:
+            return
+        pending = list(self._pending_saves)
+        await asyncio.gather(*pending, return_exceptions=True)
 
 async def create_learner(redis_client, user_id: str) -> PersistentBayesianLearner:
     """Factory to create and load learner."""

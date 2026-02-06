@@ -1105,8 +1105,22 @@ class GroupTaskService:
             ).order_by(desc(GroupTask.created_at))
         )
 
+        task_rows = result.scalars().all()
+        user_claims_by_task: dict[UUID, GroupTaskClaim] = {}
+        if user_id and task_rows:
+            claim_result = await db.execute(
+                select(GroupTaskClaim).where(
+                    GroupTaskClaim.group_task_id.in_([task.id for task in task_rows]),
+                    GroupTaskClaim.user_id == user_id,
+                    GroupTaskClaim.not_deleted_filter()
+                )
+            )
+            user_claims_by_task = {
+                claim.group_task_id: claim for claim in claim_result.scalars().all()
+            }
+
         tasks = []
-        for task in result.scalars():
+        for task in task_rows:
             completion_rate = (
                 task.total_completions / task.total_claims
                 if task.total_claims > 0 else 0
@@ -1131,11 +1145,10 @@ class GroupTaskService:
             }
 
             if user_id:
-                for claim in task.claims:
-                    if claim.user_id == user_id and not claim.is_deleted:
-                        task_dict['is_claimed_by_me'] = True
-                        task_dict['my_completion_status'] = claim.is_completed
-                        break
+                user_claim = user_claims_by_task.get(task.id)
+                if user_claim:
+                    task_dict['is_claimed_by_me'] = True
+                    task_dict['my_completion_status'] = user_claim.is_completed
 
             tasks.append(task_dict)
 

@@ -351,4 +351,20 @@ class TaskEventListener:
     def stop(self):
         """停止监听器"""
         self._running = False
+        close_method = getattr(self.event_bus, "close", None)
+        if close_method and asyncio.iscoroutinefunction(close_method):
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(close_method())
+            except RuntimeError:
+                # No running loop: defer close to explicit async shutdown call.
+                pass
         logger.info("TaskEventListener stopped")
+
+    async def shutdown(self):
+        """停止监听器并等待事件总线释放资源。"""
+        self._running = False
+        close_method = getattr(self.event_bus, "close", None)
+        if close_method and asyncio.iscoroutinefunction(close_method):
+            await close_method()
+        logger.info("TaskEventListener shutdown complete")

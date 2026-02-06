@@ -39,6 +39,7 @@ class MultiDimensionalLearner:
             'user_satisfaction': BayesianLearner()
         }
         self._loaded = False
+        self._pending_saves: set[asyncio.Task] = set()
 
     async def update(self, source: str, target: str, metrics: dict):
         """Update learners based on metrics."""
@@ -49,7 +50,7 @@ class MultiDimensionalLearner:
             if dim in self.dimensions:
                 await self.dimensions[dim].update(source, target, value)
 
-        asyncio.create_task(self._save())
+        self._schedule_save()
         logger.debug(f"Multi-dimension update: {source}->{target}, metrics={metrics}")
 
     async def get_combined_score(self, source: str, target: str, user_pref: dict = None) -> float:
@@ -161,3 +162,25 @@ class MultiDimensionalLearner:
             self._loaded = True
         except Exception as e:
             logger.error(f"Failed to load multi-dimensional learner: {e}")
+
+    def _schedule_save(self):
+        """Track async persistence tasks to avoid fire-and-forget leakage."""
+        task = asyncio.create_task(self._save())
+        self._pending_saves.add(task)
+        task.add_done_callback(self._on_save_done)
+
+    def _on_save_done(self, task: asyncio.Task):
+        self._pending_saves.discard(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            logger.debug(f"Multi-dimensional save task cancelled for user {self.user_id}")
+        except Exception as e:
+            logger.error(f"Multi-dimensional save task failed for user {self.user_id}: {e}")
+
+    async def drain_pending_saves(self):
+        """Flush all outstanding save tasks before shutdown."""
+        if not self._pending_saves:
+            return
+        pending = list(self._pending_saves)
+        await asyncio.gather(*pending, return_exceptions=True)
