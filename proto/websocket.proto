@@ -14,7 +14,7 @@ message WebSocketMessage {
   bytes payload = 3; // Protobuf binary payload (marshaled specific message)
   string trace_id = 4; // OpenTelemetry Trace ID
   string request_id = 5; // Idempotency / Request ID
-  int64 timestamp = 6; // Unix timestamp in milliseconds
+  int64 timestamp = 6 [deprecated = true]; // Deprecated (remove_after: M3): legacy milliseconds timestamp
   google.protobuf.Timestamp event_time = 7; // Preferred timestamp for new clients
 }
 
@@ -29,7 +29,7 @@ message ChatMessage {
 message UpdateNodeMasteryRequest {
   string node_id = 1;
   int32 mastery = 2;
-  int64 timestamp = 3;
+  int64 timestamp = 3 [deprecated = true]; // Deprecated (remove_after: M3): legacy milliseconds timestamp
   string request_id = 4;
   int32 revision = 5;
   google.protobuf.Timestamp event_time = 6;

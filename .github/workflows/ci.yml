@@ -399,31 +399,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: latest
-
       - name: Detect changed proto files
         id: proto_changes
-        if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "${BASE_REF}" --depth=1
-          CHANGED_PROTO=$(git diff --name-only "origin/${BASE_REF}"...HEAD -- 'proto/*.proto')
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${BASE_REF}" --depth=1
+            CHANGED_PROTO=$(git diff --name-only "origin/${BASE_REF}"...HEAD -- 'proto/*.proto')
+          else
+            CHANGED_PROTO=$(git diff --name-only HEAD~1...HEAD -- 'proto/*.proto' || true)
+            if [ -z "$CHANGED_PROTO" ]; then
+              CHANGED_PROTO="(none)"
+            fi
+          fi
           echo "changed_proto<<EOF" >> "$GITHUB_OUTPUT"
           echo "$CHANGED_PROTO" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          if [ -n "$CHANGED_PROTO" ]; then
+          if [ -n "$CHANGED_PROTO" ] && [ "$CHANGED_PROTO" != "(none)" ]; then
             echo "has_proto_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_proto_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build Proto Toolchain Image
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: make proto-tools-build
+
       - name: Buf Breaking Change Detection
         if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
-        run: buf breaking --against '.git#branch=main'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+      - name: Enforce Deprecated Removal Milestones
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: python3 scripts/check_proto_deprecated_windows.py
+
+      - name: Enforce Generated Code Consistency
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh check-generated
 
       - name: Enforce Proto Migration Notes
         if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'

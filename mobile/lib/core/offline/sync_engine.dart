@@ -15,6 +15,7 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_metadata.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/gen/google/protobuf/timestamp.pb.dart' as $ts;
 import 'package:sparkle/gen/websocket.pb.dart';
 import 'package:uuid/uuid.dart';
 
@@ -37,6 +38,8 @@ class SyncEngine {
   static const int _baseBackoffMs = 800;
   static const int _maxBackoffMs = 30000;
   static const Duration _waitingAckTtl = Duration(seconds: 30);
+  static const bool _protoWriteDual =
+      bool.fromEnvironment('PROTO_WRITE_DUAL', defaultValue: true);
 
   void start() {
     // Listen for new outbox items
@@ -249,23 +252,33 @@ class SyncEngine {
     // P3: Use Protobuf Binary Protocol
     final traceId = item.traceId ?? TracingService.instance.createTraceId();
     final requestId = item.uuid ?? item.id.toString();
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now().toUtc();
+    final nowMs = now.millisecondsSinceEpoch;
+    final nowEvent = $ts.Timestamp.fromDateTime(now);
     final request = UpdateNodeMasteryRequest(
       nodeId: payload['nodeId'] as String,
       mastery: payload['mastery'] as int,
-      timestamp: Int64(nowMs),
+      eventTime: nowEvent,
       requestId: requestId,
       // revision: payload['revision'] as int? ?? 0, 
     );
+    if (_protoWriteDual) {
+      // ignore: deprecated_member_use_from_same_package
+      request.timestamp = Int64(nowMs);
+    }
 
     final wsMsg = WebSocketMessage(
       version: '2.0',
       type: 'update_node_mastery',
       payload: request.writeToBuffer(),
-      timestamp: Int64(nowMs),
+      eventTime: nowEvent,
       requestId: requestId,
       traceId: traceId,
     );
+    if (_protoWriteDual) {
+      // ignore: deprecated_member_use_from_same_package
+      wsMsg.timestamp = Int64(nowMs);
+    }
 
     _wsService.send(wsMsg);
 

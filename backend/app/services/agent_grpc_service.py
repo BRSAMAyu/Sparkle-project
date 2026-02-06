@@ -4,6 +4,7 @@ AgentService gRPC Implementation
 """
 import asyncio
 import json
+import os
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -35,6 +36,21 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         logger.info("AgentServiceImpl initialized with injected dependencies")
 
     @staticmethod
+    def _read_new_first() -> bool:
+        return os.getenv("PROTO_READ_NEW_FIRST", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _write_dual() -> bool:
+        return os.getenv("PROTO_WRITE_DUAL", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _error_code_to_legacy(code: int) -> str:
+        name = agent_service_pb2.ErrorCode.Name(code) if code else ""
+        if not name or name == "ERROR_CODE_UNSPECIFIED":
+            return ""
+        return name.removeprefix("ERROR_CODE_").lower()
+
+    @staticmethod
     def _to_error_code(code: str) -> int:
         normalized = (code or "").strip().upper()
         mapping = {
@@ -61,17 +77,41 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
     @staticmethod
     def _enrich_dual_stack_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
-        # Timestamp dual-stack: keep legacy timestamp and populate event_time when absent.
-        if response.timestamp and not response.HasField("event_time"):
-            ts = timestamp_pb2.Timestamp()
-            ts.FromMilliseconds(response.timestamp)
-            response.event_time.CopyFrom(ts)
+        read_new_first = AgentServiceImpl._read_new_first()
+        write_dual = AgentServiceImpl._write_dual()
 
-        # Error code dual-stack: keep string code and populate enum when absent.
-        if response.HasField("error") and response.error.error_code == agent_service_pb2.ERROR_CODE_UNSPECIFIED:
-            mapped = AgentServiceImpl._to_error_code(response.error.code)
-            if mapped != agent_service_pb2.ERROR_CODE_UNSPECIFIED:
-                response.error.error_code = mapped
+        has_event = response.HasField("event_time")
+        has_legacy_ts = bool(response.timestamp)
+
+        if write_dual:
+            if read_new_first and has_event and not has_legacy_ts:
+                response.timestamp = int(response.event_time.ToMilliseconds())
+            elif has_legacy_ts and not has_event:
+                ts = timestamp_pb2.Timestamp()
+                ts.FromMilliseconds(response.timestamp)
+                response.event_time.CopyFrom(ts)
+            elif not read_new_first and has_legacy_ts and not has_event:
+                ts = timestamp_pb2.Timestamp()
+                ts.FromMilliseconds(response.timestamp)
+                response.event_time.CopyFrom(ts)
+        else:
+            if has_legacy_ts and not has_event:
+                ts = timestamp_pb2.Timestamp()
+                ts.FromMilliseconds(response.timestamp)
+                response.event_time.CopyFrom(ts)
+            response.timestamp = 0
+
+        if response.HasField("error"):
+            if response.error.error_code == agent_service_pb2.ERROR_CODE_UNSPECIFIED and response.error.code:
+                mapped = AgentServiceImpl._to_error_code(response.error.code)
+                if mapped != agent_service_pb2.ERROR_CODE_UNSPECIFIED:
+                    response.error.error_code = mapped
+
+            if write_dual:
+                if not response.error.code and response.error.error_code != agent_service_pb2.ERROR_CODE_UNSPECIFIED:
+                    response.error.code = AgentServiceImpl._error_code_to_legacy(response.error.error_code)
+            else:
+                response.error.code = ""
         return response
 
     async def _require_admin(

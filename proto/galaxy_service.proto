@@ -19,7 +19,7 @@ message CollaborativeGalaxyUpdate {
   string galaxy_id = 1;
   bytes yjs_update = 2; // Yjs binary update
   string user_id = 3;
-  int64 timestamp = 4;
+  int64 timestamp = 4 [deprecated = true]; // Deprecated (remove_after: M3): legacy milliseconds timestamp
   google.protobuf.Timestamp event_time = 5;
 }
 
@@ -38,7 +38,7 @@ message UpdateNodeMasteryRequest {
   string user_id = 1;
   string node_id = 2;
   int32 mastery = 3;
-  google.protobuf.Timestamp version = 4; // Deprecated: Use revision instead
+  google.protobuf.Timestamp version = 4 [deprecated = true]; // Deprecated (remove_after: M2): Use revision instead
   string reason = 5;
   string request_id = 6;
   int64 revision = 7; // Logical clock for conflict resolution
