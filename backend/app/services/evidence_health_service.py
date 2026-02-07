@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +19,10 @@ from app.models.semantic_memory import StrategyNode
 from app.models.task import Task
 from app.models.user_state import UserStateSnapshot
 from app.services.evidence_scoring import compute_score
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class EvidenceHealthService:
@@ -75,7 +79,7 @@ class EvidenceHealthService:
         for item in prefs:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="preference").inc()
@@ -86,7 +90,7 @@ class EvidenceHealthService:
         for item in goals:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="goal").inc()
@@ -97,7 +101,7 @@ class EvidenceHealthService:
         for item in episodic:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_snapshot = result["snapshot"]
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:

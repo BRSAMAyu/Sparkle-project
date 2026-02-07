@@ -1,9 +1,15 @@
 import pytest
+from datetime import UTC, datetime
 from httpx import AsyncClient, ASGITransport
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from unittest.mock import MagicMock, AsyncMock
 from fastapi import FastAPI
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from app.api.v1.error_book import router
 from app.api.deps import get_current_user_id, get_db
@@ -33,8 +39,6 @@ def override_deps(mock_db):
     yield
     app.dependency_overrides = {}
 
-from datetime import datetime
-
 @pytest.mark.asyncio
 async def test_create_error_api(override_deps, mock_db):
     """测试创建错题接口"""
@@ -44,8 +48,8 @@ async def test_create_error_api(override_deps, mock_db):
     
     async def mock_refresh(obj):
         obj.id = uuid4()
-        obj.created_at = datetime.utcnow()
-        obj.updated_at = datetime.utcnow()
+        obj.created_at = _utcnow()
+        obj.updated_at = _utcnow()
         # Also need these fields which are expected by ErrorRecordResponse
         obj.suggested_concepts = []
         obj.knowledge_links = []

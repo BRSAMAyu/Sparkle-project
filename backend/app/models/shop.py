@@ -3,12 +3,16 @@ Shop System Models
 商城系统数据模型 - 包含商城物品、购买记录、光子交易历史、用户消耗品
 """
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PhotonTransactionType(str, enum.Enum):
@@ -173,7 +177,7 @@ class UserConsumable(BaseModel):
         """是否已过期"""
         if self.expires_at is None:
             return False
-        return datetime.utcnow() > self.expires_at
+        return _utcnow() > self.expires_at
 
     @property
     def is_valid(self) -> bool:

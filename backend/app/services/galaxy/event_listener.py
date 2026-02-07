@@ -4,7 +4,7 @@ TaskEventListener - 任务事件监听器
 监听任务相关事件并触发知识星图更新
 """
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +16,10 @@ from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.models.task import Task
 from app.services.galaxy.feedback_service import GalaxyFeedbackService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskEventListener:
@@ -54,7 +58,7 @@ class TaskEventListener:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"task_event_listener-{datetime.utcnow().timestamp()}",
+                    consumer_name=f"task_event_listener-{_utcnow().timestamp()}",
                     callback=self._on_event
                 )
                 break

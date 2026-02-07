@@ -5,7 +5,7 @@ Budget Optimization Service
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
 import math
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import and_, select
@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.context_pack import ContextPackRun
 from app.services.budget_tuning_service import BudgetTuningService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BudgetOptimizationService:
@@ -87,7 +91,7 @@ class BudgetOptimizationService:
         Returns:
             Dict mapping pack_id to performance metrics
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         performance = {}
 

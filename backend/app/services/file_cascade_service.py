@@ -6,7 +6,7 @@
 - 删除关联的 embeddings
 - 清理 MinIO 存储
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -17,6 +17,10 @@ from app.config.phase5_config import phase5_config
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FileCascadeService:
@@ -52,7 +56,7 @@ class FileCascadeService:
         Returns:
             dict: 删除操作的统计信息
         """
-        now = datetime.utcnow()
+        now = _utcnow()
         stats = {
             "file_deleted": False,
             "chunks_deleted": 0,
@@ -183,7 +187,7 @@ class FileCascadeService:
 
                 # 检查保留期是否已过
                 retention_days = phase5_config.DELETION_RETENTION_DAYS
-                cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+                cutoff_date = _utcnow() - timedelta(days=retention_days)
 
                 if file.deleted_at > cutoff_date:
                     stats["errors"].append(
@@ -259,7 +263,7 @@ class FileCascadeService:
 
         try:
             retention_days = phase5_config.DELETION_RETENTION_DAYS
-            cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+            cutoff_date = _utcnow() - timedelta(days=retention_days)
 
             # 1. 查找过期的软删除文件
             expired_files_stmt = select(StoredFile).where(

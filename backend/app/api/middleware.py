@@ -2,12 +2,38 @@
 API 中间件
 """
 import hashlib
+from uuid import uuid4
 
 from fastapi import Request, Response
+from opentelemetry import trace
 from starlette.concurrency import iterate_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.idempotency import IdempotencyStore
+
+
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Inject request/trace identifiers into request state and response headers."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or request.headers.get("x-request-id") or str(uuid4())
+        trace_id = request.headers.get("X-Trace-ID") or request.headers.get("x-trace-id")
+
+        if not trace_id:
+            span = trace.get_current_span()
+            span_context = span.get_span_context()
+            if span_context and span_context.is_valid:
+                trace_id = format(span_context.trace_id, "032x")
+            else:
+                trace_id = uuid4().hex
+
+        request.state.request_id = request_id
+        request.state.trace_id = trace_id
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Trace-ID"] = trace_id
+        return response
 
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):

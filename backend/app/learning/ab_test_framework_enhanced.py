@@ -9,7 +9,7 @@ This module extends the existing Redis-based framework with:
 - Statistical analysis integration
 """
 import hashlib
-from datetime import datetime
+from datetime import UTC, datetime
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -23,6 +23,10 @@ from app.models.experiment import (
     ABExperimentVariant,
     ExperimentStatus,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ABTestFrameworkEnhanced:
@@ -84,8 +88,8 @@ class ABTestFrameworkEnhanced:
             significance_level=significance_level,
             power=power,
             minimum_detectable_effect=minimum_detectable_effect,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         self.db.add(experiment)
@@ -107,8 +111,8 @@ class ABTestFrameworkEnhanced:
                 configuration=variant_config.get("configuration"),
                 allocation_weight=weight,
                 traffic_allocation_percentage=traffic_percentage,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(variant)
 
@@ -127,8 +131,8 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Experiment {experiment_id} not found")
 
         experiment.status = ExperimentStatus.RUNNING
-        experiment.start_date = datetime.utcnow()
-        experiment.updated_at = datetime.utcnow()
+        experiment.start_date = _utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Started experiment {experiment_id}")
@@ -145,7 +149,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot pause experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.PAUSED
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Paused experiment {experiment_id}")
@@ -162,7 +166,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot resume experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.RUNNING
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Resumed experiment {experiment_id}")
@@ -194,10 +198,10 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot complete experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.COMPLETED
-        experiment.end_date = datetime.utcnow()
+        experiment.end_date = _utcnow()
         experiment.conclusion = conclusion
         experiment.winning_variant_id = winning_variant_id
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Completed experiment {experiment_id}")
@@ -267,9 +271,9 @@ class ABTestFrameworkEnhanced:
             experiment_id=experiment_id,
             user_id=user_id,
             variant_id=assigned_variant.id,
-            assignment_date=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            assignment_date=_utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
         self.db.add(assignment)
         await self.db.commit()
@@ -307,8 +311,8 @@ class ABTestFrameworkEnhanced:
             metric_value=metric_value,
             metric_type=metric_type,
             context_data=context_data,
-            timestamp=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            timestamp=_utcnow(),
+            created_at=_utcnow(),
         )
         self.db.add(metric)
         await self.db.commit()

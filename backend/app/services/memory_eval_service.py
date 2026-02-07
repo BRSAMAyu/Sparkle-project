@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -26,6 +26,10 @@ class EvalCase:
     forbidden_contains: list[str]
     max_episodic_age_days: int | None = None
     notes: str | None = None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def load_dataset(path: str | Path) -> list[EvalCase]:
@@ -150,7 +154,7 @@ class MemoryEvalService:
 
         staleness_rate = 0.0
         if case.max_episodic_age_days:
-            cutoff = datetime.utcnow() - timedelta(days=case.max_episodic_age_days)
+            cutoff = _utcnow() - timedelta(days=case.max_episodic_age_days)
             stale_count = 0
             for item in context_pack.episodic_memories:
                 record = episodic_map.get(item.get("id", ""))

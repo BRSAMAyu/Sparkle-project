@@ -441,7 +441,7 @@ class TestNotificationCenterAPI:
 
         # Mark as read
         notification.is_read = True
-        notification.read_at = datetime.utcnow()
+        notification.read_at = datetime.now(UTC).replace(tzinfo=None)
         await db.commit()
 
         # Verify

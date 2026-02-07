@@ -10,12 +10,16 @@ Responsibilities:
 import contextlib
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
 
 from app.orchestration.schemas import StateSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StateSnapshotManager:
@@ -347,7 +351,7 @@ class StateSnapshotManager:
 
             # Update the domain
             versions[domain] = version
-            versions["_last_updated"] = datetime.utcnow().isoformat()
+            versions["_last_updated"] = _utcnow().isoformat()
 
             # Save back
             payload = json.dumps(versions, ensure_ascii=False)

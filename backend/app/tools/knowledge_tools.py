@@ -1,4 +1,5 @@
 import contextlib
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -6,6 +7,10 @@ from app.services.galaxy_service import GalaxyService
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import CreateKnowledgeNodeParams, LinkNodesParams, QueryKnowledgeParams
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CreateKnowledgeNodeTool(BaseTool):
@@ -91,7 +96,7 @@ class CreateKnowledgeNodeTool(BaseTool):
                     "summary": node.description,
                     "tags": node.keywords,
                     "mastery_level": 0, # Initial mastery
-                    "created_at": datetime.utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat()
+                    "created_at": _utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat()
                 }
             )
         except Exception as e:
@@ -102,7 +107,7 @@ class CreateKnowledgeNodeTool(BaseTool):
                 suggestion="创建知识节点失败，请检查参数"
             )
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 class QueryKnowledgeTool(BaseTool):

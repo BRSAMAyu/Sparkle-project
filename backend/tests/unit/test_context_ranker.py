@@ -1,5 +1,9 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -17,7 +21,7 @@ class DummyItem:
 
 
 def test_context_ranker_scores():
-    now = datetime.utcnow()
+    now = _utcnow()
     item = DummyItem(
         evidence_score=0.8,
         correction_count=2,

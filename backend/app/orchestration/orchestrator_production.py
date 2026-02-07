@@ -17,7 +17,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -88,6 +88,10 @@ if PROMETHEUS_AVAILABLE:
         'chat_orchestrator_concurrent_sessions',
         'Number of active sessions'
     )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CircuitBreaker:
@@ -554,7 +558,7 @@ class ProductionChatOrchestrator:
     ):
         """结构化日志"""
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "session_id": session_id,
             "request_id": request_id,
             "user_id": user_id,

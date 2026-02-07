@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.cognitive import BehaviorPattern
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BehaviorPatternDecayService:
@@ -24,8 +28,8 @@ class BehaviorPatternDecayService:
         if not settings.ENABLE_BEHAVIOR_DECAY:
             return {"updated": 0, "archived": 0}
 
-        cutoff = datetime.utcnow() - timedelta(days=window_days)
-        decay_guard = datetime.utcnow() - timedelta(hours=24)
+        cutoff = _utcnow() - timedelta(days=window_days)
+        decay_guard = _utcnow() - timedelta(hours=24)
         result = await self.db.execute(
             select(BehaviorPattern).where(
                 BehaviorPattern.user_id == user_id,
@@ -43,7 +47,7 @@ class BehaviorPatternDecayService:
             if pattern.last_decay_at and pattern.last_decay_at > decay_guard:
                 continue
             pattern.confidence_score = float(pattern.confidence_score or 0.0) * decay_factor
-            pattern.last_decay_at = datetime.utcnow()
+            pattern.last_decay_at = _utcnow()
             if pattern.confidence_score < min_confidence and not pattern.is_archived:
                 pattern.is_archived = True
                 archived += 1

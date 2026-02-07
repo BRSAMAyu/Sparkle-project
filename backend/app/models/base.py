@@ -3,7 +3,7 @@ Base Model Classes
 所有数据库模型的基类
 """
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TypeVar
 
 from sqlalchemy import Column, DateTime, select
@@ -12,6 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import CHAR, TypeDecorator
 
 from app.db.session import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GUID(TypeDecorator):
@@ -67,7 +71,7 @@ class SoftDeleteMixin:
 
     def soft_delete(self) -> None:
         """标记记录为已删除"""
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = _utcnow()
 
     def restore(self) -> None:
         """恢复已删除的记录"""

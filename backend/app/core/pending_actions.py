@@ -4,9 +4,14 @@
 """
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PendingActionsStore:
@@ -64,8 +69,8 @@ class PendingActionsStore:
             "user_id": user_id,
             "description": description,
             "preview_data": preview_data or {},
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(minutes=self._expire_minutes),
+            "created_at": _utcnow(),
+            "expires_at": _utcnow() + timedelta(minutes=self._expire_minutes),
         }
 
         if self.redis:
@@ -110,7 +115,7 @@ class PendingActionsStore:
                 return None
 
             # 检查是否过期
-            if action["expires_at"] < datetime.utcnow():
+            if action["expires_at"] < _utcnow():
                 del self._store[action_id]
                 return None
 
@@ -165,7 +170,7 @@ class PendingActionsStore:
             try:
                 await asyncio.sleep(60)  # 每分钟清理一次
 
-                now = datetime.utcnow()
+                now = _utcnow()
                 expired_keys = [
                     key
                     for key, value in self._store.items()
@@ -196,7 +201,7 @@ class PendingActionsStore:
         return [
             action
             for action in self._store.values()
-            if action["user_id"] == user_id and action["expires_at"] > datetime.utcnow()
+            if action["user_id"] == user_id and action["expires_at"] > _utcnow()
         ]
 
     async def _get_all_by_user_redis(self, user_id: str) -> list[dict[str, Any]]:
@@ -206,7 +211,7 @@ class PendingActionsStore:
             return []
 
         actions = []
-        now = datetime.utcnow()
+        now = _utcnow()
         for action_id in action_ids:
             key = f"{self.ACTION_KEY_PREFIX}{action_id}"
             raw = await self.redis.get(key)
@@ -256,7 +261,7 @@ def _parse_datetime(value: Any) -> datetime:
     try:
         return datetime.fromisoformat(value)
     except Exception:
-        return datetime.utcnow()
+        return _utcnow()
 
 
 # 全局单例

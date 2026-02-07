@@ -5,7 +5,7 @@ Multi-Intent Splitting Service
 从简单字符串匹配升级为 LLM 驱动的智能意图识别
 支持多意图检测、依赖分析、并行执行规划
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -23,6 +23,10 @@ from app.schemas.intent import (
     SubIntent,
 )
 from app.services.llm_service import LLMService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MultiIntentService:
@@ -161,7 +165,7 @@ class MultiIntentService:
         Returns:
             IntentExecuteResponse: 执行结果
         """
-        start_time = datetime.utcnow()
+        start_time = _utcnow()
 
         if not request.confirmed:
             return IntentExecuteResponse(
@@ -202,7 +206,7 @@ class MultiIntentService:
                     logger.error(f"Failed to execute intent {intent.type}: {e}")
                     errors.append(f"{intent.type.value}: {str(e)}")
 
-            total_time = (datetime.utcnow() - start_time).total_seconds()
+            total_time = (_utcnow() - start_time).total_seconds()
 
             return IntentExecuteResponse(
                 success=len(errors) == 0,
@@ -213,7 +217,7 @@ class MultiIntentService:
 
         except Exception as e:
             logger.error(f"Intent execution failed: {e}")
-            total_time = (datetime.utcnow() - start_time).total_seconds()
+            total_time = (_utcnow() - start_time).total_seconds()
 
             return IntentExecuteResponse(
                 success=False,

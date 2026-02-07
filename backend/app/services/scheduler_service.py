@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
@@ -17,6 +17,10 @@ from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.push_service import PushService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SchedulerService:
@@ -302,7 +306,7 @@ class SchedulerService:
             async with AsyncSessionLocal() as db:
                 # 获取活跃用户（最近7天有活动）
                 from datetime import timedelta
-                cutoff_date = datetime.utcnow() - timedelta(days=7)
+                cutoff_date = _utcnow() - timedelta(days=7)
 
                 result = await db.execute(
                     select(User).where(
@@ -371,7 +375,7 @@ class SchedulerService:
             async with AsyncSessionLocal() as db:
                 # 获取活跃用户（最近7天有活动）
                 from datetime import timedelta
-                cutoff_date = datetime.utcnow() - timedelta(days=7)
+                cutoff_date = _utcnow() - timedelta(days=7)
 
                 result = await db.execute(
                     select(User).where(

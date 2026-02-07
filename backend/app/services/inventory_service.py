@@ -2,7 +2,7 @@
 Inventory Service - 物品管理服务
 处理用户物品查询、装备物品、消耗品使用等
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -12,6 +12,10 @@ from sqlalchemy.orm import selectinload
 
 from app.models.shop import ConsumableEffectType, ShopItem, ShopItemType, ShopPurchase, UserConsumable
 from app.models.user import User
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class InventoryService:
@@ -204,7 +208,7 @@ class InventoryService:
                 "success": True,
                 "item_id": None,
                 "item_name": None,
-                "equipped_at": datetime.utcnow().isoformat()
+                "equipped_at": _utcnow().isoformat()
             }
 
         # 2. 验证物品存在且是皮肤类型
@@ -231,7 +235,7 @@ class InventoryService:
             "success": True,
             "item_id": item_id,
             "item_name": item.name,
-            "equipped_at": datetime.utcnow().isoformat()
+            "equipped_at": _utcnow().isoformat()
         }
 
     async def equip_title(
@@ -269,7 +273,7 @@ class InventoryService:
                 "success": True,
                 "item_id": None,
                 "item_name": None,
-                "equipped_at": datetime.utcnow().isoformat()
+                "equipped_at": _utcnow().isoformat()
             }
 
         # 2. 验证物品存在且是称号类型
@@ -296,7 +300,7 @@ class InventoryService:
             "success": True,
             "item_id": item_id,
             "item_name": item.name,
-            "equipped_at": datetime.utcnow().isoformat()
+            "equipped_at": _utcnow().isoformat()
         }
 
     async def _check_item_ownership(
@@ -404,7 +408,7 @@ class InventoryService:
 
         # 5. 更新数量
         consumable.quantity -= quantity
-        consumable.updated_at = datetime.utcnow()
+        consumable.updated_at = _utcnow()
 
         # 如果数量为0，可以选择删除记录或保留为0
         if consumable.quantity == 0:

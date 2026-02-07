@@ -199,7 +199,7 @@ plan_review_service.py:
 - P1-3: Fix `ReviewerAgent.chat_json()` API call signature
 
 ### P2 (Optional)
-- P2-1: Fix `datetime.utcnow()` deprecation warnings
+- P2-1: Fix deprecated UTC timestamp calls (`datetime.now(UTC)` migration)
 - P2-2: Add unit tests for `_validate_feasibility()` edge cases
 
 ---

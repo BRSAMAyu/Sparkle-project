@@ -3,7 +3,7 @@ PlanExecutionRecordService - 方案执行记录持久化服务
 
 负责将验证结果保存到数据库，并支持后续查询分析
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +12,10 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan_execution_record import PlanExecutionRecord
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanExecutionRecordService:
@@ -91,7 +95,7 @@ class PlanExecutionRecordService:
         self, user_id: UUID, days: int = 30, limit: int = 100
     ) -> list[PlanExecutionRecord]:
         """获取用户的执行记录"""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
 
         result = await self.db.execute(
             select(PlanExecutionRecord)
@@ -123,7 +127,7 @@ class PlanExecutionRecordService:
             - pass_rate: 通过率
             - status_breakdown: 状态分布
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
 
         result = await self.db.execute(
             select(PlanExecutionRecord)
@@ -294,7 +298,7 @@ class PlanExecutionRecordService:
         Returns:
             每日统计列表
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
 
         result = await self.db.execute(
             select(PlanExecutionRecord)

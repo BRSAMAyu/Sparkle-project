@@ -3,10 +3,14 @@
 Vocabulary Service Unit Tests
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.vocabulary_service import VocabularyService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TestCalculateNextReview:
@@ -19,7 +23,7 @@ class TestCalculateNextReview:
             consecutive_correct=5,
             remembered=False
         )
-        expected = datetime.utcnow() + timedelta(days=1)
+        expected = _utcnow() + timedelta(days=1)
         # 允许1秒误差
         assert abs((result - expected).total_seconds()) < 1
 
@@ -30,7 +34,7 @@ class TestCalculateNextReview:
             consecutive_correct=0,
             remembered=True
         )
-        expected = datetime.utcnow() + timedelta(days=1)
+        expected = _utcnow() + timedelta(days=1)
         assert abs((result - expected).total_seconds()) < 1
 
     def test_importance_1_streak_0_returns_five_days(self):
@@ -40,7 +44,7 @@ class TestCalculateNextReview:
             consecutive_correct=0,
             remembered=True
         )
-        expected = datetime.utcnow() + timedelta(days=5)
+        expected = _utcnow() + timedelta(days=5)
         assert abs((result - expected).total_seconds()) < 1
 
     def test_importance_3_streak_3_returns_twelve_days(self):
@@ -53,7 +57,7 @@ class TestCalculateNextReview:
         # base_interval = 6 - 3 = 3
         # multiplier = 2^(3-1) = 4
         # days = 3 * 4 = 12
-        expected = datetime.utcnow() + timedelta(days=12)
+        expected = _utcnow() + timedelta(days=12)
         assert abs((result - expected).total_seconds()) < 1
 
     def test_importance_4_streak_2_returns_four_days(self):
@@ -66,7 +70,7 @@ class TestCalculateNextReview:
         # base_interval = 6 - 4 = 2
         # multiplier = 2^(2-1) = 2
         # days = 2 * 2 = 4
-        expected = datetime.utcnow() + timedelta(days=4)
+        expected = _utcnow() + timedelta(days=4)
         assert abs((result - expected).total_seconds()) < 1
 
     def test_max_interval_capped_at_180_days(self):
@@ -78,7 +82,7 @@ class TestCalculateNextReview:
         )
         # base_interval = 5, multiplier = 2^9 = 512
         # 5 * 512 = 2560，但应该被限制为 180
-        expected = datetime.utcnow() + timedelta(days=180)
+        expected = _utcnow() + timedelta(days=180)
         assert abs((result - expected).total_seconds()) < 1
 
 

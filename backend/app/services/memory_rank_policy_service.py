@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -18,6 +18,10 @@ def _default_weights() -> dict[str, float]:
         "freshness": settings.MEMORY_RANK_DEFAULT_FRESHNESS,
         "correction": settings.MEMORY_RANK_DEFAULT_CORRECTION,
     }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryRankPolicyService:
@@ -60,7 +64,7 @@ class MemoryRankPolicyService:
     async def get_policy(self, intent: str, user_id: UUID) -> dict[str, float]:
         cache_key = self._cache_key(intent, user_id)
         cached = self._cache.get(cache_key)
-        if cached and cached[0] > datetime.utcnow():
+        if cached and cached[0] > _utcnow():
             return cached[1].copy()
 
         resolved = _default_weights()
@@ -77,7 +81,7 @@ class MemoryRankPolicyService:
             resolved.update({k: v for k, v in user_policy.weights.items() if k in WEIGHT_KEYS})
 
         normalized = self._normalize_weights(resolved)
-        self._cache[cache_key] = (datetime.utcnow() + self._cache_ttl, normalized.copy())
+        self._cache[cache_key] = (_utcnow() + self._cache_ttl, normalized.copy())
         return normalized
 
     async def list_policies(self) -> list[MemoryRankPolicy]:
@@ -128,7 +132,7 @@ class MemoryRankPolicyService:
         record = result.scalar_one_or_none()
         if record is None:
             return False
-        record.deleted_at = datetime.utcnow()
+        record.deleted_at = _utcnow()
         await self.db.commit()
         self._cache.clear()
         return True

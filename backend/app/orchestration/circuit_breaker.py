@@ -8,12 +8,16 @@ Responsibilities:
 """
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 
 from loguru import logger
 
 from app.orchestration.schemas import CircuitBreakerState
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CircuitState(Enum):
@@ -58,7 +62,7 @@ class CircuitBreaker:
         self._failure_count = 0
         self._success_count = 0
         self._last_failure_time: datetime | None = None
-        self._last_state_change = datetime.utcnow()
+        self._last_state_change = _utcnow()
         self._opened_count = 0
 
         # Sliding window (for failure rate calculation)
@@ -135,7 +139,7 @@ class CircuitBreaker:
         self._success_count += 1
 
         # Update sliding window
-        self._result_window.append((datetime.utcnow(), True))
+        self._result_window.append((_utcnow(), True))
         self._trim_window()
 
         # HALF_OPEN state: consecutive success reaches threshold -> CLOSED
@@ -152,10 +156,10 @@ class CircuitBreaker:
     async def on_failure(self, error: str | None = None):
         """Record failure"""
         self._failure_count += 1
-        self._last_failure_time = datetime.utcnow()
+        self._last_failure_time = _utcnow()
 
         # Update sliding window
-        self._result_window.append((datetime.utcnow(), False))
+        self._result_window.append((_utcnow(), False))
         self._trim_window()
 
         # Check if should trip
@@ -191,7 +195,7 @@ class CircuitBreaker:
         if not self._last_failure_time:
             return False
 
-        elapsed = (datetime.utcnow() - self._last_failure_time).total_seconds() * 1000
+        elapsed = (_utcnow() - self._last_failure_time).total_seconds() * 1000
         return elapsed >= self.config.timeout_ms
 
     def _calculate_failure_rate(self) -> float:
@@ -204,7 +208,7 @@ class CircuitBreaker:
 
     def _trim_window(self):
         """Trim sliding window"""
-        cutoff = datetime.utcnow() - timedelta(seconds=60)
+        cutoff = _utcnow() - timedelta(seconds=60)
         self._result_window = [
             (ts, success) for ts, success in self._result_window
             if ts > cutoff
@@ -218,7 +222,7 @@ class CircuitBreaker:
         """Transition to new state"""
         old_state = self._state
         self._state = new_state
-        self._last_state_change = datetime.utcnow()
+        self._last_state_change = _utcnow()
 
         if new_state == CircuitState.OPEN:
             self._opened_count += 1
@@ -261,7 +265,7 @@ class CircuitBreaker:
         self._failure_count = 0
         self._success_count = 0
         self._last_failure_time = None
-        self._last_state_change = datetime.utcnow()
+        self._last_state_change = _utcnow()
         self._result_window.clear()
 
 

@@ -10,7 +10,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -19,6 +19,10 @@ from loguru import logger
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ReviewDecision(Enum):
@@ -161,7 +165,7 @@ class PlanReviewService:
             PlanReviewResult with decision and comments
         """
         review_id = str(uuid.uuid4())
-        reviewed_at = datetime.utcnow().isoformat()
+        reviewed_at = _utcnow().isoformat()
 
         # Step 1: Quick rule-based check
         rule_result = await self._quick_rule_check(plan, user_context)
@@ -884,7 +888,7 @@ Please review this plan and provide your assessment."""
                 "plan_id": plan_id,
                 "user_id": user_id,
                 "action": "resume",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             },
         )
 
@@ -1034,7 +1038,7 @@ Please review this plan and provide your assessment."""
                 "user_id": user_id,
                 "action": "rejected",
                 "feedback": feedback,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             },
         )
 
@@ -1085,7 +1089,7 @@ Please review this plan and provide your assessment."""
                 "user_id": user_id,
                 "action": "replan",
                 "feedback": feedback,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             },
         )
 
@@ -1097,7 +1101,7 @@ Please review this plan and provide your assessment."""
                 "new_plan_id": new_plan_id,
                 "user_id": user_id,
                 "feedback": feedback,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             }
             try:
                 await self.redis.publish(f"user:{user_id}:replan", json.dumps(notification))
@@ -1323,7 +1327,7 @@ Please review this plan and provide your assessment."""
                 "plan_id": plan_id,
                 "user_id": user_id,
                 "feedback": feedback,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             }
             try:
                 await self.redis.publish(

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import desc, select
@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
 from app.schemas.notification import NotificationCreate
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotificationService:
@@ -47,7 +51,7 @@ class NotificationService:
         notification = result.scalar_one_or_none()
         if notification:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = _utcnow()
             await db.commit()
             await db.refresh(notification)
         return notification

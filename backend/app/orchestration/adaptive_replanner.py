@@ -4,7 +4,7 @@ AdaptiveReplanner - Automatic plan adjustments and replanning trigger.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -13,6 +13,10 @@ from loguru import logger
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AdaptiveReplanner:
@@ -121,7 +125,7 @@ class AdaptiveReplanner:
         if not adjustments:
             return
 
-        now = datetime.utcnow().isoformat()
+        now = _utcnow().isoformat()
         existing_meta = (state.facts or {}).get("adaptive_meta", {})
         adaptive_meta = dict(existing_meta)
         adaptive_meta["last_adjustment_at"] = now
@@ -156,7 +160,7 @@ class AdaptiveReplanner:
         completion_rate: float | None = None,
         feedback_category: str | None = None,
     ) -> None:
-        now = datetime.utcnow().isoformat()
+        now = _utcnow().isoformat()
         adaptive_facts = {
             "adaptive_meta": {
                 "last_replan_at": now,
@@ -240,7 +244,7 @@ class AdaptiveReplanner:
             last_time = datetime.fromisoformat(last_str)
         except Exception:
             return False
-        return datetime.utcnow() - last_time < cooldown
+        return _utcnow() - last_time < cooldown
 
     def _build_feedback_entry(
         self,
@@ -251,7 +255,7 @@ class AdaptiveReplanner:
     ) -> dict[str, Any]:
         entry = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "type": feedback_type,
             "content": content,
         }

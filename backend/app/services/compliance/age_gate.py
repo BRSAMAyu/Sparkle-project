@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.models.user import User
@@ -10,6 +10,10 @@ class AgeGateDecision:
     is_minor: bool | None
     should_collect_sensitive: bool
     source: str | None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AgeGateService:
@@ -51,4 +55,4 @@ class AgeGateService:
         user.is_minor = decision.is_minor
         user.age_verified = True
         user.age_verification_source = decision.source
-        user.age_verified_at = datetime.utcnow()
+        user.age_verified_at = _utcnow()

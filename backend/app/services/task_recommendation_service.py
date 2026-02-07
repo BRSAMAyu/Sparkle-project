@@ -2,7 +2,7 @@
 任务推荐服务 - 基于用户偏好和知识图谱
 """
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import nullsfirst, select
@@ -21,6 +21,10 @@ class TaskRecommendation:
     difficulty: int
     priority: float
     reason: str
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskRecommendationService:
@@ -97,7 +101,7 @@ class TaskRecommendationService:
 
         days_since = 0
         if status.last_study_at:
-            days_since = (datetime.utcnow() - status.last_study_at).days
+            days_since = (_utcnow() - status.last_study_at).days
 
         difficulty = max(1, min(5, node.importance_level or 1))
 

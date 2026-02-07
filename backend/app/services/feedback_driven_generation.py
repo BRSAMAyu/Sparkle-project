@@ -14,7 +14,7 @@ Feedback-Driven Generation Service - Phase 2f
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -30,6 +30,10 @@ from app.services.review_history_service import get_review_history_service
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class FeedbackType(str, Enum):
     """反馈类型"""
@@ -88,7 +92,7 @@ class ReviewFeedback:
 
     def __post_init__(self):
         if not self.timestamp:
-            self.timestamp = datetime.utcnow().isoformat()
+            self.timestamp = _utcnow().isoformat()
 
 
 @dataclass
@@ -117,7 +121,7 @@ class RegenerationRequest:
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -404,7 +408,7 @@ class FeedbackDrivenGenerationService:
 
             # 更新请求状态
             request.status = RegenerationStatus.COMPLETED
-            request.completed_at = datetime.utcnow().isoformat()
+            request.completed_at = _utcnow().isoformat()
             request.new_content_id = new_content_id
             request.improvement_summary = f"Content regenerated with {request.regeneration_type.value}"
 
@@ -506,7 +510,7 @@ class FeedbackDrivenGenerationService:
 
         # 更新请求状态
         request.status = RegenerationStatus.COMPLETED
-        request.completed_at = datetime.utcnow().isoformat()
+        request.completed_at = _utcnow().isoformat()
 
     # ============================================
     # 反馈模式分析
@@ -528,7 +532,7 @@ class FeedbackDrivenGenerationService:
             self._feedback_patterns[user_id] = pattern
 
         pattern.feedback_count += 1
-        pattern.last_updated = datetime.utcnow().isoformat()
+        pattern.last_updated = _utcnow().isoformat()
 
         # 更新评分统计
         if feedback.rating is not None:
@@ -582,7 +586,7 @@ class FeedbackDrivenGenerationService:
         Returns:
             统计数据
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
         cutoff_str = cutoff.isoformat()
 
         # 筛选时间范围内的反馈

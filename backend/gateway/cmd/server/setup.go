@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -375,10 +376,16 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	r := gin.Default()
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
+	r.Use(middleware.RequestContextMiddleware())
 	r.Use(middleware.SecurityHeadersMiddleware())
 	if cfg.CORSEnabled {
 		r.Use(middleware.CORSMiddleware(cfg))
 	}
+	healthVersion := os.Getenv("APP_VERSION")
+	if strings.TrimSpace(healthVersion) == "" {
+		healthVersion = "dev"
+	}
+	handler.NewHealthHandler(dbh.pool, rdb, healthVersion).RegisterRoutes(r)
 
 	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
 	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
@@ -397,7 +404,11 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	api := r.Group("/api/v1")
 	{
 		api.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "ok"})
+			c.JSON(http.StatusOK, gin.H{
+				"status": "ok",
+				"ready":  "/ready",
+				"live":   "/live",
+			})
 		})
 		api.GET("/health/cqrs", func(c *gin.Context) {
 			outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())

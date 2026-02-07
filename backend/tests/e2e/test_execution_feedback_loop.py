@@ -15,7 +15,7 @@ Created: 2026-01-28
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy import select
@@ -43,6 +43,10 @@ from app.orchestration.version_conflict_service import (
 )
 from app.orchestration.state_manager import SessionStateManager
 from app.services.milestone_handler import MilestoneHandler
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # =============================================================================
@@ -80,7 +84,7 @@ async def test_e2e_modify_task_triggers_replanning_and_adjustment(db_session: As
         type=PlanType.SPRINT,
         subject="编程",
         progress=0.0,
-        target_date=datetime.utcnow() + timedelta(days=7),
+        target_date=_utcnow() + timedelta(days=7),
         is_active=True,
     )
     db_session.add(plan)
@@ -124,7 +128,7 @@ async def test_e2e_modify_task_triggers_replanning_and_adjustment(db_session: As
         plan_id=plan_id,
         task_id=tasks[0].id,
         feedback_type=FeedbackType.TIME_UNDERESTIMATE,
-        timestamp=datetime.utcnow(),
+        timestamp=_utcnow(),
         actual_duration_minutes=65,
         difficulty_perception="medium",
         task_type="training",
@@ -193,7 +197,7 @@ async def test_e2e_feedback_loop_updates_parameters_and_new_tasks(db_session: As
         type=PlanType.SPRINT,
         subject="数学",
         progress=0.0,
-        target_date=datetime.utcnow() + timedelta(days=7),
+        target_date=_utcnow() + timedelta(days=7),
         is_active=True,
     )
     db_session.add(plan)
@@ -245,7 +249,7 @@ async def test_e2e_feedback_loop_updates_parameters_and_new_tasks(db_session: As
         plan_id=plan_id,
         task_id=task1.id,
         feedback_type=FeedbackType.TASK_TOO_HARD,
-        timestamp=datetime.utcnow(),
+        timestamp=_utcnow(),
         difficulty_perception="hard",
         task_type="learning",
         rating=2,  # Low rating
@@ -306,7 +310,7 @@ async def test_e2e_milestone_triggers_progressive_task_generation(db_session: As
         type=PlanType.SPRINT,
         subject="英语",
         progress=0.0,
-        target_date=datetime.utcnow() + timedelta(days=30),
+        target_date=_utcnow() + timedelta(days=30),
         is_active=True,
     )
     db_session.add(plan)

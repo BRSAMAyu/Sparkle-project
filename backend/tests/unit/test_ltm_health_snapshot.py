@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -43,7 +47,7 @@ async def test_ltm_health_snapshot_keys(db_session):
         summary="Snapshot test",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.4,
         evidence_refs=[{"type": "event", "id": "evt_2"}],
         evidence_score=0.5,

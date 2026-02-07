@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -10,6 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.error_book import ErrorRecord
 from app.models.nightly_review import NightlyReview
 from app.models.user_state import UserStateSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NightlyReviewService:
@@ -67,7 +71,7 @@ class NightlyReviewService:
             return None
 
         review.status = "reviewed"
-        review.reviewed_at = datetime.utcnow()
+        review.reviewed_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(review)
         return review
@@ -105,7 +109,7 @@ class NightlyReviewService:
                 tz = ZoneInfo(timezone_name)
             except Exception:
                 tz = None
-        now_local = datetime.utcnow().astimezone(tz) if tz else datetime.utcnow()
+        now_local = _utcnow().astimezone(tz) if tz else _utcnow()
         target_date = review_date or (now_local.date() - timedelta(days=1))
         start_local = datetime.combine(target_date, datetime.min.time())
         end_local = datetime.combine(target_date, datetime.max.time())

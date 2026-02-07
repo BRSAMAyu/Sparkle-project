@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -9,6 +9,10 @@ from app.models.memory import EpisodicMemory, MemoryPreference
 from app.models.user import User
 from app.models.user_memory_settings import UserMemorySettings
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -88,7 +92,7 @@ async def test_memory_service_blocks_source(db_session, monkeypatch):
         summary="Memory One",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.6,
         tags=["execution"],
         evidence_refs=[{"type": "event", "id": "evt_1"}],

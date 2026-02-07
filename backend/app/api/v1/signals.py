@@ -5,7 +5,7 @@ Endpoints for collecting user feedback on candidate actions.
 Enables learning loop for signal threshold calibration.
 """
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +19,10 @@ from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.user import User
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackRequest(BaseModel):
@@ -98,8 +102,8 @@ async def record_feedback(
             executed=request.executed,
             completion_result=request.completion_result,
             context_snapshot=request.context_snapshot or {},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         db.add(feedback)

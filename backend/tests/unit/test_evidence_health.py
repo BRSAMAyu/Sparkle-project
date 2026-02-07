@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -27,10 +31,10 @@ async def test_evidence_health_marks_missing_event(db_session):
         event_type="test",
         schema_version="event.v1",
         source="unit",
-        ts_ms=int(datetime.utcnow().timestamp() * 1000),
+        ts_ms=int(_utcnow().timestamp() * 1000),
         entities=None,
         payload=None,
-        received_at=datetime.utcnow(),
+        received_at=_utcnow(),
     )
     db_session.add(event)
     await db_session.commit()
@@ -41,14 +45,14 @@ async def test_evidence_health_marks_missing_event(db_session):
         summary="Testing missing event",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.5,
         tags=["execution"],
         evidence_refs=[{"type": "event", "id": "evt_missing"}],
     )
     assert episodic.evidence_score == pytest.approx(0.5)
 
-    event.deleted_at = datetime.utcnow()
+    event.deleted_at = _utcnow()
     await db_session.commit()
 
     health_service = EvidenceHealthService(db_session)

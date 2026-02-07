@@ -67,9 +67,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter Analyze
-        working-directory: mobile
-        run: flutter analyze --no-fatal-infos
+      - name: Flutter Analyze Gate
+        run: |
+          python3 scripts/check_flutter_analyze_gate.py \
+            --project-dir mobile \
+            --budget-file quality/flutter_analyze_allowlist.json \
+            --write-report quality/flutter_analyze_report_ci.json
 
       - name: Technical Debt Budget Gate
         run: python3 scripts/check_tech_debt_budget.py
@@ -155,6 +158,9 @@ jobs:
           TESTING: 'true'
         run: |
           pytest backend/tests -v --cov=backend/app --cov-report=xml
+
+      - name: OpenAPI Contract Check
+        run: python3 scripts/check_openapi_contract.py
 
       - name: Enforce Python Coverage Threshold
         run: |

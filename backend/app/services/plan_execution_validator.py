@@ -4,7 +4,7 @@ PlanExecutionValidator - 方案执行验证服务
 负责验证方案执行结果是否符合预期
 """
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
@@ -29,7 +29,7 @@ class ExecutionValidationResult:
     criteria_results: dict[str, Any] = field(default_factory=dict)
     tool_summary: dict[str, int] = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: _utcnow().isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
@@ -42,6 +42,10 @@ class ExecutionValidationResult:
             "issues": self.issues,
             "timestamp": self.timestamp,
         }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanExecutionValidator:

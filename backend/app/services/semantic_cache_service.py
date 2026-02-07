@@ -7,7 +7,7 @@ Redis Semantic Cache Service - 语义缓存服务
 import asyncio
 import hashlib
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
@@ -21,6 +21,10 @@ from app.core.metrics import (
     SEMANTIC_CACHE_MISS_TOTAL,
 )
 from app.services.embedding_service import embedding_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SemanticCacheService:
@@ -72,7 +76,7 @@ class SemanticCacheService:
                 "total_misses": 0,
                 "total_sets": 0,
                 "semantic_hits": 0,
-                "start_time": datetime.utcnow().isoformat()
+                "start_time": _utcnow().isoformat()
             }
             await self.redis.hset(self.STATS_KEY, mapping={
                 k: json.dumps(v) for k, v in stats.items()
@@ -148,7 +152,7 @@ class SemanticCacheService:
             "user_id": user_id,
             "normalized_query": normalized_query,
             "knowledge_version": knowledge_version,
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": _utcnow().isoformat()
         }
         await self.redis.setex(emb_key, ttl, json.dumps(payload))
         await self.redis.sadd(self.KEY_SET, cache_key)
@@ -395,7 +399,7 @@ class SemanticCacheService:
                 "query": query,
                 "normalized_query": normalized_query,
                 "user_id": user_id,
-                "cached_at": datetime.utcnow().isoformat(),
+                "cached_at": _utcnow().isoformat(),
             }
 
             # 序列化并存储

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -25,6 +25,10 @@ router = APIRouter(
     tags=["memory-admin"],
     dependencies=[Depends(get_current_active_superuser)],
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _ensure_governance_enabled() -> None:
@@ -54,7 +58,7 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
                 model.evidence_missing.is_(True),
             )
         )
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        cutoff = _utcnow() - timedelta(days=7)
         retracted_result = await db.execute(
             select(func.count(model.id)).where(
                 model.retracted_at.isnot(None),

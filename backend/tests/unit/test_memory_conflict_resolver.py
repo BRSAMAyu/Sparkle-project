@@ -1,14 +1,18 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def test_preference_conflict_resolution():
     resolver = MemoryConflictResolver()
     user_id = uuid4()
-    now = datetime.utcnow()
+    now = _utcnow()
     winner = MemoryPreference(
         id=uuid4(),
         user_id=user_id,
@@ -45,7 +49,7 @@ def test_preference_conflict_resolution():
 def test_goal_conflict_resolution():
     resolver = MemoryConflictResolver()
     user_id = uuid4()
-    now = datetime.utcnow()
+    now = _utcnow()
     goal_a = MemoryGoal(
         id=uuid4(),
         user_id=user_id,
@@ -77,7 +81,7 @@ def test_goal_conflict_resolution():
 def test_episodic_deduplication():
     resolver = MemoryConflictResolver()
     user_id = uuid4()
-    now = datetime.utcnow()
+    now = _utcnow()
     winner = EpisodicMemory(
         id=uuid4(),
         user_id=user_id,

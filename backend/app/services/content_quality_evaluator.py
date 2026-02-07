@@ -4,7 +4,7 @@ Content Quality Evaluator
 
 Automatically evaluates response quality to determine if it should be added to the seed library.
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import inspect
 from typing import Any
 from uuid import UUID
@@ -15,6 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.response_feedback import ResponseFeedback
 from app.models.seed_content import SeedItem, SeedLibrary
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ContentQualityEvaluator:
@@ -191,7 +195,7 @@ class ContentQualityEvaluator:
             return False, f"Positive feedback ratio too low ({positive_ratio:.1%} < 70%)"
 
         # Check for recent activity
-        recent_cutoff = datetime.utcnow() - timedelta(days=30)
+        recent_cutoff = _utcnow() - timedelta(days=30)
         recent_feedback = [f for f in feedback_records if f.created_at and f.created_at >= recent_cutoff]
 
         if len(recent_feedback) < 2:
@@ -218,7 +222,7 @@ class ContentQualityEvaluator:
         Returns:
             list[Dict]: 候选回复列表
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+        cutoff_date = _utcnow() - timedelta(days=days_back)
 
         # Find responses with sufficient feedback
         # Group by response_id and count
@@ -313,7 +317,7 @@ class ContentQualityEvaluator:
                     'source_response_id': response_id,
                     'quality_metrics': evaluation.get('metrics', {}),
                     'auto_seeded': True,
-                    'auto_seed_date': datetime.utcnow().isoformat(),
+                    'auto_seed_date': _utcnow().isoformat(),
                 },
                 tags=['auto-seeded', 'high-quality'],
             )

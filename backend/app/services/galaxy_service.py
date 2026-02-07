@@ -30,6 +30,10 @@ from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class GalaxyService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -442,7 +446,7 @@ class GalaxyService:
                     revision = EXCLUDED.revision
             """)
 
-            update_time = _to_utc_naive(version) or datetime.utcnow()
+            update_time = _to_utc_naive(version) or _utcnow()
 
             await self.db.execute(upsert_query, {
                 "user_id": user_id,
@@ -492,9 +496,9 @@ class GalaxyService:
                     "node_id": str(node_id),
                     "mastery_score": new_mastery,
                     "revision": new_revision,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": _utcnow().isoformat()
                 }),
-                "created_at": datetime.utcnow()
+                "created_at": _utcnow()
             })
 
             await self.db.flush()
