@@ -79,7 +79,7 @@ dependencies = [
     # gRPC
     "grpcio>=1.60.0",
     "grpcio-tools>=1.60.0",
-    "protobuf>=4.25.0",
+    "protobuf>=6.33.5",
 ]
 
 [project.optional-dependencies]
@@ -183,7 +183,7 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
-ignore_errors = true
+ignore_errors = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

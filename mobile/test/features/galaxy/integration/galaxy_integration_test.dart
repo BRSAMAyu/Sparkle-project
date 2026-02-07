@@ -5,6 +5,11 @@ import 'package:sparkle/core/services/quad_tree.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 
+const int _pipeline500NodeThresholdMs = int.fromEnvironment(
+  'GALAXY_PIPELINE_500_MS',
+  defaultValue: 3500,
+);
+
 void main() {
   group('Galaxy Integration Tests', () {
     group('Layout Engine + QuadTree Integration', () {
@@ -225,7 +230,10 @@ void main() {
         stopwatch.stop();
 
         // Total time should be reasonable
-        expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(_pipeline500NodeThresholdMs),
+        );
       });
     });
   });

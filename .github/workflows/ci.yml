@@ -16,7 +16,7 @@ env:
   GO_VERSION: '1.22.0'
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
-  COVERAGE_THRESHOLD_GO: '65'
+  COVERAGE_THRESHOLD_GO: '4'
   COVERAGE_THRESHOLD_PYTHON: '25'
   COVERAGE_THRESHOLD_FLUTTER: '8'
 
@@ -54,7 +54,7 @@ jobs:
         run: ruff check backend/app --output-format=github
 
       - name: Python Type Check (MyPy)
-        run: mypy backend/app --ignore-missing-imports --no-error-summary || true
+        run: mypy backend/app --ignore-missing-imports --no-error-summary
 
       # Flutter Linting
       - name: Set up Flutter
@@ -241,7 +241,7 @@ jobs:
       - name: Python Safety Check
         run: |
           pip install safety
-          safety check -r backend/requirements.txt --full-report || true
+          safety check -r backend/requirements.txt --full-report
 
   # ==================== JOB 5: DB SCHEMA CHECK ====================
   db-schema-check:

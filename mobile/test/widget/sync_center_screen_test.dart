@@ -56,18 +56,21 @@ void main() {
       lastSuccessAt: DateTime(2025, 1, 1, 12),
     );
 
-    final streamController = StreamController<SyncCenterStats>()..add(fakeStats);
+    final streamController = StreamController<SyncCenterStats>()
+      ..add(fakeStats);
     final itemsController = StreamController<List<OutboxItem>>()
       ..add(<OutboxItem>[]);
 
-    final engine = SyncEngine(localDb, _FakeWebSocketService(), _FakeApiClient());
+    final engine =
+        SyncEngine(localDb, _FakeWebSocketService(), _FakeApiClient());
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           localDatabaseProvider.overrideWithValue(localDb),
           syncEngineProvider.overrideWithValue(engine),
-          syncCenterStatsProvider.overrideWith((ref) => streamController.stream),
+          syncCenterStatsProvider
+              .overrideWith((ref) => streamController.stream),
           syncCenterItemsProvider.overrideWith(
             (ref, query) => itemsController.stream,
           ),
@@ -95,23 +98,33 @@ class _FakeApiClient implements ApiClient {
   Dio get dio => Dio();
 
   @override
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> get<T>(String path,
+      {Map<String, dynamic>? queryParameters}) {
     throw UnimplementedError();
   }
 
   @override
-  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? headers, Map<String, dynamic>? queryParameters}) => const Stream<SSEEvent>.empty();
+  Stream<SSEEvent> getStream(String path,
+          {Map<String, dynamic>? headers,
+          Map<String, dynamic>? queryParameters}) =>
+      const Stream<SSEEvent>.empty();
 
   @override
-  Stream<SSEEvent> postStream(String path, {Object? data}) => const Stream<SSEEvent>.empty();
+  Stream<SSEEvent> postStream(String path, {Object? data}) =>
+      const Stream<SSEEvent>.empty();
 
   @override
-  Future<Response<T>> post<T>(String path, {Object? data, Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> post<T>(String path,
+      {Object? data, Map<String, dynamic>? queryParameters}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<Response<T>> put<T>(String path, {Object? data}) {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -121,7 +134,10 @@ class _FakeApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> delete<T>(String path) {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 }

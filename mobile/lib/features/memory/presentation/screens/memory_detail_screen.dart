@@ -12,7 +12,6 @@ import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_bad
 enum MemoryDetailType { preference, goal, episodic }
 
 class MemoryDetailArgs {
-
   factory MemoryDetailArgs.preference(MemoryPreferenceItem item) =>
       MemoryDetailArgs._(
         MemoryDetailType.preference,
@@ -39,8 +38,16 @@ class MemoryDetailArgs {
         item.evidenceRefs,
         episodic: item,
       );
-  MemoryDetailArgs._(this.type, this.title, this.evidenceMissing, this.refs,
-      {this.prefKey, this.preference, this.goal, this.episodic,});
+  MemoryDetailArgs._(
+    this.type,
+    this.title,
+    this.evidenceMissing,
+    this.refs, {
+    this.prefKey,
+    this.preference,
+    this.goal,
+    this.episodic,
+  });
 
   final MemoryDetailType type;
   final String title;
@@ -162,11 +169,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title:
+              Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -207,70 +215,66 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     }
   }
 
-  Widget _buildPreferenceDetail(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              MemoryEvidenceBadge(status: _evidenceStatus),
-              const SizedBox(width: DS.sm),
-              Text('当前版本', style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-          const SizedBox(height: DS.md),
-          _buildKeyValue('Key', widget.args.prefKey ?? '-'),
-          _buildKeyValue(
-            'Value',
-            _preference?.prefValue.toString() ?? '-',
-          ),
-          _buildKeyValue(
-            'Confidence',
-            _confidence?.toStringAsFixed(2) ?? '-',
-          ),
-          _buildKeyValue(
-            'Evidence',
-            _evidenceScore?.toStringAsFixed(2) ?? '-',
-          ),
-          _buildKeyValue('Corrections', _correctionCount.toString()),
-          _buildKeyValue(
-            'Updated',
-            _formatDate(_preference?.updatedAt),
-          ),
-          _buildKeyValue(
-            'Retracted',
-            _formatDate(_retractedAt),
-          ),
-          if (AppFeatureFlags.enableMemoryCorrection) ...[
-            const SizedBox(height: DS.md),
-            _buildCorrectionActions(context),
-          ],
-          if (AppFeatureFlags.enableMemoryExplain) ...[
-            const SizedBox(height: DS.lg),
-            _buildWhyMemorySection(),
-          ],
-          const SizedBox(height: DS.lg),
-          Text('版本历史', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: DS.sm),
-          if (_loadingHistory)
-            const Center(child: CircularProgressIndicator())
-          else if (_historyError != null)
-            Text(_historyError!, style: Theme.of(context).textTheme.bodyMedium)
-          else if (AppFeatureFlags.enableMemoryPanelV2)
-            Expanded(
-              child: ListView.builder(
-                itemCount: _history.length,
-                itemBuilder: _buildTimelineCard,
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                itemCount: _history.length,
-                itemBuilder: (context, index) =>
-                    _buildHistoryTile(context, _history[index]),
-              ),
+  Widget _buildPreferenceDetail(BuildContext context) => SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                MemoryEvidenceBadge(status: _evidenceStatus),
+                const SizedBox(width: DS.sm),
+                Text('当前版本', style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
-        ],
+            const SizedBox(height: DS.md),
+            _buildKeyValue('Key', widget.args.prefKey ?? '-'),
+            _buildKeyValue(
+              'Value',
+              _preference?.prefValue.toString() ?? '-',
+            ),
+            _buildKeyValue(
+              'Confidence',
+              _confidence?.toStringAsFixed(2) ?? '-',
+            ),
+            _buildKeyValue(
+              'Evidence',
+              _evidenceScore?.toStringAsFixed(2) ?? '-',
+            ),
+            _buildKeyValue('Corrections', _correctionCount.toString()),
+            _buildKeyValue(
+              'Updated',
+              _formatDate(_preference?.updatedAt),
+            ),
+            _buildKeyValue(
+              'Retracted',
+              _formatDate(_retractedAt),
+            ),
+            if (AppFeatureFlags.enableMemoryCorrection) ...[
+              const SizedBox(height: DS.md),
+              _buildCorrectionActions(context),
+            ],
+            if (AppFeatureFlags.enableMemoryExplain) ...[
+              const SizedBox(height: DS.lg),
+              _buildWhyMemorySection(),
+            ],
+            const SizedBox(height: DS.lg),
+            Text('版本历史', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: DS.sm),
+            if (_loadingHistory)
+              const Center(child: CircularProgressIndicator())
+            else if (_historyError != null)
+              Text(_historyError!,
+                  style: Theme.of(context).textTheme.bodyMedium)
+            else if (AppFeatureFlags.enableMemoryPanelV2)
+              ...List.generate(_history.length, (index) {
+                return _buildTimelineCard(context, index);
+              })
+            else
+              ...List.generate(_history.length, (index) {
+                return _buildHistoryTile(context, _history[index]);
+              }),
+          ],
+        ),
       );
 
   Widget _buildGoalDetail(BuildContext context) {
@@ -309,7 +313,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         const SizedBox(height: DS.md),
         _buildKeyValue('来源', episodic?.sourceType ?? '-'),
         _buildKeyValue('发生时间', _formatDate(episodic?.occurredAt)),
-        _buildKeyValue('重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-'),
+        _buildKeyValue(
+            '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
         _buildKeyValue('最后更新', _formatDate(episodic?.updatedAt)),
@@ -403,8 +408,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           children: [
             Row(
               children: [
-                Text('v${item.version}',
-                    style: Theme.of(context).textTheme.titleMedium,),
+                Text(
+                  'v${item.version}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const Spacer(),
                 MemoryEvidenceBadge(
                   status: _statusFor(item.evidenceMissing, item.evidenceRefs),
@@ -505,8 +512,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Why this memory?',
-                style: Theme.of(context).textTheme.titleMedium,),
+            Text(
+              'Why this memory?',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: DS.sm),
             Text(_explanationText()),
             if (settingsSummary != null) ...[
@@ -664,7 +673,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             runSpacing: DS.sm,
             children: [
               _buildCorrectionButton('Not true', 'reject'),
-              _buildCorrectionButton('No longer applies', 'no_longer_applicable'),
+              _buildCorrectionButton(
+                  'No longer applies', 'no_longer_applicable'),
               _buildCorrectionButton('Lower confidence', 'lower_confidence'),
               _buildCorrectionButton('Merge', 'merge'),
             ],

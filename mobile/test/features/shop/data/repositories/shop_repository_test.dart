@@ -64,7 +64,11 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> put<T>(String path, {Object? data}) {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -74,7 +78,10 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> delete<T>(String path) {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -106,20 +113,21 @@ ShopItem buildShopItem({
   bool isOwned = false,
   bool isAvailable = true,
   bool isLimited = false,
-}) => ShopItem(
-    id: id,
-    name: name,
-    itemType: itemType,
-    category: category,
-    pricePhotons: pricePhotons,
-    rarity: rarity,
-    sortOrder: sortOrder,
-    hasDiscount: hasDiscount,
-    isInStock: isInStock,
-    isOwned: isOwned,
-    isAvailable: isAvailable,
-    isLimited: isLimited,
-  );
+}) =>
+    ShopItem(
+      id: id,
+      name: name,
+      itemType: itemType,
+      category: category,
+      pricePhotons: pricePhotons,
+      rarity: rarity,
+      sortOrder: sortOrder,
+      hasDiscount: hasDiscount,
+      isInStock: isInStock,
+      isOwned: isOwned,
+      isAvailable: isAvailable,
+      isLimited: isLimited,
+    );
 
 void main() {
   late TestApiClient mockApiClient;
@@ -300,7 +308,6 @@ void main() {
       expect(result['price_paid'], 100);
       expect(result['balance_before'], 500);
       expect(result['balance_after'], 400);
-
     });
 
     test('throws exception on insufficient balance', () async {
@@ -318,11 +325,13 @@ void main() {
 
       expect(
         () => repository.purchaseItem('skin_001'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('Insufficient photon balance'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Insufficient photon balance'),
+          ),
+        ),
       );
     });
 
@@ -341,11 +350,13 @@ void main() {
 
       expect(
         () => repository.purchaseItem('limited_item'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('out of stock'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('out of stock'),
+          ),
+        ),
       );
     });
   });
@@ -538,7 +549,6 @@ void main() {
 
       expect(result['success'], isTrue);
       expect(result['item_id'], itemId);
-
     });
   });
 
@@ -627,10 +637,12 @@ void main() {
     test('throws exception when insufficient quantity', () async {
       mockApiClient.postHandler = (path, data, queryParameters) async {
         throw DioException(
-          requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
+          requestOptions:
+              RequestOptions(path: '/inventory/consumables/boost_001/use'),
           type: DioExceptionType.badResponse,
           response: Response(
-            requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
+            requestOptions:
+                RequestOptions(path: '/inventory/consumables/boost_001/use'),
             data: {'detail': 'Insufficient consumable quantity'},
             statusCode: 400,
           ),

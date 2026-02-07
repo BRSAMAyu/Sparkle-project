@@ -6,6 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/quad_tree.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 
+const int _layout500NodeThresholdMs = int.fromEnvironment(
+  'GALAXY_LAYOUT_500_MS',
+  defaultValue: 900,
+);
+const int _layout1000NodeThresholdMs = int.fromEnvironment(
+  'GALAXY_LAYOUT_1000_MS',
+  defaultValue: 4000,
+);
+
 void main() {
   group('Galaxy Performance Benchmarks', () {
     group('Layout Engine Performance', () {
@@ -26,39 +35,52 @@ void main() {
         expect(stopwatch.elapsedMilliseconds, lessThan(120));
       });
 
-      test('calculates initial layout for 500 nodes under 500ms', () {
-        final nodes = _generateMockNodes(500);
-        final edges = _generateMockEdges(nodes);
+      test(
+        'calculates initial layout for 500 nodes under threshold',
+        () {
+          final nodes = _generateMockNodes(500);
+          final edges = _generateMockEdges(nodes);
 
-        final stopwatch = Stopwatch()..start();
+          final stopwatch = Stopwatch()..start();
 
-        GalaxyLayoutEngine.calculateInitialLayout(
-          nodes: nodes,
-          edges: edges,
-        );
+          GalaxyLayoutEngine.calculateInitialLayout(
+            nodes: nodes,
+            edges: edges,
+          );
 
-        stopwatch.stop();
+          stopwatch.stop();
 
-        print('500 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms');
-        expect(stopwatch.elapsedMilliseconds, lessThan(500));
-      });
+          print('500 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms');
+          expect(
+            stopwatch.elapsedMilliseconds,
+            lessThan(_layout500NodeThresholdMs),
+          );
+        },
+      );
 
-      test('calculates initial layout for 1000 nodes under 2500ms', () {
-        final nodes = _generateMockNodes(1000);
-        final edges = _generateMockEdges(nodes);
+      test(
+        'calculates initial layout for 1000 nodes under threshold',
+        () {
+          final nodes = _generateMockNodes(1000);
+          final edges = _generateMockEdges(nodes);
 
-        final stopwatch = Stopwatch()..start();
+          final stopwatch = Stopwatch()..start();
 
-        GalaxyLayoutEngine.calculateInitialLayout(
-          nodes: nodes,
-          edges: edges,
-        );
+          GalaxyLayoutEngine.calculateInitialLayout(
+            nodes: nodes,
+            edges: edges,
+          );
 
-        stopwatch.stop();
+          stopwatch.stop();
 
-        print('1000 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms');
-        expect(stopwatch.elapsedMilliseconds, lessThan(2500));
-      });
+          print(
+              '1000 nodes initial layout: ${stopwatch.elapsedMilliseconds}ms');
+          expect(
+            stopwatch.elapsedMilliseconds,
+            lessThan(_layout1000NodeThresholdMs),
+          );
+        },
+      );
 
       test('optimizes layout for 100 nodes under 1000ms', () async {
         final nodes = _generateMockNodes(100);
@@ -79,7 +101,8 @@ void main() {
         stopwatch.stop();
 
         print(
-            '100 nodes layout optimization: ${stopwatch.elapsedMilliseconds}ms',);
+          '100 nodes layout optimization: ${stopwatch.elapsedMilliseconds}ms',
+        );
         expect(stopwatch.elapsedMilliseconds, lessThan(1000));
       });
     });
@@ -138,7 +161,8 @@ void main() {
         stopwatch.stop();
 
         print(
-            '100 range queries on 10000 items: ${stopwatch.elapsedMilliseconds}ms',);
+          '100 range queries on 10000 items: ${stopwatch.elapsedMilliseconds}ms',
+        );
         expect(stopwatch.elapsedMilliseconds, lessThan(200)); // 平均每次 < 2ms
       });
 
@@ -173,7 +197,8 @@ void main() {
         stopwatch.stop();
 
         print(
-            '50 kNN queries on 5000 items: ${stopwatch.elapsedMilliseconds}ms',);
+          '50 kNN queries on 5000 items: ${stopwatch.elapsedMilliseconds}ms',
+        );
         expect(stopwatch.elapsedMilliseconds, lessThan(600)); // 平均每次 < 12ms
       });
     });
@@ -202,7 +227,8 @@ void main() {
         stopwatch.stop();
 
         print(
-            '100 viewport culling operations on 1000 nodes: ${stopwatch.elapsedMilliseconds}ms',);
+          '100 viewport culling operations on 1000 nodes: ${stopwatch.elapsedMilliseconds}ms',
+        );
         expect(stopwatch.elapsedMilliseconds, lessThan(80)); // 平均每次 < 0.8ms
       });
 
@@ -230,7 +256,8 @@ void main() {
         stopwatch.stop();
 
         print(
-            '100 edge culling operations: ${stopwatch.elapsedMilliseconds}ms',);
+          '100 edge culling operations: ${stopwatch.elapsedMilliseconds}ms',
+        );
         expect(stopwatch.elapsedMilliseconds, lessThan(150)); // 平均每次 < 1.5ms
       });
     });

@@ -38,13 +38,10 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getShopItems');
-      final dataList = payload['data'] as List<dynamic>?;
-
-      if (dataList == null) {
-        return [];
-      }
-
+      final dataList = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getShopItems',
+      );
       return dataList
           .map((json) => ShopItem.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -61,13 +58,10 @@ class ShopRepository {
         '${ApiEndpoints.shopItems}/$itemId',
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getShopItemDetail');
-      final data = payload['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        throw Exception('getShopItemDetail: data field is missing');
-      }
-
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getShopItemDetail',
+      );
       return ShopItem.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError<ShopItem>(e, 'getShopItemDetail');
@@ -87,14 +81,10 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'purchaseItem');
-      final data = payload['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        throw Exception('purchaseItem: data field is missing');
-      }
-
-      return data;
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'purchaseItem',
+      );
     } on DioException catch (e) {
       return _handleDioError<Map<String, dynamic>>(e, 'purchaseItem');
     }
@@ -117,13 +107,10 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPurchaseHistory');
-      final dataList = payload['data'] as List<dynamic>?;
-
-      if (dataList == null) {
-        return [];
-      }
-
+      final dataList = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getPurchaseHistory',
+      );
       return dataList
           .map((json) => ShopPurchase.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -140,17 +127,10 @@ class ShopRepository {
         ApiEndpoints.inventory,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getInventory');
-      final data = payload['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        return {
-          'skins': [],
-          'titles': [],
-          'consumables': [],
-          'boosts': [],
-        };
-      }
+      final data = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getInventory',
+      );
 
       final inventory = <String, List<InventoryItem>>{};
 
@@ -158,7 +138,8 @@ class ShopRepository {
         final categoryList = data[category] as List<dynamic>?;
         if (categoryList != null) {
           inventory[category] = categoryList
-              .map((json) => InventoryItem.fromJson(json as Map<String, dynamic>))
+              .map((json) =>
+                  InventoryItem.fromJson(json as Map<String, dynamic>))
               .toList();
         } else {
           inventory[category] = [];
@@ -167,7 +148,8 @@ class ShopRepository {
 
       return inventory;
     } on DioException catch (e) {
-      return _handleDioError<Map<String, List<InventoryItem>>>(e, 'getInventory');
+      return _handleDioError<Map<String, List<InventoryItem>>>(
+          e, 'getInventory');
     }
   }
 
@@ -188,14 +170,10 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'equipItem');
-      final data = payload['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        throw Exception('equipItem: data field is missing');
-      }
-
-      return data;
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'equipItem',
+      );
     } on DioException catch (e) {
       return _handleDioError<Map<String, dynamic>>(e, 'equipItem');
     }
@@ -214,13 +192,10 @@ class ShopRepository {
         queryParameters: queryParams,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getOwnedItems');
-      final data = payload['data'] as List<dynamic>?;
-
-      if (data == null) {
-        return [];
-      }
-
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getOwnedItems',
+      );
       return data.map((id) => id.toString()).toList();
     } on DioException catch (e) {
       return _handleDioError<List<String>>(e, 'getOwnedItems');
@@ -229,7 +204,8 @@ class ShopRepository {
 
   /// Use consumable
   /// 使用消耗品
-  Future<Map<String, dynamic>> useConsumable(String consumableId, {int quantity = 1}) async {
+  Future<Map<String, dynamic>> useConsumable(String consumableId,
+      {int quantity = 1}) async {
     try {
       final requestData = <String, dynamic>{
         'quantity': quantity,
@@ -240,14 +216,10 @@ class ShopRepository {
         data: requestData,
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'useConsumable');
-      final data = payload['data'] as Map<String, dynamic>?;
-
-      if (data == null) {
-        throw Exception('useConsumable: data field is missing');
-      }
-
-      return data;
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'useConsumable',
+      );
     } on DioException catch (e) {
       return _handleDioError<Map<String, dynamic>>(e, 'useConsumable');
     }

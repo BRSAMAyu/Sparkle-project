@@ -97,9 +97,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
-
-      // Animate typing indicator
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
       await expectLater(
@@ -113,9 +111,9 @@ void main() {
         id: 'msg-1',
         content:
             'This is a very long message that should wrap to multiple lines. '
-                'It contains a lot of text to test how the chat UI handles '
-                'messages with substantial content. The text should wrap '
-                'properly and maintain readability across different screen sizes.',
+            'It contains a lot of text to test how the chat UI handles '
+            'messages with substantial content. The text should wrap '
+            'properly and maintain readability across different screen sizes.',
         role: 'assistant',
         timestamp: DateTime.now(),
       );
@@ -137,7 +135,8 @@ void main() {
     testGoldens('Chat screen with code block', (tester) async {
       final codeMessage = ChatMessage(
         id: 'msg-1',
-        content: 'Here is the code:\n```python\ndef hello():\n    print("Hello")\n```',
+        content:
+            'Here is the code:\n```python\ndef hello():\n    print("Hello")\n```',
         role: 'assistant',
         timestamp: DateTime.now(),
       );
@@ -219,7 +218,6 @@ void main() {
 
 // Mock implementations
 class ChatScreen extends StatelessWidget {
-
   const ChatScreen({
     super.key,
     required this.messages,
@@ -234,76 +232,75 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                return _buildMessageBubble(msg);
-              },
+        appBar: AppBar(title: const Text('Chat')),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  return _buildMessageBubble(msg);
+                },
+              ),
             ),
-          ),
-          if (isTyping) _buildTypingIndicator(),
-          if (showPlanReview && planReviewData != null)
-            _buildPlanReviewCard(planReviewData!),
-        ],
-      ),
-    );
+            if (isTyping) _buildTypingIndicator(),
+            if (showPlanReview && planReviewData != null)
+              _buildPlanReviewCard(planReviewData!),
+          ],
+        ),
+      );
 
   Widget _buildMessageBubble(ChatMessage msg) => Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      decoration: BoxDecoration(
-        color: msg.isError ? Colors.red.shade100 : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(msg.content),
-    );
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          color: msg.isError ? Colors.red.shade100 : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(msg.content),
+      );
 
   Widget _buildTypingIndicator() => const Padding(
-      padding: EdgeInsets.all(16),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          SizedBox(width: 8),
-          Text('AI is typing...'),
-        ],
-      ),
-    );
+        padding: EdgeInsets.all(16),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 8),
+            Text('AI is typing...'),
+          ],
+        ),
+      );
 
   Widget _buildPlanReviewCard(PlanReviewData data) => Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Plan Review',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text('Score: ${data.overallScore}'),
-          if (data.issues.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text('Issues:', style: TextStyle(fontWeight: FontWeight.bold)),
-            for (final issue in data.issues) Text('• ${issue.message}'),
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blue.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Plan Review',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Score: ${data.overallScore}'),
+            if (data.issues.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Issues:', style: TextStyle(fontWeight: FontWeight.bold)),
+              for (final issue in data.issues) Text('• ${issue.message}'),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 }
 
 class ChatMessage {
-
   ChatMessage({
     required this.id,
     required this.content,
@@ -319,7 +316,6 @@ class ChatMessage {
 }
 
 class PlanReviewData {
-
   PlanReviewData({
     required this.planId,
     required this.overallScore,
@@ -331,7 +327,6 @@ class PlanReviewData {
 }
 
 class PlanIssue {
-
   PlanIssue({required this.severity, required this.message});
   final IssueSeverity severity;
   final String message;
@@ -340,11 +335,11 @@ class PlanIssue {
 enum IssueSeverity { info, warning, error }
 
 List<ChatMessage> _generateMockMessages(int count) => List.generate(
-    count,
-    (i) => ChatMessage(
-      id: 'msg-$i',
-      content: i % 2 == 0 ? 'User message $i' : 'Assistant response $i',
-      role: i % 2 == 0 ? 'user' : 'assistant',
-      timestamp: DateTime.now(),
-    ),
-  );
+      count,
+      (i) => ChatMessage(
+        id: 'msg-$i',
+        content: i % 2 == 0 ? 'User message $i' : 'Assistant response $i',
+        role: i % 2 == 0 ? 'user' : 'assistant',
+        timestamp: DateTime.now(),
+      ),
+    );

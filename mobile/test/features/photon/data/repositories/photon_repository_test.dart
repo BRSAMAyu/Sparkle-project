@@ -64,7 +64,11 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> put<T>(String path, {Object? data}) {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -74,7 +78,10 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> delete<T>(String path) {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -143,11 +150,13 @@ void main() {
 
       expect(
         () => repository.getBalance(),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('Unauthorized'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Unauthorized'),
+          ),
+        ),
       );
     });
   });
@@ -205,11 +214,13 @@ void main() {
       expect(result[0].transactionType, PhotonTransactionType.grantAchievement);
       expect(result[0].amount, 100);
       expect(result[0].isIncome, isTrue);
-      expect(result[0].metadata, {'achievement_name': 'Test Achievement'});  // Verify extra_data → metadata mapping
+      expect(result[0].metadata, {
+        'achievement_name': 'Test Achievement'
+      }); // Verify extra_data → metadata mapping
       expect(result[1].transactionType, PhotonTransactionType.purchase);
       expect(result[1].amount, -50);
       expect(result[1].isExpense, isTrue);
-      expect(result[1].metadata, null);  // Verify null handling
+      expect(result[1].metadata, null); // Verify null handling
     });
 
     test('filters by transaction type', () async {
@@ -360,11 +371,13 @@ void main() {
           recipientId: 'user-456',
           amount: 1000,
         ),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('Insufficient photon balance'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Insufficient photon balance'),
+          ),
+        ),
       );
     });
   });

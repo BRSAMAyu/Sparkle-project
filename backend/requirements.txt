@@ -83,7 +83,7 @@ networkx>=3.2.1
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
 grpcio-reflection>=1.60.0
-protobuf>=4.25.0
+protobuf>=6.33.5
 
 # Document Processing (Office formats & OCR)
 python-docx>=1.0.0      # DOCX document processing
