@@ -4,7 +4,7 @@ PlanProgressService - Plan health evaluation and progress diagnostics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +28,10 @@ class PlanHealthReport:
     metrics: dict[str, Any] = field(default_factory=dict)
     requires_adjustment: bool = False
     recommended_action: str = "none"
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanProgressService:
@@ -214,5 +218,5 @@ class PlanProgressService:
         total_days = (plan.target_date - plan.created_at.date()).days
         if total_days <= 0:
             return None
-        elapsed_days = (datetime.utcnow().date() - plan.created_at.date()).days
+        elapsed_days = (_utcnow().date() - plan.created_at.date()).days
         return min(1.0, max(0.0, elapsed_days / total_days))

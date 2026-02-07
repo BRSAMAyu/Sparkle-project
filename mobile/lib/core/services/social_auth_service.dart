@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 // import 'package:fluwx/fluwx.dart'; // 🔧 Disabled for Demo build
 import 'package:google_sign_in/google_sign_in.dart';
@@ -37,8 +36,6 @@ class SocialAuthService {
 
   // Initialize WeChat (Call this on app start if possible, or lazily)
   // 🔧 WeChat support disabled for Demo build
-  bool _isWeChatInitialized = false;
-
   Future<void> initWeChat() async {
     // WeChat SDK not available in demo build
     _logger.w('WeChat SDK not available in this build');

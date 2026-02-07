@@ -3,6 +3,7 @@ Next Action Selection Service
 
 追踪用户对next_action的点击/跳过行为，学习用户偏好
 """
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.next_action_selection import NextActionSelection
 from app.services.personalization.preference_service import PreferenceService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NextActionSelectionService:
@@ -152,9 +157,7 @@ class NextActionSelectionService:
         Returns:
             选择率 (0.0 - 1.0)
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         # 统计该类型的显示次数和选择次数
         result = await self.db.execute(
@@ -193,9 +196,7 @@ class NextActionSelectionService:
         Returns:
             {action_type: selection_rate} 字典
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         # 统计各类型的显示次数和选择次数
         result = await self.db.execute(
@@ -235,9 +236,7 @@ class NextActionSelectionService:
         Returns:
             跳过次数
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         result = await self.db.execute(
             select(func.count(NextActionSelection.id))

@@ -7,18 +7,26 @@ import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import grpc
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
+from app.core.metrics import (
+    PROTO_ERROR_CODE_FALLBACK_TOTAL,
+    PROTO_FIELD_READ_TOTAL,
+)
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.services.response_feedback_service import ResponseFeedbackService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -32,6 +40,25 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self.orchestrator = orchestrator
         self.db_session_factory = db_session_factory
         logger.info("AgentServiceImpl initialized with injected dependencies")
+
+    @staticmethod
+    def _normalize_v2_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
+        service = "agent_grpc_service"
+
+        if not response.HasField("event_time"):
+            response.event_time.FromDatetime(datetime.now(UTC))
+            PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="defaulted").inc()
+        else:
+            PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="new").inc()
+
+        if response.HasField("error"):
+            if response.error.error_code == agent_service_pb2.ERROR_CODE_UNSPECIFIED:
+                response.error.error_code = agent_service_pb2.ERROR_CODE_UNKNOWN
+                PROTO_ERROR_CODE_FALLBACK_TOTAL.labels(
+                    service=service,
+                    direction="enum_missing_defaulted",
+                ).inc()
+        return response
 
     async def _require_admin(
         self,
@@ -141,7 +168,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             response.workflow_id = workflow_id
                         if not response.prompt_version:
                             response.prompt_version = prompt_version
-                        yield response
+                        yield self._normalize_v2_response(response)
                     await db_session.commit()
                 except Exception:
                     await db_session.rollback()
@@ -152,7 +179,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     f"StreamChat completed without text content for trace={trace_id}, "
                     f"session={request.session_id}"
                 )
-                yield agent_service_pb2.ChatResponse(
+                fallback = agent_service_pb2.ChatResponse(
                     response_id=str(uuid.uuid4()),
                     created_at=int(datetime.now().timestamp()),
                     request_id=request.request_id,
@@ -162,12 +189,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
+                fallback.event_time.FromDatetime(datetime.now(UTC))
+                yield fallback
 
             logger.info(f"StreamChat completed for trace={trace_id}")
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
-            yield agent_service_pb2.ChatResponse(
+            response = agent_service_pb2.ChatResponse(
                 response_id=str(uuid.uuid4()),
                 created_at=int(datetime.now().timestamp()),
                 request_id=request.request_id,
@@ -175,12 +204,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 workflow_id=workflow_id,
                 prompt_version=prompt_version,
                 error=agent_service_pb2.Error(
-                    code="INTERNAL_ERROR",
                     message=str(e),
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                 ),
                 finish_reason=agent_service_pb2.STOP # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
             )
+            response.event_time.FromDatetime(datetime.now(UTC))
+            yield response
 
     async def SubmitResponseFeedback(
         self,
@@ -436,7 +467,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 context.set_details("user_id is required")
                 return agent_service_pb2.WeeklyReport()
 
-            end_date = datetime.utcnow()
+            end_date = _utcnow()
             start_date = end_date - timedelta(days=7)
 
             async with self.db_session_factory() as db_session:

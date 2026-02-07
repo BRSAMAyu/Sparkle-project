@@ -103,6 +103,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('记忆控制'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('保存设置'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('保存设置'));
     await tester.pumpAndSettle();
 

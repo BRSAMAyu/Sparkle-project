@@ -1,7 +1,7 @@
 """
 Subtasks API Endpoints
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +17,10 @@ from app.models.user import User
 from app.schemas.task import SubTaskCreate, SubTaskDetail, SubTaskReorderRequest, SubTaskUpdate
 
 router = APIRouter()
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _verify_task_ownership(task_id: UUID, user_id: int, db: AsyncSession) -> Task:
@@ -133,7 +137,7 @@ async def update_subtask(
 
     # Set completed_at when status changes to COMPLETED
     if subtask_in.status == SubTaskStatus.COMPLETED and subtask.completed_at is None:
-        subtask.completed_at = datetime.utcnow()
+        subtask.completed_at = _utcnow()
     elif subtask_in.status and subtask_in.status != SubTaskStatus.COMPLETED:
         subtask.completed_at = None
 

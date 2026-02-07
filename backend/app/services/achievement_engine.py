@@ -2,7 +2,7 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -22,6 +22,10 @@ from app.models.achievement import (
     UserTitle,
 )
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AchievementEvent:
@@ -64,7 +68,7 @@ class AchievementEngine:
 
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
-        now = datetime.utcnow()
+        now = _utcnow()
         if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
             return
 
@@ -345,7 +349,7 @@ class AchievementEngine:
 
             # 深夜学习（隐藏成就）
             case "NIGHT_OWL_STUDY":
-                hour = datetime.utcnow().hour
+                hour = _utcnow().hour
                 if hour >= 23 or hour <= 5:
                     # 检查累计次数
                     cache_key = f"night_owl:{user_id}"
@@ -485,7 +489,7 @@ class AchievementEngine:
             user_achievement.progress = min(progress, 1.0)
             user_achievement.progress_value = current_value
             user_achievement.progress_target = target_value
-            user_achievement.last_progress_update = datetime.utcnow()
+            user_achievement.last_progress_update = _utcnow()
         else:
             # 创建新记录
             user_achievement = UserAchievement(
@@ -494,7 +498,7 @@ class AchievementEngine:
                 progress=min(progress, 1.0),
                 progress_value=current_value,
                 progress_target=target_value,
-                last_progress_update=datetime.utcnow()
+                last_progress_update=_utcnow()
             )
             self.db.add(user_achievement)
 
@@ -506,7 +510,7 @@ class AchievementEngine:
         achievement: Achievement
     ) -> dict[str, Any]:
         """解锁成就"""
-        now = datetime.utcnow()
+        now = _utcnow()
 
         # 更新用户成就记录
         query = select(UserAchievement).where(
@@ -637,7 +641,7 @@ class AchievementEngine:
                 title_name=display,
                 title_display=display,
                 source_achievement_id=achievement_id,
-                unlocked_at=datetime.utcnow()
+                unlocked_at=_utcnow()
             )
             self.db.add(user_title)
             await self.db.flush()
@@ -657,7 +661,7 @@ class AchievementEngine:
             user_skin = UserGalaxySkin(
                 user_id=user_id,
                 skin_id=skin_id,
-                unlocked_at=datetime.utcnow(),
+                unlocked_at=_utcnow(),
                 unlock_source="achievement"
             )
             self.db.add(user_skin)
@@ -711,7 +715,7 @@ class AchievementEngine:
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
-        today = datetime.utcnow().date()
+        today = _utcnow().date()
 
         # 只有核心活动才更新连胜
         if event_type not in [AchievementEvent.DAILY_CHECKIN,
@@ -749,7 +753,7 @@ class AchievementEngine:
             if stats.freeze_charges >= days_missed:
                 # 使用保护卡
                 stats.freeze_charges -= days_missed
-                stats.last_freeze_used_at = datetime.utcnow()
+                stats.last_freeze_used_at = _utcnow()
                 stats.current_streak += 1  # 今天也算
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
             else:
@@ -1200,8 +1204,8 @@ class ContractService:
             target_study_minutes=study_minutes,
             target_days=days,
             photon_stake=photon_stake,
-            start_date=datetime.utcnow(),
-            end_date=datetime.utcnow() + timedelta(days=days),
+            start_date=_utcnow(),
+            end_date=_utcnow() + timedelta(days=days),
             status=ContractStatus.ACTIVE
         )
         self.db.add(contract)
@@ -1226,7 +1230,7 @@ class ContractService:
         if not contract:
             return None
 
-        today = datetime.utcnow()
+        today = _utcnow()
 
         # 检查是否过期
         if today > contract.end_date:

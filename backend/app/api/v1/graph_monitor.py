@@ -5,7 +5,7 @@ GraphRAG 监控 API
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -68,6 +68,10 @@ if PROMETHEUS_AVAILABLE:
     )
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def _require_graph_service(db: AsyncSession) -> "GraphKnowledgeService":
     if not GRAPH_SERVICE_AVAILABLE or GraphKnowledgeService is None:
         logger.warning("GraphRAG service not available; returning 501 for graph monitor endpoints.")
@@ -93,7 +97,7 @@ async def graph_rag_health(
     """
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utcnow().isoformat(),
         "components": {},
         "metrics": {},
         "alerts": []
@@ -250,7 +254,7 @@ async def graph_statistics(
 
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "statistics": stats
         }
 
@@ -477,7 +481,7 @@ async def detailed_health_check(
 
     health_report = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utcnow().isoformat(),
         "uptime_ms": 0,
         "components": {},
         "metrics": {},

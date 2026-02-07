@@ -193,7 +193,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                 horizontal: horizontalPadding,
                 vertical: verticalPadding,
               ),
-              child: child,
+              child: child!,
             );
           },
           child: Row(

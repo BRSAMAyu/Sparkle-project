@@ -10,7 +10,7 @@ Capsule Generation Service
 """
 import asyncio
 import random
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +24,10 @@ from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.task import Task
 from app.models.user import User
 from app.services.llm_service import get_llm_service_for_task, llm_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ModelSelectionStrategy:
@@ -239,7 +243,7 @@ class CapsuleGenerationService:
                     source_context={
                         "depth_level": depth_level.value,
                         "subjects_studied": [s.get("title") for s in user_context.get("recent_tasks", [])],
-                        "generated_at": datetime.utcnow().isoformat(),
+                        "generated_at": _utcnow().isoformat(),
                     },
                     quality_score=content_data.get("quality_score", 0.5),
                 )

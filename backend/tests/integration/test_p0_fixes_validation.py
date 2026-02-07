@@ -14,7 +14,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, get_db
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.services.decision_record_service import DecisionRecordService
 from app.services.focus_service import focus_service
@@ -53,6 +53,16 @@ async def test_decision_record_service_with_valid_session():
     async for db in get_db():
         decision_service = DecisionRecordService(db=db)
         test_user_id = uuid4()
+        db.add(
+            User(
+                id=test_user_id,
+                username=f"p0_user_{test_user_id.hex[:8]}",
+                email=f"p0_{test_user_id.hex[:8]}@example.com",
+                hashed_password="hash",
+                is_active=True,
+            )
+        )
+        await db.commit()
 
         # 记录决策
         await decision_service.record_decision(
@@ -73,58 +83,55 @@ async def test_decision_record_service_with_valid_session():
 
 
 @pytest.mark.asyncio
-async def test_task_status_enum_in_focus_service():
+async def test_task_status_enum_in_focus_service(db_session: AsyncSession):
     """验证FocusService使用TaskStatus枚举而非字符串"""
-    async for db in get_async_db():
-        # 创建测试用户
-        test_user = User(
-            id=uuid4(),
-            username=f"test_user_{uuid4().hex[:8]}",
-            email=f"test_{uuid4().hex[:8]}@example.com",
-            hashed_password="hash",
-            is_active=True
-        )
-        db.add(test_user)
-        await db.flush()
+    # 创建测试用户
+    test_user = User(
+        id=uuid4(),
+        username=f"test_user_{uuid4().hex[:8]}",
+        email=f"test_{uuid4().hex[:8]}@example.com",
+        hashed_password="hash",
+        is_active=True
+    )
+    db_session.add(test_user)
+    await db_session.flush()
 
-        # 创建PENDING任务
-        test_task = Task(
-            id=uuid4(),
-            user_id=test_user.id,
-            title="验证任务状态枚举",
-            type="study",
-            status=TaskStatus.PENDING,
-            priority=1,
-            estimated_minutes=25
-        )
-        db.add(test_task)
-        await db.flush()
+    # 创建PENDING任务
+    test_task = Task(
+        id=uuid4(),
+        user_id=test_user.id,
+        title="验证任务状态枚举",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        priority=1,
+        estimated_minutes=25
+    )
+    db_session.add(test_task)
+    await db_session.flush()
 
-        # 记录一个专注会话（应该将任务状态改为IN_PROGRESS）
-        start_time = datetime.now() - timedelta(minutes=25)
-        end_time = datetime.now()
+    # 记录一个专注会话（应该将任务状态改为IN_PROGRESS）
+    start_time = datetime.now() - timedelta(minutes=25)
+    end_time = datetime.now()
 
-        result = await focus_service.log_session(
-            db=db,
-            user_id=test_user.id,
-            task_id=test_task.id,
-            start_time=start_time,
-            end_time=end_time,
-            duration_minutes=25,
-            status="completed"
-        )
+    await focus_service.log_session(
+        db=db_session,
+        user_id=test_user.id,
+        task_id=test_task.id,
+        start_time=start_time,
+        end_time=end_time,
+        duration_minutes=25,
+        status="completed"
+    )
 
-        # 刷新并验证任务状态
-        await db.refresh(test_task)
-        assert test_task.status == TaskStatus.IN_PROGRESS, \
-            f"Expected status IN_PROGRESS, got {test_task.status}"
-        assert test_task.started_at is not None
+    # 刷新并验证任务状态
+    await db_session.refresh(test_task)
+    assert test_task.status == TaskStatus.IN_PROGRESS, \
+        f"Expected status IN_PROGRESS, got {test_task.status}"
+    assert test_task.started_at is not None
 
-        print("✅ Test 4 passed: FocusService正确使用TaskStatus枚举")
+    print("✅ Test 4 passed: FocusService正确使用TaskStatus枚举")
 
-        # 清理测试数据
-        await db.rollback()
-        break
+    await db_session.rollback()
 
 
 @pytest.mark.asyncio
@@ -198,7 +205,7 @@ async def run_all_tests():
                 id=uuid4(),
                 user_id=test_user.id,
                 title="P0验证任务",
-                type="study",
+                type=TaskType.LEARNING,
                 status=TaskStatus.PENDING,
                 priority=5,
                 estimated_minutes=30

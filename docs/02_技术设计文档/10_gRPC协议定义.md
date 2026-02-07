@@ -10,40 +10,67 @@ Sparkle 使用 gRPC 作为 Go Gateway 与 Python Engine 之间的内部通信协
 
 ## 2. AgentService (AI 代理服务)
 
-定义在 `proto/agent_service_v2.proto`。
+定义在 `proto/agent_service.proto`。
 
 ### 2.1 接口定义
 
 ```protobuf
-service AgentServiceV2 {
+service AgentService {
   // 双向流式聊天接口
-  rpc StreamChat(ChatRequestV2) returns (stream ChatResponseV2);
+  rpc StreamChat(ChatRequest) returns (stream ChatResponse);
   
   // 获取用户画像
-  rpc GetUserProfile(ProfileRequestV2) returns (ProfileResponseV2);
+  rpc GetUserProfile(ProfileRequest) returns (UserProfile);
 }
 ```
 
 ### 2.2 消息结构
 
-#### `ChatRequestV2`
+#### `ChatRequest`
 ```protobuf
-message ChatRequestV2 {
+message ChatRequest {
   string user_id = 1;
-  string message = 2;
-  string session_id = 3;
-  repeated string active_tools = 4; // 当前启用的工具列表
+  string session_id = 2;
+  // input: user message or tool result
+  oneof input {
+    string message = 3;
+    ToolResult tool_result = 7;
+  }
+  UserProfile user_profile = 4;
+  google.protobuf.Struct extra_context = 5;
+  repeated ChatMessage history = 6;
+  ChatConfig config = 8;
+  string request_id = 9;
+  repeated string file_ids = 10;
+  bool include_references = 11;
+  repeated string active_tools = 12; // 当前启用的工具列表
+  string chat_mode = 13;
 }
 ```
 
-#### `ChatResponseV2`
+#### `ChatResponse`
 ```protobuf
-message ChatResponseV2 {
-  string content = 1;      // 文本增量 (Delta)
-  string type = 2;         // 消息类型: "delta", "tool_start", "tool_result", "error"
-  int64 timestamp = 3;
-  string tool_name = 4;    // (可选) 工具名称
-  string tool_payload = 5; // (可选) 工具数据 JSON
+message ChatResponse {
+  string response_id = 1;
+  int64 created_at = 2;
+  string request_id = 10;
+  string trace_id = 15;
+  string workflow_id = 16;
+  string prompt_version = 17;
+  map<string, string> metadata = 18;
+  oneof content {
+    string delta = 3;
+    ToolCall tool_call = 4;
+    AgentStatus status_update = 5;
+    string full_text = 6;
+    Error error = 7;
+    Usage usage = 8;
+    CitationBlock citations = 11;
+    ToolResultPayload tool_result = 12;
+    InterventionPayload intervention = 14;
+  }
+  FinishReason finish_reason = 9;
+  int64 timestamp = 13;
 }
 ```
 

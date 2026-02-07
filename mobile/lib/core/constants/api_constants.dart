@@ -123,8 +123,17 @@ class ApiConstants {
   }
 
   static String _androidBaseUrl() {
+    if (_androidUseEmulator && _androidEmulatorUrlOverride.isNotEmpty) {
+      return _androidEmulatorUrlOverride;
+    }
+    if (!_androidUseEmulator && _androidDeviceUrlOverride.isNotEmpty) {
+      return _androidDeviceUrlOverride;
+    }
     if (_androidEmulatorUrlOverride.isNotEmpty) {
       return _androidEmulatorUrlOverride;
+    }
+    if (_androidDeviceUrlOverride.isNotEmpty) {
+      return _androidDeviceUrlOverride;
     }
     // 🔥 永久修复：Android 模拟器默认使用 10.0.2.2
     // 这是 Android 模拟器访问宿主机服务的正确地址

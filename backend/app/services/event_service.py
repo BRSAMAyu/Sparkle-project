@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.business_metrics import EVENT_DEDUPE_TOTAL, EVENT_INGEST_LATENCY, EVENT_INGEST_TOTAL
 from app.core.event_bus import EventBus
 from app.models.event import TrackingEvent
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class EventService:
@@ -41,7 +45,7 @@ class EventService:
         results = []
 
         new_records: list[TrackingEvent] = []
-        now_ms = int(datetime.utcnow().timestamp() * 1000)
+        now_ms = int(_utcnow().timestamp() * 1000)
 
         for item in events:
             event_id = item["event_id"]
@@ -67,7 +71,7 @@ class EventService:
                     ts_ms=ts_ms,
                     entities=item.get("entities"),
                     payload=item.get("payload"),
-                    received_at=datetime.utcnow(),
+                    received_at=_utcnow(),
                 )
                 new_records.append(record)
                 results.append({"event_id": event_id, "status": "accepted"})
@@ -109,7 +113,7 @@ class EventService:
         event = await self.get_event(user_id, event_id)
         if not event:
             return False
-        event.deleted_at = datetime.utcnow()
+        event.deleted_at = _utcnow()
         event.payload = None
         event.entities = None
         await self.db.commit()

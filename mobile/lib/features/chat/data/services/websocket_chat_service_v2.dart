@@ -57,7 +57,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           final eventPayload = metadata['event_payload'] as String?;
           if (eventPayload != null && eventPayload.isNotEmpty) {
             try {
-              final eventData = json.decode(eventPayload) as Map<String, dynamic>;
+              final eventData =
+                  json.decode(eventPayload) as Map<String, dynamic>;
               final eventType = eventData['type'] as String?;
 
               if (eventType == 'transparency_step') {
@@ -90,7 +91,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Check for state change events (计划归档/恢复/删除等重大状态变更)
         if (metadata != null && metadata['state_change_event'] != null) {
-          final stateChangeData = metadata['state_change_event'] as Map<String, dynamic>;
+          final stateChangeData =
+              metadata['state_change_event'] as Map<String, dynamic>;
           return StateChangeEvent(
             changeData: stateChangeData,
             responseId: responseId,
@@ -137,16 +139,16 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             );
           }
 
-          final visualization = metadata['visualization'] as Map<String, dynamic>?;
+          final visualization =
+              metadata['visualization'] as Map<String, dynamic>?;
           final timeline = visualization?['timeline'] as List<dynamic>?;
           if (timeline != null && timeline.isNotEmpty) {
             final workflowType = (metadata['workflow'] as String?) ??
                 (visualization?['workflow_type'] as String?) ??
                 'unknown';
             final executionTime = metadata['execution_time'];
-            final executionTimeMs = executionTime is num
-                ? (executionTime * 1000).round()
-                : 0;
+            final executionTimeMs =
+                executionTime is num ? (executionTime * 1000).round() : 0;
 
             return CollaborationTimelineEvent(
               collaborationData: {
@@ -268,9 +270,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         final content = intervention['content'] as Map<String, dynamic>? ?? {};
         final widgetType =
             content['widget_type'] as String? ?? 'intervention_card';
-        final widgetData =
-            (content['widget_data'] as Map<String, dynamic>?) ??
-                Map<String, dynamic>.from(content);
+        final widgetData = (content['widget_data'] as Map<String, dynamic>?) ??
+            Map<String, dynamic>.from(content);
 
         widgetData['intervention_id'] ??= intervention['id'];
         widgetData['intervention_topic'] ??= intervention['topic'];
@@ -318,8 +319,9 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'error':
         final error = data['error'] as Map<String, dynamic>?;
         if (error != null) {
+          final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
-            code: error['code'] as String? ?? 'UNKNOWN',
+            code: code,
             message: error['message'] as String? ?? 'Unknown error',
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
@@ -530,7 +532,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'achievement_unlock':
-        final achievementData = data['achievement_data'] as Map<String, dynamic>?;
+        final achievementData =
+            data['achievement_data'] as Map<String, dynamic>?;
         if (achievementData != null) {
           return AchievementUnlockEvent(
             achievementData: achievementData,
@@ -645,8 +648,10 @@ enum WsConnectionState {
 }
 
 /// Factory for creating WebSocket channels (facilitates testing)
-typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri,
-    {Map<String, dynamic>? headers,});
+typedef WebSocketChannelFactory = WebSocketChannel Function(
+  Uri uri, {
+  Map<String, dynamic>? headers,
+});
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 {
@@ -851,8 +856,7 @@ class WebSocketChatServiceV2 {
       'type': 'plan_review_feedback',
       'review_id': reviewId,
       'user_decision': userDecision, // 'approve', 'reject', 'modify'
-      if (planId != null && planId.isNotEmpty)
-        'plan_id': planId,
+      if (planId != null && planId.isNotEmpty) 'plan_id': planId,
       if (userComment != null && userComment.isNotEmpty)
         'user_comment': userComment,
       if (modifications != null && modifications.isNotEmpty)
@@ -1031,8 +1035,11 @@ class WebSocketChatServiceV2 {
         try {
           final jsonData = json.decode(data) as Map<String, dynamic>;
           final finishReason = jsonData['finish_reason'] as String?;
-          if (finishReason != null && finishReason != 'NULL' && finishReason.isNotEmpty) {
-            _log('📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent');
+          if (finishReason != null &&
+              finishReason != 'NULL' &&
+              finishReason.isNotEmpty) {
+            _log(
+                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent');
             _safeAdd(
               _messageStreamController!,
               DoneEvent(
@@ -1105,7 +1112,8 @@ class WebSocketChatServiceV2 {
 
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
-        _log('⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure');
+        _log(
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure');
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1124,7 +1132,8 @@ class WebSocketChatServiceV2 {
     _isRefreshingToken = true;
     _401ErrorCount++;
 
-    _log('🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)');
+    _log(
+        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)');
 
     try {
       // 发送刷新中的提示
@@ -1185,7 +1194,8 @@ class WebSocketChatServiceV2 {
 
       // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
-        _log('⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure');
+        _log(
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure');
         if (_messageStreamController != null) {
           _safeAdd(
             _messageStreamController!,
@@ -1327,7 +1337,8 @@ class WebSocketChatServiceV2 {
 
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
-    _log('📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
+    _log(
+        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit

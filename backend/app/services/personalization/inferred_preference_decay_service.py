@@ -1,7 +1,7 @@
 """
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -17,6 +17,10 @@ DECAY_MIN_CONFIDENCE = 0.25     # 最小置信度阈值
 DECAY_RESET_THRESHOLD = 0.30    # 低于此值则重置
 DECAY_CHECK_INTERVAL_DAYS = 7   # 检查间隔（天）
 MAX_AGE_DAYS = 90               # 最大保留天数
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class InferredPreferenceDecayService:
@@ -52,7 +56,7 @@ class InferredPreferenceDecayService:
         reset_keys = []
         decayed_values = {}
 
-        now = datetime.utcnow()
+        now = _utcnow()
         inferred = prefs.inferred.copy()
 
         # 检查最后更新时间

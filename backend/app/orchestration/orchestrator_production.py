@@ -17,7 +17,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -88,6 +88,10 @@ if PROMETHEUS_AVAILABLE:
         'chat_orchestrator_concurrent_sessions',
         'Number of active sessions'
     )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CircuitBreaker:
@@ -554,7 +558,7 @@ class ProductionChatOrchestrator:
     ):
         """结构化日志"""
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "session_id": session_id,
             "request_id": request_id,
             "user_id": user_id,
@@ -604,9 +608,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="DUPLICATE_REQUEST",
                     message="Request already processed",
-                    retryable=False
+                    retryable=False,
+                    error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -621,9 +625,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="CIRCUIT_BREAKER_OPEN",
                     message=f"Service temporarily unavailable (circuit breaker: {state})",
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_UNAVAILABLE,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -637,9 +641,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="RATE_LIMIT",
                     message="Too many concurrent sessions",
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_RATE_LIMITED,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )
@@ -999,9 +1003,9 @@ class ProductionChatOrchestrator:
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
-                    code="INTERNAL_ERROR",
                     message=str(e),
-                    retryable=True
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                 ),
                 finish_reason=agent_service_pb2.ERROR
             )

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,10 @@ MAX_MULTIPLIER = 1.3
 TARGET_SUM = 3.0
 DECAY_DAILY = 0.98
 STEP = 0.05
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BudgetTuningService:
@@ -33,7 +37,7 @@ class BudgetTuningService:
         adjusted = self._apply_reason_adjustments(multipliers, reasons, score)
         normalized = self._normalize(adjusted)
 
-        now = datetime.utcnow()
+        now = _utcnow()
         profiles = await self._load_profiles(intent)
         for bucket, value in normalized.items():
             profile = profiles.get(bucket)
@@ -49,7 +53,7 @@ class BudgetTuningService:
 
     async def reset_profiles(self, intent: str) -> dict[str, float]:
         profiles = await self._load_profiles(intent)
-        now = datetime.utcnow()
+        now = _utcnow()
         for bucket in BUCKETS:
             profile = profiles.get(bucket)
             if profile is None:
@@ -74,7 +78,7 @@ class BudgetTuningService:
     async def _apply_decay(self, profiles: dict[str, ContextBudgetProfile]) -> None:
         if not profiles:
             return
-        now = datetime.utcnow()
+        now = _utcnow()
         updated = False
         for profile in profiles.values():
             if not profile.updated_at:

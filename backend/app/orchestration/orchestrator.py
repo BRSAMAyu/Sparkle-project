@@ -4,7 +4,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from google.protobuf import struct_pb2
@@ -85,6 +85,10 @@ CONTEXT_VERSION_TTL_SECONDS = 6 * 60 * 60
 REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def get_agent_type_for_tool(tool_name: str) -> int:
     """
     Map tool names to AgentType enum for multi-agent visualization.
@@ -157,6 +161,7 @@ class ChatOrchestrator:
         self.redis = redis_client
         self.redis_client = redis_client
         self.user_id = user_id
+        self._bg_tasks: set[asyncio.Task] = set()
 
         # Initialize components
         self.state_manager = SessionStateManager(redis_client)
@@ -228,7 +233,7 @@ class ChatOrchestrator:
             redis_client=redis_client
         )
         circuit_breaker_registry.register(self.langgraph_breaker)
-        asyncio.create_task(self.langgraph_breaker.initialize())
+        self._track_task(asyncio.create_task(self.langgraph_breaker.initialize()))
 
         # Phase 3: Observability
         self.observability = observability_logger
@@ -252,6 +257,19 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+    def _track_task(self, task: asyncio.Task) -> None:
+        """Track background tasks for graceful shutdown."""
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+
+    async def shutdown(self) -> None:
+        """Cancel background tasks started by the orchestrator."""
+        for task in list(self._bg_tasks):
+            task.cancel()
+        if self._bg_tasks:
+            await asyncio.gather(*self._bg_tasks, return_exceptions=True)
+        self._bg_tasks.clear()
 
     async def _emit_system_updates(self, user_id: str) -> list[agent_service_pb2.ChatResponse]:
         updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
@@ -547,7 +565,7 @@ class ChatOrchestrator:
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < datetime.utcnow()
+                    Task.due_date < _utcnow()
                 )
             )
             overdue = result.scalar() or 0
@@ -987,9 +1005,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             error=agent_service_pb2.Error(
-                                code="VALIDATION_ERROR",
                                 message=validation_result.error_message,
-                                retryable=False
+                                retryable=False,
+                                error_code=agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
                             ),
                             finish_reason=agent_service_pb2.ERROR
                         )
@@ -1033,9 +1051,9 @@ class ChatOrchestrator:
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         error=agent_service_pb2.Error(
-                            code="CONFLICT",
                             message="会话正在处理另一个请求，请稍候",
-                            retryable=True
+                            retryable=True,
+                            error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
                         ),
                         finish_reason=agent_service_pb2.ERROR
                     )
@@ -1458,9 +1476,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             error=agent_service_pb2.Error(
-                                code="MULTI_AGENT_ERROR",
                                 message=f"多Agent协作模式执行失败: {str(e)}",
                                 retryable=True,
+                                error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                             ),
                             finish_reason=agent_service_pb2.ERROR,
                         )
@@ -2310,9 +2328,9 @@ class ChatOrchestrator:
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(
-                        code="INTERNAL_ERROR",
                         message=str(e),
-                        retryable=True
+                        retryable=True,
+                        error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
                     ),
                     finish_reason=agent_service_pb2.ERROR
                 )
@@ -2580,7 +2598,7 @@ class ChatOrchestrator:
                     context_updates={
                         "collected_information": collected_info,
                         "user_requirement_summary": summary,
-                        "information_collection_completed_at": datetime.utcnow().isoformat()
+                        "information_collection_completed_at": _utcnow().isoformat()
                     }
                 )
                 logger.info(f"Updated state with collected information for session {session_id}")
@@ -2709,7 +2727,7 @@ class ChatOrchestrator:
                     "missing_aspects": missing_aspects,
                     "round": 1,
                     "max_rounds": 3,
-                    "triggered_at": datetime.utcnow().isoformat()
+                    "triggered_at": _utcnow().isoformat()
                 })
             )
             logger.info(f"Set information collection flag for session {session_id}")

@@ -3,7 +3,7 @@ GalaxyFeedbackService - 知识星图反馈收集服务
 
 负责收集用户学习行为的隐式反馈，实时更新知识节点掌握度
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import NodeMasteryUpdatedEvent, event_bus
 from app.models.galaxy import ExpansionFeedback, UserNodeStatus
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackType:
@@ -223,8 +227,8 @@ class GalaxyFeedbackService:
                     node_id=node_id,
                     mastery_score=max(self.MIN_MASTERY, min(self.MAX_MASTERY, int(score * 10))),
                     is_unlocked=True,
-                    first_unlock_at=datetime.utcnow(),
-                    last_study_at=datetime.utcnow()
+                    first_unlock_at=_utcnow(),
+                    last_study_at=_utcnow()
                 )
                 self.db.add(status)
                 await self.db.commit()
@@ -250,7 +254,7 @@ class GalaxyFeedbackService:
 
             if new_mastery != old_mastery:
                 status.mastery_score = new_mastery
-                status.last_study_at = datetime.utcnow()
+                status.last_study_at = _utcnow()
                 await self.db.commit()
 
                 # 发布掌握度更新事件

@@ -1,6 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -74,7 +78,7 @@ async def test_memory_eval_service_runs_dataset(db_session):
         evidence_refs=[{"type": "event", "id": "evt_8"}],
     )
 
-    now = datetime.utcnow()
+    now = _utcnow()
     await service.create_episodic_memory(
         user_id=user_id,
         summary="Had a study session on algebra",

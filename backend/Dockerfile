@@ -7,8 +7,8 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install uv for fast dependency resolution
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Install uv for fast dependency resolution without external image dependency
+RUN pip install --no-cache-dir uv
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

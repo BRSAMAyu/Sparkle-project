@@ -72,6 +72,20 @@ class AgentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     AUDIO: _ClassVar[AgentType]
     WRITING: _ClassVar[AgentType]
     REASONING: _ClassVar[AgentType]
+
+class ErrorCode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ERROR_CODE_UNSPECIFIED: _ClassVar[ErrorCode]
+    ERROR_CODE_UNKNOWN: _ClassVar[ErrorCode]
+    ERROR_CODE_INVALID_ARGUMENT: _ClassVar[ErrorCode]
+    ERROR_CODE_UNAUTHORIZED: _ClassVar[ErrorCode]
+    ERROR_CODE_FORBIDDEN: _ClassVar[ErrorCode]
+    ERROR_CODE_NOT_FOUND: _ClassVar[ErrorCode]
+    ERROR_CODE_CONFLICT: _ClassVar[ErrorCode]
+    ERROR_CODE_RATE_LIMITED: _ClassVar[ErrorCode]
+    ERROR_CODE_UNAVAILABLE: _ClassVar[ErrorCode]
+    ERROR_CODE_TIMEOUT: _ClassVar[ErrorCode]
+    ERROR_CODE_INTERNAL: _ClassVar[ErrorCode]
 FEEDBACK_TYPE_UP: FeedbackType
 FEEDBACK_TYPE_DOWN: FeedbackType
 FEEDBACK_REASON_UNSPECIFIED: FeedbackReason
@@ -113,6 +127,17 @@ IMAGE: AgentType
 AUDIO: AgentType
 WRITING: AgentType
 REASONING: AgentType
+ERROR_CODE_UNSPECIFIED: ErrorCode
+ERROR_CODE_UNKNOWN: ErrorCode
+ERROR_CODE_INVALID_ARGUMENT: ErrorCode
+ERROR_CODE_UNAUTHORIZED: ErrorCode
+ERROR_CODE_FORBIDDEN: ErrorCode
+ERROR_CODE_NOT_FOUND: ErrorCode
+ERROR_CODE_CONFLICT: ErrorCode
+ERROR_CODE_RATE_LIMITED: ErrorCode
+ERROR_CODE_UNAVAILABLE: ErrorCode
+ERROR_CODE_TIMEOUT: ErrorCode
+ERROR_CODE_INTERNAL: ErrorCode
 
 class ChatRequest(_message.Message):
     __slots__ = ("user_id", "session_id", "message", "tool_result", "user_profile", "extra_context", "history", "config", "request_id", "file_ids", "include_references", "active_tools", "chat_mode")
@@ -241,7 +266,7 @@ class ChatMessage(_message.Message):
     def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ChatResponse(_message.Message):
-    __slots__ = ("response_id", "created_at", "request_id", "trace_id", "workflow_id", "prompt_version", "metadata", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp")
+    __slots__ = ("response_id", "created_at", "request_id", "trace_id", "workflow_id", "prompt_version", "metadata", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp", "event_time")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -267,6 +292,7 @@ class ChatResponse(_message.Message):
     INTERVENTION_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    EVENT_TIME_FIELD_NUMBER: _ClassVar[int]
     response_id: str
     created_at: int
     request_id: str
@@ -285,7 +311,8 @@ class ChatResponse(_message.Message):
     intervention: InterventionPayload
     finish_reason: FinishReason
     timestamp: int
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    event_time: _timestamp_pb2.Timestamp
+    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ..., event_time: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class ResponseFeedbackRequest(_message.Message):
     __slots__ = ("user_id", "response_id", "trace_id", "feedback_type", "reasons", "free_text", "workflow_id", "prompt_version", "meta")
@@ -909,7 +936,7 @@ class AgentStatus(_message.Message):
     def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ..., active_agent: _Optional[_Union[AgentType, str]] = ...) -> None: ...
 
 class Error(_message.Message):
-    __slots__ = ("code", "message", "retryable", "details")
+    __slots__ = ("code", "message", "retryable", "details", "error_code")
     class DetailsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -921,11 +948,13 @@ class Error(_message.Message):
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     RETRYABLE_FIELD_NUMBER: _ClassVar[int]
     DETAILS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_CODE_FIELD_NUMBER: _ClassVar[int]
     code: str
     message: str
     retryable: bool
     details: _containers.ScalarMap[str, str]
-    def __init__(self, code: _Optional[str] = ..., message: _Optional[str] = ..., retryable: bool = ..., details: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    error_code: ErrorCode
+    def __init__(self, code: _Optional[str] = ..., message: _Optional[str] = ..., retryable: bool = ..., details: _Optional[_Mapping[str, str]] = ..., error_code: _Optional[_Union[ErrorCode, str]] = ...) -> None: ...
 
 class Usage(_message.Message):
     __slots__ = ("prompt_tokens", "completion_tokens", "total_tokens", "cost_micro_usd")

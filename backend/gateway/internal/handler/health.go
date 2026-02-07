@@ -70,6 +70,8 @@ func (h *HealthHandler) RegisterRoutes(r *gin.Engine) {
 	// Kubernetes probes
 	r.GET("/healthz", h.handleLiveness)
 	r.GET("/readyz", h.handleReadiness)
+	r.GET("/live", h.handleLiveness)
+	r.GET("/ready", h.handleReadiness)
 
 	// Detailed health check
 	r.GET("/health", h.handleHealth)

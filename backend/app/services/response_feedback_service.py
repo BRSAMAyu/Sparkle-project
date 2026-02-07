@@ -2,7 +2,7 @@ import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -39,6 +39,10 @@ class FeedbackResult:
     success: bool
     already_recorded: bool
     response_id: str
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ResponseFeedbackService:
@@ -203,7 +207,7 @@ class ResponseFeedbackService:
                 if pack_run is not None:
                     return pack_run
 
-        cutoff = datetime.utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
+        cutoff = _utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
         result = await self.db.execute(
             select(ContextPackRun)
             .where(
@@ -242,7 +246,7 @@ class ResponseFeedbackService:
         await self.redis.setex(key, settings.FEEDBACK_EFFECT_TTL_SECONDS, int(time.time()))
 
     async def get_summary(self, window: timedelta) -> dict[str, Any]:
-        since = datetime.utcnow() - window
+        since = _utcnow() - window
         stmt = select(ResponseFeedback).where(
             ResponseFeedback.created_at >= since,
             ResponseFeedback.deleted_at.is_(None),

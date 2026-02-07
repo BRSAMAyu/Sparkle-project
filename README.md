@@ -153,9 +153,9 @@
 +-----------------------------------------------------------------------+
 |                                                                       |
 |  [Knowledge]        [Cognition]        [Motivation]       [Social]    |
-|   知识掌握度         元认知能力          自我效能感         协作风格   |
-|   记忆半衰期         认知负荷            学习偏好           贡献度     |
-|   学习速度           思维模式            兴趣图谱           求助特征   |
+|   知识掌握度         元认知能力          自我效能感            协作风格     |
+|   记忆半衰期         认知负荷            学习偏好              贡献度      |
+|   学习速度           思维模式            兴趣图谱             求助特征     |
 |                                                                       |
 |                    Every interaction updates the model                |
 +-----------------------------------------------------------------------+
@@ -305,7 +305,10 @@ make mobile-run
 ### 常用命令
 
 ```bash
-make proto-gen       # 生成 Protobuf 代码
+make proto-tools-build      # 构建统一 Proto 工具链镜像
+make proto-gen              # 生成 Protobuf 代码 (容器优先，自动降级)
+make proto-check-generated  # 校验生成代码是否已提交
+make proto-deprecation-check # 校验 deprecated 字段移除里程碑
 make sync-db         # 数据库迁移 + SQLC
 make smoke           # 服务健康检查
 make celery-up       # 启动异步任务队列
@@ -350,10 +353,13 @@ sparkle-flutter/
 | 文档 | 说明 |
 |:-----|:-----|
 | [CLAUDE.md](CLAUDE.md) | 开发指南 · 架构规范 · 代码模式 |
+| [快速入门](docs/快速入门.md) | 本地开发与常用命令 |
 | [技术架构](docs/00_项目概览/02_技术架构.md) | 三层架构详解 |
 | [认知引擎](docs/09_Cognitive_Nexus/) | 四维画像设计 |
 | [知识星图](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG 实现 |
 | [API 参考](docs/02_技术设计文档/03_API参考.md) | gRPC + WebSocket |
+| [ADR 记录](docs/adr/) | 架构决策记录 |
+| [性能基准测试](docs/性能基准测试.md) | Benchmark 运行说明 |
 
 <br>
 

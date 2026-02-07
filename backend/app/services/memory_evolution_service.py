@@ -4,7 +4,8 @@ Memory Evolution Service
 
 Tracks and manages memory evolution history, predictions, and analysis.
 """
-from datetime import datetime, timedelta
+import inspect
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -16,11 +17,25 @@ from app.models.memory import MemoryPreference
 from app.models.memory_evolution import EvolutionPrediction, MemoryEvolution
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class MemoryEvolutionService:
     """Memory evolution tracking service"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    async def _extract_scalars(result: Any) -> list[Any]:
+        scalars_obj = result.scalars()
+        if inspect.isawaitable(scalars_obj):
+            scalars_obj = await scalars_obj
+        rows = scalars_obj.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
+        return list(rows)
 
     async def track_memory_change(
         self,
@@ -89,8 +104,8 @@ class MemoryEvolutionService:
             trigger_event=trigger_event,
             trigger_source=trigger_source or self._identify_trigger_source(workflow_id),
             workflow_id=workflow_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         self.db.add(evolution)
@@ -150,7 +165,7 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(limit)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         # 2. Build timeline
         timeline = []
@@ -204,6 +219,11 @@ class MemoryEvolutionService:
             Dict: 版本对比结果
         """
         evolution = await self.db.get(MemoryEvolution, evolution_id)
+        if not isinstance(getattr(evolution, "old_value", None), dict):
+            result = await self.db.execute(
+                select(MemoryEvolution).where(MemoryEvolution.id == evolution_id)
+            )
+            evolution = result.scalar_one_or_none()
         if not evolution:
             raise ValueError(f"Evolution {evolution_id} not found")
 
@@ -256,7 +276,7 @@ class MemoryEvolutionService:
         Returns:
             Dict: 可视化数据
         """
-        start_date = datetime.utcnow() - timedelta(days=time_range_days)
+        start_date = _utcnow() - timedelta(days=time_range_days)
 
         # 1. Get evolutions in time range
         result = await self.db.execute(
@@ -269,7 +289,7 @@ class MemoryEvolutionService:
             )
             .order_by(MemoryEvolution.created_at.asc())
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             return {
@@ -345,7 +365,7 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(100)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             logger.warning(f"No evolution history for {memory_id}, skipping prediction")
@@ -389,8 +409,8 @@ class MemoryEvolutionService:
                 predicted_confidence=pred.get('predicted_confidence'),
                 factors=pred.get('factors'),
                 similar_evolutions=pred.get('similar_evolutions', []),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(prediction_record)
 
@@ -483,7 +503,7 @@ class MemoryEvolutionService:
             .order_by(EvolutionPrediction.created_at.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return await self._extract_scalars(result)
 
     def _compare_fields(
         self,
@@ -491,6 +511,10 @@ class MemoryEvolutionService:
         new_value: dict,
     ) -> list[dict[str, Any]]:
         """Compare fields between old and new values"""
+        if not isinstance(old_value, dict):
+            old_value = {}
+        if not isinstance(new_value, dict):
+            new_value = {}
         changes = []
 
         all_keys = set(old_value.keys()) | set(new_value.keys())

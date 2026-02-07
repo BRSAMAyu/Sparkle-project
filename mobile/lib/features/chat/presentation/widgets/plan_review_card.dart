@@ -791,12 +791,10 @@ class _FeedbackOption {
   const _FeedbackOption({
     required this.value,
     required this.label,
-    this.subtitle,
   });
 
   final String value;
   final String label;
-  final String? subtitle;
 }
 
 extension on _PlanReviewCardState {

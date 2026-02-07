@@ -7,7 +7,7 @@ Collaborative Filtering Recommendation Service
 """
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -31,6 +31,10 @@ from app.schemas.recommendation import (
     UserInteractionSummary,
     UserSimilarityScore,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CollaborativeFilteringService:
@@ -345,7 +349,7 @@ class CollaborativeFilteringService:
         similar_users = []
         for sim, user in result.all():
             # 检查缓存是否过期
-            cache_age = (datetime.utcnow() - sim.last_calculated_at).total_seconds()
+            cache_age = (_utcnow() - sim.last_calculated_at).total_seconds()
             if cache_age > self.SIMILARITY_CACHE_TTL:
                 continue  # 跳过过期的缓存
 
@@ -460,7 +464,7 @@ class CollaborativeFilteringService:
         query = select(RecommendationCache).where(
             RecommendationCache.user_id == user_id,
             RecommendationCache.recommendation_type == item_type.value if item_type else "collaborative",
-            RecommendationCache.expires_at > datetime.utcnow(),
+            RecommendationCache.expires_at > _utcnow(),
             RecommendationCache.not_deleted_filter()
         ).order_by(desc(RecommendationCache.generated_at)).first()
 
@@ -478,8 +482,8 @@ class CollaborativeFilteringService:
             user_id=user_id,
             recommendation_type=item_type.value if item_type else "collaborative",
             cached_recommendations=[r.model_dump() for r in recommendations],
-            generated_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(seconds=self.RECOMMENDATION_CACHE_TTL)
+            generated_at=_utcnow(),
+            expires_at=_utcnow() + timedelta(seconds=self.RECOMMENDATION_CACHE_TTL)
         )
 
         self.db.add(cache)

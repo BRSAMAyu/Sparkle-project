@@ -3,7 +3,7 @@ Notification Center Service
 
 Provides unified access to system notifications and intervention requests.
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -19,6 +19,10 @@ from app.schemas.unified_notification import (
     NotificationPreferencesUpdate,
     UnifiedNotificationResponse,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotificationCenterService:
@@ -85,7 +89,7 @@ class NotificationCenterService:
             intervention_stmt = intervention_stmt.where(
                 or_(
                     InterventionRequest.expires_at is None,
-                    InterventionRequest.expires_at > datetime.utcnow()
+                    InterventionRequest.expires_at > _utcnow()
                 )
             )
 
@@ -136,7 +140,7 @@ class NotificationCenterService:
 
                 if notification:
                     notification.is_read = True
-                    notification.read_at = datetime.utcnow()
+                    notification.read_at = _utcnow()
                     await self.db.commit()
 
                     # Record interaction
@@ -208,7 +212,7 @@ class NotificationCenterService:
 
             for notif in unread_system:
                 notif.is_read = True
-                notif.read_at = datetime.utcnow()
+                notif.read_at = _utcnow()
                 count += 1
 
                 # Record interaction
@@ -454,7 +458,7 @@ class NotificationCenterService:
                 enable_interventions=True,
                 notification_level="standard",
                 quiet_hours_enabled=False,
-                updated_at=datetime.utcnow()
+                updated_at=_utcnow()
             )
             self.db.add(prefs)
             await self.db.commit()
@@ -483,7 +487,7 @@ class NotificationCenterService:
         if update.quiet_hours_end is not None:
             prefs.quiet_hours_end = update.quiet_hours_end
 
-        prefs.updated_at = datetime.utcnow()
+        prefs.updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(prefs)
 
@@ -500,7 +504,7 @@ class NotificationCenterService:
         """Record a notification interaction"""
         try:
             # Calculate time to action in seconds
-            time_to_action = int((datetime.utcnow() - created_at).total_seconds())
+            time_to_action = int((_utcnow() - created_at).total_seconds())
 
             interaction = NotificationInteraction(
                 id=uuid4(),
@@ -508,7 +512,7 @@ class NotificationCenterService:
                 notification_type=notification_type,
                 notification_id=notification_id,
                 action_type=action_type,
-                action_time=datetime.utcnow(),
+                action_time=_utcnow(),
                 time_to_action=time_to_action
             )
             self.db.add(interaction)

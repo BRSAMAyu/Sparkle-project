@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
+import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 
 /// 称号服务
@@ -9,20 +10,25 @@ import 'package:sparkle/shared/entities/shop_model.dart';
 class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
   TitleNotifier(
     this._shopRepository,
-    this._authNotifier,
+    this._ref,
   ) : super(null) {
     // 监听认证状态变化
-    _authNotifier.addListener(_onAuthStateChanged);
-    // 初始加载
-    _onAuthStateChanged();
+    _authStateSubscription = _ref.listen<AuthState>(
+      authProvider,
+      (previous, next) {
+        _onAuthStateChanged(next);
+      },
+      fireImmediately: true,
+    );
   }
 
   final ShopRepository _shopRepository;
-  final AuthNotifier _authNotifier;
+  final Ref _ref;
+  ProviderSubscription? _authStateSubscription;
 
   /// 当认证状态变化时，加载用户的称号
-  void _onAuthStateChanged() {
-    final user = _authNotifier.state.user;
+  void _onAuthStateChanged(AuthState authState) {
+    final user = authState.user;
     if (user != null && user.equippedTitle != null) {
       _loadTitle(user.equippedTitle!);
     } else {
@@ -97,7 +103,7 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
 
   @override
   void dispose() {
-    _authNotifier.removeListener(_onAuthStateChanged);
+    _authStateSubscription?.close();
     super.dispose();
   }
 }
@@ -105,11 +111,10 @@ class TitleNotifier extends StateNotifier<Map<String, dynamic>?> {
 /// 称号Provider
 final titleProvider = StateNotifierProvider<TitleNotifier, Map<String, dynamic>?>((ref) {
   final shopRepository = ref.watch<ShopRepository>(shopRepositoryProvider);
-  final authNotifier = ref.watch<AuthNotifier>(authProvider.notifier);
 
   return TitleNotifier(
     shopRepository,
-    authNotifier,
+    ref,
   );
 });
 

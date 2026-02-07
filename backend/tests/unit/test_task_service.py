@@ -13,13 +13,20 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.task import TaskCreate, TaskUpdate, TaskListQuery
 
 
+def _mock_db():
+    db = AsyncMock()
+    db.add = Mock()
+    db.delete = AsyncMock()
+    return db
+
+
 class TestTaskServiceGetById:
     """Test get_by_id method"""
 
     @pytest.mark.asyncio
     async def test_get_existing_task(self):
         """Test getting existing task by ID"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
 
         task_id = uuid4()
         user_id = uuid4()
@@ -40,7 +47,7 @@ class TestTaskServiceGetById:
     @pytest.mark.asyncio
     async def test_get_task_not_found(self):
         """Test getting nonexistent task returns None"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
 
         task_id = uuid4()
         user_id = uuid4()
@@ -56,7 +63,7 @@ class TestTaskServiceGetById:
     @pytest.mark.asyncio
     async def test_get_task_wrong_user(self):
         """Test getting task with wrong user ID returns None"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
 
         task_id = uuid4()
         wrong_user_id = uuid4()
@@ -77,7 +84,7 @@ class TestTaskServiceCreate:
     @pytest.mark.asyncio
     async def test_create_task_with_all_fields(self):
         """Test creating task with all fields specified"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task_in = TaskCreate(
@@ -106,7 +113,7 @@ class TestTaskServiceCreate:
     @pytest.mark.asyncio
     async def test_create_task_with_defaults(self):
         """Test creating task with default values"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task_in = TaskCreate(
@@ -135,7 +142,7 @@ class TestTaskServiceCreate:
     @pytest.mark.asyncio
     async def test_create_task_personalization_fails(self):
         """Test task creation when personalization fails"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task_in = TaskCreate(
@@ -159,7 +166,7 @@ class TestTaskServiceCreate:
     @pytest.mark.asyncio
     async def test_create_task_with_plan(self):
         """Test creating task that belongs to a plan"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
         plan_id = uuid4()
 
@@ -190,7 +197,7 @@ class TestTaskServiceUpdate:
     @pytest.mark.asyncio
     async def test_update_task_title(self):
         """Test updating task title"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task = Mock(spec=Task)
@@ -216,7 +223,7 @@ class TestTaskServiceDelete:
     @pytest.mark.asyncio
     async def test_delete_task(self):
         """Test deleting a task"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task = Mock(spec=Task)
@@ -237,7 +244,7 @@ class TestTaskStatusChanges:
     @pytest.mark.asyncio
     async def test_start_task(self):
         """Test starting a task (PENDING -> IN_PROGRESS)"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task = Mock(spec=Task)
@@ -258,7 +265,7 @@ class TestTaskStatusChanges:
     @pytest.mark.asyncio
     async def test_complete_task(self):
         """Test completing a task"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         task = Mock(spec=Task)
@@ -290,7 +297,7 @@ class TestTaskListQuery:
     @pytest.mark.asyncio
     async def test_get_user_tasks(self):
         """Test getting all tasks for a user via get_multi"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         mock_task = Mock(spec=Task)
@@ -309,7 +316,7 @@ class TestTaskListQuery:
     @pytest.mark.asyncio
     async def test_get_tasks_by_status(self):
         """Test filtering tasks by status"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db()
         user_id = uuid4()
 
         mock_result = Mock()

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ENV="${1:-production}"
 NAMESPACE="${ENV}"
+SKIP_VERIFY="${SKIP_VERIFY:-false}"
 
 if [[ "$ENV" == "staging" ]]; then
   echo "Deploying to Staging..."
@@ -55,11 +56,13 @@ SERVICE_URL="http://sparkle-gateway-${TARGET_VERSION}.${NAMESPACE}.svc.cluster.l
 # For this script, we assume inside-cluster access or we skip strict curl if outside.
 # Let's try to verify if we can.
 echo "Verifying $SERVICE_URL..."
-# ./scripts/verify_deployment.sh "$SERVICE_URL" || {
-#   echo "Verification failed! Rolling back (deleting target)..."
-#   kubectl delete -k "k8s/prod/$TARGET_VERSION"
-#   exit 1
-# }
+if [[ "$SKIP_VERIFY" != "true" ]]; then
+  ./scripts/verify_deployment.sh "$SERVICE_URL" || {
+    echo "Verification failed! Rolling back target deployment..."
+    kubectl delete -k "k8s/prod/$TARGET_VERSION" || true
+    exit 1
+  }
+fi
 
 # 5. Switch Traffic
 echo "Switching traffic to $TARGET_VERSION..."

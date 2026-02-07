@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 try:
@@ -32,6 +32,10 @@ from app.services.analytics.weekly_stats_service import WeeklyStatsService
 from app.services.llm_service import LLMService
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class WeeklySynthesisService:
     """
     Weekly Synthesis Service
@@ -56,7 +60,7 @@ class WeeklySynthesisService:
         Generate full weekly report data and PDF.
         """
         if not end_date:
-            end_date = datetime.utcnow()
+            end_date = _utcnow()
         start_date = end_date - timedelta(days=7)
 
         # 1. Gather Data
@@ -75,7 +79,7 @@ class WeeklySynthesisService:
             "blindspots": blindspots,
             "ai_insight": synthesis.get("insight", "No insight generated."),
             "ai_suggestion": synthesis.get("suggestion", "Keep learning!"),
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": _utcnow().isoformat()
         }
 
         # 3. Generate PDF (Optional: can be triggered separately or here)

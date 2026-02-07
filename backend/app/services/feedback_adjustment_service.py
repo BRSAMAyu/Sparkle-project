@@ -22,7 +22,7 @@ AdjustmentAction[] (实际执行)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -33,6 +33,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task, TaskStatus
 from app.services.plan_state_service import PlanStateService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackType(str, Enum):
@@ -127,7 +131,7 @@ class DifficultyCalibrator:
             "expected": expected_difficulty,
             "perceived": perceived_difficulty,
             "time_ratio": completion_time_ratio,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": _utcnow().isoformat()
         })
 
         # 保留最近20条记录
@@ -534,7 +538,7 @@ class FeedbackDrivenAdjustmentService:
                         update(Task)
                         .where(Task.id == task_id, Task.user_id == user_id)
                         .values(
-                            deleted_at=datetime.utcnow(),
+                            deleted_at=_utcnow(),
                             status=TaskStatus.ABANDONED.value
                         )
                     )
@@ -596,7 +600,7 @@ class FeedbackDrivenAdjustmentService:
                     await self.db.execute(
                         update(Task)
                         .where(Task.id == task.id, Task.user_id == user_id)
-                        .values(deleted_at=datetime.utcnow(), status=TaskStatus.ABANDONED.value)
+                        .values(deleted_at=_utcnow(), status=TaskStatus.ABANDONED.value)
                     )
                 await self.db.commit()
 

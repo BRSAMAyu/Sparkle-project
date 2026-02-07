@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import CONTEXT_PACK_BUILD, CONTEXT_PACK_OVER_BUDGET
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LtmHealthSnapshotService:
@@ -113,7 +117,7 @@ class LtmHealthSnapshotService:
         from app.services.memory_jobs import MemoryJobsService
 
         history = MemoryJobsService.get_history()
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cutoff = _utcnow() - timedelta(hours=24)
         summary = {"ok": 0, "error": 0, "disabled": 0}
         for entries in history.values():
             for entry in entries:

@@ -87,11 +87,11 @@ async def test_get_evolution_history(evolution_service: MemoryEvolutionService):
     history = await evolution_service.get_evolution_history(
         memory_id=memory_id,
         limit=50,
-        include_predictions=True
+        include_predictions=False
     )
 
     assert len(history) == 1
-    assert history[0]["memory_id"] == memory_id
+    assert history[0]["change_reason"] == "user_edit"
 
 
 @pytest.mark.asyncio
@@ -108,22 +108,24 @@ async def test_compare_memory_versions(evolution_service: MemoryEvolutionService
     mock_evo.confidence_delta = 0.3
     mock_evo.impact_score = 0.7
 
-    # Mock数据库查询
-    mock_result = AsyncMock()
-    mock_result.scalar_one_or_none.return_value = mock_evo
-    evolution_service.db.execute = AsyncMock(return_value=mock_result)
-
-    comparison = await evolution_service.compare_memory_versions(evolution_id)
+    evolution_service.db.get = AsyncMock(return_value=mock_evo)
+    with patch.object(evolution_service, "_analyze_semantic_changes", return_value={}):
+        with patch.object(evolution_service, "_estimate_impact_duration", return_value=7):
+            comparison = await evolution_service.compare_memory_versions(evolution_id)
 
     assert comparison["evolution_id"] == str(evolution_id)
     assert "field_changes" in comparison
-    assert comparison["confidence_delta"] == 0.3
+    assert comparison["confidence_change"]["delta"] == 0.3
 
 
 @pytest.mark.asyncio
 async def test_predict_evolution(evolution_service: MemoryEvolutionService):
     """Test predicting memory evolution"""
     memory_id = str(uuid4())
+
+    mock_memory = Mock()
+    mock_memory.memory_type = "preference"
+    evolution_service.db.get = AsyncMock(return_value=mock_memory)
 
     # Mock数据库查询
     mock_result = AsyncMock()

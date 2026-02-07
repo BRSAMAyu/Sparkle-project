@@ -15,7 +15,7 @@ from app.services.memory_jobs import MemoryJobsService
 async def test_release_gate_passes_with_metrics(db_session, monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_EVIDENCE_HEALTH_JOB", True, raising=False)
     monkeypatch.setattr(settings, "ENABLE_BUDGET_TUNING", False, raising=False)
-    monkeypatch.setattr(settings, "LTM_RELEASE_EVIDENCE_MISSING_THRESHOLD", 0.5, raising=False)
+    monkeypatch.setattr(settings, "LTM_RELEASE_EVIDENCE_MISSING_THRESHOLD", 1.0, raising=False)
     monkeypatch.setattr(settings, "LTM_RELEASE_EVAL_THRESHOLD", 0.6, raising=False)
     monkeypatch.setattr(settings, "LTM_RELEASE_JOB_SUCCESS_THRESHOLD", 0.5, raising=False)
 
@@ -57,6 +57,8 @@ async def test_release_gate_fails_without_eval(db_session, monkeypatch):
     monkeypatch.setattr(settings, "LTM_RELEASE_EVIDENCE_MISSING_THRESHOLD", 0.5, raising=False)
     monkeypatch.setattr(settings, "LTM_RELEASE_EVAL_THRESHOLD", 0.6, raising=False)
     monkeypatch.setattr(settings, "LTM_RELEASE_JOB_SUCCESS_THRESHOLD", 0.5, raising=False)
+    LTM_EVAL_AVG_SCORE.set(0)
+    LTM_EVAL_TOTAL._metrics.clear()  # type: ignore[attr-defined]
 
     user_id = uuid4()
     user = User(

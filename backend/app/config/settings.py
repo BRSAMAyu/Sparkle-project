@@ -3,7 +3,7 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -33,8 +33,9 @@ def _replace_url_host(raw_url: str, new_host: str) -> str:
     parsed = urlparse(raw_url)
     if not parsed.hostname:
         return raw_url
-    username = quote(parsed.username) if parsed.username else ""
-    password = quote(parsed.password) if parsed.password else ""
+    # urlparse may return percent-encoded userinfo; decode first to avoid double encoding.
+    username = quote(unquote(parsed.username)) if parsed.username else ""
+    password = quote(unquote(parsed.password)) if parsed.password else ""
     auth = ""
     if username:
         auth = username
@@ -105,6 +106,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool | None = None
+    SERVICE_ROLE: str = "api"  # api | grpc
 
     # Security
     # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
@@ -117,14 +119,14 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
     POSTGRES_PORT: int = Field(5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
     POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
-    POSTGRES_PASSWORD: str = Field("change-me", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
+    POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
     REDIS_HOST: str = Field("sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
     REDIS_PORT: int = Field(6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
-    REDIS_PASSWORD: str = "change-me"
+    REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
 
     @property
@@ -196,6 +198,11 @@ class Settings(BaseSettings):
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
+
+    # Prompt Snapshot (debug observability)
+    PROMPT_SNAPSHOT_ENABLED: bool = False
+    PROMPT_SNAPSHOT_SAMPLE_RATE: float = 0.0
+    PROMPT_SNAPSHOT_MAX_CHARS: int = 1200
 
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
@@ -491,11 +498,19 @@ class Settings(BaseSettings):
 
         if self.GRPC_REQUIRE_TLS is None:
             self.GRPC_REQUIRE_TLS = env in ("prod", "production")
+        service_role = (self.SERVICE_ROLE or "").strip().lower()
+        if service_role == "":
+            service_role = "api"
+        self.SERVICE_ROLE = service_role
 
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
 
-        if env in ("prod", "production") and not self.GRPC_REQUIRE_TLS:
+        if (
+            env in ("prod", "production")
+            and self.SERVICE_ROLE == "grpc"
+            and not self.GRPC_REQUIRE_TLS
+        ):
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
 
         if not self.DEBUG and not self.SECRET_KEY:
@@ -510,7 +525,11 @@ class Settings(BaseSettings):
         if self.WS_ALLOW_QUERY_TOKEN is None:
             self.WS_ALLOW_QUERY_TOKEN = env not in ("prod", "production")
 
-        if self.GRPC_REQUIRE_TLS and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH):
+        if (
+            self.SERVICE_ROLE == "grpc"
+            and self.GRPC_REQUIRE_TLS
+            and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH)
+        ):
             raise ValueError("GRPC TLS is required but cert/key are not configured")
 
         return self

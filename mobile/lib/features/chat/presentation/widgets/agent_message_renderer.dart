@@ -162,40 +162,59 @@ class AgentMessageRenderer extends StatelessWidget {
   Widget _buildConfirmationCard(
     BuildContext context,
     ConfirmationData data,
-  ) =>
-      Card(
-        color: Theme.of(context).colorScheme.tertiaryContainer,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '需要确认',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: DS.sm),
-              Text(data.description),
-              const SizedBox(height: DS.md),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => onConfirmation?.call(data.actionId, false),
-                    child: const Text('取消'),
-                  ),
-                  const SizedBox(width: DS.sm),
-                  ElevatedButton(
-                    onPressed: () => onConfirmation?.call(data.actionId, true),
-                    child: const Text('确认执行'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+  ) {
+    var title = '需要确认';
+    var description = data.description;
+    var confirmLabel = '确认执行';
+
+    if (data.toolName == 'update_user_preference') {
+      title = '确认偏好更新';
+      final prefKey = data.preview['pref_key'] ?? data.preview['key'];
+      final prefValue = data.preview['pref_value'] ?? data.preview['value'];
+      if (prefKey != null && prefValue != null) {
+        description = '将偏好「$prefKey」更新为「$prefValue」。';
+      } else if (prefKey != null) {
+        description = '确认更新你的偏好「$prefKey」。';
+      } else {
+        description = '确认更新你的偏好设置。';
+      }
+      confirmLabel = '确认更新';
+    }
+
+    return Card(
+      color: Theme.of(context).colorScheme.tertiaryContainer,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: DS.sm),
+            Text(description),
+            const SizedBox(height: DS.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => onConfirmation?.call(data.actionId, false),
+                  child: const Text('取消'),
+                ),
+                const SizedBox(width: DS.sm),
+                ElevatedButton(
+                  onPressed: () => onConfirmation?.call(data.actionId, true),
+                  child: Text(confirmLabel),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildCollaborationTimeline(
     BuildContext context,

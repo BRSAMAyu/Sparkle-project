@@ -1,8 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from app.models.event import TrackingEvent
 from app.services.state_estimator_service import StateEstimatorService, StateWindow
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _event(event_type, payload=None, received_at=None):
@@ -12,15 +16,15 @@ def _event(event_type, payload=None, received_at=None):
         event_type=event_type,
         schema_version="event.v1",
         source="test",
-        ts_ms=int(datetime.utcnow().timestamp() * 1000),
+        ts_ms=int(_utcnow().timestamp() * 1000),
         entities=None,
         payload=payload or {},
-        received_at=received_at or datetime.utcnow(),
+        received_at=received_at or _utcnow(),
     )
 
 
 def test_compute_state_focus_and_wrong_events():
-    now = datetime.utcnow()
+    now = _utcnow()
     events = [
         _event("focus_start", received_at=now - timedelta(minutes=10)),
         _event("question_submit", payload={"correct": False}, received_at=now - timedelta(minutes=5)),

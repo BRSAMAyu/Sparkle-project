@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,6 +14,10 @@ class BKTParams:
     p_transit: float = 0.15
     p_slip: float = 0.1
     p_guess: float = 0.2
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BKTService:
@@ -51,7 +55,7 @@ class BKTService:
 
         current = status.bkt_mastery_prob or self.params.p_init
         status.bkt_mastery_prob = self._update_prob(current, correct)
-        status.bkt_last_updated_at = datetime.utcnow()
+        status.bkt_last_updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(status)
         return status

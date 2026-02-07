@@ -1,9 +1,10 @@
 import asyncio
 import json
 import os
+from contextlib import suppress
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -25,7 +26,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -43,7 +44,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -61,7 +62,7 @@ class ErrorCreated(Event):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -84,7 +85,7 @@ class TaskCompleted(Event):
         self.completion_rate = completion_rate
         self.user_note = user_note
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -110,7 +111,7 @@ class TaskAbandoned(Event):
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -134,6 +135,7 @@ class EventBus:
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.redis: redis.Redis | None = None
         self._consumers = []
+        self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
 
     async def connect(self):
@@ -167,6 +169,12 @@ class EventBus:
     async def close(self):
         """Close connection and stop consumers"""
         self._running = False
+        for task in self._consumer_tasks:
+            task.cancel()
+        for task in self._consumer_tasks:
+            with suppress(asyncio.CancelledError):
+                await task
+        self._consumer_tasks.clear()
         if self.redis:
             await self.redis.close()
             self.redis = None
@@ -245,7 +253,8 @@ class EventBus:
 
         # 2. Start Consumption Loop
         self._running = True
-        asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        self._consumer_tasks.append(task)
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")

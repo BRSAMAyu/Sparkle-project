@@ -64,7 +64,11 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> put<T>(String path, {Object? data}) {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -74,7 +78,10 @@ class TestApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> delete<T>(String path) {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -106,20 +113,21 @@ ShopItem buildShopItem({
   bool isOwned = false,
   bool isAvailable = true,
   bool isLimited = false,
-}) => ShopItem(
-    id: id,
-    name: name,
-    itemType: itemType,
-    category: category,
-    pricePhotons: pricePhotons,
-    rarity: rarity,
-    sortOrder: sortOrder,
-    hasDiscount: hasDiscount,
-    isInStock: isInStock,
-    isOwned: isOwned,
-    isAvailable: isAvailable,
-    isLimited: isLimited,
-  );
+}) =>
+    ShopItem(
+      id: id,
+      name: name,
+      itemType: itemType,
+      category: category,
+      pricePhotons: pricePhotons,
+      rarity: rarity,
+      sortOrder: sortOrder,
+      hasDiscount: hasDiscount,
+      isInStock: isInStock,
+      isOwned: isOwned,
+      isAvailable: isAvailable,
+      isLimited: isLimited,
+    );
 
 void main() {
   late TestApiClient mockApiClient;
@@ -247,7 +255,7 @@ void main() {
           requestOptions: RequestOptions(path: '/shop/items'),
           data: {
             'success': true,
-            'data': [],
+            'data': <Map<String, dynamic>>[],
           },
         );
       };
@@ -300,7 +308,6 @@ void main() {
       expect(result['price_paid'], 100);
       expect(result['balance_before'], 500);
       expect(result['balance_after'], 400);
-
     });
 
     test('throws exception on insufficient balance', () async {
@@ -318,11 +325,13 @@ void main() {
 
       expect(
         () => repository.purchaseItem('skin_001'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('Insufficient photon balance'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Insufficient photon balance'),
+          ),
+        ),
       );
     });
 
@@ -341,11 +350,13 @@ void main() {
 
       expect(
         () => repository.purchaseItem('limited_item'),
-        throwsA(isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          contains('out of stock'),
-        ),),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('out of stock'),
+          ),
+        ),
       );
     });
   });
@@ -460,7 +471,7 @@ void main() {
               'item_config': {'skin_id': 'skin_001'},
             },
           ],
-          'titles': [],
+          'titles': <Map<String, dynamic>>[],
           'consumables': [
             {
               'id': 'boost_001',
@@ -475,7 +486,7 @@ void main() {
               'item_config': {'effect_type': 'exp_boost'},
             },
           ],
-          'boosts': [],
+          'boosts': <Map<String, dynamic>>[],
         },
         'meta': {
           'total_skins': 1,
@@ -538,7 +549,6 @@ void main() {
 
       expect(result['success'], isTrue);
       expect(result['item_id'], itemId);
-
     });
   });
 
@@ -546,7 +556,7 @@ void main() {
     test('returns list of owned item IDs', () async {
       final responseData = {
         'success': true,
-        'data': ['skin_001', 'skin_002', 'title_001'],
+        'data': <String>['skin_001', 'skin_002', 'title_001'],
         'meta': {
           'total_count': 3,
           'item_type': 'all',
@@ -555,7 +565,7 @@ void main() {
 
       mockApiClient.getHandler = (path, queryParameters) async {
         expect(path, '/inventory/owned');
-        expect(queryParameters, {});
+        expect(queryParameters, isEmpty);
         return Response(
           requestOptions: RequestOptions(path: '/inventory/owned'),
           data: responseData,
@@ -627,10 +637,12 @@ void main() {
     test('throws exception when insufficient quantity', () async {
       mockApiClient.postHandler = (path, data, queryParameters) async {
         throw DioException(
-          requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
+          requestOptions:
+              RequestOptions(path: '/inventory/consumables/boost_001/use'),
           type: DioExceptionType.badResponse,
           response: Response(
-            requestOptions: RequestOptions(path: '/inventory/consumables/boost_001/use'),
+            requestOptions:
+                RequestOptions(path: '/inventory/consumables/boost_001/use'),
             data: {'detail': 'Insufficient consumable quantity'},
             statusCode: 400,
           ),

@@ -27,6 +27,9 @@ class CacheService:
         self.redis: redis.Redis | None = None
         self.default_ttl = 300  # 5 minutes default
         self._local_cache: dict[str, tuple[Any, float | None]] = {}
+        self._local_cache_ops = 0
+        self._local_cache_cleanup_interval = 100
+        self._max_local_cache_entries = 5000
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
@@ -100,6 +103,7 @@ class CacheService:
 
     async def get(self, key: str) -> Any:
         if not self.redis:
+            self._maybe_cleanup_local_cache()
             cached = self._local_cache.get(key)
             if cached is None:
                 return None
@@ -118,11 +122,13 @@ class CacheService:
 
     async def set(self, key: str, value: Any, ttl: int = None):
         if not self.redis:
+            self._maybe_cleanup_local_cache()
             expires_at = None
             ttl_value = ttl or self.default_ttl
             if ttl_value:
                 expires_at = time.time() + ttl_value
             self._local_cache[key] = (value, expires_at)
+            self._maybe_cleanup_local_cache()
             return
         dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
         await self.redis.set(key, dumped, ex=ttl or self.default_ttl)
@@ -149,6 +155,31 @@ class CacheService:
         # Scan and delete
         async for key in self.redis.scan_iter(pattern):
             await self.redis.delete(key)
+
+    def _maybe_cleanup_local_cache(self):
+        self._local_cache_ops += 1
+        needs_cleanup = (
+            self._local_cache_ops % self._local_cache_cleanup_interval == 0
+            or len(self._local_cache) > self._max_local_cache_entries
+        )
+        if not needs_cleanup:
+            return
+
+        now = time.time()
+        expired_keys = [
+            key for key, (_, expires_at) in self._local_cache.items()
+            if expires_at is not None and now > expires_at
+        ]
+        for key in expired_keys:
+            self._local_cache.pop(key, None)
+
+        overflow = len(self._local_cache) - self._max_local_cache_entries
+        if overflow <= 0:
+            return
+        # Remove oldest keys first (dict preserves insertion order on Python 3.7+).
+        keys_to_remove = list(self._local_cache.keys())[:overflow]
+        for key in keys_to_remove:
+            self._local_cache.pop(key, None)
 
 cache_service = CacheService()
 

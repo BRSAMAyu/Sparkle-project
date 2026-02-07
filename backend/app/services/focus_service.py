@@ -81,7 +81,7 @@ class FocusService:
             hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
             event_type = AchievementEvent.STUDY_MINUTES_ACCUMULATED
 
-            if hour >= 23 or hour <= 5:
+            if hour >= 23 or hour < 5:
                 # Night study special event
                 event_type = AchievementEvent.NIGHT_STUDY
             elif 5 <= hour <= 8:
@@ -353,14 +353,18 @@ class FocusService:
         result = await db.execute(stmt)
         sessions = result.scalars().all()
 
+        task_ids = [session.task_id for session in sessions if session.task_id]
+        task_title_map: dict[UUID, str] = {}
+        if task_ids:
+            task_stmt = select(Task.id, Task.title).where(Task.id.in_(task_ids))
+            task_result = await db.execute(task_stmt)
+            task_title_map = {task_id: title for task_id, title in task_result.all()}
+
         session_details = []
         for session in sessions:
-            # Get task title if task exists
             task_title = None
             if session.task_id:
-                task_stmt = select(Task.title).where(Task.id == session.task_id)
-                task_result = await db.execute(task_stmt)
-                task_title = task_result.scalar()
+                task_title = task_title_map.get(session.task_id)
 
             session_details.append({
                 "id": str(session.id),

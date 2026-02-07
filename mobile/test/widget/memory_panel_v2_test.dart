@@ -89,8 +89,7 @@ class _V2MemoryApiService implements MemoryApiService {
       );
 
   @override
-  Future<MemorySettingsModel> getMemorySettings() async =>
-      MemorySettingsModel(
+  Future<MemorySettingsModel> getMemorySettings() async => MemorySettingsModel(
         enabled: true,
         allowPreferences: true,
         allowGoals: true,
@@ -110,6 +109,8 @@ class _V2MemoryApiService implements MemoryApiService {
 void main() {
   testWidgets('Memory panel V2 shows filters and applies type filter',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     AppFeatureFlags.enableMemoryPanelV2 = true;
     AppFeatureFlags.enableEvidenceViewer = false;
     AppFeatureFlags.enableMemoryExplain = false;

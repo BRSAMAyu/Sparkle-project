@@ -20,7 +20,7 @@ Usage:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,6 +33,11 @@ from app.models.plan_state import PlanState, PlanStateStatus
 # Cache configuration
 PLAN_STATE_CACHE_TTL = 3600  # 1 hour
 PLAN_STATE_CACHE_PREFIX = "state:plan:"
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanStateService:
@@ -276,7 +281,7 @@ class PlanStateService:
         if bump_version:
             state.version = (state.version or 0) + 1
 
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -313,8 +318,8 @@ class PlanStateService:
             return None
 
         state.status = PlanStateStatus.ARCHIVED.value
-        state.archived_at = datetime.utcnow()
-        state.updated_at = datetime.utcnow()
+        state.archived_at = _utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -345,7 +350,7 @@ class PlanStateService:
         if len(summaries) > limit:
             summaries = summaries[:limit]
         state.task_summaries = summaries
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -513,7 +518,7 @@ class PlanStateService:
 
         feedback_entry = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "type": feedback_type,
             "content": content,
         }
@@ -552,7 +557,7 @@ class PlanStateService:
         state.feedback_log = feedback_log
         if bump_version:
             state.version = (state.version or 0) + 1
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -627,7 +632,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-first-10-tasks",
                 "title": "Completed first 10 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
@@ -636,7 +641,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-25-tasks",
                 "title": "Completed 25 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
@@ -645,7 +650,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-50-tasks",
                 "title": "Completed 50 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
@@ -656,7 +661,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-25pct-completion",
                 "title": "Reached 25% completion rate",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "completion_rate": rate,
             })
 
@@ -665,7 +670,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-50pct-completion",
                 "title": "Reached 50% completion rate",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "completion_rate": rate,
             })
 
@@ -674,7 +679,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-75pct-completion",
                 "title": "Reached 75% completion rate",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "completion_rate": rate,
             })
 

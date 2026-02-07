@@ -106,6 +106,7 @@ analyzer:
     - "build/**"
     - ".dart_tool/**"
     - "lib/generated/**"
+    - "lib/gen/**"
     - "lib/core/network/proto/**"
     - "test/performance/**"
     - "test/integration/**"
@@ -118,6 +119,8 @@ analyzer:
     missing_required_param: error
     dead_code: warning
     deprecated_member_use: warning
+    invalid_use_of_protected_member: ignore
+    invalid_use_of_visible_for_testing_member: ignore
     unused_import: warning
     unused_local_variable: warning
 

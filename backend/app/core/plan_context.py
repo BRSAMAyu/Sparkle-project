@@ -15,7 +15,7 @@ Usage:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +28,11 @@ from app.services.plan_state_service import PlanStateService
 
 # Default budget for plan_context section (tokens)
 PLAN_CONTEXT_DEFAULT_BUDGET = 500
+
+
+def _utcnow() -> datetime:
+    """Return a naive UTC datetime for compatibility with current DB column types."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanContextBuilder:
@@ -279,7 +284,7 @@ class PlanContextBuilder:
                 from app.models.user_state import UserStateSnapshot
 
                 # Get the most recent snapshot from the last 24 hours
-                cutoff = datetime.utcnow() - timedelta(hours=24)
+                cutoff = _utcnow() - timedelta(hours=24)
                 result = await self.db.execute(
                     select(UserStateSnapshot)
                     .where(UserStateSnapshot.user_id == user_id)

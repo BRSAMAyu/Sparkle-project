@@ -15,7 +15,7 @@ Phase 2c: 集成审查历史和反馈学习
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -52,6 +52,10 @@ except ImportError:
 # ============================================
 
 _reviewer_agent: ReviewerAgent | None = None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_reviewer() -> ReviewerAgent:
@@ -395,7 +399,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
             "user_id": _state_get(state, "user_id"),
             "session_id": _state_get(state, "session_id"),
             "conversation_history": messages[:last_assistant_idx],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": _utcnow().isoformat()
         }
     )
 
@@ -485,7 +489,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     # 6. 记录审查历史
     history_entry: ReviewHistoryEntry = {
         "review_id": review_result.review_id,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utcnow().isoformat(),
         "target_type": ReviewTargetType.LLM_RESPONSE,
         "decision": review_result.decision,
         "overall_score": review_result.overall_score,
@@ -587,7 +591,7 @@ async def execution_review_node(state: SparkleState) -> dict[str, Any]:
             context={
                 "user_id": _state_get(state, "user_id"),
                 "session_id": _state_get(state, "session_id"),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         )
 

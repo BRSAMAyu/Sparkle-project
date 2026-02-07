@@ -21,7 +21,29 @@ from app.services.personalization.preference_service import PreferenceService
 from app.services.personalization.engine import PersonalizationEngine
 from app.services.personalization.runtime_context_service import RuntimeContextService
 from app.core.cache import cache_service
+from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
+
+
+@pytest.fixture(autouse=True)
+def _restore_cache_service_redis():
+    """Prevent global cache client mutation from leaking to later test modules."""
+    original_redis = cache_service.redis
+    try:
+        yield
+    finally:
+        cache_service.redis = original_redis
+
+
+async def _ensure_user(db_session: AsyncSession, user_id) -> None:
+    user = User(
+        id=user_id,
+        username=f"pref_user_{str(user_id)[:8]}",
+        email=f"pref_{str(user_id)[:8]}@example.com",
+        hashed_password="hashed_test_password",
+    )
+    db_session.add(user)
+    await db_session.commit()
 
 
 @pytest.mark.asyncio
@@ -35,6 +57,7 @@ async def test_preference_update_invalidates_cache(db_session: AsyncSession):
 
     pref_service = PreferenceService(db_session, redis_mock)
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # Step 1: 创建初始偏好
     initial_prefs = UserPreferencesCenter(
@@ -80,6 +103,7 @@ async def test_preference_change_affects_llm_profile(db_session: AsyncSession):
     engine = PersonalizationEngine(pref_service, ctx_service)
 
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # Step 1: 创建低depth偏好
     prefs_low = UserPreferencesCenter(
@@ -126,6 +150,7 @@ async def test_curiosity_preference_affects_exploration(db_session: AsyncSession
     engine = PersonalizationEngine(pref_service, ctx_service)
 
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # Test Case 1: 低好奇心（focused）
     prefs_focused = UserPreferencesCenter(
@@ -167,6 +192,7 @@ async def test_full_workflow_preference_to_generation(db_session: AsyncSession):
     engine = PersonalizationEngine(pref_service, ctx_service)
 
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # ========== 场景1：初始用户偏好简洁 ==========
     prefs_concise = UserPreferencesCenter(
@@ -251,6 +277,7 @@ async def test_inferred_preference_fallback(db_session: AsyncSession):
     engine = PersonalizationEngine(pref_service, ctx_service)
 
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # Mock：显式偏好为空，推断偏好有值
     # 注意：需要使用None作为显式偏好，让引擎fallback到推断值
@@ -289,6 +316,7 @@ async def test_preference_version_tracking(db_session: AsyncSession):
 
     pref_service = PreferenceService(db_session, redis_mock)
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # 创建初始版本
     prefs_v1 = UserPreferencesCenter(
@@ -324,6 +352,7 @@ async def test_push_policy_affected_by_preference(db_session: AsyncSession):
     engine = PersonalizationEngine(pref_service, ctx_service)
 
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     # Mock高好奇心、高depth偏好
     prefs_high_engagement = UserPreferencesCenter(

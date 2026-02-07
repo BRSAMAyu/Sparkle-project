@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,6 +33,10 @@ ALLOWED_EVIDENCE_TYPES = {
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
 SUMMARY_MAX_LEN = 48
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:
@@ -99,7 +103,7 @@ class MemoryService:
 
         if latest is not None:
             latest.replaced_by_id = record.id
-            latest.updated_at = datetime.utcnow()
+            latest.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(record)
@@ -281,7 +285,7 @@ class MemoryService:
         return record
 
     async def list_active_goals(self, user_id: UUID, now: datetime | None = None) -> list[MemoryGoal]:
-        now = now or datetime.utcnow()
+        now = now or _utcnow()
         result = await self.db.execute(
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
@@ -413,7 +417,7 @@ class MemoryService:
         include_expired: bool = False,
         limit: int = 20,
     ) -> list[MemoryGoal]:
-        now = datetime.utcnow()
+        now = _utcnow()
         stmt = select(MemoryGoal).where(
             MemoryGoal.user_id == user_id,
             MemoryGoal.deleted_at.is_(None),
@@ -601,7 +605,7 @@ class MemoryService:
             else:
                 current_score = record.evidence_score or 0.0
                 record.evidence_score = max(0.0, current_score - CONFIDENCE_DECREMENT)
-            record.updated_at = datetime.utcnow()
+            record.updated_at = _utcnow()
         else:
             raise ValueError(f"Unsupported correction action: {action}")
 
@@ -652,11 +656,13 @@ class MemoryService:
             updated_refs.append(ref_copy)
 
         record.evidence_refs = updated_refs
-        record.retracted_at = datetime.utcnow()
-        record.updated_at = datetime.utcnow()
+        record.retracted_at = _utcnow()
+        record.updated_at = _utcnow()
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
+            if not isinstance(snapshot, dict):
+                snapshot = {"history": snapshot}
             snapshot["retraction_reason"] = reason
             snapshot["evidence_refs"] = updated_refs
             record.evidence_snapshot = snapshot

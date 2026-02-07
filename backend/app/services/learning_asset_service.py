@@ -9,7 +9,7 @@ Handles:
 - Inbox expiry and status transitions
 """
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -40,6 +40,10 @@ SUGGESTION_COOLDOWN_MINUTES = 30
 DISMISS_COOLDOWN_DAYS = 7
 REPEAT_LOOKUP_THRESHOLD = 2  # Suggest after N lookups in session
 SESSION_TTL_HOURS = 2
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LearningAssetService:
@@ -118,7 +122,7 @@ class LearningAssetService:
             "ambiguity_hint": norm_result.ambiguity_hint,
             "norm_version": NORM_VERSION,
             "match_profile": DEFAULT_MATCH_PROFILE,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": _utcnow().isoformat(),
         }
 
         # 3. Try to find provenance if source_file_id provided
@@ -143,7 +147,7 @@ class LearningAssetService:
         # 4. Set inbox expiry if starting in INBOX
         inbox_expires_at = None
         if initial_status == AssetStatus.INBOX:
-            inbox_expires_at = datetime.utcnow() + timedelta(days=INBOX_EXPIRY_DAYS)
+            inbox_expires_at = _utcnow() + timedelta(days=INBOX_EXPIRY_DAYS)
 
         # 5. Create asset
         asset = LearningAsset(
@@ -160,7 +164,7 @@ class LearningAssetService:
             snapshot_json=snapshot,
             snapshot_schema_version=1,
             provenance_json=provenance,
-            provenance_updated_at=datetime.utcnow() if provenance else None,
+            provenance_updated_at=_utcnow() if provenance else None,
             selection_fp=fp_result.selection_fp,
             anchor_fp=fp_result.anchor_fp,
             doc_fp=fp_result.doc_fp,
@@ -327,7 +331,7 @@ class LearningAssetService:
         if existing:
             # Update lookup count
             existing.lookup_count += 1
-            existing.last_seen_at = datetime.utcnow()
+            existing.last_seen_at = _utcnow()
             await db.flush()
             return {
                 "suggest_asset": False,
@@ -452,12 +456,12 @@ class LearningAssetService:
             raise ValueError("Suggestion log not found or access denied")
 
         log.user_response = response.value
-        log.response_at = datetime.utcnow()
+        log.response_at = _utcnow()
         log.asset_id = asset_id
 
         # Set cooldown if dismissed
         if response == UserSuggestionResponse.DISMISS:
-            cooldown_until = datetime.utcnow() + timedelta(days=DISMISS_COOLDOWN_DAYS)
+            cooldown_until = _utcnow() + timedelta(days=DISMISS_COOLDOWN_DAYS)
             log.cooldown_until = cooldown_until
 
             cooldown_key = self._user_cooldown_key(user_id, "suggest_repeat_lookup")
@@ -551,7 +555,7 @@ class LearningAssetService:
         Returns:
             Number of assets archived
         """
-        now = datetime.utcnow()
+        now = _utcnow()
 
         # Find expired inbox items
         query = select(LearningAsset).where(

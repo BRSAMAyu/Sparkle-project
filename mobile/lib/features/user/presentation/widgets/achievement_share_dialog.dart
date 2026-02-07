@@ -81,9 +81,11 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
     if (_imagePath == null) return;
 
     try {
-      await Share.shareXFiles(
-        [XFile(_imagePath!)],
-        text: '我在 Sparkle 取得了新成就！🎉',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(_imagePath!)],
+          text: '我在 Sparkle 取得了新成就！🎉',
+        ),
       );
     } catch (e) {
       _showError('分享失败: $e');

@@ -13,9 +13,13 @@ This module provides:
 """
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 from loguru import logger
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserIntentProfiler:
@@ -136,7 +140,7 @@ class UserIntentProfiler:
             recent = profile.get("recent_intents", [])
             recent.insert(0, {
                 "intent": intent,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
                 "metadata": metadata or {}
             })
 
@@ -144,7 +148,7 @@ class UserIntentProfiler:
             profile["recent_intents"] = recent[:50]
 
             # Update timestamp
-            profile["last_updated"] = datetime.utcnow().isoformat()
+            profile["last_updated"] = _utcnow().isoformat()
 
             # Recalculate weights
             profile = self._calculate_weights(profile)
@@ -395,7 +399,7 @@ class UserIntentProfiler:
             "total_count": 0,
             "intents": {intent: {"count": 0, "weight": 0.0, "boost": 1.0} for intent in self.INTENT_CATEGORIES},
             "recent_intents": [],
-            "last_updated": datetime.utcnow().isoformat()
+            "last_updated": _utcnow().isoformat()
         }
 
 

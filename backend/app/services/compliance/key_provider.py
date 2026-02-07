@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 
 from loguru import logger
 
+from app.config import settings
+
 
 class MasterKeyProvider(ABC):
     @abstractmethod
@@ -14,7 +16,12 @@ class MasterKeyProvider(ABC):
 
 class LocalKeyProvider(MasterKeyProvider):
     def get_master_key(self) -> bytes:
-        raw = os.getenv("PERSONA_MASTER_KEY", "insecure-dev-key")
+        raw = os.getenv("PERSONA_MASTER_KEY", "")
+        if not raw:
+            env = (settings.ENVIRONMENT or "").strip().lower()
+            if env in ("prod", "production"):
+                raise ValueError("PERSONA_MASTER_KEY must be set in production")
+            raw = "insecure-dev-key"
         return hashlib.sha256(raw.encode("utf-8")).digest()
 
 

@@ -13,7 +13,7 @@ Review Appeal Service - Phase 2e
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -33,6 +33,10 @@ from app.services.review_history_service import (
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class AppealPriority(str, Enum):
     """申诉优先级"""
@@ -74,7 +78,7 @@ class AppealDecisionResult:
 
     def __post_init__(self):
         if not self.reviewed_at:
-            self.reviewed_at = datetime.utcnow().isoformat()
+            self.reviewed_at = _utcnow().isoformat()
 
 
 # ============================================
@@ -245,7 +249,7 @@ class AppealReviewService:
                     "appeal_id": appeal.appeal_id,
                     "review_id": appeal.review_id,
                     "user_id": appeal.user_id,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": _utcnow().isoformat(),
                 },
             )
 
@@ -255,7 +259,7 @@ class AppealReviewService:
                 "score": review_result.overall_score,
                 "decision": review_result.decision,
                 "issues": [i.to_dict() for i in review_result.issues],
-                "executed_at": datetime.utcnow().isoformat(),
+                "executed_at": _utcnow().isoformat(),
             }
 
         except Exception as e:
@@ -426,7 +430,7 @@ class AppealReviewService:
         Returns:
             申诉统计数据
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
         cutoff_str = cutoff.isoformat()
 
         all_appeals = await self._history_service.get_appeal_queue(status=None, limit=1000)

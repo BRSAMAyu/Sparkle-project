@@ -1,6 +1,9 @@
 import time
+from asyncio import iscoroutinefunction
 from functools import wraps
 
+from loguru import logger
+from opentelemetry import trace
 from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 
@@ -122,6 +125,28 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     'Number of pending events in the outbox table'
 )
 
+# 5b. Proto v2 Migration Metrics
+PROTO_FIELD_READ_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_field_read_total',
+    'Total protocol field reads by source during v1/v2 migration',
+    ['service', 'field', 'source']
+)
+
+PROTO_DUAL_WRITE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_dual_write_total',
+    'Total dual-write operations for legacy compatibility fields',
+    ['service', 'field']
+)
+
+PROTO_ERROR_CODE_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_proto_error_code_fallback_total',
+    'Total error code fallback operations during v1/v2 migration',
+    ['service', 'direction']
+)
+
 # 6. Response Feedback & Bandit
 RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
     Counter,
@@ -164,7 +189,6 @@ def track_latency(module, method):
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
-            from opentelemetry import trace
             start_time = time.time()
             span = trace.get_current_span()
             trace_id = format(span.get_span_context().trace_id, '032x') if span else "n/a"
@@ -175,7 +199,6 @@ def track_latency(module, method):
                 return result
             except Exception as e:
                 # Log with TraceID for correlation
-                from loguru import logger
                 logger.error(f"[TraceID: {trace_id}] Error in {module}.{method}: {e}")
                 REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
                 raise
@@ -192,7 +215,6 @@ def track_latency(module, method):
                 REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
                 return result
             except Exception as e:
-                from loguru import logger
                 logger.error(f"Error in {module}.{method}: {e}")
                 REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
                 raise
@@ -201,8 +223,7 @@ def track_latency(module, method):
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
 
         # Return async wrapper if func is async, else sync wrapper
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
+        if iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper

@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from sqlalchemy import select
@@ -32,8 +36,8 @@ async def test_feedback_ingestion_links_pack_run(db_session, monkeypatch):
         token_usage={"preferences": 80, "goals": 90, "episodic": 100},
         memory_counts={"preferences": 2, "goals": 1, "episodic": 3},
         evidence_score_avg=0.6,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=_utcnow(),
+        updated_at=_utcnow(),
     )
     db_session.add(pack_run)
     await db_session.commit()

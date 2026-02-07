@@ -187,7 +187,7 @@ class CalendarDayDragTarget extends ConsumerWidget {
 
   final DateTime date;
   final Widget child;
-  final Function(TaskModel task, DateTime newDueDate)? onTaskDropped;
+  final void Function(TaskModel task, DateTime newDueDate)? onTaskDropped;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

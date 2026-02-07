@@ -80,18 +80,18 @@ WebSocket 接口主要用于实时对话、状态同步和复杂交互。
 
 内部微服务通信使用 gRPC。
 
-### 2.1 AgentServiceV2
-定义在 `proto/agent_service_v2.proto`。
+### 2.1 AgentService
+定义在 `proto/agent_service.proto`。
 
 #### StreamChat
 双向流式对话接口。
-- **Request**: `ChatRequestV2` (user_id, message, session_id, active_tools)
-- **Response**: `stream ChatResponseV2` (content, type, timestamp)
+- **Request**: `ChatRequest` (user_id, session_id, input, active_tools, chat_mode, config, file_ids)
+- **Response**: `stream ChatResponse` (delta/tool_call/status_update/full_text/usage/citations/tool_result, finish_reason, timestamp)
 
 #### GetUserProfile
 获取用户画像。
-- **Request**: `ProfileRequestV2` (user_id)
-- **Response**: `ProfileResponseV2` (nickname, level, avatar_url)
+- **Request**: `ProfileRequest` (user_id)
+- **Response**: `UserProfile` (nickname, level, avatar_url, preferences, extra_context)
 
 #### GetWeeklyReport
 生成周报。

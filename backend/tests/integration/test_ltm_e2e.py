@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -39,7 +43,7 @@ async def test_ltm_write_inject_correct(db_session, monkeypatch):
         user_id=user_id,
         title="Finish LTM rollout",
         status="active",
-        target_date=datetime.utcnow().date() + timedelta(days=7),
+        target_date=_utcnow().date() + timedelta(days=7),
         evidence_refs=[{"type": "event", "id": "evt_goal_1"}],
     )
     await memory_service.create_episodic_memory(
@@ -47,7 +51,7 @@ async def test_ltm_write_inject_correct(db_session, monkeypatch):
         summary="Agreed on LTM rollout plan",
         source_type="analysis",
         source_id="analysis_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.7,
         tags=["planning"],
         evidence_refs=[{"type": "event", "id": "evt_ep_1"}],
@@ -86,12 +90,12 @@ async def test_evidence_missing_and_repair_flow(db_session):
     db_session.add(user)
 
     event = TrackingEvent(
-        event_id="evt_health_1",
+        event_id=f"evt_health_{uuid4().hex[:8]}",
         user_id=user_id,
         event_type="memory_test",
         schema_version="event.v1",
         source="test",
-        ts_ms=int(datetime.utcnow().timestamp() * 1000),
+        ts_ms=int(_utcnow().timestamp() * 1000),
     )
     db_session.add(event)
     await db_session.commit()
@@ -102,17 +106,17 @@ async def test_evidence_missing_and_repair_flow(db_session):
         summary="Evidence health check",
         source_type="analysis",
         source_id="analysis_health",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.5,
         tags=["health"],
-        evidence_refs=[{"type": "event", "id": "evt_health_1"}],
+        evidence_refs=[{"type": "event", "id": event.event_id}],
     )
 
     health_service = EvidenceHealthService(db_session)
     resolved_ok = await health_service.check_memory_item(episodic, user_id)
     assert resolved_ok["missing"] is False
 
-    event.deleted_at = datetime.utcnow()
+    event.deleted_at = _utcnow()
     await db_session.commit()
 
     resolved_missing = await health_service.check_memory_item(episodic, user_id)

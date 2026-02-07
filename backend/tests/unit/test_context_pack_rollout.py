@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -46,7 +50,7 @@ async def test_context_pack_respects_rollout(db_session, monkeypatch):
         summary="Rolled out test",
         source_type="analysis",
         source_id="src_rollout",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.4,
         tags=["rollout"],
         evidence_refs=[{"type": "event", "id": "evt_rollout"}],

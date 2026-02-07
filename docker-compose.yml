@@ -6,9 +6,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=sparkle
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,9 +22,9 @@ services:
     container_name: sparkle_redis
     ports:
       - "6379:6379"
-    command: redis-stack-server --requirepass change-me
+    command: redis-stack-server --requirepass ${REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "change-me", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,8 +38,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - ./minio_data:/data
 
@@ -53,8 +53,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:change-me@sparkle_db:5432/sparkle
-      - REDIS_URL=redis://:change-me@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
@@ -77,10 +77,10 @@ services:
     ports:
       - "50051:50051"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:change-me@sparkle_db:5432/sparkle
-      - REDIS_URL=redis://:change-me@sparkle_redis:6379/0
-      - INTERNAL_API_KEY=dev_internal_key
-      - JWT_SECRET=Jk8Lm2Np5Qr9St3Uv7Wx1Yz4Ab6Cd0Ef8Gh3Ij7Kl2Mn9Op4Qr6Sv0Tw1Xy5Za
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       - ./backend:/app
     depends_on:
@@ -97,9 +97,9 @@ services:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:change-me@sparkle_db:5432/sparkle
-      - CELERY_BROKER_URL=redis://:change-me@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:change-me@sparkle_redis:6379/2
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
     depends_on:
       sparkle_db:
         condition: service_healthy
@@ -118,14 +118,16 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgres://postgres:change-me@sparkle_db:5432/sparkle
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=sparkle_redis:6379
-      - REDIS_PASSWORD=change-me
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - AGENT_ADDRESS=sparkle_agent:50051
       - BACKEND_URL=http://sparkle_api:8000
       - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - MINIO_USE_SSL=false
-      - JWT_SECRET=Jk8Lm2Np5Qr9St3Uv7Wx1Yz4Ab6Cd0Ef8Gh3Ij7Kl2Mn9Op4Qr6Sv0Tw1Xy5Za
+      - JWT_SECRET=${JWT_SECRET}
 
     depends_on:
       sparkle_api:

@@ -13,7 +13,7 @@ Feedback Learning Service - Phase 2c
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -28,6 +28,10 @@ from app.services.review_history_service import (
 # ============================================
 # 学习数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 @dataclass
 class ThresholdAdjustment:
@@ -177,7 +181,7 @@ class FeedbackLearningService:
         logger.info(f"[FeedbackLearning] Starting analysis for past {days} days")
 
         # 获取时间范围内的数据
-        end_date = datetime.utcnow()
+        end_date = _utcnow()
         start_date = end_date - timedelta(days=days)
 
         # 获取审查历史
@@ -219,7 +223,7 @@ class FeedbackLearningService:
         # 生成报告
         report = LearningReport(
             report_id=f"lr_{uuid.uuid4().hex[:12]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_reviews_analyzed=len(period_reviews),
             total_feedback_analyzed=len(period_feedbacks),
@@ -440,7 +444,7 @@ class FeedbackLearningService:
         import uuid
         return LearningReport(
             report_id=f"lr_empty_{uuid.uuid4().hex[:8]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_reviews_analyzed=reviews_count,
             total_feedback_analyzed=feedbacks_count,
@@ -692,7 +696,7 @@ class FeedbackLearningService:
 
             report = ExecutionQualityReport(
                 report_id=f"eq_{uuid.uuid4().hex[:12]}",
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=_utcnow().isoformat(),
                 period_days=days,
                 total_executions=stats.get("total", 0),
                 avg_quality_score=stats.get("avg_score", 0.0),
@@ -758,7 +762,7 @@ class FeedbackLearningService:
         import uuid
         return ExecutionQualityReport(
             report_id=f"eq_empty_{uuid.uuid4().hex[:8]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_executions=0,
             avg_quality_score=0.0,

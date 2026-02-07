@@ -1,7 +1,7 @@
 """
 Background Tasks API Endpoints
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -189,7 +189,7 @@ async def get_background_task_stats(
         stats[status.value] = count
 
     # Get recently completed tasks (last 24 hours)
-    yesterday = datetime.utcnow() - timedelta(days=1)
+    yesterday = _utcnow() - timedelta(days=1)
     recent_result = await db.execute(
         select(BackgroundTask)
         .where(

@@ -7,6 +7,8 @@
 /// - User preferences
 library;
 
+import 'enhanced_intent_classifier.dart';
+
 class ContextAwareIntentClassifier {
   const ContextAwareIntentClassifier._();
 
@@ -46,7 +48,7 @@ class ContextAwareIntentClassifier {
       if (baseResult?.type == EnhancedIntentType.learn ||
           baseResult?.type == EnhancedIntentType.review) {
         return baseResult;  // Already correct
-      } else if (baseResult == null || baseResult!.confidence < 0.6) {
+      } else if (baseResult == null || baseResult.confidence < 0.6) {
         // Weak prediction, but study keywords detected during study time
         return IntentClassification(
           type: EnhancedIntentType.learn,
@@ -64,7 +66,7 @@ class ContextAwareIntentClassifier {
 
     if (recentTaskCreationCount >= 2 &&
         _containsTaskKeywords(text) &&
-        (baseResult == null || baseResult!.confidence < 0.7)) {
+        (baseResult == null || baseResult.confidence < 0.7)) {
       return IntentClassification(
         type: EnhancedIntentType.task,
         confidence: 0.75,

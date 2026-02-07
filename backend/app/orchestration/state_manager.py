@@ -9,7 +9,7 @@ Session State Manager
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
@@ -53,6 +53,10 @@ class FSMState:
     @classmethod
     def from_json(cls, data: str) -> 'FSMState':
         return cls(**json.loads(data))
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SessionStateManager:
@@ -522,7 +526,7 @@ class SessionStateManager:
             data = {
                 "plan_id": str(plan_id),
                 "reason": reason,
-                "switched_at": datetime.utcnow().isoformat()
+                "switched_at": _utcnow().isoformat()
             }
             await self.redis.setex(key, self.ttl, json.dumps(data))
             logger.info(f"Active plan set to {plan_id} for session {session_id}, reason: {reason}")

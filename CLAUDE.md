@@ -102,7 +102,6 @@ Proto Definition  →  Generated Code  →  Implementation
 ```
 proto/
 ├── agent_service.proto      # Main agent RPC (StreamChat, SubmitPlanReview, etc.)
-├── agent_service_v2.proto   # V2 agent definitions (future/enhanced features)
 ├── galaxy_service.proto     # Knowledge graph / Galaxy service
 ├── error_book.proto         # Error archive /错题本 system
 └── websocket.proto          # WebSocket message types

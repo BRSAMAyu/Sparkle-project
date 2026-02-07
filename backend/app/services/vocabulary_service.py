@@ -13,7 +13,7 @@ Vocabulary & Dictionary Service
 import csv
 import io
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -22,6 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vocabulary import DictionaryEntry, WordBook
 from app.services.llm_service import llm_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VocabularyService:
@@ -60,7 +64,7 @@ class VocabularyService:
             - 上限 180 天
         """
         if not remembered:
-            return datetime.utcnow() + timedelta(days=1)
+            return _utcnow() + timedelta(days=1)
 
         # 重要度 5 -> 基础 1 天（关键词汇）
         # 重要度 1 -> 基础 5 天（普通词汇）
@@ -73,7 +77,7 @@ class VocabularyService:
         # 上限 180 天
         days = min(days, 180)
 
-        return datetime.utcnow() + timedelta(days=int(days))
+        return _utcnow() + timedelta(days=int(days))
 
     @staticmethod
     async def import_dictionary(
@@ -165,7 +169,7 @@ class VocabularyService:
             existing.definition = definition
             existing.phonetic = phonetic or existing.phonetic
             existing.importance = importance
-            existing.next_review_at = datetime.utcnow()
+            existing.next_review_at = _utcnow()
             if context_sentence:
                 existing.context_sentence = context_sentence
             if part_of_speech:
@@ -184,7 +188,7 @@ class VocabularyService:
             importance=importance,
             part_of_speech=part_of_speech,
             source_translation_id=source_translation_id,
-            next_review_at=datetime.utcnow()
+            next_review_at=_utcnow()
         )
         db.add(word_book)
         await db.commit()
@@ -197,7 +201,7 @@ class VocabularyService:
         stmt = select(WordBook).where(
             and_(
                 WordBook.user_id == user_id,
-                WordBook.next_review_at <= datetime.utcnow()
+                WordBook.next_review_at <= _utcnow()
             )
         ).order_by(WordBook.next_review_at)
 
@@ -207,7 +211,7 @@ class VocabularyService:
     @staticmethod
     async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
         """Get number of words added today (UTC)"""
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         stmt = select(func.count()).select_from(WordBook).where(
             and_(
@@ -240,7 +244,7 @@ class VocabularyService:
             return None
 
         word_book.review_count += 1
-        word_book.last_review_at = datetime.utcnow()
+        word_book.last_review_at = _utcnow()
 
         if remembered:
             word_book.correct_review_count += 1
@@ -321,7 +325,7 @@ class VocabularyService:
         due_stmt = select(func.count()).select_from(WordBook).where(
             and_(
                 WordBook.user_id == user_id,
-                WordBook.next_review_at <= datetime.utcnow()
+                WordBook.next_review_at <= _utcnow()
             )
         )
         due_result = await db.execute(due_stmt)

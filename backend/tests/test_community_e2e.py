@@ -49,6 +49,10 @@ from app.services.community_service import (
 )
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -384,7 +388,7 @@ async def test_e2e_checkin_flow(db_session, test_users):
         name="7天Python冲刺",
         type=GroupType.SPRINT,
         sprint_goal="学会Python基础",
-        deadline=datetime.utcnow() + timedelta(days=7),
+        deadline=_utcnow() + timedelta(days=7),
         max_members=20,
     )
     group = await GroupService.create_group(db_session, user1.id, group_data)
@@ -573,7 +577,7 @@ async def test_e2e_complete_user_journey(db_session, test_users):
         name="7天Python冲刺计划",
         type=GroupType.SPRINT,
         sprint_goal="掌握Python基础语法",
-        deadline=datetime.utcnow() + timedelta(days=7),
+        deadline=_utcnow() + timedelta(days=7),
         max_members=10,
         is_public=True,
     )

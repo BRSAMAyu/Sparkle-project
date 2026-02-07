@@ -10,7 +10,7 @@ Handles version conflict detection and resolution for plans:
 P1 Priority: 版本冲突检测增强
 """
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -72,6 +72,10 @@ class ReplanResult:
             "requires_hitl": self.requires_hitl,
             "hitl_reason": self.hitl_reason,
         }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VersionConflictService:
@@ -421,7 +425,7 @@ class VersionConflictService:
         key = f"{self.CONFLICT_HISTORY_PREFIX}{user_id}"
 
         history_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "plan_id": str(plan_id),
             "conflict_type": conflict_result.conflict_type,
             "version_delta": abs(

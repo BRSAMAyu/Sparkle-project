@@ -70,7 +70,11 @@ jobs:
         run: |
           PGPASSWORD=test psql -h localhost -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;"
           PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
-          cd backend && alembic upgrade head
+          cd backend
+          DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
+          ENVIRONMENT=development \
+          GRPC_REQUIRE_TLS=false \
+          alembic upgrade head
 
       - name: Run Python E2E tests
         env:
@@ -141,8 +145,7 @@ jobs:
         run: |
           cd backend/gateway
           go test ./internal/handler/... -v -tags=integration -timeout=5m \
-            -coverprofile=coverage.out \
-            -junitxml=test-results/go-e2e.xml
+            -coverprofile=coverage.out
 
       - name: Generate coverage report
         run: |
@@ -155,13 +158,6 @@ jobs:
           files: backend/gateway/coverage.out
           flags: go-e2e
           name: go-e2e-coverage
-
-      - name: Archive test results
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: go-e2e-test-results
-          path: backend/gateway/test-results/
 
   # =============================================================================
   # Flutter Integration Tests
@@ -270,17 +266,34 @@ jobs:
 
       - name: Setup environment
         run: |
+          PGPASSWORD=test psql -h localhost -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;"
           PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
-          cd backend && alembic upgrade head
+          cd backend
+          DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
+          ENVIRONMENT=development \
+          GRPC_REQUIRE_TLS=false \
+          alembic upgrade head
 
       - name: Start services
         run: |
           # Start Go Gateway (background)
-          cd backend/gateway && go run cmd/gateway/main.go &
+          (
+            cd backend/gateway
+            DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
+            REDIS_URL=localhost:6379 \
+            go run cmd/server/main.go
+          ) &
           echo $! > gateway.pid
 
           # Start Python gRPC Server (background)
-          cd backend && python -m app.grpc_server &
+          (
+            cd backend
+            DATABASE_URL=postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test \
+            REDIS_URL=redis://localhost:6379/0 \
+            ENVIRONMENT=development \
+            GRPC_REQUIRE_TLS=false \
+            python grpc_server.py
+          ) &
           echo $! > grpc.pid
 
           # Wait for services to be ready

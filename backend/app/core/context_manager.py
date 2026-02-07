@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -16,6 +16,10 @@ from app.services.galaxy_service import GalaxyService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CognitiveContext(BaseModel):
@@ -112,7 +116,7 @@ class ContextOrchestrator:
         # Construct Context Object
         context = CognitiveContext(
             user_id=user_id,
-            timestamp=datetime.utcnow(),
+            timestamp=_utcnow(),
 
             knowledge_stats=knowledge_data.get("stats", {}),
             recent_mastery_changes=knowledge_data.get("recent", []),

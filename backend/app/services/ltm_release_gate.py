@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -20,6 +20,10 @@ class ReleaseGateResult:
     ok: bool
     reasons: list[str]
     metrics: dict[str, Any]
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LtmReleaseGate:
@@ -98,7 +102,7 @@ class LtmReleaseGate:
 
     def _job_success_ratio(self) -> float | None:
         history = MemoryJobsService.get_history()
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cutoff = _utcnow() - timedelta(hours=24)
         total = 0
         ok = 0
         for entries in history.values():

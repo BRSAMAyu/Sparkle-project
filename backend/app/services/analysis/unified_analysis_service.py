@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +14,10 @@ from app.schemas.intervention import EvidenceRef
 from app.services.analysis.orchestrator import AnalysisOrchestrator
 from app.services.analytics_service import AnalyticsService
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UnifiedAnalysisService:
@@ -79,7 +83,7 @@ class UnifiedAnalysisService:
             summary=summary,
             source_type="analysis",
             source_id=result.task_id,
-            occurred_at=datetime.utcnow(),
+            occurred_at=_utcnow(),
             importance_score=result.primary_output.get("confidence_score"),
             tags=tags,
             evidence_refs=[ref.model_dump() for ref in result.evidence_refs],

@@ -52,7 +52,7 @@ class XunFeiProvider(STTProvider):
         参考：https://www.xfyun.cn/doc/asr/voicedictation/API.html
         """
         host = "iat.xf-yun.com"
-        path = "/v1"
+        path = "/v1/iat"
 
         date = formatdate(timeval=None, localtime=False, usegmt=True)
         signature_origin = f"host: {host}\ndate: {date}\nGET {path} HTTP/1.1"
@@ -126,6 +126,19 @@ class XunFeiProvider(STTProvider):
 
         # 检查是否有 payload.result.text
         try:
+            # 兼容旧测试与部分历史响应格式: {"data": {"ws": [...]}}
+            if "data" in data and isinstance(data["data"], dict):
+                ws = data["data"].get("ws", [])
+                text_parts = []
+                for item in ws:
+                    cw = item.get("cw", [])
+                    for word in cw:
+                        w = word.get("w", "")
+                        if w:
+                            text_parts.append(w)
+                if text_parts:
+                    return "".join(text_parts)
+
             if "payload" in data and isinstance(data["payload"], dict):
                 result = data["payload"].get("result")
                 if isinstance(result, dict) and "text" in result:
@@ -170,7 +183,7 @@ class XunFeiProvider(STTProvider):
         官方文档：https://www.xfyun.cn/doc/asr/voicedictation/API.html
         """
         if not self.app_id or not self.api_key or not self.api_secret:
-            yield "科大讯飞API密钥或AppID未配置"
+            yield "科大讯飞API密钥未配置"
             return
 
         # 使用配置的语言

@@ -13,7 +13,7 @@ Created: 2026-01-28
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -45,6 +45,23 @@ from app.orchestration.state_manager import SessionStateManager
 from app.services.milestone_handler import MilestoneHandler
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _ensure_user(db_session: AsyncSession, user_id) -> None:
+    db_session.add(
+        User(
+            id=user_id,
+            username=f"adaptive_user_{str(user_id)[:8]}",
+            email=f"adaptive_{str(user_id)[:8]}@example.com",
+            hashed_password="test_hash",
+            is_active=True,
+        )
+    )
+    await db_session.commit()
+
+
 # =============================================================================
 # Integration Test 1: AdaptiveReplanner + PlanProgressService
 # =============================================================================
@@ -58,6 +75,7 @@ async def test_adaptive_replanner_integration_on_task_completion(db_session: Asy
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(
@@ -145,6 +163,7 @@ async def test_version_conflict_detection_integration(db_session: AsyncSession):
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(
@@ -224,6 +243,7 @@ async def test_feedback_loop_integration(db_session: AsyncSession):
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(
@@ -298,6 +318,7 @@ async def test_milestone_handler_integration(db_session: AsyncSession):
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(
@@ -405,6 +426,7 @@ async def test_multi_plan_state_isolation_integration(db_session: AsyncSession):
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
 
     plan_a_id = uuid4()
     plan_b_id = uuid4()
@@ -515,6 +537,7 @@ async def test_session_manager_plan_switching_integration(db_session: AsyncSessi
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     session_id = f"session_{uuid4().hex[:8]}"
 
     plan_a_id = uuid4()
@@ -614,6 +637,7 @@ async def test_feedback_adjustment_similar_tasks_integration(db_session: AsyncSe
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(
@@ -673,7 +697,7 @@ async def test_feedback_adjustment_similar_tasks_integration(db_session: AsyncSe
         plan_id=plan_id,
         task_id=completed_task.id,
         feedback_type=FeedbackType.TASK_TOO_HARD,
-        timestamp=datetime.utcnow(),
+        timestamp=_utcnow(),
         difficulty_perception="hard",
         task_type="learning",
     )
@@ -703,6 +727,7 @@ async def test_milestone_deferred_when_many_pending_tasks(db_session: AsyncSessi
     """
     # Setup
     user_id = uuid4()
+    await _ensure_user(db_session, user_id)
     plan_id = uuid4()
 
     plan = Plan(

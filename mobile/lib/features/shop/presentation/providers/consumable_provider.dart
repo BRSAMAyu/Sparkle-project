@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
-import 'package:sparkle/shared/entities/shop_model.dart';
+import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
 
 /// 消耗品效果状态
 class ConsumableEffectState {

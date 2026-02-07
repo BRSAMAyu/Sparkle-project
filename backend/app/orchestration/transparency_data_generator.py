@@ -8,6 +8,7 @@ This module captures execution steps, agent switching, tool calls, and resource 
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -21,6 +22,9 @@ class StepType(str, Enum):
     EXECUTING_TOOL = "executing_tool"
     PLANNING = "planning"
     VALIDATING = "validating"
+    # Backward-compatible aliases used in legacy tests/callers.
+    TOOL_EXECUTION = "executing_tool"
+    LLM_INFERENCE = "generating"
 
 
 class StepStatus(str, Enum):
@@ -29,6 +33,8 @@ class StepStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    # Backward-compatible alias.
+    RUNNING = "in_progress"
 
 
 @dataclass
@@ -45,6 +51,18 @@ class TransparencyStep:
     result: str | None = None
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def started_at(self):
+        if self.start_time is None:
+            return None
+        return None if self.status == StepStatus.PENDING else datetime.fromtimestamp(self.start_time)
+
+    @property
+    def completed_at(self):
+        if self.end_time is None:
+            return None
+        return datetime.fromtimestamp(self.end_time)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -75,6 +93,7 @@ class TransparencyStep:
         """Mark step as completed"""
         self.status = StepStatus.COMPLETED
         self.end_time = time.time()
+        self.duration_ms = int((self.end_time - self.start_time) * 1000)
         if result:
             self.result = result
 
@@ -82,6 +101,7 @@ class TransparencyStep:
         """Mark step as failed"""
         self.status = StepStatus.FAILED
         self.end_time = time.time()
+        self.duration_ms = int((self.end_time - self.start_time) * 1000)
         self.error = error
 
 
@@ -93,7 +113,7 @@ class TransparencyDataGenerator:
     transparency_step and transparency_complete events.
     """
 
-    def __init__(self, request_id: str, enabled: bool = True):
+    def __init__(self, request_id: str | None = None, enabled: bool = True):
         """
         Initialize transparency data generator.
 
@@ -101,9 +121,10 @@ class TransparencyDataGenerator:
             request_id: Unique request identifier
             enabled: Whether transparency mode is enabled
         """
-        self.request_id = request_id
+        self.request_id = request_id or str(uuid.uuid4())
         self.enabled = enabled
         self.steps: list[TransparencyStep] = []
+        self._active_steps: dict[str, TransparencyStep] = {}
         self.current_step_index = 0
         self.total_tokens = 0
         self.start_time = time.time()
@@ -146,21 +167,27 @@ class TransparencyDataGenerator:
             return
 
         step.mark_started()
+        self._active_steps[step.step_id] = step
         logger.debug(f"[Transparency] Step started: {step.name}")
 
     def complete_step(
         self,
         step: TransparencyStep,
         result: str | None = None,
+        error: str | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         """Mark a step as completed"""
         if not self.enabled:
             return
 
-        step.mark_completed(result)
+        if error:
+            step.mark_failed(error)
+        else:
+            step.mark_completed(result)
         if metadata:
             step.metadata.update(metadata)
+        self._active_steps.pop(step.step_id, None)
 
         logger.debug(f"[Transparency] Step completed: {step.name} ({step.duration_ms}ms)")
 
@@ -177,20 +204,40 @@ class TransparencyDataGenerator:
         step.mark_failed(error)
         if metadata:
             step.metadata.update(metadata)
+        self._active_steps.pop(step.step_id, None)
 
         logger.debug(f"[Transparency] Step failed: {step.name} - {error}")
 
-    def get_step_event(self) -> dict[str, Any] | None:
+    def get_step_event(self, step: TransparencyStep | None = None) -> dict[str, Any] | None:
         """
         Get the next step event to send to frontend.
 
         Returns:
             Dict with transparency_step event data, or None if no steps
         """
+        if step is not None:
+            # Legacy flat payload used by older tests/callers.
+            legacy_step_type = (
+                "tool_execution" if step.step_type == StepType.EXECUTING_TOOL else step.step_type.value
+            )
+            legacy_status = "running" if step.status == StepStatus.IN_PROGRESS else step.status.value
+            return {
+                "step_id": step.step_id,
+                "name": step.name,
+                "step_type": legacy_step_type,
+                "status": legacy_status,
+                "agent_type": step.agent_type,
+                "started_at": step.started_at.isoformat() if step.started_at else None,
+                "completed_at": step.completed_at.isoformat() if step.completed_at else None,
+                "result": step.result,
+                "error": step.error,
+                "metadata": step.metadata,
+            }
+
         if not self.enabled or self.current_step_index >= len(self.steps):
             return None
 
-        step = self.steps[self.current_step_index]
+        current_step = self.steps[self.current_step_index]
         self.current_step_index += 1
 
         return {
@@ -198,7 +245,7 @@ class TransparencyDataGenerator:
             "data": {
                 "currentStep": self.current_step_index,
                 "totalSteps": len(self.steps),
-                "step": step.to_dict(),
+                "step": current_step.to_dict(),
             },
         }
 
@@ -222,11 +269,53 @@ class TransparencyDataGenerator:
                 "totalDurationMs": total_duration_ms,
                 "totalTokens": self.total_tokens,
             },
+            # Legacy compatibility fields.
+            "summary": {
+                "completed_steps": sum(1 for step in self.steps if step.status == StepStatus.COMPLETED),
+                "failed_steps": sum(1 for step in self.steps if step.status == StepStatus.FAILED),
+            },
+            "total_steps": len(self.steps),
+            "steps": [step.to_dict() for step in self.steps],
         }
 
     def add_tokens(self, token_count: int):
         """Add to total token count"""
         self.total_tokens += token_count
+
+    def track_planning_step(
+        self,
+        name: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> TransparencyStep:
+        step = self.create_step(name=name, step_type=StepType.PLANNING, metadata=metadata)
+        self.start_step(step)
+        return step
+
+    def track_tool_execution(
+        self,
+        tool_name: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> TransparencyStep:
+        step = self.create_step(
+            name=f"Execute Tool: {tool_name}",
+            step_type=StepType.EXECUTING_TOOL,
+            metadata={"tool": tool_name, **(metadata or {})},
+        )
+        self.start_step(step)
+        return step
+
+    def track_llm_inference(
+        self,
+        model: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> TransparencyStep:
+        step = self.create_step(
+            name=f"LLM Inference: {model}",
+            step_type=StepType.LLM_INFERENCE,
+            metadata={"model": model, **(metadata or {})},
+        )
+        self.start_step(step)
+        return step
 
 
 # Convenience functions for common workflow patterns
