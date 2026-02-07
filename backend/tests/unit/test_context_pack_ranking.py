@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from sqlalchemy import select
@@ -49,7 +53,7 @@ async def test_context_pack_ranking_applied(db_session, monkeypatch):
         )
     )
     stale_record = result.scalar_one()
-    stale_record.updated_at = datetime.utcnow() - timedelta(days=200)
+    stale_record.updated_at = _utcnow() - timedelta(days=200)
     await db_session.commit()
 
     scheduler = ContextBudgetScheduler(
@@ -89,7 +93,7 @@ async def test_context_pack_soft_caps(db_session, monkeypatch):
             evidence_refs=[{"type": "event", "id": f"evt_goal_{idx}"}],
         )
 
-    now = datetime.utcnow()
+    now = _utcnow()
     for idx in range(3):
         await memory_service.create_episodic_memory(
             user_id=user_id,

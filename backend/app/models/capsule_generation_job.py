@@ -2,12 +2,16 @@
 Capsule Generation Job Model
 """
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class JobStatus(enum.Enum):
@@ -64,13 +68,13 @@ class CapsuleGenerationJob(BaseModel):
     def mark_started(self):
         """标记任务为进行中"""
         self.status = JobStatus.GENERATING.value
-        self.started_at = datetime.utcnow()
+        self.started_at = _utcnow()
         self.progress = 0.1
 
     def mark_completed(self, capsule_ids: list = None):
         """标记任务为完成"""
         self.status = JobStatus.COMPLETED.value
-        self.completed_at = datetime.utcnow()
+        self.completed_at = _utcnow()
         self.progress = 1.0
         if capsule_ids:
             self.capsule_ids = capsule_ids
@@ -81,7 +85,7 @@ class CapsuleGenerationJob(BaseModel):
     def mark_failed(self, error_message: str):
         """标记任务为失败"""
         self.status = JobStatus.FAILED.value
-        self.completed_at = datetime.utcnow()
+        self.completed_at = _utcnow()
         self.error_message = error_message
 
     def update_progress(self, progress: float):

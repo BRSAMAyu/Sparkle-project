@@ -13,7 +13,7 @@ Model Fallback Service - Phase 2d
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -24,6 +24,10 @@ from app.core.agent_profiles import TaskType
 # ============================================
 # 数据模型
 # ============================================
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class FallbackReason(str, Enum):
     """降级原因"""
@@ -178,7 +182,7 @@ class ModelFallbackService:
         record = ModelPerformanceRecord(
             model_name=model_name,
             task_type=task_type,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             review_passed=review_passed,
             review_score=review_score,
             issues_count=issues_count,
@@ -461,7 +465,7 @@ class ModelFallbackService:
         window_seconds: int,
     ) -> list[ModelPerformanceRecord]:
         """获取最近的记录"""
-        cutoff_time = datetime.utcnow() - timedelta(seconds=window_seconds)
+        cutoff_time = _utcnow() - timedelta(seconds=window_seconds)
         return [
             r for r in self._performance_history
             if r.model_name == model_name

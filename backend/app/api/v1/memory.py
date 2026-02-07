@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -12,6 +12,10 @@ from app.models.user import User
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _ensure_memory_panel_enabled() -> None:
@@ -110,7 +114,7 @@ async def list_goals(
     current_user: User = Depends(get_current_user),
 ):
     _ensure_memory_panel_enabled()
-    now = datetime.utcnow()
+    now = _utcnow()
     stmt = select(MemoryGoal).where(
         MemoryGoal.user_id == current_user.id,
         MemoryGoal.deleted_at.is_(None),

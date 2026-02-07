@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import y_py as Y
 from redis.asyncio import Redis
@@ -6,6 +6,10 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CRDTPersistenceManager:
@@ -37,7 +41,7 @@ class CRDTPersistenceManager:
         # 记录最后同步时间
         await self.redis.set(
             f"crdt:timestamp:{galaxy_id}",
-            datetime.utcnow().isoformat(),
+            _utcnow().isoformat(),
             ex=86400
         )
 
@@ -53,12 +57,12 @@ class CRDTPersistenceManager:
             galaxy_id=galaxy_id,
             state_data=update_data,
             operation_count=0, # TODO: implement operation count tracking
-            updated_at=datetime.utcnow()
+            updated_at=_utcnow()
         ).on_conflict_do_update(
             index_elements=['galaxy_id'],
             set_={
                 'state_data': update_data,
-                'updated_at': datetime.utcnow()
+                'updated_at': _utcnow()
             }
         )
 

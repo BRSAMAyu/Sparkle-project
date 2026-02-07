@@ -3,7 +3,7 @@ Seed Library Service
 种子内容库核心服务 - 管理库、内容项、订阅和查询
 """
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -31,6 +31,10 @@ from app.schemas.seed_content import (
     SubscriptionUpdate,
 )
 from app.services.embedding_service import embedding_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SeedLibraryService:
@@ -697,7 +701,7 @@ class SeedLibraryService:
             is_enabled=True,
             priority=subscription_data.priority,
             notes=subscription_data.notes,
-            subscribed_at=datetime.utcnow(),
+            subscribed_at=_utcnow(),
         )
         db.add(subscription)
         await db.flush()

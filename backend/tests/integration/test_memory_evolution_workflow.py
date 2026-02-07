@@ -11,7 +11,7 @@ Tests the complete memory evolution tracking workflow:
 """
 import os
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.memory_service import MemoryService
@@ -24,6 +24,10 @@ pytestmark = pytest.mark.skipif(
 )
 from app.models.memory import MemoryPreference, MemoryGoal
 from app.models.memory_evolution import MemoryEvolution, EvolutionPrediction
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -100,7 +104,7 @@ async def test_goal_evolution_with_feedback():
     initial_goal = await memory_service.create_goal(
         user_id=user_id,
         title="Learn Python",
-        target_date=datetime.utcnow() + timedelta(days=30),
+        target_date=_utcnow() + timedelta(days=30),
         status="pending",
         metadata={"priority": "high"}
     )
@@ -112,7 +116,7 @@ async def test_goal_evolution_with_feedback():
         user_id=user_id,
         goal_id=initial_goal_id,
         evidence_type="progress",
-        evidence_data={"progress": "30%", "date": datetime.utcnow().isoformat()}
+        evidence_data={"progress": "30%", "date": _utcnow().isoformat()}
     )
 
     # Check evolution was tracked

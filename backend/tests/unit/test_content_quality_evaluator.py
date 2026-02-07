@@ -4,9 +4,13 @@ Unit tests for Content Quality Evaluator
 """
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from app.services.content_quality_evaluator import ContentQualityEvaluator
 from app.models.response_feedback import ResponseFeedback
@@ -37,19 +41,19 @@ async def test_evaluate_response_quality_high_quality(evaluator: ContentQualityE
         feedback1.is_positive = True
         feedback1.rating = 5
         feedback1.action = "save"
-        feedback1.created_at = datetime.utcnow()
+        feedback1.created_at = _utcnow()
 
         feedback2 = Mock(spec=ResponseFeedback)
         feedback2.is_positive = True
         feedback2.rating = 4
         feedback2.action = "save"
-        feedback2.created_at = datetime.utcnow()
+        feedback2.created_at = _utcnow()
 
         feedback3 = Mock(spec=ResponseFeedback)
         feedback3.is_positive = True
         feedback3.rating = 5
         feedback3.action = "share"
-        feedback3.created_at = datetime.utcnow()
+        feedback3.created_at = _utcnow()
 
         mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = [
@@ -76,13 +80,13 @@ async def test_evaluate_response_quality_low_quality(evaluator: ContentQualityEv
         feedback1.is_positive = False
         feedback1.rating = 2
         feedback1.action = None
-        feedback1.created_at = datetime.utcnow()
+        feedback1.created_at = _utcnow()
 
         feedback2 = Mock(spec=ResponseFeedback)
         feedback2.is_positive = False
         feedback2.rating = 1
         feedback2.action = None
-        feedback2.created_at = datetime.utcnow()
+        feedback2.created_at = _utcnow()
 
         mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = [

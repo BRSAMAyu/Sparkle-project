@@ -3,7 +3,7 @@ GalaxyStreamingService - 知识星图实时推送服务
 
 通过WebSocket向用户推送知识星图的实时更新
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +11,10 @@ from loguru import logger
 
 from app.core.event_bus import EventBus
 from app.core.websocket import ConnectionManager
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyStreamingService:
@@ -55,7 +59,7 @@ class GalaxyStreamingService:
             await self.event_bus.subscribe(
                 stream="sparkle_events",
                 group_name="galaxy_streamers",
-                consumer_name=f"galaxy_streamer-{datetime.utcnow().timestamp()}",
+                consumer_name=f"galaxy_streamer-{_utcnow().timestamp()}",
                 callback=self._on_event
             )
 
@@ -152,7 +156,7 @@ class GalaxyStreamingService:
                 "new_mastery": new_mastery,
                 "delta": new_mastery - old_mastery,
                 "reason": reason,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -172,7 +176,7 @@ class GalaxyStreamingService:
                 "trigger_node_id": str(trigger_node_id),
                 "new_nodes": new_nodes,
                 "count": len(new_nodes),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -191,7 +195,7 @@ class GalaxyStreamingService:
             "data": {
                 "node_id": str(node_id),
                 "node_name": node_name,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -212,7 +216,7 @@ class GalaxyStreamingService:
                 "node_id": str(node_id),
                 "old_level": old_level,
                 "new_level": new_level,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -230,7 +234,7 @@ class GalaxyStreamingService:
             "data": {
                 "updates": updates,
                 "count": len(updates),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 

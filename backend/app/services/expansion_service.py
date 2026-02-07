@@ -3,7 +3,7 @@
 使用 LLM 自动拓展知识星图
 """
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -13,6 +13,10 @@ from app.config import settings
 from app.core.llm_client import llm_client
 from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
 from app.services.embedding_service import embedding_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ExpansionService:
@@ -71,7 +75,7 @@ class ExpansionService:
     async def _should_expand(self, node_id: UUID, user_id: UUID) -> bool:
         """检查是否应该触发拓展"""
         # 检查最近是否已拓展过
-        cooldown_time = datetime.utcnow() - timedelta(hours=self.EXPANSION_COOLDOWN_HOURS)
+        cooldown_time = _utcnow() - timedelta(hours=self.EXPANSION_COOLDOWN_HOURS)
 
         query = select(NodeExpansionQueue).where(
             and_(
@@ -191,7 +195,7 @@ class ExpansionService:
             queue_item.expanded_nodes = json.dumps([
                 {"id": str(n.id), "name": n.name} for n in new_nodes
             ], ensure_ascii=False)
-            queue_item.processed_at = datetime.utcnow()
+            queue_item.processed_at = _utcnow()
             await self.db.commit()
 
             return new_nodes

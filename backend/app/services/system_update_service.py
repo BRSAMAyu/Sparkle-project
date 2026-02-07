@@ -1,11 +1,15 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 
 from app.core.cache import cache_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SystemUpdateService:
@@ -94,5 +98,5 @@ def build_system_update(
         "description": description,
         "priority": priority,
         "metadata": metadata or {},
-        "created_at": int(datetime.utcnow().timestamp()),
+        "created_at": int(_utcnow().timestamp()),
     }

@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api.middleware import IdempotencyMiddleware
+from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
 from app.api.v1.health import set_start_time
 from app.api.v1.router import api_router
 from app.config import settings
@@ -257,6 +257,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestContextMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -293,6 +294,18 @@ async def health_check():
         "status": "healthy",
         "detail": "For detailed health info, use /api/v1/health"
     }
+
+
+@app.get("/live")
+async def liveness_probe():
+    """Kubernetes liveness probe alias."""
+    return {"status": "alive"}
+
+
+@app.get("/ready")
+async def readiness_probe():
+    """Kubernetes readiness probe alias."""
+    return {"status": "ready"}
 
 
 # Include API routers
@@ -340,13 +353,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(SparkleException)
 async def sparkle_exception_handler(request: Request, exc: SparkleException):
     """自定义异常处理器"""
+    request_id = getattr(request.state, "request_id", None)
+    trace_id = getattr(request.state, "trace_id", None)
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
             "error_code": exc.__class__.__name__,
             "message": exc.message,
-            "detail": exc.detail
+            "detail": exc.detail,
+            "request_id": request_id,
+            "trace_id": trace_id,
         },
     )
 
@@ -354,10 +371,14 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
 async def generic_exception_handler(request: Request, exc: Exception):
     """全局未捕获异常处理器"""
     logger.exception(f"Unhandled exception: {exc}")
+    request_id = getattr(request.state, "request_id", None)
+    trace_id = getattr(request.state, "trace_id", None)
     content = {
         "success": False,
         "error_code": "InternalServerError",
         "message": "An unexpected error occurred",
+        "request_id": request_id,
+        "trace_id": trace_id,
     }
     if settings.DEBUG:
         content["detail"] = str(exc)

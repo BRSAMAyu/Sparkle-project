@@ -16,7 +16,7 @@ Reflection Agent - 自我反思与修正Agent
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -32,6 +32,10 @@ from app.agents.reviewer_agent import (
 # ============================================
 # 反思策略定义
 # ============================================
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class ReflectionStrategy(str, Enum):
     """反思修正策略"""
@@ -272,7 +276,7 @@ class ReflectionAgent:
                 llm_response=fixed_content,
                 context={
                     **(context or {}),
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": _utcnow().isoformat()
                 }
             )
 
@@ -287,7 +291,7 @@ class ReflectionAgent:
             # 5. 记录本轮
             round_record = ReflectionRound(
                 round_number=round_num,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=_utcnow().isoformat(),
                 original_score=current_score,
                 original_content=current_content,
                 strategy=strategy,

@@ -114,6 +114,10 @@ from app.services.group_file_service import GroupFileService
 
 router = APIRouter()
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def _build_message_info(msg: GroupMessage) -> MessageInfo:
     sender = None
     if msg.sender:
@@ -958,8 +962,8 @@ async def search_groups(
         days_remaining = None
         deadline = group_dict.get('deadline')
         if deadline:
-            from datetime import datetime
-            delta = deadline - datetime.utcnow()
+            from datetime import UTC, datetime
+            delta = deadline - _utcnow()
             days_remaining = max(0, delta.days)
 
         result.append(GroupListItem(

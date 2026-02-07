@@ -6,7 +6,7 @@
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -18,6 +18,10 @@ from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.graph_models import KnowledgeVertex
 from app.services.knowledge_service import KnowledgeService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GraphKnowledgeService:
@@ -65,8 +69,8 @@ class GraphKnowledgeService:
             keywords=keywords,
             source_type=source_type,
             source_task_id=source_task_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=_utcnow(),
+            updated_at=_utcnow()
         )
 
         self.db.add(node)
@@ -115,7 +119,7 @@ class GraphKnowledgeService:
             relation_type=relation_type,
             strength=strength,
             created_by=created_by,
-            created_at=datetime.utcnow()
+            created_at=_utcnow()
         )
 
         self.db.add(relation)
@@ -172,7 +176,7 @@ class GraphKnowledgeService:
                         "study_minutes": study_minutes,
                         "is_favorite": is_favorite,
                         "mastery_delta": mastery_delta,
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": _utcnow().isoformat()
                     })
                 }
             )

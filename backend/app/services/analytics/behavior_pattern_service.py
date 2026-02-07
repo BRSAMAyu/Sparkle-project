@@ -1,4 +1,4 @@
-import datetime
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
@@ -12,6 +12,10 @@ from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
 
 # Fixed: Import class from module, not instance
 from app.services.nudge_service import NudgeService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BehaviorPatternService:
@@ -87,10 +91,10 @@ class BehaviorPatternService:
         """
         # Get daily averages for last 3 days
         stats = []
-        today = datetime.date.today()
+        today = date.today()
         for i in range(3):
-            date = today - datetime.timedelta(days=i)
-            avg = await self._get_daily_focus_average(user_id, date)
+            target_date = today - timedelta(days=i)
+            avg = await self._get_daily_focus_average(user_id, target_date)
             stats.append(avg) # [Today, Yesterday, 2 Days Ago]
 
         # Check for decay trend: Day 2 > Day 1 > Today (Strict decay) or significant drop
@@ -155,9 +159,9 @@ class BehaviorPatternService:
         result = await self.db.execute(query)
         return result.scalars().all() # type: ignore
 
-    async def _get_daily_focus_average(self, user_id: UUID, date: datetime.date) -> float:
-        start = datetime.datetime.combine(date, datetime.time.min)
-        end = datetime.datetime.combine(date, datetime.time.max)
+    async def _get_daily_focus_average(self, user_id: UUID, date: date) -> float:
+        start = datetime.combine(date, time.min)
+        end = datetime.combine(date, time.max)
 
         query = select(func.avg(FocusSession.duration_minutes)).where(
             FocusSession.user_id == user_id,
@@ -171,7 +175,7 @@ class BehaviorPatternService:
 
     async def _create_or_update_pattern(self, user_id: UUID, pattern_name: str, pattern_type: str,
                                       description: str, solution_text: str, evidence_id: str, confidence: float) -> BehaviorPattern:
-        now = datetime.datetime.utcnow()
+        now = _utcnow()
         # Check if pattern exists (active)
         query = select(BehaviorPattern).where(
             BehaviorPattern.user_id == user_id,

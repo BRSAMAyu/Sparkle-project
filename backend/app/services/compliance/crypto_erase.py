@@ -1,6 +1,6 @@
 import base64
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -9,6 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.compliance import CryptoShreddingCertificate, UserPersonaKey
 from app.services.compliance.key_provider import get_master_key_provider
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CryptoEraseManager:
@@ -99,7 +103,7 @@ class CryptoEraseManager:
             raise ValueError("Active user key not found")
 
         key.is_active = False
-        key.destroyed_at = datetime.utcnow()
+        key.destroyed_at = _utcnow()
         key.encrypted_key = None
         await self.db.commit()
 

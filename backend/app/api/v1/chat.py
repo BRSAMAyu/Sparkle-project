@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -26,6 +27,10 @@ from app.services.llm_service import LLMResponse, llm_service
 from app.tools.registry import tool_registry
 
 router = APIRouter()
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -595,7 +600,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
     """
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
     from app.models.galaxy import UserNodeStatus
     from app.models.plan import Plan
@@ -672,7 +677,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             }
 
         # 2. 获取近期任务（最近7天）
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = _utcnow() - timedelta(days=7)
         tasks_stmt = (
             select(Task)
             .where(

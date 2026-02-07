@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from math import exp
 from typing import TypeVar
 
 from app.config import settings
 
 T = TypeVar("T")
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 def _default_weights() -> dict[str, float]:
     return {
@@ -77,7 +81,7 @@ def _score_item(
     now: datetime | None = None,
     weights: dict[str, float] | None = None,
 ) -> float:
-    now = now or datetime.utcnow()
+    now = now or _utcnow()
     weights = _normalize_weights(weights)
     evidence_score = float(getattr(item, "evidence_score", 0.0) or 0.0)
     correction_count = getattr(item, "correction_count", 0) or 0
@@ -106,7 +110,7 @@ def rank_items(
     now: datetime | None = None,
     weights: dict[str, float] | None = None,
 ) -> list[RankedItem[T]]:
-    now = now or datetime.utcnow()
+    now = now or _utcnow()
     ranked = [
         RankedItem(item=item, score=_score_item(item, kind=kind, now=now, weights=weights))
         for item in items

@@ -1,10 +1,14 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.compliance import LegalHold
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LegalHoldService:
@@ -35,7 +39,7 @@ class LegalHoldService:
     async def release_hold(self, hold: LegalHold, released_by: UUID) -> LegalHold:
         hold.is_active = False
         hold.released_by = released_by
-        hold.released_at = datetime.utcnow()
+        hold.released_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(hold)
         return hold

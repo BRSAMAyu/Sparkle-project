@@ -14,7 +14,7 @@ Review History Service - Phase 2c
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -38,6 +38,10 @@ from app.models.review_system import (
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class FeedbackType(str, Enum):
     """用户反馈类型"""
@@ -461,7 +465,7 @@ class ReviewHistoryService:
             feedback_val = feedback_type.value if isinstance(feedback_type, FeedbackType) else str(feedback_type)
             original_review.user_feedback = feedback_val
             original_review.user_satisfied = (feedback_val == "satisfied")
-            original_review.feedback_timestamp = datetime.utcnow()
+            original_review.feedback_timestamp = _utcnow()
 
         feedback_model = ReviewFeedbackModel(
             feedback_id=feedback_id or f"fb_{uuid.uuid4().hex[:12]}",
@@ -588,14 +592,14 @@ class ReviewHistoryService:
         """
         # 解析日期范围
         if not end_date:
-            end_date = datetime.utcnow().isoformat()
+            end_date = _utcnow().isoformat()
         if not start_date:
             if period == "daily":
-                start_date = (datetime.utcnow() - timedelta(days=1)).isoformat()
+                start_date = (_utcnow() - timedelta(days=1)).isoformat()
             elif period == "weekly":
-                start_date = (datetime.utcnow() - timedelta(days=7)).isoformat()
+                start_date = (_utcnow() - timedelta(days=7)).isoformat()
             else:  # monthly
-                start_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
+                start_date = (_utcnow() - timedelta(days=30)).isoformat()
 
         start_dt = datetime.fromisoformat(start_date)
         end_dt = datetime.fromisoformat(end_date)
@@ -696,7 +700,7 @@ class ReviewHistoryService:
         Returns:
             审查趋势分析
         """
-        end_date = datetime.utcnow()
+        end_date = _utcnow()
         start_date = end_date - timedelta(days=days)
 
         query = select(ReviewHistoryModel).where(
@@ -782,7 +786,7 @@ class ReviewHistoryService:
         learning_data = {
             "reviews": [asdict(r) for r in reviews],
             "feedbacks": [asdict(f) for f in feedbacks],
-            "export_timestamp": datetime.utcnow().isoformat(),
+            "export_timestamp": _utcnow().isoformat(),
             "total_count": len(reviews),
         }
 
@@ -884,7 +888,7 @@ class ReviewHistoryService:
         if entry_model:
             entry_model.user_feedback = f"override:{new_decision}"
             entry_model.user_satisfied = (new_decision == "passed")
-            entry_model.feedback_timestamp = datetime.utcnow()
+            entry_model.feedback_timestamp = _utcnow()
 
         await self._db.flush()
         override = self._to_override_entry(override_model)
@@ -1004,7 +1008,7 @@ class ReviewHistoryService:
             model.resolution = resolution
         if resolved_by:
             model.resolved_by = resolved_by
-            model.resolved_at = datetime.utcnow()
+            model.resolved_at = _utcnow()
         if secondary_review_id:
             model.secondary_review_id = secondary_review_id
         if secondary_decision:
@@ -1066,7 +1070,7 @@ class ReviewHistoryService:
         Returns:
             覆盖模式分析
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
         cutoff.isoformat()
 
         query = select(ReviewOverrideModel).where(

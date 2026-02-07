@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -15,6 +15,10 @@ from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CognitiveService:
@@ -83,7 +87,7 @@ class CognitiveService:
             source_event_id=source_event_id,
             persona_version=persona_version,
             analysis_status=AnalysisStatus.PENDING,
-            created_at=datetime.utcnow()
+            created_at=_utcnow()
         )
 
         logger.info(f"Creating fragment {fragment.id} for user {user_id}: {self._sanitize_content(content)}")
@@ -138,7 +142,7 @@ class CognitiveService:
         Analyze a specific fragment using RAG + LLM to identify behavioral patterns.
         Returns the analysis result and potentially created/updated pattern.
         """
-        start_time = datetime.utcnow()
+        start_time = _utcnow()
         use_hyde = False
         hyde_cancelled = False
         # 1. Fetch Target Fragment
@@ -291,7 +295,7 @@ class CognitiveService:
             analysis["_meta"] = {
                 "strategy_used": "raw+hyde" if use_hyde else "raw",
                 "hyde_cancelled": hyde_cancelled,
-                "latency_ms": (datetime.utcnow() - start_time).total_seconds() * 1000
+                "latency_ms": (_utcnow() - start_time).total_seconds() * 1000
             }
 
             logger.info(f"Successfully analyzed fragment {fragment_id}")

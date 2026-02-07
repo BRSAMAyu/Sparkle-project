@@ -25,6 +25,10 @@ from app.orchestration.plan_review_service import ReviewDecision, plan_review_se
 from app.services.response_feedback_service import ResponseFeedbackService
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
     """
     AgentService 的 gRPC 实现
@@ -463,7 +467,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 context.set_details("user_id is required")
                 return agent_service_pb2.WeeklyReport()
 
-            end_date = datetime.utcnow()
+            end_date = _utcnow()
             start_date = end_date - timedelta(days=7)
 
             async with self.db_session_factory() as db_session:

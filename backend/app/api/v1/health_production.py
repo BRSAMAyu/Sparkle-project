@@ -10,7 +10,7 @@
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -84,7 +84,7 @@ async def health_check(
         "version": settings.APP_VERSION,
         "environment": "production" if not settings.DEBUG else "development",
         "uptime_seconds": round(time.time() - START_TIME, 2),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }
 
     # 4. 基础响应
@@ -187,7 +187,7 @@ async def liveness_check() -> dict[str, Any]:
     """
     return {
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }
 
 
@@ -307,5 +307,5 @@ async def prometheus_alerts(
     return {
         "alerts": alerts,
         "firing": len(alerts) > 0,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }

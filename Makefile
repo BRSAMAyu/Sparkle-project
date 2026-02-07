@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check
+.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
@@ -119,6 +119,14 @@ quality-baseline-full:
 quality-budget-check:
 	@echo "🧱 Enforcing technical debt budget..."
 	python3 scripts/check_tech_debt_budget.py
+
+openapi-contract-check:
+	@echo "🧾 Checking OpenAPI contract snapshot..."
+	python3 scripts/check_openapi_contract.py
+
+flutter-analyze-gate:
+	@echo "📱 Running Flutter analyze gate..."
+	python3 scripts/check_flutter_analyze_gate.py --project-dir mobile --budget-file quality/flutter_analyze_allowlist.json --write-report quality/flutter_analyze_report.json
 
 # Build proto toolchain container image (single source of truth for local + CI)
 proto-tools-build:

@@ -1,11 +1,15 @@
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.irt import IRTItemParameter, UserIRTAbility
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class IRTService:
@@ -34,7 +38,7 @@ class IRTService:
         p = self._prob(ability.theta, item.a, item.b, item.c)
         gradient = (1.0 if correct else 0.0) - p
         ability.theta += self.lr * gradient
-        ability.last_updated_at = datetime.utcnow()
+        ability.last_updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(ability)
         return ability

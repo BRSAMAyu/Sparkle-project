@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -8,6 +8,10 @@ from app.models.event import TrackingEvent
 from app.models.user import User
 from app.services.memory_jobs import MemoryJobsService
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -30,10 +34,10 @@ async def test_memory_jobs_evidence_health_marks_missing(db_session, monkeypatch
         event_type="test",
         schema_version="event.v1",
         source="unit",
-        ts_ms=int(datetime.utcnow().timestamp() * 1000),
+        ts_ms=int(_utcnow().timestamp() * 1000),
         entities=None,
         payload=None,
-        received_at=datetime.utcnow(),
+        received_at=_utcnow(),
     )
     db_session.add(event)
     await db_session.commit()
@@ -44,13 +48,13 @@ async def test_memory_jobs_evidence_health_marks_missing(db_session, monkeypatch
         summary="Job missing event",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.5,
         tags=["job"],
         evidence_refs=[{"type": "event", "id": "evt_job_missing"}],
     )
 
-    event.deleted_at = datetime.utcnow()
+    event.deleted_at = _utcnow()
     await db_session.commit()
 
     service = MemoryJobsService(db_session)
@@ -81,10 +85,10 @@ async def test_memory_jobs_repair_restores_evidence(db_session, monkeypatch):
         event_type="test",
         schema_version="event.v1",
         source="unit",
-        ts_ms=int(datetime.utcnow().timestamp() * 1000),
+        ts_ms=int(_utcnow().timestamp() * 1000),
         entities=None,
         payload=None,
-        received_at=datetime.utcnow(),
+        received_at=_utcnow(),
     )
     db_session.add(event)
     await db_session.commit()
@@ -95,7 +99,7 @@ async def test_memory_jobs_repair_restores_evidence(db_session, monkeypatch):
         summary="Restore event",
         source_type="analysis",
         source_id="src_2",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.5,
         tags=["job"],
         evidence_refs=[{"type": "event", "id": "evt_job_restore"}],

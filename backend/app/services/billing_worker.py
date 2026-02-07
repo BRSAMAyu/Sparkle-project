@@ -7,7 +7,7 @@ BillingWorker - 异步计费任务处理器
 import asyncio
 import json
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -20,6 +20,10 @@ from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 from app.db.url import to_async_database_url
 from app.models.chat import TokenUsage
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BillingWorker:
@@ -127,7 +131,7 @@ class BillingWorker:
                             "completion_tokens": r["completion_tokens"],
                             "total_tokens": r["total_tokens"],
                             "cost": r.get("cost", 0.0),
-                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else datetime.utcnow()
+                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow()
                         })
 
                     # 批量插入
@@ -164,7 +168,7 @@ class BillingWorker:
                             "completion_tokens": r["completion_tokens"],
                             "total_tokens": r["total_tokens"],
                             "cost": r.get("cost", 0.0),
-                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else datetime.utcnow()
+                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow()
                         }
                         await session.execute(insert(TokenUsage), stmt_data)
                     await session.commit()

@@ -4,7 +4,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from google.protobuf import struct_pb2
@@ -83,6 +83,10 @@ STATE_FAILED = "FAILED"
 CONTEXT_VERSION_KEY_PREFIX = "user:context:versions:"
 CONTEXT_VERSION_TTL_SECONDS = 6 * 60 * 60
 REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -561,7 +565,7 @@ class ChatOrchestrator:
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < datetime.utcnow()
+                    Task.due_date < _utcnow()
                 )
             )
             overdue = result.scalar() or 0
@@ -2594,7 +2598,7 @@ class ChatOrchestrator:
                     context_updates={
                         "collected_information": collected_info,
                         "user_requirement_summary": summary,
-                        "information_collection_completed_at": datetime.utcnow().isoformat()
+                        "information_collection_completed_at": _utcnow().isoformat()
                     }
                 )
                 logger.info(f"Updated state with collected information for session {session_id}")
@@ -2723,7 +2727,7 @@ class ChatOrchestrator:
                     "missing_aspects": missing_aspects,
                     "round": 1,
                     "max_rounds": 3,
-                    "triggered_at": datetime.utcnow().isoformat()
+                    "triggered_at": _utcnow().isoformat()
                 })
             )
             logger.info(f"Set information collection flag for session {session_id}")

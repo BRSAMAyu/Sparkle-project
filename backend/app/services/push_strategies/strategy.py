@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -9,6 +9,10 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.personalization import PushPolicyProfile
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PushStrategy(ABC):
@@ -90,7 +94,7 @@ class SprintStrategy(PushStrategy):
         base_hours = 72
         adjusted_hours = base_hours * (1 + policy.pressure_tolerance)
 
-        now = datetime.utcnow()
+        now = _utcnow()
         deadline_threshold = now + timedelta(hours=adjusted_hours)
 
         query = (
@@ -108,7 +112,7 @@ class SprintStrategy(PushStrategy):
         return result.first() is not None
 
     async def get_context_data(self, user: User) -> dict[str, Any]:
-        now = datetime.utcnow()
+        now = _utcnow()
         query = (
             select(Task)
             .where(
@@ -144,7 +148,7 @@ class InactivityStrategy(PushStrategy):
         if not user.last_login_at:
             return True
 
-        hours_inactive = (datetime.utcnow() - user.last_login_at).total_seconds() / 3600
+        hours_inactive = (_utcnow() - user.last_login_at).total_seconds() / 3600
         return hours_inactive >= 24
 
     async def get_context_data(self, user: User) -> dict[str, Any]:

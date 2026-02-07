@@ -4,8 +4,8 @@ Memory Evolution Service
 
 Tracks and manages memory evolution history, predictions, and analysis.
 """
-from datetime import datetime, timedelta
 import inspect
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.memory import MemoryPreference
 from app.models.memory_evolution import EvolutionPrediction, MemoryEvolution
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryEvolutionService:
@@ -100,8 +104,8 @@ class MemoryEvolutionService:
             trigger_event=trigger_event,
             trigger_source=trigger_source or self._identify_trigger_source(workflow_id),
             workflow_id=workflow_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         self.db.add(evolution)
@@ -272,7 +276,7 @@ class MemoryEvolutionService:
         Returns:
             Dict: 可视化数据
         """
-        start_date = datetime.utcnow() - timedelta(days=time_range_days)
+        start_date = _utcnow() - timedelta(days=time_range_days)
 
         # 1. Get evolutions in time range
         result = await self.db.execute(
@@ -405,8 +409,8 @@ class MemoryEvolutionService:
                 predicted_confidence=pred.get('predicted_confidence'),
                 factors=pred.get('factors'),
                 similar_evolutions=pred.get('similar_evolutions', []),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(prediction_record)
 

@@ -8,13 +8,17 @@ Sends detailed notifications for major state changes:
 
 Integrates with WebSocket to deliver real-time notifications to clients.
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
 
 from app.core.websocket import get_ws_manager
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StateNotificationService:
@@ -54,7 +58,7 @@ class StateNotificationService:
 
         event_data = {
             "change_type": "plan_archived",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "change_id": change_id,
             "plan_name": plan_name,
             "plan_id": str(plan_id),
@@ -110,7 +114,7 @@ class StateNotificationService:
 
         event_data = {
             "change_type": "plan_restored",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "change_id": change_id,
             "plan_name": plan_name,
             "plan_id": str(plan_id),
@@ -153,7 +157,7 @@ class StateNotificationService:
 
         event_data = {
             "change_type": "plan_deleted",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "change_id": change_id,
             "plan_name": plan_name,
             "plan_id": str(plan_id),
@@ -218,7 +222,7 @@ class StateNotificationService:
 
         event_data = {
             "change_type": "user_settings_updated",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "change_id": change_id,
             "setting_field": setting_field,
             "field_label": field_label,
@@ -269,7 +273,7 @@ class StateNotificationService:
 
         event_data = {
             "change_type": "memory_cleanup",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "change_id": change_id,
             "memories_removed": memories_removed,
             "space_freed_mb": space_freed_mb,

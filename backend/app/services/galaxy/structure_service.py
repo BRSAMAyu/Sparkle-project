@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, or_, select
@@ -8,6 +8,10 @@ from sqlalchemy.orm import selectinload
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.galaxy import GalaxyGraphResponse
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GraphStructureService:
@@ -45,7 +49,7 @@ class GraphStructureService:
             node_id=node.id,
             is_unlocked=True,
             mastery_score=0,
-            first_unlock_at=datetime.utcnow()
+            first_unlock_at=_utcnow()
         )
         self.db.add(status)
 

@@ -13,7 +13,7 @@ Arbitration Service - Phase 2g
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -36,6 +36,10 @@ from app.services.review_history_service import (
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class ArbitratorRole(str, Enum):
     """仲裁员角色"""
@@ -97,7 +101,7 @@ class ArbitrationCase:
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -114,7 +118,7 @@ class ArbitrationDecision:
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -413,7 +417,7 @@ class ArbitrationService:
 
         case.status = "assigned"
         case.assigned_to = arbitrator_id
-        case.assigned_at = datetime.utcnow().isoformat()
+        case.assigned_at = _utcnow().isoformat()
 
         result = await self._db.execute(
             select(ArbitrationCaseModel).where(ArbitrationCaseModel.case_id == case_id)
@@ -422,7 +426,7 @@ class ArbitrationService:
         if model:
             model.status = "assigned"
             model.assigned_to = arbitrator_id
-            model.assigned_at = datetime.utcnow()
+            model.assigned_at = _utcnow()
             await self._db.flush()
 
         logger.info(
@@ -485,7 +489,7 @@ class ArbitrationService:
             arbitrator_role=arbitrator_role.value,
             confidence=arb_decision.confidence,
             feedback_for_model=feedback_for_model,
-            decided_at=datetime.utcnow(),
+            decided_at=_utcnow(),
         )
         self._db.add(decision_model)
         await self._db.flush()
@@ -494,7 +498,7 @@ class ArbitrationService:
         case.status = "resolved"
         case.resolution = explanation
         case.final_decision = decision.value
-        case.resolved_at = datetime.utcnow().isoformat()
+        case.resolved_at = _utcnow().isoformat()
         case.resolved_by = arbitrator_id
 
         result = await self._db.execute(
@@ -505,7 +509,7 @@ class ArbitrationService:
             model.status = "resolved"
             model.resolution = explanation
             model.final_decision = decision.value
-            model.resolved_at = datetime.utcnow()
+            model.resolved_at = _utcnow()
             model.resolved_by = arbitrator_id
             await self._db.flush()
 
@@ -609,7 +613,7 @@ class ArbitrationService:
 
     async def get_queue_stats(self) -> ArbitrationQueueStats:
         """获取队列统计"""
-        now = datetime.utcnow()
+        now = _utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         result = await self._db.execute(select(ArbitrationCaseModel))
@@ -682,7 +686,7 @@ class ArbitrationService:
         if not model:
             raise ValueError(f"Case {case_id} not found")
 
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = _utcnow().isoformat()
         formatted_note = f"[{timestamp}] {author_id}: {note}"
         existing_notes = model.notes or []
         existing_notes.append(formatted_note)

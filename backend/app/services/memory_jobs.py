@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -25,6 +25,10 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 _JOB_STATUS: dict[str, dict[str, Any]] = {}
 _JOB_HISTORY: dict[str, list[dict[str, Any]]] = {}
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryJobsService:
@@ -190,7 +194,7 @@ class MemoryJobsService:
                     result = await service.check_memory_item(item, item.user_id)
                     if not result["missing"]:
                         item.evidence_missing = False
-                        item.evidence_checked_at = datetime.utcnow()
+                        item.evidence_checked_at = _utcnow()
                         item.evidence_score = compute_score(
                             item.evidence_refs or [],
                             evidence_missing=False,
@@ -234,7 +238,7 @@ class MemoryJobsService:
         try:
             service = LtmHealthSnapshotService(self.db)
             snapshot = await service.compute_snapshot()
-            today = datetime.utcnow().date()
+            today = _utcnow().date()
             result = await self.db.execute(
                 select(LtmDailySnapshot).where(
                     LtmDailySnapshot.snapshot_date == today,
@@ -247,7 +251,7 @@ class MemoryJobsService:
                 self.db.add(record)
             else:
                 record.payload = snapshot
-                record.updated_at = datetime.utcnow()
+                record.updated_at = _utcnow()
 
             await self.db.commit()
             MEMORY_JOB_RUNS_TOTAL.labels(job="daily_summary", status="ok").inc()
@@ -281,8 +285,8 @@ class MemoryJobsService:
     async def _apply_episodic_decay(self, users: list[User], window_days: int) -> dict[UUID, int]:
         if not users:
             return {}
-        cutoff = datetime.utcnow() - timedelta(days=window_days)
-        recent_guard = datetime.utcnow() - timedelta(hours=24)
+        cutoff = _utcnow() - timedelta(days=window_days)
+        recent_guard = _utcnow() - timedelta(hours=24)
         updated_by_user: dict[UUID, int] = {}
         updated_any = False
         for user in users:
@@ -300,7 +304,7 @@ class MemoryJobsService:
             updated = 0
             for record in records:
                 record.importance_score = max(0.0, float(record.importance_score or 0.0) * 0.98)
-                record.updated_at = datetime.utcnow()
+                record.updated_at = _utcnow()
                 updated += 1
             if updated > 0:
                 updated_by_user[user.id] = updated
@@ -327,7 +331,7 @@ class MemoryJobsService:
             "job": job,
             "status": status,
             "detail": detail,
-            "updated_at": datetime.utcnow(),
+            "updated_at": _utcnow(),
         }
         _JOB_STATUS[job] = payload
         history = _JOB_HISTORY.setdefault(job, [])

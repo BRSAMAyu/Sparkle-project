@@ -5,7 +5,7 @@ User Similarity Update Tasks
 每日定时任务，计算用户相似度并缓存
 """
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +19,10 @@ from app.db.session import get_db_context
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.recommendation import UserItemInteraction, UserLearningProfile, UserSimilarity
 from app.models.user import User
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @shared_task(name="tasks.update_all_user_similarities")
@@ -120,7 +124,7 @@ async def _update_all_similarities(db: AsyncSession) -> int:
     Jaccard 相似度：similarity = |A ∩ B| / |A ∪ B|
     """
     # 获取活跃用户列表（最近30天有活动）
-    active_since = datetime.utcnow() - timedelta(days=30)
+    active_since = _utcnow() - timedelta(days=30)
 
     active_users_query = select(User.id).where(
         User.is_active,
@@ -137,7 +141,7 @@ async def _update_all_similarities(db: AsyncSession) -> int:
 
     # 计算用户两两之间的相似度
     similarity_count = 0
-    version = int(datetime.utcnow().timestamp())
+    version = int(_utcnow().timestamp())
 
     for i, user_id_1 in enumerate(active_user_ids):
         items_1 = user_items.get(user_id_1, set())
@@ -187,7 +191,7 @@ async def _update_all_similarities(db: AsyncSession) -> int:
                 existing.similarity_score = similarity
                 existing.common_items_count = intersection
                 existing.common_subjects = common_subjects
-                existing.last_calculated_at = datetime.utcnow()
+                existing.last_calculated_at = _utcnow()
                 existing.calculation_version = version
             else:
                 # 创建新记录
@@ -197,7 +201,7 @@ async def _update_all_similarities(db: AsyncSession) -> int:
                     similarity_score=similarity,
                     common_items_count=intersection,
                     common_subjects=common_subjects,
-                    last_calculated_at=datetime.utcnow(),
+                    last_calculated_at=_utcnow(),
                     calculation_version=version
                 )
                 db.add(new_similarity)
@@ -249,7 +253,7 @@ async def _update_learning_profiles(db: AsyncSession) -> int:
             profile.total_items_completed = stats.get("total_items_completed", 0)
             profile.average_session_duration = stats.get("average_session_duration")
             profile.learning_vector = stats.get("learning_vector")
-            profile.last_updated_at = datetime.utcnow()
+            profile.last_updated_at = _utcnow()
             profile.update_version += 1
         else:
             # 创建新画像
@@ -260,7 +264,7 @@ async def _update_learning_profiles(db: AsyncSession) -> int:
                 total_items_completed=stats.get("total_items_completed", 0),
                 average_session_duration=stats.get("average_session_duration"),
                 learning_vector=stats.get("learning_vector"),
-                last_updated_at=datetime.utcnow()
+                last_updated_at=_utcnow()
             )
             db.add(profile)
 
@@ -338,7 +342,7 @@ async def _cleanup_expired_cache(db: AsyncSession) -> int:
 
     # 删除过期的缓存
     delete_query = delete(RecommendationCache).where(
-        RecommendationCache.expires_at < datetime.utcnow()
+        RecommendationCache.expires_at < _utcnow()
     )
     result = await db.execute(delete_query)
     deleted_count = result.rowcount

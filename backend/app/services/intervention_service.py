@@ -37,6 +37,10 @@ _NON_SILENT_LEVELS = {
 }
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 @dataclass
 class GuardrailDecision:
     action: str
@@ -104,7 +108,7 @@ class InterventionService:
             errors.append("low_confidence")
         if not payload.reason.explanation_text:
             errors.append("missing_explanation")
-        if payload.expires_at and payload.expires_at <= datetime.utcnow():
+        if payload.expires_at and payload.expires_at <= _utcnow():
             errors.append("expired_request")
         return errors
 
@@ -121,7 +125,7 @@ class InterventionService:
 
         settings_row = await self.get_or_create_settings(target_user_id, default_timezone)
         errors = self.validate_contract(payload)
-        now = datetime.utcnow()
+        now = _utcnow()
 
         if errors:
             decision = GuardrailDecision(action="block", final_level=payload.level.value, reasons=errors)
@@ -500,9 +504,9 @@ class InterventionService:
         if until_ms:
             until_dt = datetime.utcfromtimestamp(until_ms / 1000.0)
         else:
-            until_dt = datetime.utcnow() + timedelta(minutes=settings.INTERVENTION_DEFAULT_COOLDOWN_MINUTES)
+            until_dt = _utcnow() + timedelta(minutes=settings.INTERVENTION_DEFAULT_COOLDOWN_MINUTES)
 
-        ttl_seconds = max(60, int((until_dt - datetime.utcnow()).total_seconds()))
+        ttl_seconds = max(60, int((until_dt - _utcnow()).total_seconds()))
         if feedback_type == InterventionFeedbackType.MUTE_TOPIC:
             topic_key = f"intervention:cooldown:{request.user_id}:{request.topic or 'global'}"
             await cache_service.set(topic_key, policy_name or "mute_topic", ttl=ttl_seconds)

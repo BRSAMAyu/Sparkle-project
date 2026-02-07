@@ -1,7 +1,7 @@
 """
 偏好推断服务 - 从用户反馈中学习并调整推断偏好
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -23,6 +23,10 @@ DECAY_WEEKLY = 0.90         # 每周衰减系数
 # 震荡抑制配置
 COOLDOWN_PERIOD_SECONDS = 300  # 5分钟冷却期
 OPPOSITE_DIRECTION_PENALTY = 0.5  # 相反方向调整幅度的惩罚系数
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PreferenceInferenceService:
@@ -91,7 +95,7 @@ class PreferenceInferenceService:
                 if last_direction and last_update_str:
                     try:
                         last_update = datetime.fromisoformat(last_update_str)
-                        time_since = (datetime.utcnow() - last_update).total_seconds()
+                        time_since = (_utcnow() - last_update).total_seconds()
 
                         # 如果在冷却期内且方向相反，应用惩罚
                         if time_since < COOLDOWN_PERIOD_SECONDS and last_direction != conf_dir:
@@ -115,7 +119,7 @@ class PreferenceInferenceService:
 
                 inferred[key] = new_value
                 inferred[f"{key}_confidence"] = new_confidence
-                inferred[f"{key}_last_updated"] = datetime.utcnow().isoformat()
+                inferred[f"{key}_last_updated"] = _utcnow().isoformat()
                 inferred[last_direction_key] = conf_dir  # 记录方向
 
                 applied_changes[key] = {
@@ -178,7 +182,7 @@ class PreferenceInferenceService:
                 new_value = max(1, current_value + delta)
                 inferred[key] = new_value
                 inferred[f"{key}_confidence"] = 0.4
-                inferred[f"{key}_last_updated"] = datetime.utcnow().isoformat()
+                inferred[f"{key}_last_updated"] = _utcnow().isoformat()
 
                 applied_changes[key] = {
                     "from": current_value,
@@ -198,7 +202,7 @@ class PreferenceInferenceService:
 
                 inferred[key] = new_value
                 inferred[f"{key}_confidence"] = 0.4  # 行为推断置信度较低
-                inferred[f"{key}_last_updated"] = datetime.utcnow().isoformat()
+                inferred[f"{key}_last_updated"] = _utcnow().isoformat()
 
                 applied_changes[key] = {
                     "from": current_value,

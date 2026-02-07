@@ -3,7 +3,7 @@
 Idempotency Store - 用于管理幂等性键
 """
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +16,11 @@ from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 from app.db.session import AsyncSessionLocal
 from app.models.idempotency_key import IdempotencyKey
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class IdempotencyStore:
@@ -48,7 +53,7 @@ class MemoryIdempotencyStore(IdempotencyStore):
         if not data:
             return None
 
-        if datetime.utcnow() > data["expires_at"]:
+        if _utcnow() > data["expires_at"]:
             del self._cache[key]
             return None
 
@@ -57,7 +62,7 @@ class MemoryIdempotencyStore(IdempotencyStore):
     async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         self._cache[key] = {
             "value": value,
-            "expires_at": datetime.utcnow() + timedelta(seconds=ttl)
+            "expires_at": _utcnow() + timedelta(seconds=ttl)
         }
 
     async def lock(self, key: str) -> bool:
@@ -184,7 +189,7 @@ class DBIdempotencyStore(IdempotencyStore):
             logger.warning("DB idempotency store skipped: missing user_id")
             return
 
-        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        expires_at = _utcnow() + timedelta(seconds=ttl)
         async with AsyncSessionLocal() as db:
             record = IdempotencyKey(
                 key=key,
@@ -204,7 +209,7 @@ class DBIdempotencyStore(IdempotencyStore):
                     await db.commit()
 
     async def lock(self, key: str) -> bool:
-        now = datetime.utcnow()
+        now = _utcnow()
         expires_at = self._local_locks.get(key)
         if expires_at and expires_at > now:
             return False

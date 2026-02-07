@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -88,7 +88,7 @@ class SharedSessionState:
             cognitive_profile=data.get("cognitive_profile", {}),
             fatigue_level=data.get("fatigue_level", 0.0),
             recent_topics=data.get("recent_topics", []),
-            last_activity_time=datetime.fromisoformat(data["last_activity_time"]) if data.get("last_activity_time") else datetime.utcnow()
+            last_activity_time=datetime.fromisoformat(data["last_activity_time"]) if data.get("last_activity_time") else _utcnow()
         )
 
 
@@ -143,7 +143,7 @@ class ActivePlansTracker:
 
         old_focus = self.focus_plan_id
         self.focus_plan_id = plan_id
-        self.last_switch_time = datetime.utcnow()
+        self.last_switch_time = _utcnow()
 
         # 记录历史
         self.switch_history.append({
@@ -189,6 +189,10 @@ class ActivePlansTracker:
             switch_history=data.get("switch_history", []),
             last_switch_time=datetime.fromisoformat(data["last_switch_time"]) if data.get("last_switch_time") else None
         )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MultiPlanStateManager:
@@ -280,7 +284,7 @@ class MultiPlanStateManager:
         if "recent_topics" in updates:
             state.recent_topics = updates["recent_topics"]
 
-        state.last_activity_time = datetime.utcnow()
+        state.last_activity_time = _utcnow()
 
         # 缓存
         await self._set_shared_state_cache(session_id, state)

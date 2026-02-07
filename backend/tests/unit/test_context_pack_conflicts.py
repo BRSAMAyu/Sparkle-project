@@ -1,5 +1,9 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -56,7 +60,7 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
         evidence_refs=[{"type": "event", "id": "evt_goal_2"}],
     )
 
-    now = datetime.utcnow()
+    now = _utcnow()
     await memory_service.create_episodic_memory(
         user_id=user_id,
         summary="Completed the sprint planning session",

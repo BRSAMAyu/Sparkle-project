@@ -9,6 +9,7 @@ User Service - 生产级实现
 - 容错降级: 缓存/DB 故障时优雅降级
 """
 import json
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,10 @@ from app.core.security import get_password_hash
 from app.models.user import PushPreference, User
 from app.schemas.user import UserContext, UserPreferences, UserRegister
 from app.services.personalization.preference_service import PreferenceService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserService:
@@ -429,8 +434,8 @@ class UserService:
             if not user:
                 return False
 
-            from datetime import datetime
-            user.last_login_at = datetime.utcnow()
+            from datetime import UTC, datetime
+            user.last_login_at = _utcnow()
             await self.db.commit()
             logger.debug(f"Updated last login for user {user_id}")
             return True

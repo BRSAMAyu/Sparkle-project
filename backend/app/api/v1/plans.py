@@ -359,7 +359,7 @@ async def archive_plan_state(
         plan_id=plan_id,
         patch={
             "status": PlanStateStatus.ARCHIVED.value,
-            "archived_at": datetime.utcnow(),
+            "archived_at": _utcnow(),
         },
         bump_version=False,
     )

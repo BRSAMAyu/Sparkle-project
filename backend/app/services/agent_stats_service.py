@@ -3,7 +3,7 @@ Agent Execution Statistics Service
 
 跟踪和分析Multi-Agent系统中各个Agent的使用情况和性能指标。
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -11,6 +11,10 @@ from sqlalchemy import and_, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent_stats import AgentExecutionStats
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AgentStatsService:
@@ -94,7 +98,7 @@ class AgentStatsService:
         Returns:
             统计数据字典
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         # 总体统计
         total_query = select(
@@ -192,7 +196,7 @@ class AgentStatsService:
         Returns:
             Agent列表，按使用次数排序
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         query = select(
             AgentExecutionStats.agent_type,
@@ -241,7 +245,7 @@ class AgentStatsService:
         Returns:
             性能指标字典
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         filters = [AgentExecutionStats.created_at >= cutoff_date]
         if user_id:

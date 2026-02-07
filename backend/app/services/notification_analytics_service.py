@@ -3,7 +3,7 @@ Notification Analytics Service
 
 Provides usage statistics and analytics for notifications.
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -26,6 +26,10 @@ from app.schemas.unified_notification import (
     NotificationTrendData,
     NotificationTypeStats,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotificationAnalyticsService:
@@ -297,7 +301,7 @@ class NotificationAnalyticsService:
 
         # Generate day-by-day data
         current_date = start_date.date()
-        end_date = datetime.utcnow().date()
+        end_date = _utcnow().date()
 
         while current_date <= end_date:
             day_start = datetime.combine(current_date, datetime.min.time())
@@ -398,7 +402,7 @@ class NotificationAnalyticsService:
 
     def _get_period_start_date(self, period: str) -> datetime:
         """Calculate start date for the given period"""
-        now = datetime.utcnow()
+        now = _utcnow()
 
         if period == '1d':
             return now - timedelta(days=1)

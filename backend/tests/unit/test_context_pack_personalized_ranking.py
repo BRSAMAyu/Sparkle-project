@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from sqlalchemy import text
@@ -48,7 +52,7 @@ async def test_context_pack_uses_personalized_weights(db_session, monkeypatch):
             "UPDATE memory_preferences SET updated_at = :ts WHERE user_id = :uid AND pref_key = :key"
         ),
         {
-            "ts": datetime.utcnow() - timedelta(days=200),
+            "ts": _utcnow() - timedelta(days=200),
             "uid": str(user_id),
             "key": "response_style",
         },

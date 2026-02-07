@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -10,6 +10,10 @@ from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult
 from app.services.expansion_service import ExpansionService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyStatsService:
@@ -47,11 +51,11 @@ class GalaxyStatsService:
         status.mastery_score = min(status.mastery_score + mastery_delta, self.MAX_MASTERY)
         status.total_study_minutes += study_minutes
         status.study_count += 1
-        status.last_study_at = datetime.utcnow()
+        status.last_study_at = _utcnow()
         status.is_unlocked = True
 
         if is_first_unlock:
-            status.first_unlock_at = datetime.utcnow()
+            status.first_unlock_at = _utcnow()
 
         # 计算下次复习时间
         status.next_review_at = self._calculate_next_review(status.mastery_score)
@@ -314,7 +318,7 @@ class GalaxyStatsService:
         rows = result.all()
 
         heatmap = []
-        now = datetime.utcnow()
+        now = _utcnow()
 
         for px, py, next_review, mastery in rows:
             intensity = 0.0
@@ -356,7 +360,7 @@ class GalaxyStatsService:
         elif mastery_score >= 60: days = 7
         elif mastery_score >= 30: days = 3
         else: days = 1
-        return datetime.utcnow() + timedelta(days=days)
+        return _utcnow() + timedelta(days=days)
 
     async def _get_or_create_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus:
         query = select(UserNodeStatus).where(

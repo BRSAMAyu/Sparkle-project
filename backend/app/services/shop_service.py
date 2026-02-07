@@ -2,7 +2,7 @@
 Shop Service - 商城核心业务逻辑
 处理商城物品查询、购买流程、物品发放等
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -14,6 +14,10 @@ from sqlalchemy.orm import selectinload
 from app.models.shop import ItemRarity, ShopItem, ShopItemType, ShopPurchase, UserConsumable
 from app.models.user import User
 from app.services.photon_service import PhotonService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ShopService:
@@ -326,7 +330,7 @@ class ShopService:
             if existing:
                 # 增加数量
                 existing.quantity += 1
-                existing.updated_at = datetime.utcnow()
+                existing.updated_at = _utcnow()
             else:
                 # 创建新记录
                 effect_type = item.item_config.get("effect_type") if item.item_config else None

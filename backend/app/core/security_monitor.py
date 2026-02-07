@@ -11,7 +11,7 @@ Security Monitoring Service
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -24,6 +24,10 @@ from app.config import settings
 from app.core.redis import redis_client
 from app.models.audit_log import SecurityAuditLog
 from app.models.user import LoginAttempt
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SecurityEventType(Enum):
@@ -62,7 +66,7 @@ class SecurityEvent:
 
     def __post_init__(self):
         if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = _utcnow()
 
     def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
@@ -122,7 +126,7 @@ class SecurityMonitor:
                 ip_address=ip_address,
                 user_agent=user_agent,
                 success=success,
-                attempted_at=datetime.utcnow()
+                attempted_at=_utcnow()
             )
             db.add(login_attempt)
             await db.commit()
@@ -315,7 +319,7 @@ class SecurityMonitor:
     ) -> dict[str, Any]:
         """获取安全统计信息"""
         try:
-            since_time = datetime.utcnow() - timedelta(hours=hours)
+            since_time = _utcnow() - timedelta(hours=hours)
 
             # 查询失败登录次数
             failed_logins_stmt = select(func.count(LoginAttempt.id)).where(
@@ -591,7 +595,7 @@ class SecurityMonitor:
         try:
             # 检查审计日志是否完整
             stmt = select(func.count(SecurityAuditLog.id)).where(
-                SecurityAuditLog.timestamp >= datetime.utcnow() - timedelta(hours=24)
+                SecurityAuditLog.timestamp >= _utcnow() - timedelta(hours=24)
             )
             result = await db.execute(stmt)
             count = result.scalar() or 0

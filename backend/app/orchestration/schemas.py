@@ -28,8 +28,12 @@ REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
 REPLAN_MAX_PER_WINDOW = 3  # max replans per window
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
+
+
+def _utcnow_iso() -> str:
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
 
 
 @dataclass
@@ -156,7 +160,7 @@ class StateSnapshot:
     snapshot_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str = ""
     session_id: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=_utcnow_iso)
     context_versions: dict[str, str] = field(default_factory=dict)
     active_focus_id: str | None = None
     pending_tasks_count: int = 0
@@ -188,7 +192,7 @@ class FeedbackPayload:
     user_id: str = ""
     session_id: str = ""
     context_version: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=_utcnow_iso)
     feedback_type: Literal["explicit", "implicit"] = "implicit"
     rating: int | None = None
     comment: str | None = None
@@ -246,7 +250,7 @@ class CircuitBreakerState:
     failure_count: int = 0
     success_count: int = 0
     last_failure_time: str | None = None
-    last_state_change: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    last_state_change: str = field(default_factory=_utcnow_iso)
     opened_count: int = 0  # 累计熔断次数
 
 
@@ -259,7 +263,7 @@ class ShadowPrediction:
     plan_id: str = ""  # 关联的计划 ID
     user_id: str = ""
     session_id: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=_utcnow_iso)
 
     # 预测内容
     predicted_mode: str = ""  # 预测的最佳执行模式
@@ -283,7 +287,7 @@ class ShadowPrediction:
 class ObservabilityEvent:
     """可观测性事件 (Phase 3)"""
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=_utcnow_iso)
     event_type: Literal[
         "route_decision", "langgraph_plan", "validation_failed",
         "circuit_state_change", "collaboration_start", "collaboration_end",
@@ -315,7 +319,7 @@ class PlanFeedback:
     source: Literal["reviewer", "user"] = "reviewer"
     related_plan_id: str | None = None
     related_task_id: str | None = None
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=_utcnow_iso)
 
     # Review-specific fields
     review_id: str | None = None

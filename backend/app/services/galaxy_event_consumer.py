@@ -2,13 +2,17 @@
 Galaxy 事件消费者 - 处理错题创建事件
 """
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
 from loguru import logger
 
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.services.galaxy_service import GalaxyService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyEventConsumer:
@@ -34,7 +38,7 @@ class GalaxyEventConsumer:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"galaxy-{datetime.utcnow().timestamp()}",
+                    consumer_name=f"galaxy-{_utcnow().timestamp()}",
                     callback=self.handle_event
                 )
                 break  # subscribe 内部是循环，成功后跳出

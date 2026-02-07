@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from fastapi import FastAPI
@@ -58,7 +62,7 @@ async def test_memory_api_list_and_history(db_session, enable_memory_panel):
         summary="Memory One",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.6,
         tags=["execution"],
         evidence_refs=[{"type": "event", "id": "evt_4"}],
@@ -116,7 +120,7 @@ async def test_memory_api_retract_flag(db_session, monkeypatch, enable_memory_pa
         summary="Memory Two",
         source_type="analysis",
         source_id="src_2",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.4,
         tags=["cognitive"],
         evidence_refs=[{"type": "event", "id": "evt_5"}],

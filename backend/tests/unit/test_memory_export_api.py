@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from fastapi import FastAPI
@@ -75,7 +79,7 @@ async def test_memory_export_payload(db_session, monkeypatch):
         summary="Memory Export",
         source_type="analysis",
         source_id="src_1",
-        occurred_at=datetime.utcnow(),
+        occurred_at=_utcnow(),
         importance_score=0.5,
         tags=["cognitive"],
         evidence_refs=[{"type": "event", "id": "evt_2", "user_deleted": True}],
