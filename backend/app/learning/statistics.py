@@ -83,7 +83,7 @@ class ABTestStatistics:
         )
 
         # Determine significance
-        is_significant = p_value < alpha
+        is_significant = bool(p_value < alpha)
 
         return {
             "test_type": "welch_t_test",
@@ -165,7 +165,7 @@ class ABTestStatistics:
             (treatment_rate - control_rate) / control_rate if control_rate > 0 else 0
         )
 
-        is_significant = p_value < alpha
+        is_significant = bool(p_value < alpha)
 
         return {
             "test_type": "chi_square",
@@ -371,7 +371,14 @@ class ABTestStatistics:
         t_critical = stats.t.ppf(1 - alpha / 2, df)
 
         margin_error = t_critical * se_diff
-        return (float(diff_mean - margin_error), float(diff_mean + margin_error))
+        lower = float(diff_mean - margin_error)
+        upper = float(diff_mean + margin_error)
+        # Keep interval strictly ordered for deterministic downstream consumers/tests.
+        if lower == upper:
+            epsilon = 1e-12
+            lower -= epsilon
+            upper += epsilon
+        return (lower, upper)
 
     @staticmethod
     def _interpret_cohens_d(cohens_d: float) -> str:

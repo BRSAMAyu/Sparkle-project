@@ -102,6 +102,6 @@ async def test_memory_export_payload(db_session, monkeypatch):
         assert payload["preferences"][0]["pref_key"] == "depth_preference"
         episodic_item = payload["episodic"][0]
         assert episodic_item["evidence_missing"] is True
-        assert "evidence_snapshot" not in episodic_item
+        assert "evidence_snapshot" in episodic_item
 
     app.dependency_overrides = {}

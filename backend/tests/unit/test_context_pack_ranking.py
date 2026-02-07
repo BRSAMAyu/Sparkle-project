@@ -31,21 +31,21 @@ async def test_context_pack_ranking_applied(db_session, monkeypatch):
     memory_service = MemoryService(db_session)
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="stale_high_evidence",
-        pref_value={"value": "x" * 40},
+        pref_key="response_style",
+        pref_value={"value": "x"},
         evidence_refs=[{"type": "event", "id": "evt_1"}, {"type": "concept", "id": "c_1"}],
     )
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="fresh_lower_evidence",
-        pref_value={"value": "y" * 40},
+        pref_key="learning_style",
+        pref_value={"value": "y"},
         evidence_refs=[{"type": "event", "id": "evt_2"}],
     )
 
     result = await db_session.execute(
         select(MemoryPreference).where(
             MemoryPreference.user_id == user_id,
-            MemoryPreference.pref_key == "stale_high_evidence",
+            MemoryPreference.pref_key == "response_style",
         )
     )
     stale_record = result.scalar_one()
@@ -58,8 +58,8 @@ async def test_context_pack_ranking_applied(db_session, monkeypatch):
     builder = ContextPackBuilder(db_session, scheduler=scheduler)
     pack = await builder.build(user_id, intent="chat")
 
-    assert "fresh_lower_evidence" in pack.preferences
-    assert "stale_high_evidence" not in pack.preferences
+    assert "learning_style" in pack.preferences
+    assert "response_style" not in pack.preferences
     assert pack.metadata is not None
     assert "ranking" in pack.metadata
 

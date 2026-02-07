@@ -5,13 +5,16 @@ Content Quality Evaluator
 Automatically evaluates response quality to determine if it should be added to the seed library.
 """
 from datetime import datetime, timedelta
+import inspect
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.response_feedback import ResponseFeedback
+from app.models.seed_content import SeedItem, SeedLibrary
 
 
 class ContentQualityEvaluator:
@@ -19,6 +22,42 @@ class ContentQualityEvaluator:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    async def _extract_scalars(result: Any) -> list[Any]:
+        scalars_obj = result.scalars()
+        if inspect.isawaitable(scalars_obj):
+            scalars_obj = await scalars_obj
+        rows = scalars_obj.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
+        return list(rows)
+
+    @staticmethod
+    def _is_positive(feedback: ResponseFeedback) -> bool:
+        explicit = getattr(feedback, "is_positive", None)
+        if explicit is not None:
+            return bool(explicit)
+        feedback_type = getattr(feedback, "feedback_type", None)
+        return feedback_type == ResponseFeedback.FEEDBACK_UP
+
+    @staticmethod
+    def _action(feedback: ResponseFeedback) -> str | None:
+        action = getattr(feedback, "action", None)
+        if action is not None:
+            return action
+        return getattr(feedback, "action_taken", None)
+
+    @staticmethod
+    def _rating(feedback: ResponseFeedback) -> int | None:
+        rating = getattr(feedback, "rating", None)
+        if rating is not None:
+            return rating
+        if getattr(feedback, "feedback_type", None) == ResponseFeedback.FEEDBACK_UP:
+            return 5
+        if getattr(feedback, "feedback_type", None) == ResponseFeedback.FEEDBACK_DOWN:
+            return 1
+        return None
 
     async def evaluate_response_quality(
         self,
@@ -39,7 +78,7 @@ class ContentQualityEvaluator:
                 ResponseFeedback.response_id == response_id
             )
         )
-        feedback_records = result.scalars().all()
+        feedback_records = await self._extract_scalars(result)
 
         if not feedback_records:
             return {
@@ -64,15 +103,17 @@ class ContentQualityEvaluator:
             'should_seed': should_seed,
             'reason': reason,
             'feedback_count': len(feedback_records),
-            'positive_count': sum(1 for f in feedback_records if f.is_positive),
-            'negative_count': sum(1 for f in feedback_records if not f.is_positive),
+            'positive_count': sum(1 for f in feedback_records if self._is_positive(f)),
+            'negative_count': sum(1 for f in feedback_records if not self._is_positive(f)),
             'metrics': {
-                'avg_rating': sum(f.rating for f in feedback_records if f.rating) /
-                               len([f for f in feedback_records if f.rating])
-                               if any(f.rating for f in feedback_records) else None,
-                'save_count': sum(1 for f in feedback_records if f.action == 'save'),
-                'share_count': sum(1 for f in feedback_records if f.action == 'share'),
-                'revisit_count': sum(1 for f in feedback_records if f.action == 'revisit'),
+                'avg_rating': (
+                    sum(ratings) / len(ratings)
+                    if (ratings := [r for r in (self._rating(f) for f in feedback_records) if r is not None])
+                    else None
+                ),
+                'save_count': sum(1 for f in feedback_records if self._action(f) == 'save'),
+                'share_count': sum(1 for f in feedback_records if self._action(f) == 'share'),
+                'revisit_count': sum(1 for f in feedback_records if self._action(f) == 'revisit'),
             },
         }
 
@@ -93,12 +134,12 @@ class ContentQualityEvaluator:
             return 0.0
 
         # 1. Positive feedback ratio (40% weight)
-        positive_count = sum(1 for f in feedback_records if f.is_positive)
+        positive_count = sum(1 for f in feedback_records if self._is_positive(f))
         positive_ratio = positive_count / len(feedback_records)
         score_positive = positive_ratio * 4.0
 
         # 2. Average rating (30% weight)
-        ratings = [f.rating for f in feedback_records if f.rating]
+        ratings = [r for r in (self._rating(f) for f in feedback_records) if r is not None]
         avg_rating = sum(ratings) / len(ratings) if ratings else 0
         score_rating = (avg_rating / 5.0) * 3.0
 
@@ -107,8 +148,9 @@ class ContentQualityEvaluator:
         action_scores = {'save': 3.0, 'share': 2.0, 'revisit': 1.0}
         total_action_score = 0.0
         for feedback in feedback_records:
-            if feedback.action:
-                total_action_score += action_scores.get(feedback.action, 0)
+            action = self._action(feedback)
+            if action:
+                total_action_score += action_scores.get(action, 0)
 
         # Normalize action score (assuming max 10 actions)
         score_action = min(total_action_score, 10.0) * 0.3
@@ -142,7 +184,7 @@ class ContentQualityEvaluator:
             return False, f"Quality score too low ({quality_score:.1f} < 7.0)"
 
         # Positive feedback ratio
-        positive_count = sum(1 for f in feedback_records if f.is_positive)
+        positive_count = sum(1 for f in feedback_records if self._is_positive(f))
         positive_ratio = positive_count / len(feedback_records)
 
         if positive_ratio < 0.7:
@@ -150,7 +192,7 @@ class ContentQualityEvaluator:
 
         # Check for recent activity
         recent_cutoff = datetime.utcnow() - timedelta(days=30)
-        recent_feedback = [f for f in feedback_records if f.created_at >= recent_cutoff]
+        recent_feedback = [f for f in feedback_records if f.created_at and f.created_at >= recent_cutoff]
 
         if len(recent_feedback) < 2:
             return False, f"Insufficient recent activity ({len(recent_feedback)} < 2 in last 30 days)"
@@ -187,7 +229,7 @@ class ContentQualityEvaluator:
                 func.count(ResponseFeedback.id).label('feedback_count'),
                 func.sum(
                     case(
-                        (ResponseFeedback.is_positive, 1),
+                        (ResponseFeedback.feedback_type == ResponseFeedback.FEEDBACK_UP, 1),
                         else_=0,
                     )
                 ).label('positive_count'),
@@ -200,30 +242,32 @@ class ContentQualityEvaluator:
 
         # Join with feedback to get full records
         result = await self.db.execute(
-            select(ResponseFeedback, feedback_count_subq.c.feedback_count, feedback_count_subq.c.positive_count)
-            .join(feedback_count_subq, ResponseFeedback.response_id == feedback_count_subq.c.response_id)
+            select(
+                feedback_count_subq.c.response_id,
+                feedback_count_subq.c.feedback_count,
+                feedback_count_subq.c.positive_count,
+            )
             .order_by(feedback_count_subq.c.positive_count.desc())
             .limit(limit)
         )
 
         candidates = []
-        for row in result:
-            feedback, count, positive_count = row
-
-            # Calculate quality score
-            feedback_records = [feedback]  # Simplified; in practice, load all for this response_id
-            quality_score = await self._calculate_quality_score(feedback_records)
+        rows = result.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
+        for row in rows:
+            response_id, count, positive_count = row
+            positive_ratio = positive_count / count if count > 0 else 0
+            quality_score = min(10.0, (positive_ratio * 8.0) + min(count, 10) * 0.2)
 
             if quality_score >= min_quality_score:
-                positive_ratio = positive_count / count if count > 0 else 0
-
                 candidates.append({
-                    'response_id': str(feedback.response_id),
+                    'response_id': str(response_id),
                     'quality_score': quality_score,
                     'feedback_count': count,
                     'positive_count': positive_count,
                     'positive_ratio': positive_ratio,
-                    'created_at': feedback.created_at.isoformat(),
+                    'created_at': None,
                 })
 
         return candidates
@@ -258,24 +302,24 @@ class ContentQualityEvaluator:
             target_library_id = await self._get_or_create_test_library()
 
         # 3. Create seed item
-        # In a full implementation, load the actual response content
-        # For now, create a placeholder
-        from app.services.seed_library_service import seed_library_service
-
         try:
-            item = await seed_library_service.add_item(
-                library_id=target_library_id,
+            target_library_uuid = UUID(str(target_library_id))
+            item = SeedItem(
+                library_id=target_library_uuid,
                 item_type='example',
                 title=f"Auto-seeded response {response_id[:8]}",
                 content=f"Response with quality score: {evaluation['quality_score']:.1f}",
                 content_data={
                     'source_response_id': response_id,
-                    'quality_metrics': evaluation['metrics'],
+                    'quality_metrics': evaluation.get('metrics', {}),
                     'auto_seeded': True,
                     'auto_seed_date': datetime.utcnow().isoformat(),
                 },
                 tags=['auto-seeded', 'high-quality'],
             )
+            self.db.add(item)
+            await self.db.commit()
+            await self.db.refresh(item)
 
             logger.info(
                 f"Successfully auto-seeded response {response_id} to library {target_library_id}, "
@@ -290,27 +334,28 @@ class ContentQualityEvaluator:
 
     async def _get_or_create_test_library(self) -> str:
         """获取或创建测试种子库"""
-        from app.services.seed_library_service import seed_library_service
-
-        # Try to find existing test library
-        libraries = await seed_library_service.list_libraries(
-            category='custom',
-            visibility='private',
-            limit=10,
+        result = await self.db.execute(
+            select(SeedLibrary).where(
+                SeedLibrary.name == "Auto-Seeded Content",
+                SeedLibrary.category == "custom",
+                SeedLibrary.visibility == "private",
+                SeedLibrary.deleted_at.is_(None),
+            )
         )
+        existing = result.scalar_one_or_none()
+        if existing:
+            return str(existing.id)
 
-        # Look for one named "Auto-Seeded Content"
-        for lib in libraries.items:
-            if lib.name == "Auto-Seeded Content":
-                return str(lib.id)
-
-        # Create new test library
-        library = await seed_library_service.create_library(
+        library = SeedLibrary(
             name="Auto-Seeded Content",
             description="High-quality responses auto-seeded from user feedback",
-            category='custom',
-            visibility='private',
-            tags=['auto-seeded', 'test'],
+            category="custom",
+            visibility="private",
+            tags=["auto-seeded", "test"],
+            language="zh",
         )
+        self.db.add(library)
+        await self.db.commit()
+        await self.db.refresh(library)
 
         return str(library.id)

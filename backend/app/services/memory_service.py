@@ -657,6 +657,8 @@ class MemoryService:
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
+            if not isinstance(snapshot, dict):
+                snapshot = {"history": snapshot}
             snapshot["retraction_reason"] = reason
             snapshot["evidence_refs"] = updated_refs
             record.evidence_snapshot = snapshot

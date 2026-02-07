@@ -29,7 +29,7 @@ class BehaviorPatternDecayService:
         result = await self.db.execute(
             select(BehaviorPattern).where(
                 BehaviorPattern.user_id == user_id,
-                not BehaviorPattern.is_archived,
+                BehaviorPattern.is_archived.is_(False),
             )
         )
         patterns = result.scalars().all()
