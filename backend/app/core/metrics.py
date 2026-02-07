@@ -1,6 +1,9 @@
 import time
+from asyncio import iscoroutinefunction
 from functools import wraps
 
+from loguru import logger
+from opentelemetry import trace
 from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 
@@ -186,7 +189,6 @@ def track_latency(module, method):
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
-            from opentelemetry import trace
             start_time = time.time()
             span = trace.get_current_span()
             trace_id = format(span.get_span_context().trace_id, '032x') if span else "n/a"
@@ -197,7 +199,6 @@ def track_latency(module, method):
                 return result
             except Exception as e:
                 # Log with TraceID for correlation
-                from loguru import logger
                 logger.error(f"[TraceID: {trace_id}] Error in {module}.{method}: {e}")
                 REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
                 raise
@@ -214,7 +215,6 @@ def track_latency(module, method):
                 REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
                 return result
             except Exception as e:
-                from loguru import logger
                 logger.error(f"Error in {module}.{method}: {e}")
                 REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
                 raise
@@ -223,8 +223,7 @@ def track_latency(module, method):
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
 
         # Return async wrapper if func is async, else sync wrapper
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
+        if iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper

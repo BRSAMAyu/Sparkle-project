@@ -16,16 +16,14 @@ class TestPhotonServiceBasic:
 
     def test_photon_models_import(self):
         """Test that photon models can be imported"""
-        from app.models.photon import PhotonTransaction, PhotonBalance
-        assert PhotonTransaction is not None
-        assert PhotonBalance is not None
+        from app.models.shop import PhotonTransactionHistory
+        assert PhotonTransactionHistory is not None
 
     def test_transaction_types(self):
         """Test transaction type enum exists"""
-        from app.models.photon import TransactionType, TransactionSource
-        assert hasattr(TransactionType, 'EARN')
-        assert hasattr(TransactionType, 'SPEND')
-        assert hasattr(TransactionSource, 'TASK_COMPLETION')
+        from app.models.shop import PhotonTransactionType
+        assert hasattr(PhotonTransactionType, 'PURCHASE')
+        assert hasattr(PhotonTransactionType, 'REFUND')
 
 
 class TestPhotonCalculations:

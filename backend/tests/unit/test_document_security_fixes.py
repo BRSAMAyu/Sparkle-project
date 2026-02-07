@@ -173,25 +173,29 @@ class Test10MBSizeLimit:
     @pytest.mark.asyncio
     async def test_small_document_returns_full_text(self):
         """测试小文档（<20KB）返回完整文本"""
-        # 模拟小文档处理
-        with patch('app.services.document_service.ingestion_service') as mock_ingestion:
-            # 模拟返回的小文本块
-            mock_ingestion.process_file.return_value = [
-                Mock(text="Small content", page_num=1, metadata={}, ocr_confidence=None)
-            ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "test.txt")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("small")
 
-            with patch.object(self.document_service, '_generate_quick_summary') as mock_summary:
-                mock_summary.return_value = "Summary"
+            with patch.object(settings, "UPLOAD_DIR", tmpdir):
+                with patch('app.services.document_service.ingestion_service') as mock_ingestion:
+                    mock_ingestion.process_file.return_value = [
+                        Mock(text="Small content", page_num=1, metadata={}, ocr_confidence=None)
+                    ]
 
-                result = await self.document_service.clean_and_summarize(
-                    "test.txt",
-                    task_id="test-task"
-                )
+                    with patch.object(self.document_service, '_generate_quick_summary') as mock_summary:
+                        mock_summary.return_value = "Summary"
 
-                assert result["status"] == "completed"
-                assert result["mode"] == "full_text"
-                assert "full_text" in result
-                assert result.get("truncated") == False
+                        result = await self.document_service.clean_and_summarize(
+                            test_file,
+                            task_id="test-task"
+                        )
+
+                        assert result["status"] == "completed"
+                        assert result["mode"] == "full_text"
+                        assert "full_text" in result
+                        assert result.get("truncated") == False
 
     @pytest.mark.asyncio
     async def test_large_document_returns_compressed(self):
@@ -207,23 +211,28 @@ class Test10MBSizeLimit:
             )
             large_chunks.append(chunk)
 
-        with patch('app.services.document_service.ingestion_service') as mock_ingestion:
-            mock_ingestion.process_file.return_value = large_chunks
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "large.txt")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("large")
 
-            with patch.object(self.document_service, '_run_map_reduce') as mock_map_reduce:
-                mock_map_reduce.return_value = "Compressed summary"
+            with patch.object(settings, "UPLOAD_DIR", tmpdir):
+                with patch('app.services.document_service.ingestion_service') as mock_ingestion:
+                    mock_ingestion.process_file.return_value = large_chunks
 
-                result = await self.document_service.clean_and_summarize(
-                    "test.txt",
-                    task_id="test-task"
-                )
+                    with patch.object(self.document_service, '_run_map_reduce') as mock_map_reduce:
+                        mock_map_reduce.return_value = "Compressed summary"
 
-                assert result["status"] == "completed"
-                assert result["mode"] == "compressed"
-                assert result.get("truncated") == True
-                assert "summary" in result
-                # 超大文档不应该有full_text
-                assert "full_text" not in result or result.get("full_text_preview") is not None
+                        result = await self.document_service.clean_and_summarize(
+                            test_file,
+                            task_id="test-task"
+                        )
+
+                        assert result["status"] == "completed"
+                        assert result["mode"] == "compressed"
+                        assert result.get("truncated") == True
+                        assert "summary" in result
+                        assert "full_text" not in result or result.get("full_text_preview") is not None
 
 
 class TestErrorHandling:
@@ -234,24 +243,31 @@ class TestErrorHandling:
         """测试任务失败时更新Redis状态"""
         document_service = DocumentService()
 
-        with patch('app.services.document_service.ingestion_service') as mock_ingestion:
-            # 模拟处理失败
-            mock_ingestion.process_file.side_effect = Exception("Processing failed")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "test.txt")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("x")
 
-            with patch('app.services.document_service.cache_service') as mock_cache:
-                result = await document_service.clean_and_summarize(
-                    "test.txt",
-                    task_id="test-task"
-                )
+            with patch.object(settings, "UPLOAD_DIR", tmpdir):
+                with patch('app.services.document_service.ingestion_service') as mock_ingestion:
+                    # 模拟处理失败
+                    mock_ingestion.process_file.side_effect = Exception("Processing failed")
 
-                # 验证返回错误状态
-                assert result["status"] == "error"
-                assert "error" in result
+                    with patch('app.services.document_service.cache_service') as mock_cache:
+                        mock_cache.set = AsyncMock()
+                        result = await document_service.clean_and_summarize(
+                            test_file,
+                            task_id="test-task"
+                        )
 
-                # 验证更新了Redis（最后一次调用应该是status=error）
-                calls = mock_cache.set.call_args_list
-                error_call = [c for c in calls if "error" in str(c.kwargs)]
-                assert len(error_call) > 0, "应该更新任务状态为失败"
+                        # 验证返回错误状态
+                        assert result["status"] == "error"
+                        assert "error" in result
+
+                        # 验证更新了Redis（最后一次调用应该是status=error）
+                        calls = mock_cache.set.call_args_list
+                        error_call = [c for c in calls if "error" in str(c)]
+                        assert len(error_call) > 0, "应该更新任务状态为失败"
 
     @pytest.mark.asyncio
     async def test_invalid_path_returns_error(self):

@@ -5,6 +5,7 @@ Memory Evolution Service
 Tracks and manages memory evolution history, predictions, and analysis.
 """
 from datetime import datetime, timedelta
+import inspect
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,16 @@ class MemoryEvolutionService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    async def _extract_scalars(result: Any) -> list[Any]:
+        scalars_obj = result.scalars()
+        if inspect.isawaitable(scalars_obj):
+            scalars_obj = await scalars_obj
+        rows = scalars_obj.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
+        return list(rows)
 
     async def track_memory_change(
         self,
@@ -150,7 +161,7 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(limit)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         # 2. Build timeline
         timeline = []
@@ -204,6 +215,11 @@ class MemoryEvolutionService:
             Dict: 版本对比结果
         """
         evolution = await self.db.get(MemoryEvolution, evolution_id)
+        if not isinstance(getattr(evolution, "old_value", None), dict):
+            result = await self.db.execute(
+                select(MemoryEvolution).where(MemoryEvolution.id == evolution_id)
+            )
+            evolution = result.scalar_one_or_none()
         if not evolution:
             raise ValueError(f"Evolution {evolution_id} not found")
 
@@ -269,7 +285,7 @@ class MemoryEvolutionService:
             )
             .order_by(MemoryEvolution.created_at.asc())
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             return {
@@ -345,7 +361,7 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(100)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             logger.warning(f"No evolution history for {memory_id}, skipping prediction")
@@ -483,7 +499,7 @@ class MemoryEvolutionService:
             .order_by(EvolutionPrediction.created_at.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return await self._extract_scalars(result)
 
     def _compare_fields(
         self,
@@ -491,6 +507,10 @@ class MemoryEvolutionService:
         new_value: dict,
     ) -> list[dict[str, Any]]:
         """Compare fields between old and new values"""
+        if not isinstance(old_value, dict):
+            old_value = {}
+        if not isinstance(new_value, dict):
+            new_value = {}
         changes = []
 
         all_keys = set(old_value.keys()) | set(new_value.keys())

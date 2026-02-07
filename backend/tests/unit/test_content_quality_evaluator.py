@@ -3,7 +3,9 @@ Unit tests for Content Quality Evaluator
 内容质量评估器单元测试
 """
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
+from datetime import datetime
+from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.content_quality_evaluator import ContentQualityEvaluator
@@ -35,18 +37,21 @@ async def test_evaluate_response_quality_high_quality(evaluator: ContentQualityE
         feedback1.is_positive = True
         feedback1.rating = 5
         feedback1.action = "save"
+        feedback1.created_at = datetime.utcnow()
 
         feedback2 = Mock(spec=ResponseFeedback)
         feedback2.is_positive = True
         feedback2.rating = 4
         feedback2.action = "save"
+        feedback2.created_at = datetime.utcnow()
 
         feedback3 = Mock(spec=ResponseFeedback)
         feedback3.is_positive = True
         feedback3.rating = 5
         feedback3.action = "share"
+        feedback3.created_at = datetime.utcnow()
 
-        mock_result = AsyncMock()
+        mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = [
             feedback1, feedback2, feedback3
         ]
@@ -71,13 +76,15 @@ async def test_evaluate_response_quality_low_quality(evaluator: ContentQualityEv
         feedback1.is_positive = False
         feedback1.rating = 2
         feedback1.action = None
+        feedback1.created_at = datetime.utcnow()
 
         feedback2 = Mock(spec=ResponseFeedback)
         feedback2.is_positive = False
         feedback2.rating = 1
         feedback2.action = None
+        feedback2.created_at = datetime.utcnow()
 
-        mock_result = AsyncMock()
+        mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = [
             feedback1, feedback2
         ]
@@ -95,7 +102,7 @@ async def test_evaluate_response_quality_no_feedback(evaluator: ContentQualityEv
     response_id = "test-response-3"
 
     with patch.object(evaluator.db, 'execute') as mock_execute:
-        mock_result = AsyncMock()
+        mock_result = Mock()
         mock_result.scalars.return_value.all.return_value = []
         mock_execute.return_value = mock_result
 
@@ -110,30 +117,20 @@ async def test_evaluate_response_quality_no_feedback(evaluator: ContentQualityEv
 async def test_find_candidate_responses(evaluator: ContentQualityEvaluator):
     """Test finding candidate responses for seeding"""
     with patch.object(evaluator.db, 'execute') as mock_execute:
-        # Mock feedback aggregation query
-        mock_agg_result = AsyncMock()
-        mock_row = Mock()
-        mock_row.response_id = "response-1"
-        mock_row.feedback_count = 5
-        mock_row.positive_count = 4
-
-        mock_agg_result.scalars.return_value.all.return_value = [mock_row]
+        mock_agg_result = Mock()
+        mock_agg_result.all.return_value = [("response-1", 5, 4)]
         mock_execute.return_value = mock_agg_result
 
-        # Mock individual feedback
-        with patch.object(evaluator, '_calculate_quality_score') as mock_score:
-            mock_score.return_value = 8.5
+        candidates = await evaluator.find_candidate_responses(
+            min_quality_score=7.0,
+            min_feedback_count=3,
+            days_back=30,
+            limit=50
+        )
 
-            candidates = await evaluator.find_candidate_responses(
-                min_quality_score=7.0,
-                min_feedback_count=3,
-                days_back=30,
-                limit=50
-            )
-
-            assert len(candidates) > 0
-            assert candidates[0]["response_id"] == "response-1"
-            assert candidates[0]["quality_score"] >= 7.0
+        assert len(candidates) > 0
+        assert candidates[0]["response_id"] == "response-1"
+        assert candidates[0]["quality_score"] >= 7.0
 
 
 @pytest.mark.asyncio
@@ -150,17 +147,17 @@ async def test_auto_seed_to_library(evaluator: ContentQualityEvaluator):
         }
 
         with patch.object(evaluator, '_get_or_create_test_library') as mock_lib:
-            mock_lib.return_value = "test-library-id"
+            mock_lib.return_value = str(uuid4())
 
-            with patch('app.services.content_quality_evaluator.seed_library_service') as mock_service:
-                mock_item = Mock(spec=SeedItem)
-                mock_item.id = "item-1"
-                mock_service.add_item.return_value = mock_item
+            async def _refresh(item):
+                item.id = "item-1"
 
-                result = await evaluator.auto_seed_to_library(response_id)
+            evaluator.db.refresh.side_effect = _refresh
 
-                assert result == "item-1"
-                mock_service.add_item.assert_called_once()
+            result = await evaluator.auto_seed_to_library(response_id)
+
+            assert result == "item-1"
+            evaluator.db.add.assert_called_once()
 
 
 @pytest.mark.asyncio

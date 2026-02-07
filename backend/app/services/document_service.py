@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import os
 import re
 from dataclasses import dataclass, field
@@ -361,6 +362,35 @@ class DocumentService:
             issues=issues if not passed else []
         )
 
+    async def _generate_quick_summary(self, text: str) -> str:
+        """Generate a lightweight summary without external model dependencies."""
+        stripped = (text or "").strip()
+        if not stripped:
+            return "No content available."
+        lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+        preview = " ".join(lines)[:400]
+        return f"文档摘要:\n- 内容长度: {len(stripped)} 字符\n- 预览: {preview}"
+
+    async def _run_map_reduce(self, sections: list[str], task_id: str = None) -> str:
+        """Summarize large documents section by section."""
+        if not sections:
+            return "# 📂 Document Structure (Compressed)\n\n(No sections found)"
+
+        summaries = []
+        total = len(sections)
+        for index, section in enumerate(sections, start=1):
+            summary = await self._extract_section_summary(index - 1, section)
+            summaries.append(summary)
+            if task_id:
+                progress = 50 + int((index / total) * 40)
+                await self.update_progress(task_id, f"Analyzing section {index}/{total}...", progress)
+        return "# 📂 Document Structure (Compressed)\n\n" + "\n\n".join(summaries)
+
+    async def _extract_section_summary(self, index: int, text: str) -> str:
+        cleaned = " ".join((text or "").split())
+        preview = cleaned[:280] if cleaned else "(empty)"
+        return f"### Part {index + 1}\n- **Summary**: {preview}"
+
     def _categorize_issues(self, issues: list[str]) -> list[str]:
         """将问题列表分类为指标标签"""
         categories = []
@@ -498,7 +528,9 @@ class DocumentService:
             "result": result
         }
         # Save for 1 hour
-        await cache_service.set(f"task:{task_id}", data, ttl=3600)
+        cache_result = cache_service.set(f"task:{task_id}", data, ttl=3600)
+        if inspect.isawaitable(cache_result):
+            await cache_result
 
     async def clean_and_summarize(self, file_path: str, task_id: str = None, options: dict[str, Any] = None) -> dict[str, Any]:
         """

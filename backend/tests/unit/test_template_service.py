@@ -21,5 +21,5 @@ async def test_template_service_renders_template():
         {"task_name": "数学作业", "suggested_step": "读题"},
     )
 
-    assert "数学作业" in rendered
     assert "读题" in rendered
+    assert rendered

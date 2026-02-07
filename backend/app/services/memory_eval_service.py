@@ -30,7 +30,14 @@ class EvalCase:
 
 def load_dataset(path: str | Path) -> list[EvalCase]:
     cases: list[EvalCase] = []
-    with Path(path).open("r", encoding="utf-8") as handle:
+    dataset_path = Path(path)
+    if not dataset_path.exists():
+        path_text = str(dataset_path)
+        if path_text.startswith("backend/"):
+            alt = Path(path_text.removeprefix("backend/"))
+            if alt.exists():
+                dataset_path = alt
+    with dataset_path.open("r", encoding="utf-8") as handle:
         for line in handle:
             raw = line.strip()
             if not raw:
