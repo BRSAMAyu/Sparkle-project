@@ -7,7 +7,7 @@ GATEWAY_IMAGE="${GATEWAY_IMAGE:-}"
 BACKEND_IMAGE="${BACKEND_IMAGE:-}"
 DRAIN_SECONDS="${DRAIN_SECONDS:-90}"
 OBSERVE_SECONDS="${OBSERVE_SECONDS:-180}"
-SMOKE_URLS="${SMOKE_URLS:-/api/v1/health}"
+SMOKE_URLS="${SMOKE_URLS:-/api/v1/health /api/v1/health/cqrs}"
 APP_NETWORK="${APP_NETWORK:-sparkle_app}"
 UPSTREAM_FILE="${UPSTREAM_FILE:-nginx/upstream.conf}"
 
@@ -43,9 +43,9 @@ export IMAGE_TAG GATEWAY_IMAGE BACKEND_IMAGE
 
 echo "Current: $current_color, Target: $target_color"
 
-docker compose -f "$COMPOSE_FILE" pull "gateway_${target_color}" backend
+docker compose -f "$COMPOSE_FILE" pull "gateway_${target_color}" backend agent
 docker compose -f "$COMPOSE_FILE" rm -f toxiproxy_init >/dev/null 2>&1 || true
-docker compose -f "$COMPOSE_FILE" up -d backend "gateway_${target_color}" toxiproxy toxiproxy_init nginx
+docker compose -f "$COMPOSE_FILE" up -d backend agent "gateway_${target_color}" toxiproxy toxiproxy_init nginx
 
 health_url="http://gateway_${target_color}:8080/api/v1/health"
 echo "Health check: $health_url"

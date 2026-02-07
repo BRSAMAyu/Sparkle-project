@@ -1,115 +1,111 @@
-"""
-Unit tests for A/B Testing Framework
-A/B测试框架单元测试
-"""
+"""Unit tests for ABTestFrameworkEnhanced."""
+
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
-from datetime import datetime
-from unittest.mock import Mock, AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
-from app.models.experiment import (
-    ABExperiment,
-    ABExperimentVariant,
-    ExperimentStatus,
-)
+from app.models.experiment import ExperimentStatus
 
 
 @pytest.fixture
 def db_session():
-    """Mock database session"""
-    session = AsyncMock(spec=AsyncSession)
-    return session
+    return AsyncMock(spec=AsyncSession)
 
 
 @pytest.fixture
-def ab_framework(db_session):
-    """Create AB test framework instance"""
-    from app.core.config import settings
-    return ABTestFrameworkEnhanced(db_session, settings)
+def redis_client():
+    client = AsyncMock()
+    client.set = AsyncMock()
+    return client
+
+
+@pytest.fixture
+def ab_framework(db_session, redis_client):
+    return ABTestFrameworkEnhanced(db_session, redis_client)
 
 
 @pytest.mark.asyncio
-async def test_create_experiment(ab_framework: ABTestFrameworkEnhanced):
-    """Test creating a new experiment"""
-    # Mock experiment creation
-    with patch.object(ab_framework, '_save_to_db') as mock_save:
-        mock_exp = Mock(spec=ABExperiment)
-        mock_exp.id = "test-exp-1"
-        mock_exp.name = "Test Experiment"
-        mock_exp.status = ExperimentStatus.CREATED
+async def test_create_experiment(ab_framework: ABTestFrameworkEnhanced, db_session):
+    ab_framework._cache_experiment_config = AsyncMock()
 
-        mock_save.return_value = mock_exp
+    result = await ab_framework.create_experiment(
+        name="Test Experiment",
+        description="Test description",
+        hypothesis="Test hypothesis",
+        variants=[
+            {"name": "control", "is_control": True, "weight": 0.5},
+            {"name": "treatment", "is_control": False, "weight": 0.5},
+        ],
+        metrics=["success"],
+        created_by="user-1",
+    )
 
-        result = await ab_framework.create_experiment(
-            name="Test Experiment",
-            description="Test description",
-            hypothesis="Test hypothesis",
-            variants=[
-                {"name": "control", "weight": 0.5},
-                {"name": "treatment", "weight": 0.5}
-            ],
-            metrics=["success"]
-        )
-
-        assert result.name == "Test Experiment"
-        assert result.status == ExperimentStatus.CREATED
-        mock_save.assert_called_once()
+    assert result.name == "Test Experiment"
+    assert result.status == ExperimentStatus.CREATED
+    assert db_session.add.called
+    assert db_session.flush.await_count == 1
+    assert db_session.commit.await_count == 1
+    ab_framework._cache_experiment_config.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_assign_variant_consistency(ab_framework: ABTestFrameworkEnhanced):
-    """Test that variant assignment is consistent for same user"""
-    experiment_id = "test-exp-1"
-    user_id = "test-user-1"
+async def test_assign_variant_consistency(ab_framework: ABTestFrameworkEnhanced, db_session):
+    existing_assignment = SimpleNamespace(variant_id="variant-1")
+    existing_variant = SimpleNamespace(id="variant-1", variant_name="control")
+    db_session.execute.return_value = SimpleNamespace(
+        scalar_one_or_none=lambda: existing_assignment,
+    )
+    db_session.get.return_value = existing_variant
 
-    with patch.object(ab_framework, '_get_or_create_assignment') as mock_get:
-        mock_variant = Mock(spec=ABExperimentVariant)
-        mock_variant.id = "variant-1"
-        mock_variant.variant_name = "control"
+    variant, is_new = await ab_framework.assign_variant("exp-1", "user-1")
 
-        mock_get.return_value = mock_variant
-
-        # First assignment
-        variant1, is_new1 = await ab_framework.assign_variant(experiment_id, user_id)
-
-        # Second assignment (should return same variant)
-        variant2, is_new2 = await ab_framework.assign_variant(experiment_id, user_id)
-
-        assert variant1.variant_name == variant2.variant_name
-        assert is_new1 is True  # First time
-        assert is_new2 is False  # Cached
+    assert variant.variant_name == "control"
+    assert is_new is False
+    db_session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_record_metric(ab_framework: ABTestFrameworkEnhanced):
-    """Test recording experiment metrics"""
-    with patch.object(ab_framework, '_save_metric') as mock_save:
-        await ab_framework.record_metric(
-            experiment_id="test-exp-1",
-            variant_id="variant-1",
-            metric_name="success",
-            metric_value=1.0,
-            metric_type="success",
-            user_id="test-user-1"
-        )
+async def test_record_metric(ab_framework: ABTestFrameworkEnhanced, db_session):
+    await ab_framework.record_metric(
+        experiment_id="exp-1",
+        variant_id="variant-1",
+        metric_name="success",
+        metric_value=1.0,
+        metric_type="success",
+        user_id="user-1",
+    )
 
-        mock_save.assert_called_once()
+    assert db_session.add.called
+    assert db_session.commit.await_count == 1
 
 
 @pytest.mark.asyncio
-async def test_get_experiment_stats(ab_framework: ABTestFrameworkEnhanced):
-    """Test getting experiment statistics"""
-    with patch.object(ab_framework, '_calculate_stats') as mock_calc:
-        mock_calc.return_value = {
-            "total_users": 100,
-            "control_count": 50,
-            "treatment_count": 50,
-            "control_success_rate": 0.6,
-            "treatment_success_rate": 0.7
-        }
+async def test_get_experiment_stats(ab_framework: ABTestFrameworkEnhanced, db_session):
+    experiment = SimpleNamespace(
+        id="exp-1",
+        name="Experiment",
+        status=ExperimentStatus.RUNNING,
+        start_date=None,
+        sample_size_target=100,
+        variants=[
+            SimpleNamespace(id="v1", variant_name="control", is_control=True),
+            SimpleNamespace(id="v2", variant_name="treatment", is_control=False),
+        ],
+    )
+    db_session.get.return_value = experiment
 
-        stats = await ab_framework.get_experiment_stats("test-exp-1")
+    row1 = SimpleNamespace(count=30, success_rate=0.5, avg_latency=120.0)
+    row2 = SimpleNamespace(count=40, success_rate=0.7, avg_latency=110.0)
+    db_session.execute.side_effect = [
+        SimpleNamespace(one=lambda: row1),
+        SimpleNamespace(one=lambda: row2),
+    ]
 
-        assert stats["total_users"] == 100
-        assert stats["treatment_success_rate"] > stats["control_success_rate"]
+    stats = await ab_framework.get_experiment_stats("exp-1")
+
+    assert stats["sample_size_collected"] == 70
+    assert stats["completion_percentage"] == 70.0
+    assert len(stats["variants"]) == 2

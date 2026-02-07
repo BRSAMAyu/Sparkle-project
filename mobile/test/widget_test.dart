@@ -24,45 +24,50 @@ import 'package:sparkle/core/services/websocket_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('App smoke test', (WidgetTester tester) async {
-    await Isar.initializeIsarCore(download: true);
-    SharedPreferences.setMockInitialValues({});
+  testWidgets(
+    'App smoke test',
+    (WidgetTester tester) async {
+      await Isar.initializeIsarCore(download: true);
+      SharedPreferences.setMockInitialValues({});
 
-    final tempDir = await Directory.systemTemp.createTemp('sparkle_app_test');
-    final isar = await Isar.open(
-      [
-        LocalKnowledgeNodeSchema,
-        PendingUpdateSchema,
-        LocalCRDTSnapshotSchema,
-        OutboxItemSchema,
-        UserAnalyticsEventSchema,
-      ],
-      directory: tempDir.path,
-    );
-    final localDb = LocalDatabase()..isar = isar;
-    final engine = SyncEngine(localDb, _FakeWebSocketService(), _FakeApiClient());
-
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          localDatabaseProvider.overrideWithValue(localDb),
-          syncEngineProvider.overrideWithValue(engine),
+      final tempDir = await Directory.systemTemp.createTemp('sparkle_app_test');
+      final isar = await Isar.open(
+        [
+          LocalKnowledgeNodeSchema,
+          PendingUpdateSchema,
+          LocalCRDTSnapshotSchema,
+          OutboxItemSchema,
+          UserAnalyticsEventSchema,
         ],
-        child: const SparkleApp(),
-      ),
-    );
+        directory: tempDir.path,
+      );
+      final localDb = LocalDatabase()..isar = isar;
+      final engine =
+          SyncEngine(localDb, _FakeWebSocketService(), _FakeApiClient());
 
-    // Verify that the splash screen or login screen is shown (simplified check)
-    expect(find.byType(SparkleApp), findsOneWidget);
+      // Build our app and trigger a frame.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localDatabaseProvider.overrideWithValue(localDb),
+            syncEngineProvider.overrideWithValue(engine),
+          ],
+          child: const SparkleApp(),
+        ),
+      );
 
-    // Dispose app to avoid lingering timers during tests.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpAndSettle();
+      // Verify that the splash screen or login screen is shown (simplified check)
+      expect(find.byType(SparkleApp), findsOneWidget);
 
-    await isar.close(deleteFromDisk: true);
-    await tempDir.delete(recursive: true);
-  }, skip: true,);
+      // Dispose app to avoid lingering timers during tests.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      await isar.close(deleteFromDisk: true);
+      await tempDir.delete(recursive: true);
+    },
+    skip: true,
+  );
 }
 
 class _FakeApiClient implements ApiClient {
@@ -70,23 +75,33 @@ class _FakeApiClient implements ApiClient {
   Dio get dio => Dio();
 
   @override
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> get<T>(String path,
+      {Map<String, dynamic>? queryParameters}) {
     throw UnimplementedError();
   }
 
   @override
-  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? headers, Map<String, dynamic>? queryParameters}) => const Stream<SSEEvent>.empty();
+  Stream<SSEEvent> getStream(String path,
+          {Map<String, dynamic>? headers,
+          Map<String, dynamic>? queryParameters}) =>
+      const Stream<SSEEvent>.empty();
 
   @override
-  Stream<SSEEvent> postStream(String path, {Object? data}) => const Stream<SSEEvent>.empty();
+  Stream<SSEEvent> postStream(String path, {Object? data}) =>
+      const Stream<SSEEvent>.empty();
 
   @override
-  Future<Response<T>> post<T>(String path, {Object? data, Map<String, dynamic>? queryParameters}) {
+  Future<Response<T>> post<T>(String path,
+      {Object? data, Map<String, dynamic>? queryParameters}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<Response<T>> put<T>(String path, {Object? data}) {
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 
@@ -96,7 +111,10 @@ class _FakeApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> delete<T>(String path) {
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 }

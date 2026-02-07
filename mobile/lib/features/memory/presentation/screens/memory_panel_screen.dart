@@ -101,11 +101,11 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -318,7 +318,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildPreferenceCard(MemoryPreferenceItem item) => _MemoryCard(
         title: item.prefKey,
         subtitle: _formatUpdated(item.updatedAt),
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -329,7 +330,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildGoalCard(MemoryGoalItem item) => _MemoryCard(
         title: item.title,
         subtitle: item.status,
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -340,7 +342,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildEpisodicCard(EpisodicMemoryItem item) => _MemoryCard(
         title: item.summary,
         subtitle: _formatUpdated(item.occurredAt),
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -368,26 +371,32 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   Text(_formatMetrics(entry)),
                 ],
               ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            MemoryEvidenceBadge(status: entry.evidenceStatus),
-            if (entry.correctionCount > 0) ...[
-              const SizedBox(height: 6),
-              _CorrectionBadge(count: entry.correctionCount),
+        trailing: SizedBox(
+          width: 176,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              MemoryEvidenceBadge(status: entry.evidenceStatus),
+              if (entry.correctionCount > 0) ...[
+                const SizedBox(width: 6),
+                _CorrectionBadge(count: entry.correctionCount),
+              ],
+              const SizedBox(width: 4),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints.tightFor(width: 32, height: 32),
+                icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined),
+                onPressed: () => setState(() {
+                  if (isPinned) {
+                    _pinnedIds.remove(entry.id);
+                  } else {
+                    _pinnedIds.add(entry.id);
+                  }
+                }),
+              ),
             ],
-            const SizedBox(height: 6),
-            IconButton(
-              icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined),
-              onPressed: () => setState(() {
-                if (isPinned) {
-                  _pinnedIds.remove(entry.id);
-                } else {
-                  _pinnedIds.add(entry.id);
-                }
-              }),
-            ),
-          ],
+          ),
         ),
         onTap: () => _openDetail(context, entry.detailArgs),
       ),
@@ -498,21 +507,23 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     return entries;
   }
 
-  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) => entries.where((entry) {
-      if (_filterType != null && entry.type != _filterType) {
-        return false;
-      }
-      if (_filterEvidence != null && entry.evidenceStatus != _filterEvidence) {
-        return false;
-      }
-      if (_dateRange != null && entry.updatedAt != null) {
-        if (entry.updatedAt!.isBefore(_dateRange!.start) ||
-            entry.updatedAt!.isAfter(_dateRange!.end)) {
+  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) =>
+      entries.where((entry) {
+        if (_filterType != null && entry.type != _filterType) {
           return false;
         }
-      }
-      return true;
-    }).toList();
+        if (_filterEvidence != null &&
+            entry.evidenceStatus != _filterEvidence) {
+          return false;
+        }
+        if (_dateRange != null && entry.updatedAt != null) {
+          if (entry.updatedAt!.isBefore(_dateRange!.start) ||
+              entry.updatedAt!.isAfter(_dateRange!.end)) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
 
   List<MemoryEntry> _applySort(List<MemoryEntry> entries) {
     entries.sort((a, b) {
@@ -612,12 +623,12 @@ class _MemoryCard extends StatelessWidget {
         child: ListTile(
           title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(subtitle),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               badge,
               if (correctionCount > 0) ...[
-                const SizedBox(height: 6),
+                const SizedBox(width: 6),
                 _CorrectionBadge(count: correctionCount),
               ],
             ],

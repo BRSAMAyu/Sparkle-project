@@ -1,21 +1,100 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
-class MockApiClient extends Mock implements ApiClient {}
+class TestApiClient implements ApiClient {
+  Future<Response<dynamic>> Function(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  })? putHandler;
+
+  @override
+  Dio get dio => throw UnimplementedError();
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = putHandler;
+    if (handler == null) {
+      throw UnimplementedError('No put handler configured');
+    }
+    final response = await handler(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+    );
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
+  }
+
+  @override
+  Future<Response<T>> patch<T>(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> getStream(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> postStream(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+}
 
 void main() {
-  late MockApiClient mockApiClient;
+  late TestApiClient apiClient;
   late UserRepository repository;
 
   setUp(() {
     DemoDataService.isDemoMode = false;
-    mockApiClient = MockApiClient();
-    repository = UserRepository(mockApiClient);
+    apiClient = TestApiClient();
+    repository = UserRepository(apiClient);
   });
 
   tearDown(() {
@@ -37,28 +116,19 @@ void main() {
       'updated_at': '2024-01-02T00:00:00.000Z',
     };
 
-    when(
-      mockApiClient.put<Map<String, dynamic>>(
-        '/users/me/preferences',
-        data: anyNamed('data'),
-      ),
-    ).thenAnswer(
-      (_) async => Response(
+    apiClient.putHandler = (path, {data, queryParameters}) async {
+      expect(path, '/users/me/preferences');
+      expect(data, isNotNull);
+      return Response(
         requestOptions: RequestOptions(path: '/users/me/preferences'),
         data: payload,
-      ),
-    );
+      );
+    };
 
     final result = await repository.updateUserPreferences(
       UserPreferences(depthPreference: 0.4, curiosityPreference: 0.7),
     );
 
     expect(result.id, 'user-1');
-    verify(
-      mockApiClient.put<Map<String, dynamic>>(
-        '/users/me/preferences',
-        data: anyNamed('data'),
-      ),
-    ).called(1);
   });
 }
