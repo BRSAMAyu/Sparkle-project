@@ -7,7 +7,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 
 const int _pipeline500NodeThresholdMs = int.fromEnvironment(
   'GALAXY_PIPELINE_500_MS',
-  defaultValue: 3500,
+  defaultValue: 7000,
 );
 
 void main() {

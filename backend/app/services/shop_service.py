@@ -184,11 +184,8 @@ class ShopService:
             ValueError: 物品不存在、不可购买、库存不足、余额不足等
         """
         try:
-            tx_context = (
-                self.db.begin_nested()
-                if self.db.in_transaction()
-                else self.db.begin()
-            )
+            owns_transaction = not self.db.in_transaction()
+            tx_context = self.db.begin() if owns_transaction else self.db.begin_nested()
             async with tx_context:
                 # 1. 查询物品（加行锁防止并发超卖）
                 query = select(ShopItem).where(
@@ -296,7 +293,9 @@ class ShopService:
             }
 
         except Exception as e:
-            await self.db.rollback()
+            # 仅回滚当前方法创建的顶层事务，避免破坏外层会话中的已成功操作
+            if owns_transaction and self.db.in_transaction():
+                await self.db.rollback()
             logger.error(f"Purchase failed: user_id={user_id}, item_id={item_id}, error={e}")
             raise
 

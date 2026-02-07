@@ -68,7 +68,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   // 🔧 性能优化: 缓存 StarMapPainter
   StarMapPainter? _cachedPainter;
-  int _painterRevision = 0;
 
   // Gesture conflict resolution
   bool _hasDragged = false;
@@ -164,8 +163,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if ((scale - _lastScale).abs() > 0.02) {
       _lastScale = scale;
       ref.read(galaxyProvider.notifier).updateScale(scale);
-      // 🔧 缩放变化时，标记 painter 需要重建
-      _painterRevision++;
     }
 
     if (!mounted) return;

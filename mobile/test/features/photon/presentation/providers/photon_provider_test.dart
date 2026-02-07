@@ -235,7 +235,7 @@ void main() {
           .loadTransactions(refresh: true);
       await container.read(photonTransactionsProvider.notifier).loadTransactions();
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(photonTransactionsProvider);
 
@@ -270,7 +270,7 @@ void main() {
 
       await container.read(photonTransactionsProvider.notifier).refresh();
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final stateAfterRefresh = container.read(photonTransactionsProvider);
 
@@ -430,7 +430,7 @@ void main() {
       container.read(photonBalanceProvider);
       container.read(photonTransactionsProvider);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       // Should not throw
       expect(container.dispose, returnsNormally);

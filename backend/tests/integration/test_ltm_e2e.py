@@ -86,7 +86,7 @@ async def test_evidence_missing_and_repair_flow(db_session):
     db_session.add(user)
 
     event = TrackingEvent(
-        event_id="evt_health_1",
+        event_id=f"evt_health_{uuid4().hex[:8]}",
         user_id=user_id,
         event_type="memory_test",
         schema_version="event.v1",
@@ -105,7 +105,7 @@ async def test_evidence_missing_and_repair_flow(db_session):
         occurred_at=datetime.utcnow(),
         importance_score=0.5,
         tags=["health"],
-        evidence_refs=[{"type": "event", "id": "evt_health_1"}],
+        evidence_refs=[{"type": "event", "id": event.event_id}],
     )
 
     health_service = EvidenceHealthService(db_session)

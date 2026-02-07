@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,9 +25,9 @@ type BaseWorker struct {
 	metrics         *metrics.CQRSMetrics
 	logger          *zap.Logger
 
-	streamKey    string
+	streamKey     string
 	consumerGroup string
-	consumerName string
+	consumerName  string
 
 	retryConfig RetryConfig
 	options     WorkerOptions
@@ -124,9 +125,8 @@ func (w *BaseWorker) Run(ctx context.Context, handler event.EventHandler) error 
 	)
 
 	// Create consumer group if it doesn't exist
-	err := w.redis.XGroupCreateMkStream(ctx, w.streamKey, w.consumerGroup, "0").Err()
-	if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
-		return fmt.Errorf("create consumer group: %w", err)
+	if err := w.ensureConsumerGroup(ctx); err != nil {
+		return err
 	}
 
 	for {
@@ -158,6 +158,18 @@ func (w *BaseWorker) processMessages(ctx context.Context, handler event.EventHan
 		if err == redis.Nil {
 			return nil // No new messages
 		}
+		// Self-heal on Redis stream/group recreation race or reset.
+		if isNoGroupError(err) {
+			w.logger.Warn("Consumer group missing, attempting to recreate",
+				zap.String("stream", w.streamKey),
+				zap.String("group", w.consumerGroup),
+				zap.Error(err),
+			)
+			if ensureErr := w.ensureConsumerGroup(ctx); ensureErr != nil {
+				return fmt.Errorf("xreadgroup recover ensure group: %w", ensureErr)
+			}
+			return nil
+		}
 		return fmt.Errorf("xreadgroup: %w", err)
 	}
 
@@ -174,6 +186,22 @@ func (w *BaseWorker) processMessages(ctx context.Context, handler event.EventHan
 	}
 
 	return nil
+}
+
+func (w *BaseWorker) ensureConsumerGroup(ctx context.Context) error {
+	err := w.redis.XGroupCreateMkStream(ctx, w.streamKey, w.consumerGroup, "0").Err()
+	if err == nil || isBusyGroupError(err) {
+		return nil
+	}
+	return fmt.Errorf("create consumer group: %w", err)
+}
+
+func isBusyGroupError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "BUSYGROUP")
+}
+
+func isNoGroupError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "NOGROUP")
 }
 
 func (w *BaseWorker) processMessage(ctx context.Context, msg redis.XMessage, handler event.EventHandler) {

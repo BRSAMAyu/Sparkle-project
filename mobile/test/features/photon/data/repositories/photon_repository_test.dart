@@ -261,7 +261,7 @@ void main() {
           requestOptions: RequestOptions(path: '/photons/transactions'),
           data: {
             'success': true,
-            'data': [],
+            'data': <Map<String, dynamic>>[],
           },
         );
       };

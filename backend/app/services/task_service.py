@@ -5,7 +5,7 @@ Handle task business logic
 import json
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from google.protobuf import json_format
@@ -123,7 +123,7 @@ class TaskService:
         """Start task"""
         old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
-        db_obj.started_at = datetime.utcnow()
+        db_obj.started_at = datetime.now(UTC)
 
         db.add(db_obj)
         await db.commit()
@@ -205,7 +205,7 @@ class TaskService:
     ) -> Task:
         """Complete task and update plan progress if task belongs to a plan"""
         db_obj.status = TaskStatus.COMPLETED
-        db_obj.completed_at = datetime.utcnow()
+        db_obj.completed_at = datetime.now(UTC)
         db_obj.actual_minutes = actual_minutes
         if note:
             db_obj.user_note = note

@@ -4,7 +4,7 @@ import os
 from contextlib import suppress
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as redis
@@ -26,7 +26,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -44,7 +44,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -62,7 +62,7 @@ class ErrorCreated(Event):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -85,7 +85,7 @@ class TaskCompleted(Event):
         self.completion_rate = completion_rate
         self.user_note = user_note
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -111,7 +111,7 @@ class TaskAbandoned(Event):
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {

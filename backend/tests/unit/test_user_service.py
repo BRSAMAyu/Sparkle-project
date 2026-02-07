@@ -8,6 +8,13 @@ from app.schemas.user import UserRegister
 from app.services.user_service import UserService
 
 
+def _mock_db():
+    db = AsyncMock()
+    db.add = Mock()
+    db.delete = Mock()
+    return db
+
+
 def _result_with_scalar(value):
     result = Mock()
     result.scalar_one_or_none.return_value = value
@@ -16,7 +23,7 @@ def _result_with_scalar(value):
 
 @pytest.mark.asyncio
 async def test_get_by_email_returns_user():
-    db = AsyncMock()
+    db = _mock_db()
     user = Mock()
     user.email = "test@example.com"
     db.execute.return_value = _result_with_scalar(user)
@@ -27,7 +34,7 @@ async def test_get_by_email_returns_user():
 
 @pytest.mark.asyncio
 async def test_create_user_hashes_password():
-    db = AsyncMock()
+    db = _mock_db()
     user_in = UserRegister(
         username="user1",
         email="u1@example.com",
@@ -42,7 +49,7 @@ async def test_create_user_hashes_password():
 
 @pytest.mark.asyncio
 async def test_get_user_by_id_from_db():
-    db = AsyncMock()
+    db = _mock_db()
     user = Mock()
     db.execute.return_value = _result_with_scalar(user)
     service = UserService(db, redis_client=None)
@@ -53,7 +60,7 @@ async def test_get_user_by_id_from_db():
 
 @pytest.mark.asyncio
 async def test_get_context_uses_cache():
-    db = AsyncMock()
+    db = _mock_db()
     redis = AsyncMock()
     user_id = uuid4()
     cached_payload = {
@@ -78,7 +85,7 @@ async def test_get_context_uses_cache():
 
 @pytest.mark.asyncio
 async def test_get_context_returns_none_for_missing_user():
-    db = AsyncMock()
+    db = _mock_db()
     redis = AsyncMock()
     redis.get.return_value = None
     service = UserService(db, redis)

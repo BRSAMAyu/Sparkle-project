@@ -148,7 +148,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       if (chatMessage.content.length < 100) return;
 
       // 生成唯一的Hero tag
-      final heroTag = 'message_${chatMessage.id ?? chatMessage.createdAt.millisecondsSinceEpoch}';
+      final heroTag = 'message_${chatMessage.id}';
 
       // 打开详情视图
       Navigator.of(context).push(

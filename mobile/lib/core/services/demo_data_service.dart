@@ -1,7 +1,5 @@
 // ignore_for_file: use_setters_to_change_properties
 
-import 'dart:math';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
@@ -23,7 +21,6 @@ class DemoDataService {
   static final DemoDataService _instance = DemoDataService._internal();
 
   final _uuid = const Uuid();
-  final _random = Random();
 
   String? _currentAvatarUrl;
 
@@ -1213,14 +1210,6 @@ class DemoDataService {
     ));
 
     return edges;
-  }
-
-  // Helper enum for logic (internal use)
-  NodeStatus _determineNodeStatus(int index) {
-    if (index > 350) return NodeStatus.locked;
-    if (index < 50) return NodeStatus.mastered;
-    if (index < 130) return NodeStatus.review;
-    return NodeStatus.unlocked;
   }
 
   /// Get demo node detail for a specific node ID

@@ -255,7 +255,7 @@ void main() {
           requestOptions: RequestOptions(path: '/shop/items'),
           data: {
             'success': true,
-            'data': [],
+            'data': <Map<String, dynamic>>[],
           },
         );
       };
@@ -471,7 +471,7 @@ void main() {
               'item_config': {'skin_id': 'skin_001'},
             },
           ],
-          'titles': [],
+          'titles': <Map<String, dynamic>>[],
           'consumables': [
             {
               'id': 'boost_001',
@@ -486,7 +486,7 @@ void main() {
               'item_config': {'effect_type': 'exp_boost'},
             },
           ],
-          'boosts': [],
+          'boosts': <Map<String, dynamic>>[],
         },
         'meta': {
           'total_skins': 1,
@@ -556,7 +556,7 @@ void main() {
     test('returns list of owned item IDs', () async {
       final responseData = {
         'success': true,
-        'data': ['skin_001', 'skin_002', 'title_001'],
+        'data': <String>['skin_001', 'skin_002', 'title_001'],
         'meta': {
           'total_count': 3,
           'item_type': 'all',
@@ -565,7 +565,7 @@ void main() {
 
       mockApiClient.getHandler = (path, queryParameters) async {
         expect(path, '/inventory/owned');
-        expect(queryParameters, {});
+        expect(queryParameters, isEmpty);
         return Response(
           requestOptions: RequestOptions(path: '/inventory/owned'),
           data: responseData,

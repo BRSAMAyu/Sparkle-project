@@ -35,7 +35,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _currentTimerDuration = 0; // In seconds
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
-  bool _isTimerRunning = false;
 
   // Focus Protection State
   DateTime? _pageEnterTime;
@@ -81,7 +80,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   Future<void> _handleCompletion(int minutes, String? note) async {
     // 1. Stop Timer
     setState(() {
-      _isTimerRunning = false;
       _showCelebration = true;
     });
 
@@ -306,8 +304,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                     ? (_pomodoroCycle == 0 ? 25 * 60 : 5 * 60)
                                     : null,
                                 onTick: (seconds) => _elapsedSeconds = seconds,
-                                onStateChange: (isRunning) =>
-                                    _isTimerRunning = isRunning,
+                                onStateChange: (_) {},
                                 onComplete:
                                     _onPomodoroComplete, // Call only for Pomodoro
                               ),

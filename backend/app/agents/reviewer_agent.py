@@ -383,8 +383,10 @@ class ReviewerAgent:
         try:
             # 调用LLM进行审查
             response = await self.llm.chat_json(
-                system_prompt=REVIEWER_SYSTEM_PROMPT,
-                user_message=prompt,
+                messages=[
+                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.2
             )
 
@@ -466,8 +468,10 @@ class ReviewerAgent:
 
         try:
             response = await self.llm.chat_json(
-                system_prompt=REVIEWER_SYSTEM_PROMPT,
-                user_message=prompt,
+                messages=[
+                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.2
             )
 

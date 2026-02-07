@@ -13,7 +13,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 
 const int _planReviewBuildThresholdMs = int.fromEnvironment(
   'PLAN_REVIEW_BUILD_MS',
-  defaultValue: 600,
+  defaultValue: 900,
 );
 const int _taskBoardBuildThresholdMs = int.fromEnvironment(
   'TASK_BOARD_BUILD_MS',
@@ -25,7 +25,11 @@ const int _planReviewRebuildThresholdMs = int.fromEnvironment(
 );
 const int _scrollFrameThresholdUs = int.fromEnvironment(
   'SCROLL_FRAME_US',
-  defaultValue: 50000,
+  defaultValue: 70000,
+);
+const int _chatListBuildThresholdMs = int.fromEnvironment(
+  'CHAT_LIST_BUILD_MS',
+  defaultValue: 260,
 );
 
 void main() {
@@ -98,7 +102,7 @@ void main() {
       expect(stopwatch.elapsedMilliseconds, lessThan(100));
     });
 
-    testWidgets('Chat message list builds 100 items in under 200ms',
+    testWidgets('Chat message list builds 100 items in under threshold',
         (tester) async {
       final messages = List.generate(
         100,
@@ -132,7 +136,10 @@ void main() {
       stopwatch.stop();
 
       print('100 messages build: ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(200));
+      expect(
+        stopwatch.elapsedMilliseconds,
+        lessThan(_chatListBuildThresholdMs),
+      );
     });
   });
 

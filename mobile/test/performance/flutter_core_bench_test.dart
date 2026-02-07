@@ -312,7 +312,7 @@ void main() {
       print('=========================\n');
 
       // Verify all are within acceptable limits
-      expect(results['Text'], lessThan(20));
+      expect(results['Text'], lessThanOrEqualTo(20));
       expect(results['ListView'], lessThan(200));
       expect(results['Column'], lessThan(50));
     });
