@@ -2,7 +2,7 @@
 光子积分服务
 Photon Service - 处理光子积分的发放、扣除和余额查询
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +16,11 @@ from app.core.cache import cache_service
 from app.models.shop import PhotonTransactionHistory
 from app.models.shop import PhotonTransactionType as DBPhotonTransactionType
 from app.models.user import User
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime compatible with existing DB fields."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PhotonTransactionType:
@@ -82,7 +87,7 @@ class PhotonService:
 
         # 更新余额
         user.photon_balance = new_balance
-        user.updated_at = datetime.utcnow()
+        user.updated_at = _utcnow()
 
         # 先删除缓存，防止脏读（在commit前删除确保一致性）
         if delete_cache:
@@ -136,7 +141,7 @@ class PhotonService:
             "new_balance": new_balance,
             "source": source,
             "transaction_type": transaction_type,
-            "timestamp": datetime.utcnow()
+            "timestamp": _utcnow()
         }
 
     async def deduct_photons(
@@ -192,7 +197,7 @@ class PhotonService:
             "new_balance": new_balance,
             "reason": reason,
             "transaction_type": transaction_type,
-            "timestamp": datetime.utcnow()
+            "timestamp": _utcnow()
         }
 
     async def get_balance(self, user_id: str) -> int:
@@ -477,7 +482,7 @@ class PhotonService:
         """
         from datetime import timedelta
 
-        since_date = datetime.utcnow() - timedelta(days=days)
+        since_date = _utcnow() - timedelta(days=days)
 
         # 查询交易历史
         query = select(PhotonTransactionHistory).where(

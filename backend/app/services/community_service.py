@@ -2,7 +2,7 @@
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +24,11 @@ from app.models.community import (
 )
 from app.models.user import User
 from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime compatible with existing DB fields."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _is_visible_to(content_data: dict | None, user_id: UUID) -> bool:
@@ -222,8 +227,8 @@ class GroupService:
             group_id=group.id,
             user_id=creator_id,
             role=GroupRole.OWNER,
-            joined_at=datetime.utcnow(),
-            last_active_at=datetime.utcnow()
+            joined_at=_utcnow(),
+            last_active_at=_utcnow()
         )
         db.add(owner)
 
@@ -272,7 +277,7 @@ class GroupService:
         # 计算剩余天数
         days_remaining = None
         if group.deadline:
-            delta = group.deadline - datetime.utcnow()
+            delta = group.deadline - _utcnow()
             days_remaining = max(0, delta.days)
 
         return {
@@ -335,8 +340,8 @@ class GroupService:
             group_id=group_id,
             user_id=user_id,
             role=GroupRole.MEMBER,
-            joined_at=datetime.utcnow(),
-            last_active_at=datetime.utcnow()
+            joined_at=_utcnow(),
+            last_active_at=_utcnow()
         )
         db.add(member)
         await db.flush()
@@ -399,7 +404,7 @@ class GroupService:
         for group, membership, count in result.all():
             days_remaining = None
             if group.deadline:
-                delta = group.deadline - datetime.utcnow()
+                delta = group.deadline - _utcnow()
                 days_remaining = max(0, delta.days)
 
             groups.append({
@@ -447,7 +452,7 @@ class GroupService:
         await db.execute(
             update(GroupMember)
             .where(GroupMember.group_id == group_id)
-            .values(is_deleted=True, deleted_at=datetime.utcnow())
+            .values(is_deleted=True, deleted_at=_utcnow())
         )
 
         return True
@@ -557,7 +562,7 @@ class GroupMessageService:
         db.add(message)
 
         # 更新最后活跃时间
-        member.last_active_at = datetime.utcnow()
+        member.last_active_at = _utcnow()
 
         await db.flush()
 
@@ -599,7 +604,7 @@ class GroupMessageService:
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
 
-        msg.edited_at = datetime.utcnow()
+        msg.edited_at = _utcnow()
         db.add(msg)
         await db.flush()
 
@@ -638,14 +643,14 @@ class GroupMessageService:
         if not is_sender and not is_admin:
             raise ValueError("无权限撤回该消息")
 
-        if is_sender and (datetime.utcnow() - msg.created_at).total_seconds() > 86400:
+        if is_sender and (_utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         if msg.is_revoked:
             return msg
 
         msg.is_revoked = True
-        msg.revoked_at = datetime.utcnow()
+        msg.revoked_at = _utcnow()
         msg.content = None
         msg.content_data = None
         msg.reactions = None
@@ -874,7 +879,7 @@ class CheckinService:
             raise ValueError("不是群组成员")
 
         # 检查今日是否已打卡
-        today = datetime.utcnow().date()
+        today = _utcnow().date()
         if member.last_checkin_date and member.last_checkin_date.date() == today:
             raise ValueError("今日已打卡")
 
@@ -885,7 +890,7 @@ class CheckinService:
         else:
             member.checkin_streak = 1
 
-        member.last_checkin_date = datetime.utcnow()
+        member.last_checkin_date = _utcnow()
 
         # 计算火苗奖励
         base_flame = 10
@@ -1039,7 +1044,7 @@ class GroupTaskService:
             group_task_id=task_id,
             user_id=user_id,
             personal_task_id=personal_task.id,
-            claimed_at=datetime.utcnow()
+            claimed_at=_utcnow()
         )
         db.add(claim)
 
@@ -1061,7 +1066,7 @@ class GroupTaskService:
             return claim
 
         claim.is_completed = True
-        claim.completed_at = datetime.utcnow()
+        claim.completed_at = _utcnow()
 
         # 更新群任务完成计数
         group_task = await GroupTask.get_by_id(db, claim.group_task_id)
@@ -1206,7 +1211,7 @@ class PrivateMessageService:
             reply_to_id=data.reply_to_id,
             thread_root_id=data.thread_root_id,
             mention_user_ids=mention_user_ids,
-            created_at=datetime.utcnow()
+            created_at=_utcnow()
         )
         db.add(message)
         await db.flush()
@@ -1251,7 +1256,7 @@ class PrivateMessageService:
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
 
-        msg.edited_at = datetime.utcnow()
+        msg.edited_at = _utcnow()
         db.add(msg)
         await db.flush()
 
@@ -1280,11 +1285,11 @@ class PrivateMessageService:
             raise ValueError("无权限撤回该消息")
         if msg.is_revoked:
             return msg
-        if (datetime.utcnow() - msg.created_at).total_seconds() > 86400:
+        if (_utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         msg.is_revoked = True
-        msg.revoked_at = datetime.utcnow()
+        msg.revoked_at = _utcnow()
         msg.content = None
         msg.content_data = None
         msg.reactions = None
@@ -1421,7 +1426,7 @@ class PrivateMessageService:
             )
         ).values(
             is_read=True,
-            read_at=datetime.utcnow()
+            read_at=_utcnow()
         )
 
         result = await db.execute(stmt)
