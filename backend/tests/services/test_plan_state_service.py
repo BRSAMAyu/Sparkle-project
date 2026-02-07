@@ -10,7 +10,7 @@ Tests cover:
 """
 import json
 import pytest
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -23,6 +23,10 @@ from app.services.plan_state_service import (
     PLAN_STATE_CACHE_TTL,
 )
 from app.models.plan_state import PlanState, PlanStateStatus
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.fixture
@@ -67,8 +71,8 @@ def sample_plan_state():
         constraints={},
         version=3,
         status=PlanStateStatus.ACTIVE.value,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=_utcnow(),
+        updated_at=_utcnow(),
     )
 
 
@@ -232,16 +236,16 @@ class TestUpsertPlanState:
             constraints={},
             version=1,
             status=PlanStateStatus.ACTIVE.value,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         # Return the new state on refresh calls
         async def mock_refresh(obj):
             obj.id = new_state.id
             obj.version = 1
-            obj.created_at = datetime.utcnow()
-            obj.updated_at = datetime.utcnow()
+            obj.created_at = _utcnow()
+            obj.updated_at = _utcnow()
 
         mock_db.refresh.side_effect = mock_refresh
 

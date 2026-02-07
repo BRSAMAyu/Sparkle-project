@@ -11,7 +11,7 @@ Leaderboard Service
 - STREAK: 连胜排行榜
 - GROUP_FLAME: 群组火苗榜
 """
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -32,6 +32,11 @@ from app.schemas.leaderboard import (
     LeaderboardType,
     MyRankResponse,
 )
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LeaderboardService:
@@ -274,7 +279,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=my_score,
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(scored_users),
             period=request.period
         )
@@ -382,7 +387,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=my_score,
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(scored_users),
             period=request.period
         )
@@ -458,7 +463,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score),
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(sorted_users),
             period=request.period
         )
@@ -540,7 +545,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=my_score,
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(scored_users),
             period=request.period
         )
@@ -612,7 +617,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score) if my_score else None,
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(scored_users),
             period=request.period
         )
@@ -682,7 +687,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score),
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(rows),
             period=request.period
         )
@@ -745,7 +750,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score),
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(rows),
             period=request.period
         )
@@ -831,7 +836,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=my_rank,
             my_score=float(my_score),
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(rows),
             period=request.period
         )
@@ -928,7 +933,7 @@ class LeaderboardService:
             entries=entries,
             my_rank=None,
             my_score=None,
-            last_updated=datetime.utcnow(),
+            last_updated=_utcnow(),
             total_participants=len(groups),
             period=request.period
         )

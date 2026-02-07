@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke
+.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
@@ -107,6 +107,18 @@ smoke:
 	curl -fsS http://localhost:8080/api/v1/health > /dev/null || (echo "❌ Gateway /api/v1/health failed" && exit 1); \
 	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
 	echo "✅ Smoke checks passed."
+
+quality-baseline:
+	@echo "📊 Collecting quality baseline metrics..."
+	python3 scripts/collect_quality_baseline.py --output quality/baseline_snapshot.json
+
+quality-baseline-full:
+	@echo "📊 Collecting full quality baseline (includes runtime checks)..."
+	python3 scripts/collect_quality_baseline.py --run-checks --output quality/baseline_snapshot_full.json
+
+quality-budget-check:
+	@echo "🧱 Enforcing technical debt budget..."
+	python3 scripts/check_tech_debt_budget.py
 
 # Build proto toolchain container image (single source of truth for local + CI)
 proto-tools-build:

@@ -50,6 +50,9 @@ jobs:
       - name: Install Python Lint Tools
         run: pip install ruff mypy
 
+      - name: Install quality gate runtime deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Python Lint (Ruff)
         run: ruff check backend/app --output-format=github
 
@@ -67,6 +70,9 @@ jobs:
       - name: Flutter Analyze
         working-directory: mobile
         run: flutter analyze --no-fatal-infos
+
+      - name: Technical Debt Budget Gate
+        run: python3 scripts/check_tech_debt_budget.py
 
   # ==================== JOB 2: BACKEND TEST ====================
   backend-test:

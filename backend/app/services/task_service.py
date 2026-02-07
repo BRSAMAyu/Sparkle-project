@@ -24,6 +24,11 @@ from app.services.llm_dispatcher import LLMDispatcher
 from app.services.personalization import get_personalization_engine
 
 
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class TaskService:
     @staticmethod
     async def get_by_id(
@@ -123,7 +128,7 @@ class TaskService:
         """Start task"""
         old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
-        db_obj.started_at = datetime.now(UTC)
+        db_obj.started_at = _utcnow()
 
         db.add(db_obj)
         await db.commit()
@@ -205,7 +210,7 @@ class TaskService:
     ) -> Task:
         """Complete task and update plan progress if task belongs to a plan"""
         db_obj.status = TaskStatus.COMPLETED
-        db_obj.completed_at = datetime.now(UTC)
+        db_obj.completed_at = _utcnow()
         db_obj.actual_minutes = actual_minutes
         if note:
             db_obj.user_note = note
@@ -323,7 +328,7 @@ class TaskService:
     ) -> Task:
         """Abandon task"""
         db_obj.status = TaskStatus.ABANDONED
-        db_obj.completed_at = datetime.utcnow() # using completed_at for end time
+        db_obj.completed_at = _utcnow()  # using completed_at for end time
         if reason:
             db_obj.user_note = f"Abandoned: {reason}"
 
@@ -345,7 +350,7 @@ class TaskService:
 
         time_spent = None
         if db_obj.started_at:
-            time_spent = int((datetime.utcnow() - db_obj.started_at).total_seconds() / 60)
+            time_spent = int((_utcnow() - db_obj.started_at).total_seconds() / 60)
 
         event = TaskAbandoned(
             user_id=str(db_obj.user_id),
@@ -420,7 +425,7 @@ class TaskService:
         if not tasks:
             return []
 
-        current_time = datetime.utcnow()
+        current_time = _utcnow()
         confirmed_tasks = []
         for task in tasks:
             # Use TaskService.start() to ensure proper state synchronization
