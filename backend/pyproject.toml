@@ -192,4 +192,6 @@ python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
 markers = [
   "benchmark: performance benchmarks (set PERF_TESTS=1 to run)",
+  "performance: performance/stress tests",
+  "e2e: end-to-end tests",
 ]

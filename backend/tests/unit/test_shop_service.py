@@ -26,6 +26,13 @@ def _result_with_scalars(values):
     return result
 
 
+def _mock_db():
+    db = AsyncMock()
+    db.add = Mock()
+    db.delete = Mock()
+    return db
+
+
 def _build_item(item_id: str | None = None) -> ShopItem:
     item = Mock(spec=ShopItem)
     item.id = item_id or str(uuid4())
@@ -50,7 +57,7 @@ def _build_item(item_id: str | None = None) -> ShopItem:
 
 @pytest.mark.asyncio
 async def test_get_available_items_returns_mapped_fields():
-    db = AsyncMock()
+    db = _mock_db()
     db.execute.return_value = _result_with_scalars([_build_item()])
 
     service = ShopService(db)
@@ -64,7 +71,7 @@ async def test_get_available_items_returns_mapped_fields():
 
 @pytest.mark.asyncio
 async def test_purchase_item_success():
-    db = AsyncMock()
+    db = _mock_db()
     db.begin = Mock(return_value=_AsyncTx())
     db.in_transaction = Mock(return_value=False)
     db.refresh = AsyncMock()
@@ -92,7 +99,7 @@ async def test_purchase_item_success():
 
 @pytest.mark.asyncio
 async def test_purchase_item_rejects_out_of_stock():
-    db = AsyncMock()
+    db = _mock_db()
     db.begin = Mock(return_value=_AsyncTx())
     db.in_transaction = Mock(return_value=False)
     db.rollback = AsyncMock()
@@ -109,7 +116,7 @@ async def test_purchase_item_rejects_out_of_stock():
 
 @pytest.mark.asyncio
 async def test_get_user_purchases_returns_paged_result():
-    db = AsyncMock()
+    db = _mock_db()
     purchase = Mock(spec=ShopPurchase)
     purchase.id = uuid4()
     purchase.item_id = str(uuid4())

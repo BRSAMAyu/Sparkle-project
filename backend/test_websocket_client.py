@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import time
+import uuid
 import urllib.request
 import urllib.error
 from jose import jwt as jose_jwt
@@ -185,30 +186,37 @@ async def test_multiple_messages():
     """
     测试多轮对话
     """
-    user_id = DEFAULT_USER_ID
-    token = _create_jwt(user_id)
-    uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
+    auth = _get_auth_token_and_user_id()
+    if auth:
+        token, user_id = auth
+    else:
+        user_id = DEFAULT_USER_ID
+        token = _create_jwt(user_id)
 
     headers = {"Authorization": f"Bearer {token}"}
     logger.info(f"🔌 Testing multiple messages...")
 
-    async with websockets.connect(uri, additional_headers=headers) as websocket:
-        messages = [
-            "帮我制定高数复习计划",
-            "什么是微积分？",
-            "推荐一本好书"
-        ]
+    messages = [
+        "帮我制定高数复习计划",
+        "什么是微积分？",
+        "推荐一本好书"
+    ]
+    session_id = str(uuid.uuid4())
 
-        for i, msg in enumerate(messages, 1):
-            logger.info(f"\n📤 Message {i}/{len(messages)}: {msg}")
+    # 对每条消息独立建连，避免因服务端主动结束连接导致假失败
+    for i, msg in enumerate(messages, 1):
+        uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
+        logger.info(f"\n📤 Message {i}/{len(messages)}: {msg}")
 
+        async with websockets.connect(uri, additional_headers=headers) as websocket:
             await websocket.send(json.dumps({
                 "message": msg,
-                "session_id": "multi_test_session",
+                "session_id": session_id,
                 "nickname": "测试同学"
             }))
 
             # 接收这条消息的所有响应
+            saw_finish = False
             while True:
                 try:
                     response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
@@ -218,7 +226,12 @@ async def test_multiple_messages():
                         print(data.get("delta", ""), end="", flush=True)
 
                     if data.get("finish_reason") and data.get("finish_reason") != "NULL":
+                        saw_finish = True
                         print()  # 换行
+                        continue
+
+                    # finish 后通常会有 meta，拿到后可结束当前消息
+                    if saw_finish and data.get("type") == "meta":
                         break
 
                 except asyncio.TimeoutError:

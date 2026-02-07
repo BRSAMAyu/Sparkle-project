@@ -18,8 +18,10 @@ import pytest
 import asyncio
 from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 
+from app.config import settings
+from app.core.cache import cache_service
 from app.models.user import User
 from app.models.shop import ShopItem, ShopPurchase, UserConsumable, PhotonTransactionHistory
 # from app.core.security import get_hashed_password  # Not needed for tests
@@ -33,7 +35,12 @@ from app.models.shop import ShopItem, ShopPurchase, UserConsumable, PhotonTransa
 async def shop_test_user(db_session: AsyncSession) -> User:
     """Create a test user for shop tests"""
     result = await db_session.execute(
-        select(User).where(User.email == "shop_test@example.com")
+        select(User).where(
+            or_(
+                User.email == "shop_test@example.com",
+                User.username == "shop_test_user",
+            )
+        )
     )
     user = result.scalar_one_or_none()
 
@@ -48,6 +55,13 @@ async def shop_test_user(db_session: AsyncSession) -> User:
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
+    else:
+        user.email = "shop_test@example.com"
+        user.username = "shop_test_user"
+        user.photon_balance = 1000
+        await db_session.commit()
+        await db_session.refresh(user)
+    await cache_service.delete(f"{settings.APP_NAME}:photon:balance:{user.id}")
 
     yield user
 
@@ -102,6 +116,15 @@ async def setup_shop_items(db_session: AsyncSession) -> list[ShopItem]:
         ),
     ]
 
+    item_ids = [item.id for item in items]
+    await db_session.execute(delete(UserConsumable).where(UserConsumable.consumable_id.in_(item_ids)))
+    await db_session.execute(delete(ShopPurchase).where(ShopPurchase.item_id.in_(item_ids)))
+    await db_session.execute(delete(PhotonTransactionHistory).where(PhotonTransactionHistory.related_item_id.in_(item_ids)))
+    existing = await db_session.execute(select(ShopItem).where(ShopItem.id.in_(item_ids)))
+    for row in existing.scalars().all():
+        await db_session.delete(row)
+    await db_session.commit()
+
     for item in items:
         db_session.add(item)
     await db_session.commit()
@@ -112,6 +135,9 @@ async def setup_shop_items(db_session: AsyncSession) -> list[ShopItem]:
     yield items
 
     # Cleanup
+    await db_session.execute(delete(UserConsumable).where(UserConsumable.consumable_id.in_(item_ids)))
+    await db_session.execute(delete(ShopPurchase).where(ShopPurchase.item_id.in_(item_ids)))
+    await db_session.execute(delete(PhotonTransactionHistory).where(PhotonTransactionHistory.related_item_id.in_(item_ids)))
     for item in items:
         await db_session.delete(item)
     await db_session.commit()

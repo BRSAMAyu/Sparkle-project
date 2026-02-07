@@ -9,6 +9,7 @@ from uuid import uuid4
 from loguru import logger
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload
 
 from app.config import settings
 from app.core.cache import cache_service
@@ -60,8 +61,8 @@ class PhotonService:
         Returns:
             (old_balance, new_balance, user)
         """
-        # 获取用户
-        query = select(User).where(User.id == user_id)
+        # 获取用户：强制禁用关系 eager load，避免 FOR UPDATE 与外连接冲突
+        query = select(User).options(lazyload("*")).where(User.id == user_id)
         if lock_for_update:
             query = query.with_for_update()
         result = await self.db.execute(query)

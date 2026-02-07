@@ -5,11 +5,28 @@
 import asyncio
 import grpc
 import os
+import uuid
 from loguru import logger
+from sqlalchemy import text
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.core.security import create_access_token
 from app.config import settings
+from app.db.session import AsyncSessionLocal
+
+
+async def _resolve_test_user_id() -> str:
+    env_user_id = os.getenv("TEST_USER_ID")
+    if env_user_id:
+        return env_user_id
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(text("SELECT id::text FROM users WHERE is_active = true LIMIT 1"))
+        row = result.first()
+        if row and row[0]:
+            return str(row[0])
+
+    raise RuntimeError("No active user found. Set TEST_USER_ID in environment.")
 
 
 async def test_demo_mode():
@@ -18,7 +35,8 @@ async def test_demo_mode():
     """
     logger.info("🧪 Testing gRPC StreamChat with REAL_USER...")
     
-    real_user_id = "006848e2-7961-4e46-a72c-375749013d0e"
+    real_user_id = await _resolve_test_user_id()
+    session_id = str(uuid.uuid4())
 
     async with grpc.aio.insecure_channel('localhost:50051') as channel:
         stub = agent_service_pb2_grpc.AgentServiceStub(channel)
@@ -26,7 +44,7 @@ async def test_demo_mode():
         # 使用非常简单的请求，确保能走到最后的 record_decision
         request = agent_service_pb2.ChatRequest(
             user_id=real_user_id,
-            session_id="fresh_session_v5",
+            session_id=session_id,
             message="你好，请介绍一下你自己", 
             user_profile=agent_service_pb2.UserProfile(
                 nickname="测试同学",
@@ -38,14 +56,15 @@ async def test_demo_mode():
 
         token = create_access_token({"sub": real_user_id})
         
-        # Use Internal API Key to bypass JWT secret mismatch issues in dev environment
-        # This matches how Gateway calls Agent
-        # Use settings.INTERNAL_API_KEY which is loaded from .env by Pydantic
-        internal_key = "dev_internal_key"
+        # Use configured internal key for service-to-service authentication.
+        internal_key = os.getenv("INTERNAL_API_KEY") or settings.INTERNAL_API_KEY
+        if not internal_key:
+            logger.error("❌ INTERNAL_API_KEY is not configured")
+            return False
         
         metadata = (
             ("authorization", f"Bearer {token}"),
-            ("user-id", "demo_user"),
+            ("user-id", real_user_id),
             ("x-trace-id", "demo_trace_001"),
             ("x-internal-api-key", internal_key), # Add internal key
         )

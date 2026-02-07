@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse, urlunparse
 import pytest
 import pytest_asyncio
 import redis.asyncio as redis
@@ -39,6 +40,32 @@ from app.models.shop import (  # noqa: F401
 )
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+def _normalize_test_redis_url(raw_url: str) -> str:
+    """Normalize docker-internal redis host to localhost for host-side test runs."""
+    parsed = urlparse(raw_url)
+    hostname = parsed.hostname
+    if hostname != "sparkle_redis":
+        return raw_url
+
+    auth = ""
+    if parsed.username:
+        auth = parsed.username
+        if parsed.password:
+            auth = f"{auth}:{parsed.password}"
+        auth = f"{auth}@"
+    elif parsed.password:
+        auth = f":{parsed.password}@"
+
+    port = f":{parsed.port}" if parsed.port else ""
+    return urlunparse(parsed._replace(netloc=f"{auth}127.0.0.1{port}"))
+
+
+_runtime_redis_url = os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0")
+_runtime_redis_url = _normalize_test_redis_url(_runtime_redis_url)
+os.environ["REDIS_URL"] = _runtime_redis_url
+settings.REDIS_URL = _runtime_redis_url
 
 
 @pytest_asyncio.fixture(name="db_session")
@@ -147,7 +174,7 @@ async def test_shop_items_fixture(db_session: AsyncSession) -> list[ShopItem]:
 @pytest_asyncio.fixture(name="redis_client")
 async def redis_client_fixture():
     """Create Redis client for integration tests."""
-    redis_url = os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0")
+    redis_url = _normalize_test_redis_url(os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0"))
     password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
     client = redis.from_url(
         redis_url,
@@ -155,10 +182,20 @@ async def redis_client_fixture():
         decode_responses=True,
         password=password,
     )
-
+    try:
+        await client.ping()
+    except Exception as exc:
+        if hasattr(client, "aclose"):
+            await client.aclose()
+        else:
+            await client.close()
+        pytest.skip(f"Redis unavailable for integration fixture: {exc}")
     yield client
 
-    await client.flushdb()
+    try:
+        await client.flushdb()
+    except Exception:
+        pass
     if hasattr(client, "aclose"):
         await client.aclose()
     else:

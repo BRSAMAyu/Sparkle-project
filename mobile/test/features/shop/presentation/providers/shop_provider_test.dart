@@ -195,7 +195,7 @@ void main() {
 
       container.read(shopItemsProvider);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(shopItemsProvider);
 
@@ -242,7 +242,7 @@ void main() {
       }) async => items;
 
       container.read(shopItemsProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(shopItemsProvider);
 
@@ -264,7 +264,7 @@ void main() {
 
       container.read(shopItemsProvider);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(shopItemsProvider);
 
@@ -294,7 +294,7 @@ void main() {
 
       // Initial load
       container.read(shopItemsProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       // Purchase item
       final notifier = container.read(shopItemsProvider.notifier);
@@ -328,7 +328,7 @@ void main() {
       };
 
       container.read(shopItemsProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final notifier = container.read(shopItemsProvider.notifier);
       final result = await notifier.purchaseItem('skin_001');
@@ -357,7 +357,7 @@ void main() {
       }) async => items;
 
       container.read(shopItemsProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       mockRepository.getShopItemsCalls = 0;
       mockRepository.getShopItemsHandler = ({
@@ -370,7 +370,7 @@ void main() {
       final notifier = container.read(shopItemsProvider.notifier);
       await notifier.refresh();
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       expect(mockRepository.getShopItemsCalls, 1);
     });
@@ -453,7 +453,7 @@ void main() {
 
       await notifier.loadPurchaseHistory();
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(purchaseHistoryProvider);
 
@@ -509,7 +509,7 @@ void main() {
 
       await notifier.refresh();
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(purchaseHistoryProvider);
 
@@ -541,7 +541,7 @@ void main() {
 
       container.read(inventoryProvider);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(inventoryProvider);
 
@@ -577,7 +577,7 @@ void main() {
       }) async => {'success': true};
 
       container.read(inventoryProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final notifier = container.read(inventoryProvider.notifier);
       final result = await notifier.equipItem(
@@ -606,7 +606,7 @@ void main() {
       };
 
       container.read(inventoryProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final notifier = container.read(inventoryProvider.notifier);
       final result = await notifier.equipItem(
@@ -660,7 +660,7 @@ void main() {
       mockRepository.getInventoryHandler = () async => inventory;
 
       container.read(inventoryProvider);
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       final state = container.read(inventoryProvider);
 
@@ -892,7 +892,7 @@ void main() {
       testContainer.read(inventoryProvider);
       testContainer.read(ownedItemsProvider);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       // Should not throw
       expect(testContainer.dispose, returnsNormally);

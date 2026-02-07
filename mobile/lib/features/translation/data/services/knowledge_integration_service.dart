@@ -49,7 +49,7 @@ class KnowledgeIntegrationService {
 
       if (response.statusCode == 200 && response.data?['success'] == true) {
         debugPrint('✅ Vocabulary node created/updated: ${response.data?['node_id']}');
-        return VocabularyNodeResult.fromJson(response.data! as Map<String, dynamic>);
+        return VocabularyNodeResult.fromJson(response.data!);
       } else {
         debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
         return null;

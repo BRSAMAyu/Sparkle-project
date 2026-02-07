@@ -197,7 +197,8 @@ async def test_2_shop_items_inventory(db: AsyncSession):
 
     logger.info("\n📋 示例商品（最便宜3件）:")
     for item in items:
-        logger.info(f"  - {item.name} ({item.rarity.value}) - {item.price_photons}光子")
+        rarity = item.rarity.value if hasattr(item.rarity, "value") else str(item.rarity)
+        logger.info(f"  - {item.name} ({rarity}) - {item.price_photons}光子")
 
 
 async def test_3_photon_balance(db: AsyncSession, shop_test_user: dict):

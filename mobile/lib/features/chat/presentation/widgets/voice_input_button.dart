@@ -34,7 +34,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   int _recordingDuration = 0;
   Timer? _durationTimer;
   AnimationController? _animationController;
-  String? _currentTranscription;
 
   @override
   void initState() {
@@ -140,7 +139,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         onTranscription: (text) {
           if (mounted) {
             setState(() {
-              _currentTranscription = text;
               _isProcessing = false;
             });
             // 实时更新父组件的文本
@@ -219,7 +217,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       setState(() {
         _isRecording = false;
         _isProcessing = false;
-        _currentTranscription = null;
       });
       _animationController?.reverse();
       widget.onRecordingStopped?.call();
