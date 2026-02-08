@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -13,6 +13,9 @@ from loguru import logger
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
+
+if TYPE_CHECKING:
+    from app.orchestration.step_feedback_collector import PlanExecutionFeedback
 
 
 def _utcnow() -> datetime:
@@ -69,6 +72,89 @@ class AdaptiveReplanner:
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def on_plan_execution_completed(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        feedback: "PlanExecutionFeedback",
+    ) -> None:
+        """Handle feedback from DAG plan execution.
+
+        Persists step-level feedback to PlanState and triggers
+        replanning if the execution signals warrant it.
+        """
+        # 1. Persist execution feedback to PlanState.feedback_log
+        feedback_entry = self._build_feedback_entry(
+            feedback_type="plan_execution",
+            content=(
+                f"Plan execution completed: {feedback.validation_status}, "
+                f"score={feedback.quality_score:.2f}, "
+                f"{feedback.steps_passed}/{feedback.total_steps} steps passed"
+            ),
+            task_id=None,
+            applied_adjustment={
+                "quality_score": feedback.quality_score,
+                "slow_tools": feedback.slow_tools,
+                "failed_tools": feedback.failed_tools,
+                "unreliable_dependencies": feedback.unreliable_dependencies,
+                "aborted": feedback.aborted,
+            },
+        )
+
+        adaptive_facts: dict[str, Any] = {}
+        if feedback.slow_tools:
+            adaptive_facts["known_slow_tools"] = feedback.slow_tools
+        if feedback.failed_tools:
+            adaptive_facts["recently_failed_tools"] = feedback.failed_tools
+        if feedback.unreliable_dependencies:
+            adaptive_facts["unreliable_dep_steps"] = feedback.unreliable_dependencies
+
+        patch: dict[str, Any] = {"feedback_log": feedback_entry}
+        if adaptive_facts:
+            patch["facts"] = adaptive_facts
+
+        await self.plan_state_service.upsert_plan_state(
+            user_id=user_id,
+            plan_id=plan_id,
+            patch=patch,
+            bump_version=False,
+        )
+
+        # 2. Trigger replanning if execution feedback warrants it
+        if feedback.needs_replanning:
+            state = await self.plan_state_service.get_plan_state(user_id, plan_id)
+            if state and not self._recently_triggered(
+                state.facts or {}, "last_replan_at", self.AUTO_REPLAN_COOLDOWN,
+            ):
+                replan_reason = (
+                    f"Execution feedback: {feedback.validation_status}, "
+                    f"failed_tools={feedback.failed_tools}"
+                )
+                await plan_review_service.trigger_replanning(
+                    plan_id=str(plan_id),
+                    user_id=str(user_id),
+                    feedback=replan_reason,
+                )
+                # Mark replan timestamp
+                await self.plan_state_service.upsert_plan_state(
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    patch={
+                        "facts": {
+                            "adaptive_meta": {
+                                "last_replan_at": _utcnow().isoformat(),
+                                "last_trigger": "plan_execution_feedback",
+                                "last_replan_reason": [replan_reason],
+                            }
+                        }
+                    },
+                    bump_version=True,
+                )
+                logger.info(
+                    "Triggered replan from execution feedback: plan={}, severity={}",
+                    plan_id, feedback.severity,
+                )
 
     async def _handle_report(
         self,

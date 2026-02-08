@@ -1,7 +1,11 @@
+from __future__ import annotations
+
+import asyncio
 import json
 import time
 import uuid
-from typing import Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from pydantic import ValidationError
@@ -11,6 +15,32 @@ from app.db.session import AsyncSessionLocal
 from app.services.tool_history_service import ToolHistoryService
 from app.tools.base import ToolResult
 from app.tools.registry import tool_registry
+
+if TYPE_CHECKING:
+    from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
+
+
+@dataclass
+class StepResult:
+    """Result of executing a single DAG step."""
+    step_id: str
+    tool_name: str
+    tool_result: ToolResult
+    duration_ms: int = 0
+    output_key: str | None = None
+    output_data: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class PlanExecutionResult:
+    """Aggregate result of executing an entire plan via DAG layers."""
+    plan_id: str
+    step_results: list[StepResult] = field(default_factory=list)
+    tool_results: list[ToolResult] = field(default_factory=list)
+    execution_layers_completed: int = 0
+    total_layers: int = 0
+    aborted: bool = False
+    abort_reason: str | None = None
 
 
 class ToolExecutor:
@@ -374,3 +404,167 @@ class ToolExecutor:
             )
             results.append(result)
         return results
+
+    # ------------------------------------------------------------------
+    # DAG-aware plan execution
+    # ------------------------------------------------------------------
+
+    async def execute_plan(
+        self,
+        plan: "ExecutablePlan",
+        user_id: str,
+        db_session: Any | None,
+        progress_callback: Any | None = None,
+    ) -> PlanExecutionResult:
+        """Execute an ExecutablePlan respecting DAG layer ordering.
+
+        Steps within a layer run concurrently (asyncio.gather).
+        Output from earlier steps is propagated to dependent steps
+        via ``output_key`` → parameter substitution.
+
+        If a *required* step fails, execution is aborted and remaining
+        layers are skipped.
+
+        Falls back to sequential execution when no ``execution_order``
+        is defined (backward compatible).
+        """
+        layers = plan.get_execution_layers()
+        result = PlanExecutionResult(
+            plan_id=plan.plan_id,
+            total_layers=len(layers),
+        )
+
+        # Shared output store: step_id -> output_data
+        output_store: dict[str, dict[str, Any]] = {}
+
+        for layer_idx, layer in enumerate(layers):
+            if not layer:
+                continue
+
+            # Resolve parameter placeholders from output_store
+            resolved_layer = self._resolve_layer_params(layer, output_store)
+
+            # Execute steps within this layer concurrently
+            step_results = await asyncio.gather(
+                *(
+                    self._execute_step(tc, user_id, db_session, progress_callback)
+                    for tc in resolved_layer
+                ),
+                return_exceptions=True,
+            )
+
+            # Process results
+            layer_aborted = False
+            for tc, sr in zip(resolved_layer, step_results):
+                if isinstance(sr, BaseException):
+                    sr = StepResult(
+                        step_id=tc.id,
+                        tool_name=tc.name,
+                        tool_result=ToolResult(
+                            success=False,
+                            tool_name=tc.name,
+                            error_message=str(sr),
+                        ),
+                    )
+
+                result.step_results.append(sr)
+                result.tool_results.append(sr.tool_result)
+
+                # Store output for downstream steps
+                if sr.output_key and sr.tool_result.success:
+                    output_store[sr.step_id] = sr.output_data
+
+                # Check required step failure
+                criteria = tc.success_criteria
+                is_required = criteria.required if criteria else True
+                if not sr.tool_result.success and is_required:
+                    layer_aborted = True
+
+            result.execution_layers_completed = layer_idx + 1
+
+            if layer_aborted:
+                result.aborted = True
+                result.abort_reason = (
+                    f"Required step failed in layer {layer_idx}"
+                )
+                logger.warning(
+                    "Plan {} aborted at layer {}: required step failed",
+                    plan.plan_id, layer_idx,
+                )
+                break
+
+        return result
+
+    async def _execute_step(
+        self,
+        spec: "ToolCallSpec",
+        user_id: str,
+        db_session: Any | None,
+        progress_callback: Any | None,
+    ) -> StepResult:
+        """Execute a single ToolCallSpec and return StepResult."""
+        start = time.time()
+        tool_result = await self.execute_tool_call(
+            tool_name=spec.name,
+            arguments=spec.params,
+            user_id=user_id,
+            db_session=db_session,
+            progress_callback=progress_callback,
+            tool_call_id=spec.id,
+            compensation_call=spec.compensation_call,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+
+        # Extract output_data from result for downstream propagation
+        output_data: dict[str, Any] = {}
+        if spec.output_key and tool_result.success and tool_result.data:
+            if isinstance(tool_result.data, dict):
+                output_data = tool_result.data
+            else:
+                output_data = {"_value": tool_result.data}
+
+        return StepResult(
+            step_id=spec.id,
+            tool_name=spec.name,
+            tool_result=tool_result,
+            duration_ms=duration_ms,
+            output_key=spec.output_key,
+            output_data=output_data,
+        )
+
+    @staticmethod
+    def _resolve_layer_params(
+        layer: list["ToolCallSpec"],
+        output_store: dict[str, dict[str, Any]],
+    ) -> list["ToolCallSpec"]:
+        """Substitute placeholder params with outputs from completed steps.
+
+        If a step's param value matches a pattern like
+        ``"$ref:step_id:key"`` or is exactly ``"$ref:step_id"``,
+        replace it with the corresponding value from output_store.
+        Also handles the common case where ``depends_on`` lists a step
+        whose output contains the needed ID (e.g. plan_id, task_id).
+        """
+        if not output_store:
+            return layer
+
+        for tc in layer:
+            for dep_id in tc.depends_on:
+                if dep_id not in output_store:
+                    continue
+                dep_output = output_store[dep_id]
+                # Auto-inject matching keys from dependency output
+                for param_key, param_val in list(tc.params.items()):
+                    # Explicit $ref placeholder
+                    if isinstance(param_val, str) and param_val.startswith("$ref:"):
+                        parts = param_val.split(":", 2)
+                        ref_step = parts[1] if len(parts) > 1 else ""
+                        ref_key = parts[2] if len(parts) > 2 else param_key
+                        if ref_step == dep_id and ref_key in dep_output:
+                            tc.params[param_key] = dep_output[ref_key]
+                    # Auto-fill: if param value looks like a placeholder
+                    # (empty or __pending__) and dep has the key
+                    elif param_val in ("", "__pending__") and param_key in dep_output:
+                        tc.params[param_key] = dep_output[param_key]
+
+        return layer

@@ -43,13 +43,11 @@ from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
-from app.orchestration.request_router import RequestRouter
+from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import (
-    MAX_REPLAN_ATTEMPTS,
-    REPLAN_MAX_PER_WINDOW,
-    REPLAN_RATE_LIMIT_WINDOW,
-    VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD,
     ExecutablePlan,
+    RouteDecision,
+    StateSnapshot,
 )
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
@@ -205,7 +203,6 @@ class ChatOrchestrator:
         )
 
         # Phase 1: Initialize new components
-        self.request_router = RequestRouter(redis_client)
         self.grounding_validator = GroundingValidator(redis_client)
 
         # Unified Intent Router (Fix #1): 统一功能入口路由
@@ -214,7 +211,7 @@ class ChatOrchestrator:
             llm_service=llm_service,
             context_window_size=5
         )
-        logger.info("ChatOrchestrator initialized with RequestRouter, GroundingValidator, and UnifiedIntentRouter")
+        logger.info("ChatOrchestrator initialized with GroundingValidator and UnifiedIntentRouter")
 
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
         self.lang_graph_planner = LangGraphPlanner(redis_client)
@@ -312,28 +309,6 @@ class ChatOrchestrator:
                 logger.info("GroundingValidator allowlist refreshed after tool registration")
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
-
-    def _infer_domain_for_tool(self, tool_name: str) -> str | None:
-        tool_lower = tool_name.lower()
-        if "task" in tool_lower:
-            return "tasks"
-        if "plan" in tool_lower or "sprint" in tool_lower:
-            return "plans"
-        if "focus" in tool_lower or "pomodoro" in tool_lower:
-            return "focus"
-        if "friend" in tool_lower or "group" in tool_lower or "community" in tool_lower:
-            return "community"
-        if "knowledge" in tool_lower or "graph" in tool_lower or "galaxy" in tool_lower:
-            return "knowledge"
-        return None
-
-    def _get_plan_affected_domains(self, plan: ExecutablePlan) -> set:
-        domains = set()
-        for tool_call in plan.tool_calls:
-            domain = self._infer_domain_for_tool(tool_call.name)
-            if domain:
-                domains.add(domain)
-        return domains
 
     async def _update_state(self, session_id: str, state: str, details: str = ""):
         """Update FSM State in Redis with persistence"""
@@ -487,28 +462,6 @@ class ChatOrchestrator:
         if healed:
             await self._save_context_versions(user_id, previous)
             logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
-
-    async def _check_replan_rate_limit(self, plan_id: uuid.UUID | None) -> tuple[bool, int]:
-        """Check replan rate limit to prevent excessive replanning
-
-        Args:
-            plan_id: Plan ID to check rate limit for
-
-        Returns:
-            tuple[bool, int]: (is_allowed, current_count)
-        """
-        if not self.redis or not plan_id:
-            return True, 0
-
-        window_key = f"replan:rate:{plan_id}:{int(time.time()) // REPLAN_RATE_LIMIT_WINDOW}"
-
-        try:
-            current = await self.redis.incr(window_key)
-            await self.redis.expire(window_key, REPLAN_RATE_LIMIT_WINDOW)
-            return current <= REPLAN_MAX_PER_WINDOW, current
-        except Exception as e:
-            logger.warning(f"Failed to check replan rate limit: {e}")
-            return True, 0
 
     def _merge_user_contexts(self, local_context: dict[str, Any], grpc_context: dict[str, Any]) -> dict[str, Any]:
         """
@@ -964,18 +917,1114 @@ class ChatOrchestrator:
             logger.error(f"Failed to get tools schema: {e}")
             return []
 
+    async def _validate_request(
+        self,
+        request: agent_service_pb2.ChatRequest,
+        *,
+        response_id: str,
+        request_id: str,
+    ) -> agent_service_pb2.ChatResponse | None:
+        if not self.validator:
+            return None
+        validation_result = await self.validator.validate_chat_request(request)
+        if validation_result.is_valid:
+            return None
+        logger.error(f"Validation failed: {validation_result.error_message}")
+        return agent_service_pb2.ChatResponse(
+            response_id=response_id,
+            created_at=int(datetime.now().timestamp()),
+            request_id=request_id,
+            error=agent_service_pb2.Error(
+                message=validation_result.error_message,
+                retryable=False,
+                error_code=agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
+            ),
+            finish_reason=agent_service_pb2.ERROR,
+        )
+
+    async def _check_idempotency_response(
+        self,
+        *,
+        session_id: str,
+        request_id: str,
+        response_id: str,
+    ) -> agent_service_pb2.ChatResponse | None:
+        cached_response = await self._check_idempotency(session_id, request_id)
+        if not cached_response:
+            return None
+        logger.info(f"Cache hit for session {session_id}, request {request_id}")
+        cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
+        metadata_map = {}
+        if isinstance(cached_metadata, dict):
+            metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
+        return agent_service_pb2.ChatResponse(
+            response_id=response_id,
+            created_at=int(datetime.now().timestamp()),
+            request_id=request_id,
+            full_text=cached_response.get("full_text") or cached_response.get("message", ""),
+            metadata=metadata_map,
+            finish_reason=agent_service_pb2.STOP,
+        )
+
+    async def _drain_queue(self, queue: asyncio.Queue) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        while not queue.empty():
+            item = await queue.get()
+            yield item
+
+    async def _check_sufficiency(
+        self,
+        *,
+        request: agent_service_pb2.ChatRequest,
+        user_message: str,
+        user_id: str,
+        plan_id: uuid.UUID | None,
+        conversation_context: dict[str, Any] | None,
+        stream_callback,
+        queue: asyncio.Queue,
+    ) -> bool:
+        if request.HasField("tool_result"):
+            return False
+        try:
+            prediction = await shadow_prediction_service.predict_intent_only(
+                user_message=user_message,
+                active_plan_id=str(plan_id) if plan_id else None,
+                user_id=user_id,
+            )
+            intent_type = prediction.get("intent_type", "unknown")
+            extracted_entities = {
+                "intent_type": intent_type,
+                "suggested_tools": prediction.get("suggested_tools", []),
+            }
+            plan_intents = {"create_plan", "time_planning"}
+            check_result = await sufficiency_checker.check(
+                intent=intent_type,
+                extracted_entities=extracted_entities,
+                conversation_context=(conversation_context or {}).get("messages", []),
+                user_message=user_message,
+                use_llm_fallback=intent_type in plan_intents,
+            )
+
+            if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
+                questions = check_result.clarification_questions
+                if check_result.clarification_text:
+                    questions = [check_result.clarification_text]
+                question_text = "\n".join([f"- {q}" for q in questions if q]) if questions else "- 请补充更多关键信息"
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"我需要更多信息来帮您：\n\n{question_text}\n\n请提供以上信息，我将为您处理。",
+                    metadata={
+                        "requires_clarification": "true",
+                        "missing_fields": ",".join(check_result.missing_fields),
+                    },
+                ))
+                await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                return True
+
+            if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=check_result.confirmation_message,
+                    metadata={"requires_confirmation": "true"},
+                ))
+                await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                return True
+        except Exception as e:
+            logger.warning(f"Sufficiency check failed, continuing: {e}")
+        return False
+
+    async def _route_and_classify(
+        self,
+        *,
+        user_message: str,
+        user_id: str,
+        session_id: str,
+        grpc_context: dict[str, Any],
+        conversation_context: dict[str, Any] | None,
+        state: WorkflowState,
+    ) -> tuple[RouteDecision, Any | None]:
+        unified_routing_result = None
+        try:
+            unified_routing_result = await self.unified_router.route(
+                message=user_message,
+                user_id=user_id,
+                session_id=session_id,
+                payload=grpc_context,
+                conversation_history=(conversation_context or {}).get("history", []),
+            )
+            logger.info(
+                f"Unified routing: {unified_routing_result.primary_intent.value} "
+                f"(confidence={unified_routing_result.confidence:.2f}, "
+                f"layer={unified_routing_result.routing_layer})"
+            )
+        except Exception as e:
+            logger.warning(f"Unified routing failed: {e}")
+
+        if unified_routing_result:
+            state.context_data["unified_intent"] = {
+                "primary_intent": unified_routing_result.primary_intent.value,
+                "confidence": unified_routing_result.confidence,
+                "routing_layer": unified_routing_result.routing_layer,
+                "execution_mode": unified_routing_result.execution_mode,
+                "risk_level": unified_routing_result.risk_level,
+                "context_signals": unified_routing_result.context_signals,
+            }
+            if unified_routing_result.primary_intent == UnifiedIntentType.COGNITIVE_PRISM:
+                state.context_data["special_intent"] = "cognitive_prism"
+            elif unified_routing_result.primary_intent == UnifiedIntentType.TRANSLATION:
+                state.context_data["special_intent"] = "translation"
+            elif unified_routing_result.primary_intent == UnifiedIntentType.SPRINT_PLAN:
+                state.context_data["special_intent"] = "sprint_plan"
+            route_decision = to_route_decision(unified_routing_result)
+        else:
+            route_decision = RouteDecision(
+                execution_mode="direct",
+                reason="unified:fallback",
+                risk_level="low",
+                confidence=0.5,
+                context_version=None,
+            )
+
+        state.context_data["plan_metadata"] = {
+            "context_version": route_decision.context_version,
+            "execution_mode": route_decision.execution_mode,
+            "risk_level": route_decision.risk_level,
+            "route_reason": route_decision.reason,
+        }
+        state.context_data["grounding_validator"] = self.grounding_validator
+        return route_decision, unified_routing_result
+
+    async def _stream_hitl_escalation(
+        self,
+        *,
+        conflict,
+        executable_plan: ExecutablePlan,
+        snapshot: StateSnapshot | None,
+        user_id: str,
+        stream_callback,
+    ) -> None:
+        tool_calls_payload = [{"id": tc.id, "name": tc.name, "params": tc.params} for tc in executable_plan.tool_calls]
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_version_conflict__",
+            arguments={
+                "plan_id": executable_plan.plan_id,
+                "snapshot_id": snapshot.snapshot_id if snapshot else None,
+                "tool_calls": tool_calls_payload,
+                "reason": "version_conflict",
+                "conflicted_domains": list(conflict.conflicted_domains),
+            },
+            user_id=user_id,
+            description="检测到状态变更，是否继续执行该计划？",
+            preview_data={
+                "plan_id": executable_plan.plan_id,
+                "conflicted_domains": list(conflict.conflicted_domains),
+                "affected_domains": list(conflict.affected_domains),
+                "tool_calls": tool_calls_payload,
+            },
+        )
+        HITL_REQUESTED.labels(reason="version_conflict").inc()
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=("\n\n⚠️ 检测到状态变化，需要确认后继续执行。\n" f"action_id={action_id}"),
+            metadata={"requires_hitl": "true", "action_id": action_id, "reason": "version_conflict"},
+        ))
+
+    async def _stream_discard_notice(self, stream_callback) -> None:
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta="\n\n⚠️ 检测到状态变化，计划已过期。请重试。",
+        ))
+
+    def _extract_llm_profile_meta(self, user_context_payload: dict[str, Any] | None) -> dict[str, Any]:
+        llm_profile_meta = {}
+        if not isinstance(user_context_payload, dict):
+            return llm_profile_meta
+        llm_profile = user_context_payload.get("llm_profile")
+        if not llm_profile:
+            return llm_profile_meta
+        if isinstance(llm_profile, str):
+            try:
+                llm_profile_meta = json.loads(llm_profile)
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
+                llm_profile_meta = {}
+        elif isinstance(llm_profile, dict):
+            llm_profile_meta = llm_profile
+        else:
+            logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
+        return llm_profile_meta
+
+    async def _validate_plan_execution(
+        self,
+        *,
+        executable_plan: ExecutablePlan | None,
+        active_db: AsyncSession | None,
+        final_state: WorkflowState,
+        user_id: str,
+    ) -> dict[str, Any] | None:
+        if not executable_plan or not hasattr(executable_plan, "plan_id") or not active_db:
+            return None
+        try:
+            tool_extractor = ToolResultExtractor()
+            tool_results = tool_extractor.extract_from_messages(final_state.messages)
+            if not (tool_results or executable_plan.tool_calls):
+                return None
+            record_service = PlanExecutionRecordService(active_db)
+            execution_validator = PlanExecutionValidator(record_service=record_service)
+            validation_result = await execution_validator.validate_and_record(
+                plan=executable_plan,
+                tool_results=tool_results,
+                user_id=uuid.UUID(user_id),
+            )
+            logger.info(
+                f"Plan execution validation: plan_id={validation_result.plan_id}, "
+                f"validation_status={validation_result.validation_status}, "
+                f"score={validation_result.quality_score:.2f}"
+            )
+            return {
+                "validation_status": validation_result.validation_status,
+                "quality_score": validation_result.quality_score,
+                "tools_total": validation_result.tool_summary.get("total", 0),
+                "tools_successful": validation_result.tool_summary.get("successful", 0),
+            }
+        except Exception as e:
+            logger.warning(f"Plan execution validation failed: {e}", exc_info=True)
+            return None
+
+    async def _persist_assistant_message(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        full_response: str,
+    ) -> None:
+        if not active_db or not full_response:
+            return
+        try:
+            assistant_msg = ChatMessage(
+                user_id=uuid.UUID(str(user_id)),
+                session_id=uuid.UUID(str(session_id)),
+                role=MessageRole.ASSISTANT,
+                content=full_response,
+                model_name=getattr(llm_service, "default_model", None),
+            )
+            active_db.add(assistant_msg)
+            await active_db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to persist assistant chat message: {e}")
+            with contextlib.suppress(Exception):
+                await active_db.rollback()
+
+    async def _record_decision(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_context_payload: dict[str, Any] | None,
+        llm_profile_meta: dict[str, Any],
+        full_response: str,
+    ) -> None:
+        try:
+            from app.services.decision_record_service import DecisionRecordService
+
+            if active_db is None or not active_db.is_active:
+                return
+
+            def get_val(d, key, default):
+                if not isinstance(d, dict):
+                    return default
+                if key in d:
+                    return d[key]
+                quoted_key = f'"{key}"'
+                if quoted_key in d:
+                    return d[quoted_key]
+                return default
+
+            pref_snapshot = {
+                "verbosity": get_val(llm_profile_meta, "verbosity_target", "balanced"),
+                "temperature": get_val(llm_profile_meta, "temperature", 0.7),
+                "tone": get_val(llm_profile_meta, "tone", "encouraging"),
+            }
+            decision_service = DecisionRecordService(active_db)
+            await decision_service.record_decision(
+                user_id=uuid.UUID(str(user_id)),
+                module="ai",
+                action="generate_response",
+                preference_version=(user_context_payload or {}).get("preference_version", 0),
+                preferences_snapshot=pref_snapshot,
+                outcome=f"Generated response with {len(full_response)} chars",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to record decision: {e}")
+            logger.debug(f"llm_profile_meta type: {type(llm_profile_meta)}, content: {llm_profile_meta}")
+
+    async def _build_final_response(
+        self,
+        *,
+        final_state: WorkflowState,
+        executable_plan: ExecutablePlan | None,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        route_decision: RouteDecision,
+        plan_switched: bool,
+        plan_id: uuid.UUID | None,
+        user_context_payload: dict[str, Any] | None,
+    ) -> tuple[agent_service_pb2.ChatResponse, dict[str, Any]]:
+        full_response = ""
+        for msg in reversed(final_state.messages):
+            if msg["role"] == "assistant":
+                full_response = msg["content"]
+                break
+
+        llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
+        response_metadata = {
+            "response_id": response_id,
+            "trace_id": trace_id,
+            "preference_version": (user_context_payload or {}).get("preference_version", 0),
+            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+        }
+        if route_decision and "sprint" in route_decision.reason.lower():
+            response_metadata["switch_to_sprint"] = True
+        if plan_switched and plan_id:
+            response_metadata["plan_switched"] = True
+            response_metadata["switched_to_plan_id"] = str(plan_id)
+
+        execution_validation = await self._validate_plan_execution(
+            executable_plan=executable_plan,
+            active_db=active_db,
+            final_state=final_state,
+            user_id=user_id,
+        )
+        if execution_validation:
+            response_metadata["execution_validation"] = execution_validation
+
+        await self._persist_assistant_message(
+            active_db=active_db,
+            user_id=user_id,
+            session_id=session_id,
+            full_response=full_response,
+        )
+        await self._record_decision(
+            active_db=active_db,
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            llm_profile_meta=llm_profile_meta,
+            full_response=full_response,
+        )
+
+        final_response_data = {
+            "message": full_response,
+            "tool_results": [],
+            "metadata": response_metadata,
+        }
+        final_response = agent_service_pb2.ChatResponse(
+            response_id=response_id,
+            created_at=int(datetime.now().timestamp()),
+            request_id=request_id,
+            trace_id=trace_id,
+            workflow_id=workflow_id,
+            prompt_version=prompt_version,
+            metadata={str(k): str(v) for k, v in response_metadata.items()},
+            full_text=full_response,
+            finish_reason=agent_service_pb2.STOP,
+        )
+        return final_response, final_response_data
+
+    async def _cleanup(
+        self,
+        *,
+        lock_acquired: bool,
+        lock_renewal_task: asyncio.Task | None,
+        lock_renewal_stop: asyncio.Event | None,
+        session_id: str,
+        request_id: str,
+        start_time: float,
+        user_id: str,
+        total_prompt_tokens: int,
+        total_completion_tokens: int,
+    ) -> None:
+        ACTIVE_SESSIONS.dec()
+        latency = time.time() - start_time
+        REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
+        COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
+
+        if lock_renewal_task and lock_renewal_stop:
+            try:
+                await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
+            except Exception as e:
+                logger.warning(f"Failed to stop lock renewal: {e}")
+
+        if lock_acquired:
+            await self._release_session_lock(session_id, request_id)
+
+        if self.token_tracker and total_prompt_tokens > 0:
+            try:
+                estimated_cost = await self.token_tracker.estimate_cost(
+                    prompt_tokens=total_prompt_tokens,
+                    completion_tokens=total_completion_tokens,
+                    model="gpt-4",
+                )
+                await task_manager.spawn(
+                    self.token_tracker.record_usage(
+                        user_id=user_id,
+                        session_id=session_id,
+                        request_id=request_id,
+                        prompt_tokens=total_prompt_tokens,
+                        completion_tokens=total_completion_tokens,
+                        model="gpt-4",
+                        cost=estimated_cost,
+                    ),
+                    task_name="token_usage_record",
+                    user_id=str(user_id),
+                )
+                logger.info(
+                    f"Token usage recorded for user {user_id}: "
+                    f"{total_prompt_tokens} + {total_completion_tokens} = "
+                    f"{total_prompt_tokens + total_completion_tokens} tokens, "
+                    f"est. cost: ${estimated_cost:.6f}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to record token usage: {e}")
+
+    async def _prepare_runtime_context(
+        self,
+        state: WorkflowState,
+        request_id: str,
+        response_id: str,
+        stream_callback,
+        tracer,
+    ) -> tuple[TransparencyDataGenerator, "typing.Callable"]:
+        """Prepare transparency tracking, tools schema, and initial status.
+
+        Returns (transparency_generator, emit_transparency_event).
+        """
+        import typing
+
+        transparency_enabled = bool(
+            settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
+        )
+        transparency_generator = TransparencyDataGenerator(
+            request_id=request_id or response_id,
+            enabled=transparency_enabled,
+        )
+
+        async def emit_transparency_event(event: dict[str, Any] | None) -> None:
+            if not event:
+                return
+            try:
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        metadata={
+                            "event_type": "transparency",
+                            "event_payload": json.dumps(event, ensure_ascii=False),
+                        }
+                    )
+                )
+            except Exception as exc:
+                logger.debug(f"Failed to emit transparency event: {exc}")
+
+        # Load tools with transparency step
+        tools_step = transparency_generator.create_step(
+            name="加载工具配置",
+            step_type=StepType.PLANNING,
+            agent_type="ORCHESTRATOR",
+            metadata={"phase": "tools_schema"},
+        )
+        transparency_generator.start_step(tools_step)
+        await emit_transparency_event(transparency_generator.get_step_event())
+        with tracer.start_as_current_span("orchestrator.get_tools"):
+            tools = await self._get_tools_schema()
+        transparency_generator.complete_step(
+            tools_step,
+            metadata={"tool_count": len(tools)},
+        )
+        await emit_transparency_event(transparency_generator.get_step_event())
+
+        # Emit initial thinking status
+        await stream_callback(agent_service_pb2.ChatResponse(
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.THINKING
+            )
+        ))
+
+        # Inject tools into state
+        state.context_data["tools_schema"] = tools
+
+        return transparency_generator, emit_transparency_event
+
+    async def _handle_multi_agent_mode(
+        self,
+        chat_mode: str,
+        user_message: str,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        start_time: float,
+        user_context_payload: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        stream_callback,
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        """Handle non-standard chat modes (multi-agent workflows).
+
+        Yields ChatResponse items directly; caller should ``return`` after iteration.
+        """
+        logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+        multi_agent_context = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "user_context": user_context_payload,
+            "conversation_context": conversation_context,
+            "plan_context": plan_context,
+        }
+
+        try:
+            response_count = 0
+            async for response in execute_multi_agent_workflow(
+                orchestrator=self,
+                chat_mode=chat_mode,
+                message=user_message,
+                user_id=user_id,
+                session_id=session_id,
+                context_data=multi_agent_context,
+                stream_callback=stream_callback,
+            ):
+                response.response_id = response_id
+                response.created_at = int(datetime.now().timestamp())
+                response.request_id = request_id
+                response.trace_id = response.trace_id or trace_id
+                response.workflow_id = f"multi_agent_{chat_mode}"
+                response_count += 1
+                content_type = response.WhichOneof("content")
+                logger.info(
+                    f"[Orchestrator] Multi-agent response #{response_count}: "
+                    f"type={content_type}, delta_len={len(response.delta) if response.delta else 0}"
+                )
+                yield response
+
+            logger.info(f"[Orchestrator] Multi-agent workflow completed with {response_count} responses")
+            await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
+
+        except Exception as e:
+            logger.error(f"Multi-agent workflow error: {e}")
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                error=agent_service_pb2.Error(
+                    message=f"多Agent协作模式执行失败: {str(e)}",
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
+                ),
+                finish_reason=agent_service_pb2.ERROR,
+            )
+
+    def _inject_state_dependencies(
+        self,
+        state: WorkflowState,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        stream_callback,
+        tools_schema: list[dict[str, Any]],
+        transparency_generator: TransparencyDataGenerator,
+        emit_transparency_event,
+        user_context_payload: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        file_ids: list[str],
+        include_references: bool,
+        workflow_id: str,
+        prompt_version: str,
+    ) -> None:
+        """Inject all runtime dependencies into the workflow state."""
+        if active_db:
+            state.context_data["db_session"] = active_db
+        state.context_data.update({
+            "user_id": user_id,
+            "session_id": session_id,
+            "stream_callback": stream_callback,
+            "tools_schema": tools_schema,
+            "transparency_generator": transparency_generator,
+            "emit_transparency_event": emit_transparency_event,
+            "redis_client": self.redis,
+            "user_context": user_context_payload,
+            "conversation_context": conversation_context,
+            "plan_context": plan_context,
+            "file_ids": file_ids,
+            "include_references": include_references,
+            "workflow_id": workflow_id,
+            "prompt_version": prompt_version,
+        })
+
+    async def _execute_graph(
+        self,
+        *,
+        state: WorkflowState,
+        user_id: str,
+        queue: asyncio.Queue,
+        result_holder: dict[str, Any],
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        logger.info("🚀 Launching StateGraph Execution")
+        graph_task = await task_manager.spawn(
+            self.graph.invoke(state),
+            task_name="orchestrator_graph",
+            user_id=str(user_id),
+        )
+
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+
+        while not graph_task.done() or not queue.empty():
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=0.1)
+                if item.HasField("usage"):
+                    total_prompt_tokens = item.usage.prompt_tokens
+                    total_completion_tokens = item.usage.completion_tokens
+                    if self.token_tracker:
+                        TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
+                        TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
+                yield item
+                queue.task_done()
+            except TimeoutError:
+                if graph_task.done():
+                    break
+
+        if graph_task.done():
+            exc = graph_task.exception()
+            if exc:
+                raise exc
+            result_holder["final_state"] = graph_task.result()
+            result_holder["total_prompt_tokens"] = total_prompt_tokens
+            result_holder["total_completion_tokens"] = total_completion_tokens
+
+    async def _plan_and_validate(
+        self,
+        *,
+        route_decision: RouteDecision,
+        user_message: str,
+        user_id: str,
+        session_id: str,
+        active_db: AsyncSession | None,
+        plan_id: uuid.UUID | None,
+        conversation_context: dict[str, Any] | None,
+        stream_callback,
+        state: WorkflowState,
+        user_context_payload: dict[str, Any] | None,
+    ) -> tuple[RouteDecision, ExecutablePlan | None, StateSnapshot | None, bool]:
+        executable_plan = None
+        snapshot = None
+
+        if route_decision.execution_mode not in ["langgraph", "hybrid"]:
+            return route_decision, executable_plan, snapshot, False
+
+        logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
+        allow, reason = await self.langgraph_breaker.allow_request()
+        if not allow:
+            logger.warning(f"LangGraph blocked by circuit breaker: {reason}")
+            await self.observability.log_circuit_state_change(
+                circuit_name="langgraph_planner",
+                old_state="open",
+                new_state="open",
+                reason=reason,
+            )
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta="\n\n⚠️ 智能规划暂时不可用，使用标准模式"
+            ))
+            route_decision.execution_mode = "direct"
+            return route_decision, executable_plan, snapshot, False
+
+        try:
+            snapshot = await self.snapshot_manager.create_snapshot(
+                user_id=user_id,
+                session_id=session_id,
+                db_session=active_db,
+            )
+            conversation_history = []
+            if conversation_context:
+                conversation_history = conversation_context.get("messages", [])
+            plan_id_str = str(plan_id) if plan_id else None
+
+            executable_plan = await self.lang_graph_planner.plan(
+                message=user_message,
+                snapshot=snapshot,
+                user_id=user_id,
+                session_id=session_id,
+                conversation_history=conversation_history,
+                plan_id=plan_id_str,
+            )
+
+            await self.observability.log_langgraph_plan(
+                user_id=user_id,
+                session_id=session_id,
+                plan_id=executable_plan.plan_id,
+                plan_data={
+                    "agents_involved": executable_plan.agents_involved,
+                    "collaboration_mode": executable_plan.collaboration_mode,
+                    "tool_calls_count": len(executable_plan.tool_calls),
+                    "confidence": executable_plan.confidence,
+                    "rationale": executable_plan.rationale,
+                },
+            )
+
+            logger.info(
+                f"LangGraph plan generated: {len(executable_plan.tool_calls)} tool calls, "
+                f"confidence={executable_plan.confidence}, "
+                f"collaboration={executable_plan.collaboration_mode}, "
+                f"agents={executable_plan.agents_involved}"
+            )
+
+            current_versions = await self._load_context_versions(user_id)
+            conflict = await self.version_conflict_service.check_all_conflicts(
+                plan=executable_plan,
+                snapshot=snapshot,
+                current_context_versions=current_versions,
+                user_id=uuid.UUID(user_id),
+            )
+            if conflict.has_conflict:
+                logger.warning(
+                    "Version conflict detected: type=%s domains=%s",
+                    conflict.conflict_type,
+                    conflict.conflicted_domains,
+                )
+                plan_uuid = uuid.UUID(plan_id_str) if plan_id_str else None
+
+                async def _replan_callback():
+                    new_snapshot = await self.snapshot_manager.create_snapshot(
+                        user_id=user_id,
+                        session_id=session_id,
+                        db_session=active_db,
+                    )
+                    nonlocal snapshot
+                    snapshot = new_snapshot
+                    return await self.lang_graph_planner.replan(
+                        message=user_message,
+                        snapshot=new_snapshot,
+                        user_id=user_id,
+                        session_id=session_id,
+                        previous_plan=executable_plan,
+                        conflict_info=conflict.to_dict(),
+                        plan_id=plan_id_str,
+                    )
+
+                resolution = await self.version_conflict_service.resolve_conflict(
+                    conflict_result=conflict,
+                    original_plan=executable_plan,
+                    user_id=uuid.UUID(user_id),
+                    session_id=session_id,
+                    user_message=user_message,
+                    plan_id=plan_uuid,
+                    replan_callback=_replan_callback,
+                )
+                if resolution.requires_hitl:
+                    await self._stream_hitl_escalation(
+                        conflict=conflict,
+                        executable_plan=executable_plan,
+                        snapshot=snapshot,
+                        user_id=str(user_id),
+                        stream_callback=stream_callback,
+                    )
+                    return route_decision, executable_plan, snapshot, True
+                if resolution.success and resolution.new_plan:
+                    executable_plan = resolution.new_plan
+                else:
+                    await self._stream_discard_notice(stream_callback)
+                    await self.observability.log_validation_failed(
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=executable_plan.plan_id,
+                        failure_reason="Version conflict discard",
+                    )
+                    await self.langgraph_breaker.on_failure("version_conflict_discard")
+                    return route_decision, executable_plan, snapshot, True
+
+            validation_result = await self.grounding_validator.validate_plan(
+                plan=executable_plan,
+                snapshot=snapshot,
+            )
+            if not validation_result.is_valid:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 计划验证失败: {validation_result.failure_reason}"
+                ))
+                await self.observability.log_validation_failed(
+                    user_id=user_id,
+                    session_id=session_id,
+                    plan_id=executable_plan.plan_id,
+                    failure_reason=validation_result.failure_reason,
+                )
+                await self.langgraph_breaker.on_failure("validation_failed")
+                return route_decision, executable_plan, snapshot, True
+
+            preflight = await self.grounding_validator.preflight_check(
+                plan=executable_plan,
+                user_id=user_id,
+            )
+            if not preflight["is_ready"]:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 服务暂时不可用: {', '.join(preflight['blocked_by'])}"
+                ))
+                await self.langgraph_breaker.on_failure("preflight_blocked")
+                return route_decision, executable_plan, snapshot, True
+
+            if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
+                review_result = await plan_review_service.review_plan(
+                    plan=executable_plan,
+                    user_message=user_message,
+                    user_context=user_context_payload or {},
+                )
+                if plan_id:
+                    from app.services.plan_feedback_service import get_plan_feedback_service
+
+                    feedback_service = get_plan_feedback_service(active_db, self.redis)
+                    await feedback_service.append_review_feedback(
+                        user_id=uuid.UUID(user_id),
+                        plan_id=uuid.UUID(plan_id),
+                        review_result=review_result,
+                        user_decision=None,
+                    )
+                    logger.info(f"Review feedback written for plan {plan_id}")
+
+                if review_result.decision in [
+                    ReviewDecision.REJECTED.value,
+                    ReviewDecision.REQUIRES_CONFIRMATION.value,
+                    ReviewDecision.NEEDS_MODIFICATION.value,
+                ]:
+                    action_id = await plan_review_service.store_review_result(
+                        review=review_result,
+                        user_id=str(user_id),
+                    )
+                    review_data_dict = review_result.to_dict()
+                    review_data_dict["action_id"] = action_id
+                    review_metadata = {
+                        "requires_review": "true",
+                        "review_action_id": action_id,
+                        "review_decision": review_result.decision,
+                        "review_id": review_result.review_id,
+                        "plan_id": review_result.plan_id,
+                        "review_data": json.dumps(review_data_dict),
+                    }
+                    review_delta = self._format_review_message(review_result)
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=review_delta,
+                        metadata=review_metadata,
+                    ))
+                    state.context_data["plan_review"] = review_result.to_dict()
+                    state.context_data["pending_review_action_id"] = action_id
+                    logger.info(
+                        f"Plan {executable_plan.plan_id} requires user review: "
+                        f"{review_result.decision} (action_id={action_id})"
+                    )
+                    return route_decision, executable_plan, snapshot, True
+
+                state.context_data["plan_review"] = review_result.to_dict()
+                logger.info(
+                    f"Plan {executable_plan.plan_id} auto-approved: "
+                    f"confidence={review_result.confidence}"
+                )
+
+            state.context_data["executable_plan"] = executable_plan
+            state.context_data["snapshot"] = snapshot
+            await self.langgraph_breaker.on_success()
+
+            plan_summary = self.lang_graph_planner.get_plan_summary(executable_plan)
+            logger.info(f"Plan ready for execution: {plan_summary}")
+            if executable_plan.collaboration_mode != "single":
+                await self.observability.log_collaboration_start(
+                    user_id=user_id,
+                    session_id=session_id,
+                    agents=executable_plan.agents_involved,
+                    mode=executable_plan.collaboration_mode,
+                )
+
+            asyncio.create_task(
+                self.shadow_predictor.predict_and_record(
+                    user_message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    actual_decision=route_decision,
+                    actual_plan=executable_plan,
+                )
+            )
+            return route_decision, executable_plan, snapshot, False
+        except Exception as e:
+            logger.error(f"LangGraph planning error: {e}", exc_info=True)
+            await self.langgraph_breaker.on_failure(str(e))
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"
+            ))
+            route_decision.execution_mode = "direct"
+            return route_decision, executable_plan, snapshot, False
+
+    async def _build_full_context(
+        self,
+        *,
+        request: agent_service_pb2.ChatRequest,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        user_message: str,
+        request_id: str,
+        tracer,
+    ) -> tuple[dict[str, Any], uuid.UUID | None, bool, dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+        grpc_context = {}
+        if request.user_profile and request.user_profile.extra_context:
+            try:
+                grpc_context = json.loads(request.user_profile.extra_context)
+                logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse extra_context JSON: {e}")
+
+        request_context = {}
+        if request.HasField("extra_context"):
+            try:
+                request_context = MessageToDict(request.extra_context)
+                if request_context:
+                    logger.debug(f"Parsed request extra_context: {list(request_context.keys())}")
+            except Exception as e:
+                logger.warning(f"Failed to parse request extra_context: {e}")
+
+        if request_context:
+            grpc_context = {**grpc_context, **request_context}
+
+        plan_id = None
+        if grpc_context and "plan_id" in grpc_context:
+            with contextlib.suppress(ValueError, AttributeError):
+                plan_id = uuid.UUID(grpc_context["plan_id"])
+
+        plan_switched = False
+        if not plan_id and user_message and active_db:
+            with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
+                try:
+                    from app.services.plan_matching_service import PlanMatchingService
+                    plan_matching = PlanMatchingService(active_db)
+                    matched_plan_id = await self.state_manager.auto_switch_plan(
+                        session_id=session_id,
+                        user_id=uuid.UUID(user_id),
+                        task_context={
+                            "content": user_message,
+                            "type": grpc_context.get("task_type", "chat"),
+                        },
+                        db_session=active_db,
+                        plan_matching_service=plan_matching,
+                    )
+                    if matched_plan_id:
+                        plan_id = matched_plan_id
+                        plan_switched = True
+                        logger.info(f"Auto-switched to plan {plan_id} based on message content")
+                except Exception as e:
+                    logger.warning(f"Auto-switch plan failed: {e}")
+
+        overlay_versions = {}
+        if grpc_context:
+            versions = grpc_context.get("realtime_versions")
+            if isinstance(versions, dict):
+                overlay_versions = {str(k): str(v) for k, v in versions.items()}
+        if overlay_versions:
+            await self._self_heal_versions(user_id, overlay_versions, active_db)
+
+        if grpc_context and ("realtime_versions" in grpc_context or "overlay_generated_at" in grpc_context):
+            grpc_context = dict(grpc_context)
+            grpc_context.pop("realtime_versions", None)
+            grpc_context.pop("overlay_generated_at", None)
+
+        user_context_payload = None
+        conversation_context = None
+        plan_context = None
+        with tracer.start_as_current_span("db.build_context"):
+            if active_db and user_id:
+                local_context = await self._build_user_context(user_id, active_db)
+                user_context_payload = self._merge_user_contexts(local_context, grpc_context)
+                logger.info(f"Merged user context: {user_context_payload is not None}")
+
+                if plan_id:
+                    try:
+                        from app.core.plan_context import PlanContextBuilder
+                        from app.services.plan_state_service import PlanStateService
+
+                        plan_builder = PlanContextBuilder(active_db, self.redis)
+                        plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
+                        if plan_context:
+                            logger.info(f"Built plan_context for plan_id={plan_id}")
+                            if user_context_payload is None:
+                                user_context_payload = {}
+                            user_context_payload["plan_context"] = plan_context
+
+                            try:
+                                plan_state_svc = PlanStateService(active_db, self.redis)
+                                plan_state = await plan_state_svc.get_plan_state(
+                                    uuid.UUID(user_id), uuid.UUID(plan_id)
+                                )
+                                if plan_state and plan_state.constraints.get("require_phase_rollback"):
+                                    logger.info(f"Phase rollback triggered for plan_id={plan_id}")
+                                    await plan_state_svc.upsert_plan_state(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        patch={"constraints": {"require_phase_rollback": False}},
+                                        bump_version=False,
+                                    )
+                                    plan_context["mode"] = "phase_rollback"
+                                    plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
+                                    if plan_state.feedback_log:
+                                        plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
+                            except Exception as e:
+                                logger.warning(f"Failed to check phase rollback: {e}")
+                    except Exception as e:
+                        logger.warning(f"Failed to build plan context: {e}")
+
+                try:
+                    user_uuid = uuid.UUID(user_id)
+                    router = ToolPreferenceRouter(active_db, user_uuid, self.redis)
+                    preferred_tools = await router.get_preferred_tools(limit=3)
+                    if preferred_tools:
+                        if user_context_payload is not None:
+                            user_context_payload["preferred_tools"] = preferred_tools
+                        logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
+                except Exception as e:
+                    logger.warning(f"Failed to get tool preferences (non-fatal): {e}")
+                    if active_db:
+                        await active_db.rollback()
+            elif grpc_context:
+                user_context_payload = grpc_context
+                logger.info("Using gRPC context without local DB context")
+
+        self._log_context_injection(user_id, user_context_payload)
+        if self.context_pruner:
+            with tracer.start_as_current_span("db.build_conversation_context"):
+                conversation_context = await self._build_conversation_context(session_id, user_id)
+
+        if active_db and user_message:
+            try:
+                user_msg = ChatMessage(
+                    user_id=uuid.UUID(str(user_id)),
+                    session_id=uuid.UUID(str(session_id)),
+                    role=MessageRole.USER,
+                    content=user_message,
+                    message_id=request_id,
+                )
+                active_db.add(user_msg)
+                await active_db.commit()
+            except Exception as e:
+                logger.warning(f"Failed to persist user chat message: {e}")
+                with contextlib.suppress(Exception):
+                    await active_db.rollback()
+
+        return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+
     async def process_stream(
         self,
         request: agent_service_pb2.ChatRequest,
         db_session: AsyncSession | None = None,
         context_data: dict[str, Any] | None = None
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
-        """
-        Process the incoming chat request with enhanced features
-        """
+        """Coordinator: orchestrate chat request through validation, routing,
+        planning, execution, and response composition."""
         tracer = trace.get_tracer(__name__)
 
-        # Start Root Span
         with tracer.start_as_current_span("orchestrator.process_stream") as span:
             span.set_attribute("session_id", request.session_id)
             span.set_attribute("user_id", request.user_id)
@@ -990,47 +2039,16 @@ class ChatOrchestrator:
             response_id = str(uuid.uuid4())
             workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
             prompt_version = (context_data or {}).get("prompt_version", "v1")
-
-            # Use provided session or instance session
             active_db = db_session or self.db_session
 
-            # Step 0: Request Validation (with quota check)
+            # Step 1: Validation & idempotency (early exits)
             with tracer.start_as_current_span("orchestrator.validate_request"):
-                if self.validator:
-                    validation_result = await self.validator.validate_chat_request(request)
-                    if not validation_result.is_valid:
-                        logger.error(f"Validation failed: {validation_result.error_message}")
-                        yield agent_service_pb2.ChatResponse(
-                            response_id=response_id,
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            error=agent_service_pb2.Error(
-                                message=validation_result.error_message,
-                                retryable=False,
-                                error_code=agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
-                            ),
-                            finish_reason=agent_service_pb2.ERROR
-                        )
-                        return
-
-            # Step 1: Check Idempotency
+                if validation_error := await self._validate_request(request, response_id=response_id, request_id=request_id):
+                    yield validation_error
+                    return
             with tracer.start_as_current_span("orchestrator.check_idempotency"):
-                cached_response = await self._check_idempotency(session_id, request_id)
-                if cached_response:
-                    logger.info(f"Cache hit for session {session_id}, request {request_id}")
-                    cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
-                    metadata_map = {}
-                    if isinstance(cached_metadata, dict):
-                        metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
-                    # Return cached response
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=response_id,
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        full_text=cached_response.get("full_text") or cached_response.get("message", ""),
-                        metadata=metadata_map,
-                        finish_reason=agent_service_pb2.STOP
-                    )
+                if cached_resp := await self._check_idempotency_response(session_id=session_id, request_id=request_id, response_id=response_id):
+                    yield cached_resp
                     return
 
             lock_acquired = False
@@ -1039,217 +2057,38 @@ class ChatOrchestrator:
             total_prompt_tokens = 0
             total_completion_tokens = 0
             transparency_generator: TransparencyDataGenerator | None = None
+            emit_transparency_event = None
 
             try:
-                # Step 2: Acquire Distributed Lock
+                # Step 2: Distributed lock
                 with tracer.start_as_current_span("redis.acquire_lock"):
                     lock_acquired = await self._acquire_session_lock(session_id, request_id)
-
                 if not lock_acquired:
                     yield agent_service_pb2.ChatResponse(
-                        response_id=response_id,
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        error=agent_service_pb2.Error(
-                            message="会话正在处理另一个请求，请稍候",
-                            retryable=True,
-                            error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
-                        ),
-                        finish_reason=agent_service_pb2.ERROR
+                        response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
+                        error=agent_service_pb2.Error(message="会话正在处理另一个请求，请稍候", retryable=True, error_code=agent_service_pb2.ERROR_CODE_CONFLICT),
+                        finish_reason=agent_service_pb2.ERROR,
                     )
                     return
+                lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(session_id, request_id, interval=10.0)
 
-                # Start lock renewal for long-running requests
-                lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
-                    session_id, request_id, interval=10.0
-                )
-
-                # Step 3: Initialize Workflow State
+                # Step 3: Initialize state & extract message
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+                chat_mode = request.chat_mode or CHAT_MODE_STANDARD
+                user_message = request.message or ""
+                if not user_message and request.HasField("tool_result"):
+                    tr = request.tool_result
+                    user_message = f"Tool '{tr.tool_name}' execution result: {tr.result_json}"
 
-                # Step 3.5: Extract chat mode for multi-agent routing
-                chat_mode = CHAT_MODE_STANDARD
-                if request.chat_mode:
-                    chat_mode = request.chat_mode
-                    logger.info(f"Chat mode requested: {chat_mode}")
+                # Step 4: Build full context
+                grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = \
+                    await self._build_full_context(request=request, active_db=active_db, user_id=user_id, session_id=session_id, user_message=user_message, request_id=request_id, tracer=tracer)
 
-                user_message = ""
-                if request.message:
-                    user_message = request.message
-                elif request.HasField("tool_result"):
-                    tool_result = request.tool_result
-                    user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
-
-                if active_db and user_message:
-                    try:
-                        user_msg = ChatMessage(
-                            user_id=uuid.UUID(str(user_id)),
-                            session_id=uuid.UUID(str(session_id)),
-                            role=MessageRole.USER,
-                            content=user_message,
-                            message_id=request_id,
-                        )
-                        active_db.add(user_msg)
-                        await active_db.commit()
-                    except Exception as e:
-                        logger.warning(f"Failed to persist user chat message: {e}")
-                        with contextlib.suppress(Exception):
-                            await active_db.rollback()
-
-                # P0: Build user + conversation context
-                # First, try to merge extra_context from gRPC (from Go Gateway)
-                grpc_context = {}
-                if request.user_profile and request.user_profile.extra_context:
-                    try:
-                        grpc_context = json.loads(request.user_profile.extra_context)
-                        logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Failed to parse extra_context JSON: {e}")
-
-                request_context = {}
-                if request.HasField("extra_context"):
-                    try:
-                        request_context = MessageToDict(request.extra_context)
-                        if request_context:
-                            logger.debug(f"Parsed request extra_context: {list(request_context.keys())}")
-                    except Exception as e:
-                        logger.warning(f"Failed to parse request extra_context: {e}")
-
-                if request_context:
-                    grpc_context = {**grpc_context, **request_context}
-
-                # Extract plan_id from extra_context for PlanScope
-                plan_id = None
-                if grpc_context and "plan_id" in grpc_context:
-                    with contextlib.suppress(ValueError, AttributeError):
-                        plan_id = uuid.UUID(grpc_context["plan_id"])
-
-                # P0: Auto-switch plan based on task context if no plan_id provided
-                plan_switched = False
-                if not plan_id and user_message and active_db:
-                    with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
-                        try:
-                            from app.services.plan_matching_service import PlanMatchingService
-                            plan_matching = PlanMatchingService(active_db)
-
-                            # Try to match the message to a plan
-                            matched_plan_id = await self.state_manager.auto_switch_plan(
-                                session_id=session_id,
-                                user_id=uuid.UUID(user_id),
-                                task_context={
-                                    "content": user_message,
-                                    "type": grpc_context.get("task_type", "chat"),
-                                },
-                                db_session=active_db,
-                                plan_matching_service=plan_matching
-                            )
-
-                            if matched_plan_id:
-                                plan_id = matched_plan_id
-                                plan_switched = True
-                                logger.info(f"Auto-switched to plan {plan_id} based on message content")
-                        except Exception as e:
-                            logger.warning(f"Auto-switch plan failed: {e}")
-
-                overlay_versions = {}
-                if grpc_context:
-                    versions = grpc_context.get("realtime_versions")
-                    if isinstance(versions, dict):
-                        overlay_versions = {str(k): str(v) for k, v in versions.items()}
-                if overlay_versions:
-                    await self._self_heal_versions(user_id, overlay_versions, active_db)
-
-                if grpc_context:
-                    if "realtime_versions" in grpc_context or "overlay_generated_at" in grpc_context:
-                        grpc_context = dict(grpc_context)
-                        grpc_context.pop("realtime_versions", None)
-                        grpc_context.pop("overlay_generated_at", None)
-
-                user_context_payload = None
-                conversation_context = None
-                plan_context = None
-
-                with tracer.start_as_current_span("db.build_context"):
-                    if active_db and user_id:
-                        local_context = await self._build_user_context(user_id, active_db)
-                        # P0: Merge contexts - prioritize gRPC context (more recent) over local context
-                        user_context_payload = self._merge_user_contexts(local_context, grpc_context)
-                        logger.info(f"Merged user context: {user_context_payload is not None}")
-
-                        # PlanScope: Build plan_context if plan_id is provided
-                        if plan_id:
-                            try:
-                                from app.core.plan_context import PlanContextBuilder
-                                plan_builder = PlanContextBuilder(active_db, self.redis)
-                                plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
-                                if plan_context:
-                                    logger.info(f"Built plan_context for plan_id={plan_id}")
-                                    # Include plan_context in user_context_payload
-                                    if user_context_payload is None:
-                                        user_context_payload = {}
-                                    user_context_payload["plan_context"] = plan_context
-
-                                    # P0-2: Check for phase rollback requirement
-                                    try:
-                                        from app.services.plan_state_service import PlanStateService
-                                        plan_state_svc = PlanStateService(active_db, self.redis)
-                                        plan_state = await plan_state_svc.get_plan_state(
-                                            uuid.UUID(user_id), uuid.UUID(plan_id)
-                                        )
-                                        if plan_state and plan_state.constraints.get("require_phase_rollback"):
-                                            logger.info(f"Phase rollback triggered for plan_id={plan_id}")
-                                            # Clear the flag
-                                            await plan_state_svc.upsert_plan_state(
-                                                user_id=uuid.UUID(user_id),
-                                                plan_id=uuid.UUID(plan_id),
-                                                patch={"constraints": {"require_phase_rollback": False}},
-                                                bump_version=False,
-                                            )
-                                            # Inject rollback context
-                                            plan_context["mode"] = "phase_rollback"
-                                            plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
-                                            # Get last 2 feedback entries for context
-                                            if plan_state.feedback_log:
-                                                plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
-                                    except Exception as e:
-                                        logger.warning(f"Failed to check phase rollback: {e}")
-                            except Exception as e:
-                                logger.warning(f"Failed to build plan context: {e}")
-
-                        # P4: Tool Preference Routing
-                        try:
-                            # Convert user_id string to UUID
-                            user_uuid = uuid.UUID(user_id)
-                            router = ToolPreferenceRouter(active_db, user_uuid, self.redis)
-                            preferred_tools = await router.get_preferred_tools(limit=3)
-                            if preferred_tools:
-                                if user_context_payload is not None:
-                                    user_context_payload["preferred_tools"] = preferred_tools
-                                logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
-                        except Exception as e:
-                            logger.warning(f"Failed to get tool preferences (non-fatal): {e}")
-                            if active_db: await active_db.rollback()
-                    elif grpc_context:
-                        # If no DB session but have gRPC context, use it
-                        user_context_payload = grpc_context
-                        logger.info("Using gRPC context without local DB context")
-
-                self._log_context_injection(user_id, user_context_payload)
-
-                if self.context_pruner:
-                    with tracer.start_as_current_span("db.build_conversation_context"):
-                        conversation_context = await self._build_conversation_context(session_id, user_id)
-
-                # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
-
-                # Prepare queue for streaming early so it can be used by
-                # sufficiency checks and other early-return branches.
-                queue = asyncio.Queue()
+                queue: asyncio.Queue = asyncio.Queue()
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
-                    # Augment response with IDs
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
@@ -1258,1134 +2097,113 @@ class ChatOrchestrator:
                     resp.trace_id = resp.trace_id or trace_id
                     await queue.put(resp)
 
-                # P4: Sufficiency Checking (skip for tool results)
-                if not request.HasField("tool_result"):
-                    with tracer.start_as_current_span("orchestrator.sufficiency_check"):
-                        try:
-                            # Predict intent from user message
-                            prediction = await shadow_prediction_service.predict_intent_only(
-                                user_message=user_message,
-                                active_plan_id=str(plan_id) if plan_id else None,
-                                user_id=user_id
-                            )
-
-                            # Extract basic entities from prediction
-                            extracted_entities = {
-                                "intent_type": prediction.get("intent_type", "unknown"),
-                                "suggested_tools": prediction.get("suggested_tools", []),
-                            }
-
-                            # Run sufficiency check
-                            check_result = await sufficiency_checker.check(
-                                intent=prediction.get("intent_type", "unknown"),
-                                extracted_entities=extracted_entities,
-                                conversation_context=conversation_context or [],
-                            )
-
-                            # If clarification needed, respond with questions
-                            if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
-                                logger.info(f"Sufficiency check requires clarification: {check_result.clarification_questions}")
-                                questions = "\n".join([f"- {q}" for q in check_result.clarification_questions])
-                                clarification_response = agent_service_pb2.ChatResponse(
-                                    delta=f"我需要更多信息来帮您：\n\n{questions}\n\n请提供以上信息，我将为您处理。",
-                                    metadata={
-                                        "requires_clarification": "true",
-                                        "missing_fields": ",".join(check_result.missing_fields),
-                                    }
-                                )
-                                await stream_callback(clarification_response)
-                                await stream_callback(agent_service_pb2.ChatResponse(
-                                    finish_reason=agent_service_pb2.STOP
-                                ))
-                                # Drain queue before returning
-                                logger.info(f"Draining queue, size={queue.qsize()}")
-                                while not queue.empty():
-                                    item = await queue.get()
-                                    content_type = item.WhichOneof("content")
-                                    logger.info(f"Yielding from queue: type={content_type}")
-                                    yield item
-                                logger.info("Queue drained, returning from clarification path")
-                                return
-
-                            # If confirmation needed, ask for confirmation
-                            if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
-                                logger.info(f"Sufficiency check requires confirmation: {check_result.confirmation_message}")
-                                confirmation_response = agent_service_pb2.ChatResponse(
-                                    delta=check_result.confirmation_message,
-                                    metadata={
-                                        "requires_confirmation": "true",
-                                    }
-                                )
-                                await stream_callback(confirmation_response)
-                                await stream_callback(agent_service_pb2.ChatResponse(
-                                    finish_reason=agent_service_pb2.STOP
-                                ))
-                                # Drain queue before returning
-                                while not queue.empty():
-                                    item = await queue.get()
-                                    yield item
-                                return
-
-                        except Exception as e:
-                            logger.warning(f"Sufficiency check failed, continuing: {e}")
-
-                # Initialize transparency tracking (guarded by global settings).
-                transparency_enabled = bool(
-                    settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
-                )
-                transparency_generator = TransparencyDataGenerator(
-                    request_id=request_id or response_id,
-                    enabled=transparency_enabled,
-                )
-
-                async def emit_transparency_event(event: dict[str, Any] | None) -> None:
-                    if not event:
+                # Step 5: Sufficiency check (may short-circuit)
+                with tracer.start_as_current_span("orchestrator.sufficiency_check"):
+                    if await self._check_sufficiency(request=request, user_message=user_message, user_id=user_id, plan_id=plan_id, conversation_context=conversation_context, stream_callback=stream_callback, queue=queue):
+                        async for queued in self._drain_queue(queue):
+                            yield queued
                         return
-                    try:
-                        await stream_callback(
-                            agent_service_pb2.ChatResponse(
-                                metadata={
-                                    "event_type": "transparency",
-                                    "event_payload": json.dumps(event, ensure_ascii=False),
-                                }
-                            )
-                        )
-                    except Exception as exc:
-                        logger.debug(f"Failed to emit transparency event: {exc}")
 
-                # Get tools with a transparency step so the frontend can show progress.
-                tools_step = transparency_generator.create_step(
-                    name="加载工具配置",
-                    step_type=StepType.PLANNING,
-                    agent_type="ORCHESTRATOR",
-                    metadata={"phase": "tools_schema"},
-                )
-                transparency_generator.start_step(tools_step)
-                await emit_transparency_event(transparency_generator.get_step_event())
-                with tracer.start_as_current_span("orchestrator.get_tools"):
-                    tools = await self._get_tools_schema()
-                transparency_generator.complete_step(
-                    tools_step,
-                    metadata={"tool_count": len(tools)},
-                )
-                await emit_transparency_event(transparency_generator.get_step_event())
+                # Step 6: Prepare runtime context (transparency, tools)
+                transparency_generator, emit_transparency_event = await self._prepare_runtime_context(state, request_id, response_id, stream_callback, tracer)
 
-                # Emit initial thinking status
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING
-                    )
-                ))
-
-                # Check and notify pending milestone proposals
+                # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)
-
-                # P0: Send plan switch notification if auto-switched
                 if plan_switched and plan_id:
-                    await stream_callback(agent_service_pb2.ChatResponse(
-                        metadata={
-                            "plan_switched": "true",
-                            "switched_to_plan_id": str(plan_id),
-                        }
-                    ))
-                    logger.info(f"Sent plan switch notification to client: plan_id={plan_id}")
+                    await stream_callback(agent_service_pb2.ChatResponse(metadata={"plan_switched": "true", "switched_to_plan_id": str(plan_id)}))
 
-                # Inject Dependencies
-                if active_db:
-                    state.context_data["db_session"] = active_db
+                # Step 8: Inject dependencies into state
+                self._inject_state_dependencies(
+                    state, active_db=active_db, user_id=user_id, session_id=session_id, stream_callback=stream_callback,
+                    tools_schema=state.context_data.get("tools_schema", []), transparency_generator=transparency_generator,
+                    emit_transparency_event=emit_transparency_event, user_context_payload=user_context_payload,
+                    conversation_context=conversation_context, plan_context=plan_context,
+                    file_ids=list(request.file_ids), include_references=bool(request.include_references),
+                    workflow_id=workflow_id, prompt_version=prompt_version,
+                )
 
-                state.context_data.update({
-                    "user_id": user_id,
-                    "session_id": session_id,
-                    "stream_callback": stream_callback,
-                    "tools_schema": tools,
-                    "transparency_generator": transparency_generator,
-                    "emit_transparency_event": emit_transparency_event,
-                    "redis_client": self.redis,
-                    "user_context": user_context_payload,
-                    "conversation_context": conversation_context,
-                    "plan_context": plan_context,
-                    "file_ids": list(request.file_ids),
-                    "include_references": bool(request.include_references),
-                    "workflow_id": workflow_id,
-                    "prompt_version": prompt_version,
-                })
-
-                # === Multi-Agent Mode Routing ===
-                # Check if a specific chat mode is requested
+                # Step 9: Multi-agent mode (early exit)
                 if chat_mode != CHAT_MODE_STANDARD:
-                    logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+                    async for resp in self._handle_multi_agent_mode(
+                        chat_mode=chat_mode, user_message=user_message, user_id=user_id, session_id=session_id,
+                        response_id=response_id, request_id=request_id, trace_id=trace_id, start_time=start_time,
+                        user_context_payload=user_context_payload, conversation_context=conversation_context,
+                        plan_context=plan_context, stream_callback=stream_callback,
+                    ):
+                        yield resp
+                    return
 
-                    # Prepare context for multi-agent workflow
-                    multi_agent_context = {
-                        "user_id": user_id,
-                        "session_id": session_id,
-                        "user_context": user_context_payload,
-                        "conversation_context": conversation_context,
-                        "plan_context": plan_context,
-                    }
-
-                    try:
-                        # 🔧 修复：实时流式输出，不再使用queue缓冲
-                        response_count = 0
-                        async for response in execute_multi_agent_workflow(
-                            orchestrator=self,
-                            chat_mode=chat_mode,
-                            message=user_message,
-                            user_id=user_id,
-                            session_id=session_id,
-                            context_data=multi_agent_context,
-                            stream_callback=stream_callback,
-                        ):
-                            # Add response metadata
-                            response.response_id = response_id
-                            response.created_at = int(datetime.now().timestamp())
-                            response.request_id = request_id
-                            response.trace_id = response.trace_id or trace_id
-                            response.workflow_id = f"multi_agent_{chat_mode}"
-                            response_count += 1
-                            # 🔧 调试：记录响应内容和类型
-                            content_type = response.WhichOneof("content")
-                            logger.info(f"[Orchestrator] Multi-agent response #{response_count}: type={content_type}, has_delta={hasattr(response, 'delta') and bool(response.delta)}, delta_len={len(response.delta) if hasattr(response, 'delta') and response.delta else 0}")
-                            # 🔧 修复：立即yield响应，实现真正的流式输出
-                            yield response
-
-                        logger.info(f"[Orchestrator] Multi-agent workflow completed with {response_count} responses")
-
-                        # Update final state
-                        await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
-
-                        # Log completion
-                        # 🔧 修复：注释掉metrics记录以避免标签错误
-                        # REQUEST_COUNT.labels(
-                        #     mode="multi_agent",
-                        #     chat_mode=chat_mode,
-                        #     status="success"
-                        # ).inc()
-                        # REQUEST_LATENCY.labels(
-                        #     mode="multi_agent",
-                        #     chat_mode=chat_mode
-                        # ).observe(time.time() - start_time)
-
-                        return
-
-                    except Exception as e:
-                        logger.error(f"Multi-agent workflow error: {e}")
-                        yield agent_service_pb2.ChatResponse(
-                            response_id=response_id,
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            error=agent_service_pb2.Error(
-                                message=f"多Agent协作模式执行失败: {str(e)}",
-                                retryable=True,
-                                error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
-                            ),
-                            finish_reason=agent_service_pb2.ERROR,
-                        )
-                        return
-
-                # === Phase 1 & Phase 2: Routing & Validation Setup ===
-
-                # Fix #1: 统一路由决策（优先于request_router）
-                unified_routing_result = None
-                try:
-                    unified_routing_result = await self.unified_router.route(
-                        message=user_message,
-                        user_id=user_id,
-                        session_id=session_id,
-                        payload=grpc_context,
-                        conversation_history=conversation_context.get("history", []) if conversation_context else []
-                    )
-                    logger.info(
-                        f"Unified routing: {unified_routing_result.primary_intent.value} "
-                        f"(confidence={unified_routing_result.confidence:.2f}, "
-                        f"layer={unified_routing_result.routing_layer})"
-                    )
-                except Exception as e:
-                    logger.warning(f"Unified routing failed: {e}, falling back to request_router")
-
-                # 检查特殊意图并标记到context_data（供后续工具调用使用）
-                if unified_routing_result:
-                    state.context_data["unified_intent"] = {
-                        "primary_intent": unified_routing_result.primary_intent.value,
-                        "confidence": unified_routing_result.confidence,
-                        "routing_layer": unified_routing_result.routing_layer,
-                        "execution_mode": unified_routing_result.execution_mode,
-                        "context_signals": unified_routing_result.context_signals
-                    }
-
-                    # 特殊意图标记（供工具调用时识别）
-                    if unified_routing_result.primary_intent == UnifiedIntentType.COGNITIVE_PRISM:
-                        state.context_data["special_intent"] = "cognitive_prism"
-                        logger.info("Special intent detected: COGNITIVE_PRISM (认知棱镜)")
-                    elif unified_routing_result.primary_intent == UnifiedIntentType.TRANSLATION:
-                        state.context_data["special_intent"] = "translation"
-                        logger.info("Special intent detected: TRANSLATION (翻译)")
-                    elif unified_routing_result.primary_intent == UnifiedIntentType.SPRINT_PLAN:
-                        state.context_data["special_intent"] = "sprint_plan"
-                        logger.info("Special intent detected: SPRINT_PLAN (冲刺计划)")
-
-                # 原有路由决策（保持兼容）
-                route_decision = await self.request_router.decide(
-                    message=user_message,
-                    user_id=user_id,
-                    session_id=session_id
-                )
-                logger.info(
-                    f"Route decision: {route_decision.execution_mode} "
-                    f"(risk: {route_decision.risk_level}, intent: {route_decision.reason})"
+                # Step 10: Route
+                route_decision, unified_routing_result = await self._route_and_classify(
+                    user_message=user_message, user_id=user_id, session_id=session_id,
+                    grpc_context=grpc_context, conversation_context=conversation_context, state=state,
                 )
 
-                # 存储路由决策和 plan 元数据到 state
-                # 工具执行节点会使用这些信息进行验证
-                state.context_data["plan_metadata"] = {
-                    "context_version": route_decision.context_version,
-                    "execution_mode": route_decision.execution_mode,
-                    "risk_level": route_decision.risk_level,
-                    "route_reason": route_decision.reason
-                }
-                state.context_data["grounding_validator"] = self.grounding_validator
+                # Step 11: Plan & validate (langgraph/hybrid mode)
+                route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
+                    route_decision=route_decision, user_message=user_message, user_id=user_id, session_id=session_id,
+                    active_db=active_db, plan_id=plan_id, conversation_context=conversation_context,
+                    stream_callback=stream_callback, state=state, user_context_payload=user_context_payload,
+                )
+                if should_return:
+                    return
 
-                # === Phase 2: LangGraph Planning Mode ===
-                # === Phase 3: With Circuit Breaker, Observability, Shadow Mode ===
-                executable_plan = None
-                snapshot = None
-
-                # Fix #2: 信息收集检查（在LangGraph规划之前）
-                # 仅在识别为计划意图时触发信息收集
-                if unified_routing_result and unified_routing_result.primary_intent == UnifiedIntentType.PLAN:
-                    try:
-                        # 创建临时snapshot用于信息充足度检查
-                        temp_snapshot = await self.snapshot_manager.create_snapshot(
-                            user_id=user_id,
-                            session_id=session_id,
-                            db_session=active_db,
-                        )
-
-                        # 检查并收集信息
-                        info_collection_triggered = await self.check_and_collect_information(
-                            user_message=user_message,
-                            snapshot=temp_snapshot,
-                            user_id=user_id,
-                            session_id=session_id,
-                            stream_callback=stream_callback
-                        )
-
-                        # 如果触发了信息收集，继续正常流程（不中断）
-                        # 用户回复后会再次进入流程，此时信息会更充足
-                        if info_collection_triggered:
-                            logger.info("Information collection triggered, continuing with planning")
-
-                    except Exception as e:
-                        logger.warning(f"Information collection check failed: {e}")
-                        # 继续正常流程，不阻塞
-
-                if route_decision.execution_mode in ["langgraph", "hybrid"]:
-                    logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
-
-                    # === Phase 3: Circuit Breaker Check ===
-                    allow, reason = await self.langgraph_breaker.allow_request()
-                    if not allow:
-                        logger.warning(f"LangGraph blocked by circuit breaker: {reason}")
-                        await self.observability.log_circuit_state_change(
-                            circuit_name="langgraph_planner",
-                            old_state="open",
-                            new_state="open",
-                            reason=reason
-                        )
-                        # Degrade to direct mode
-                        await stream_callback(agent_service_pb2.ChatResponse(
-                            delta="\n\n⚠️ 智能规划暂时不可用，使用标准模式"
-                        ))
-                        route_decision.execution_mode = "direct"
-                    else:
-                        try:
-                            # 1. Create State Snapshot
-                            snapshot = await self.snapshot_manager.create_snapshot(
-                                user_id=user_id,
-                                session_id=session_id,
-                                db_session=active_db
-                            )
-
-                            # 2. Call LangGraph Planner
-                            conversation_history = []
-                            if conversation_context:
-                                conversation_history = conversation_context.get("messages", [])
-
-                            # Phase 4: Pass plan_id for version tracking
-                            plan_id_str = str(plan_id) if plan_id else None
-
-                            executable_plan = await self.lang_graph_planner.plan(
-                                message=user_message,
-                                snapshot=snapshot,
-                                user_id=user_id,
-                                session_id=session_id,
-                                conversation_history=conversation_history,
-                                plan_id=plan_id_str,  # Phase 4
-                            )
-
-                            # === Phase 3: Log planning observability ===
-                            await self.observability.log_langgraph_plan(
-                                user_id=user_id,
-                                session_id=session_id,
-                                plan_id=executable_plan.plan_id,
-                                plan_data={
-                                    "agents_involved": executable_plan.agents_involved,
-                                    "collaboration_mode": executable_plan.collaboration_mode,
-                                    "tool_calls_count": len(executable_plan.tool_calls),
-                                    "confidence": executable_plan.confidence,
-                                    "rationale": executable_plan.rationale
-                                }
-                            )
-
-                            logger.info(
-                                f"LangGraph plan generated: {len(executable_plan.tool_calls)} tool calls, "
-                                f"confidence={executable_plan.confidence}, "
-                                f"collaboration={executable_plan.collaboration_mode}, "
-                                f"agents={executable_plan.agents_involved}"
-                            )
-
-                            # 3. Version Conflict Check
-                            current_versions = await self._load_context_versions(user_id)
-                            version_check = await self.snapshot_manager.compare_versions(
-                                snapshot=snapshot,
-                                current_versions=current_versions
-                            )
-                            replan_attempted = False
-
-                            if version_check["has_conflict"]:
-                                logger.warning(
-                                    f"Version conflict detected: {version_check['conflicted_domains']}"
-                                )
-
-                                if executable_plan.fallback_strategy.get("on_version_conflict") == "replan":
-                                    # P1: Check replan rate limit
-                                    plan_uuid = uuid.UUID(plan_id_str) if plan_id_str else None
-                                    user_uuid = uuid.UUID(user_id)
-
-                                    if plan_uuid:
-                                        can_replan, limit_reason, attempt_count = await self.version_conflict_service.can_replan(
-                                            user_uuid, plan_uuid
-                                        )
-
-                                        if not can_replan:
-                                            logger.warning(f"Replan rate limited: {limit_reason}")
-                                            await stream_callback(agent_service_pb2.ChatResponse(
-                                                delta=f"\n\n⚠️ {limit_reason}. 请稍后重试。",
-                                                metadata={
-                                                    "replan_blocked": "true",
-                                                    "reason": limit_reason,
-                                                    "attempt_count": str(attempt_count),
-                                                }
-                                            ))
-                                            return
-
-                                        # Record replan attempt
-                                        await self.version_conflict_service.record_replan_attempt(user_uuid, plan_uuid)
-
-                                    logger.info("Version conflict -> attempting replan with latest snapshot")
-                                    replan_attempted = True
-                                    snapshot = await self.snapshot_manager.create_snapshot(
-                                        user_id=user_id,
-                                        session_id=session_id,
-                                        db_session=active_db
-                                    )
-                                    executable_plan = await self.lang_graph_planner.plan(
-                                        message=user_message,
-                                        snapshot=snapshot,
-                                        user_id=user_id,
-                                        session_id=session_id,
-                                        conversation_history=conversation_history,
-                                        plan_id=plan_id_str,  # Phase 4
-                                    )
-                                    current_versions = await self._load_context_versions(user_id)
-                                    version_check = await self.snapshot_manager.compare_versions(
-                                        snapshot=snapshot,
-                                        current_versions=current_versions
-                                    )
-
-                                conflict_domains = set(version_check.get("conflicted_domains", []))
-                                affected_domains = self._get_plan_affected_domains(executable_plan)
-
-                                if affected_domains and conflict_domains.isdisjoint(affected_domains):
-                                    logger.info(
-                                        "Version conflict outside affected domains, proceeding without replan"
-                                    )
-                                elif executable_plan.confidence < 0.7 and not replan_attempted:
-                                    # Low confidence + conflict → Discard plan
-                                    await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta="\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
-                                    ))
-                                    # === Phase 3: Log validation failure ===
-                                    await self.observability.log_validation_failed(
-                                        user_id=user_id,
-                                        session_id=session_id,
-                                        plan_id=executable_plan.plan_id,
-                                        failure_reason="Version conflict with low confidence"
-                                    )
-                                    await self.langgraph_breaker.on_failure("version_conflict_low_confidence")
-                                    return
-                                elif version_check["has_conflict"]:
-                                    # High confidence + conflict → HITL confirmation
-                                    tool_calls_payload = [
-                                        {
-                                            "id": tc.id,
-                                            "name": tc.name,
-                                            "params": tc.params
-                                        }
-                                        for tc in executable_plan.tool_calls
-                                    ]
-                                    action_id = await pending_actions_store.save(
-                                        tool_name="__plan__",
-                                        arguments={
-                                            "plan_id": executable_plan.plan_id,
-                                            "snapshot_id": snapshot.snapshot_id if snapshot else None,
-                                            "tool_calls": tool_calls_payload,
-                                            "reason": "version_conflict",
-                                            "conflicted_domains": list(conflict_domains)
-                                        },
-                                        user_id=str(user_id),
-                                        description="检测到状态变更，是否继续执行该计划？",
-                                        preview_data={
-                                            "plan_id": executable_plan.plan_id,
-                                            "conflicted_domains": list(conflict_domains),
-                                            "affected_domains": list(affected_domains),
-                                            "tool_calls": tool_calls_payload
-                                        }
-                                    )
-                                    HITL_REQUESTED.labels(reason="version_conflict").inc()
-                                    await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta=(
-                                            "\n\n⚠️ 检测到状态变化，需要确认后继续执行。\n"
-                                            f"action_id={action_id}"
-                                        ),
-                                        metadata={
-                                            "requires_hitl": "true",
-                                            "action_id": action_id,
-                                            "reason": "version_conflict"
-                                        }
-                                    ))
-                                    return
-
-                            # 4. Grounding Validation
-                            validation_result = await self.grounding_validator.validate_plan(
-                                plan=executable_plan,
-                                snapshot=snapshot
-                            )
-
-                            if not validation_result.is_valid:
-                                await stream_callback(agent_service_pb2.ChatResponse(
-                                    delta=f"\n\n⚠️ 计划验证失败: {validation_result.failure_reason}"
-                                ))
-                                # === Phase 3: Log validation failure ===
-                                await self.observability.log_validation_failed(
-                                    user_id=user_id,
-                                    session_id=session_id,
-                                    plan_id=executable_plan.plan_id,
-                                    failure_reason=validation_result.failure_reason
-                                )
-                                await self.langgraph_breaker.on_failure("validation_failed")
-                                return
-
-                            # 5. Preflight Check
-                            preflight = await self.grounding_validator.preflight_check(
-                                plan=executable_plan,
-                                user_id=user_id
-                            )
-
-                            if not preflight["is_ready"]:
-                                await stream_callback(agent_service_pb2.ChatResponse(
-                                    delta=f"\n\n⚠️ 服务暂时不可用: {', '.join(preflight['blocked_by'])}"
-                                ))
-                                await self.langgraph_breaker.on_failure("preflight_blocked")
-                                return
-
-                            # === Phase 4: Plan version conflict check before execution ===
-                            if plan_id and hasattr(executable_plan, 'plan_version'):
-                                from app.services.plan_feedback_service import get_plan_feedback_service
-                                from app.services.plan_state_service import PlanStateService
-
-                                plan_state_service = PlanStateService(active_db, self.redis)
-                                feedback_service = get_plan_feedback_service(active_db, self.redis)
-
-                                # Check rate limit first
-                                rate_allowed, rate_count = await self._check_replan_rate_limit(plan_id)
-                                if not rate_allowed:
-                                    await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta="\n\n⚠️ 计划重规划过于频繁，请稍后再试。"
-                                    ))
-                                    return
-
-                                # Retry loop for version conflict handling
-                                version_conflict_logged = False
-                                for replan_attempt in range(MAX_REPLAN_ATTEMPTS):
-                                    current_state = await plan_state_service.get_plan_state(
-                                        uuid.UUID(user_id), uuid.UUID(plan_id)
-                                    )
-
-                                    if not current_state or current_state.version == executable_plan.plan_version:
-                                        # No conflict or no state, exit loop successfully
-                                        break
-
-                                    # Version conflict detected
-                                    logger.warning(
-                                        f"Plan version conflict (attempt {replan_attempt + 1}/{MAX_REPLAN_ATTEMPTS}): "
-                                        f"planned v{executable_plan.plan_version} -> current v{current_state.version}"
-                                    )
-
-                                    # Log conflict feedback only once
-                                    if not version_conflict_logged:
-                                        await feedback_service.append_user_feedback(
-                                            user_id=uuid.UUID(user_id),
-                                            plan_id=uuid.UUID(plan_id),
-                                            content=(
-                                                f"Plan version conflict detected: "
-                                                f"planned v{executable_plan.plan_version}, "
-                                                f"current v{current_state.version}"
-                                            ),
-                                            decision="supplement",
-                                            priority="high"
-                                        )
-                                        version_conflict_logged = True
-
-                                    # Check if we've exhausted retries
-                                    if replan_attempt >= MAX_REPLAN_ATTEMPTS - 1:
-                                        # Max retries reached, require HITL
-                                        tool_calls_payload = [
-                                            {"id": tc.id, "name": tc.name, "params": tc.params}
-                                            for tc in executable_plan.tool_calls
-                                        ]
-                                        action_id = await pending_actions_store.save(
-                                            tool_name="__plan_version_conflict__",
-                                            arguments={
-                                                "plan_id": executable_plan.plan_id,
-                                                "planned_version": executable_plan.plan_version,
-                                                "current_version": current_state.version,
-                                                "tool_calls": tool_calls_payload,
-                                            },
-                                            user_id=str(user_id),
-                                            description=(
-                                                f"计划版本持续变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
-                                                f"是否继续执行？"
-                                            ),
-                                            preview_data={
-                                                "plan_id": executable_plan.plan_id,
-                                                "planned_version": executable_plan.plan_version,
-                                                "current_version": current_state.version,
-                                                "confidence": executable_plan.confidence,
-                                                "tool_calls": tool_calls_payload,
-                                            }
-                                        )
-                                        HITL_REQUESTED.labels(reason="plan_version_conflict_max_retries").inc()
-                                        await stream_callback(agent_service_pb2.ChatResponse(
-                                            delta=(
-                                                f"\n\n⚠️ 检测到持续状态变更，已重试 {MAX_REPLAN_ATTEMPTS} 次，"
-                                                f"需要确认后继续执行。\naction_id={action_id}"
-                                            ),
-                                            metadata={
-                                                "requires_hitl": "true",
-                                                "action_id": action_id,
-                                                "reason": "plan_version_conflict_max_retries",
-                                            }
-                                        ))
-                                        return
-
-                                    # Handle conflict based on confidence
-                                    if executable_plan.confidence >= VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD:
-                                        # High confidence: auto replan
-                                        if replan_attempt == 0:
-                                            await stream_callback(agent_service_pb2.ChatResponse(
-                                                delta="\n\n⚠️ 检测到状态变更，正在重新规划..."
-                                            ))
-
-                                        # Create new snapshot and replan
-                                        new_snapshot = await self.snapshot_manager.create_snapshot(
-                                            user_id=user_id,
-                                            session_id=session_id,
-                                            db_session=active_db
-                                        )
-                                        executable_plan = await self.lang_graph_planner.replan(
-                                            message=user_message,
-                                            snapshot=new_snapshot,
-                                            user_id=user_id,
-                                            session_id=session_id,
-                                            previous_plan=executable_plan,
-                                            conflict_info={
-                                                "has_conflict": True,
-                                                "old_version": executable_plan.plan_version,
-                                                "new_version": current_state.version,
-                                            },
-                                            plan_id=plan_id_str,
-                                        )
-                                        # Continue loop to verify new plan version
-                                    else:
-                                        # Low confidence: require HITL confirmation (no retry)
-                                        tool_calls_payload = [
-                                            {"id": tc.id, "name": tc.name, "params": tc.params}
-                                            for tc in executable_plan.tool_calls
-                                        ]
-                                        action_id = await pending_actions_store.save(
-                                            tool_name="__plan_version_conflict__",
-                                            arguments={
-                                                "plan_id": executable_plan.plan_id,
-                                                "planned_version": executable_plan.plan_version,
-                                                "current_version": current_state.version,
-                                                "tool_calls": tool_calls_payload,
-                                            },
-                                            user_id=str(user_id),
-                                            description=(
-                                                f"计划版本已变更 (v{executable_plan.plan_version} -> v{current_state.version})，"
-                                                f"是否继续执行？"
-                                            ),
-                                            preview_data={
-                                                "plan_id": executable_plan.plan_id,
-                                                "planned_version": executable_plan.plan_version,
-                                                "current_version": current_state.version,
-                                                "confidence": executable_plan.confidence,
-                                                "tool_calls": tool_calls_payload,
-                                            }
-                                        )
-                                        HITL_REQUESTED.labels(reason="plan_version_conflict_low_confidence").inc()
-                                        await stream_callback(agent_service_pb2.ChatResponse(
-                                            delta=(
-                                                f"\n\n⚠️ 检测到状态变更，需要确认后继续执行。\n"
-                                                f"action_id={action_id}"
-                                            ),
-                                            metadata={
-                                                "requires_hitl": "true",
-                                                "action_id": action_id,
-                                                "reason": "plan_version_conflict",
-                                            }
-                                        ))
-                                        return
-
-                                # If we get here, version check passed (no conflict or resolved)
-                                if version_conflict_logged:
-                                    logger.info(f"Plan version conflict resolved for plan {plan_id}")
-
-                            # 6. Plan Review (User Confirmation Loop)
-                            if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
-                                review_result = await plan_review_service.review_plan(
-                                    plan=executable_plan,
-                                    user_message=user_message,
-                                    user_context=user_context_payload or {}
-                                )
-
-                                # === Phase 4: Write review feedback to PlanScope (时机1: 审查完成后) ===
-                                if plan_id:
-                                    from app.services.plan_feedback_service import get_plan_feedback_service
-                                    feedback_service = get_plan_feedback_service(active_db, self.redis)
-
-                                    # 写入审查结果到 feedback_log
-                                    await feedback_service.append_review_feedback(
-                                        user_id=uuid.UUID(user_id),
-                                        plan_id=uuid.UUID(plan_id),
-                                        review_result=review_result,
-                                        user_decision=None,  # 尚未确认
-                                    )
-                                    logger.info(f"Review feedback written for plan {plan_id}")
-
-                                # Check if plan requires user action
-                                if review_result.decision in [
-                                    ReviewDecision.REJECTED.value,
-                                    ReviewDecision.REQUIRES_CONFIRMATION.value,
-                                    ReviewDecision.NEEDS_MODIFICATION.value
-                                ]:
-                                    action_id = await plan_review_service.store_review_result(
-                                        review=review_result,
-                                        user_id=str(user_id)
-                                    )
-
-                                    # Send review result to client
-                                    # Serialize full review data as JSON string for proto map<string,string>
-                                    # Go gateway will decode this back to a Map for Flutter
-                                    review_data_dict = review_result.to_dict()
-                                    review_data_dict["action_id"] = action_id  # Flutter needs action_id for feedback submission
-
-                                    review_metadata = {
-                                        "requires_review": "true",
-                                        "review_action_id": action_id,
-                                        "review_decision": review_result.decision,
-                                        "review_id": review_result.review_id,
-                                        "plan_id": review_result.plan_id,
-                                        "review_data": json.dumps(review_data_dict),
-                                    }
-
-                                    # Format review message for display
-                                    review_delta = self._format_review_message(review_result)
-
-                                    await stream_callback(agent_service_pb2.ChatResponse(
-                                        delta=review_delta,
-                                        metadata=review_metadata
-                                    ))
-
-                                    # Store review result in state for potential re-plan
-                                    state.context_data["plan_review"] = review_result.to_dict()
-                                    state.context_data["pending_review_action_id"] = action_id
-
-                                    logger.info(
-                                        f"Plan {executable_plan.plan_id} requires user review: "
-                                        f"{review_result.decision} (action_id={action_id})"
-                                    )
-                                    return
-
-                                # Auto-approved: continue with execution
-                                state.context_data["plan_review"] = review_result.to_dict()
-                                logger.info(
-                                    f"Plan {executable_plan.plan_id} auto-approved: "
-                                    f"confidence={review_result.confidence}"
-                                )
-
-                            # 7. Store plan in state for execution
-                            state.context_data["executable_plan"] = executable_plan
-                            state.context_data["snapshot"] = snapshot
-
-                            # === Phase 3: Record success for circuit breaker (plan accepted) ===
-                            await self.langgraph_breaker.on_success()
-
-                            # Log plan summary
-                            plan_summary = self.lang_graph_planner.get_plan_summary(executable_plan)
-                            logger.info(f"Plan ready for execution: {plan_summary}")
-
-                            # === Phase 3: Log collaboration start if multi-agent ===
-                            if executable_plan.collaboration_mode != "single":
-                                await self.observability.log_collaboration_start(
-                                    user_id=user_id,
-                                    session_id=session_id,
-                                    agents=executable_plan.agents_involved,
-                                    mode=executable_plan.collaboration_mode
-                                )
-
-                            # === Phase 3: Shadow Mode Prediction (parallel, non-blocking) ===
-                            asyncio.create_task(
-                                self.shadow_predictor.predict_and_record(
-                                    user_message=user_message,
-                                    user_id=user_id,
-                                    session_id=session_id,
-                                    actual_decision=route_decision,
-                                    actual_plan=executable_plan
-                                )
-                            )
-
-                        except Exception as e:
-                            logger.error(f"LangGraph planning error: {e}", exc_info=True)
-                            # === Phase 3: Record failure for circuit breaker ===
-                            await self.langgraph_breaker.on_failure(str(e))
-                            # Fall back to direct mode
-                            await stream_callback(agent_service_pb2.ChatResponse(
-                                delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"
-                            ))
-                            # Reset to direct mode
-                            route_decision.execution_mode = "direct"
-
-                # === Phase 3: Log route decision (after potential mode change) ===
+                # Step 12: Log route decision
                 await self.observability.log_route_decision(
-                    user_id=user_id,
-                    session_id=session_id,
-                    message=user_message,
-                    decision={
-                        "execution_mode": route_decision.execution_mode,
-                        "risk_level": route_decision.risk_level,
-                        "reason": route_decision.reason,
-                        "intent": route_decision.reason.split(":")[0] if ":" in route_decision.reason else "unknown"
-                    }
+                    user_id=user_id, session_id=session_id, message=user_message,
+                    decision={"execution_mode": route_decision.execution_mode, "risk_level": route_decision.risk_level,
+                              "reason": route_decision.reason, "intent": route_decision.reason.split(":")[0] if ":" in route_decision.reason else "unknown"},
                 )
 
-                # ===========================================
-
-                # Launch Graph Execution in Background (Managed)
-                logger.info("🚀 Launching StateGraph Execution")
-
+                # Step 13: Execute graph
+                result_holder: dict[str, Any] = {}
                 with tracer.start_as_current_span("agent_graph.invoke"):
-                    graph_task = await task_manager.spawn(
-                        self.graph.invoke(state),
-                        task_name="orchestrator_graph",
-                        user_id=str(user_id)
-                    )
+                    async for item in self._execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
+                        yield item
 
-                    # Stream from queue
-                    while not graph_task.done() or not queue.empty():
-                        try:
-                            # Wait for next item with timeout to check task status
-                            item = await asyncio.wait_for(queue.get(), timeout=0.1)
-
-                            # Track token usage if present
-                            if item.HasField("usage"):
-                                total_prompt_tokens = item.usage.prompt_tokens
-                                total_completion_tokens = item.usage.completion_tokens
-                                # Also track to Prometheus immediately
-                                if self.token_tracker:
-                                    TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
-                                    TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
-
-                            yield item
-                            queue.task_done()
-                        except TimeoutError:
-                            if graph_task.done():
-                                break
-
-                # Check for exceptions
-                if graph_task.done():
-                    exc = graph_task.exception()
-                    if exc:
-                        raise exc
-
-                    # Get final state
-                    final_state = graph_task.result()
-
-                    # Get full response from state history
-                    full_response = ""
-                    # Find the last assistant message
-                    for msg in reversed(final_state.messages):
-                        if msg["role"] == "assistant":
-                            full_response = msg["content"]
-                            break
-
-                    # Compose Final Response (Idempotency Cache)
-                    # Note: Tool results are already in history, but ResponseComposer might need them separate.
-                    # For now, we trust full_response is sufficient or we can extract from context.
-
-                    llm_profile_meta = {}
-                    if isinstance(user_context_payload, dict):
-                        llm_profile = user_context_payload.get("llm_profile")
-                        if llm_profile:
-                            # Handle both dict and JSON string cases
-                            if isinstance(llm_profile, str):
-                                try:
-                                    llm_profile_meta = json.loads(llm_profile)
-                                except (json.JSONDecodeError, TypeError):
-                                    logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
-                                    llm_profile_meta = {}
-                            elif isinstance(llm_profile, dict):
-                                llm_profile_meta = llm_profile
-                            else:
-                                logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
-                                llm_profile_meta = {}
-
-                    # Build metadata with plan switch notification
-                    response_metadata = {
-                        "response_id": response_id,
-                        "trace_id": trace_id,
-                        "preference_version": (user_context_payload or {}).get("preference_version", 0),
-                        "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
-                    }
-
-                    # P0: Add sprint mode switch notification
-                    if route_decision and "sprint" in route_decision.reason.lower():
-                        response_metadata["switch_to_sprint"] = True
-                        logger.info("Sprint mode switch notification added to response")
-
-                    # P0: Add plan switch notification to metadata
-                    if plan_switched and plan_id:
-                        response_metadata["plan_switched"] = True
-                        response_metadata["switched_to_plan_id"] = str(plan_id)
-                        logger.info(f"Plan switch notification added to response: plan_id={plan_id}")
-
-                    # === Phase 5: Plan Execution Validation ===
-                    # Validate plan execution results and persist to database
-                    if executable_plan and hasattr(executable_plan, 'plan_id') and active_db:
-                        try:
-                            with tracer.start_as_current_span("orchestrator.validate_execution"):
-                                # 1. Extract tool results from final_state.messages
-                                tool_extractor = ToolResultExtractor()
-                                tool_results = tool_extractor.extract_from_messages(
-                                    final_state.messages
-                                )
-
-                                # 2. Only validate if there were tool executions
-                                if tool_results or executable_plan.tool_calls:
-                                    # Create record service for persistence
-                                    record_service = PlanExecutionRecordService(active_db)
-
-                                    # Create validator with record service
-                                    execution_validator = PlanExecutionValidator(
-                                        record_service=record_service
-                                    )
-
-                                    # 3. Validate and persist
-                                    validation_result = await execution_validator.validate_and_record(
-                                        plan=executable_plan,
-                                        tool_results=tool_results,
-                                        user_id=uuid.UUID(user_id),
-                                    )
-
-                                    logger.info(
-                                        f"Plan execution validation: "
-                                        f"plan_id={validation_result.plan_id}, "
-                                        f"validation_status={validation_result.validation_status}, "
-                                        f"score={validation_result.quality_score:.2f}"
-                                    )
-
-                                    # 4. Add validation result to response metadata
-                                    response_metadata["execution_validation"] = {
-                                        "validation_status": validation_result.validation_status,
-                                        "quality_score": validation_result.quality_score,
-                                        "tools_total": validation_result.tool_summary.get("total", 0),
-                                        "tools_successful": validation_result.tool_summary.get("successful", 0),
-                                    }
-
-                        except Exception as e:
-                            logger.warning(f"Plan execution validation failed: {e}", exc_info=True)
-                            # Validation failure should not affect main flow
-
-                    final_response_data = {
-                        "message": full_response,
-                        "tool_results": [],
-                        "metadata": response_metadata,
-                    }
-                    if active_db and full_response:
-                        try:
-                            assistant_msg = ChatMessage(
-                                user_id=uuid.UUID(str(user_id)),
-                                session_id=uuid.UUID(str(session_id)),
-                                role=MessageRole.ASSISTANT,
-                                content=full_response,
-                                model_name=getattr(llm_service, "default_model", None),
-                            )
-                            active_db.add(assistant_msg)
-                            await active_db.commit()
-                        except Exception as e:
-                            logger.warning(f"Failed to persist assistant chat message: {e}")
-                            with contextlib.suppress(Exception):
-                                await active_db.rollback()
-                    try:
-                        from app.services.decision_record_service import DecisionRecordService
-
-                        if active_db is not None and active_db.is_active:
-                            logger.debug(f"DEBUG: llm_profile_meta type={type(llm_profile_meta)} content={llm_profile_meta}")
-                            
-                            def get_val(d, key, default):
-                                if not isinstance(d, dict): return default
-                                # Try normal key, then try key with literal double quotes
-                                if key in d: return d[key]
-                                quoted_key = f'"{key}"'
-                                if quoted_key in d: return d[quoted_key]
-                                return default
-
-                            # Ensure llm_profile_meta is a dict and has defaults
-                            pref_snapshot = {
-                                "verbosity": get_val(llm_profile_meta, "verbosity_target", "balanced"),
-                                "temperature": get_val(llm_profile_meta, "temperature", 0.7),
-                                "tone": get_val(llm_profile_meta, "tone", "encouraging"),
-                            }
-                            
-                            decision_service = DecisionRecordService(active_db)
-                            await decision_service.record_decision(
-                                user_id=uuid.UUID(str(user_id)),
-                                module="ai",
-                                action="generate_response",
-                                preference_version=(user_context_payload or {}).get("preference_version", 0),
-                                preferences_snapshot=pref_snapshot,
-                                outcome=f"Generated response with {len(full_response)} chars",
-                            )
-                    except Exception as e:
-                        logger.warning(f"Failed to record decision: {e}")
-                        logger.debug(f"llm_profile_meta type: {type(llm_profile_meta)}, content: {llm_profile_meta}")
+                # Step 14: Build & yield final response
+                final_state = result_holder.get("final_state")
+                if final_state is not None:
+                    total_prompt_tokens = result_holder.get("total_prompt_tokens", 0)
+                    total_completion_tokens = result_holder.get("total_completion_tokens", 0)
+                    with tracer.start_as_current_span("orchestrator.build_final_response"):
+                        final_response, final_response_data = await self._build_final_response(
+                            final_state=final_state, executable_plan=executable_plan, active_db=active_db,
+                            user_id=user_id, session_id=session_id, response_id=response_id, request_id=request_id,
+                            trace_id=trace_id, workflow_id=workflow_id, prompt_version=prompt_version,
+                            route_decision=route_decision, plan_switched=plan_switched, plan_id=plan_id,
+                            user_context_payload=user_context_payload,
+                        )
                     with tracer.start_as_current_span("orchestrator.cache_response"):
                         await self._cache_response(session_id, request_id, final_response_data)
-
-                    # Yield final full_text if not already streamed complete?
-                    # Actually, standard_workflow streams delta. Client might need full_text signal.
-                    if transparency_generator is not None and "emit_transparency_event" in locals():
+                    if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
                     for update_resp in await self._emit_system_updates(user_id):
                         yield update_resp
-
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=response_id,
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        trace_id=trace_id,
-                        workflow_id=workflow_id,
-                        prompt_version=prompt_version,
-                        metadata={str(k): str(v) for k, v in final_response_data.get("metadata", {}).items()},
-                        full_text=full_response,
-                        finish_reason=agent_service_pb2.STOP
-                    )
+                    yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-
-                COLLABORATION_SUCCESS.labels(
-                    workflow_type="standard_chat",
-                    agents_used="orchestrator",
-                    outcome="success"
-                ).inc()
+                COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="success").inc()
 
             except Exception as e:
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
-
-                COLLABORATION_SUCCESS.labels(
-                    workflow_type="standard_chat",
-                    agents_used="orchestrator",
-                    outcome="error"
-                ).inc()
+                COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="error").inc()
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
-                if transparency_generator is not None and "emit_transparency_event" in locals():
+                if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
                 yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    error=agent_service_pb2.Error(
-                        message=str(e),
-                        retryable=True,
-                        error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
-                    ),
-                    finish_reason=agent_service_pb2.ERROR
+                    response_id=response_id, created_at=int(datetime.now().timestamp()), request_id=request_id,
+                    error=agent_service_pb2.Error(message=str(e), retryable=True, error_code=agent_service_pb2.ERROR_CODE_INTERNAL),
+                    finish_reason=agent_service_pb2.ERROR,
                 )
 
             finally:
-                ACTIVE_SESSIONS.dec()
-                latency = time.time() - start_time
-                REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
-                COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
-
-                # Stop lock renewal task
-                if lock_renewal_task and lock_renewal_stop:
-                    try:
-                        await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
-                    except Exception as e:
-                        logger.warning(f"Failed to stop lock renewal: {e}")
-
-                # Always release lock
-                if lock_acquired:
-                    await self._release_session_lock(session_id, request_id)
-
-                # Record token usage (async, non-blocking)
-                if self.token_tracker and total_prompt_tokens > 0:
-                    try:
-                        # Estimate cost
-                        estimated_cost = await self.token_tracker.estimate_cost(
-                            prompt_tokens=total_prompt_tokens,
-                            completion_tokens=total_completion_tokens,
-                            model="gpt-4"
-                        )
-
-                        # Record usage (async - managed)
-                        await task_manager.spawn(
-                            self.token_tracker.record_usage(
-                                user_id=user_id,
-                                session_id=session_id,
-                                request_id=request_id,
-                                prompt_tokens=total_prompt_tokens,
-                                completion_tokens=total_completion_tokens,
-                                model="gpt-4",
-                                cost=estimated_cost
-                            ),
-                            task_name="token_usage_record",
-                            user_id=str(user_id)
-                        )
-
-                        logger.info(
-                            f"Token usage recorded for user {user_id}: "
-                            f"{total_prompt_tokens} + {total_completion_tokens} = "
-                            f"{total_prompt_tokens + total_completion_tokens} tokens, "
-                            f"est. cost: ${estimated_cost:.6f}"
-                        )
-
-                    except Exception as e:
-                        logger.error(f"Failed to record token usage: {e}")
+                await self._cleanup(
+                    lock_acquired=lock_acquired, lock_renewal_task=lock_renewal_task, lock_renewal_stop=lock_renewal_stop,
+                    session_id=session_id, request_id=request_id, start_time=start_time, user_id=user_id,
+                    total_prompt_tokens=total_prompt_tokens, total_completion_tokens=total_completion_tokens,
+                )
 
     async def _notify_pending_milestone_proposals(
         self,
@@ -2433,309 +2251,6 @@ class ChatOrchestrator:
 
         except Exception as e:
             logger.warning(f"Failed to notify milestone proposals: {e}")
-
-    # Fix #2: 多轮对话信息收集方法
-
-    async def _is_information_sufficient(
-        self,
-        collected_info: dict[str, Any],
-        snapshot
-    ) -> tuple[bool, list[str]]:
-        """
-        使用LLM判断当前收集的信息是否充足
-
-        Args:
-            collected_info: 已收集的信息
-            snapshot: StateSnapshot对象
-
-        Returns:
-            (is_sufficient, list_of_missing_aspects)
-        """
-        prompt = f"""你是一个信息充足度判断专家。请分析当前收集的用户信息是否足够制定学习计划。
-
-## 用户初始请求
-{collected_info.get("initial_request", "")}
-
-## 已收集的澄清信息
-{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
-
-## 当前用户上下文
-{snapshot.to_prompt_context() if snapshot else "无"}
-
-请判断：
-1. 信息是否充足（可以开始制定计划）
-2. 如果不充足，列出缺失的关键方面（最多3个）
-
-返回JSON格式：
-{{
-  "is_sufficient": true/false,
-  "missing_aspects": ["缺失方面1", "缺失方面2"],
-  "reasoning": "判断理由"
-}}
-"""
-
-        try:
-            result = await llm_service.chat_json(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1
-            )
-
-            is_sufficient = result.get("is_sufficient", False)
-            missing_aspects = result.get("missing_aspects", [])
-
-            logger.info(
-                f"Information sufficiency check: sufficient={is_sufficient}, "
-                f"missing={len(missing_aspects)}"
-            )
-
-            return is_sufficient, missing_aspects
-
-        except Exception as e:
-            logger.error(f"LLM information sufficiency check failed: {e}")
-            # 降级：认为信息充足，避免阻塞流程
-            return True, []
-
-    async def _generate_clarifying_question(
-        self,
-        missing_aspects: list[str],
-        collected_info: dict[str, Any]
-    ) -> str:
-        """
-        生成追问
-
-        Args:
-            missing_aspects: 缺失的信息方面
-            collected_info: 已收集的信息
-
-        Returns:
-            追问文本
-        """
-        prompt = f"""你是一个善于提问的学习助手。需要向用户询问缺失的信息以制定学习计划。
-
-## 缺失的信息方面
-{chr(10).join(f"- {aspect}" for aspect in missing_aspects)}
-
-## 当前已收集的信息
-{json.dumps(collected_info, ensure_ascii=False, indent=2)}
-
-请生成一个自然、友好的追问，帮助用户提供这些缺失信息。
-
-要求：
-1. 问题要自然、口语化
-2. 一次只问1-2个相关问题
-3. 体现出你对用户情况的理解
-
-返回追问内容（直接返回问题文本，不要JSON）。"""
-
-        try:
-            question = await llm_service.chat(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7
-            )
-            return question.strip()
-        except Exception as e:
-            logger.error(f"Failed to generate clarifying question: {e}")
-            return "为了更好地为您制定计划，请提供更多关于您学习目标和时间安排的信息。"
-
-    async def _synthesize_collected_info(
-        self,
-        collected_info: dict[str, Any]
-    ) -> str:
-        """
-        提炼收集的信息为总结
-
-        Args:
-            collected_info: 已收集的信息
-
-        Returns:
-            信息总结文本
-        """
-        prompt = f"""请将以下收集的用户信息提炼为简洁的学习计划需求总结。
-
-## 用户初始请求
-{collected_info.get("initial_request", "")}
-
-## 澄清信息
-{json.dumps(collected_info.get("clarifications", []), ensure_ascii=False, indent=2)}
-
-请提炼为一段简洁的总结（不超过200字），包含：
-1. 学习目标
-2. 时间安排
-3. 其他关键约束或偏好
-
-直接返回总结文本，不要JSON。"""
-
-        try:
-            summary = await llm_service.chat(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
-            )
-            return summary.strip()
-        except Exception as e:
-            logger.error(f"Failed to synthesize collected info: {e}")
-            # 降级：返回初始请求
-            return collected_info.get("initial_request", "")
-
-    async def _update_state_with_collected_info(
-        self,
-        session_id: str,
-        collected_info: dict[str, Any],
-        summary: str
-    ):
-        """
-        将收集的信息写入state
-
-        Args:
-            session_id: 会话ID
-            collected_info: 已收集的信息
-            summary: 信息总结
-        """
-        try:
-            # 通过state_manager更新session context
-            if self.state_manager:
-                await self.state_manager.update_session_context(
-                    session_id=session_id,
-                    context_updates={
-                        "collected_information": collected_info,
-                        "user_requirement_summary": summary,
-                        "information_collection_completed_at": _utcnow().isoformat()
-                    }
-                )
-                logger.info(f"Updated state with collected information for session {session_id}")
-        except Exception as e:
-            logger.warning(f"Failed to update state with collected info: {e}")
-
-    async def _needs_information_collection(
-        self,
-        user_message: str,
-        snapshot
-    ) -> bool:
-        """
-        快速判断是否需要信息收集（基于规则+LLM）
-
-        Args:
-            user_message: 用户消息
-            snapshot: StateSnapshot对象
-
-        Returns:
-            是否需要信息收集
-        """
-        # 规则1: 消息长度过短（<20字）可能需要更多信息
-        if len(user_message.strip()) < 20:
-            return True
-
-        # 规则2: 包含模糊关键词
-        vague_keywords = [
-            "计划", "学习", "复习", "安排", "帮我",
-            "制定", "设计", "规划"
-        ]
-        if any(keyword in user_message for keyword in vague_keywords):
-            # 检查是否包含具体信息
-            has_specific_info = any([
-                "天" in user_message or "周" in user_message or "月" in user_message,  # 时间
-                "考试" in user_message or "目标" in user_message,  # 目标
-                "数学" in user_message or "英语" in user_message or "语文" in user_message,  # 科目
-            ])
-            if not has_specific_info:
-                return True
-
-        # 规则3: 使用LLM判断（仅对复杂消息）
-        if len(user_message) > 50:
-            try:
-                prompt = f"""判断用户消息是否足够具体以制定学习计划。
-
-用户消息："{user_message}"
-
-如果消息包含足够的学习目标、时间安排、科目等信息，返回 {{"specific": true}}
-如果消息过于模糊或笼统，需要更多信息，返回 {{"specific": false}}
-
-只返回JSON，不要其他内容。"""
-
-                result = await llm_service.chat_json(
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.1
-                )
-                return not result.get("specific", False)
-            except Exception as e:
-                logger.warning(f"LLM specificity check failed: {e}")
-
-        return False
-
-    async def check_and_collect_information(
-        self,
-        user_message: str,
-        snapshot,
-        user_id: str,
-        session_id: str,
-        stream_callback
-    ) -> bool:
-        """
-        检查是否需要信息收集，如果需要则生成追问（简化版本）
-
-        注意：这是简化实现，在单次响应中检测并提示信息收集。
-        完整的多轮loop需要客户端配合或WebSocket长连接。
-
-        Args:
-            user_message: 用户消息
-            snapshot: StateSnapshot对象
-            user_id: 用户ID
-            session_id: 会话ID
-            stream_callback: 流式回调函数
-
-        Returns:
-            True表示需要信息收集且已发送追问，False表示信息充足
-        """
-        # 检查是否需要信息收集
-        needs_collection = await self._needs_information_collection(user_message, snapshot)
-
-        if not needs_collection:
-            return False
-
-        logger.info(f"Information collection triggered for session {session_id}")
-
-        # 构建初始收集信息结构
-        collected_info = {
-            "initial_request": user_message,
-            "clarifications": []
-        }
-
-        # 检查信息充足度
-        is_sufficient, missing_aspects = await self._is_information_sufficient(
-            collected_info, snapshot
-        )
-
-        if is_sufficient:
-            return False
-
-        # 生成追问
-        question = await self._generate_clarifying_question(
-            missing_aspects, collected_info
-        )
-
-        # 流式返回追问
-        await stream_callback(agent_service_pb2.ChatResponse(
-            delta=f"\n\n{question}"
-        ))
-
-        # 保存状态到Redis，标记"需要收集信息"
-        try:
-            await self.redis.setex(
-                f"info_collection_needed:{session_id}",
-                300,  # 5分钟过期
-                json.dumps({
-                    "collected_info": collected_info,
-                    "missing_aspects": missing_aspects,
-                    "round": 1,
-                    "max_rounds": 3,
-                    "triggered_at": _utcnow().isoformat()
-                })
-            )
-            logger.info(f"Set information collection flag for session {session_id}")
-        except Exception as e:
-            logger.warning(f"Failed to set info collection flag: {e}")
-
-        return True
-
 
 # Backwards-compatible alias for benchmarks/tests
 Orchestrator = ChatOrchestrator

@@ -36,8 +36,10 @@ class VersionConflictResult:
     expected_version: int = 0
     current_version: int = 0
     changed_fields: list[str] = field(default_factory=list)
-    recommendation: Literal["proceed", "replan", "hitl"] = "proceed"
+    recommendation: Literal["proceed", "replan", "hitl", "discard"] = "proceed"
     replan_confidence: float = 1.0
+    conflicted_domains: list[str] = field(default_factory=list)
+    affected_domains: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -49,6 +51,8 @@ class VersionConflictResult:
             "changed_fields": self.changed_fields,
             "recommendation": self.recommendation,
             "replan_confidence": self.replan_confidence,
+            "conflicted_domains": self.conflicted_domains,
+            "affected_domains": self.affected_domains,
             "details": self.details,
         }
 
@@ -183,6 +187,119 @@ class VersionConflictService:
 
         return result
 
+    def _check_context_versions(
+        self,
+        snapshot: StateSnapshot,
+        current_context_versions: dict[str, str],
+    ) -> VersionConflictResult:
+        result = VersionConflictResult()
+        if not snapshot:
+            return result
+
+        snapshot_versions = snapshot.context_versions or {}
+        conflicted_domains = []
+        for domain, snapshot_version in snapshot_versions.items():
+            current_version = current_context_versions.get(domain)
+            if current_version and current_version != snapshot_version:
+                conflicted_domains.append(domain)
+
+        if conflicted_domains:
+            result.has_conflict = True
+            result.conflict_type = "context_version"
+            result.changed_fields = conflicted_domains
+            result.conflicted_domains = conflicted_domains
+            result.details["snapshot_versions"] = snapshot_versions
+            result.details["current_versions"] = current_context_versions
+
+        return result
+
+    def _infer_domain_for_tool(self, tool_name: str) -> str | None:
+        tool_lower = tool_name.lower()
+        if "task" in tool_lower:
+            return "tasks"
+        if "plan" in tool_lower or "sprint" in tool_lower:
+            return "plans"
+        if "focus" in tool_lower or "pomodoro" in tool_lower:
+            return "focus"
+        if "friend" in tool_lower or "group" in tool_lower or "community" in tool_lower:
+            return "community"
+        if "knowledge" in tool_lower or "graph" in tool_lower or "galaxy" in tool_lower:
+            return "knowledge"
+        return None
+
+    def _get_plan_affected_domains(self, plan: ExecutablePlan) -> list[str]:
+        domains = set()
+        for tool_call in plan.tool_calls:
+            domain = self._infer_domain_for_tool(tool_call.name)
+            if domain:
+                domains.add(domain)
+        return sorted(domains)
+
+    def _merge_conflicts(
+        self,
+        *,
+        context_check: VersionConflictResult,
+        plan_check: VersionConflictResult,
+        plan: ExecutablePlan,
+    ) -> VersionConflictResult:
+        merged = VersionConflictResult()
+        merged.affected_domains = self._get_plan_affected_domains(plan)
+
+        if not context_check.has_conflict and not plan_check.has_conflict:
+            return merged
+
+        if context_check.has_conflict and plan_check.has_conflict:
+            merged.conflict_type = "both"
+        elif context_check.has_conflict:
+            merged.conflict_type = "context_version"
+        else:
+            merged.conflict_type = "plan_version"
+
+        merged.has_conflict = True
+        merged.expected_version = plan_check.expected_version
+        merged.current_version = plan_check.current_version
+        merged.changed_fields = sorted(set(context_check.changed_fields + plan_check.changed_fields))
+        merged.conflicted_domains = sorted(set(context_check.conflicted_domains))
+        merged.replan_confidence = min(context_check.replan_confidence, plan_check.replan_confidence)
+        if merged.replan_confidence <= 0:
+            merged.replan_confidence = plan_check.replan_confidence or 0.8
+
+        # Decision tree (align orchestrator behavior)
+        conflict_domains = set(merged.conflicted_domains)
+        affected_domains = set(merged.affected_domains)
+        if conflict_domains and affected_domains and conflict_domains.isdisjoint(affected_domains):
+            merged.recommendation = "proceed"
+        elif plan.fallback_strategy.get("on_version_conflict") == "replan":
+            if plan.confidence < 0.7:
+                merged.recommendation = "discard"
+            elif merged.replan_confidence >= VERSION_CONFLICT_AUTO_REPLAN_THRESHOLD:
+                merged.recommendation = "replan"
+            else:
+                merged.recommendation = "hitl"
+        else:
+            merged.recommendation = "hitl"
+
+        merged.details = {
+            "context_conflict": context_check.to_dict(),
+            "plan_conflict": plan_check.to_dict(),
+        }
+        return merged
+
+    async def check_all_conflicts(
+        self,
+        plan: ExecutablePlan,
+        snapshot: StateSnapshot,
+        current_context_versions: dict[str, str],
+        user_id: UUID,
+    ) -> VersionConflictResult:
+        context_check = self._check_context_versions(snapshot, current_context_versions)
+        plan_check = await self.check_version_conflict(plan, user_id)
+        return self._merge_conflicts(
+            context_check=context_check,
+            plan_check=plan_check,
+            plan=plan,
+        )
+
     def _detect_changed_fields(self, plan: ExecutablePlan, plan_state) -> list[str]:
         """Detect which fields changed between planning and current state"""
         changed_fields = []
@@ -308,6 +425,9 @@ class VersionConflictService:
         user_id: UUID,
         session_id: str,
         user_message: str,
+        *,
+        plan_id: UUID | None = None,
+        replan_callback=None,
     ) -> ReplanResult:
         """
         Resolve a version conflict based on the recommendation
@@ -326,15 +446,19 @@ class VersionConflictService:
             return ReplanResult(success=True, new_plan=original_plan, reason="No conflict")
 
         if conflict_result.recommendation == "proceed":
-            # Minor conflict, proceed with original plan
             return ReplanResult(
                 success=True,
                 new_plan=original_plan,
-                reason="Minor version change, proceeding with original plan",
+                reason="Conflict outside affected domains, proceeding with original plan",
+            )
+
+        if conflict_result.recommendation == "discard":
+            return ReplanResult(
+                success=False,
+                reason="Low confidence conflict; discarding current plan",
             )
 
         if conflict_result.recommendation == "hitl":
-            # Need human review
             return ReplanResult(
                 success=False,
                 requires_hitl=True,
@@ -345,10 +469,16 @@ class VersionConflictService:
                 ),
             )
 
-        # Auto-replan
-        plan_id = UUID(original_plan.context_version.split(":")[0])
-        can_replan, reason, attempt_count = await self.can_replan(user_id, plan_id)
+        if not plan_id:
+            return ReplanResult(
+                success=False,
+                requires_hitl=True,
+                reason="Missing plan_id for conflict resolution",
+                hitl_reason="缺少计划ID，无法自动重规划",
+            )
 
+        # Auto-replan
+        can_replan, reason, attempt_count = await self.can_replan(user_id, plan_id)
         if not can_replan:
             return ReplanResult(
                 success=False,
@@ -358,24 +488,12 @@ class VersionConflictService:
                 hitl_reason=f"Replan rate limit reached: {reason}",
             )
 
-        # Record attempt
         await self.record_replan_attempt(user_id, plan_id)
 
-        # Attempt replan
-        if self.planner:
+        if replan_callback:
             try:
                 logger.info(f"Attempting auto-replan for plan {plan_id} (attempt {attempt_count + 1})")
-
-                # Get fresh state snapshot
-                new_snapshot = await self._get_fresh_snapshot(user_id, session_id)
-
-                # Replan with updated context
-                new_plan = await self.planner.create_plan(
-                    user_message=user_message,
-                    user_id=str(user_id),
-                    session_id=session_id,
-                    snapshot=new_snapshot,
-                )
+                new_plan = await replan_callback()
 
                 return ReplanResult(
                     success=True,
@@ -393,22 +511,12 @@ class VersionConflictService:
                     requires_hitl=True,
                     hitl_reason=f"Auto-replan failed: {str(e)}",
                 )
-        else:
-            return ReplanResult(
-                success=False,
-                reason="No planner configured for replan",
-                requires_hitl=True,
-                hitl_reason="Auto-replan not available",
-            )
 
-    async def _get_fresh_snapshot(self, user_id: UUID, session_id: str) -> StateSnapshot:
-        """Get a fresh state snapshot for replanning"""
-        from app.orchestration.state_snapshot import StateSnapshotManager
-
-        snapshot_manager = StateSnapshotManager(redis=self.redis)
-        return await snapshot_manager.capture(
-            user_id=str(user_id),
-            session_id=session_id,
+        return ReplanResult(
+            success=False,
+            reason="No replanning callback configured",
+            requires_hitl=True,
+            hitl_reason="Auto-replan not available",
         )
 
     async def record_conflict_history(
