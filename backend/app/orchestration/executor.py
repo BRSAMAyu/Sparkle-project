@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import time
 import uuid
@@ -48,6 +49,14 @@ class ToolExecutor:
     工具执行器
     负责解析 LLM 的工具调用请求并执行
     """
+
+    @staticmethod
+    async def _notify_execution_observer(execution_observer: Any | None, payload: dict[str, Any]) -> None:
+        if not execution_observer:
+            return
+        result = execution_observer(payload)
+        if inspect.isawaitable(result):
+            await result
 
     async def execute_tool_call(
         self,
@@ -415,6 +424,7 @@ class ToolExecutor:
         user_id: str,
         db_session: Any | None,
         progress_callback: Any | None = None,
+        execution_observer: Any | None = None,
     ) -> PlanExecutionResult:
         """Execute an ExecutablePlan respecting DAG layer ordering.
 
@@ -443,6 +453,16 @@ class ToolExecutor:
 
             # Resolve parameter placeholders from output_store
             resolved_layer = self._resolve_layer_params(layer, output_store)
+            layer_number = layer_idx + 1
+
+            await self._notify_execution_observer(execution_observer, {
+                    "event": "layer_start",
+                    "layer_index": layer_idx,
+                    "layer_number": layer_number,
+                    "total_layers": len(layers),
+                    "step_ids": [tc.id for tc in resolved_layer],
+                    "tool_names": [tc.name for tc in resolved_layer],
+                })
 
             # Execute steps within this layer concurrently
             step_results = await asyncio.gather(
@@ -470,6 +490,16 @@ class ToolExecutor:
                 result.step_results.append(sr)
                 result.tool_results.append(sr.tool_result)
 
+                await self._notify_execution_observer(execution_observer, {
+                        "event": "step_completed",
+                        "layer_index": layer_idx,
+                        "layer_number": layer_number,
+                        "step_id": sr.step_id,
+                        "tool_name": sr.tool_name,
+                        "success": sr.tool_result.success,
+                        "duration_ms": sr.duration_ms,
+                    })
+
                 # Store output for downstream steps
                 if sr.output_key and sr.tool_result.success:
                     output_store[sr.step_id] = sr.output_data
@@ -482,6 +512,15 @@ class ToolExecutor:
 
             result.execution_layers_completed = layer_idx + 1
 
+            await self._notify_execution_observer(execution_observer, {
+                    "event": "layer_end",
+                    "layer_index": layer_idx,
+                    "layer_number": layer_number,
+                    "total_layers": len(layers),
+                    "aborted": layer_aborted,
+                    "completed_steps": len(resolved_layer),
+                })
+
             if layer_aborted:
                 result.aborted = True
                 result.abort_reason = (
@@ -491,7 +530,23 @@ class ToolExecutor:
                     "Plan {} aborted at layer {}: required step failed",
                     plan.plan_id, layer_idx,
                 )
+                await self._notify_execution_observer(execution_observer, {
+                        "event": "execution_aborted",
+                        "layer_index": layer_idx,
+                        "layer_number": layer_number,
+                        "reason": result.abort_reason,
+                    })
                 break
+
+        await self._notify_execution_observer(execution_observer, {
+                "event": "execution_end",
+                "plan_id": plan.plan_id,
+                "total_layers": len(layers),
+                "layers_completed": result.execution_layers_completed,
+                "aborted": result.aborted,
+                "abort_reason": result.abort_reason,
+                "steps_total": len(result.step_results),
+            })
 
         return result
 

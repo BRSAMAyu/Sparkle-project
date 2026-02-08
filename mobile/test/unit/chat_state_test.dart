@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 
 void main() {
@@ -36,5 +37,15 @@ void main() {
     );
 
     expect(state.listItemCount, 3);
+  });
+
+  test('ChatState copyWith clearDagExecution resets dag signal', () {
+    final state = ChatState(
+      dagExecutionSignal:
+          DagExecutionSignal(event: 'layer_start', layerNumber: 1),
+    );
+
+    final cleared = state.copyWith(clearDagExecution: true);
+    expect(cleared.dagExecutionSignal, isNull);
   });
 }

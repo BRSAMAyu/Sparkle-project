@@ -135,8 +135,11 @@ class SparkleState(TypedDict):
     # 协作模式 (Phase 3 Collaboration)
     collaboration_mode: str | None      # "single", "sequential", "parallel"
     collaboration_agents: list[str] | None
-    collaboration_order: list[str] | None
+    collaboration_order: list[dict[str, str]] | None
     collaboration_index: int | None
+    mode_name: str | None
+    mode_constraints: dict[str, Any] | None
+    synthesis_policy: dict[str, Any] | None
 
     # ==========================
     # 4. 审查与反馈 (Review & Feedback)

@@ -38,7 +38,8 @@ from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 
 # Multi-Agent Mode Support
-from app.orchestration.multi_agent_adapter import CHAT_MODE_STANDARD, execute_multi_agent_workflow
+from app.orchestration.chat_modes import CHAT_MODE_STANDARD
+from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 
@@ -254,6 +255,7 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+        self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
 
     def _track_task(self, task: asyncio.Task) -> None:
         """Track background tasks for graceful shutdown."""
@@ -1149,6 +1151,98 @@ class ChatOrchestrator:
             logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
         return llm_profile_meta
 
+    @staticmethod
+    def _extract_execution_feedback_from_log_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+        if not isinstance(entry, dict):
+            return None
+
+        entry_type = str(entry.get("type", "")).strip()
+        if entry_type == "plan_execution_feedback":
+            feedback = {
+                "slow_tools": entry.get("slow_tools", []) or [],
+                "failed_tools": entry.get("failed_tools", []) or [],
+                "unreliable_dependencies": entry.get("unreliable_dependencies", []) or [],
+                "quality_score": entry.get("quality_score"),
+            }
+            if any(feedback.get(k) for k in ("slow_tools", "failed_tools", "unreliable_dependencies")) or feedback.get("quality_score") is not None:
+                return feedback
+            return None
+
+        if entry_type == "plan_execution":
+            adjustment = entry.get("applied_adjustment") or {}
+            if not isinstance(adjustment, dict):
+                return None
+            feedback = {
+                "slow_tools": adjustment.get("slow_tools", []) or [],
+                "failed_tools": adjustment.get("failed_tools", []) or [],
+                "unreliable_dependencies": adjustment.get("unreliable_dependencies", []) or [],
+                "quality_score": adjustment.get("quality_score"),
+            }
+            if any(feedback.get(k) for k in ("slow_tools", "failed_tools", "unreliable_dependencies")) or feedback.get("quality_score") is not None:
+                return feedback
+        return None
+
+    async def _load_recent_execution_feedback(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        plan_id: str | None,
+    ) -> dict[str, Any] | None:
+        if not active_db or not plan_id:
+            return None
+        try:
+            from app.services.plan_state_service import PlanStateService
+
+            plan_state_service = PlanStateService(active_db, self.redis)
+            plan_state = await plan_state_service.get_plan_state(
+                uuid.UUID(user_id),
+                uuid.UUID(plan_id),
+            )
+            if not plan_state or not plan_state.feedback_log:
+                return None
+
+            for entry in reversed(plan_state.feedback_log):
+                feedback = self._extract_execution_feedback_from_log_entry(entry)
+                if feedback is not None:
+                    return feedback
+        except Exception as e:
+            logger.warning(f"Failed to load recent execution feedback: {e}")
+        return None
+
+    async def _publish_execution_feedback(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        executable_plan: ExecutablePlan,
+        plan_result: Any,
+        validation_result: Any,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        if not active_db:
+            return
+        try:
+            from app.orchestration.adaptive_replanner import AdaptiveReplanner
+            from app.orchestration.step_feedback_collector import StepFeedbackCollector
+
+            collector = StepFeedbackCollector()
+            feedback = collector.collect(
+                plan=executable_plan,
+                plan_result=plan_result,
+                validation_result=validation_result,
+                user_id=user_id,
+                session_id=session_id,
+            )
+            replanner = AdaptiveReplanner(active_db, redis=self.redis)
+            await replanner.on_plan_execution_completed(
+                user_id=uuid.UUID(user_id),
+                plan_id=uuid.UUID(str(executable_plan.plan_id)),
+                feedback=feedback,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to publish execution feedback: {e}", exc_info=True)
+
     async def _validate_plan_execution(
         self,
         *,
@@ -1156,16 +1250,52 @@ class ChatOrchestrator:
         active_db: AsyncSession | None,
         final_state: WorkflowState,
         user_id: str,
+        session_id: str,
     ) -> dict[str, Any] | None:
         if not executable_plan or not hasattr(executable_plan, "plan_id") or not active_db:
             return None
         try:
+            record_service = PlanExecutionRecordService(active_db)
+            execution_validator = PlanExecutionValidator(record_service=record_service)
+            plan_result = final_state.context_data.get("plan_execution_result")
+
+            if plan_result is not None and hasattr(plan_result, "step_results"):
+                validation_result = await execution_validator.validate_plan_execution(
+                    plan=executable_plan,
+                    plan_result=plan_result,
+                    user_id=uuid.UUID(user_id),
+                )
+                await self._publish_execution_feedback(
+                    active_db=active_db,
+                    executable_plan=executable_plan,
+                    plan_result=plan_result,
+                    validation_result=validation_result,
+                    user_id=user_id,
+                    session_id=session_id,
+                )
+                logger.info(
+                    "DAG plan execution validation: plan_id={} status={} score={:.2f} steps={} aborted={}",
+                    validation_result.plan_id,
+                    validation_result.validation_status,
+                    validation_result.quality_score,
+                    len(getattr(validation_result, "step_validations", []) or []),
+                    getattr(validation_result, "aborted", False),
+                )
+                return {
+                    "validation_status": validation_result.validation_status,
+                    "quality_score": validation_result.quality_score,
+                    "tools_total": validation_result.tool_summary.get("total", 0),
+                    "tools_successful": validation_result.tool_summary.get("successful", 0),
+                    "steps_total": len(getattr(validation_result, "step_validations", []) or []),
+                    "steps_passed": sum(1 for sv in (getattr(validation_result, "step_validations", []) or []) if sv.passed),
+                    "aborted": bool(getattr(validation_result, "aborted", False)),
+                }
+
             tool_extractor = ToolResultExtractor()
             tool_results = tool_extractor.extract_from_messages(final_state.messages)
             if not (tool_results or executable_plan.tool_calls):
                 return None
-            record_service = PlanExecutionRecordService(active_db)
-            execution_validator = PlanExecutionValidator(record_service=record_service)
+
             validation_result = await execution_validator.validate_and_record(
                 plan=executable_plan,
                 tool_results=tool_results,
@@ -1296,6 +1426,7 @@ class ChatOrchestrator:
             active_db=active_db,
             final_state=final_state,
             user_id=user_id,
+            session_id=session_id,
         )
         if execution_validation:
             response_metadata["execution_validation"] = execution_validation
@@ -1484,15 +1615,27 @@ class ChatOrchestrator:
 
         try:
             response_count = 0
-            async for response in execute_multi_agent_workflow(
-                orchestrator=self,
-                chat_mode=chat_mode,
-                message=user_message,
-                user_id=user_id,
-                session_id=session_id,
-                context_data=multi_agent_context,
-                stream_callback=stream_callback,
-            ):
+            if settings.ENABLE_MODE_WORKFLOW_V2:
+                response_stream = self.multi_agent_adapter.execute_mode_workflow(
+                    chat_mode=chat_mode,
+                    message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    context_data=multi_agent_context,
+                    stream_callback=stream_callback,
+                )
+            else:
+                response_stream = execute_multi_agent_workflow(
+                    orchestrator=self,
+                    chat_mode=chat_mode,
+                    message=user_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    context_data=multi_agent_context,
+                    stream_callback=stream_callback,
+                )
+
+            async for response in response_stream:
                 response.response_id = response_id
                 response.created_at = int(datetime.now().timestamp())
                 response.request_id = request_id
@@ -1650,6 +1793,12 @@ class ChatOrchestrator:
                 conversation_history = conversation_context.get("messages", [])
             plan_id_str = str(plan_id) if plan_id else None
 
+            execution_feedback = await self._load_recent_execution_feedback(
+                active_db=active_db,
+                user_id=user_id,
+                plan_id=plan_id_str,
+            )
+
             executable_plan = await self.lang_graph_planner.plan(
                 message=user_message,
                 snapshot=snapshot,
@@ -1657,6 +1806,7 @@ class ChatOrchestrator:
                 session_id=session_id,
                 conversation_history=conversation_history,
                 plan_id=plan_id_str,
+                execution_feedback=execution_feedback,
             )
 
             await self.observability.log_langgraph_plan(
@@ -1710,6 +1860,7 @@ class ChatOrchestrator:
                         previous_plan=executable_plan,
                         conflict_info=conflict.to_dict(),
                         plan_id=plan_id_str,
+                        execution_feedback=execution_feedback,
                     )
 
                 resolution = await self.version_conflict_service.resolve_conflict(

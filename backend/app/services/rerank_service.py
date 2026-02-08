@@ -2,11 +2,15 @@ import asyncio
 from http import HTTPStatus
 from typing import Any
 
-import dashscope
 import httpx
 from loguru import logger
 
 from app.config import settings
+
+try:
+    import dashscope
+except ImportError:  # pragma: no cover - optional dependency in some test/dev envs
+    dashscope = None
 
 
 class RerankService:
@@ -116,6 +120,9 @@ class RerankService:
         top_k: int,
         instruct: str | None = None,
     ) -> list[int]:
+        if dashscope is None:
+            raise RuntimeError("dashscope package is required for dashscope rerank provider")
+
         def _call():
             dashscope.api_key = self.dashscope_api_key
             if self.dashscope_base_url:

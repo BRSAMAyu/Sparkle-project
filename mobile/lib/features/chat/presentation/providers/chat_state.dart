@@ -47,6 +47,7 @@ class ChatState {
     this.transparencyData,
     this.currentStepId,
     this.currentStepIndex,
+    this.dagExecutionSignal,
   });
 
   final bool isLoading;
@@ -86,6 +87,7 @@ class ChatState {
   final TransparencyData? transparencyData;
   final int? currentStepId;
   final int? currentStepIndex;
+  final DagExecutionSignal? dagExecutionSignal;
 
   int get listItemCount =>
       messages.length +
@@ -141,6 +143,8 @@ class ChatState {
     int? currentStepId,
     int? currentStepIndex,
     bool clearTransparency = false,
+    DagExecutionSignal? dagExecutionSignal,
+    bool clearDagExecution = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -201,11 +205,13 @@ class ChatState {
         transparencyData: clearTransparency
             ? null
             : transparencyData ?? this.transparencyData,
-        currentStepId: clearTransparency
-            ? null
-            : currentStepId ?? this.currentStepId,
+        currentStepId:
+            clearTransparency ? null : currentStepId ?? this.currentStepId,
         currentStepIndex: clearTransparency
             ? null
             : currentStepIndex ?? this.currentStepIndex,
+        dagExecutionSignal: clearDagExecution
+            ? null
+            : dagExecutionSignal ?? this.dagExecutionSignal,
       );
 }

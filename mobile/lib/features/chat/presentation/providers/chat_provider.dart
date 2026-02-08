@@ -38,8 +38,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (DemoDataService.isDemoMode) {
       // Load demo history
       state = state.copyWith(
-          messages: DemoDataService().demoChatHistory,
-          conversationId: 'demo_conv_1',);
+        messages: DemoDataService().demoChatHistory,
+        conversationId: 'demo_conv_1',
+      );
     }
 
     // 监听 WebSocket 连接状态
@@ -128,14 +129,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
       isSending: true,
       streamingContent: '',
       activeTools: const [],
+      clearDagExecution: true,
       clearError: true,
     );
 
-      var accumulatedContent = '';
-      String? responseId;
-      String? traceId;
-      String? workflowId;
-      String? promptVersion;
+    var accumulatedContent = '';
+    String? responseId;
+    String? traceId;
+    String? workflowId;
+    String? promptVersion;
     String? lastAiStatus;
     final accumulatedWidgets = <WidgetPayload>[];
     Map<String, dynamic>? accumulatedCollaboration;
@@ -192,9 +194,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
-      final extraContext = selectedPlanId != null
-          ? {'plan_id': selectedPlanId}
-          : null;
+      final extraContext =
+          selectedPlanId != null ? {'plan_id': selectedPlanId} : null;
 
       // Get selected chat mode
       final chatMode = _ref.read(chatModeProvider);
@@ -260,6 +261,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
             activeAgentType: event.activeAgentType,
           );
           flushPending();
+        } else if (event is DagExecutionEvent) {
+          state = state.copyWith(dagExecutionSignal: event.signal);
+          final dagDetails = event.signal.statusDetails;
+          if (dagDetails != null && dagDetails.isNotEmpty) {
+            lastAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatusDetails = dagDetails;
+          }
+          flushPending();
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
           accumulatedContent = event.content;
@@ -280,6 +290,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             isErrorRetryable: isRetryable,
             isSending: false,
             streamingContent: '',
+            clearDagExecution: true,
             clearAiStatus: true,
             clearReasoning: true,
           );
@@ -412,6 +423,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
           state = state.copyWith(
             clearAiStatus: true,
+            clearDagExecution: true,
             streamingContent: '',
           );
           // 🔧 修复：立即退出流循环，确保执行清理代码（设置 isSending: false）
@@ -459,6 +471,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           isSending: false,
           messages: [...state.messages, aiMessage],
           streamingContent: '',
+          clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true, // Clear real-time reasoning state
         );
@@ -466,6 +479,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         state = state.copyWith(
           isSending: false,
           streamingContent: '',
+          clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true,
         );
@@ -481,6 +495,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
         isSending: false,
         streamingContent: '',
+        clearDagExecution: true,
         error: errorMessage,
         errorCode: 'UNKNOWN',
         isErrorRetryable: true, // 未知错误默认可重试
@@ -493,5 +508,4 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
   }
-
 }

@@ -28,6 +28,27 @@ bool _isTrue(dynamic value) {
   return false;
 }
 
+Map<String, dynamic>? _extractDagExecutionMetadata(
+  Map<String, dynamic>? metadata,
+) {
+  if (metadata == null) {
+    return null;
+  }
+  final raw = metadata['dag_execution_event'];
+  if (raw is Map<String, dynamic>) {
+    return raw;
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
 /// Parse JSON event in isolate to avoid blocking main thread
 ChatStreamEvent _parseChatEvent(String jsonString) {
   try {
@@ -51,6 +72,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     switch (type) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
+        final dagData = _extractDagExecutionMetadata(metadata);
+        final dagSignal = DagExecutionSignal.fromDynamic(dagData);
+        final deltaContent = data['delta'] as String? ?? '';
+
+        if (dagSignal != null && deltaContent.isEmpty) {
+          return DagExecutionEvent(
+            signal: dagSignal,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
+          );
+        }
 
         // Check for transparency events (透明化与信任构建链路)
         if (metadata != null && metadata['event_type'] == 'transparency') {
@@ -188,7 +223,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
 
         return TextEvent(
-          content: data['delta'] as String? ?? '',
+          content: deltaContent,
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
@@ -198,16 +233,31 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
       case 'status_update':
         final status = data['status'] as Map<String, dynamic>?;
+        final metadata = data['metadata'] as Map<String, dynamic>?;
+        final dagData = _extractDagExecutionMetadata(metadata);
+        final dagSignal = DagExecutionSignal.fromDynamic(dagData);
         if (status != null) {
+          final dagDetails = dagSignal?.statusDetails;
           return StatusUpdateEvent(
             state: status['state'] as String? ?? 'UNKNOWN',
-            details: status['details'] as String? ?? '',
+            details: dagDetails ?? status['details'] as String? ?? '',
             currentAgentName: status['current_agent_name'] as String?,
             activeAgentType: status['active_agent'] as String?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
             promptVersion: promptVersion,
+            metadata: metadata,
+          );
+        }
+        if (dagSignal != null) {
+          return DagExecutionEvent(
+            signal: dagSignal,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
           );
         }
         return UnknownEvent(

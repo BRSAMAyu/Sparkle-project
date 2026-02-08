@@ -241,3 +241,24 @@ class QueryAllTasksParams(BaseModel):
         ge=1,
         le=100
     )
+
+
+# ============ 错题工具参数 ============
+
+
+class RecordErrorParams(BaseModel):
+    """记录错题参数"""
+    question: str = Field(..., description="题目内容", min_length=1, max_length=5000)
+    wrong_answer: str | None = Field(default=None, description="错误答案", max_length=2000)
+    correct_answer: str | None = Field(default=None, description="正确答案", max_length=2000)
+    error_type: str | None = Field(default=None, description="错因类型")
+    root_cause: str | None = Field(default=None, description="根因分析")
+    subject: str = Field(default="math", description="科目编码")
+    chapter: str | None = Field(default=None, description="章节")
+
+
+class QueryErrorHistoryParams(BaseModel):
+    """查询错题历史参数"""
+    subject: str | None = Field(default=None, description="科目编码")
+    error_type: str | None = Field(default=None, description="错因类型")
+    limit: int = Field(default=10, ge=1, le=50, description="返回数量")

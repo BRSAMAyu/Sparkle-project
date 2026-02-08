@@ -388,6 +388,7 @@ class Settings(BaseSettings):
 
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
+    ENABLE_MODE_WORKFLOW_V2: bool = True
 
     # Optional Graph Sync Worker
     ENABLE_GRAPH_SYNC_WORKER: bool = False
