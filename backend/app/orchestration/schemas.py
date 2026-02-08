@@ -58,10 +58,34 @@ class OrchestratorState(str, Enum):
 
 
 @dataclass
-class ToolCallSpec:
-    """工具调用规格
+class StepCriteria:
+    """Per-step success/failure criteria for DAG execution.
 
-    定义单个工具调用的详细参数和约束
+    Defines what constitutes success for an individual tool call step,
+    enabling fine-grained validation within a plan.
+    """
+    expected_output_keys: list[str] = field(default_factory=list)
+    max_duration_ms: int = 30000
+    required: bool = True  # If False, failure does not block dependents
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "expected_output_keys": self.expected_output_keys,
+            "max_duration_ms": self.max_duration_ms,
+            "required": self.required,
+        }
+
+
+@dataclass
+class ToolCallSpec:
+    """工具调用规格 v2 — with DAG support
+
+    定义单个工具调用的详细参数和约束。
+
+    Phase 5 additions (backward-compatible defaults):
+    - depends_on: list of ToolCallSpec.id values this step waits for
+    - success_criteria: per-step pass/fail criteria
+    - output_key: key under which this step's result is stored for dependents
     """
     id: str
     name: str
@@ -72,11 +96,17 @@ class ToolCallSpec:
     max_retries: int = 2
     point_of_no_return: bool = False
     compensation_call: dict[str, Any] | None = None
+    # Phase 5: DAG edges — list of ToolCallSpec.id values this step depends on
+    depends_on: list[str] = field(default_factory=list)
+    # Phase 5: Per-step success criteria
+    success_criteria: StepCriteria | None = None
+    # Phase 5: Key under which this step's output is stored for downstream steps
+    output_key: str | None = None
 
 
 @dataclass
 class ExecutablePlan:
-    """可执行计划 v1.0/v2.0/v3.0/v4.0
+    """可执行计划 v1.0 ~ v5.0
 
     统一的执行计划结构，包含工具调用序列和元数据
 
@@ -84,8 +114,9 @@ class ExecutablePlan:
     Phase 2 (v2.0): Added snapshot_id, enhanced fallback_strategy
     Phase 3 (v3.0): Added agents_involved, collaboration_mode, circuit_breaker_status
     Phase 4 (v4.0): Added plan_version for version conflict detection
+    Phase 5 (v5.0): DAG support — execution_order layers, per-step criteria, total_steps
     """
-    schema_version: str = "1.0"
+    schema_version: str = "5.0"
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     context_version: str = ""
     snapshot_id: str = ""  # Phase 2: Associated snapshot_id
@@ -115,6 +146,31 @@ class ExecutablePlan:
     # Phase 4: PlanState version at planning time
     plan_version: int = 1  # NEW: PlanState.version when plan was created
 
+    # Phase 5: DAG execution support
+    # Topologically sorted layers: [[step_id_1, step_id_2], [step_id_3], ...]
+    # Steps within a layer can execute in parallel.
+    execution_order: list[list[str]] = field(default_factory=list)
+    total_steps: int = 0
+
+    # ------------------------------------------------------------------
+    # DAG helpers
+    # ------------------------------------------------------------------
+
+    def get_execution_layers(self) -> list[list["ToolCallSpec"]]:
+        """Return tool calls organized by execution layer.
+
+        Steps within a layer have no mutual dependencies and can run in
+        parallel.  If *execution_order* is empty the entire list is treated
+        as a single sequential layer (backward compatible).
+        """
+        if not self.execution_order:
+            return [self.tool_calls] if self.tool_calls else []
+        id_map = {tc.id: tc for tc in self.tool_calls}
+        return [
+            [id_map[tid] for tid in layer if tid in id_map]
+            for layer in self.execution_order
+        ]
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
@@ -139,14 +195,19 @@ class ExecutablePlan:
                     "allow_retry": tc.allow_retry,
                     "max_retries": tc.max_retries,
                     "point_of_no_return": tc.point_of_no_return,
-                    "compensation_call": tc.compensation_call
+                    "compensation_call": tc.compensation_call,
+                    "depends_on": tc.depends_on,
+                    "success_criteria": tc.success_criteria.to_dict() if tc.success_criteria else None,
+                    "output_key": tc.output_key,
                 }
                 for tc in self.tool_calls
             ],
             "fallback_strategy": self.fallback_strategy,
             "success_criteria": self.success_criteria,
             "circuit_breaker_status": self.circuit_breaker_status,
-            "plan_version": self.plan_version,  # Phase 4
+            "plan_version": self.plan_version,
+            "execution_order": self.execution_order,
+            "total_steps": self.total_steps,
         }
 
 

@@ -42,6 +42,10 @@ except ImportError:
 class RequestRouter:
     """路由器 (Phase 1 & Phase 2)
 
+    DEPRECATED:
+    - 新请求应使用 `UnifiedIntentRouter`。
+    - 本类暂时保留用于兼容旧测试与回退路径。
+
     职责:
     1. 分析用户消息意图
     2. 评估请求风险等级
