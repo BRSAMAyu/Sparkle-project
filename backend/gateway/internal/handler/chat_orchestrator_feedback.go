@@ -166,7 +166,7 @@ func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status stri
 	}
 }
 
-func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatusSender, msgMap map[string]interface{}, userID string) {
+func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatusSender, msgMap map[string]interface{}, userID, authToken string) {
 	action, ok := msgMap["action"].(string)
 	if !ok {
 		log.Printf("Invalid action feedback: missing action field")
@@ -271,6 +271,73 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 	default:
 		log.Printf("Unknown widget type in action feedback: %s", widgetType)
 	}
+
+	// Persist feedback for analytics/learning (best effort).
+	if err := h.persistActionFeedback(authToken, toolResultID, widgetType, action); err != nil {
+		log.Printf("Failed to persist action feedback: %v", err)
+	}
+}
+
+func normalizeActionFeedbackType(action string) string {
+	switch strings.ToLower(action) {
+	case "confirm":
+		return "accept"
+	case "dismiss":
+		return "dismiss"
+	default:
+		return "ignore"
+	}
+}
+
+func normalizeActionType(widgetType string) string {
+	switch strings.ToLower(widgetType) {
+	case "focus_card":
+		return "break"
+	case "task_list", "create_task", "plan_card", "create_plan":
+		return "plan_split"
+	default:
+		return "review"
+	}
+}
+
+func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widgetType, action string) error {
+	if h.backendURL == "" || authToken == "" || toolResultID == "" {
+		return nil
+	}
+
+	payload := map[string]interface{}{
+		"candidate_id":  toolResultID,
+		"action_type":   normalizeActionType(widgetType),
+		"feedback_type": normalizeActionFeedbackType(action),
+		"executed":      strings.EqualFold(action, "confirm"),
+		"context_snapshot": map[string]interface{}{
+			"widget_type": widgetType,
+			"source":      "chat_orchestrator.action_feedback",
+		},
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	endpoint := fmt.Sprintf("%s/api/v1/signals/feedback", h.backendURL)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("feedback API returned status=%d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder updateNodeResponder, msgMap map[string]interface{}, userID string) {
@@ -517,8 +584,8 @@ func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Conte
 }
 
 // handleActionFeedback processes action confirmation/dismissal feedback from user
-func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
-	h.handleActionFeedbackWithResponder(legacyActionStatusSender{conn: conn}, msgMap, userID)
+func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID, authToken string) {
+	h.handleActionFeedbackWithResponder(legacyActionStatusSender{conn: conn}, msgMap, userID, authToken)
 }
 
 // sendActionStatus sends action confirmation/dismissal status back to the client via WebSocket
@@ -669,7 +736,7 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Con
 }
 
 // handleFocusCompleted processes focus session completion events
-func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, userID string) {
+func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, userID, authToken string) {
 	sessionID, ok := msgMap["session_id"].(string)
 	if !ok {
 		log.Printf("Invalid focus_completed event: missing session_id field")
@@ -694,9 +761,66 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 	log.Printf("Focus session completed: user=%s, session_id=%s, duration=%d minutes, completed_tasks=%d",
 		userID, sessionID, int(actualDuration), len(completedTaskIDs))
 
-	// TODO: Update focus session status to completed
-	// TODO: Update associated task statuses to completed
-	// TODO: Record metrics for focus session
+	if h.backendURL == "" || authToken == "" {
+		log.Printf("Focus completion not persisted: backendURL or auth token missing")
+		return
+	}
+
+	duration := int(actualDuration)
+	if duration <= 0 {
+		log.Printf("Focus completion not persisted: invalid duration=%d", duration)
+		return
+	}
+
+	endTime := time.Now().UTC()
+	startTime := endTime.Add(-time.Duration(duration) * time.Minute)
+
+	payload := map[string]interface{}{
+		"start_time":       startTime.Format(time.RFC3339),
+		"end_time":         endTime.Format(time.RFC3339),
+		"duration_minutes": duration,
+		"focus_type":       "pomodoro",
+		"status":           "completed",
+	}
+	if rawType, ok := msgMap["focus_type"].(string); ok && rawType != "" {
+		payload["focus_type"] = rawType
+	}
+
+	for _, taskID := range completedTaskIDs {
+		if _, err := uuid.Parse(taskID); err == nil {
+			payload["task_id"] = taskID
+			break
+		}
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal focus_completed payload: %v", err)
+		return
+	}
+
+	endpoint := fmt.Sprintf("%s/api/v1/focus/sessions", h.backendURL)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		log.Printf("Failed to build focus_completed request: %v", err)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		log.Printf("Failed to persist focus_completed: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		log.Printf("Focus completion rejected by backend: status=%d", resp.StatusCode)
+		return
+	}
+
+	log.Printf("Focus completion persisted: session_id=%s", sessionID)
 }
 
 // handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK

@@ -186,29 +186,38 @@ class DagExecutionSignal {
     if (event == null || event.isEmpty) {
       return null;
     }
+    final payload = data;
+    if (payload == null) {
+      return null;
+    }
+
+    int? asInt(String camel, String snake) =>
+        (payload[camel] ?? payload[snake]) as int?;
+    String? asString(String camel, String snake) =>
+        (payload[camel] ?? payload[snake]) as String?;
+    List<String>? asStringList(String camel, String snake) =>
+        ((payload[camel] ?? payload[snake]) as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList();
 
     return DagExecutionSignal(
       event: event,
-      layerIndex: data['layer_index'] as int?,
-      layerNumber: data['layer_number'] as int?,
-      totalLayers: data['total_layers'] as int?,
-      stepId: data['step_id'] as String?,
-      toolName: data['tool_name'] as String?,
+      layerIndex: asInt('layerIndex', 'layer_index'),
+      layerNumber: asInt('layerNumber', 'layer_number'),
+      totalLayers: asInt('totalLayers', 'total_layers'),
+      stepId: asString('stepId', 'step_id'),
+      toolName: asString('toolName', 'tool_name'),
       success: data['success'] as bool?,
-      durationMs: data['duration_ms'] as int?,
+      durationMs: asInt('durationMs', 'duration_ms'),
       aborted: data['aborted'] as bool?,
       reason: data['reason'] as String?,
-      completedSteps: data['completed_steps'] as int?,
-      stepIds: (data['step_ids'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toList(),
-      toolNames: (data['tool_names'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toList(),
-      planId: data['plan_id'] as String?,
-      layersCompleted: data['layers_completed'] as int?,
-      stepsTotal: data['steps_total'] as int?,
-      abortReason: data['abort_reason'] as String?,
+      completedSteps: asInt('completedSteps', 'completed_steps'),
+      stepIds: asStringList('stepIds', 'step_ids'),
+      toolNames: asStringList('toolNames', 'tool_names'),
+      planId: asString('planId', 'plan_id'),
+      layersCompleted: asInt('layersCompleted', 'layers_completed'),
+      stepsTotal: asInt('stepsTotal', 'steps_total'),
+      abortReason: asString('abortReason', 'abort_reason'),
     );
   }
 

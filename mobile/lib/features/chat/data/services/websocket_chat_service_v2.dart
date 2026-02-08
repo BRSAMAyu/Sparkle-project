@@ -562,6 +562,30 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'response_feedback_ack':
+        final responseId = data['response_id'] as String?;
+        final status = data['status'] as String?;
+        if (responseId != null && status != null) {
+          return ActionStatusEvent(
+            actionId: responseId,
+            status: status,
+            message: data['message'] as String?,
+            widgetType: 'response_feedback',
+            timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'milestone_proposal':
         final proposalData = data['proposal'] as Map<String, dynamic>?;
         if (proposalData != null) {

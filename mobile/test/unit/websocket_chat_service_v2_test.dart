@@ -178,6 +178,31 @@ void main() {
       expect(sentJson['trace_id'], 'trace-1');
     });
 
+    test('Parses response_feedback_ack into ActionStatusEvent', () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'response_feedback_ack',
+        'response_id': 'resp-1',
+        'status': 'ok',
+        'message': 'recorded',
+        'timestamp': 1234567890,
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<ActionStatusEvent>());
+      final ack = events.first as ActionStatusEvent;
+      expect(ack.actionId, 'resp-1');
+      expect(ack.status, 'ok');
+      expect(ack.widgetType, 'response_feedback');
+
+      await sub.cancel();
+    });
+
     test('Queues messages when disconnected and flushes on connect', () async {
       service.sendMessage(message: 'Queued Message', userId: 'user1');
 
@@ -244,6 +269,40 @@ void main() {
       expect(dag.signal.event, 'layer_start');
       expect(dag.signal.layerNumber, 1);
       expect(dag.signal.totalLayers, 3);
+
+      await sub.cancel();
+    });
+
+    test(
+        'Parses dag_execution_event metadata with camelCase keys into DagExecutionEvent',
+        () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'delta',
+        'delta': '',
+        'metadata': {
+          'dag_execution_event': json.encode({
+            'event': 'layer_start',
+            'layerIndex': 0,
+            'layerNumber': 1,
+            'totalLayers': 3,
+            'toolNames': ['create_plan', 'query_knowledge'],
+          }),
+        },
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<DagExecutionEvent>());
+      final dag = events.first as DagExecutionEvent;
+      expect(dag.signal.event, 'layer_start');
+      expect(dag.signal.layerNumber, 1);
+      expect(dag.signal.totalLayers, 3);
+      expect(dag.signal.toolNames, ['create_plan', 'query_knowledge']);
 
       await sub.cancel();
     });

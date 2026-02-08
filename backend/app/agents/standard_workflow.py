@@ -360,10 +360,29 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # Execute plan with DAG-aware executor (parallel by layer).
         start_time = time.time()
 
+        def _to_camel_case_dag_event(event: dict[str, Any]) -> dict[str, Any]:
+            key_map = {
+                "layer_index": "layerIndex",
+                "layer_number": "layerNumber",
+                "total_layers": "totalLayers",
+                "step_id": "stepId",
+                "tool_name": "toolName",
+                "duration_ms": "durationMs",
+                "completed_steps": "completedSteps",
+                "step_ids": "stepIds",
+                "tool_names": "toolNames",
+                "plan_id": "planId",
+                "layers_completed": "layersCompleted",
+                "steps_total": "stepsTotal",
+                "abort_reason": "abortReason",
+            }
+            return {key_map.get(k, k): v for k, v in event.items()}
+
         async def _execution_observer(event: dict[str, Any]) -> None:
             if not stream_callback:
                 return
 
+            payload_event = _to_camel_case_dag_event(event)
             event_type = event.get("event")
             if event_type == "layer_start":
                 details = (
@@ -377,14 +396,14 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                         active_agent=agent_service_pb2.ORCHESTRATOR
                     ),
                     metadata={
-                        "dag_execution_event": json.dumps(event, ensure_ascii=False),
+                        "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
                     },
                 ))
                 return
 
             await stream_callback(agent_service_pb2.ChatResponse(
                 metadata={
-                    "dag_execution_event": json.dumps(event, ensure_ascii=False),
+                    "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
                 }
             ))
 

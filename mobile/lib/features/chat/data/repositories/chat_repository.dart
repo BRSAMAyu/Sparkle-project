@@ -312,6 +312,15 @@ class ChatRepository {
           timestamp: data['timestamp'] as int?,
         );
 
+      case 'response_feedback_ack':
+        return ActionStatusEvent(
+          actionId: data['response_id'] as String? ?? '',
+          status: data['status'] as String? ?? 'unknown',
+          message: data['message'] as String?,
+          widgetType: 'response_feedback',
+          timestamp: data['timestamp'] as int?,
+        );
+
       default:
         return UnknownEvent(data: data);
     }

@@ -269,7 +269,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					conn.WriteJSON(gin.H{"type": "pong"})
 					return false
 				case "action_feedback":
-					h.handleActionFeedback(conn, msgMap, userID)
+					h.handleActionFeedback(conn, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
 					h.handleInterventionFeedback(conn, msgMap, userID, authToken)
@@ -281,7 +281,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					h.handlePlanReviewFeedback(conn, msgMap, userID, c.Request.Context())
 					return false
 				case "focus_completed":
-					h.handleFocusCompleted(msgMap, userID)
+					h.handleFocusCompleted(msgMap, userID, authToken)
 					return false
 				case "update_node_mastery":
 					h.handleUpdateNodeMastery(conn, msgMap, userID)
@@ -392,7 +392,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid action_feedback payload", false)
 					return false
 				}
-				h.handleActionFeedbackWithResponder(responder, msgMap, userID)
+				h.handleActionFeedbackWithResponder(responder, msgMap, userID, authToken)
 				return false
 			case "focus_completed":
 				msgMap, err := decodePayloadMap(envelope.Payload["focus_completed"])
@@ -400,7 +400,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid focus_completed payload", false)
 					return false
 				}
-				h.handleFocusCompleted(msgMap, userID)
+				h.handleFocusCompleted(msgMap, userID, authToken)
 				return false
 			case "update_node_mastery":
 				msgMap, err := decodePayloadMap(envelope.Payload["update_node_mastery"])
