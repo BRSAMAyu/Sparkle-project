@@ -5,11 +5,15 @@
 import asyncio
 from http import HTTPStatus
 
-import dashscope
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+
+try:
+    import dashscope
+except ImportError:  # pragma: no cover - optional dependency in some test/dev envs
+    dashscope = None
 
 
 class EmbeddingService:
@@ -79,6 +83,9 @@ class EmbeddingService:
         raise ValueError(f"Unsupported embedding provider: {self.provider}")
 
     async def _dashscope_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
+        if dashscope is None:
+            raise RuntimeError("dashscope package is required for dashscope embedding provider")
+
         def _call():
             dashscope.api_key = self.dashscope_api_key
             if self.dashscope_base_url:

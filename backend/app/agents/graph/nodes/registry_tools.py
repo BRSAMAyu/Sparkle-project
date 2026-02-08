@@ -129,3 +129,37 @@ def suggest_focus_session(
         "task_id": task_id,
         "task_title": task_title,
     }
+
+
+@tool
+def record_error(
+    question: str,
+    wrong_answer: str | None = None,
+    correct_answer: str | None = None,
+    error_type: str | None = None,
+    root_cause: str | None = None,
+    subject: str = "math",
+) -> dict[str, Any]:
+    """Record an error into error book."""
+    return {
+        "question": question,
+        "wrong_answer": wrong_answer,
+        "correct_answer": correct_answer,
+        "error_type": error_type,
+        "root_cause": root_cause,
+        "subject": subject,
+    }
+
+
+@tool
+def query_error_history(
+    subject: str | None = None,
+    error_type: str | None = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Query user's historical errors."""
+    return {
+        "subject": subject,
+        "error_type": error_type,
+        "limit": limit,
+    }

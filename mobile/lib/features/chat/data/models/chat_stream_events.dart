@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -115,11 +117,147 @@ class StatusUpdateEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
   });
   final String state;
   final String details;
   final String? currentAgentName;
   final String? activeAgentType;
+}
+
+/// DAG execution signal payload embedded in metadata['dag_execution_event'].
+class DagExecutionSignal {
+  DagExecutionSignal({
+    required this.event,
+    this.layerIndex,
+    this.layerNumber,
+    this.totalLayers,
+    this.stepId,
+    this.toolName,
+    this.success,
+    this.durationMs,
+    this.aborted,
+    this.reason,
+    this.completedSteps,
+    this.stepIds,
+    this.toolNames,
+    this.planId,
+    this.layersCompleted,
+    this.stepsTotal,
+    this.abortReason,
+  });
+
+  final String event;
+  final int? layerIndex;
+  final int? layerNumber;
+  final int? totalLayers;
+  final String? stepId;
+  final String? toolName;
+  final bool? success;
+  final int? durationMs;
+  final bool? aborted;
+  final String? reason;
+  final int? completedSteps;
+  final List<String>? stepIds;
+  final List<String>? toolNames;
+  final String? planId;
+  final int? layersCompleted;
+  final int? stepsTotal;
+  final String? abortReason;
+
+  static DagExecutionSignal? fromDynamic(dynamic raw) {
+    Map<String, dynamic>? data;
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = json.decode(raw);
+        if (decoded is Map<String, dynamic>) {
+          data = decoded;
+        }
+      } catch (_) {}
+    } else if (raw is Map<String, dynamic>) {
+      data = raw;
+    }
+
+    if (data == null) {
+      return null;
+    }
+
+    final event = data['event'] as String?;
+    if (event == null || event.isEmpty) {
+      return null;
+    }
+
+    return DagExecutionSignal(
+      event: event,
+      layerIndex: data['layer_index'] as int?,
+      layerNumber: data['layer_number'] as int?,
+      totalLayers: data['total_layers'] as int?,
+      stepId: data['step_id'] as String?,
+      toolName: data['tool_name'] as String?,
+      success: data['success'] as bool?,
+      durationMs: data['duration_ms'] as int?,
+      aborted: data['aborted'] as bool?,
+      reason: data['reason'] as String?,
+      completedSteps: data['completed_steps'] as int?,
+      stepIds: (data['step_ids'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      toolNames: (data['tool_names'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      planId: data['plan_id'] as String?,
+      layersCompleted: data['layers_completed'] as int?,
+      stepsTotal: data['steps_total'] as int?,
+      abortReason: data['abort_reason'] as String?,
+    );
+  }
+
+  String? get statusDetails {
+    switch (event) {
+      case 'layer_start':
+        final layer = layerNumber ?? 0;
+        final total = totalLayers ?? 0;
+        final count = toolNames?.length ?? stepIds?.length ?? 0;
+        return 'DAG 第$layer/$total层，$count个步骤并行执行';
+      case 'step_completed':
+        final name = toolName ?? 'step';
+        if (success == false) {
+          return '$name 执行失败';
+        }
+        if (durationMs != null) {
+          return '$name 执行完成 (${durationMs}ms)';
+        }
+        return '$name 执行完成';
+      case 'layer_end':
+        final layer = layerNumber ?? 0;
+        if (aborted == true) {
+          return '第$layer层已中断';
+        }
+        return '第$layer层执行完成';
+      case 'execution_aborted':
+        return reason ?? 'DAG 执行中断';
+      case 'execution_end':
+        if (aborted == true) {
+          return abortReason ?? 'DAG 执行结束（中断）';
+        }
+        return 'DAG 执行完成';
+      default:
+        return null;
+    }
+  }
+}
+
+class DagExecutionEvent extends ChatStreamEvent {
+  DagExecutionEvent({
+    required this.signal,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.metadata,
+  });
+
+  final DagExecutionSignal signal;
 }
 
 /// 完整文本事件
@@ -226,7 +364,8 @@ class PlanReviewStatusEvent extends ChatStreamEvent {
     super.promptVersion,
   });
   final String reviewId;
-  final String status; // 'approved', 'rejected', 'modify_requested', 'acknowledged'
+  final String
+      status; // 'approved', 'rejected', 'modify_requested', 'acknowledged'
   final String? message;
   final String? userDecision;
   final int? timestamp;
@@ -267,13 +406,15 @@ class StateChangeEvent extends ChatStreamEvent {
   String get timestamp => changeData['timestamp'] as String? ?? '';
 
   /// Intervention level: toast, card, modal
-  String get interventionLevel => changeData['intervention_level'] as String? ?? 'toast';
+  String get interventionLevel =>
+      changeData['intervention_level'] as String? ?? 'toast';
 
   /// Priority: low, medium, high
   String get priority => changeData['priority'] as String? ?? 'low';
 
   /// Pre-formatted user-friendly message
-  String get formattedMessage => changeData['formatted_message'] as String? ?? '';
+  String get formattedMessage =>
+      changeData['formatted_message'] as String? ?? '';
 
   /// Plan-specific fields (for plan_archived, plan_restored, plan_deleted)
   String? get planName => changeData['plan_name'] as String?;
@@ -291,28 +432,29 @@ class StateChangeEvent extends ChatStreamEvent {
 
   /// Memory-specific fields (for memory_cleanup)
   int get memoriesRemoved => changeData['memories_removed'] as int? ?? 0;
-  double get spaceFreedMb => (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
+  double get spaceFreedMb =>
+      (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
 
   /// Convert to InterventionPushMessage for display
   InterventionPushMessage toInterventionMessage() => InterventionPushMessage(
-      interventionId: changeId,
-      level: _mapInterventionLevel(),
-      content: InterventionContent(
-        renderedMessage: formattedMessage,
-        intentType: changeType,
-        templateId: 'state_change_$changeType',
-        scaffoldingLevel: 0,
-        contextVariables: {
-          'change_type': changeType,
-          'change_id': changeId,
-          'timestamp': timestamp,
-          if (planId != null) 'plan_id': planId!,
-          if (planName != null) 'plan_name': planName!,
-        },
-      ),
-      actions: _getActions(),
-      expiresAt: DateTime.now().add(const Duration(hours: 24)),
-    );
+        interventionId: changeId,
+        level: _mapInterventionLevel(),
+        content: InterventionContent(
+          renderedMessage: formattedMessage,
+          intentType: changeType,
+          templateId: 'state_change_$changeType',
+          scaffoldingLevel: 0,
+          contextVariables: {
+            'change_type': changeType,
+            'change_id': changeId,
+            'timestamp': timestamp,
+            if (planId != null) 'plan_id': planId!,
+            if (planName != null) 'plan_name': planName!,
+          },
+        ),
+        actions: _getActions(),
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
+      );
 
   InterventionLevel _mapInterventionLevel() {
     switch (interventionLevel) {
@@ -394,10 +536,12 @@ class ContentReviewWidgetEvent extends ChatStreamEvent {
   String get reviewId => reviewData['review_id'] as String? ?? '';
 
   /// 审查决策: passed/failed/needs_refinement
-  String get decision => reviewData['decision'] as String? ?? 'needs_refinement';
+  String get decision =>
+      reviewData['decision'] as String? ?? 'needs_refinement';
 
   /// 总体评分 0-1
-  double get overallScore => (reviewData['overall_score'] as num?)?.toDouble() ?? 0.0;
+  double get overallScore =>
+      (reviewData['overall_score'] as num?)?.toDouble() ?? 0.0;
 
   /// 是否通过审查
   bool get passed => decision == 'passed' && overallScore >= 0.7;
@@ -433,7 +577,8 @@ class ContentReviewWidgetEvent extends ChatStreamEvent {
   }
 
   /// 是否需要反思修正
-  bool get requiresReflection => reviewData['requires_reflection'] as bool? ?? false;
+  bool get requiresReflection =>
+      reviewData['requires_reflection'] as bool? ?? false;
 }
 
 /// Content Reflection Result Event - 反思修正完成事件
@@ -455,7 +600,8 @@ class ContentReflectionResultEvent extends ChatStreamEvent {
   String get outcome => reflectionData['outcome'] as String? ?? 'unknown';
 
   /// 分数变化
-  double get scoreDelta => (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
+  double get scoreDelta =>
+      (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
 
   /// 执行轮数
   int get rounds => reflectionData['rounds'] as int? ?? 0;
@@ -487,7 +633,8 @@ class ReviewOverrideEvent extends ChatStreamEvent {
   String get reviewId => overrideData['review_id'] as String? ?? '';
 
   /// 原决策
-  String get originalDecision => overrideData['original_decision'] as String? ?? '';
+  String get originalDecision =>
+      overrideData['original_decision'] as String? ?? '';
 
   /// 新决策
   String get newDecision => overrideData['new_decision'] as String? ?? '';
@@ -558,7 +705,8 @@ class AppealResultEvent extends ChatStreamEvent {
   String? get secondaryDecision => resultData['secondary_decision'] as String?;
 
   /// 二次审查分数
-  double? get secondaryScore => (resultData['secondary_score'] as num?)?.toDouble();
+  double? get secondaryScore =>
+      (resultData['secondary_score'] as num?)?.toDouble();
 
   /// 是否申诉通过
   bool get isApproved => status == 'resolved';
@@ -589,7 +737,8 @@ class AchievementUnlockEvent extends ChatStreamEvent {
   final Map<String, dynamic> achievementData;
 
   /// 成就ID
-  String get achievementId => achievementData['achievement_id'] as String? ?? '';
+  String get achievementId =>
+      achievementData['achievement_id'] as String? ?? '';
 
   /// 成就名称
   String get name => achievementData['name'] as String? ?? '';
@@ -689,7 +838,8 @@ class AchievementMilestoneEvent extends ChatStreamEvent {
   String get achievementId => milestoneData['achievement_id'] as String? ?? '';
 
   /// 成就名称
-  String get achievementName => milestoneData['achievement_name'] as String? ?? '';
+  String get achievementName =>
+      milestoneData['achievement_name'] as String? ?? '';
 
   /// 里程碑百分比（25、50、75）
   int get milestonePercent => milestoneData['milestone_percent'] as int? ?? 0;
@@ -753,15 +903,17 @@ class TransparencyData {
     this.totalTokens = 0,
   });
 
-  factory TransparencyData.fromJson(Map<String, dynamic> json) => TransparencyData(
-      steps: (json['steps'] as List<dynamic>?)
-              ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      totalDurationMs: json['totalDurationMs'] as int? ?? 0,
-      requestId: json['requestId'] as String? ?? '',
-      totalTokens: json['totalTokens'] as int? ?? 0,
-    );
+  factory TransparencyData.fromJson(Map<String, dynamic> json) =>
+      TransparencyData(
+        steps: (json['steps'] as List<dynamic>?)
+                ?.map(
+                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        totalDurationMs: json['totalDurationMs'] as int? ?? 0,
+        requestId: json['requestId'] as String? ?? '',
+        totalTokens: json['totalTokens'] as int? ?? 0,
+      );
 
   final List<TransparencyStep> steps;
   final int totalDurationMs;
@@ -791,17 +943,18 @@ class TransparencyStep {
     this.metadata,
   });
 
-  factory TransparencyStep.fromJson(Map<String, dynamic> json) => TransparencyStep(
-      stepId: json['stepId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      durationMs: json['durationMs'] as int?,
-      result: json['result'] as Map<String, dynamic>?,
-      error: json['error'] as String?,
-      agentType: json['agentType'] as String?,
-      stepType: json['type'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
-    );
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) =>
+      TransparencyStep(
+        stepId: json['stepId'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        durationMs: json['durationMs'] as int?,
+        result: json['result'] as Map<String, dynamic>?,
+        error: json['error'] as String?,
+        agentType: json['agentType'] as String?,
+        stepType: json['type'] as String?,
+        metadata: json['metadata'] as Map<String, dynamic>?,
+      );
 
   final String stepId;
   final String name;
@@ -857,13 +1010,16 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
   final Map<String, dynamic> collaborationData;
 
   /// 工作流类型 (e.g., 'deep_analysis', 'study_plan', 'error_diagnosis')
-  String get workflowType => collaborationData['workflow_type'] as String? ?? 'unknown';
+  String get workflowType =>
+      collaborationData['workflow_type'] as String? ?? 'unknown';
 
   /// 总执行时间 (ms)
-  int get executionTimeMs => collaborationData['execution_time_ms'] as int? ?? 0;
+  int get executionTimeMs =>
+      collaborationData['execution_time_ms'] as int? ?? 0;
 
   /// 参与者数量
-  int get participantCount => collaborationData['participant_count'] as int? ?? 0;
+  int get participantCount =>
+      collaborationData['participant_count'] as int? ?? 0;
 
   /// 协作步骤列表
   List<CollaborationStep> get steps {
@@ -883,16 +1039,20 @@ class CollaborationTimelineEvent extends ChatStreamEvent {
   }
 
   /// 转换为UI步骤列表
-  List<TimelineStep> toTimelineSteps() => steps.map((step) => TimelineStep(
-      agentName: step.agentName,
-      agentRole: step.agentRole,
-      action: step.action,
-      status: step.status,
-      startTimeMs: step.startTimeMs,
-      durationMs: step.durationMs,
-      outputSummary: step.outputSummary,
-      metadata: step.metadata,
-    ),).toList();
+  List<TimelineStep> toTimelineSteps() => steps
+      .map(
+        (step) => TimelineStep(
+          agentName: step.agentName,
+          agentRole: step.agentRole,
+          action: step.action,
+          status: step.status,
+          startTimeMs: step.startTimeMs,
+          durationMs: step.durationMs,
+          outputSummary: step.outputSummary,
+          metadata: step.metadata,
+        ),
+      )
+      .toList();
 }
 
 /// 协作步骤数据模型
@@ -908,7 +1068,8 @@ class CollaborationStep {
     this.metadata,
   });
 
-  factory CollaborationStep.fromJson(Map<String, dynamic> json) => CollaborationStep(
+  factory CollaborationStep.fromJson(Map<String, dynamic> json) =>
+      CollaborationStep(
         agentName: json['agent_name'] as String? ?? 'Unknown',
         agentRole: json['agent_role'] as String? ?? 'Agent',
         action: json['action'] as String? ?? '',

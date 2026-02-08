@@ -9,6 +9,8 @@ from app.agents.graph.nodes.collaboration import (
     collaboration_node,
 )
 from app.agents.graph.nodes.exam_oracle import exam_oracle_node
+from app.agents.graph.nodes.deep_analyst import deep_analyst_node
+from app.agents.graph.nodes.error_analyst import error_analyst_node
 from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
 from app.agents.graph.nodes.registry_tools import (
     batch_create_tasks,
@@ -17,7 +19,9 @@ from app.agents.graph.nodes.registry_tools import (
     create_task,
     generate_tasks_for_plan,
     link_nodes,
+    query_error_history,
     query_knowledge,
+    record_error,
     suggest_focus_session,
 )
 from app.agents.graph.nodes.router import router_node
@@ -36,6 +40,10 @@ def route_after_router(state: SparkleState):
         return "exam_oracle"
     elif target == "time_tutor":
         return "time_tutor"
+    elif target == "deep_analyst":
+        return "deep_analyst"
+    elif target == "error_analyst":
+        return "error_analyst"
     elif target == "study_buddy":
         return "study_buddy"  # 暂未实现，可指向 TimeTutor 或 GalaxyGuide 兜底
     elif target == "human_assist":
@@ -80,6 +88,8 @@ workflow.add_node("router", router_node)
 workflow.add_node("galaxy_guide", galaxy_guide_node)
 workflow.add_node("exam_oracle", exam_oracle_node)
 workflow.add_node("time_tutor", time_tutor_node)
+workflow.add_node("deep_analyst", deep_analyst_node)
+workflow.add_node("error_analyst", error_analyst_node)
 
 # (B) 添加工具节点 (所有 Agent 的工具汇聚于此，也可拆分为多个 ToolNode)
 all_tools = [
@@ -91,6 +101,8 @@ all_tools = [
     create_task,
     batch_create_tasks,
     suggest_focus_session,
+    record_error,
+    query_error_history,
 ]
 tool_node = ToolNode(all_tools)
 workflow.add_node("tools", tool_node)
@@ -113,6 +125,8 @@ workflow.add_conditional_edges(
         "galaxy_guide": "galaxy_guide",
         "exam_oracle": "exam_oracle",
         "time_tutor": "time_tutor",
+        "deep_analyst": "deep_analyst",
+        "error_analyst": "error_analyst",
         "study_buddy": "time_tutor",  # 暂时 fallback
         "human_node": "human_node",
         END: END
@@ -120,7 +134,7 @@ workflow.add_conditional_edges(
 )
 
 # Agents -> Tools OR End
-for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor"]:
+for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor", "deep_analyst", "error_analyst"]:
     workflow.add_conditional_edges(
         agent_name,
         route_after_agent,
@@ -175,6 +189,8 @@ def create_planning_graph():
     planning_workflow.add_node("galaxy_guide", galaxy_guide_node)
     planning_workflow.add_node("exam_oracle", exam_oracle_node)
     planning_workflow.add_node("time_tutor", time_tutor_node)
+    planning_workflow.add_node("deep_analyst", deep_analyst_node)
+    planning_workflow.add_node("error_analyst", error_analyst_node)
     # Phase 3: Add aggregator node
     planning_workflow.add_node("aggregator", collaboration_aggregator_node)
     # P0 Fix: Add reset_collaboration node for review feedback loop
@@ -196,6 +212,8 @@ def create_planning_graph():
             "galaxy_guide": "galaxy_guide",
             "exam_oracle": "exam_oracle",
             "time_tutor": "time_tutor",
+            "deep_analyst": "deep_analyst",
+            "error_analyst": "error_analyst",
             END: END
         }
     )
@@ -217,12 +235,14 @@ def create_planning_graph():
             "galaxy_guide": "galaxy_guide",
             "exam_oracle": "exam_oracle",
             "time_tutor": "time_tutor",
+            "deep_analyst": "deep_analyst",
+            "error_analyst": "error_analyst",
             "aggregator": "aggregator"  # All done, aggregate results
         }
     )
 
     # Agents -> Back to Collaboration or Aggregator
-    for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor"]:
+    for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor", "deep_analyst", "error_analyst"]:
         planning_workflow.add_conditional_edges(
             agent_name,
             route_after_agent_in_collaboration,
@@ -288,6 +308,10 @@ def route_after_router_with_collaboration(state: SparkleState):
         return "exam_oracle"
     elif target == "time_tutor":
         return "time_tutor"
+    elif target == "deep_analyst":
+        return "deep_analyst"
+    elif target == "error_analyst":
+        return "error_analyst"
     else:
         return "time_tutor"
 

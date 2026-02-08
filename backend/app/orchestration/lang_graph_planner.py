@@ -50,6 +50,8 @@ class LangGraphPlanner:
         "generate_tasks_for_plan": StepCriteria(expected_output_keys=["task_ids"], max_duration_ms=30000, required=True),
         "query_knowledge": StepCriteria(expected_output_keys=["results"], max_duration_ms=10000, required=False),
         "suggest_focus_session": StepCriteria(expected_output_keys=["session_id"], max_duration_ms=10000, required=False),
+        "record_error": StepCriteria(expected_output_keys=["error_id"], max_duration_ms=10000, required=False),
+        "query_error_history": StepCriteria(expected_output_keys=["errors"], max_duration_ms=10000, required=False),
     }
 
     def __init__(self, redis_client=None):
@@ -68,6 +70,8 @@ class LangGraphPlanner:
         conversation_history: list[dict] | None = None,
         plan_id: str | None = None,  # Phase 4: for plan_version tracking
         execution_feedback: dict[str, Any] | None = None,  # Phase C: past feedback
+        mode_config: Any | None = None,
+        state_overrides: dict[str, Any] | None = None,
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -126,6 +130,17 @@ class LangGraphPlanner:
             # Phase C: Execution feedback for planning context
             "_execution_feedback": execution_feedback,
         }
+        if mode_config:
+            initial_state["mode_name"] = getattr(mode_config, "chat_mode", None)
+            initial_state["collaboration_mode"] = getattr(mode_config, "collaboration_mode", None)
+            initial_state["collaboration_agents"] = getattr(mode_config, "collaboration_agents", None)
+            initial_state["collaboration_order"] = getattr(mode_config, "collaboration_order", None)
+            initial_state["collaboration_index"] = 0
+            initial_state["mode_constraints"] = getattr(mode_config, "tool_policy", None)
+            initial_state["synthesis_policy"] = {"template": getattr(mode_config, "synthesis_template", "")}
+
+        if state_overrides:
+            initial_state.update(state_overrides)
 
         # Execute planning graph (stops at tool_calls, does NOT execute tools)
         config = {"configurable": {"thread_id": session_id}}
@@ -385,6 +400,7 @@ class LangGraphPlanner:
         previous_plan: ExecutablePlan | None = None,
         conflict_info: dict[str, Any] | None = None,
         plan_id: str | None = None,
+        execution_feedback: dict[str, Any] | None = None,
     ) -> ExecutablePlan:
         """Re-plan after version conflict or validation failure
 
@@ -421,6 +437,7 @@ class LangGraphPlanner:
             user_id=user_id,
             session_id=session_id,
             plan_id=plan_id,
+            execution_feedback=execution_feedback,
         )
 
         # Mark as re-plan

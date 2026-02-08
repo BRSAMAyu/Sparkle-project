@@ -215,6 +215,71 @@ void main() {
       await sub.cancel();
     });
 
+    test(
+        'Parses dag_execution_event metadata-only delta into DagExecutionEvent',
+        () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'delta',
+        'delta': '',
+        'metadata': {
+          'dag_execution_event': json.encode({
+            'event': 'layer_start',
+            'layer_index': 0,
+            'layer_number': 1,
+            'total_layers': 3,
+            'tool_names': ['create_plan', 'query_knowledge'],
+          }),
+        },
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<DagExecutionEvent>());
+      final dag = events.first as DagExecutionEvent;
+      expect(dag.signal.event, 'layer_start');
+      expect(dag.signal.layerNumber, 1);
+      expect(dag.signal.totalLayers, 3);
+
+      await sub.cancel();
+    });
+
+    test('StatusUpdateEvent details prefer DAG metadata detail', () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      final incomingJson = json.encode({
+        'type': 'status_update',
+        'status': {
+          'state': 'EXECUTING_TOOL',
+          'details': 'legacy details',
+        },
+        'metadata': {
+          'dag_execution_event': json.encode({
+            'event': 'step_completed',
+            'tool_name': 'create_plan',
+            'success': true,
+            'duration_ms': 320,
+          }),
+        },
+      });
+      mockChannel.simulateIncomingMessage(incomingJson);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(events, isNotEmpty);
+      expect(events.first, isA<StatusUpdateEvent>());
+      final event = events.first as StatusUpdateEvent;
+      expect(event.details, contains('create_plan'));
+      expect(event.details, contains('320ms'));
+
+      await sub.cancel();
+    });
+
     test('Parses v2 error_code with higher priority than legacy code',
         () async {
       final stream = service.sendMessage(message: 'init', userId: 'user1');

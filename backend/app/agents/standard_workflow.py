@@ -357,30 +357,91 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 state.next_step = "__end__"
                 return state
 
-        # Execute tool calls from the plan
+        # Execute plan with DAG-aware executor (parallel by layer).
         start_time = time.time()
-        total_tools = len(executable_plan.tool_calls)
 
-        for idx, tool_call_spec in enumerate(executable_plan.tool_calls):
-            tool_args = tool_call_spec.params
-            if isinstance(tool_args, str):
-                try:
-                    tool_args = json.loads(tool_args)
-                except Exception:
-                    tool_args = {}
-            await _execute_single_tool(
-                tool_name=tool_call_spec.name,
-                tool_args=tool_args,
-                tool_call_id=tool_call_spec.id,
-                stream_callback=stream_callback,
-                user_id=user_id,
-                db_session=db_session,
-                executor=executor,
-                state=state,
-                compensation_call=tool_call_spec.compensation_call,
-                tool_index=idx,
-                total_tools=total_tools,
-            )
+        async def _execution_observer(event: dict[str, Any]) -> None:
+            if not stream_callback:
+                return
+
+            event_type = event.get("event")
+            if event_type == "layer_start":
+                details = (
+                    f"正在执行 DAG 第 {event.get('layer_number', 0)}/{event.get('total_layers', 0)} 层，"
+                    f"{len(event.get('tool_names', []))} 个步骤并行"
+                )
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                        details=details,
+                        active_agent=agent_service_pb2.ORCHESTRATOR
+                    ),
+                    metadata={
+                        "dag_execution_event": json.dumps(event, ensure_ascii=False),
+                    },
+                ))
+                return
+
+            await stream_callback(agent_service_pb2.ChatResponse(
+                metadata={
+                    "dag_execution_event": json.dumps(event, ensure_ascii=False),
+                }
+            ))
+
+        plan_result = await executor.execute_plan(
+            plan=executable_plan,
+            user_id=user_id,
+            db_session=db_session,
+            progress_callback=None,
+            execution_observer=_execution_observer,
+        )
+        state.context_data["plan_execution_result"] = plan_result
+
+        for step_result in plan_result.step_results:
+            result = step_result.tool_result
+
+            if stream_callback:
+                status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.IDLE,
+                        details=status_msg,
+                        active_agent=agent_service_pb2.ORCHESTRATOR
+                    )
+                ))
+
+                data_struct = struct_pb2.Struct()
+                if isinstance(result.data, dict):
+                    data_struct.update(result.data)
+                widget_struct = struct_pb2.Struct()
+                if isinstance(result.widget_data, dict):
+                    widget_struct.update(result.widget_data)
+
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name=result.tool_name,
+                        success=result.success,
+                        data=data_struct,
+                        error_message=result.error_message or "",
+                        suggestion=result.suggestion or "",
+                        widget_type=result.widget_type or "",
+                        widget_data=widget_struct,
+                        tool_call_id=step_result.step_id
+                    )
+                ))
+
+            result_json = json.dumps({
+                "success": result.success,
+                "result": result.data,
+                "error": result.error_message,
+                "fallback": result.data.get("fallback", False) if isinstance(result.data, dict) else False,
+            })
+            state.append_message("tool", result_json, name=step_result.tool_name)
+
+        if plan_result.aborted and stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=f"\n\n⚠️ 计划执行中断: {plan_result.abort_reason or 'required step failed'}"
+            ))
 
         # Write feedback for LangGraph plan
         await _write_feedback(
@@ -389,7 +450,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             session_id=session_id,
             redis_client=redis_client,
             start_time=start_time,
-            tool_count=len(executable_plan.tool_calls),
+            tool_count=len(plan_result.step_results),
             plan_id=executable_plan.plan_id
         )
 

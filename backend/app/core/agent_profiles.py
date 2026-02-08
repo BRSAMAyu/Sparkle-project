@@ -30,6 +30,8 @@ class AgentRole(str, Enum):
     GALAXY_GUIDE = "galaxy_guide"
     EXAM_ORACLE = "exam_oracle"
     TIME_TUTOR = "time_tutor"
+    DEEP_ANALYST = "deep_analyst"
+    ERROR_ANALYST = "error_analyst"
     STUDY_BUDDY = "study_buddy"
 
     # 协作工作流角色
@@ -229,6 +231,36 @@ Query: {query}"""
 2. 管理任务列表
 3. 建议番茄钟安排
 4. 监控学习进度"""
+    ),
+
+    AgentRole.DEEP_ANALYST: AgentProfile(
+        role=AgentRole.DEEP_ANALYST,
+        display_name="深度分析师",
+        description="多视角结构化分析专家",
+        model_tier=ModelTier.REASONING,
+        temperature=0.4,
+        allowed_tools=["query_knowledge", "create_knowledge_node"],
+        system_prompt_template="""你是深度分析师，负责基于证据进行多角度分析。
+
+你的职责：
+1. 提炼关键论点与证据链
+2. 分析边界条件与反例
+3. 给出可执行应用建议"""
+    ),
+
+    AgentRole.ERROR_ANALYST: AgentProfile(
+        role=AgentRole.ERROR_ANALYST,
+        display_name="错题分析师",
+        description="错题诊断与根因分析",
+        model_tier=ModelTier.REASONING,
+        temperature=0.3,
+        allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
+        system_prompt_template="""你是错题分析师，负责识别错误类型并输出补救策略。
+
+你的职责：
+1. 分类错误并解释根因
+2. 对齐正确解法路径
+3. 设计针对性训练建议"""
     ),
 
     # ==================== 协作工作流 Agents ====================
