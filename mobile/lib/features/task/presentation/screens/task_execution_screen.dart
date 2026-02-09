@@ -46,6 +46,28 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     final task = ref.read(activeTaskProvider);
     _currentTimerDuration =
         task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
+
+    // 🔧 Fix: Call startTask if the task is PENDING
+    // This ensures backend state transitions to IN_PROGRESS when user enters execution screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final activeTask = ref.read(activeTaskProvider);
+      if (activeTask != null && activeTask.status == TaskStatus.pending) {
+        ref.read(taskListProvider.notifier).startTask(activeTask.id).catchError(
+          (error, stackTrace) {
+            debugPrint('Error starting task: $error');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                      '无法启动任务: ${error is DioException ? error.message : error.toString()}'),
+                  backgroundColor: DS.error,
+                ),
+              );
+            }
+          },
+        );
+      }
+    });
   }
 
   bool _shouldShowFullExitConfirmation() {

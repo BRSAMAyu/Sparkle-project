@@ -39,8 +39,14 @@ class FocusRepository {
     }
 
     try {
+      // 🔧 Fix: Ensure taskId is a valid UUID or null. 
+      // "quick_focus_" IDs are local-only and will cause backend validation errors.
+      final validTaskId = (taskId != null && taskId.length == 36 && !taskId.contains('_')) 
+          ? taskId 
+          : null;
+
       final request = FocusSessionRequest(
-        taskId: taskId,
+        taskId: validTaskId,
         startTime: startTime,
         endTime: endTime,
         durationMinutes: durationMinutes,
