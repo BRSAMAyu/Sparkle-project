@@ -9,15 +9,18 @@ class EngagementHeatmap extends StatelessWidget {
   const EngagementHeatmap({
     required this.data,
     this.daysToShow = 90,
-    this.lowColor = const Color(0xFFE0E0E0),
-    this.highColor = const Color(0xFF2E7D32),
+    this.lowColor,
+    this.highColor,
     super.key,
   });
 
   final Map<DateTime, double> data; // DateTime -> intensity (0-1)
   final int daysToShow;
-  final Color lowColor;
-  final Color highColor;
+  final Color? lowColor;
+  final Color? highColor;
+
+  Color get _resolvedLowColor => lowColor ?? DS.surfaceTertiary;
+  Color get _resolvedHighColor => highColor ?? DS.success;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -31,8 +34,11 @@ class EngagementHeatmap extends StatelessWidget {
               // Header
               Row(
                 children: [
-                  Icon(Icons.calendar_month,
-                      color: DS.brandPrimary.shade600, size: 24,),
+                  Icon(
+                    Icons.calendar_month,
+                    color: DS.brandPrimary.shade600,
+                    size: 24,
+                  ),
                   const SizedBox(width: DS.md),
                   Expanded(
                     child: Column(
@@ -41,7 +47,9 @@ class EngagementHeatmap extends StatelessWidget {
                         const Text(
                           '学习活跃度',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold,),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           '过去 90 天的学习记录',
@@ -145,9 +153,15 @@ class EngagementHeatmap extends StatelessWidget {
       children: [
         _buildStatItem('活跃天数', '${stats['activeDays']}', Icons.check_circle),
         _buildStatItem(
-            '最长连续', '${stats['longestStreak']} 天', Icons.local_fire_department,),
+          '最长连续',
+          '${stats['longestStreak']} 天',
+          Icons.local_fire_department,
+        ),
         _buildStatItem(
-            '当前连续', '${stats['currentStreak']} 天', Icons.trending_up,),
+          '当前连续',
+          '${stats['currentStreak']} 天',
+          Icons.trending_up,
+        ),
       ],
     );
   }
@@ -182,8 +196,9 @@ class EngagementHeatmap extends StatelessWidget {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Color _getColorForIntensity(double intensity) {
-    if (intensity == 0) return lowColor;
-    return Color.lerp(lowColor, highColor, intensity) ?? lowColor;
+    if (intensity == 0) return _resolvedLowColor;
+    return Color.lerp(_resolvedLowColor, _resolvedHighColor, intensity) ??
+        _resolvedLowColor;
   }
 
   String _getIntensityLabel(double intensity) {

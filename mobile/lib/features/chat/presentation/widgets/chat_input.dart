@@ -50,7 +50,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           builder: (context) => FilePickerWithPresignedUpload(
             groupId: widget.fileUploadGroupId,
             onUploaded: (file) {
@@ -68,7 +68,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         builder: (context) => DocumentCleanerSheet(
           onResult: (result) {
             // 🔧 修复：检查widget是否仍然挂载
@@ -182,7 +182,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final isNarrow = ResponsiveSystem.isMobile(context);
     final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
     final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
-    final attachmentPadding = isNarrow ? 4.0 : 8.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -205,18 +204,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     child: SizedBox(
                       width: attachmentVisualSize,
                       height: attachmentVisualSize,
-                      child: IconButton(
+                      child: SparkleIconButton(
                         icon: Icon(
                           Icons.add_circle_outline_rounded,
                           color: DS.textSecondary,
+                          size: attachmentIconSize,
                         ),
-                        iconSize: attachmentIconSize,
                         onPressed: widget.enabled ? _showAttachmentSheet : null,
-                        padding: EdgeInsets.all(attachmentPadding),
-                        constraints: BoxConstraints.tightFor(
-                          width: attachmentVisualSize,
-                          height: attachmentVisualSize,
-                        ),
+                        variant: ButtonVariant.ghost,
+                        size: attachmentVisualSize,
                       ),
                     ),
                   ),
@@ -337,7 +333,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 : null,
                           ),
                           child: Material(
-                            color: Colors.transparent,
+                            color: DS.surfacePrimary.withValues(alpha: 0),
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
@@ -381,8 +377,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Widget _buildQuotePreview(bool isDark) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing4,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
         decoration: BoxDecoration(
           // Use surfaceSecondary for dark mode to match Dashboard ceramic cards
           color: isDark
@@ -423,14 +425,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
+              child: SparkleIconButton(
                 icon: Icon(
                   Icons.close_rounded,
                   size: DS.iconSizeSm,
                   color: DS.textSecondary,
                 ),
                 onPressed: widget.onCancelQuote,
-                padding: const EdgeInsets.all(12),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ),
           ],

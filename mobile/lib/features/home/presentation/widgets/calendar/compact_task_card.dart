@@ -20,57 +20,60 @@ class CompactTaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialStyler(
-      material: AppMaterials.ceramic,
-      borderRadius: DS.borderRadius12,
-      padding: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap ?? () => context.push(TaskRoutes.taskDetail.replaceFirst(':id', task.id)),
+        material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius12,
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Row(
-            children: [
-              // Priority indicator
-              _buildPriorityIndicator(task.priority),
-              const SizedBox(width: DS.spacing12),
-              // Task info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: DS.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Row(
-                      children: [
-                        _buildTaskTypeChip(task.type),
-                        const SizedBox(width: DS.spacing8),
-                        Text(
-                          '${task.estimatedMinutes}m',
-                          style: context.sparkleTypography.labelSmall.copyWith(
-                            color: DS.textSecondary,
-                          ),
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          onTap: onTap ??
+              () => context
+                  .push(TaskRoutes.taskDetail.replaceFirst(':id', task.id)),
+          borderRadius: DS.borderRadius12,
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: Row(
+              children: [
+                // Priority indicator
+                _buildPriorityIndicator(task.priority),
+                const SizedBox(width: DS.spacing12),
+                // Task info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        style: context.sparkleTypography.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: DS.textPrimary,
                         ),
-                      ],
-                    ),
-                  ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Row(
+                        children: [
+                          _buildTaskTypeChip(task.type),
+                          const SizedBox(width: DS.spacing8),
+                          Text(
+                            '${task.estimatedMinutes}m',
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              // Quick action button
-              _buildQuickActionButton(context, ref, task),
-            ],
+                const SizedBox(width: DS.spacing8),
+                // Quick action button
+                _buildQuickActionButton(context, ref, task),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildPriorityIndicator(int priority) {
     Color color;
@@ -100,7 +103,7 @@ class CompactTaskCard extends ConsumerWidget {
       TaskType.reflection => ('反思', DS.prismPurple),
       TaskType.social => ('社交', DS.info),
       TaskType.planning => ('规划', DS.warning),
-      TaskType.ocr => ('OCR', Colors.grey),
+      TaskType.ocr => ('OCR', DS.textSecondary),
     };
 
     return Container(
@@ -120,7 +123,8 @@ class CompactTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActionButton(BuildContext context, WidgetRef ref, TaskModel task) {
+  Widget _buildQuickActionButton(
+      BuildContext context, WidgetRef ref, TaskModel task) {
     switch (task.status) {
       case TaskStatus.pending:
         return _ActionButton(
@@ -135,7 +139,8 @@ class CompactTaskCard extends ConsumerWidget {
         return _ActionButton(
           icon: Icons.check_rounded,
           color: DS.brandPrimaryConst,
-          onTap: () => context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
+          onTap: () => context
+              .push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
         );
       case TaskStatus.completed:
         return _ActionButton(
@@ -162,19 +167,19 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: DS.borderRadius8,
-      child: InkWell(
-        onTap: onTap,
+        color: color.withValues(alpha: 0.12),
         borderRadius: DS.borderRadius8,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing6),
-          child: Icon(
-            icon,
-            size: DS.iconSizeSm,
-            color: onTap != null ? color : DS.textSecondary,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: DS.borderRadius8,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing6),
+            child: Icon(
+              icon,
+              size: DS.iconSizeSm,
+              color: onTap != null ? color : DS.textSecondary,
+            ),
           ),
         ),
-      ),
-    );
+      );
 }

@@ -45,7 +45,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     final word = _controller.text.trim();
     if (word.isNotEmpty) {
       // Check if word is already in local wordbook
-      final localWord = await ref.read(localVocabularyProvider.notifier).getByWord(word);
+      final localWord =
+          await ref.read(localVocabularyProvider.notifier).getByWord(word);
       setState(() {
         _isInLocalWordbook = localWord != null;
       });
@@ -85,13 +86,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     if (mounted) {
       HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('已添加 "$word" 到生词本'),
-          backgroundColor: DS.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.success(context, '已添加 "$word" 到生词本');
     }
   }
 
@@ -101,7 +96,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     if (result == null) return;
 
     final word = result['word'] as String? ?? _controller.text;
-    final localWord = await ref.read(localVocabularyProvider.notifier).getByWord(word);
+    final localWord =
+        await ref.read(localVocabularyProvider.notifier).getByWord(word);
 
     if (localWord != null) {
       await ref.read(localVocabularyProvider.notifier).delete(localWord.id);
@@ -112,13 +108,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
       if (mounted) {
         HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已从生词本移除 "$word"'),
-            backgroundColor: DS.neutral500,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.info(context, '已从生词本移除 "$word"');
       }
     }
   }
@@ -151,7 +141,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: DS.spacing20),
 
           // Header
           Row(
@@ -159,11 +149,14 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               Container(
                 padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
-                  color: Colors.cyan.withValues(alpha: 0.1),
+                  color: DS.prismBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.search_rounded,
-                    color: Colors.cyan, size: 24,),
+                child: Icon(
+                  Icons.search_rounded,
+                  color: DS.prismBlue,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: DS.md),
               Text(
@@ -174,7 +167,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: DS.spacing20),
 
           // Search Input
           Row(
@@ -193,11 +186,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: Colors.cyan, width: 2),
+                      borderSide: BorderSide(color: DS.prismBlue, width: 2),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14,),
+                      horizontal: DS.spacing16,
+                      vertical: DS.spacing12,
+                    ),
                     prefixIcon:
                         Icon(Icons.translate_rounded, color: DS.neutral400),
                   ),
@@ -208,26 +202,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               const SizedBox(width: DS.md),
               SizedBox(
                 height: 52,
-                child: ElevatedButton(
-                  onPressed: state.isLookingUp ? null : _lookup,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan,
-                    foregroundColor: DS.brandPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                  ),
-                  child: state.isLookingUp
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: DS.brandPrimaryConst,
-                          ),
-                        )
-                      : const Text('查询'),
+                child: SparkleButton.primary(
+                  label: '查询',
+                  onPressed: _lookup,
+                  icon: const Icon(Icons.search_rounded),
+                  loading: state.isLookingUp,
                 ),
               ),
             ],
@@ -242,7 +221,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           // Add to Wordbook Button
           if (state.lookupResult != null)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.only(top: DS.spacing16),
               child: _isInLocalWordbook
                   ? CustomButton.secondary(
                       text: '已在生词本中',
@@ -253,8 +232,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       text: '加入生词本',
                       icon: Icons.add_rounded,
                       onPressed: state.isLoading ? null : _addToWordbook,
-                      customGradient: const LinearGradient(
-                        colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
+                      customGradient: LinearGradient(
+                        colors: [DS.prismBlue, DS.info],
                       ),
                     ),
             ),
@@ -316,9 +295,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       child: Container(
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
-          color: Colors.cyan.withValues(alpha: 0.05),
+          color: DS.prismBlue.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.cyan.withValues(alpha: 0.2)),
+          border: Border.all(color: DS.prismBlue.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,15 +332,18 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             if (pos != null) ...[
               const SizedBox(height: DS.sm),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing8,
+                  vertical: DS.spacing4,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.cyan.withValues(alpha: 0.2),
+                  color: DS.prismBlue.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   pos,
-                  style: const TextStyle(
-                    color: Colors.cyan,
+                  style: TextStyle(
+                    color: DS.prismBlue,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -413,8 +395,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
               const SizedBox(height: DS.sm),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
                 children: state.associations
                     .map(
                       (assoc) => ActionChip(
@@ -446,7 +428,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           .entries
           .map(
             (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: DS.spacing4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -490,7 +472,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           .take(3)
           .map(
             (example) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

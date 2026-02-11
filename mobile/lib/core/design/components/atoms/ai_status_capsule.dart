@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Capsule indicator for AI status.
 class AiStatusCapsule extends StatelessWidget {
@@ -22,10 +22,10 @@ class AiStatusCapsule extends StatelessWidget {
   /// 🔧 安全获取品牌主色，避免SparkleThemeExtension未注册错误
   Color _safeGetColor(BuildContext context) {
     try {
-      return context.colors.brandPrimary;
+      return ThemeManager().current.colors.brandPrimary;
     } catch (e) {
       // Fallback color if SparkleThemeExtension is not registered
-      return Colors.blue;
+      return DS.brandPrimary;
     }
   }
 

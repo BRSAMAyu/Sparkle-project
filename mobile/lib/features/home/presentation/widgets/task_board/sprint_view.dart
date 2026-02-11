@@ -27,7 +27,8 @@ class SprintView extends ConsumerWidget {
 
     // 冲刺有任务
     if (sprintTasks.isNotEmpty) {
-      return _buildSprintTasks(context, ref, sprintTasks, dashboardState.sprint!);
+      return _buildSprintTasks(
+          context, ref, sprintTasks, dashboardState.sprint!);
     }
 
     // 冲刺无任务
@@ -35,24 +36,24 @@ class SprintView extends ConsumerWidget {
   }
 
   Widget _buildNoSprintState(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.flash_on_rounded,
-            size: 48,
-            color: DS.textSecondary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: DS.spacing12),
-          Text(
-            '暂无活跃冲刺',
-            style: context.sparkleTypography.bodyMedium.copyWith(
-              color: DS.textSecondary,
+        padding: const EdgeInsets.all(DS.spacing32),
+        child: Column(
+          children: [
+            Icon(
+              Icons.flash_on_rounded,
+              size: 48,
+              color: DS.textSecondary.withValues(alpha: 0.5),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '暂无活跃冲刺',
+              style: context.sparkleTypography.bodyMedium.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildSprintTasks(
     BuildContext context,
@@ -78,31 +79,34 @@ class SprintView extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             itemCount: tasks.length,
-            separatorBuilder: (context, index) => const SizedBox(height: DS.spacing8),
-            itemBuilder: (context, index) => InteractiveTaskCard(task: tasks[index]),
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: DS.spacing8),
+            itemBuilder: (context, index) =>
+                InteractiveTaskCard(task: tasks[index]),
           ),
         ],
       );
 
-  Widget _buildEmptySprintState(BuildContext context, SprintData sprint) => Container(
-      padding: const EdgeInsets.all(DS.spacing32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.check_circle_outline_rounded,
-            size: 48,
-            color: DS.brandPrimary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: DS.spacing12),
-          Text(
-            '${sprint.name} 暂无待办任务',
-            style: context.sparkleTypography.bodyMedium.copyWith(
-              color: DS.textSecondary,
+  Widget _buildEmptySprintState(BuildContext context, SprintData sprint) =>
+      Container(
+        padding: const EdgeInsets.all(DS.spacing32),
+        child: Column(
+          children: [
+            Icon(
+              Icons.check_circle_outline_rounded,
+              size: 48,
+              color: DS.brandPrimary.withValues(alpha: 0.5),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '${sprint.name} 暂无待办任务',
+              style: context.sparkleTypography.bodyMedium.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _SprintHeader extends ConsumerWidget {
@@ -116,144 +120,139 @@ class _SprintHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.08),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(
-          color: DS.brandPrimary.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.spacing8),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.15),
-              borderRadius: DS.borderRadius8,
-            ),
-            child: Icon(
-              Icons.flash_on_rounded,
-              size: DS.iconSizeSm,
-              color: DS.brandPrimaryConst,
-            ),
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(
+            color: DS.brandPrimary.withValues(alpha: 0.2),
           ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sprint.name,
-                  style: context.sparkleTypography.labelLarge.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: FontWeight.w600,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.spacing8),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.withValues(alpha: 0.15),
+                borderRadius: DS.borderRadius8,
+              ),
+              child: Icon(
+                Icons.flash_on_rounded,
+                size: DS.iconSizeSm,
+                color: DS.brandPrimaryConst,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sprint.name,
+                    style: context.sparkleTypography.labelLarge.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    '剩余 $taskCount 个任务 · ${sprint.daysLeft} 天',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // History button
+            SparkleIconButton(
+              icon: const Icon(Icons.history_rounded),
+              onPressed: () => context.push(PlanRoutes.sprintHistory),
+              variant: ButtonVariant.ghost,
+              semanticLabel: '冲刺历史',
+              size: DS.touchTargetMinSize,
+            ),
+            const SizedBox(width: DS.spacing4),
+            // Actions menu button
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: DS.brandPrimaryConst,
+              ),
+              tooltip: '更多操作',
+              padding: const EdgeInsets.all(DS.spacing4),
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: DS.surfaceSecondary,
+                foregroundColor: DS.brandPrimary,
+              ),
+              onSelected: (value) => _handleMenuSelection(
+                  context, ref, value, sprint.id, sprint.name),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'complete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          color: DS.semanticSuccess),
+                      const SizedBox(width: DS.spacing12),
+                      const Text('完成冲刺'),
+                    ],
                   ),
                 ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  '剩余 $taskCount 个任务 · ${sprint.daysLeft} 天',
-                  style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.textSecondary,
+                PopupMenuItem(
+                  value: 'extend',
+                  child: Row(
+                    children: [
+                      Icon(Icons.date_range_rounded, color: DS.info),
+                      const SizedBox(width: DS.spacing12),
+                      const Text('延长冲刺'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'abandon',
+                  child: Row(
+                    children: [
+                      Icon(Icons.cancel_rounded, color: DS.semanticError),
+                      const SizedBox(width: DS.spacing12),
+                      const Text('放弃冲刺'),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-          // History button
-          IconButton(
-            icon: const Icon(Icons.history_rounded),
-            onPressed: () => context.push(PlanRoutes.sprintHistory),
-            tooltip: '冲刺历史',
-            padding: const EdgeInsets.all(DS.spacing4),
-            constraints: const BoxConstraints(
-              minWidth: 36,
-              minHeight: 36,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: DS.surfaceSecondary,
-              foregroundColor: DS.brandPrimary,
-            ),
-          ),
-          const SizedBox(width: DS.spacing4),
-          // Actions menu button
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert_rounded,
-              color: DS.brandPrimaryConst,
-            ),
-            tooltip: '更多操作',
-            padding: const EdgeInsets.all(DS.spacing4),
-            constraints: const BoxConstraints(
-              minWidth: 36,
-              minHeight: 36,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: DS.surfaceSecondary,
-              foregroundColor: DS.brandPrimary,
-            ),
-            onSelected: (value) => _handleMenuSelection(context, ref, value, sprint.id, sprint.name),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'complete',
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, color: DS.semanticSuccess),
-                    const SizedBox(width: DS.spacing12),
-                    const Text('完成冲刺'),
-                  ],
+            const SizedBox(width: DS.spacing4),
+            // Progress indicator
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    value: sprint.progress,
+                    strokeWidth: 3,
+                    backgroundColor: DS.surfaceSecondary,
+                    valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'extend',
-                child: Row(
-                  children: [
-                    Icon(Icons.date_range_rounded, color: DS.info),
-                    const SizedBox(width: DS.spacing12),
-                    const Text('延长冲刺'),
-                  ],
+                Text(
+                  '${(sprint.progress * 100).toInt()}%',
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'abandon',
-                child: Row(
-                  children: [
-                    Icon(Icons.cancel_rounded, color: DS.semanticError),
-                    const SizedBox(width: DS.spacing12),
-                    const Text('放弃冲刺'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: DS.spacing4),
-          // Progress indicator
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  value: sprint.progress,
-                  strokeWidth: 3,
-                  backgroundColor: DS.surfaceSecondary,
-                  valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
-                ),
-              ),
-              Text(
-                '${(sprint.progress * 100).toInt()}%',
-                style: context.sparkleTypography.labelSmall.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+          ],
+        ),
+      );
 
   Future<void> _handleMenuSelection(
     BuildContext context,
@@ -277,7 +276,9 @@ class _SprintHeader extends ConsumerWidget {
           planName: planName,
         );
         if (days != null && days > 0) {
-          await ref.read(sprintActionsProvider.notifier).extendSprint(planId, days);
+          await ref
+              .read(sprintActionsProvider.notifier)
+              .extendSprint(planId, days);
         }
       case 'abandon':
         final confirmed = await showConfirmAbandonDialog(
@@ -285,7 +286,9 @@ class _SprintHeader extends ConsumerWidget {
           planName: planName,
         );
         if (confirmed) {
-          await ref.read(sprintActionsProvider.notifier).abandonSprint(planId, '');
+          await ref
+              .read(sprintActionsProvider.notifier)
+              .abandonSprint(planId, '');
         }
     }
   }
@@ -304,7 +307,8 @@ class _SprintFilterChips extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentFilter = ref.watch(taskBoardProvider.select((s) => s.sprintFilter));
+    final currentFilter =
+        ref.watch(taskBoardProvider.select((s) => s.sprintFilter));
     final counts = ref.watch(sprintTaskCountsProvider);
 
     return Wrap(
@@ -315,21 +319,18 @@ class _SprintFilterChips extends ConsumerWidget {
         final count = counts[filter] ?? 0;
 
         return GestureDetector(
-          onTap: () => ref.read(taskBoardProvider.notifier).setSprintFilter(filter),
+          onTap: () =>
+              ref.read(taskBoardProvider.notifier).setSprintFilter(filter),
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing12,
               vertical: DS.spacing6,
             ),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? DS.brandPrimary
-                  : DS.surfaceSecondary,
+              color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
               borderRadius: DS.borderRadiusFull,
               border: Border.all(
-                color: isSelected
-                    ? DS.brandPrimary
-                    : DS.border,
+                color: isSelected ? DS.brandPrimary : DS.border,
               ),
             ),
             child: Row(
@@ -338,9 +339,7 @@ class _SprintFilterChips extends ConsumerWidget {
                 Text(
                   _filterLabels[filter] ?? '',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: isSelected
-                        ? DS.onBrandPrimary
-                        : DS.textSecondary,
+                    color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
@@ -361,9 +360,8 @@ class _SprintFilterChips extends ConsumerWidget {
                     child: Text(
                       count.toString(),
                       style: context.sparkleTypography.labelSmall.copyWith(
-                        color: isSelected
-                            ? DS.onBrandPrimary
-                            : DS.textSecondary,
+                        color:
+                            isSelected ? DS.onBrandPrimary : DS.textSecondary,
                         fontSize: 10,
                       ),
                     ),

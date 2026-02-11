@@ -49,7 +49,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             end: Alignment.bottomRight,
             colors: [
               DS.brandPrimary.shade50,
-              Colors.purple.shade50,
+              DS.prismPurple.withValues(alpha: 0.08),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
@@ -76,12 +76,12 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
           Container(
             padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100,
+              color: DS.prismPurple.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.timeline,
-              color: Colors.purple.shade700,
+              color: DS.prismPurple,
               size: 20,
             ),
           ),
@@ -95,7 +95,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
+                    color: DS.prismPurple,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -103,7 +103,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   _getWorkflowDisplayName(),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.purple.shade600,
+                    color: DS.prismPurple.withValues(alpha: 0.82),
                   ),
                 ),
               ],
@@ -205,7 +205,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
       );
 
   Widget _buildStepCard(AgentTimelineStep step) => Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(DS.spacing8 + DS.spacing6),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.circular(12),
@@ -347,9 +347,7 @@ class AgentTimelineStep {
         agentName: (json['agent'] as String?) ??
             (json['agent_name'] as String?) ??
             'Agent',
-        action: (json['action'] as String?) ??
-            (json['step'] as String?) ??
-            '',
+        action: (json['action'] as String?) ?? (json['step'] as String?) ?? '',
         agentIcon: _getAgentIcon(
           (json['agent'] as String?) ??
               (json['agent_name'] as String?) ??
@@ -400,13 +398,13 @@ class AgentTimelineStep {
     } else if (agentName.contains('Math')) {
       return DS.brandPrimary;
     } else if (agentName.contains('Code')) {
-      return Colors.purple;
+      return DS.prismPurple;
     } else if (agentName.contains('Writing')) {
-      return Colors.teal;
+      return DS.info;
     } else if (agentName.contains('Science')) {
       return DS.error;
     } else {
-      return Colors.indigo;
+      return DS.capsuleAccent;
     }
   }
 }

@@ -413,9 +413,7 @@ async def guest_login(
             hashed_password=get_password_hash(str(uuid.uuid4())), # 随机密码
             nickname=f"访客{guest_id[-4:]}",
             registration_source="guest",
-            is_active=True,
-            # 标记为guest用户
-            user_type="guest"  # 需要在User模型中添加此字段，如果没有则忽略
+            is_active=True
         )
         db.add(user)
         await db.commit()

@@ -39,14 +39,14 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       subtitle: 'Sparkle - AI 时间导师',
       duration: const Duration(seconds: 60),
       icon: Icons.auto_awesome,
-      gradient: [DS.brandPrimary.shade600, Colors.purple.shade600],
+      gradient: [DS.brandPrimary.shade600, DS.prismPurple.shade600],
     ),
     _DemoStep(
       title: '必杀技 A',
       subtitle: 'GraphRAG 可视化',
       duration: const Duration(seconds: 90),
       icon: Icons.auto_graph,
-      gradient: [Colors.cyan.shade600, DS.brandPrimary.shade600],
+      gradient: [DS.prismBlue.shade600, DS.brandPrimary.shade600],
     ),
     _DemoStep(
       title: '必杀技 B',
@@ -60,28 +60,28 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       subtitle: '多智能体协作',
       duration: const Duration(seconds: 90),
       icon: Icons.psychology,
-      gradient: [Colors.purple.shade600, Colors.pink.shade600],
+      gradient: [DS.prismPurple.shade600, DS.brandPrimary.shade600],
     ),
     _DemoStep(
       title: '性能优化',
       subtitle: 'Redis 缓存 + 连接池',
       duration: const Duration(seconds: 60),
       icon: Icons.speed,
-      gradient: [DS.success.shade600, Colors.teal.shade600],
+      gradient: [DS.success.shade600, DS.prismBlue.shade600],
     ),
     _DemoStep(
       title: '预测分析',
       subtitle: 'AI 驱动的学习洞察',
       duration: const Duration(seconds: 60),
       icon: Icons.analytics,
-      gradient: [Colors.indigo.shade600, DS.brandPrimary.shade600],
+      gradient: [DS.info.shade600, DS.brandPrimary.shade600],
     ),
     _DemoStep(
       title: '总结展望',
       subtitle: '未来发展方向',
       duration: const Duration(seconds: 30),
       icon: Icons.rocket_launch,
-      gradient: [Colors.amber.shade600, DS.brandPrimary.shade600],
+      gradient: [DS.warning.shade600, DS.brandPrimary.shade600],
     ),
   ];
 
@@ -169,22 +169,22 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           SafeArea(
             child: ContentConstraint(
               child: Column(
-              children: [
-                // Header with controls
-                _buildHeader(),
+                children: [
+                  // Header with controls
+                  _buildHeader(),
 
-                // Step content
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: _buildStepContent(currentStep),
+                  // Step content
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      child: _buildStepContent(currentStep),
+                    ),
                   ),
-                ),
 
-                // Navigation controls
-                _buildNavigationControls(),
-              ],
-            ),
+                  // Navigation controls
+                  _buildNavigationControls(),
+                ],
+              ),
             ),
           ),
 
@@ -199,9 +199,11 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         padding: const EdgeInsets.all(DS.lg),
         child: Row(
           children: [
-            IconButton(
-              icon: Icon(Icons.close, color: DS.brandPrimary),
+            SparkleIconButton(
+              icon: const Icon(Icons.close),
               onPressed: () => Navigator.of(context).pop(),
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
             Expanded(
               child: Column(
@@ -224,12 +226,13 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
                 ],
               ),
             ),
-            IconButton(
+            SparkleIconButton(
               icon: Icon(
                 _isAutoPlaying ? Icons.pause : Icons.play_arrow,
-                color: DS.brandPrimaryConst,
               ),
               onPressed: _isAutoPlaying ? _stopAutoPlay : _startAutoPlay,
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
           ],
         ),
@@ -456,12 +459,12 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       );
 
   Widget _buildBulletPoint(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(bottom: DS.md),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 8),
+              margin: const EdgeInsets.only(top: DS.sm),
               width: 8,
               height: 8,
               decoration: BoxDecoration(
@@ -505,17 +508,22 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
             const SizedBox(height: DS.lg),
             ...points.map(
               (point) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: DS.sm),
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_right,
-                        color: DS.brandPrimaryConst, size: 20,),
+                    Icon(
+                      Icons.arrow_right,
+                      color: DS.brandPrimaryConst,
+                      size: 20,
+                    ),
                     const SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         point,
                         style: TextStyle(
-                            color: DS.brandPrimaryConst, fontSize: 16,),
+                          color: DS.brandPrimaryConst,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ],
@@ -570,16 +578,12 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // Previous button
-            ElevatedButton.icon(
-              onPressed: _currentStep > 0 ? _previousStep : null,
+            SparkleButton(
+              label: '上一步',
+              onPressed: _previousStep,
               icon: const Icon(Icons.arrow_back),
-              label: const Text('上一步'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.2),
-                foregroundColor: DS.brandPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              ),
+              variant: ButtonVariant.outline,
+              disabled: _currentStep <= 0,
             ),
 
             // Progress indicator
@@ -589,7 +593,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
                 (index) => Container(
                   width: index == _currentStep ? 32 : 10,
                   height: 10,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: DS.xs),
                   decoration: BoxDecoration(
                     color: index <= _currentStep
                         ? DS.brandPrimary
@@ -601,26 +605,23 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
             ),
 
             // Next button
-            ElevatedButton.icon(
-              onPressed: _currentStep < _totalSteps - 1 ? _nextStep : null,
+            SparkleButton(
+              label: '下一步',
+              onPressed: _nextStep,
               icon: const Icon(Icons.arrow_forward),
-              label: const Text('下一步'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.2),
-                foregroundColor: DS.brandPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              ),
+              variant: ButtonVariant.outline,
+              disabled: _currentStep >= _totalSteps - 1,
             ),
           ],
         ),
       );
 
   Widget _buildTimerOverlay(_DemoStep step) => Positioned(
-        top: 80,
-        right: 20,
+        top: DS.spacing64 + DS.spacing16,
+        right: DS.spacing20,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding:
+              const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(20),

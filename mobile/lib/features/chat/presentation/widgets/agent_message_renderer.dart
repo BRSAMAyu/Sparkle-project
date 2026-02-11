@@ -107,7 +107,7 @@ class AgentMessageRenderer extends StatelessWidget {
         return PlanCard(data: widget.data);
 
       case 'plan_context_summary':
-      case 'plan_state':  // Legacy alias for compatibility
+      case 'plan_state': // Legacy alias for compatibility
         return PlanContextSummary(contextData: widget.data);
 
       case 'prism_card':
@@ -134,15 +134,21 @@ class AgentMessageRenderer extends StatelessWidget {
                     color: Theme.of(context).colorScheme.error,
                   ),
                   const SizedBox(width: DS.sm),
-                  Text('操作遇到问题',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,),),
+                  Text(
+                    '操作遇到问题',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: DS.sm),
-              ...errors.map((e) => Text('• ${e.message}',
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error),),),
+              ...errors.map(
+                (e) => Text(
+                  '• ${e.message}',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
               if (errors.any((e) => e.suggestion != null))
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
@@ -183,7 +189,7 @@ class AgentMessageRenderer extends StatelessWidget {
 
     return Card(
       color: Theme.of(context).colorScheme.tertiaryContainer,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
       child: Padding(
         padding: const EdgeInsets.all(DS.md),
         child: Column(
@@ -199,14 +205,14 @@ class AgentMessageRenderer extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
+                SparkleButton.ghost(
+                  label: '取消',
                   onPressed: () => onConfirmation?.call(data.actionId, false),
-                  child: const Text('取消'),
                 ),
                 const SizedBox(width: DS.sm),
-                ElevatedButton(
+                SparkleButton.primary(
+                  label: confirmLabel,
                   onPressed: () => onConfirmation?.call(data.actionId, true),
-                  child: Text(confirmLabel),
                 ),
               ],
             ),
@@ -222,21 +228,21 @@ class AgentMessageRenderer extends StatelessWidget {
   ) {
     try {
       // Extract workflow type
-      final workflowType = collaborationData['workflow_type'] as String? ?? 'unknown';
+      final workflowType =
+          collaborationData['workflow_type'] as String? ?? 'unknown';
 
       // Extract execution time
       final executionTimeRaw = collaborationData['execution_time_ms'];
-      final executionTimeMs = executionTimeRaw is num
-          ? executionTimeRaw.toInt()
-          : 0;
+      final executionTimeMs =
+          executionTimeRaw is num ? executionTimeRaw.toInt() : 0;
       final executionTime = executionTimeMs / 1000.0;
 
       // Extract steps
-      final stepsList =
-          (collaborationData['steps'] as List<dynamic>?) ??
+      final stepsList = (collaborationData['steps'] as List<dynamic>?) ??
           (collaborationData['timeline'] as List<dynamic>?);
       final steps = stepsList
-              ?.map((e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>))
+              ?.map(
+                  (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
 
@@ -245,7 +251,7 @@ class AgentMessageRenderer extends StatelessWidget {
       }
 
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
         child: AgentCollaborationTimeline(
           steps: steps,
           workflowType: workflowType,
@@ -259,7 +265,7 @@ class AgentMessageRenderer extends StatelessWidget {
   }
 
   Widget _buildUnknownWidget(WidgetPayload widget) => Card(
-        margin: const EdgeInsets.symmetric(vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
         child: Padding(
           padding: const EdgeInsets.all(DS.sm),
           child: Text('Unknown widget type: ${widget.type}'),

@@ -139,9 +139,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Colors.transparent,
+                              DS.surfacePrimary.withValues(alpha: 0),
                               DS.brandPrimary.withValues(alpha: 0.1),
-                              Colors.transparent,
+                              DS.surfacePrimary.withValues(alpha: 0),
                             ],
                             stops: [
                               (value - 0.3).clamp(0.0, 1.0),
@@ -252,11 +252,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return action.type;
   }
 
-  LinearGradient _getActionGradientFor(WidgetPayload action) => _getActionGradient(_resolveActionType(action));
+  LinearGradient _getActionGradientFor(WidgetPayload action) =>
+      _getActionGradient(_resolveActionType(action));
 
-  Color _getActionColorFor(WidgetPayload action) => _getActionColor(_resolveActionType(action));
+  Color _getActionColorFor(WidgetPayload action) =>
+      _getActionColor(_resolveActionType(action));
 
-  IconData _getActionIconFor(WidgetPayload action) => _getActionIcon(_resolveActionType(action));
+  IconData _getActionIconFor(WidgetPayload action) =>
+      _getActionIcon(_resolveActionType(action));
 
   LinearGradient _getActionGradient(String type) {
     switch (type) {
@@ -439,84 +442,84 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       );
     }
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (action.data['title'] != null) ...[
-            Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _getActionColorFor(action).withValues(alpha: 0.1),
-                    _getActionColorFor(action).withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: DS.borderRadius12,
-                border: Border.all(
-                  color: _getActionColorFor(action).withValues(alpha: 0.2),
-                ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (action.data['title'] != null) ...[
+          Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getActionColorFor(action).withValues(alpha: 0.1),
+                  _getActionColorFor(action).withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Text(
-                action.data['title'] as String,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.neutral900,
-                    ),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(
+                color: _getActionColorFor(action).withValues(alpha: 0.2),
               ),
             ),
-            const SizedBox(height: DS.spacing12),
-          ],
-          if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: action.data.entries
-                  .where((e) => e.key != 'title')
-                  .map(
-                    (entry) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.neutral100,
-                        borderRadius: DS.borderRadius8,
-                        border: Border.all(color: DS.neutral200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getParamIcon(entry.key),
-                            size: DS.iconSizeXs,
-                            color: DS.neutral600,
-                          ),
-                          const SizedBox(width: DS.spacing4),
-                          Text(
-                            '${_formatParamKey(entry.key)}: ',
-                            style: TextStyle(
-                              color: DS.neutral600,
-                              fontSize: DS.fontSizeSm,
-                            ),
-                          ),
-                          Text(
-                            entry.value.toString(),
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightSemibold,
-                              fontSize: DS.fontSizeSm,
-                              color: DS.neutral900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
+            child: Text(
+              action.data['title'] as String,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral900,
+                  ),
             ),
+          ),
+          const SizedBox(height: DS.spacing12),
         ],
-      );
+        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: action.data.entries
+                .where((e) => e.key != 'title')
+                .map(
+                  (entry) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.neutral100,
+                      borderRadius: DS.borderRadius8,
+                      border: Border.all(color: DS.neutral200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getParamIcon(entry.key),
+                          size: DS.iconSizeXs,
+                          color: DS.neutral600,
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          '${_formatParamKey(entry.key)}: ',
+                          style: TextStyle(
+                            color: DS.neutral600,
+                            fontSize: DS.fontSizeSm,
+                          ),
+                        ),
+                        Text(
+                          entry.value.toString(),
+                          style: TextStyle(
+                            fontWeight: DS.fontWeightSemibold,
+                            fontSize: DS.fontSizeSm,
+                            color: DS.neutral900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
@@ -530,7 +533,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           final task = item as Map<String, dynamic>;
           final title = task['title']?.toString() ?? '未命名任务';
           final minutes = task['estimated_minutes']?.toString() ?? '30';
-          
+
           return Padding(
             padding: const EdgeInsets.only(bottom: DS.spacing8),
             child: Container(
@@ -561,17 +564,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       children: [
                         Text(
                           title,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: DS.fontWeightSemibold,
-                                color: DS.neutral900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: DS.fontWeightSemibold,
+                                    color: DS.neutral900,
+                                  ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '$minutes 分钟',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: DS.neutral600,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.neutral600,
+                                  ),
                         ),
                       ],
                     ),
@@ -596,7 +601,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildNightlyReviewContent(BuildContext context, WidgetPayload action) {
+  Widget _buildNightlyReviewContent(
+      BuildContext context, WidgetPayload action) {
     final summary = action.data['summary']?.toString() ?? '';
     final reviewDate = action.data['review_date']?.toString() ?? '';
     final rawTodos = action.data['todo_items'] as List<dynamic>? ?? [];
@@ -642,8 +648,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline,
-                      size: DS.iconSizeXs, color: DS.neutral500,),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: DS.iconSizeXs,
+                    color: DS.neutral500,
+                  ),
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
@@ -666,7 +675,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final taskData = action.data['task'] as Map<String, dynamic>?;
 
     // 构建任务 ID 或使用默认的快速专注 ID
-    final taskId = taskData?['id']?.toString() ?? 'focus_${DateTime.now().millisecondsSinceEpoch}';
+    final taskId = taskData?['id']?.toString() ??
+        'focus_${DateTime.now().millisecondsSinceEpoch}';
 
     // 导航到正念模式（番茄钟）
     context.push('/focus/mindfulness/$taskId');

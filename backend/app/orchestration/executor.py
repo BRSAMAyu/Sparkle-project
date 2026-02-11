@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -57,6 +58,46 @@ class ToolExecutor:
         result = execution_observer(payload)
         if inspect.isawaitable(result):
             await result
+
+    @staticmethod
+    def _quote_bareword_values(raw: str) -> str:
+        def _replace(match: re.Match[str]) -> str:
+            prefix, token, suffix = match.groups()
+            if token in {"true", "false", "null"}:
+                return f"{prefix}{token}{suffix}"
+            return f'{prefix}"{token}"{suffix}'
+
+        return re.sub(r'(:\s*)([A-Za-z_][A-Za-z0-9_-]*)(\s*[,}])', _replace, raw)
+
+    @classmethod
+    def _coerce_arguments(cls, raw: Any) -> dict[str, Any]:
+        if isinstance(raw, dict):
+            return raw
+        if raw is None:
+            return {}
+        if not isinstance(raw, str):
+            return {}
+
+        text = raw.strip()
+        if not text:
+            return {}
+
+        candidates = [
+            text,
+            text.replace("'", '"'),
+            cls._quote_bareword_values(text),
+            cls._quote_bareword_values(text.replace("'", '"')),
+        ]
+        for candidate in candidates:
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                continue
+
+        logger.warning(f"Failed to parse tool call arguments as JSON: {text}")
+        return {"_raw": text}
 
     async def execute_tool_call(
         self,
@@ -348,10 +389,7 @@ class ToolExecutor:
         if not tool_name:
             return None
         if isinstance(args, str):
-            try:
-                args = json.loads(args)
-            except Exception:
-                args = {"_raw": args}
+            args = self._coerce_arguments(args)
         if not isinstance(args, dict):
             args = {}
         return tool_name, args
@@ -400,9 +438,10 @@ class ToolExecutor:
         """
         results = []
         for call in tool_calls:
+            arguments = self._coerce_arguments(call["function"].get("arguments"))
             result = await self.execute_tool_call(
                 tool_name=call["function"]["name"],
-                arguments=call["function"]["arguments"] if isinstance(call["function"]["arguments"], dict) else json.loads(call["function"]["arguments"]),
+                arguments=arguments,
                 user_id=user_id,
                 db_session=db_session,
                 tool_call_id=call.get("id"),

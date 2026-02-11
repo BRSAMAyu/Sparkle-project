@@ -51,7 +51,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
       onTap: widget.onTap,
       child: MaterialStyler(
         material: AppMaterials.neoGlass.copyWith(
-           rimLightColor: DS.brandPrimary.withValues(alpha: 0.3),
+          rimLightColor: DS.brandPrimary.withValues(alpha: 0.3),
         ),
         borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.md),
@@ -73,9 +73,9 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.spacing6,
+                    vertical: DS.spacing4 / 2,
                   ),
                   decoration: BoxDecoration(
                     color: DS.flameCore.withValues(alpha: 0.2),
@@ -119,7 +119,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                                     colors: [
                                       DS.flameCore,
                                       DS.flameCore.withValues(alpha: 0.4),
-                                      Colors.transparent,
+                                      DS.surfacePrimary.withValues(alpha: 0),
                                     ],
                                   ),
                                   shape: BoxShape.circle,
@@ -137,7 +137,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           Expanded(
                             child: Text(
                               nudgeMessage,
-                              style: context.sparkleTypography.bodyMedium.copyWith(
+                              style:
+                                  context.sparkleTypography.bodyMedium.copyWith(
                                 fontSize: 9,
                                 height: 1.2,
                                 color: secondaryColor.withValues(alpha: 0.9),
@@ -155,7 +156,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         children: [
                           Text(
                             _formatFocusTime(todayMinutes),
-                            style: context.sparkleTypography.titleLarge.copyWith(
+                            style:
+                                context.sparkleTypography.titleLarge.copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: secondaryColor,
@@ -170,7 +172,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           ),
                           Text(
                             '$tasksCompleted完成',
-                            style: context.sparkleTypography.labelSmall.copyWith(
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
                               fontSize: 10,
                               color: secondaryColor.withValues(alpha: 0.7),
                             ),

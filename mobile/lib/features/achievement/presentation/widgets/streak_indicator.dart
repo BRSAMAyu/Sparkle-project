@@ -217,7 +217,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
       ),
       child: const Icon(
         Icons.whatshot_rounded,
-        color: Colors.white,
+        color: DS.textOnPrimary,
         size: DS.iconSizeLg,
       ),
     );
@@ -380,7 +380,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
       ),
       child: const Icon(
         Icons.whatshot_rounded,
-        color: Colors.white,
+        color: DS.textOnPrimary,
         size: DS.iconSize3xl,
       ),
     );
@@ -443,11 +443,11 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
             margin: const EdgeInsets.only(left: 2),
             decoration: BoxDecoration(
               color: isActive
-                  ? Colors.cyan.withValues(alpha: 0.8)
+                  ? DS.info.withValues(alpha: 0.8)
                   : DS.neutral300,
               borderRadius: DS.borderRadius4,
               border: Border.all(
-                color: isActive ? Colors.cyan : DS.neutral400,
+                color: isActive ? DS.info : DS.neutral400,
               ),
             ),
           );
@@ -456,7 +456,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         Icon(
           Icons.ac_unit,
           size: DS.iconSizeSm,
-          color: Colors.cyan.withValues(alpha: 0.8),
+          color: DS.info.withValues(alpha: 0.8),
         ),
       ],
     );

@@ -3,7 +3,6 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// Data point for heatmap visualization
 class HeatmapData {
-
   const HeatmapData({
     required this.x,
     required this.y,
@@ -11,6 +10,7 @@ class HeatmapData {
     this.label,
     this.timestamp,
   });
+
   /// X coordinate (e.g., day of week, hour of day)
   final int x;
 
@@ -29,9 +29,10 @@ class HeatmapData {
 
 /// Heatmap widget for statistics visualization (like GitHub contribution graph)
 class StatisticsHeatmap extends StatelessWidget {
-
   const StatisticsHeatmap({
-    required this.data, required this.columns, super.key,
+    required this.data,
+    required this.columns,
+    super.key,
     this.rows,
     this.xLabels,
     this.yLabels,
@@ -45,6 +46,7 @@ class StatisticsHeatmap extends StatelessWidget {
     this.highColor,
     this.onTap,
   });
+
   /// 2D grid of data points
   final List<HeatmapData> data;
 
@@ -95,7 +97,8 @@ class StatisticsHeatmap extends StatelessWidget {
 
     final effectiveRows = rows ?? _calculateRows();
     final effectiveCellSize = cellSize ?? StatisticsChartConfig.heatmapCellSize;
-    final effectiveCellSpacing = cellSpacing ?? StatisticsChartConfig.heatmapCellSpacing;
+    final effectiveCellSpacing =
+        cellSpacing ?? StatisticsChartConfig.heatmapCellSpacing;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +144,9 @@ class StatisticsHeatmap extends StatelessWidget {
     }
 
     return Column(
-      children: List.generate(rows, (y) => Padding(
+      children: List.generate(
+        rows,
+        (y) => Padding(
           padding: EdgeInsets.only(bottom: cellSpacing),
           child: Row(
             children: List.generate(columns, (x) {
@@ -150,11 +155,13 @@ class StatisticsHeatmap extends StatelessWidget {
 
               return Padding(
                 padding: EdgeInsets.only(right: cellSpacing),
-                child: _buildCell(item ?? HeatmapData(x: x, y: y, value: 0), cellSize),
+                child: _buildCell(
+                    item ?? HeatmapData(x: x, y: y, value: 0), cellSize),
               );
             }),
           ),
-        ),),
+        ),
+      ),
     );
   }
 
@@ -192,60 +199,62 @@ class StatisticsHeatmap extends StatelessWidget {
   }
 
   Color _getColorForValue(double value) {
-    if (value <= 0) return emptyColor ?? StatisticsChartConfig.heatmapEmptyColor;
+    if (value <= 0)
+      return emptyColor ?? StatisticsChartConfig.heatmapEmptyColor;
     if (value < 0.33) return lowColor ?? StatisticsChartConfig.heatmapLowColor;
-    if (value < 0.66) return mediumColor ?? StatisticsChartConfig.heatmapMediumColor;
+    if (value < 0.66)
+      return mediumColor ?? StatisticsChartConfig.heatmapMediumColor;
     return highColor ?? StatisticsChartConfig.heatmapHighColor;
   }
 
   Widget _buildLegend() => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildLegendCell(
-          StatisticsChartConfig.heatmapEmptyColor,
-          '0',
-        ),
-        _buildLegendCell(
-          lowColor ?? StatisticsChartConfig.heatmapLowColor,
-          '低',
-        ),
-        _buildLegendCell(
-          mediumColor ?? StatisticsChartConfig.heatmapMediumColor,
-          '中',
-        ),
-        _buildLegendCell(
-          highColor ?? StatisticsChartConfig.heatmapHighColor,
-          '高',
-        ),
-      ],
-    );
-
-  Widget _buildLegendCell(Color color, String label) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.xs),
-      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: StatisticsChartConfig.heatmapCellSize,
-            height: StatisticsChartConfig.heatmapCellSize,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(
-                StatisticsChartConfig.heatmapCellRadius,
-              ),
-            ),
+          _buildLegendCell(
+            StatisticsChartConfig.heatmapEmptyColor,
+            '0',
           ),
-          const SizedBox(width: DS.xs),
-          Text(
-            label,
-            style: DS.captionStyle.copyWith(
-              color: DS.neutral500,
-              fontSize: 10,
-            ),
+          _buildLegendCell(
+            lowColor ?? StatisticsChartConfig.heatmapLowColor,
+            '低',
+          ),
+          _buildLegendCell(
+            mediumColor ?? StatisticsChartConfig.heatmapMediumColor,
+            '中',
+          ),
+          _buildLegendCell(
+            highColor ?? StatisticsChartConfig.heatmapHighColor,
+            '高',
           ),
         ],
-      ),
-    );
+      );
+
+  Widget _buildLegendCell(Color color, String label) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.xs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: StatisticsChartConfig.heatmapCellSize,
+              height: StatisticsChartConfig.heatmapCellSize,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(
+                  StatisticsChartConfig.heatmapCellRadius,
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.xs),
+            Text(
+              label,
+              style: DS.captionStyle.copyWith(
+                color: DS.neutral500,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildXLabels(int count, double cellSize, double cellSpacing) {
     final labels = xLabels ?? [];
@@ -297,37 +306,39 @@ class StatisticsHeatmap extends StatelessWidget {
   }
 
   Widget _buildEmptyState() => Container(
-      height: 150,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.grid_on_outlined,
-            size: 48,
-            color: StatisticsChartConfig.emptyStateColor,
-          ),
-          const SizedBox(height: DS.md),
-          Text(
-            '暂无数据',
-            style: DS.bodyStyle.copyWith(
-              color: DS.neutral400,
+        height: 150,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.grid_on_outlined,
+              size: 48,
+              color: StatisticsChartConfig.emptyStateColor,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.md),
+            Text(
+              '暂无数据',
+              style: DS.bodyStyle.copyWith(
+                color: DS.neutral400,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 /// GitHub-style contribution heatmap (weekly)
 class StatisticsContributionHeatmap extends StatelessWidget {
-
   const StatisticsContributionHeatmap({
-    required this.dailyData, required this.startDate, super.key,
+    required this.dailyData,
+    required this.startDate,
+    super.key,
     this.endDate,
     this.cellSize,
     this.onTap,
   });
+
   /// Daily activity data (one value per day)
   final Map<DateTime, double> dailyData;
 
@@ -349,8 +360,20 @@ class StatisticsContributionHeatmap extends StatelessWidget {
     final heatmapData = _convertToHeatmapData(startDate, end);
 
     final xLabels = ['一', '三', '五'];
-    final yLabels = ['一月', '二月', '三月', '四月', '五月', '六月',
-                    '七月', '八月', '九月', '十月', '十一月', '十二月',];
+    final yLabels = [
+      '一月',
+      '二月',
+      '三月',
+      '四月',
+      '五月',
+      '六月',
+      '七月',
+      '八月',
+      '九月',
+      '十月',
+      '十一月',
+      '十二月',
+    ];
 
     return StatisticsHeatmap(
       data: heatmapData,
@@ -381,15 +404,18 @@ class StatisticsContributionHeatmap extends StatelessWidget {
       final dayOfWeek = current.weekday - 1; // 0 = Monday
 
       // Find the value for this date
-      final value = dailyData[DateTime(current.year, current.month, current.day)] ?? 0.0;
+      final value =
+          dailyData[DateTime(current.year, current.month, current.day)] ?? 0.0;
 
-      data.add(HeatmapData(
-        x: dayOfWeek,
-        y: weekIndex,
-        value: value,
-        timestamp: current,
-        label: '${current.month}/${current.day}',
-      ),);
+      data.add(
+        HeatmapData(
+          x: dayOfWeek,
+          y: weekIndex,
+          value: value,
+          timestamp: current,
+          label: '${current.month}/${current.day}',
+        ),
+      );
 
       // Move to next day
       current = current.add(const Duration(days: 1));

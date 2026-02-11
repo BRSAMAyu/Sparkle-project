@@ -251,7 +251,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
               ),
               if (_isLoading)
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(DS.spacing8),
                   child: SizedBox(
                     width: 20,
                     height: 20,
@@ -263,22 +263,21 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   ),
                 )
               else if (_controller.text.isEmpty && !_isListening)
-                IconButton(
-                  icon: Icon(
-                    Icons.mic,
-                    color: DS.brandPrimaryConst,
-                    size: iconSize,
-                  ),
-                  onPressed: _toggleListening,
-                  tooltip: '语音输入',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: DS.touchTargetMinSize,
-                    minHeight: DS.touchTargetMinSize,
+                Tooltip(
+                  message: '语音输入',
+                  child: SparkleIconButton(
+                    icon: Icon(
+                      Icons.mic,
+                      color: DS.brandPrimaryConst,
+                      size: iconSize,
+                    ),
+                    onPressed: _toggleListening,
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
                   ),
                 )
               else
-                IconButton(
+                SparkleIconButton(
                   icon: Icon(
                     _isListening
                         ? Icons.stop_circle_outlined
@@ -293,11 +292,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
                     size: iconSize,
                   ),
                   onPressed: _isListening ? _toggleListening : _submit,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: DS.touchTargetMinSize,
-                    minHeight: DS.touchTargetMinSize,
-                  ),
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
                 ),
             ],
           ),

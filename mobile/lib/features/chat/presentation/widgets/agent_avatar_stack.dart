@@ -179,7 +179,7 @@ class AgentInfo {
           type: 'science',
           name: 'Science Expert',
           icon: Icons.science,
-          color: Colors.purple.shade600,
+          color: DS.prismPurple,
         );
       case 'orchestrator':
       default:

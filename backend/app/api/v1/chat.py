@@ -138,19 +138,13 @@ async def chat_with_task_context(
                 "tool_calls": llm_response.tool_calls
             }
 
-            tool_messages_for_history = []
-            for tr in tool_results:
-                 tool_messages_for_history.append({
-                     "role": "tool",
-                     "content": json.dumps(tr.model_dump(), ensure_ascii=False)
-                 })
-
             updated_history = llm_conversation_history + [
                 {"role": "user", "content": request.message}
-            ] + [llm_response_for_history] + tool_messages_for_history
+            ] + [llm_response_for_history]
 
             final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_history
+                conversation_history=updated_history,
+                tool_results=[tr.model_dump() for tr in tool_results]
             )
             llm_text = final_llm_response.content
 
@@ -285,20 +279,13 @@ async def chat(
                 "tool_calls": llm_response.tool_calls # Store raw tool calls if needed
             }
 
-            # Append tool results in history as tool messages
-            tool_messages_for_history = []
-            for tr in tool_results:
-                 tool_messages_for_history.append({
-                     "role": "tool",
-                     "content": json.dumps(tr.model_dump(), ensure_ascii=False)
-                 })
-
             updated_conversation_history = llm_conversation_history + [
                 {"role": "user", "content": request.message} # User message
-            ] + [llm_response_for_history] + tool_messages_for_history
+            ] + [llm_response_for_history]
 
             final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_conversation_history
+                conversation_history=updated_conversation_history,
+                tool_results=[tr.model_dump() for tr in tool_results]
             )
             llm_text = final_llm_response.content
         else:
@@ -435,6 +422,7 @@ async def chat_stream(
                     "tool_calls": [
                         {
                             "id": chunk.tool_call_id,
+                            "type": "function",
                             "function": {
                                 "name": chunk.tool_name,
                                 "arguments": json.dumps(chunk.full_arguments)
@@ -443,14 +431,10 @@ async def chat_stream(
                     ]
                 })
 
-                message_history_for_llm_callback.append({
-                    "role": "tool",
-                    "content": json.dumps(result.model_dump(), ensure_ascii=False)
-                })
-
                 # Call LLM again to get final text
                 final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=message_history_for_llm_callback
+                    conversation_history=message_history_for_llm_callback,
+                    tool_results=[result.model_dump()]
                 )
                 final_text = final_llm_response.content
                 yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\\n\n"

@@ -64,7 +64,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(
-        CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),);
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),
+    );
 
     _entryController.forward();
   }
@@ -130,7 +131,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       : null;
 
   void _handleDoubleTap() {
-    if (_isUser || _isRevoked || !mounted) return;
+    if (_isUser || _isRevoked || !mounted || context.reduceMotion) return;
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) setState(() => _showHeart = false);
@@ -154,15 +155,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       Navigator.of(context).push(
         PageRouteBuilder<void>(
           opaque: false, // 使用半透明背景
-          barrierColor: Colors.transparent,
+          barrierColor: DS.overlay30.withValues(alpha: 0),
           pageBuilder: (context, animation, secondaryAnimation) =>
-            FadeTransition(
-              opacity: animation,
-              child: MessageDetailView(
-                message: chatMessage,
-                heroTag: heroTag,
-              ),
+              FadeTransition(
+            opacity: animation,
+            child: MessageDetailView(
+              message: chatMessage,
+              heroTag: heroTag,
             ),
+          ),
           transitionDuration: const Duration(milliseconds: 250),
         ),
       );
@@ -178,7 +179,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.overlay30.withValues(alpha: 0),
       builder: (context) => DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -199,7 +200,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   onTap: () {
                     Navigator.pop(context);
                     widget.onResponseFeedback!(
-                        widget.message as ChatMessageModel, 'up',);
+                      widget.message as ChatMessageModel,
+                      'up',
+                    );
                   },
                 ),
               if (!_isUser &&
@@ -213,7 +216,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   onTap: () {
                     Navigator.pop(context);
                     widget.onResponseFeedback!(
-                        widget.message as ChatMessageModel, 'down',);
+                      widget.message as ChatMessageModel,
+                      'down',
+                    );
                   },
                 ),
               if (widget.onQuote != null &&
@@ -235,11 +240,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   Clipboard.setData(ClipboardData(text: _content));
                   if (mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('已复制到剪贴板'),
-                          duration: Duration(seconds: 1),),
-                    );
+                    AppFeedback.info(context, '已复制到剪贴板');
                   }
                 },
               ),
@@ -268,259 +269,268 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     final isUser = _isUser;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
+    final reduceMotion = context.reduceMotion;
+    final bubble = Container(
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isUser && widget.showAvatar) _buildAvatar(false),
+              if (!isUser && !widget.showAvatar)
+                const SizedBox(width: DS.touchTargetMinSize - DS.spacing4),
+              Flexible(
+                child: GestureDetector(
+                  onTap: () => _handleTap(context),
+                  onDoubleTap: _handleDoubleTap,
+                  onLongPress: () => _showContextMenu(context),
+                  onTapDown: (_) {
+                    if (mounted) setState(() => _isPressed = true);
+                  },
+                  onTapUp: (_) {
+                    if (mounted) setState(() => _isPressed = false);
+                  },
+                  onTapCancel: () {
+                    if (mounted) setState(() => _isPressed = false);
+                  },
+                  child: AnimatedScale(
+                    scale: _isPressed ? 0.98 : 1.0,
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 100),
+                    curve: Curves.easeInOut,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Column(
+                          crossAxisAlignment: isUser
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              constraints: BoxConstraints(
+                                maxWidth: _bubbleMaxWidth(context),
+                              ),
+                              child: MaterialStyler(
+                                material: isUser
+                                    ? SparkleMaterial(
+                                        backgroundGradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            DS.brandPrimary,
+                                            DS.brandPrimary
+                                                .withValues(alpha: 0.85),
+                                          ],
+                                        ),
+                                        shadows: [
+                                          BoxShadow(
+                                            color: DS.brandPrimary
+                                                .withValues(alpha: 0.2),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      )
+                                    : _getAIMessageMaterial(context),
+                                shapeBorder: ContinuousRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 14,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (widget.message is PrivateMessageInfo &&
+                                        (widget.message as PrivateMessageInfo)
+                                                .quotedMessage !=
+                                            null)
+                                      _buildQuoteArea(
+                                        context,
+                                        isUser,
+                                        (widget.message as PrivateMessageInfo)
+                                            .quotedMessage!,
+                                      ),
+                                    if (widget.message is ChatMessageModel &&
+                                        (widget.message as ChatMessageModel)
+                                                .aiStatus !=
+                                            null)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 8.0),
+                                        child: AiStatusBubble(
+                                          status: (widget.message
+                                                  as ChatMessageModel)
+                                              .aiStatus!,
+                                        ),
+                                      ),
+                                    if (widget.message is ChatMessageModel &&
+                                        (widget.message as ChatMessageModel)
+                                                .reasoningSteps !=
+                                            null)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 8.0),
+                                        child: AgentReasoningBubble(
+                                          steps: (widget.message
+                                                  as ChatMessageModel)
+                                              .reasoningSteps!,
+                                          totalDurationMs:
+                                              _calculateReasoningDuration(
+                                            widget.message as ChatMessageModel,
+                                          ),
+                                        ),
+                                      ),
+                                    // Use constrained height for long messages
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        // Calculate max height based on screen size
+                                        final maxHeight =
+                                            MediaQuery.of(context).size.height *
+                                                0.5;
+                                        final contentWidget = MarkdownBody(
+                                          data: _content,
+                                          styleSheet: _getMarkdownStyle(
+                                              context, isUser),
+                                          onTapLink: (text, href, title) async {
+                                            if (href == null) return;
+                                            final uri = Uri.tryParse(href);
+                                            if (uri == null) return;
+
+                                            final scheme =
+                                                uri.scheme.toLowerCase();
+                                            const allowedSchemes = [
+                                              'http',
+                                              'https',
+                                            ];
+                                            if (!allowedSchemes
+                                                .contains(scheme)) {
+                                              return;
+                                            }
+
+                                            try {
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(
+                                                  uri,
+                                                  mode: LaunchMode
+                                                      .externalApplication,
+                                                );
+                                              }
+                                            } catch (e) {
+                                              debugPrint(
+                                                  'Failed to launch URL: $e');
+                                            }
+                                          },
+                                        );
+
+                                        // Try to estimate content height and decide if scrolling is needed
+                                        // For long content (heuristic: >500 chars), use constrained scrollable
+                                        final shouldConstrain =
+                                            _content.length > 500;
+
+                                        if (!shouldConstrain) {
+                                          return contentWidget;
+                                        }
+
+                                        return SizedBox(
+                                          height: maxHeight,
+                                          child: SingleChildScrollView(
+                                            physics:
+                                                const ClampingScrollPhysics(),
+                                            child: contentWidget,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (widget.message is ChatMessageModel &&
+                                (widget.message as ChatMessageModel).widgets !=
+                                    null)
+                              ...(widget.message as ChatMessageModel)
+                                  .widgets!
+                                  .map(
+                                (w) {
+                                  final actionable = (w.data['id'] ??
+                                          w.data['tool_result_id'] ??
+                                          w.data['intervention_id'] ??
+                                          w.data['request_id']) !=
+                                      null;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 8.0,
+                                      right: 8.0,
+                                      left: 8.0,
+                                    ),
+                                    child: ActionCard(
+                                      action: w,
+                                      onConfirm: actionable &&
+                                              widget.onActionConfirm != null
+                                          ? () => widget.onActionConfirm!(w)
+                                          : null,
+                                      onDismiss: actionable &&
+                                              widget.onActionDismiss != null
+                                          ? () => widget.onActionDismiss!(w)
+                                          : null,
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        if (_showHeart) _buildHeartAnimation(context),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (isUser && widget.showAvatar) _buildAvatar(true),
+              if (isUser && !widget.showAvatar)
+                const SizedBox(width: DS.touchTargetMinSize - DS.spacing4),
+            ],
+          ),
+          Padding(
+            padding: EdgeInsets.only(
+              top: 4,
+              left: isUser ? 0 : 52,
+              right: isUser ? 52 : 0,
+            ),
+            child: Row(
+              mainAxisAlignment:
+                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                if (isUser) _buildMessageStatus(),
+                const SizedBox(width: DS.xs),
+                Text(
+                  timeStr,
+                  style: TextStyle(fontSize: 10, color: DS.neutral500),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (reduceMotion) {
+      return bubble;
+    }
 
     return SlideTransition(
       position: _position,
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment:
-                    isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!isUser && widget.showAvatar) _buildAvatar(false),
-                  if (!isUser && !widget.showAvatar) const SizedBox(width: 44),
-                  Flexible(
-                    child: GestureDetector(
-                      onTap: () => _handleTap(context),
-                      onDoubleTap: _handleDoubleTap,
-                      onLongPress: () => _showContextMenu(context),
-                      onTapDown: (_) {
-                        if (mounted) setState(() => _isPressed = true);
-                      },
-                      onTapUp: (_) {
-                        if (mounted) setState(() => _isPressed = false);
-                      },
-                      onTapCancel: () {
-                        if (mounted) setState(() => _isPressed = false);
-                      },
-                      child: AnimatedScale(
-                        scale: _isPressed ? 0.98 : 1.0,
-                        duration: const Duration(milliseconds: 100),
-                        curve: Curves.easeInOut,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Column(
-                              crossAxisAlignment: isUser
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                  ),
-                                  constraints: BoxConstraints(
-                                    maxWidth: _bubbleMaxWidth(context),
-                                  ),
-                                  child: MaterialStyler(
-                                    material: isUser
-                                        ? SparkleMaterial(
-                                            backgroundGradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                DS.brandPrimary,
-                                                DS.brandPrimary
-                                                    .withValues(alpha: 0.85),
-                                              ],
-                                            ),
-                                            shadows: [
-                                              BoxShadow(
-                                                color: DS.brandPrimary
-                                                    .withValues(alpha: 0.2),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          )
-                                        : _getAIMessageMaterial(context),
-                                    shapeBorder: ContinuousRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 14,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (widget.message is PrivateMessageInfo &&
-                                            (widget.message as PrivateMessageInfo)
-                                                    .quotedMessage !=
-                                                null)
-                                          _buildQuoteArea(
-                                              context,
-                                              isUser,
-                                              (widget.message as PrivateMessageInfo)
-                                                  .quotedMessage!,),
-                                        if (widget.message is ChatMessageModel &&
-                                            (widget.message as ChatMessageModel)
-                                                    .aiStatus !=
-                                                null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 8.0,),
-                                            child: AiStatusBubble(
-                                                status: (widget.message
-                                                        as ChatMessageModel)
-                                                    .aiStatus!,),
-                                          ),
-                                        if (widget.message is ChatMessageModel &&
-                                            (widget.message as ChatMessageModel)
-                                                    .reasoningSteps !=
-                                                null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 8.0,),
-                                            child: AgentReasoningBubble(
-                                              steps: (widget.message
-                                                      as ChatMessageModel)
-                                                  .reasoningSteps!,
-                                              totalDurationMs:
-                                                  _calculateReasoningDuration(
-                                                      widget.message
-                                                          as ChatMessageModel,),
-                                            ),
-                                          ),
-                                        // Use constrained height for long messages
-                                        LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            // Calculate max height based on screen size
-                                            final maxHeight =
-                                                                                MediaQuery.of(context).size.height * 0.5;
-                                            final contentWidget = MarkdownBody(
-                                              data: _content,
-                                              styleSheet: _getMarkdownStyle(
-                                                  context, isUser,),
-                                              onTapLink: (text, href, title) async {
-                                                if (href == null) return;
-                                                final uri = Uri.tryParse(href);
-                                                if (uri == null) return;
-
-                                                final scheme =
-                                                    uri.scheme.toLowerCase();
-                                                const allowedSchemes = [
-                                                  'http',
-                                                  'https',
-                                                ];
-                                                if (!allowedSchemes
-                                                    .contains(scheme)) {
-                                                  return;
-                                                }
-
-                                                try {
-                                                  if (await canLaunchUrl(uri)) {
-                                                    await launchUrl(
-                                                      uri,
-                                                      mode: LaunchMode
-                                                          .externalApplication,
-                                                    );
-                                                  }
-                                                } catch (e) {
-                                                  debugPrint(
-                                                      'Failed to launch URL: $e',);
-                                                }
-                                              },
-                                            );
-
-                                            // Try to estimate content height and decide if scrolling is needed
-                                            // For long content (heuristic: >500 chars), use constrained scrollable
-                                            final shouldConstrain = _content.length > 500;
-
-                                            if (!shouldConstrain) {
-                                              return contentWidget;
-                                            }
-
-                                            return SizedBox(
-                                              height: maxHeight,
-                                              child: SingleChildScrollView(
-                                                physics: const ClampingScrollPhysics(),
-                                                child: contentWidget,
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (widget.message is ChatMessageModel &&
-                                    (widget.message as ChatMessageModel)
-                                            .widgets !=
-                                        null)
-                                  ...(widget.message as ChatMessageModel)
-                                      .widgets!
-                                      .map(
-                                        (w) {
-                                          final actionable = (w.data['id'] ??
-                                                  w.data['tool_result_id'] ??
-                                                  w.data['intervention_id'] ??
-                                                  w.data['request_id']) !=
-                                              null;
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                top: 8.0,
-                                                right: 8.0,
-                                                left: 8.0,),
-                                            child: ActionCard(
-                                              action: w,
-                                              onConfirm: actionable &&
-                                                      widget.onActionConfirm !=
-                                                          null
-                                                  ? () => widget
-                                                      .onActionConfirm!(w)
-                                                  : null,
-                                              onDismiss: actionable &&
-                                                      widget.onActionDismiss !=
-                                                          null
-                                                  ? () => widget
-                                                      .onActionDismiss!(w)
-                                                  : null,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                              ],
-                            ),
-                            if (_showHeart) _buildHeartAnimation(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (isUser && widget.showAvatar) _buildAvatar(true),
-                  if (isUser && !widget.showAvatar) const SizedBox(width: 44),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.only(
-                  top: 4,
-                  left: isUser ? 0 : 52,
-                  right: isUser ? 52 : 0,
-                ),
-                child: Row(
-                  mainAxisAlignment:
-                      isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-                  children: [
-                    if (isUser) _buildMessageStatus(),
-                    const SizedBox(width: DS.xs),
-                    Text(
-                      timeStr,
-                      style: TextStyle(fontSize: 10, color: DS.neutral500),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: bubble,
       ),
     );
   }
@@ -528,28 +538,31 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   double _bubbleMaxWidth(BuildContext context) {
     final screenWidth = ResponsiveSystem.width(context);
     final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
-    final baseMax =
-        contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
+    final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
     return min(screenWidth * 0.72, baseMax * 0.9);
   }
 
   Widget _buildQuoteArea(
-          BuildContext context, bool isUser, PrivateMessageInfo msg,) =>
+    BuildContext context,
+    bool isUser,
+    PrivateMessageInfo msg,
+  ) =>
       Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: isUser
-              ? context.sparkleColors.brandPrimary.withValues(alpha: 0.15)
-              : context.sparkleColors.surfaceTertiary.withValues(alpha: 0.5),
+              ? DS.brandPrimary.withValues(alpha: 0.15)
+              : DS.surfaceTertiary.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
           border: Border(
-              left: BorderSide(
-                  color: isUser
-                      ? context.sparkleColors.brandPrimary
-                          .withValues(alpha: 0.7)
-                      : context.sparkleColors.brandPrimary,
-                  width: 3,),),
+            left: BorderSide(
+              color: isUser
+                  ? DS.brandPrimary.withValues(alpha: 0.7)
+                  : DS.brandPrimary,
+              width: 3,
+            ),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,9 +572,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: isUser
-                    ? context.sparkleColors.brandPrimary
-                    : context.sparkleColors.brandPrimary,
+                color: isUser ? DS.brandPrimary : DS.brandPrimary,
               ),
             ),
             const SizedBox(height: 2),
@@ -572,8 +583,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 12,
                 color: isUser
-                    ? context.sparkleColors.brandPrimary.withValues(alpha: 0.9)
-                    : context.sparkleColors.textSecondary,
+                    ? DS.brandPrimary.withValues(alpha: 0.9)
+                    : DS.textSecondary,
               ),
             ),
           ],
@@ -586,7 +597,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Text(
             _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
             style: TextStyle(
-                fontSize: 12, color: context.sparkleColors.neutral400,),
+              fontSize: 12,
+              color: DS.neutral400,
+            ),
           ),
         ),
       );
@@ -597,13 +610,17 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     if (msg.isSending) {
       return const SizedBox(
-          width: 12,
-          height: 12,
-          child: CircularProgressIndicator(strokeWidth: 1),);
+        width: 12,
+        height: 12,
+        child: CircularProgressIndicator(strokeWidth: 1),
+      );
     }
     if (msg.hasError) {
-      return Icon(Icons.error_outline,
-          color: context.sparkleColors.semanticError, size: 14,);
+      return Icon(
+        Icons.error_outline,
+        color: DS.error,
+        size: 14,
+      );
     }
 
     final isRead = msg.isRead || msg.readAt != null;
@@ -613,16 +630,18 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         Icon(
           isRead ? Icons.done_all_rounded : Icons.done_rounded,
           size: 14,
-          color: isRead
-              ? context.sparkleColors.semanticInfo
-              : context.sparkleColors.neutral400,
+          color: isRead ? DS.info : DS.neutral400,
         ),
         if (isRead)
           Padding(
             padding: const EdgeInsets.only(left: 2),
-            child: Text('已读',
-                style: TextStyle(
-                    fontSize: 10, color: context.sparkleColors.semanticInfo,),),
+            child: Text(
+              '已读',
+              style: TextStyle(
+                fontSize: 10,
+                color: DS.info,
+              ),
+            ),
           ),
       ],
     );
@@ -657,9 +676,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isUser
-                    ? context.sparkleColors.brandPrimary
-                    : context.sparkleColors.brandSecondary)
+            color: (isUser ? DS.brandPrimary : DS.brandSecondary)
                 .withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -672,54 +689,62 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           height: 32,
           decoration: BoxDecoration(
             color: isUser
-                ? context.sparkleColors.brandPrimary
-                : (isDark
-                    ? context.sparkleColors.neutral200
-                    : context.sparkleColors.brandPrimary),
+                ? DS.brandPrimary
+                : (isDark ? DS.neutral200 : DS.brandPrimary),
             shape: BoxShape.circle,
           ),
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null
-              ? Image.network(avatarUrl,
+              ? Image.network(
+                  avatarUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Center(child: Text(initial)),)
+                  errorBuilder: (_, __, ___) => Center(child: Text(initial)),
+                )
               : Center(
-                  child: Text(initial,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isUser
-                              ? DS.onBrandPrimary
-                              : Colors.white,),),),
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isUser ? DS.onBrandPrimary : DS.onBrandPrimary,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
+      MarkdownStyleSheet(
         p: TextStyle(
-            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-            fontSize: 16,
-            height: 1.4,),
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 16,
+          height: 1.4,
+        ),
         h1: TextStyle(
-            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,),
+          color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
         code: TextStyle(
-            backgroundColor: isUser
-                ? DS.chatBubbleUserText.withValues(alpha: 0.2)
-                : DS.surfaceTertiary,
-            fontFamily: 'monospace',
-            fontSize: 14,
-            color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,),
+          backgroundColor: isUser
+              ? DS.chatBubbleUserText.withValues(alpha: 0.2)
+              : DS.surfaceTertiary,
+          fontFamily: 'monospace',
+          fontSize: 14,
+          color: isUser ? DS.chatBubbleUserText : DS.brandSecondary,
+        ),
         codeblockDecoration: BoxDecoration(
-            color: isUser
-                ? DS.chatBubbleUserText.withValues(alpha: 0.1)
-                : DS.surfaceTertiary,
-            borderRadius: BorderRadius.circular(12),),
+          color: isUser
+              ? DS.chatBubbleUserText.withValues(alpha: 0.1)
+              : DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(12),
+        ),
         a: TextStyle(
-            color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
-            decoration: TextDecoration.underline,),
+          color: isUser ? DS.chatBubbleUserText : DS.brandPrimary,
+          decoration: TextDecoration.underline,
+        ),
       );
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
@@ -760,11 +785,13 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (isDark) {
-      // Use a lighter color than surfaceSecondary for better contrast
-      // surfaceAmbient (#0D0D0D) < surfacePrimary (#121212) < surfaceSecondary (#1E1E1E) < this (#2A2A2A)
-      return const SparkleMaterial(
-        backgroundColor: Color(0xFF2A2A2A),
-        borderColor: Color(0xFF3A3A3A),
+      final darkSurface = Color.alphaBlend(
+        DS.neutral200.withValues(alpha: 0.08),
+        DS.surfaceSecondary,
+      );
+      return SparkleMaterial(
+        backgroundColor: darkSurface,
+        borderColor: DS.border.withValues(alpha: 0.8),
       );
     }
 
@@ -775,17 +802,29 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.elasticOut,
-        builder: (context, value, child) => Transform.scale(
-            scale: value,
-            child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [
-              Shadow(
-                  blurRadius: 10,
-                  color: DS.brandPrimary26,
-                  offset: const Offset(0, 4),),
-            ],),),
-      );
+  Widget _buildHeartAnimation(BuildContext context) {
+    if (context.reduceMotion) {
+      return Icon(Icons.favorite, color: DS.error, size: 48);
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) => Transform.scale(
+        scale: value,
+        child: Icon(
+          Icons.favorite,
+          color: DS.error,
+          size: 48,
+          shadows: [
+            Shadow(
+              blurRadius: 10,
+              color: DS.brandPrimary26,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

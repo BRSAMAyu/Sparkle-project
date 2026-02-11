@@ -57,8 +57,7 @@ class _TranslationHistoryScreenState
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(5, (index) {
                   final starValue = index + 1;
-                  return IconButton(
-                    iconSize: 40,
+                  return SparkleIconButton(
                     onPressed: () {
                       setDialogState(() {
                         _selectedRatings[id] = starValue;
@@ -66,19 +65,22 @@ class _TranslationHistoryScreenState
                     },
                     icon: Icon(
                       Icons.star,
-                      color: (_selectedRatings[id] ?? currentRating) >= starValue
-                          ? Colors.amber
-                          : DS.neutral300,
+                      color:
+                          (_selectedRatings[id] ?? currentRating) >= starValue
+                              ? DS.warning
+                              : DS.neutral300,
                     ),
+                    variant: ButtonVariant.ghost,
+                    size: DS.spacing40,
                   );
                 }),
               ),
             ],
           ),
           actions: [
-            TextButton(
+            SparkleButton.ghost(
+              label: '取消',
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
             ),
             FilledButton(
               onPressed: () async {
@@ -104,9 +106,9 @@ class _TranslationHistoryScreenState
         title: const Text('删除翻译'),
         content: Text('确定要删除这条翻译记录吗？\n\n${item.originalText}'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: '取消',
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -141,13 +143,14 @@ class _TranslationHistoryScreenState
                       title: const Text('清空历史'),
                       content: const Text('确定要清空所有翻译历史吗？'),
                       actions: [
-                        TextButton(
+                        SparkleButton.ghost(
+                          label: '取消',
                           onPressed: () => Navigator.pop(context, false),
-                          child: const Text('取消'),
                         ),
                         FilledButton(
                           onPressed: () => Navigator.pop(context, true),
-                          style: FilledButton.styleFrom(backgroundColor: DS.error),
+                          style:
+                              FilledButton.styleFrom(backgroundColor: DS.error),
                           child: const Text('清空'),
                         ),
                       ],
@@ -178,108 +181,110 @@ class _TranslationHistoryScreenState
       body: ContentConstraint(
         child: Column(
           children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(DS.md),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '搜索翻译记录...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref
-                              .read(translationHistoryProvider.notifier)
-                              .clearSearch();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onChanged: (value) {
-                ref
-                    .read(translationHistoryProvider.notifier)
-                    .search(value);
-              },
-            ),
-          ),
-
-          // Filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: DS.md),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: '全部',
-                  isSelected: state.filter == TranslationFilter.all,
-                  count: state.statistics['total'] ?? 0,
-                  onTap: () => ref
-                      .read(translationHistoryProvider.notifier)
-                      .setFilter(TranslationFilter.all),
-                ),
-                const SizedBox(width: DS.sm),
-                _FilterChip(
-                  label: '收藏',
-                  isSelected: state.filter == TranslationFilter.favorites,
-                  count: state.statistics['favorites'] ?? 0,
-                  icon: Icons.star,
-                  onTap: () => ref
-                      .read(translationHistoryProvider.notifier)
-                      .setFilter(TranslationFilter.favorites),
-                ),
-                const SizedBox(width: DS.sm),
-                _FilterChip(
-                  label: '重要',
-                  isSelected: state.filter == TranslationFilter.highRating,
-                  count: state.statistics['highRated'] ?? 0,
-                  icon: Icons.grade,
-                  onTap: () => ref
-                      .read(translationHistoryProvider.notifier)
-                      .setFilter(TranslationFilter.highRating),
-                ),
-                const SizedBox(width: DS.sm),
-                _FilterChip(
-                  label: '最近',
-                  isSelected: state.filter == TranslationFilter.recent,
-                  onTap: () => ref
-                      .read(translationHistoryProvider.notifier)
-                      .setFilter(TranslationFilter.recent),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: DS.md),
-
-          // Content
-          Expanded(
-            child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : state.records.isEmpty
-                    ? _buildEmptyState(state)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: DS.md),
-                        itemCount: state.records.length,
-                        itemBuilder: (context, index) {
-                          final item = state.records[index];
-                          return _TranslationCard(
-                            item: item,
-                            languageCodeToFlag: _languageCodeToFlag,
-                            onRatingTap: () => _showRatingDialog(item.id, item.rating),
-                            onFavoriteToggle: () => ref
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(DS.md),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: '搜索翻译记录...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? SparkleIconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            ref
                                 .read(translationHistoryProvider.notifier)
-                                .toggleFavorite(item.id),
-                            onDelete: () => _showDeleteConfirmation(item),
-                          );
-                        },
-                      ),
-          ),
+                                .clearSearch();
+                          },
+                          variant: ButtonVariant.ghost,
+                          size: DS.touchTargetMinSize,
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (value) {
+                  ref.read(translationHistoryProvider.notifier).search(value);
+                },
+              ),
+            ),
+
+            // Filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: DS.md),
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: '全部',
+                    isSelected: state.filter == TranslationFilter.all,
+                    count: state.statistics['total'] ?? 0,
+                    onTap: () => ref
+                        .read(translationHistoryProvider.notifier)
+                        .setFilter(TranslationFilter.all),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  _FilterChip(
+                    label: '收藏',
+                    isSelected: state.filter == TranslationFilter.favorites,
+                    count: state.statistics['favorites'] ?? 0,
+                    icon: Icons.star,
+                    onTap: () => ref
+                        .read(translationHistoryProvider.notifier)
+                        .setFilter(TranslationFilter.favorites),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  _FilterChip(
+                    label: '重要',
+                    isSelected: state.filter == TranslationFilter.highRating,
+                    count: state.statistics['highRated'] ?? 0,
+                    icon: Icons.grade,
+                    onTap: () => ref
+                        .read(translationHistoryProvider.notifier)
+                        .setFilter(TranslationFilter.highRating),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  _FilterChip(
+                    label: '最近',
+                    isSelected: state.filter == TranslationFilter.recent,
+                    onTap: () => ref
+                        .read(translationHistoryProvider.notifier)
+                        .setFilter(TranslationFilter.recent),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: DS.md),
+
+            // Content
+            Expanded(
+              child: state.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : state.records.isEmpty
+                      ? _buildEmptyState(state)
+                      : ListView.builder(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: DS.md),
+                          itemCount: state.records.length,
+                          itemBuilder: (context, index) {
+                            final item = state.records[index];
+                            return _TranslationCard(
+                              item: item,
+                              languageCodeToFlag: _languageCodeToFlag,
+                              onRatingTap: () =>
+                                  _showRatingDialog(item.id, item.rating),
+                              onFavoriteToggle: () => ref
+                                  .read(translationHistoryProvider.notifier)
+                                  .toggleFavorite(item.id),
+                              onDelete: () => _showDeleteConfirmation(item),
+                            );
+                          },
+                        ),
+            ),
           ],
         ),
       ),
@@ -324,12 +329,12 @@ class _TranslationHistoryScreenState
             ),
           ),
           ...[
-          const SizedBox(height: DS.sm),
-          Text(
-            subtitle,
-            style: TextStyle(color: DS.neutral400),
-          ),
-        ],
+            const SizedBox(height: DS.sm),
+            Text(
+              subtitle,
+              style: TextStyle(color: DS.neutral400),
+            ),
+          ],
         ],
       ),
     );
@@ -353,56 +358,57 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.purple : DS.neutral100,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : DS.neutral600,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : DS.neutral700,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            if (count != null) ...[
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.white.withValues(alpha: 0.2)
-                      : DS.neutral200,
-                  borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? DS.prismPurple : DS.neutral100,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected ? DS.textOnPrimary : DS.neutral600,
                 ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : DS.neutral600,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? DS.textOnPrimary : DS.neutral700,
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              if (count != null) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? DS.textOnPrimary.withValues(alpha: 0.2)
+                        : DS.neutral200,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      color: isSelected ? DS.textOnPrimary : DS.neutral600,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class _TranslationCard extends StatelessWidget {
@@ -422,111 +428,114 @@ class _TranslationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onRatingTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with languages and favorite
-              Row(
-                children: [
-                  Text(
-                    '${languageCodeToFlag(item.sourceLanguage)} ${item.sourceLanguage.toUpperCase()} → '
-                    '${languageCodeToFlag(item.targetLanguage)} ${item.targetLanguage.toUpperCase()}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: DS.neutral500,
-                      fontWeight: FontWeight.w500,
+        margin: const EdgeInsets.only(bottom: 12),
+        child: InkWell(
+          onTap: onRatingTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with languages and favorite
+                Row(
+                  children: [
+                    Text(
+                      '${languageCodeToFlag(item.sourceLanguage)} ${item.sourceLanguage.toUpperCase()} → '
+                      '${languageCodeToFlag(item.targetLanguage)} ${item.targetLanguage.toUpperCase()}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: DS.neutral500,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    iconSize: 20,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      item.isFavorited ? Icons.star : Icons.star_border,
-                      color: item.isFavorited ? Colors.amber : DS.neutral400,
+                    const Spacer(),
+                    InkWell(
+                      onTap: onFavoriteToggle,
+                      borderRadius: DS.borderRadiusFull,
+                      child: Icon(
+                        item.isFavorited ? Icons.star : Icons.star_border,
+                        color: item.isFavorited ? DS.warning : DS.neutral400,
+                        size: DS.iconSizeSm,
+                      ),
                     ),
-                    onPressed: onFavoriteToggle,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.sm),
-
-              // Original text
-              Text(
-                item.originalText,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  ],
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
 
-              // Translated text
-              Text(
-                '👉 ${item.translatedText}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: DS.neutral700,
+                // Original text
+                Text(
+                  item.originalText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: DS.md),
+                const SizedBox(height: DS.sm),
 
-              // Footer with rating and date
-              Row(
-                children: [
-                  // Rating stars
-                  GestureDetector(
-                    onTap: onRatingTap,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (index) => Icon(
-                          Icons.star,
-                          size: 16,
-                          color: index < item.rating ? Colors.amber : DS.neutral300,
-                        ),),
-                    ),
+                // Translated text
+                Text(
+                  '👉 ${item.translatedText}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: DS.neutral700,
                   ),
-                  const SizedBox(width: DS.md),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: DS.md),
 
-                  // Date
-                  Text(
-                    _formatDate(item.createdAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: DS.neutral500,
+                // Footer with rating and date
+                Row(
+                  children: [
+                    // Rating stars
+                    GestureDetector(
+                      onTap: onRatingTap,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          5,
+                          (index) => Icon(
+                            Icons.star,
+                            size: 16,
+                            color: index < item.rating
+                                ? DS.warning
+                                : DS.neutral300,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const Spacer(),
+                    const SizedBox(width: DS.md),
 
-                  // Delete button
-                  IconButton(
-                    iconSize: 18,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: DS.error.withValues(alpha: 0.7),
+                    // Date
+                    Text(
+                      _formatDate(item.createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: DS.neutral500,
+                      ),
                     ),
-                    onPressed: onDelete,
-                  ),
-                ],
-              ),
-            ],
+                    const Spacer(),
+
+                    // Delete button
+                    InkWell(
+                      onTap: onDelete,
+                      borderRadius: DS.borderRadiusFull,
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: DS.error.withValues(alpha: 0.7),
+                        size: DS.iconSizeSm,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();

@@ -3,18 +3,18 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Default implementation of the statistics export service
 ///
 /// Supports JSON, CSV, and PNG report exports.
 class StatisticsExportServiceImpl<T extends StatisticsEntity>
     implements StatisticsExportService<T> {
-
   StatisticsExportServiceImpl({
     this.includeMetadata = true,
     this.appVersion = '1.0.0',
   });
+
   /// Whether to include app metadata in exports
   final bool includeMetadata;
 
@@ -84,10 +84,10 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
 
   @override
   List<ExportFormat> getSupportedFormats() => [
-      ExportFormat.json,
-      ExportFormat.csv,
-      ExportFormat.pngReport,
-    ];
+        ExportFormat.json,
+        ExportFormat.csv,
+        ExportFormat.pngReport,
+      ];
 
   @override
   Future<List<Uint8List>> exportMultiple(
@@ -120,15 +120,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       const size = ExportDimensions(200, 200);
 
       // Draw background
-      final bgPaint = Paint()..color = Colors.white;
+      final bgPaint = Paint()..color = DS.neutral0;
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
       // Draw preview text
       final textPainter = TextPainter(
         text: TextSpan(
           text: '预览\n${statistics.type.displayName}',
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: DS.textPrimary,
             fontSize: 20,
           ),
         ),
@@ -231,12 +231,12 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final canvas = Canvas(recorder);
 
     // Draw background gradient
-    const bgGradient = LinearGradient(
+    final bgGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Color(0xFF6366F1),
-        Color(0xFF8B5CF6),
+        StatisticsChartConfig.primaryColor,
+        StatisticsChartConfig.secondaryColor,
       ],
     );
 
@@ -245,8 +245,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     canvas.drawRect(bgRect, bgPaint);
 
     // Draw title
-    const titleStyle = TextStyle(
-      color: Colors.white,
+    final titleStyle = TextStyle(
+      color: DS.onBrandPrimary,
       fontSize: 48,
       fontWeight: FontWeight.bold,
     );
@@ -267,8 +267,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     );
 
     // Draw period
-    const periodStyle = TextStyle(
-      color: Colors.white,
+    final periodStyle = TextStyle(
+      color: DS.onBrandPrimary,
       fontSize: 32,
     );
     final periodPainter = TextPainter(
@@ -288,8 +288,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     );
 
     // Draw date
-    const dateStyle = TextStyle(
-      color: Colors.white,
+    final dateStyle = TextStyle(
+      color: DS.onBrandPrimary,
       fontSize: 24,
     );
     final datePainter = TextPainter(
@@ -312,8 +312,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     await _drawPngReportData(canvas, statistics, scaledSize, config);
 
     // Draw footer
-    const footerStyle = TextStyle(
-      color: Colors.white,
+    final footerStyle = TextStyle(
+      color: DS.onBrandPrimary,
       fontSize: 20,
     );
     final footerPainter = TextPainter(
@@ -371,7 +371,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   void _writeCsvData(StringBuffer buffer, T statistics) {
     buffer.writeln('Type,${statistics.type.code}');
     buffer.writeln('Period,${statistics.period.name}');
-    buffer.writeln('Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}');
+    buffer.writeln(
+        'Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}');
     buffer.writeln('From Cache,${statistics.isFromCache}');
   }
 
@@ -390,7 +391,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
         text: '数据图表区域\n(子类需实现具体绘制)',
         style: TextStyle(
           fontSize: 28 * config.pngScale,
-          color: Colors.white.withValues(alpha: 0.8),
+          color: DS.onBrandPrimary.withValues(alpha: 0.8),
         ),
       ),
       textAlign: TextAlign.center,
@@ -412,8 +413,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
 
   /// Format datetime for display
   String _formatDateTime(DateTime dt) => '${dt.year}年${dt.month}月${dt.day}日 '
-        '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')}';
+      '${dt.hour.toString().padLeft(2, '0')}:'
+      '${dt.minute.toString().padLeft(2, '0')}';
 }
 
 /// Provider for statistics export service

@@ -101,18 +101,22 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
           title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
-            IconButton(
+            SparkleIconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _loadAll,
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
           ],
         ),
@@ -277,18 +281,16 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ],
               ),
               const Spacer(),
-              TextButton.icon(
+              SparkleButton.ghost(
+                label: _dateRange == null
+                    ? '日期'
+                    : '${_dateRange!.start.month}/${_dateRange!.start.day}'
+                        ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
                 onPressed: _pickDateRange,
                 icon: const Icon(Icons.date_range),
-                label: Text(
-                  _dateRange == null
-                      ? '日期'
-                      : '${_dateRange!.start.month}/${_dateRange!.start.day}'
-                          ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
-                ),
               ),
               const SizedBox(width: DS.sm),
-              IconButton(
+              SparkleIconButton(
                 icon: Icon(
                   _viewMode == MemoryViewMode.compact
                       ? Icons.view_agenda
@@ -299,6 +301,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       ? MemoryViewMode.expanded
                       : MemoryViewMode.compact;
                 }),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -382,11 +386,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 _CorrectionBadge(count: entry.correctionCount),
               ],
               const SizedBox(width: 4),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints.tightFor(width: 32, height: 32),
-                icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined),
+              SparkleIconButton(
+                icon: Icon(
+                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                ),
                 onPressed: () => setState(() {
                   if (isPinned) {
                     _pinnedIds.remove(entry.id);
@@ -394,6 +397,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                     _pinnedIds.add(entry.id);
                   }
                 }),
+                variant: ButtonVariant.ghost,
+                size: 32,
               ),
             ],
           ),

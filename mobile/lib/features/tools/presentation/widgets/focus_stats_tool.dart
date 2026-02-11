@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart' as feature;
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
+    as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
 
@@ -22,7 +23,9 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(feature.focusStatisticsProvider.notifier).loadTodayStats();
       ref.read(feature.focusStatisticsProvider.notifier).loadWeeklyStats();
-      ref.read(feature.focusStatisticsProvider.notifier).loadSessionHistory(limit: 5);
+      ref
+          .read(feature.focusStatisticsProvider.notifier)
+          .loadSessionHistory(limit: 5);
     });
   }
 
@@ -70,9 +73,11 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                icon: Icon(Icons.close, color: DS.textSecondary),
+              SparkleIconButton(
+                icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ],
           ),

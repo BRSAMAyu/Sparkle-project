@@ -120,15 +120,15 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: context.sparkleColors.surfaceTertiary.withValues(alpha: 0.3),
+        color: DS.surfaceTertiary.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: context.sparkleColors.brandPrimary.withValues(alpha: 0.2),
+          color: DS.brandPrimary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: context.sparkleColors.brandPrimary.withValues(alpha: 0.1),
+            color: DS.brandPrimary.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -191,7 +191,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
                   color: ThemeUtils.getContrastSafeText(
                     activeAgentColor,
-                    darkText: context.sparkleColors.textPrimary,
+                    darkText: DS.textPrimary,
                   ),
                   size: 18,
                   key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
@@ -217,7 +217,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     Text(
                       '耗时: ${(widget.totalDurationMs! / 1000).toStringAsFixed(1)}s',
                       style: context.sparkleTypography.labelSmall.copyWith(
-                        color: context.sparkleColors.textSecondary,
+                        color: DS.textSecondary,
                       ),
                     ),
                 ],
@@ -240,7 +240,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             else if (isCompleted)
               Icon(
                 Icons.check_circle,
-                color: context.sparkleColors.semanticSuccess,
+                color: DS.success,
                 size: 20,
               )
             else
@@ -249,7 +249,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 duration: transitionDuration,
                 child: Icon(
                   Icons.keyboard_arrow_down,
-                  color: context.sparkleColors.brandPrimary,
+                  color: DS.brandPrimary,
                 ),
               ),
           ],
@@ -273,11 +273,11 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            context.sparkleColors.rimLight,
-            context.sparkleColors.rimLight,
-            context.sparkleColors.rimLight.withValues(alpha: 0.7),
-            context.sparkleColors.rimLight,
-            context.sparkleColors.rimLight,
+            DS.brandPrimary.withValues(alpha: 0.18),
+            DS.brandPrimary.withValues(alpha: 0.18),
+            DS.brandPrimary.withValues(alpha: 0.7),
+            DS.brandPrimary.withValues(alpha: 0.18),
+            DS.brandPrimary.withValues(alpha: 0.18),
           ],
           stops: [
             0.0,
@@ -297,10 +297,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         padding: EdgeInsets.all(context.sparkleSpacing.md),
         decoration: BoxDecoration(
-          color: context.sparkleColors.surfacePrimary,
+          color: DS.surfacePrimary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: context.sparkleColors.neutral200.withValues(alpha: 0.1),
+            color: DS.neutral200.withValues(alpha: 0.1),
           ),
         ),
         child: Column(
@@ -312,13 +312,13 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 Icon(
                   Icons.psychology,
                   size: 16,
-                  color: context.sparkleColors.brandPrimary,
+                  color: DS.brandPrimary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '思考过程',
                   style: context.sparkleTypography.labelLarge.copyWith(
-                    color: context.sparkleColors.brandPrimary,
+                    color: DS.brandPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -326,7 +326,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 Text(
                   '${widget.steps.length} steps',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: context.sparkleColors.textSecondary,
+                    color: DS.textSecondary,
                   ),
                 ),
               ],
@@ -377,7 +377,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       step.description,
                       style: context.sparkleTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: context.sparkleColors.textPrimary,
+                        color: DS.textPrimary,
                       ),
                     ),
 
@@ -387,7 +387,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         margin: const EdgeInsets.only(top: 6),
                         padding: EdgeInsets.all(context.sparkleSpacing.sm),
                         decoration: BoxDecoration(
-                          color: context.sparkleColors.surfaceTertiary,
+                          color: DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: SelectableText(
@@ -395,7 +395,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 11,
-                            color: context.sparkleColors.semanticSuccess,
+                            color: DS.success,
                             height: 1.4,
                           ),
                         ),
@@ -419,12 +419,11 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: context.sparkleColors.brandPrimary
+                                      color: DS.brandPrimary
                                           .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: context
-                                            .sparkleColors.brandPrimary
+                                        color: DS.brandPrimary
                                             .withValues(alpha: 0.3),
                                       ),
                                     ),
@@ -434,16 +433,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                         Icon(
                                           Icons.book,
                                           size: 12,
-                                          color: context
-                                              .sparkleColors.brandPrimary,
+                                          color: DS.brandPrimary,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           '引用: $citation',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: context
-                                                .sparkleColors.brandPrimary,
+                                            color: DS.brandPrimary,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -463,7 +460,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         child: Text(
                           '${step.durationMs}ms',
                           style: context.sparkleTypography.labelSmall.copyWith(
-                            color: context.sparkleColors.textSecondary,
+                            color: DS.textSecondary,
                             fontSize: 10,
                           ),
                         ),
@@ -479,7 +476,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               height: 1,
-              color: context.sparkleColors.neutral200.withValues(alpha: 0.1),
+              color: DS.neutral200.withValues(alpha: 0.1),
             ),
         ],
       );
@@ -489,7 +486,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       case StepStatus.completed:
         return Icon(
           Icons.check_circle,
-          color: context.sparkleColors.semanticSuccess,
+          color: DS.success,
           size: 16,
         );
       case StepStatus.inProgress:
@@ -503,13 +500,13 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       case StepStatus.failed:
         return Icon(
           Icons.error,
-          color: context.sparkleColors.semanticError,
+          color: DS.error,
           size: 16,
         );
       case StepStatus.pending:
         return Icon(
           Icons.radio_button_unchecked,
-          color: context.sparkleColors.textDisabled,
+          color: DS.neutral400,
           size: 16,
         );
     }
@@ -547,29 +544,29 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   Color _getAgentColor(BuildContext context, AgentType agent) {
     switch (agent) {
       case AgentType.orchestrator:
-        return context.sparkleColors.brandPrimary;
+        return DS.brandPrimary;
       case AgentType.math:
-        return context.sparkleColors.semanticInfo;
+        return DS.info;
       case AgentType.code:
-        return context.sparkleColors.taskReflection;
+        return DS.taskReflection;
       case AgentType.writing:
-        return context.sparkleColors.semanticWarning;
+        return DS.warning;
       case AgentType.science:
-        return context.sparkleColors.semanticSuccess;
+        return DS.success;
       case AgentType.knowledge:
-        return context.sparkleColors.planGrowth;
+        return DS.planGrowth;
       case AgentType.search:
-        return context.sparkleColors.taskLearning;
+        return DS.taskLearning;
       case AgentType.dataAnalysis:
-        return context.sparkleColors.taskPlanning;
+        return DS.taskPlanning;
       case AgentType.translation:
-        return context.sparkleColors.brandSecondary;
+        return DS.brandSecondary;
       case AgentType.image:
-        return context.sparkleColors.taskTraining;
+        return DS.taskTraining;
       case AgentType.audio:
-        return context.sparkleColors.taskReflection;
+        return DS.taskReflection;
       case AgentType.reasoning:
-        return context.sparkleColors.brandPrimary;
+        return DS.brandPrimary;
     }
   }
 
@@ -613,11 +610,11 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     bool isCompleted,
     BuildContext context,
   ) {
-    if (isCompleted) return context.sparkleColors.semanticSuccess;
+    if (isCompleted) return DS.success;
     if (widget.isThinking && activeStep != null) {
       return _getAgentColor(context, activeStep.agent);
     }
-    return context.sparkleColors.textSecondary;
+    return DS.textSecondary;
   }
 
   ReasoningStep? _getActiveStep() {
@@ -642,9 +639,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             '证明AI确实检索了相关知识，而非凭空想象。',
           ),
           actions: [
-            TextButton(
+            SparkleButton.ghost(
+              label: '关闭',
               onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
             ),
           ],
         ),
@@ -670,7 +667,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = context.sparkleColors.taskReflection;
+    final accent = DS.taskReflection;
     final accentSoft = accent.withValues(alpha: 0.08);
     final accentBorder = accent.withValues(alpha: 0.25);
 
@@ -679,7 +676,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            context.sparkleColors.surfacePrimary,
+            DS.surfacePrimary,
             accentSoft,
           ],
         ),
@@ -826,7 +823,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     _getAgentIcon(contribution.agentType),
                     color: ThemeUtils.getContrastSafeText(
                       _getAgentColor(context, contribution.agentType),
-                      darkText: context.sparkleColors.textPrimary,
+                      darkText: DS.textPrimary,
                     ),
                     size: 14,
                   ),
@@ -926,29 +923,29 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
   Color _getAgentColor(BuildContext context, AgentType agent) {
     switch (agent) {
       case AgentType.orchestrator:
-        return context.sparkleColors.brandPrimary;
+        return DS.brandPrimary;
       case AgentType.math:
-        return context.sparkleColors.semanticInfo;
+        return DS.info;
       case AgentType.code:
-        return context.sparkleColors.taskReflection;
+        return DS.taskReflection;
       case AgentType.writing:
-        return context.sparkleColors.semanticWarning;
+        return DS.warning;
       case AgentType.science:
-        return context.sparkleColors.semanticSuccess;
+        return DS.success;
       case AgentType.knowledge:
-        return context.sparkleColors.planGrowth;
+        return DS.planGrowth;
       case AgentType.search:
-        return context.sparkleColors.taskLearning;
+        return DS.taskLearning;
       case AgentType.dataAnalysis:
-        return context.sparkleColors.taskPlanning;
+        return DS.taskPlanning;
       case AgentType.translation:
-        return context.sparkleColors.brandSecondary;
+        return DS.brandSecondary;
       case AgentType.image:
-        return context.sparkleColors.taskTraining;
+        return DS.taskTraining;
       case AgentType.audio:
-        return context.sparkleColors.taskReflection;
+        return DS.taskReflection;
       case AgentType.reasoning:
-        return context.sparkleColors.brandPrimary;
+        return DS.brandPrimary;
     }
   }
 }

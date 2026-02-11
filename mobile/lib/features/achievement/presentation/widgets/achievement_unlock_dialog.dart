@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
-import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
+    as chat;
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 成就解锁弹窗
@@ -61,7 +62,8 @@ class AchievementUnlockDialog extends StatefulWidget {
   }
 
   @override
-  State<AchievementUnlockDialog> createState() => _AchievementUnlockDialogState();
+  State<AchievementUnlockDialog> createState() =>
+      _AchievementUnlockDialogState();
 
   /// 显示成就解锁弹窗
   static Future<void> show(
@@ -71,24 +73,27 @@ class AchievementUnlockDialog extends StatefulWidget {
     bool barrierDismissible = true,
     int? comboCount,
     MilestoneInfo? milestoneInfo,
-  }) => showGeneralDialog(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      barrierLabel: 'Achievement Unlock',
-      barrierColor: Colors.black.withValues(alpha: 0.7),
-      transitionDuration: const Duration(milliseconds: 600),
-      pageBuilder: (context, animation, secondaryAnimation) => AchievementUnlockDialog(
+  }) =>
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: barrierDismissible,
+        barrierLabel: 'Achievement Unlock',
+        barrierColor: DS.textPrimary.withValues(alpha: 0.7),
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            AchievementUnlockDialog(
           event: event,
           onShare: onShare,
           comboCount: comboCount,
           milestoneInfo: milestoneInfo,
         ),
-      transitionBuilder: (context, animation, secondaryAnimation, child) => _AchievementUnlockTransition(
+        transitionBuilder: (context, animation, secondaryAnimation, child) =>
+            _AchievementUnlockTransition(
           animation: animation,
           rarity: event.rarity,
           child: child,
         ),
-    );
+      );
 }
 
 class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
@@ -214,14 +219,13 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     final rarity = widget.event.rarity;
 
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.overlay30.withValues(alpha: 0),
       elevation: 0,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // 背景特效
-          if (rarity != AchievementRarity.common)
-            _buildBackgroundEffects(),
+          if (rarity != AchievementRarity.common) _buildBackgroundEffects(),
 
           // 连击横幅 (P1功能 - 成就连击反馈)
           if (widget.comboCount != null && widget.comboCount! > 1)
@@ -322,19 +326,19 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 vertical: DS.spacing6,
               ),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.3),
+                color: DS.warning.withValues(alpha: 0.3),
                 borderRadius: DS.borderRadius12,
                 border: Border.all(
-                  color: Colors.amber,
+                  color: DS.warning,
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.star,
                     size: DS.iconSizeSm,
-                    color: Colors.amber,
+                    color: DS.warning,
                   ),
                   const SizedBox(width: DS.spacing4),
                   Text(
@@ -342,7 +346,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
-                      color: Colors.amber.shade700,
+                      color: DS.warning,
                     ),
                   ),
                 ],
@@ -394,54 +398,54 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     return AnimatedBuilder(
       animation: _scaleAnimation,
       builder: (context, child) => Transform.scale(
-          scale: _scaleAnimation.value,
-          child: AnimatedBuilder(
-            animation: _rotateAnimation,
-            builder: (context, child) {
-              final shouldRotate = rarity == AchievementRarity.legendary;
-              return Transform.rotate(
-                angle: shouldRotate ? _rotateAnimation.value * 0.1 : 0,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        colors.primary,
-                        colors.secondary,
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colors.glow,
-                        blurRadius: 24,
-                        spreadRadius: 2,
-                      ),
+        scale: _scaleAnimation.value,
+        child: AnimatedBuilder(
+          animation: _rotateAnimation,
+          builder: (context, child) {
+            final shouldRotate = rarity == AchievementRarity.legendary;
+            return Transform.rotate(
+              angle: shouldRotate ? _rotateAnimation.value * 0.1 : 0,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.primary,
+                      colors.secondary,
                     ],
                   ),
-                  child: AnimatedBuilder(
-                    animation: _glowAnimation,
-                    builder: (context, child) => Container(
-                        margin: EdgeInsets.all(4 * _glowAnimation.value),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: colors.background,
-                        ),
-                        child: Icon(
-                          _getIconForRarity(),
-                          size: 50,
-                          color: colors.icon,
-                        ),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.glow,
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: AnimatedBuilder(
+                  animation: _glowAnimation,
+                  builder: (context, child) => Container(
+                    margin: EdgeInsets.all(4 * _glowAnimation.value),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.background,
+                    ),
+                    child: Icon(
+                      _getIconForRarity(),
+                      size: 50,
+                      color: colors.icon,
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
+      ),
     );
   }
 
@@ -461,56 +465,56 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   }
 
   Widget _buildGlowingRings() => AnimatedBuilder(
-      animation: _glowAnimation,
-      builder: (context, child) => Container(
+        animation: _glowAnimation,
+        builder: (context, child) => Container(
           width: 360,
           height: 360,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.amber.withValues(alpha: 0.3 * _glowAnimation.value),
+              color: DS.warning.withValues(alpha: 0.3 * _glowAnimation.value),
               width: 2,
             ),
           ),
         ),
-    );
+      );
 
   Widget _buildPulsingWaves() => AnimatedBuilder(
-      animation: _particleController,
-      builder: (context, child) => Container(
+        animation: _particleController,
+        builder: (context, child) => Container(
           width: 400,
           height: 400,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.purple.withValues(
+              color: DS.taskReflection.withValues(
                 alpha: 0.2 * (1 - _particleController.value),
               ),
               width: 3,
             ),
           ),
         ),
-    );
+      );
 
   Widget _buildRainbowExplosion() => AnimatedBuilder(
-      animation: _particleController,
-      builder: (context, child) {
-        final progress = _particleController.value;
-        return CustomPaint(
-          size: const Size(400, 400),
-          painter: _RainbowExplosionPainter(progress),
-        );
-      },
-    );
+        animation: _particleController,
+        builder: (context, child) {
+          final progress = _particleController.value;
+          return CustomPaint(
+            size: const Size(400, 400),
+            painter: _RainbowExplosionPainter(progress),
+          );
+        },
+      );
 
   Widget _buildParticleOverlay() => Positioned.fill(
-      child: CustomPaint(
-        painter: _ParticlePainter(
-          rarity: widget.event.rarity,
-          animation: _particleController,
+        child: CustomPaint(
+          painter: _ParticlePainter(
+            rarity: widget.event.rarity,
+            animation: _particleController,
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildActionButton({
     required IconData icon,
@@ -566,38 +570,38 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           border: DS.neutral400,
           glow: DS.neutral400.withValues(alpha: 0.3),
           text: DS.neutral800,
-          background: Colors.white,
+          background: DS.neutral0,
           icon: DS.neutral600,
         );
       case AchievementRarity.rare:
         return _RarityColors(
-          primary: const Color(0xFFFFD700),
-          secondary: const Color(0xFFFFA500),
-          border: const Color(0xFFFFD700),
-          glow: const Color(0xFFFFD700).withValues(alpha: 0.5),
-          text: const Color(0xFFB8860B),
-          background: Colors.white.withValues(alpha: 0.9),
-          icon: const Color(0xFFB8860B),
+          primary: DS.rarityRare,
+          secondary: DS.warning,
+          border: DS.rarityRare,
+          glow: DS.rarityRare.withValues(alpha: 0.5),
+          text: DS.rarityRareText,
+          background: DS.neutral0.withValues(alpha: 0.9),
+          icon: DS.rarityRareText,
         );
       case AchievementRarity.epic:
         return _RarityColors(
-          primary: const Color(0xFF9B59B6),
-          secondary: const Color(0xFF8E44AD),
-          border: const Color(0xFF9B59B6),
-          glow: const Color(0xFF9B59B6).withValues(alpha: 0.6),
-          text: Colors.white,
-          background: Colors.white.withValues(alpha: 0.95),
-          icon: Colors.white,
+          primary: DS.rarityEpic,
+          secondary: DS.brandSecondary,
+          border: DS.rarityEpic,
+          glow: DS.rarityEpic.withValues(alpha: 0.6),
+          text: DS.onBrandPrimary,
+          background: DS.neutral0.withValues(alpha: 0.95),
+          icon: DS.onBrandPrimary,
         );
       case AchievementRarity.legendary:
         return _RarityColors(
-          primary: const Color(0xFFFF6B6B),
-          secondary: const Color(0xFF4D96FF),
-          border: const Color(0xFFFFD93D),
-          glow: const Color(0xFFFFD93D).withValues(alpha: 0.7),
-          text: Colors.white,
-          background: Colors.white.withValues(alpha: 0.95),
-          icon: Colors.white,
+          primary: DS.rarityLegendary,
+          secondary: DS.info,
+          border: DS.rarityRare,
+          glow: DS.rarityRare.withValues(alpha: 0.7),
+          text: DS.onBrandPrimary,
+          background: DS.neutral0.withValues(alpha: 0.95),
+          icon: DS.onBrandPrimary,
         );
     }
   }
@@ -652,56 +656,56 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) => Transform.scale(
-            scale: _scaleAnimation.value.clamp(0.8, 1.2),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing20,
-                vertical: DS.spacing10,
+          scale: _scaleAnimation.value.clamp(0.8, 1.2),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing20,
+              vertical: DS.spacing10,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  DS.rarityLegendary,
+                  DS.rarityRare,
+                ],
               ),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFFF6B6B),
-                    Color(0xFFFFD93D),
-                  ],
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: DS.rarityLegendary.withValues(alpha: 0.5),
+                  blurRadius: 10,
                 ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.5),
-                    blurRadius: 10,
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.local_fire_department,
+                  color: DS.onBrandPrimary,
+                  size: 24,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  '$comboCount连击！',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeBase,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.onBrandPrimary,
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.local_fire_department,
-                    color: Colors.white,
-                    size: 24,
+                ),
+                const SizedBox(width: DS.spacing4),
+                Text(
+                  _getComboText(comboCount),
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    color: DS.onBrandPrimary.withValues(alpha: 0.7),
                   ),
-                  const SizedBox(width: DS.spacing8),
-                  Text(
-                    '$comboCount连击！',
-                    style: const TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight: DS.fontWeightBold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing4),
-                  Text(
-                    _getComboText(comboCount),
-                    style: const TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
       ),
     );
   }
@@ -758,24 +762,24 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 vertical: DS.spacing4,
               ),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.3),
+                color: DS.warning.withValues(alpha: 0.3),
                 borderRadius: DS.borderRadius8,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.card_giftcard,
                     size: 14,
-                    color: Colors.amber,
+                    color: DS.warning,
                   ),
                   const SizedBox(width: DS.spacing4),
                   Text(
                     milestone.reward!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
-                      color: Colors.amber,
+                      color: DS.warning,
                     ),
                   ),
                 ],
@@ -919,7 +923,7 @@ class _ParticlePainter extends CustomPainter {
   });
 
   final AchievementRarity rarity;
-    final Animation<double> animation;
+  final Animation<double> animation;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -955,11 +959,11 @@ class _ParticlePainter extends CustomPainter {
   Color _getParticleBaseColor() {
     switch (rarity) {
       case AchievementRarity.rare:
-        return const Color(0xFFFFD700);
+        return DS.rarityRare;
       case AchievementRarity.epic:
-        return const Color(0xFF9B59B6);
+        return DS.rarityEpic;
       case AchievementRarity.legendary:
-        return const Color(0xFFFFD93D);
+        return DS.rarityRare;
       default:
         return DS.neutral400;
     }
@@ -980,16 +984,17 @@ class _RainbowExplosionPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final colors = [
-      const Color(0xFFFF6B6B),
-      const Color(0xFFFFD93D),
-      const Color(0xFF6BCB77),
-      const Color(0xFF4D96FF),
+      DS.rarityLegendary,
+      DS.rarityRare,
+      DS.success,
+      DS.info,
     ];
 
     for (var i = 0; i < colors.length; i++) {
       final radius = 80 + progress * 120 + i * 30;
       final paint = Paint()
-        ..color = colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))
+        ..color =
+            colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
 

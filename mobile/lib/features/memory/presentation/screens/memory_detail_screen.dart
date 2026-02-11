@@ -169,30 +169,38 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
           title:
               Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
             if (AppFeatureFlags.enableMemoryPanelV2)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.copy),
                 onPressed: _copyDetail,
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableMemoryPanelV2)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.file_download),
                 onPressed: _showExportDialog,
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableEvidenceViewer)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.link),
                 onPressed: () => _showEvidence(context),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
           ],
         ),
@@ -434,15 +442,15 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                   message: AppFeatureFlags.enableMemoryRetraction
                       ? '撤回到此版本'
                       : '需要开启 ENABLE_MEMORY_RETRACTION',
-                  child: TextButton(
-                    onPressed: AppFeatureFlags.enableMemoryRetraction
-                        ? () => _showRevertInfo(context)
-                        : null,
-                    child: const Text('Revert'),
+                  child: SparkleButton(
+                    label: 'Revert',
+                    onPressed: () => _showRevertInfo(context),
+                    variant: ButtonVariant.outline,
+                    disabled: !AppFeatureFlags.enableMemoryRetraction,
                   ),
                 ),
                 const Spacer(),
-                IconButton(
+                SparkleIconButton(
                   icon: const Icon(Icons.link),
                   onPressed: AppFeatureFlags.enableEvidenceViewer
                       ? () => EvidenceDrawer.show(
@@ -451,6 +459,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                             evidenceMissing: item.evidenceMissing,
                           )
                       : null,
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
                 ),
               ],
             ),
@@ -544,9 +554,9 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             if (AppFeatureFlags.enableEvidenceViewer)
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton(
+                child: SparkleButton.ghost(
+                  label: '查看证据',
                   onPressed: () => _showEvidence(context),
-                  child: const Text('查看证据'),
                 ),
               ),
           ],
@@ -635,9 +645,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制记忆内容')),
-    );
+    AppFeedback.info(context, '已复制记忆内容');
   }
 
   void _showExportDialog() {
@@ -654,9 +662,9 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           child: SelectableText(payload.toString()),
         ),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: '关闭',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
           ),
         ],
       ),
@@ -682,9 +690,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         ],
       );
 
-  Widget _buildCorrectionButton(String label, String action) => OutlinedButton(
+  Widget _buildCorrectionButton(String label, String action) => SparkleButton(
+        label: label,
         onPressed: () => _submitCorrection(action),
-        child: Text(label),
+        variant: ButtonVariant.outline,
       );
 
   Future<void> _submitCorrection(String action) async {
@@ -693,9 +702,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('合并功能即将上线')),
-        );
+        AppFeedback.info(context, '合并功能即将上线');
         return;
       }
       final service = ref.read(memoryApiServiceProvider);
@@ -728,16 +735,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         _confidence = result.confidence ?? _confidence;
         _retractedAt = result.retractedAt ?? _retractedAt;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已提交纠错: $action')),
-      );
+      AppFeedback.success(context, '已提交纠错: $action');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('纠错失败: $e')),
-      );
+      AppFeedback.error(context, '纠错失败: $e');
     }
   }
 }

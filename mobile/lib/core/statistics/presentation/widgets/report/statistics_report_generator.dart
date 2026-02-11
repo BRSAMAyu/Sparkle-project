@@ -6,16 +6,16 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// Configuration for PNG report generation
 class ReportConfig {
-
   const ReportConfig({
     this.size = const ExportDimensions(1080, 1920),
     this.pixelRatio = 2.0,
-    this.backgroundColor = const Color(0xFF6366F1),
-    this.primaryColor = const Color(0xFFFFFFFF),
-    this.secondaryColor = const Color(0xFFFFFFFF),
+    this.backgroundColor,
+    this.primaryColor,
+    this.secondaryColor,
     this.includeWatermark = true,
     this.watermarkText = '星火AI学习助手',
   });
+
   /// Size of the report
   final ExportDimensions size;
 
@@ -23,13 +23,13 @@ class ReportConfig {
   final double pixelRatio;
 
   /// Background color
-  final Color backgroundColor;
+  final Color? backgroundColor;
 
   /// Primary accent color
-  final Color primaryColor;
+  final Color? primaryColor;
 
   /// Secondary accent color
-  final Color secondaryColor;
+  final Color? secondaryColor;
 
   /// Whether to include a watermark
   final bool includeWatermark;
@@ -37,26 +37,31 @@ class ReportConfig {
   /// Watermark text
   final String watermarkText;
 
+  Color get resolvedBackgroundColor => backgroundColor ?? DS.brandPrimary;
+  Color get resolvedPrimaryColor => primaryColor ?? DS.onBrandPrimary;
+  Color get resolvedSecondaryColor =>
+      secondaryColor ?? DS.onBrandPrimary.withValues(alpha: 0.9);
+
   /// Get a landscape config
   ReportConfig toLandscape() => ReportConfig(
-      size: ExportDimensions(size.height, size.width),
-      pixelRatio: pixelRatio,
-      backgroundColor: backgroundColor,
-      primaryColor: primaryColor,
-      secondaryColor: secondaryColor,
-      includeWatermark: includeWatermark,
-      watermarkText: watermarkText,
-    );
+        size: ExportDimensions(size.height, size.width),
+        pixelRatio: pixelRatio,
+        backgroundColor: backgroundColor,
+        primaryColor: primaryColor,
+        secondaryColor: secondaryColor,
+        includeWatermark: includeWatermark,
+        watermarkText: watermarkText,
+      );
 }
 
 /// Report section data
 class ReportSection {
-
   const ReportSection({
     required this.title,
     required this.content,
     this.enabled = true,
   });
+
   /// Title of the section
   final String title;
 
@@ -118,8 +123,8 @@ class StatisticsReportGenerator {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        config.backgroundColor,
-        config.backgroundColor.withBlue(200),
+        config.resolvedBackgroundColor,
+        config.resolvedBackgroundColor.withValues(alpha: 0.75),
       ],
     );
 
@@ -135,24 +140,24 @@ class StatisticsReportGenerator {
     StatisticsEntity statistics,
     ReportConfig config,
   ) async {
-    final padding = size.width * 0.08;
+    final horizontalInset = DS.spacing64 * config.pixelRatio;
 
     // Draw title
     final titlePainter = TextPainter(
       text: TextSpan(
         text: statistics.type.displayName,
         style: TextStyle(
-          color: config.primaryColor,
+          color: config.resolvedPrimaryColor,
           fontSize: 56 * config.pixelRatio,
           fontWeight: FontWeight.bold,
         ),
       ),
       textDirection: TextDirection.ltr,
     );
-    titlePainter.layout(maxWidth: size.width - padding * 2);
+    titlePainter.layout(maxWidth: size.width - horizontalInset * 2);
     titlePainter.paint(
       canvas,
-      Offset(padding, size.height * 0.1),
+      Offset(horizontalInset, size.height * 0.1),
     );
 
     // Draw period
@@ -160,7 +165,7 @@ class StatisticsReportGenerator {
       text: TextSpan(
         text: statistics.period.label,
         style: TextStyle(
-          color: config.primaryColor.withValues(alpha: 0.9),
+          color: config.resolvedSecondaryColor,
           fontSize: 36 * config.pixelRatio,
         ),
       ),
@@ -169,7 +174,10 @@ class StatisticsReportGenerator {
     periodPainter.layout();
     periodPainter.paint(
       canvas,
-      Offset(padding, size.height * 0.1 + titlePainter.height + 20 * config.pixelRatio),
+      Offset(
+        horizontalInset,
+        size.height * 0.1 + titlePainter.height + 20 * config.pixelRatio,
+      ),
     );
 
     // Draw date
@@ -177,7 +185,7 @@ class StatisticsReportGenerator {
       text: TextSpan(
         text: _formatDate(DateTime.now()),
         style: TextStyle(
-          color: config.primaryColor.withValues(alpha: 0.7),
+          color: config.resolvedPrimaryColor.withValues(alpha: 0.7),
           fontSize: 28 * config.pixelRatio,
         ),
       ),
@@ -186,7 +194,13 @@ class StatisticsReportGenerator {
     datePainter.layout();
     datePainter.paint(
       canvas,
-      Offset(padding, size.height * 0.1 + titlePainter.height + periodPainter.height + 40 * config.pixelRatio),
+      Offset(
+        horizontalInset,
+        size.height * 0.1 +
+            titlePainter.height +
+            periodPainter.height +
+            40 * config.pixelRatio,
+      ),
     );
   }
 
@@ -213,7 +227,7 @@ class StatisticsReportGenerator {
         text: TextSpan(
           text: section.title,
           style: TextStyle(
-            color: config.primaryColor.withValues(alpha: 0.8),
+            color: config.resolvedPrimaryColor.withValues(alpha: 0.8),
             fontSize: 32 * config.pixelRatio,
             fontWeight: FontWeight.w500,
           ),
@@ -235,7 +249,7 @@ class StatisticsReportGenerator {
       );
 
       final cardPaint = Paint()
-        ..color = config.primaryColor.withValues(alpha: 0.15);
+        ..color = config.resolvedPrimaryColor.withValues(alpha: 0.15);
       final rrect = RRect.fromRectAndRadius(
         cardRect,
         Radius.circular(24 * config.pixelRatio),
@@ -263,7 +277,7 @@ class StatisticsReportGenerator {
       text: TextSpan(
         text: config.watermarkText,
         style: TextStyle(
-          color: config.primaryColor.withValues(alpha: 0.5),
+          color: config.resolvedPrimaryColor.withValues(alpha: 0.5),
           fontSize: 24 * config.pixelRatio,
         ),
       ),
@@ -280,14 +294,16 @@ class StatisticsReportGenerator {
   }
 
   /// Format date for display
-  static String _formatDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
+  static String _formatDate(DateTime date) =>
+      '${date.year}年${date.month}月${date.day}日';
 }
 
 /// Widget for generating a report preview
 class ReportPreviewWidget extends StatefulWidget {
-
   const ReportPreviewWidget({
-    required this.statistics, required this.sections, super.key,
+    required this.statistics,
+    required this.sections,
+    super.key,
     this.config = const ReportConfig(),
   });
   final StatisticsEntity statistics;
@@ -301,92 +317,95 @@ class ReportPreviewWidget extends StatefulWidget {
 class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
   @override
   Widget build(BuildContext context) => DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            widget.config.backgroundColor,
-            widget.config.backgroundColor.withBlue(200),
-          ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              widget.config.resolvedBackgroundColor,
+              widget.config.resolvedBackgroundColor.withValues(alpha: 0.75),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(DS.borderRadiusLG),
         ),
-        borderRadius: BorderRadius.circular(DS.borderRadiusLG),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(DS.lg),
-                child: Column(
-                  children: [
-                    ...widget.sections.where((s) => s.enabled).map(_buildSectionCard),
-                  ],
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(DS.lg),
+                  child: Column(
+                    children: [
+                      ...widget.sections
+                          .where((s) => s.enabled)
+                          .map(_buildSectionCard),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            _buildFooter(),
-          ],
+              _buildFooter(),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildHeader() => Padding(
-      padding: const EdgeInsets.all(DS.xl),
-      child: Column(
-        children: [
-          Text(
-            widget.statistics.type.displayName,
-            style: TextStyle(
-              color: widget.config.primaryColor,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.all(DS.xl),
+        child: Column(
+          children: [
+            Text(
+              widget.statistics.type.displayName,
+              style: TextStyle(
+                color: widget.config.resolvedPrimaryColor,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            widget.statistics.period.label,
-            style: TextStyle(
-              color: widget.config.primaryColor.withValues(alpha: 0.9),
-              fontSize: 18,
+            const SizedBox(height: DS.sm),
+            Text(
+              widget.statistics.period.label,
+              style: TextStyle(
+                color: widget.config.resolvedSecondaryColor,
+                fontSize: 18,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.xs),
-          Text(
-            StatisticsReportGenerator._formatDate(DateTime.now()),
-            style: TextStyle(
-              color: widget.config.primaryColor.withValues(alpha: 0.7),
-              fontSize: 14,
+            const SizedBox(height: DS.xs),
+            Text(
+              StatisticsReportGenerator._formatDate(DateTime.now()),
+              style: TextStyle(
+                color:
+                    widget.config.resolvedPrimaryColor.withValues(alpha: 0.7),
+                fontSize: 14,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildSectionCard(ReportSection section) => Container(
-      margin: const EdgeInsets.only(bottom: DS.md),
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        color: widget.config.primaryColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(DS.borderRadiusLG),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            section.title,
-            style: TextStyle(
-              color: widget.config.primaryColor,
-              fontSize: 16,
-              fontWeight: DS.fontWeightSemibold,
+        margin: const EdgeInsets.only(bottom: DS.md),
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          color: widget.config.resolvedPrimaryColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              section.title,
+              style: TextStyle(
+                color: widget.config.resolvedPrimaryColor,
+                fontSize: 16,
+                fontWeight: DS.fontWeightSemibold,
+              ),
             ),
-          ),
-          const SizedBox(height: DS.md),
-          section.content,
-        ],
-      ),
-    );
+            const SizedBox(height: DS.md),
+            section.content,
+          ],
+        ),
+      );
 
   Widget _buildFooter() {
     if (!widget.config.includeWatermark) return const SizedBox.shrink();
@@ -396,7 +415,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
       child: Text(
         widget.config.watermarkText,
         style: TextStyle(
-          color: widget.config.primaryColor.withValues(alpha: 0.5),
+          color: widget.config.resolvedPrimaryColor.withValues(alpha: 0.5),
           fontSize: 12,
         ),
       ),

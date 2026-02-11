@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    hide ButtonVariant;
 import 'package:sparkle/features/vocabulary/data/repositories/local_vocabulary_repository.dart';
 import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
@@ -130,7 +131,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                           Icons.star,
                           size: 36,
                           color: selectedImportance >= starValue
-                              ? Colors.amber
+                              ? DS.warning
                               : DS.neutral300,
                         ),
                       ),
@@ -156,18 +157,18 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             ],
           ),
           actions: [
-            TextButton(
+            SparkleButton.ghost(
+              label: '取消',
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
             ),
-            FilledButton(
+            SparkleButton.primary(
+              label: '确定',
               onPressed: () async {
                 await ref
                     .read(localVocabularyProvider.notifier)
                     .updateImportance(word.id, selectedImportance);
                 if (mounted) Navigator.pop(context);
               },
-              child: const Text('确定'),
             ),
           ],
         ),
@@ -323,7 +324,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: DS.success,
               unselectedLabelColor: DS.neutral500,
-              dividerColor: Colors.transparent,
+              dividerColor: DS.surfacePrimary.withValues(alpha: 0),
               tabs: [
                 Tab(text: '待复习 (${state.dueCount})'),
                 Tab(text: '全部 (${state.totalCount})'),
@@ -348,13 +349,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           // Start Review Button
           if (state.dueCount > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.only(top: DS.spacing16),
               child: CustomButton.primary(
                 text: '开始复习',
                 icon: Icons.play_arrow_rounded,
                 onPressed: _startReview,
                 customGradient: LinearGradient(
-                  colors: [DS.successConst, const Color(0xFF66BB6A)],
+                  colors: [DS.successConst, DS.success.shade700],
                 ),
               ),
             ),
@@ -363,7 +364,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     );
   }
 
-  Widget _buildWordList(List<VocabWordItem> words, {required bool isReviewList}) {
+  Widget _buildWordList(List<VocabWordItem> words,
+      {required bool isReviewList}) {
     if (words.isEmpty) {
       return Center(
         child: Column(
@@ -415,14 +417,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 title: const Text('删除单词'),
                 content: Text('确定要从生词本中删除 "${word.word}" 吗？'),
                 actions: [
-                  TextButton(
+                  SparkleButton.ghost(
+                    label: '取消',
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('取消'),
                   ),
-                  FilledButton(
+                  SparkleButton.destructive(
+                    label: '删除',
                     onPressed: () => Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(backgroundColor: DS.error),
-                    child: const Text('删除'),
                   ),
                 ],
               ),
@@ -459,9 +460,11 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => setState(() => _isReviewMode = false),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
               Text(
                 '${_currentReviewIndex + 1} / ${_sessionWords.length}',
@@ -484,13 +487,19 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 padding: const EdgeInsets.all(DS.xl),
                 decoration: BoxDecoration(
                   gradient: _showAnswer
-                      ? const LinearGradient(
-                          colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                      ? LinearGradient(
+                          colors: [
+                            DS.success.withValues(alpha: 0.15),
+                            DS.success.withValues(alpha: 0.3),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
-                      : const LinearGradient(
-                          colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                      : LinearGradient(
+                          colors: [
+                            DS.warning.withValues(alpha: 0.15),
+                            DS.warning.withValues(alpha: 0.3),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -616,49 +625,49 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? DS.success : DS.neutral100,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? DS.success : DS.neutral200,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? DS.brandPrimaryConst : DS.neutral600,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? DS.brandPrimaryConst : DS.neutral700,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? DS.success : DS.neutral100,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? DS.success : DS.neutral200,
             ),
-            if (count != null) ...[
-              const SizedBox(width: 4),
-              Text(
-                '($count)',
-                style: TextStyle(
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 16,
                   color: isSelected ? DS.brandPrimaryConst : DS.neutral600,
-                  fontSize: 12,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? DS.brandPrimaryConst : DS.neutral700,
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
+              if (count != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '($count)',
+                  style: TextStyle(
+                    color: isSelected ? DS.brandPrimaryConst : DS.neutral600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// 单词卡片组件 (本地版本)
@@ -727,9 +736,13 @@ class _WordCard extends StatelessWidget {
                       if (word.daysUntilReview != null) ...[
                         const SizedBox(height: DS.sm),
                         Text(
-                          word.isDueForReview ? '今天到期' : '还有 ${word.daysUntilReview} 天',
+                          word.isDueForReview
+                              ? '今天到期'
+                              : '还有 ${word.daysUntilReview} 天',
                           style: TextStyle(
-                            color: word.isDueForReview ? DS.warning : DS.neutral400,
+                            color: word.isDueForReview
+                                ? DS.warning
+                                : DS.neutral400,
                             fontSize: 12,
                           ),
                         ),
@@ -742,23 +755,30 @@ class _WordCard extends StatelessWidget {
                   onTap: onTap,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: List.generate(5, (index) => Icon(
+                    children: List.generate(
+                      5,
+                      (index) => Icon(
                         Icons.star,
                         size: 16,
-                        color: index < word.importance ? Colors.amber : DS.neutral300,
-                      ),),
+                        color: index < word.importance
+                            ? DS.warning
+                            : DS.neutral300,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: DS.sm),
-                IconButton(
-                  iconSize: 18,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: DS.error.withValues(alpha: 0.7),
+                InkWell(
+                  borderRadius: DS.borderRadiusFull,
+                  onTap: onDelete,
+                  child: Padding(
+                    padding: const EdgeInsets.all(DS.spacing4),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: DS.error.withValues(alpha: 0.7),
+                    ),
                   ),
-                  onPressed: onDelete,
                 ),
               ],
             ),

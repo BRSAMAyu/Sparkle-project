@@ -45,9 +45,7 @@ class _NotesToolState extends State<NotesTool> {
     await prefs.remove(_notesTimestampKey);
     if (mounted) {
       setState(_controller.clear);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('笔记已清空')),
-      );
+      AppFeedback.info(context, '笔记已清空');
     }
   }
 
@@ -106,9 +104,9 @@ class _NotesToolState extends State<NotesTool> {
                   ),
                 ],
               ),
-              TextButton(
+              SparkleButton.ghost(
+                label: '清空',
                 onPressed: _clearNotes,
-                child: Text('清空', style: TextStyle(color: DS.error)),
               ),
             ],
           ),
@@ -159,18 +157,13 @@ class _NotesToolState extends State<NotesTool> {
                       onChanged: (_) => _saveNotes(),
                     ),
                   ),
-            ),
+          ),
           const SizedBox(height: DS.lg),
           CustomButton.primary(
             text: '完成',
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('笔记已保存'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              AppFeedback.success(context, '笔记已保存');
             },
           ),
         ],

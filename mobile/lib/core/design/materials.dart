@@ -34,31 +34,31 @@ class SparkleMaterial {
   final Color? backgroundColor;
   final double opacity;
   final BlendMode? blendMode;
-  
+
   /// Opacity of the noise texture overlay (0.0 - 1.0)
   /// Use 0.0 for text containers to ensure readability.
   final double noiseOpacity;
   final BlendMode noiseBlendMode;
   final Color? noiseColor;
-  
+
   /// Backdrop filter blur sigma.
   final double blurSigma;
-  
+
   /// Top-edge highlight color (simulates light from top).
   final Color? rimLightColor;
-  
+
   /// Inner ambient glow color.
   final Color? glowColor;
-  
+
   /// Elevation shadows.
   final List<BoxShadow>? shadows;
-  
+
   /// Optional gradient border.
   final Gradient? borderGradient;
-  
+
   /// Fallback solid border color.
   final Color? borderColor;
-  
+
   final double borderWidth;
 
   SparkleMaterial copyWith({
@@ -76,22 +76,23 @@ class SparkleMaterial {
     Gradient? borderGradient,
     Color? borderColor,
     double? borderWidth,
-  }) => SparkleMaterial(
-      backgroundGradient: backgroundGradient ?? this.backgroundGradient,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
-      opacity: opacity ?? this.opacity,
-      blendMode: blendMode ?? this.blendMode,
-      noiseOpacity: noiseOpacity ?? this.noiseOpacity,
-      noiseBlendMode: noiseBlendMode ?? this.noiseBlendMode,
-      noiseColor: noiseColor ?? this.noiseColor,
-      blurSigma: blurSigma ?? this.blurSigma,
-      rimLightColor: rimLightColor ?? this.rimLightColor,
-      glowColor: glowColor ?? this.glowColor,
-      shadows: shadows ?? this.shadows,
-      borderGradient: borderGradient ?? this.borderGradient,
-      borderColor: borderColor ?? this.borderColor,
-      borderWidth: borderWidth ?? this.borderWidth,
-    );
+  }) =>
+      SparkleMaterial(
+        backgroundGradient: backgroundGradient ?? this.backgroundGradient,
+        backgroundColor: backgroundColor ?? this.backgroundColor,
+        opacity: opacity ?? this.opacity,
+        blendMode: blendMode ?? this.blendMode,
+        noiseOpacity: noiseOpacity ?? this.noiseOpacity,
+        noiseBlendMode: noiseBlendMode ?? this.noiseBlendMode,
+        noiseColor: noiseColor ?? this.noiseColor,
+        blurSigma: blurSigma ?? this.blurSigma,
+        rimLightColor: rimLightColor ?? this.rimLightColor,
+        glowColor: glowColor ?? this.glowColor,
+        shadows: shadows ?? this.shadows,
+        borderGradient: borderGradient ?? this.borderGradient,
+        borderColor: borderColor ?? this.borderColor,
+        borderWidth: borderWidth ?? this.borderWidth,
+      );
 }
 
 /// ---------------------------------------------------------------------------
@@ -112,7 +113,8 @@ class AppMaterials {
 
     // Performance degradation
     final enableBlur = PerformanceService.instance.enableBlur;
-    final enableNoise = PerformanceService.instance.currentTier.value == PerformanceTier.ultra;
+    final enableNoise =
+        PerformanceService.instance.currentTier.value == PerformanceTier.ultra;
 
     if (isDark) {
       // Dark mode: subtle elevated surface with warm glow
@@ -145,8 +147,8 @@ class AppMaterials {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.7),
-          Colors.white.withValues(alpha: 0.85),
+          DS.neutral0.withValues(alpha: 0.7),
+          DS.neutral0.withValues(alpha: 0.85),
         ],
       ),
       rimLightColor: colors.rimLight,
@@ -172,7 +174,7 @@ class AppMaterials {
     }
 
     return SparkleMaterial(
-      backgroundColor: Colors.black.withValues(alpha: 0.6),
+      backgroundColor: DS.neutral900.withValues(alpha: 0.6),
       rimLightColor: colors.brandPrimary.withValues(alpha: 0.4),
       glowColor: colors.brandPrimary.withValues(alpha: 0.1),
       shadows: ThemeManager().current.shadows.large,
@@ -216,7 +218,9 @@ class AppMaterials {
 
 class MaterialStyler extends StatelessWidget {
   const MaterialStyler({
-    required this.material, required this.child, super.key,
+    required this.material,
+    required this.child,
+    super.key,
     this.shape = BoxShape.rectangle,
     this.shapeBorder,
     this.borderRadius,
@@ -249,7 +253,9 @@ class MaterialStyler extends StatelessWidget {
         boxShadow: material.shadows,
       ),
       child: ClipPath(
-        clipper: shapeBorder != null ? ShapeBorderClipper(shape: shapeBorder!) : null,
+        clipper: shapeBorder != null
+            ? ShapeBorderClipper(shape: shapeBorder!)
+            : null,
         child: ClipRRect(
           borderRadius: clipRadius,
           child: Stack(
@@ -270,7 +276,7 @@ class MaterialStyler extends StatelessWidget {
                       sigmaX: material.blurSigma,
                       sigmaY: material.blurSigma,
                     ),
-                    child: Container(color: Colors.transparent),
+                    child: ColoredBox(color: DS.neutral0.withValues(alpha: 0)),
                   ),
                 ),
 
@@ -316,8 +322,8 @@ class MaterialStyler extends StatelessWidget {
                       gradient: RadialGradient(
                         radius: 1.5,
                         colors: [
-                           Colors.transparent,
-                           material.glowColor!,
+                          DS.neutral0.withValues(alpha: 0),
+                          material.glowColor!,
                         ],
                         stops: const [0.6, 1.0],
                       ),
@@ -333,7 +339,8 @@ class MaterialStyler extends StatelessWidget {
 
               // Layer 7: Border
               if (material.borderWidth > 0 &&
-                  (material.borderColor != null || material.borderGradient != null))
+                  (material.borderColor != null ||
+                      material.borderGradient != null))
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
@@ -382,7 +389,7 @@ class _MaterialBackground extends StatelessWidget {
     if (material.blendMode != null) {
       content = ColorFiltered(
         colorFilter: ColorFilter.mode(
-          Colors.white,
+          DS.neutral0,
           material.blendMode!,
         ),
         child: content,
@@ -410,8 +417,7 @@ class _MaterialRimPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final borderPath =
-        shapeBorder?.getOuterPath(rect);
+    final borderPath = shapeBorder?.getOuterPath(rect);
 
     // Draw Rim Light (Top Edge)
     if (rimColor != null) {
@@ -441,9 +447,10 @@ class _MaterialRimPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MaterialRimPainter oldDelegate) => oldDelegate.rimColor != rimColor ||
-        oldDelegate.borderRadius != borderRadius ||
-        oldDelegate.shapeBorder != shapeBorder;
+  bool shouldRepaint(covariant _MaterialRimPainter oldDelegate) =>
+      oldDelegate.rimColor != rimColor ||
+      oldDelegate.borderRadius != borderRadius ||
+      oldDelegate.shapeBorder != shapeBorder;
 }
 
 class _MaterialBorderPainter extends CustomPainter {
@@ -470,8 +477,7 @@ class _MaterialBorderPainter extends CustomPainter {
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final borderPath =
-        shapeBorder?.getOuterPath(rect);
+    final borderPath = shapeBorder?.getOuterPath(rect);
 
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -493,10 +499,11 @@ class _MaterialBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MaterialBorderPainter oldDelegate) => oldDelegate.borderColor != borderColor ||
-        oldDelegate.borderGradient != borderGradient ||
-        oldDelegate.borderWidth != borderWidth ||
-        oldDelegate.borderRadius != borderRadius ||
-        oldDelegate.shape != shape ||
-        oldDelegate.shapeBorder != shapeBorder;
+  bool shouldRepaint(covariant _MaterialBorderPainter oldDelegate) =>
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.borderGradient != borderGradient ||
+      oldDelegate.borderWidth != borderWidth ||
+      oldDelegate.borderRadius != borderRadius ||
+      oldDelegate.shape != shape ||
+      oldDelegate.shapeBorder != shapeBorder;
 }
