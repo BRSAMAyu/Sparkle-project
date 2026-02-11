@@ -17,7 +17,7 @@ Future<void> showShareResourceSheet(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+    backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
     builder: (context) => ShareResourceSheet(
       resourceType: resourceType,
       resourceId: resourceId,
@@ -138,11 +138,11 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               const SizedBox(height: DS.md),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: SparkleButton(
+                  label: '立即分享',
                   onPressed: _isSharing ? null : _share,
-                  child: _isSharing
-                      ? const LoadingIndicator(size: 20)
-                      : const Text('立即分享'),
+                  loading: _isSharing,
+                  expand: true,
                 ),
               ),
             ],
@@ -257,9 +257,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
   Future<void> _share() async {
     if (_selectedGroupId == null && _selectedUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择好友或群组')),
-      );
+      AppFeedback.info(context, '请选择好友或群组');
       return;
     }
 
@@ -277,14 +275,10 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
 
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('分享成功')),
-      );
+      AppFeedback.success(context, '分享成功');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('分享失败: $e')),
-      );
+      AppFeedback.error(context, '分享失败: $e');
     } finally {
       if (mounted) {
         setState(() => _isSharing = false);

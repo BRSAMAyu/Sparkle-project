@@ -17,7 +17,7 @@ class AchievementCardGenerator extends StatelessWidget {
     required Map<String, dynamic> data,
   }) async {
     // TODO: Implement actual image generation logic
-    // This typically requires wrapping the widget in a RepaintBoundary, 
+    // This typically requires wrapping the widget in a RepaintBoundary,
     // rendering it to an image, and converting to byte data.
     // For now, returning null to allow compilation.
     return null;
@@ -329,7 +329,7 @@ class _MasteryAchievementCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             DS.success.shade900,
-            Colors.teal.shade900,
+            DS.success.shade700,
           ],
         ),
       ),
@@ -344,10 +344,10 @@ class _MasteryAchievementCard extends StatelessWidget {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.amber.shade400,
+                color: DS.rarityRare,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.amber.withValues(alpha: 0.6),
+                    color: DS.rarityRare.withValues(alpha: 0.6),
                     blurRadius: 60,
                     spreadRadius: 20,
                   ),

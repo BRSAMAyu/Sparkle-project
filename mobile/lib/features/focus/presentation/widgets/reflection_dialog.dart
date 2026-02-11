@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -115,32 +117,19 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
           ],
         ),
         actions: [
-          TextButton(
+          SparkleButton(
+            label: '跳过',
+            variant: ButtonVariant.ghost,
             onPressed: () => context.pop(false),
-            child: Text(
-              '跳过',
-              style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),
-            ),
           ),
-          ElevatedButton(
-            onPressed: _feeling != null && !_isSubmitting ? _submit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DS.brandPrimary,
-              foregroundColor: ThemeUtils.getContrastSafeText(
-                DS.brandPrimary,
-                darkText: DS.textPrimary,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('保存'),
+          SparkleButton(
+            label: '保存',
+            loading: _isSubmitting,
+            onPressed: _feeling != null && !_isSubmitting
+                ? () {
+                    unawaited(_submit());
+                  }
+                : null,
           ),
         ],
       );

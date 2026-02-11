@@ -56,24 +56,18 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 try {
-                  await ref.read(friendRecommendationsProvider.notifier)
+                  await ref
+                      .read(friendRecommendationsProvider.notifier)
                       .sendRequest(user.id);
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Friend request sent to ${user.displayName}'),
-                        backgroundColor: DS.success,
-                      ),
+                    AppFeedback.success(
+                      context,
+                      'Friend request sent to ${user.displayName}',
                     );
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to send request: $e'),
-                        backgroundColor: DS.error,
-                      ),
-                    );
+                    AppFeedback.error(context, 'Failed to send request: $e');
                   }
                 }
               },
@@ -101,7 +95,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -118,7 +114,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           textInputAction: TextInputAction.search,
         ),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: _handleSearch,
           ),
@@ -146,7 +144,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.all(DS.lg),
                 itemCount: users.length,
-                separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: DS.md),
                 itemBuilder: (context, index) {
                   final user = users[index];
                   return Card(
@@ -159,7 +158,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                                 ? NetworkImage(user.avatarUrl!)
                                 : null,
                             child: user.avatarUrl == null
-                                ? Text(user.displayName.substring(0, 1).toUpperCase())
+                                ? Text(user.displayName
+                                    .substring(0, 1)
+                                    .toUpperCase())
                                 : null,
                           ),
                           if (user.status == UserStatus.online)
@@ -228,9 +229,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               const SizedBox(height: DS.lg),
               Text('Error: $e'),
               const SizedBox(height: DS.md),
-              ElevatedButton(
+              SparkleButton.primary(
+                label: 'Retry',
                 onPressed: _handleSearch,
-                child: const Text('Retry'),
               ),
             ],
           ),

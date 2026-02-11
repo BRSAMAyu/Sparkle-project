@@ -19,46 +19,48 @@ class FocusMainScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: DS.surfacePrimary,
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: const Text('选择专注任务'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         elevation: 0,
         foregroundColor: DS.textPrimary,
       ),
       body: SafeArea(
         child: ContentConstraint(
           child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(DS.xl),
-              child: Text(
-                '准备好开始专注了吗？',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: DS.textPrimary,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(DS.xl),
+                child: Text(
+                  '准备好开始专注了吗？',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: DS.textPrimary,
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: todayTasks.isEmpty
-                  ? _buildEmptyState(context, ref)
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: todayTasks.length,
-                      itemBuilder: (context, index) {
-                        final task = todayTasks[index];
-                        return _buildTaskItem(context, task);
-                      },
-                    ),
-            ),
-            _buildQuickFocusButton(context, ref),
-            const SizedBox(height: 20),
-          ],
-        ),
+              Expanded(
+                child: todayTasks.isEmpty
+                    ? _buildEmptyState(context, ref)
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: todayTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = todayTasks[index];
+                          return _buildTaskItem(context, task);
+                        },
+                      ),
+              ),
+              _buildQuickFocusButton(context, ref),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -68,8 +70,11 @@ class FocusMainScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.assignment_turned_in_outlined,
-                size: 64, color: DS.textSecondary.withValues(alpha: 0.3),),
+            Icon(
+              Icons.assignment_turned_in_outlined,
+              size: 64,
+              color: DS.textSecondary.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: DS.lg),
             Text(
               '没有待办任务',
@@ -84,7 +89,8 @@ class FocusMainScreen extends ConsumerWidget {
             // 🆕 在空状态下也显示快速专注按钮
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: ElevatedButton.icon(
+              child: SparkleButton(
+                expand: true,
                 onPressed: () {
                   final dummyTask = TaskModel(
                     id: 'quick_focus_${DateTime.now().millisecondsSinceEpoch}',
@@ -105,20 +111,14 @@ class FocusMainScreen extends ConsumerWidget {
                   context.push('/tasks/${dummyTask.id}/execute');
                 },
                 icon: const Icon(Icons.play_circle_outline),
-                label: const Text('立即开始专注'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: DS.primaryBase,
-                  foregroundColor: DS.textOnPrimary,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
+                label: '立即开始专注',
               ),
             ),
             const SizedBox(height: DS.sm),
             SparkleButton.ghost(
-                label: '或者创建一个新任务', onPressed: () => context.push('/tasks/new'),),
+              label: '或者创建一个新任务',
+              onPressed: () => context.push('/tasks/new'),
+            ),
           ],
         ),
       );
@@ -138,14 +138,16 @@ class FocusMainScreen extends ConsumerWidget {
             title: Text(
               task.title,
               style: TextStyle(
-                  color: DS.textPrimary, fontWeight: FontWeight.w600,),
+                color: DS.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             subtitle: Text(
               '预计 ${task.estimatedMinutes} 分钟',
               style: TextStyle(color: DS.textSecondary),
             ),
-            trailing:
-                Icon(Icons.arrow_forward_ios, color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: DS.textSecondary.withValues(alpha: 0.5), size: 16),
             onTap: () {
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;
@@ -157,7 +159,9 @@ class FocusMainScreen extends ConsumerWidget {
 
   Widget _buildQuickFocusButton(BuildContext context, WidgetRef ref) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: ElevatedButton(
+        child: SparkleButton(
+          expand: true,
+          label: '快速开启专注 (25min)',
           onPressed: () {
             // Create a dummy task for quick focus if needed, or just push a generic task
             final dummyTask = TaskModel(
@@ -178,17 +182,6 @@ class FocusMainScreen extends ConsumerWidget {
             ref.read(activeTaskProvider.notifier).state = dummyTask;
             context.push('/tasks/${dummyTask.id}/execute');
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: DS.primaryBase,
-            foregroundColor: DS.textOnPrimary,
-            minimumSize: const Size(double.infinity, 56),
-            elevation: 2,
-            shadowColor: DS.primaryBase.withValues(alpha: 0.3),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: const Text('快速开启专注 (25min)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
         ),
       );
 }

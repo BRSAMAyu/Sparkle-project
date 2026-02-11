@@ -31,7 +31,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     super.dispose();
   }
 
-  bool get _canManage => widget.myRole == GroupRole.owner || widget.myRole == GroupRole.admin;
+  bool get _canManage =>
+      widget.myRole == GroupRole.owner || widget.myRole == GroupRole.admin;
 
   @override
   Widget build(BuildContext context) {
@@ -39,19 +40,24 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text('${widget.groupName} - Members'),
         actions: [
           if (_canManage)
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.person_add),
               onPressed: () {
                 // TODO: Navigate to invite members screen
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invite members feature coming soon')),
+                  const SnackBar(
+                      content: Text('Invite members feature coming soon')),
                 );
               },
             ),
@@ -62,121 +68,144 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
           children: [
             // Search bar
             Padding(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search members...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search members...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 32,
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                  ),
+                  filled: true,
+                  fillColor: DS.neutral50,
                 ),
-                filled: true,
-                fillColor: DS.neutral50,
+                onChanged: (value) =>
+                    setState(() => _searchQuery = value.toLowerCase()),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
             ),
-          ),
 
-          // Members list
-          Expanded(
-            child: membersState.when(
-              data: (members) {
-                final filteredMembers = _searchQuery.isEmpty
-                    ? members
-                    : members.where((m) =>
-                        m.user.username.toLowerCase().contains(_searchQuery) ||
-                        (m.user.nickname?.toLowerCase().contains(_searchQuery) ?? false),
-                      ).toList();
+            // Members list
+            Expanded(
+              child: membersState.when(
+                data: (members) {
+                  final filteredMembers = _searchQuery.isEmpty
+                      ? members
+                      : members
+                          .where(
+                            (m) =>
+                                m.user.username
+                                    .toLowerCase()
+                                    .contains(_searchQuery) ||
+                                (m.user.nickname
+                                        ?.toLowerCase()
+                                        .contains(_searchQuery) ??
+                                    false),
+                          )
+                          .toList();
 
-                if (filteredMembers.isEmpty) {
-                  return Center(
-                    child: Text(
-                      _searchQuery.isEmpty ? 'No members yet' : 'No members found',
-                      style: TextStyle(color: DS.neutral500, fontSize: 16),
-                    ),
+                  if (filteredMembers.isEmpty) {
+                    return Center(
+                      child: Text(
+                        _searchQuery.isEmpty
+                            ? 'No members yet'
+                            : 'No members found',
+                        style: TextStyle(color: DS.neutral500, fontSize: 16),
+                      ),
+                    );
+                  }
+
+                  // Group by role
+                  final owners = filteredMembers
+                      .where((m) => m.role == GroupRole.owner)
+                      .toList();
+                  final admins = filteredMembers
+                      .where((m) => m.role == GroupRole.admin)
+                      .toList();
+                  final regularMembers = filteredMembers
+                      .where((m) => m.role == GroupRole.member)
+                      .toList();
+
+                  return ListView(
+                    children: [
+                      if (owners.isNotEmpty) ...[
+                        _buildSectionHeader('Owner (${owners.length})'),
+                        ...owners.map(_buildMemberTile),
+                      ],
+                      if (admins.isNotEmpty) ...[
+                        _buildSectionHeader('Admins (${admins.length})'),
+                        ...admins.map(_buildMemberTile),
+                      ],
+                      if (regularMembers.isNotEmpty) ...[
+                        _buildSectionHeader(
+                            'Members (${regularMembers.length})'),
+                        ...regularMembers.map(_buildMemberTile),
+                      ],
+                    ],
                   );
-                }
-
-                // Group by role
-                final owners = filteredMembers.where((m) => m.role == GroupRole.owner).toList();
-                final admins = filteredMembers.where((m) => m.role == GroupRole.admin).toList();
-                final regularMembers = filteredMembers.where((m) => m.role == GroupRole.member).toList();
-
-                return ListView(
-                  children: [
-                    if (owners.isNotEmpty) ...[
-                      _buildSectionHeader('Owner (${owners.length})'),
-                      ...owners.map(_buildMemberTile),
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (e, st) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: DS.error),
+                      const SizedBox(height: DS.md),
+                      Text(
+                        'Failed to load members',
+                        style: TextStyle(color: DS.error, fontSize: 16),
+                      ),
+                      const SizedBox(height: DS.md),
+                      SparkleButton(
+                        label: 'Retry',
+                        onPressed: () => ref
+                            .read(groupMembersProvider(widget.groupId).notifier)
+                            .refresh(),
+                      ),
                     ],
-                    if (admins.isNotEmpty) ...[
-                      _buildSectionHeader('Admins (${admins.length})'),
-                      ...admins.map(_buildMemberTile),
-                    ],
-                    if (regularMembers.isNotEmpty) ...[
-                      _buildSectionHeader('Members (${regularMembers.length})'),
-                      ...regularMembers.map(_buildMemberTile),
-                    ],
-                  ],
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (e, st) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 64, color: DS.error),
-                    const SizedBox(height: DS.md),
-                    Text(
-                      'Failed to load members',
-                      style: TextStyle(color: DS.error, fontSize: 16),
-                    ),
-                    const SizedBox(height: DS.md),
-                    ElevatedButton(
-                      onPressed: () =>
-                          ref.read(groupMembersProvider(widget.groupId).notifier).refresh(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
   }
 
   Widget _buildSectionHeader(String title) => Padding(
-      padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.lg, DS.spacing16, DS.sm),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: DS.neutral600,
+        padding:
+            const EdgeInsets.fromLTRB(DS.spacing16, DS.lg, DS.spacing16, DS.sm),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: DS.neutral600,
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildMemberTile(GroupMemberInfo member) {
     final isOwner = member.role == GroupRole.owner;
     final isAdmin = member.role == GroupRole.admin;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: DS.spacing16, vertical: DS.xs),
+      margin:
+          const EdgeInsets.symmetric(horizontal: DS.spacing16, vertical: DS.xs),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(DS.borderRadiusMD),
@@ -195,7 +224,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => _buildDefaultAvatar(member.user),
+                        errorBuilder: (ctx, err, stack) =>
+                            _buildDefaultAvatar(member.user),
                       ),
                     )
                   : _buildDefaultAvatar(member.user),
@@ -223,7 +253,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
               child: Text(
                 member.user.displayName,
                 style: TextStyle(
-                  fontWeight: isOwner || isAdmin ? FontWeight.bold : FontWeight.normal,
+                  fontWeight:
+                      isOwner || isAdmin ? FontWeight.bold : FontWeight.normal,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -238,7 +269,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 ),
                 child: Text(
                   'OWNER',
-                  style: TextStyle(fontSize: 10, color: DS.neutral900, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: DS.neutral900,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ] else if (isAdmin) ...[
@@ -251,7 +285,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 ),
                 child: Text(
                   'ADMIN',
-                  style: TextStyle(fontSize: 10, color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: DS.brandPrimaryConst,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -286,52 +323,63 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
 
                   if (widget.myRole == GroupRole.owner) {
                     if (member.role == GroupRole.admin) {
-                      items.add(const PopupMenuItem(
-                        value: 'demote',
-                        child: Row(
-                          children: [
-                            Icon(Icons.arrow_downward, size: 18),
-                            SizedBox(width: DS.sm),
-                            Text('Demote to Member'),
-                          ],
+                      items.add(
+                        const PopupMenuItem(
+                          value: 'demote',
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_downward, size: 18),
+                              SizedBox(width: DS.sm),
+                              Text('Demote to Member'),
+                            ],
+                          ),
                         ),
-                      ),);
+                      );
                     } else {
-                      items.add(const PopupMenuItem(
-                        value: 'promote',
+                      items.add(
+                        const PopupMenuItem(
+                          value: 'promote',
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_upward, size: 18),
+                              SizedBox(width: DS.sm),
+                              Text('Promote to Admin'),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    items.add(
+                      PopupMenuItem(
+                        value: 'transfer',
                         child: Row(
                           children: [
-                            Icon(Icons.arrow_upward, size: 18),
-                            SizedBox(width: DS.sm),
-                            Text('Promote to Admin'),
+                            Icon(Icons.supervisor_account,
+                                size: 18, color: DS.warning),
+                            const SizedBox(width: DS.sm),
+                            Text('Transfer Ownership',
+                                style: TextStyle(color: DS.warning)),
                           ],
                         ),
-                      ),);
-                    }
-                    items.add(PopupMenuItem(
-                      value: 'transfer',
-                      child: Row(
-                        children: [
-                          Icon(Icons.supervisor_account, size: 18, color: DS.warning),
-                          const SizedBox(width: DS.sm),
-                          Text('Transfer Ownership', style: TextStyle(color: DS.warning)),
-                        ],
                       ),
-                    ),);
+                    );
                   }
 
                   items.add(const PopupMenuDivider());
 
-                  items.add(PopupMenuItem(
-                    value: 'kick',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_remove, size: 18, color: DS.error),
-                        const SizedBox(width: DS.sm),
-                        Text('Remove from Group', style: TextStyle(color: DS.error)),
-                      ],
+                  items.add(
+                    PopupMenuItem(
+                      value: 'kick',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_remove, size: 18, color: DS.error),
+                          const SizedBox(width: DS.sm),
+                          Text('Remove from Group',
+                              style: TextStyle(color: DS.error)),
+                        ],
+                      ),
                     ),
-                  ),);
+                  );
 
                   return items;
                 },
@@ -340,7 +388,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         onTap: () {
           // TODO: Navigate to user profile
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('View ${member.user.displayName}\'s profile')),
+            SnackBar(
+                content: Text('View ${member.user.displayName}\'s profile')),
           );
         },
       ),
@@ -348,16 +397,16 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
   }
 
   Widget _buildDefaultAvatar(UserBrief user) => CircleAvatar(
-      backgroundColor: _getFlameColor(user.flameLevel),
-      child: Text(
-        user.displayName.substring(0, 1).toUpperCase(),
-        style: TextStyle(
-          color: DS.brandPrimaryConst,
-          fontWeight: FontWeight.bold,
-          fontSize: 20,
+        backgroundColor: _getFlameColor(user.flameLevel),
+        child: Text(
+          user.displayName.substring(0, 1).toUpperCase(),
+          style: TextStyle(
+            color: DS.brandPrimaryConst,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
-      ),
-    );
+      );
 
   Color _getFlameColor(int flamePower) {
     if (flamePower >= 10000) return DS.error;
@@ -366,7 +415,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     return DS.neutral300;
   }
 
-  Future<void> _handleMemberAction(GroupMemberInfo member, String action) async {
+  Future<void> _handleMemberAction(
+      GroupMemberInfo member, String action) async {
     switch (action) {
       case 'promote':
         final confirmed = await _showConfirmDialog(
@@ -375,10 +425,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         );
         if ((confirmed ?? false) && mounted) {
           try {
-            await ref.read(groupMembersProvider(widget.groupId).notifier).promoteMember(member.user.id);
+            await ref
+                .read(groupMembersProvider(widget.groupId).notifier)
+                .promoteMember(member.user.id);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${member.user.displayName} promoted to admin')),
+                SnackBar(
+                    content:
+                        Text('${member.user.displayName} promoted to admin')),
               );
             }
           } catch (e) {
@@ -397,10 +451,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         );
         if ((confirmed ?? false) && mounted) {
           try {
-            await ref.read(groupMembersProvider(widget.groupId).notifier).demoteMember(member.user.id);
+            await ref
+                .read(groupMembersProvider(widget.groupId).notifier)
+                .demoteMember(member.user.id);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${member.user.displayName} demoted to member')),
+                SnackBar(
+                    content:
+                        Text('${member.user.displayName} demoted to member')),
               );
             }
           } catch (e) {
@@ -420,11 +478,15 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         );
         if ((confirmed ?? false) && mounted) {
           try {
-            await ref.read(groupMembersProvider(widget.groupId).notifier).transferOwnership(member.user.id);
+            await ref
+                .read(groupMembersProvider(widget.groupId).notifier)
+                .transferOwnership(member.user.id);
             if (mounted) {
               context.pop(); // Go back to group detail
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Ownership transferred to ${member.user.displayName}')),
+                SnackBar(
+                    content: Text(
+                        'Ownership transferred to ${member.user.displayName}')),
               );
             }
           } catch (e) {
@@ -444,10 +506,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
         );
         if ((confirmed ?? false) && mounted) {
           try {
-            await ref.read(groupMembersProvider(widget.groupId).notifier).kickMember(member.user.id);
+            await ref
+                .read(groupMembersProvider(widget.groupId).notifier)
+                .kickMember(member.user.id);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${member.user.displayName} removed from group')),
+                SnackBar(
+                    content:
+                        Text('${member.user.displayName} removed from group')),
               );
             }
           } catch (e) {
@@ -461,22 +527,26 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     }
   }
 
-  Future<bool?> _showConfirmDialog(String title, String message, {bool isDestructive = false}) => showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: isDestructive ? DS.error : DS.primaryBase),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
+  Future<bool?> _showConfirmDialog(String title, String message,
+          {bool isDestructive = false}) =>
+      showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            SparkleButton.ghost(
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            SparkleButton(
+              label: 'Confirm',
+              onPressed: () => Navigator.pop(context, true),
+              variant: isDestructive
+                  ? ButtonVariant.destructive
+                  : ButtonVariant.primary,
+            ),
+          ],
+        ),
+      );
 }

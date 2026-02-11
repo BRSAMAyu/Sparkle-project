@@ -42,14 +42,14 @@ class ErrorCard extends StatelessWidget {
                   title: const Text('确认删除'),
                   content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
                   actions: [
-                    TextButton(
+                    SparkleButton.ghost(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('取消'),
+                      label: '取消',
                     ),
-                    TextButton(
+                    SparkleButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child:
-                          Text('删除', style: TextStyle(color: DS.semanticError)),
+                      variant: ButtonVariant.destructive,
+                      label: '删除',
                     ),
                   ],
                 ),
@@ -58,17 +58,20 @@ class ErrorCard extends StatelessWidget {
       onDismissed: (_) => onDelete?.call(),
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.only(right: DS.spacing16),
         color: DS.semanticError,
         child: Icon(Icons.delete, color: DS.onBrandPrimary),
       ),
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -76,7 +79,7 @@ class ErrorCard extends StatelessWidget {
                 Row(
                   children: [
                     SubjectChip(subjectCode: error.subject, compact: true),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: DS.spacing8),
                     if (error.chapter != null && error.chapter!.isNotEmpty)
                       Expanded(
                         child: Text(
@@ -92,14 +95,15 @@ class ErrorCard extends StatelessWidget {
                     if (needReview && showReviewStatus)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
+                          horizontal: DS.spacing6,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: theme.colorScheme.error.withValues(alpha: 0.3),
+                            color:
+                                theme.colorScheme.error.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -113,7 +117,7 @@ class ErrorCard extends StatelessWidget {
                       ),
                     if (error.difficulty != null)
                       Padding(
-                        padding: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.only(left: DS.spacing8),
                         child: Row(
                           children: List.generate(
                             5,
@@ -129,7 +133,7 @@ class ErrorCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
 
                 // 题目摘要（限制3行）
                 Text(
@@ -140,7 +144,7 @@ class ErrorCard extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
 
                 // 掌握度进度条
                 if (showReviewStatus) ...[
@@ -160,7 +164,7 @@ class ErrorCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: DS.spacing12),
                       Text(
                         '${(error.masteryLevel * 100).toInt()}%',
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -170,7 +174,7 @@ class ErrorCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: DS.spacing12),
                 ],
 
                 // 底部元信息
@@ -181,20 +185,20 @@ class ErrorCard extends StatelessWidget {
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DS.spacing4),
                     Text(
                       '复习 ${error.reviewCount} 次',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: DS.spacing16),
                     Icon(
                       Icons.access_time,
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DS.spacing4),
                     Text(
                       _formatTime(error.createdAt),
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -208,7 +212,7 @@ class ErrorCard extends StatelessWidget {
                         size: 14,
                         color: theme.colorScheme.primary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: DS.spacing4),
                       Text(
                         'AI已分析',
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -265,15 +269,18 @@ class ErrorCardCompact extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing6,
+      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(DS.spacing12),
           child: Row(
             children: [
               SubjectChip(subjectCode: error.subject, compact: true),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.spacing12),
               Expanded(
                 child: Text(
                   error.questionText,
@@ -282,7 +289,7 @@ class ErrorCardCompact extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.spacing8),
               Icon(
                 Icons.chevron_right,
                 color: theme.colorScheme.onSurfaceVariant,

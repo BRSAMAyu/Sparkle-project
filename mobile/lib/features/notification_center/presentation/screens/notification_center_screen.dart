@@ -11,10 +11,12 @@ class NotificationCenterScreen extends ConsumerStatefulWidget {
   const NotificationCenterScreen({super.key});
 
   @override
-  ConsumerState<NotificationCenterScreen> createState() => _NotificationCenterScreenState();
+  ConsumerState<NotificationCenterScreen> createState() =>
+      _NotificationCenterScreenState();
 }
 
-class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScreen> {
+class _NotificationCenterScreenState
+    extends ConsumerState<NotificationCenterScreen> {
   NotificationFilter _filter = NotificationFilter.all;
   SourceTypeFilter _sourceFilter = SourceTypeFilter.all;
 
@@ -37,10 +39,10 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         actions: [
           // Mark all as read button
           if (state.unreadCount > 0)
-            TextButton.icon(
+            SparkleButton.ghost(
               onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all, size: 20),
-              label: Text('全部已读 (${state.unreadCount})'),
+              icon: const Icon(Icons.done_all, size: DS.iconSizeSm),
+              label: '全部已读 (${state.unreadCount})',
             ),
 
           // Menu
@@ -56,7 +58,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
                 child: Row(
                   children: [
                     Icon(Icons.delete_sweep),
-                    SizedBox(width: 12),
+                    SizedBox(width: DS.spacing12),
                     Text('清除已读'),
                   ],
                 ),
@@ -82,46 +84,57 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
   }
 
   Widget _buildFilterBar() => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.colorCode.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.colorCode.borderSubtle,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.colorCode.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: Theme.of(context).colorScheme.colorCode.borderSubtle,
+            ),
           ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: NotificationFilter.values.map((filter) => NotificationFilterChip(
-                  label: _getFilterLabel(filter),
-                  isSelected: _filter == filter,
-                  onTap: () => _setFilter(filter),
-                ),).toList(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: NotificationFilter.values
+                    .map(
+                      (filter) => NotificationFilterChip(
+                        label: _getFilterLabel(filter),
+                        isSelected: _filter == filter,
+                        onTap: () => _setFilter(filter),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
-          ),
 
-          const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
 
-          // Source type filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: SourceTypeFilter.values.map((filter) => NotificationFilterChip(
-                  label: _getSourceFilterLabel(filter),
-                  isSelected: _sourceFilter == filter,
-                  onTap: () => _setSourceFilter(filter),
-                ),).toList(),
+            // Source type filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: SourceTypeFilter.values
+                    .map(
+                      (filter) => NotificationFilterChip(
+                        label: _getSourceFilterLabel(filter),
+                        isSelected: _sourceFilter == filter,
+                        onTap: () => _setSourceFilter(filter),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildContent(NotificationCenterState state) {
     if (state.isLoading && state.notifications.isEmpty) {
@@ -145,7 +158,7 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         itemCount: filteredNotifications.length,
         itemBuilder: (context, index) {
           final notification = filteredNotifications[index];
@@ -160,48 +173,50 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
   }
 
   Widget _buildError(String error) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            '加载失败',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(error),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _refresh,
-            child: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '加载失败',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(error),
+            const SizedBox(height: DS.spacing16),
+            SparkleButton(
+              onPressed: _refresh,
+              label: '重试',
+            ),
+          ],
+        ),
+      );
 
   Widget _buildEmpty() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            '暂无通知',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.notifications_none,
+                size: DS.spacing64, color: DS.textTertiary),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '暂无通知',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: DS.textSecondary,
+                  ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '当有新通知时，会显示在这里',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '当有新通知时，会显示在这里',
+              style: TextStyle(color: DS.textTertiary),
+            ),
+          ],
+        ),
+      );
 
-  List<UnifiedNotification> _filterNotifications(List<UnifiedNotification> notifications) {
+  List<UnifiedNotification> _filterNotifications(
+      List<UnifiedNotification> notifications) {
     var filtered = notifications;
 
     // Apply status filter
@@ -219,7 +234,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
       case SourceTypeFilter.system:
         filtered = filtered.where((n) => n.sourceType == 'system').toList();
       case SourceTypeFilter.intervention:
-        filtered = filtered.where((n) => n.sourceType == 'intervention').toList();
+        filtered =
+            filtered.where((n) => n.sourceType == 'intervention').toList();
       case SourceTypeFilter.all:
         break;
     }
@@ -263,26 +279,24 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
 
   Future<void> _markAsRead(UnifiedNotification notification) async {
     await ref.read(notificationCenterProvider.notifier).markAsRead(
-      notification.id,
-      notification.sourceType,
-    );
+          notification.id,
+          notification.sourceType,
+        );
   }
 
   Future<void> _markAllAsRead() async {
     await ref.read(notificationCenterProvider.notifier).markAllAsRead();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已标记所有通知为已读')),
-      );
+      AppFeedback.success(context, '已标记所有通知为已读');
     }
   }
 
   Future<void> _deleteNotification(UnifiedNotification notification) async {
     await ref.read(notificationCenterProvider.notifier).deleteNotification(
-      notification.id,
-      notification.sourceType,
-    );
+          notification.id,
+          notification.sourceType,
+        );
   }
 
   Future<void> _clearReadNotifications() async {
@@ -292,25 +306,25 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
         title: const Text('清除已读通知'),
         content: const Text('确定要清除所有已读通知吗？'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
+            label: '确定',
           ),
         ],
       ),
     );
 
     if (confirmed ?? false) {
-      await ref.read(notificationCenterProvider.notifier).clearReadNotifications();
+      await ref
+          .read(notificationCenterProvider.notifier)
+          .clearReadNotifications();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已清除已读通知')),
-        );
+        AppFeedback.success(context, '已清除已读通知');
       }
     }
   }
@@ -326,7 +340,6 @@ extension ColorSchemeExtension on ColorScheme {
 }
 
 class _CustomColors {
-
   _CustomColors(this.colorScheme);
   final ColorScheme colorScheme;
 

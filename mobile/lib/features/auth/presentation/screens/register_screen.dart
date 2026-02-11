@@ -58,16 +58,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ErrorMessages.getLocalizedMessage(
-                l10n,
-                'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-                next.error,
-              ),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
+        AppFeedback.error(
+          context,
+          ErrorMessages.getLocalizedMessage(
+            l10n,
+            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
+            next.error,
           ),
         );
       }
@@ -76,13 +72,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/login'),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: Text(l10n.register),
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       ),
       body: SafeArea(
         child: ContentConstraint(
@@ -93,7 +91,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: DS.spacing20),
                   Text(
                     l10n.joinSparkle,
                     textAlign: TextAlign.center,
@@ -151,14 +149,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
+                      suffixIcon: SparkleIconButton(
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility_off
                               : Icons.visibility,
                         ),
                         onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible,),
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
                       ),
                     ),
                     validator: (value) {
@@ -189,30 +190,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: DS.xl),
 
                   // Register Button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: DS.brandPrimary,
-                      foregroundColor: Colors.white,
-                    ),
+                  SparkleButton(
+                    label: l10n.register,
                     onPressed: authState.isLoading ? null : _submit,
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(l10n.register),
+                    variant: ButtonVariant.primary,
+                    expand: true,
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
                   ),
                   const SizedBox(height: DS.lg),
 
                   // Login Link
-                  TextButton(
+                  SparkleButton.ghost(
+                    label: l10n.hasAccount,
                     onPressed: () => context.go('/login'),
-                    child: Text(l10n.hasAccount),
                   ),
                 ],
               ),

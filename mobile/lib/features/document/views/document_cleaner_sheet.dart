@@ -67,7 +67,8 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
       decoration: BoxDecoration(
         color: isDark ? DS.neutral900 : DS.brandPrimary,
         borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(DS.borderRadiusXl),),
+          top: Radius.circular(DS.borderRadiusXl),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -102,7 +103,8 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
               } else if (taskStatus.status == 'queued' ||
                   taskStatus.status == 'processing') {
                 return _buildProgress(taskStatus, isDark);
-              } else if (taskStatus.status == 'completed' && taskStatus.result != null) {
+              } else if (taskStatus.status == 'completed' &&
+                  taskStatus.result != null) {
                 return _buildSuccess(taskStatus.result!, isDark);
               } else {
                 return _buildError(taskStatus.message, isDark);
@@ -138,21 +140,28 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.cloud_upload_outlined,
-                              size: 48, color: DS.primaryBase,),
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 48,
+                            color: DS.primaryBase,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             '点击选择 PDF/Word/PPT',
                             style: TextStyle(
-                                color: isDark ? DS.neutral400 : DS.neutral600,),
+                              color: isDark ? DS.neutral400 : DS.neutral600,
+                            ),
                           ),
                         ],
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.insert_drive_file,
-                              size: 48, color: DS.primaryBase,),
+                          Icon(
+                            Icons.insert_drive_file,
+                            size: 48,
+                            color: DS.primaryBase,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             _selectedFile!.path.split('/').last,
@@ -161,10 +170,12 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                               color: isDark ? DS.brandPrimary : DS.neutral900,
                             ),
                           ),
-                          TextButton(
-                            onPressed: _pickFile,
-                            child: Text('更换文件',
-                                style: TextStyle(color: DS.primaryBase),),
+                          SparkleButton(
+                            label: '更换文件',
+                            variant: ButtonVariant.ghost,
+                            onPressed: () {
+                              _pickFile();
+                            },
                           ),
                         ],
                       ),
@@ -202,19 +213,15 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
               ],
             ),
           ],
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _selectedFile == null ? null : _startCleaning,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              backgroundColor: DS.primaryBase,
-              foregroundColor: DS.brandPrimaryConst,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(27),),
-              elevation: 0,
-            ),
-            child: const Text('开始 AI 清洗',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
+          const SizedBox(height: DS.xl),
+          SparkleButton(
+            expand: true,
+            label: '开始 AI 清洗',
+            onPressed: _selectedFile == null
+                ? null
+                : () {
+                    _startCleaning();
+                  },
           ),
         ],
       );
@@ -232,7 +239,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.transparent,
+          color: isSelected ? color : DS.surfacePrimary.withValues(alpha: 0),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color, width: 1.5),
         ),
@@ -290,7 +297,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
   Widget _buildSuccess(CleaningResult result, bool isDark) => Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             decoration: BoxDecoration(
               color: DS.success.withValues(alpha: 0.1),
               shape: BoxShape.circle,
@@ -298,7 +305,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
             child:
                 Icon(Icons.check_circle_rounded, color: DS.success, size: 64),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           Text(
             '文档分析成功！',
             style: TextStyle(
@@ -312,24 +319,19 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
             '已提取 ${result.charCount} 字符 \n分析模式: ${result.mode == "map_reduce" ? "深度摘要" : "全量清洗"}',
             textAlign: TextAlign.center,
             style: TextStyle(
-                color: isDark ? DS.neutral400 : DS.neutral600, height: 1.5,),
+              color: isDark ? DS.neutral400 : DS.neutral600,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton.icon(
+          SparkleButton(
+            expand: true,
             onPressed: () {
               widget.onResult(result.summary);
               Navigator.pop(context);
             },
             icon: const Icon(Icons.send_rounded),
-            label: const Text('将摘要发送到对话',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              backgroundColor: DS.success,
-              foregroundColor: DS.brandPrimaryConst,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(27),),
-            ),
+            label: '将摘要发送到对话',
           ),
           const SizedBox(height: 12),
         ],
@@ -338,7 +340,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
   Widget _buildError(String message, bool isDark) => Column(
         children: [
           Icon(Icons.error_outline_rounded, color: DS.error, size: 64),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           Text(
             '清洗处理失败',
             style: TextStyle(
@@ -354,12 +356,11 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
             style: TextStyle(color: DS.error),
           ),
           const SizedBox(height: 32),
-          TextButton(
+          SparkleButton(
+            label: '重新尝试',
+            variant: ButtonVariant.ghost,
             onPressed: () =>
                 ref.read(documentControllerProvider.notifier).reset(),
-            child: Text('重新尝试',
-                style: TextStyle(
-                    color: DS.primaryBase, fontWeight: FontWeight.bold,),),
           ),
         ],
       );

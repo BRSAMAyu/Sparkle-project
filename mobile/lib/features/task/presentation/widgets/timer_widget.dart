@@ -167,15 +167,14 @@ class _TimerWidgetState extends State<TimerWidget>
             scale: animation,
             child: FadeTransition(opacity: animation, child: child),
           ),
-          child: IconButton(
+          child: GestureDetector(
             key: ValueKey(_isRunning),
-            icon: Icon(_isRunning
-                ? Icons.pause_circle_filled
-                : Icons.play_circle_filled,),
-            iconSize: 80, // Slightly larger
-            color: DS.primaryBase,
-            onPressed: _toggleTimer,
-            padding: EdgeInsets.zero,
+            onTap: _toggleTimer,
+            child: Icon(
+              _isRunning ? Icons.pause_circle_filled : Icons.play_circle_filled,
+              size: 80,
+              color: DS.primaryBase,
+            ),
           ),
         ),
       ],

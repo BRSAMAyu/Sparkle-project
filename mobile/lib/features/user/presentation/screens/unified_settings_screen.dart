@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,20 +38,21 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.schedulePreferences),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: l10n.confirm,
             onPressed: () {
-              // TODO: Save all settings
               if (context.mounted) {
                 context.pop();
               }
             },
-            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -57,253 +60,276 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.spacing16),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader(Icons.psychology, l10n.learningMode),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.dragToAdjust,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
-            ),
-            const SizedBox(height: DS.spacing16),
-            LearningModeControl(
-              depth: learningPrefs.depth,
-              curiosity: learningPrefs.curiosity,
-              onChanged: (d, c) {
-                ref.read(learningPreferencesProvider.notifier).updatePreferences(
-                      depth: d,
-                      curiosity: c,
-                    );
-              },
-            ),
-            const SizedBox(height: DS.spacing32),
-
-            // ========== 胶囊生成区域 ==========
-            _buildSectionHeader(Icons.auto_awesome, l10n.capsuleGeneration),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.adjustAndGenerate,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
-            ),
-            const SizedBox(height: DS.spacing16),
-
-            // 二维控制面板
-            PreferenceController2D(
-              initialDepth: learningPrefs.depth,
-              initialCuriosity: learningPrefs.curiosity,
-              onPreferenceChanged: (offset) {
-                ref.read(learningPreferencesProvider.notifier).updatePreferences(
-                      depth: offset.dy,
-                      curiosity: offset.dx,
-                    );
-              },
-            ),
-            const SizedBox(height: DS.spacing16),
-
-            // 生成预览卡片
-            CapsuleGenerationPreview(
-              depthPreference: learningPrefs.depth,
-              curiosityPreference: learningPrefs.curiosity,
-            ),
-            const SizedBox(height: DS.spacing16),
-
-            // 立即生成按钮
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isGenerating
-                    ? null
-                    : () => _requestCapsuleGeneration(context, l10n),
-                icon: _isGenerating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome),
-                label: Text(_isGenerating ? l10n.generating : l10n.generateNow),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: DS.primaryBase,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: DS.borderRadius12,
-                  ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader(Icons.psychology, l10n.learningMode),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.dragToAdjust,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: DS.fontSizeSm,
                 ),
               ),
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.selectTimeSlots,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeSm),
-            ),
-            const SizedBox(height: DS.spacing16),
-            WeeklyAgendaGrid(
-              initialData: ref.watch(weeklyAgendaProvider),
-              onChanged: (data) {
-                ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
-              },
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.brightness_6, l10n.theme),
-            const SizedBox(height: DS.spacing16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.theme),
-              subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
-              trailing: DropdownButton<AppThemeMode>(
-                value: ref.watch(appThemeModeProvider),
-                underline: const SizedBox.shrink(),
-                onChanged: (AppThemeMode? newValue) {
-                  if (newValue != null) {
-                    ref.read(themeManagerProvider).setAppThemeMode(newValue);
-                  }
+              const SizedBox(height: DS.spacing16),
+              LearningModeControl(
+                depth: learningPrefs.depth,
+                curiosity: learningPrefs.curiosity,
+                onChanged: (d, c) {
+                  ref
+                      .read(learningPreferencesProvider.notifier)
+                      .updatePreferences(
+                        depth: d,
+                        curiosity: c,
+                      );
                 },
-                items: [
-                  DropdownMenuItem(
-                      value: AppThemeMode.system,
-                      child: Text(l10n.followSystem),),
-                  DropdownMenuItem(
-                      value: AppThemeMode.light, child: Text(l10n.lightMode),),
-                  DropdownMenuItem(
-                      value: AppThemeMode.dark, child: Text(l10n.darkMode),),
-                ],
               ),
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.touch_app, l10n.interactionSettings),
-            const SizedBox(height: DS.spacing16),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.enterToSend),
-              subtitle: Text(l10n.enterToSendDescription),
-              value: enterToSend,
-              onChanged: (v) =>
-                  ref.read(enterToSendProvider.notifier).setEnabled(v),
-              activeThumbColor: DS.primaryBase,
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.notifications, l10n.notificationSettings),
-            const SizedBox(height: DS.spacing16),
-            SwitchListTile(
-              title: Text(l10n.enableNotifications),
-              subtitle: const Text('接收智能推送和学习提醒'),
-              value: pushPrefs.enableCuriosity,
-              onChanged: (v) {
-                ref.read(pushPreferencesProvider.notifier).toggleEnableCuriosity();
-              },
-              activeThumbColor: DS.primaryBase,
-            ),
-            SwitchListTile(
-              title: Text(l10n.smartReminders),
-              subtitle: Text(l10n.pushMicroTasks),
-              value: pushPrefs.dailyCap > 0,
-              onChanged: (v) {
-                ref.read(pushPreferencesProvider.notifier).updatePreferences(
-                      dailyCap: v ? 5 : 0,
-                    );
-              },
-              activeThumbColor: DS.primaryBase,
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.visibility, l10n.transparentMode),
-            const SizedBox(height: DS.spacing16),
-            SwitchListTile(
-              title: Text(l10n.enableTransparentMode),
-              subtitle: Text(l10n.showStatusOverview),
-              value: transparentMode,
-              onChanged: (v) => ref
-                  .read(transparencyLevelProvider.notifier)
-                  .setLevel(v ? 2 : 0),
-              activeThumbColor: DS.primaryBase,
-            ),
-            if (transparentMode) ...[
-              const SizedBox(height: DS.spacing8),
+              const SizedBox(height: DS.spacing32),
+
+              // ========== 胶囊生成区域 ==========
+              _buildSectionHeader(Icons.auto_awesome, l10n.capsuleGeneration),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.adjustAndGenerate,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+
+              // 二维控制面板
+              PreferenceController2D(
+                initialDepth: learningPrefs.depth,
+                initialCuriosity: learningPrefs.curiosity,
+                onPreferenceChanged: (offset) {
+                  ref
+                      .read(learningPreferencesProvider.notifier)
+                      .updatePreferences(
+                        depth: offset.dy,
+                        curiosity: offset.dx,
+                      );
+                },
+              ),
+              const SizedBox(height: DS.spacing16),
+
+              // 生成预览卡片
+              CapsuleGenerationPreview(
+                depthPreference: learningPrefs.depth,
+                curiosityPreference: learningPrefs.curiosity,
+              ),
+              const SizedBox(height: DS.spacing16),
+
+              // 立即生成按钮
+              SparkleButton(
+                expand: true,
+                label: _isGenerating ? l10n.generating : l10n.generateNow,
+                icon: _isGenerating ? null : const Icon(Icons.auto_awesome),
+                onPressed: _isGenerating
+                    ? null
+                    : () {
+                        unawaited(_requestCapsuleGeneration(context, l10n));
+                      },
+                loading: _isGenerating,
+              ),
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                l10n.selectTimeSlots,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: DS.fontSizeSm,
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              WeeklyAgendaGrid(
+                initialData: ref.watch(weeklyAgendaProvider),
+                onChanged: (data) {
+                  ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
+                },
+              ),
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(Icons.brightness_6, l10n.theme),
+              const SizedBox(height: DS.spacing16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(l10n.transparencyLevel),
-                subtitle: Text('${l10n.basic}/${l10n.standard}/${l10n.advanced}'),
-                trailing: DropdownButton<int>(
-                  value: transparencyLevel,
+                title: Text(l10n.theme),
+                subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
+                trailing: DropdownButton<AppThemeMode>(
+                  value: ref.watch(appThemeModeProvider),
                   underline: const SizedBox.shrink(),
-                  onChanged: (level) {
-                    if (level != null) {
-                      ref.read(transparencyLevelProvider.notifier).setLevel(level);
+                  onChanged: (AppThemeMode? newValue) {
+                    if (newValue != null) {
+                      ref.read(themeManagerProvider).setAppThemeMode(newValue);
                     }
                   },
                   items: [
-                    DropdownMenuItem(value: 0, child: Text(l10n.cancel)), // Reuse "关闭/Cancel" as "Off"
-                    DropdownMenuItem(value: 1, child: Text(l10n.basic)),
-                    DropdownMenuItem(value: 2, child: Text(l10n.standard)),
-                    DropdownMenuItem(value: 3, child: Text(l10n.advanced)),
+                    DropdownMenuItem(
+                      value: AppThemeMode.system,
+                      child: Text(l10n.followSystem),
+                    ),
+                    DropdownMenuItem(
+                      value: AppThemeMode.light,
+                      child: Text(l10n.lightMode),
+                    ),
+                    DropdownMenuItem(
+                      value: AppThemeMode.dark,
+                      child: Text(l10n.darkMode),
+                    ),
                   ],
                 ),
               ),
-            ],
-            const SizedBox(height: DS.spacing16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.systemFeedback),
-              subtitle: Text(l10n.controlUpdateDetails),
-              trailing: DropdownButton<int>(
-                value: systemUpdateLevel,
-                underline: const SizedBox.shrink(),
-                onChanged: (level) {
-                  if (level != null) {
-                    ref.read(systemUpdateLevelProvider.notifier).setLevel(level);
-                  }
-                },
-                items: [
-                  DropdownMenuItem(value: 0, child: Text(l10n.silent)),
-                  DropdownMenuItem(value: 1, child: Text(l10n.summary)),
-                  DropdownMenuItem(value: 2, child: Text(l10n.detailed)),
-                ],
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(Icons.touch_app, l10n.interactionSettings),
+              const SizedBox(height: DS.spacing16),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.enterToSend),
+                subtitle: Text(l10n.enterToSendDescription),
+                value: enterToSend,
+                onChanged: (v) =>
+                    ref.read(enterToSendProvider.notifier).setEnabled(v),
+                activeThumbColor: DS.primaryBase,
               ),
-            ),
-            const SizedBox(height: DS.spacing32),
-            _buildSectionHeader(Icons.sync, l10n.sync),
-            const SizedBox(height: DS.spacing16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.sync),
-              title: Text(l10n.syncCenter),
-              subtitle: Text(l10n.viewOfflineQueue),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SyncCenterScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: DS.spacing64),
-            Center(
-              child: GestureDetector(
-                onLongPress: () {
-                  showDialog<void>(
-                    context: context,
-                    builder: (context) => const ChaosControlDialog(),
-                  );
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(
+                Icons.notifications,
+                l10n.notificationSettings,
+              ),
+              const SizedBox(height: DS.spacing16),
+              SwitchListTile(
+                title: Text(l10n.enableNotifications),
+                subtitle: const Text('接收智能推送和学习提醒'),
+                value: pushPrefs.enableCuriosity,
+                onChanged: (v) {
+                  ref
+                      .read(pushPreferencesProvider.notifier)
+                      .toggleEnableCuriosity();
                 },
-                child: Text(
-                  l10n.version,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: DS.fontSizeXs),
+                activeThumbColor: DS.primaryBase,
+              ),
+              SwitchListTile(
+                title: Text(l10n.smartReminders),
+                subtitle: Text(l10n.pushMicroTasks),
+                value: pushPrefs.dailyCap > 0,
+                onChanged: (v) {
+                  ref.read(pushPreferencesProvider.notifier).updatePreferences(
+                        dailyCap: v ? 5 : 0,
+                      );
+                },
+                activeThumbColor: DS.primaryBase,
+              ),
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(Icons.visibility, l10n.transparentMode),
+              const SizedBox(height: DS.spacing16),
+              SwitchListTile(
+                title: Text(l10n.enableTransparentMode),
+                subtitle: Text(l10n.showStatusOverview),
+                value: transparentMode,
+                onChanged: (v) => ref
+                    .read(transparencyLevelProvider.notifier)
+                    .setLevel(v ? 2 : 0),
+                activeThumbColor: DS.primaryBase,
+              ),
+              if (transparentMode) ...[
+                const SizedBox(height: DS.spacing8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.transparencyLevel),
+                  subtitle: Text(
+                    '${l10n.basic}/${l10n.standard}/${l10n.advanced}',
+                  ),
+                  trailing: DropdownButton<int>(
+                    value: transparencyLevel,
+                    underline: const SizedBox.shrink(),
+                    onChanged: (level) {
+                      if (level != null) {
+                        ref
+                            .read(transparencyLevelProvider.notifier)
+                            .setLevel(level);
+                      }
+                    },
+                    items: [
+                      // Reuse "关闭/Cancel" as "Off"
+                      DropdownMenuItem(value: 0, child: Text(l10n.cancel)),
+                      DropdownMenuItem(value: 1, child: Text(l10n.basic)),
+                      DropdownMenuItem(value: 2, child: Text(l10n.standard)),
+                      DropdownMenuItem(value: 3, child: Text(l10n.advanced)),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: DS.spacing16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.systemFeedback),
+                subtitle: Text(l10n.controlUpdateDetails),
+                trailing: DropdownButton<int>(
+                  value: systemUpdateLevel,
+                  underline: const SizedBox.shrink(),
+                  onChanged: (level) {
+                    if (level != null) {
+                      ref
+                          .read(systemUpdateLevelProvider.notifier)
+                          .setLevel(level);
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(value: 0, child: Text(l10n.silent)),
+                    DropdownMenuItem(value: 1, child: Text(l10n.summary)),
+                    DropdownMenuItem(value: 2, child: Text(l10n.detailed)),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: DS.spacing32),
-          ],
+              const SizedBox(height: DS.spacing32),
+              _buildSectionHeader(Icons.sync, l10n.sync),
+              const SizedBox(height: DS.spacing16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.sync),
+                title: Text(l10n.syncCenter),
+                subtitle: Text(l10n.viewOfflineQueue),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SyncCenterScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: DS.spacing64),
+              Center(
+                child: GestureDetector(
+                  onLongPress: () {
+                    showDialog<void>(
+                      context: context,
+                      builder: (context) => const ChaosControlDialog(),
+                    );
+                  },
+                  child: Text(
+                    l10n.version,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
+                      fontSize: DS.fontSizeXs,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing32),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Future<void> _requestCapsuleGeneration(BuildContext context, AppLocalizations l10n) async {
+  Future<void> _requestCapsuleGeneration(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
     setState(() => _isGenerating = true);
 
     try {
@@ -325,36 +351,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
       if (mounted) {
         if (taskId != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.capsuleTaskCreated),
-              backgroundColor: DS.success,
-              action: SnackBarAction(
-                label: l10n.view,
-                textColor: Colors.white,
-                onPressed: () {
-                  // TODO: 导航到任务状态页
-                },
-              ),
-            ),
-          );
+          AppFeedback.success(context, l10n.capsuleTaskCreated);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.generationFailed),
-              backgroundColor: DS.error,
-            ),
-          );
+          AppFeedback.error(context, l10n.generationFailed);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.generationFailedWithDetail(e.toString())),
-            backgroundColor: DS.error,
-          ),
-        );
+        AppFeedback.error(
+            context, l10n.generationFailedWithDetail(e.toString()));
       }
     } finally {
       if (mounted) {

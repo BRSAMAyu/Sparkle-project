@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation_dialog.dart';
 import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
@@ -89,20 +90,20 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
             Icon(
               Icons.shopping_bag_outlined,
               size: 64,
-              color: Colors.grey[400],
+              color: DS.textTertiary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             Text(
               '暂无物品',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
+                    color: DS.textSecondary,
                   ),
             ),
             if (state.error != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.spacing8),
               Text(
                 state.error!,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: DS.error),
               ),
             ],
           ],
@@ -111,7 +112,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 16,
@@ -141,19 +142,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
 
           if (success && mounted) {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('成功购买 ${item.name}'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            AppFeedback.success(context, '成功购买 ${item.name}');
           } else if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(ref.read(shopItemsProvider).error ?? '购买失败'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            AppFeedback.error(context, ref.read(shopItemsProvider).error ?? '购买失败');
           }
         },
       ),

@@ -294,7 +294,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   Widget _buildStepStream(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        margin: const EdgeInsets.fromLTRB(DS.md, 0, DS.md, DS.md),
         padding: EdgeInsets.all(context.sparkleSpacing.md),
         decoration: BoxDecoration(
           color: DS.surfacePrimary,

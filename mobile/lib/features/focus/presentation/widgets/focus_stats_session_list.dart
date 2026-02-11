@@ -142,20 +142,20 @@ class _SessionItem extends StatelessWidget {
   }
 
   Widget _buildStatusIcon(bool isCompleted) => Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: isCompleted
-            ? DS.brandPrimary.withValues(alpha: 0.15)
-            : DS.neutral200,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        isCompleted ? Icons.check : Icons.close,
-        color: isCompleted ? DS.brandPrimary : DS.neutral500,
-        size: 18,
-      ),
-    );
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: isCompleted
+              ? DS.brandPrimary.withValues(alpha: 0.15)
+              : DS.neutral200,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          isCompleted ? Icons.check : Icons.close,
+          color: isCompleted ? DS.brandPrimary : DS.neutral500,
+          size: 18,
+        ),
+      );
 
   Widget _buildFocusTypeBadge(String focusType) {
     final isPomodoro = focusType == 'pomodoro';
@@ -165,16 +165,15 @@ class _SessionItem extends StatelessWidget {
         vertical: DS.xs,
       ),
       decoration: BoxDecoration(
-        color: isPomodoro
-            ? Colors.deepPurple.withValues(alpha: 0.1)
-            : DS.neutral200,
+        color:
+            isPomodoro ? DS.prismPurple.withValues(alpha: 0.1) : DS.neutral200,
         borderRadius: BorderRadius.circular(DS.sm),
       ),
       child: Text(
         isPomodoro ? '番茄' : '正计',
         style: TextStyle(
           fontSize: 11,
-          color: isPomodoro ? Colors.deepPurple : DS.neutral600,
+          color: isPomodoro ? DS.prismPurple : DS.neutral600,
           fontWeight: FontWeight.w500,
         ),
       ),

@@ -626,7 +626,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     required IconData icon,
   }) =>
       Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
@@ -669,7 +669,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
       children: [
         // Filters
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.lg),
           child: Row(
             children: [
               // Status filter
@@ -754,7 +754,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
             });
           },
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Row(
               children: [
                 // Priority indicator
@@ -880,7 +880,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
       children: [
         // Header with back button
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.lg),
           child: Row(
             children: [
               SparkleIconButton(
@@ -916,7 +916,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         // Case details
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -939,7 +939,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Scores
                 Text(
@@ -973,7 +973,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                 if (caseData.scoreDiscrepancy > 0.1) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: DS.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -993,7 +993,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   ),
                 ],
 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Appeal information
                 Text(
@@ -1011,7 +1011,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                 if (caseData.assignedTo != null)
                   _buildInfoRow(theme, '分配给', caseData.assignedTo!),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Notes
                 if (caseData.notes.isNotEmpty) ...[
@@ -1105,7 +1105,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
             : DS.error;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -1206,7 +1206,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(DS.lg),
               child: Text(
                 '选择优先级',
                 style: TextStyle(

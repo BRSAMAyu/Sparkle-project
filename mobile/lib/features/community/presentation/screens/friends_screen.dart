@@ -18,7 +18,9 @@ class FriendsScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -56,8 +58,11 @@ class _MyFriendsTab extends ConsumerWidget {
       data: (friends) {
         if (friends.isEmpty) {
           return const Center(
-              child: CompactEmptyState(
-                  message: 'No friends yet', icon: Icons.people_outline,),);
+            child: CompactEmptyState(
+              message: 'No friends yet',
+              icon: Icons.people_outline,
+            ),
+          );
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
@@ -70,7 +75,8 @@ class _MyFriendsTab extends ConsumerWidget {
               return InkWell(
                 onTap: () {
                   context.push(
-                      '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',);
+                    '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
+                  );
                 },
                 child: Padding(
                   padding:
@@ -84,10 +90,11 @@ class _MyFriendsTab extends ConsumerWidget {
                               Border.all(color: DS.brandPrimaryConst, width: 2),
                           boxShadow: [
                             BoxShadow(
-                                color: DS.brandPrimaryConst
-                                    .withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),),
+                              color:
+                                  DS.brandPrimaryConst.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: CircleAvatar(
@@ -104,17 +111,28 @@ class _MyFriendsTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(friend.displayName,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500, fontSize: 16,),),
-                            Text('Lv.${friend.flameLevel}',
-                                style: TextStyle(
-                                    color: DS.brandPrimaryConst, fontSize: 12,),),
+                            Text(
+                              friend.displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'Lv.${friend.flameLevel}',
+                              style: TextStyle(
+                                color: DS.brandPrimaryConst,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right,
-                          size: 20, color: DS.brandPrimaryConst,),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: DS.brandPrimaryConst,
+                      ),
                     ],
                   ),
                 ),
@@ -125,10 +143,12 @@ class _MyFriendsTab extends ConsumerWidget {
       },
       loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(
-          child: CustomErrorWidget.page(
-              context: context,
-              message: e.toString(),
-              onRetry: () => ref.read(friendsProvider.notifier).refresh(),),),
+        child: CustomErrorWidget.page(
+          context: context,
+          message: e.toString(),
+          onRetry: () => ref.read(friendsProvider.notifier).refresh(),
+        ),
+      ),
     );
   }
 }
@@ -168,7 +188,9 @@ class _PendingRequestsTab extends ConsumerWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 36,
                         icon: Icon(Icons.check, color: DS.success),
                         onPressed: () {
                           ref
@@ -177,7 +199,9 @@ class _PendingRequestsTab extends ConsumerWidget {
                           ref.read(friendsProvider.notifier).refresh();
                         },
                       ),
-                      IconButton(
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 36,
                         icon: Icon(Icons.close, color: DS.error),
                         onPressed: () {
                           ref
@@ -195,11 +219,12 @@ class _PendingRequestsTab extends ConsumerWidget {
       },
       loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(
-          child: CustomErrorWidget.page(
-              context: context,
-              message: e.toString(),
-              onRetry: () =>
-                  ref.read(pendingRequestsProvider.notifier).refresh(),),),
+        child: CustomErrorWidget.page(
+          context: context,
+          message: e.toString(),
+          onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh(),
+        ),
+      ),
     );
   }
 }
@@ -236,14 +261,17 @@ class _RecommendationsTab extends ConsumerWidget {
                   ),
                   title: Text(rec.user.displayName),
                   subtitle: Text('Match: ${(rec.matchScore * 100).toInt()}%'),
-                  trailing: IconButton(
+                  trailing: SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 36,
                     icon: const Icon(Icons.person_add),
                     onPressed: () {
                       ref
                           .read(friendRecommendationsProvider.notifier)
                           .sendRequest(rec.user.id);
                       ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Request sent')),);
+                        const SnackBar(content: Text('Request sent')),
+                      );
                     },
                   ),
                 ),
@@ -254,11 +282,13 @@ class _RecommendationsTab extends ConsumerWidget {
       },
       loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(
-          child: CustomErrorWidget.page(
-              context: context,
-              message: e.toString(),
-              onRetry: () =>
-                  ref.read(friendRecommendationsProvider.notifier).refresh(),),),
+        child: CustomErrorWidget.page(
+          context: context,
+          message: e.toString(),
+          onRetry: () =>
+              ref.read(friendRecommendationsProvider.notifier).refresh(),
+        ),
+      ),
     );
   }
 }

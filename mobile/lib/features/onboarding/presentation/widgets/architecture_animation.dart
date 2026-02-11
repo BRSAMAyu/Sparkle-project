@@ -271,15 +271,27 @@ class _ArchitecturePainter extends CustomPainter {
     // Draw connections
     if (currentStep >= 1) {
       _drawConnection(
-          canvas, mobilePos, gatewayPos, currentStep >= 1 ? fadeValue : 0,);
+        canvas,
+        mobilePos,
+        gatewayPos,
+        currentStep >= 1 ? fadeValue : 0,
+      );
     }
     if (currentStep >= 2) {
       _drawConnection(
-          canvas, gatewayPos, agentPos, currentStep >= 2 ? fadeValue : 0,);
+        canvas,
+        gatewayPos,
+        agentPos,
+        currentStep >= 2 ? fadeValue : 0,
+      );
     }
     if (currentStep >= 3) {
       _drawConnection(
-          canvas, agentPos, dbPos, currentStep >= 3 ? fadeValue : 0,);
+        canvas,
+        agentPos,
+        dbPos,
+        currentStep >= 3 ? fadeValue : 0,
+      );
     }
 
     // Draw data flow particles
@@ -317,7 +329,7 @@ class _ArchitecturePainter extends CustomPainter {
         'Python\nAgent',
         Icons.psychology.codePoint,
         currentStep >= 2 ? fadeValue : 0,
-        Colors.purple.shade400,
+        DS.prismPurple,
       );
     }
     if (currentStep >= 3) {
@@ -381,7 +393,11 @@ class _ArchitecturePainter extends CustomPainter {
   }
 
   void _drawConnection(
-      Canvas canvas, Offset start, Offset end, double opacity,) {
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    double opacity,
+  ) {
     final paint = Paint()
       ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
       ..strokeWidth = 2
@@ -417,14 +433,14 @@ class _ArchitecturePainter extends CustomPainter {
     final position = Offset.lerp(start, end, progress) ?? start;
 
     final paint = Paint()
-      ..color = Colors.cyan.withValues(alpha: 0.8)
+      ..color = DS.info.withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(position, 6, paint);
 
     // Glow effect
     final glowPaint = Paint()
-      ..color = Colors.cyan.withValues(alpha: 0.3)
+      ..color = DS.info.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
     canvas.drawCircle(position, 12, glowPaint);

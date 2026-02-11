@@ -12,41 +12,45 @@ class PlanEditScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.editPlan),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+      appBar: AppBar(
+        title: Text(l10n.editPlan),
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: ContentConstraint(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.construction, size: 80, color: DS.brandPrimary),
+              const SizedBox(height: DS.lg),
+              Text(
+                l10n.planEditInProgress,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                '${l10n.planId}: $planId',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                l10n.featureInDevelopment,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.xl),
+              SparkleButton.primary(
+                label: l10n.back,
+                onPressed: () => context.pop(),
+              ),
+            ],
           ),
         ),
-        body: ContentConstraint(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-                const SizedBox(height: DS.lg),
-                Text(
-                  l10n.planEditInProgress,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  '${l10n.planId}: $planId',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  l10n.featureInDevelopment,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.xl),
-                SparkleButton.primary(
-                    label: l10n.back, onPressed: () => context.pop(),),
-              ],
-            ),
-          ),
-        ),
-      );
+      ),
+    );
   }
 }

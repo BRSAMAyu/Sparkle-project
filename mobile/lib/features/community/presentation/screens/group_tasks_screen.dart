@@ -18,17 +18,22 @@ class GroupTasksScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Group Tasks'),),
-      floatingActionButton: FloatingActionButton(
+        title: const Text('Group Tasks'),
+      ),
+      floatingActionButton: SparkleIconButton(
+        variant: ButtonVariant.primary,
+        size: DS.touchTargetMinSize,
+        icon: const Icon(Icons.add),
         onPressed: () {
           // Feature: Show task creation dialog
           _showCreateTaskDialog(context, ref);
         },
-        child: const Icon(Icons.add),
       ),
       body: tasksState.when(
         data: (tasks) {
@@ -66,13 +71,19 @@ class GroupTasksScreen extends ConsumerWidget {
                           const SizedBox(height: DS.xs),
                           Row(
                             children: [
-                              Icon(Icons.timer,
-                                  size: 14, color: DS.brandPrimaryConst,),
+                              Icon(
+                                Icons.timer,
+                                size: 14,
+                                color: DS.brandPrimaryConst,
+                              ),
                               const SizedBox(width: DS.xs),
                               Text('${task.estimatedMinutes} min'),
                               const SizedBox(width: DS.md),
-                              Icon(Icons.people,
-                                  size: 14, color: DS.brandPrimaryConst,),
+                              Icon(
+                                Icons.people,
+                                size: 14,
+                                color: DS.brandPrimaryConst,
+                              ),
                               const SizedBox(width: DS.xs),
                               Text('${task.totalClaims} claimed'),
                             ],
@@ -82,8 +93,10 @@ class GroupTasksScreen extends ConsumerWidget {
                       trailing: task.isClaimedByMe
                           ? (task.myCompletionStatus ?? false
                               ? Icon(Icons.check_circle, color: DS.success)
-                              : Icon(Icons.hourglass_bottom,
-                                  color: DS.brandPrimaryConst,))
+                              : Icon(
+                                  Icons.hourglass_bottom,
+                                  color: DS.brandPrimaryConst,
+                                ))
                           : SparkleButton.primary(
                               label: 'Claim',
                               onPressed: () {
@@ -185,24 +198,25 @@ class GroupTasksScreen extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(
+            SparkleButton.ghost(
+              label: '取消',
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
             ),
-            ElevatedButton(
+            SparkleButton.primary(
+              label: '创建',
               onPressed: () async {
                 final title = titleController.text.trim();
                 if (title.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入任务标题')),
-                  );
+                  AppFeedback.info(context, '请输入任务标题');
                   return;
                 }
 
                 Navigator.pop(context);
 
                 try {
-                  await ref.read(groupTasksProvider(groupId).notifier).createTask(
+                  await ref
+                      .read(groupTasksProvider(groupId).notifier)
+                      .createTask(
                         GroupTaskCreate(
                           title: title,
                           description: descriptionController.text.trim().isEmpty
@@ -214,25 +228,14 @@ class GroupTasksScreen extends ConsumerWidget {
                       );
 
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('任务创建成功'),
-                        backgroundColor: DS.success,
-                      ),
-                    );
+                    AppFeedback.success(context, '任务创建成功');
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('创建失败: $e'),
-                        backgroundColor: DS.error,
-                      ),
-                    );
+                    AppFeedback.error(context, '创建失败: $e');
                   }
                 }
               },
-              child: const Text('创建'),
             ),
           ],
         ),

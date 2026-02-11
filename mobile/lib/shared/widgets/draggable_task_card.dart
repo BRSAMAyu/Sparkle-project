@@ -64,7 +64,7 @@ class DraggableTaskCard extends ConsumerWidget {
           opacity: 0.8,
           child: Container(
             width: 300,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -116,8 +116,11 @@ class DraggableTaskCard extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.calendar_today,
-                              size: 12, color: DS.brandPrimary54,),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: DS.brandPrimary54,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             task.dueDate != null
@@ -133,7 +136,8 @@ class DraggableTaskCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.drag_indicator, color: DS.brandPrimary38Const, size: 20),
+                Icon(Icons.drag_indicator,
+                    color: DS.brandPrimary38Const, size: 20),
               ],
             ),
           ),
@@ -208,8 +212,7 @@ class CalendarDayDragTarget extends ConsumerWidget {
         // Clear hover when leaving
       },
       onAcceptWithDetails: (details) {
-        final result =
-            ref.read(taskDragProvider.notifier).dropOnDate(date);
+        final result = ref.read(taskDragProvider.notifier).dropOnDate(date);
         if (result != null) {
           onTaskDropped?.call(result.task, result.newDueDate);
         }
@@ -232,5 +235,6 @@ class CalendarDayDragTarget extends ConsumerWidget {
     );
   }
 
-  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }

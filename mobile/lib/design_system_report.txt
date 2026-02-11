@@ -1,53 +1,9 @@
 ================================================================================
 设计系统合规检查报告
 ================================================================================
-检查时间: 2026-02-11 20:07:47.940009
+检查时间: 2026-02-11 22:42:03.403632
 项目根目录: lib
-违规数量: 669
+违规数量: 0
 
-⚠️ 发现以下设计系统违规：
-
-🔴 硬编码颜色违规 (351处):
-  • lib/features/translation/presentation/widgets/translatable_text.dart:233: 硬编码颜色 -                 color: Colors.grey,
-  • lib/features/translation/presentation/widgets/inline_translation_block.dart:103: 硬编码颜色 -               color: Colors.black87,
-  • lib/features/translation/presentation/widgets/inline_translation_block.dart:136: 硬编码颜色 -                       color: Colors.grey[400],
-  • lib/features/translation/presentation/widgets/inline_translation_block.dart:170: 硬编码颜色 -         color: Colors.grey[100],
-  • lib/features/translation/presentation/widgets/inline_translation_block.dart:291: 硬编码颜色 -                   color: Colors.grey[500],
-  • lib/features/translation/presentation/widgets/inline_translation_block.dart:298: 硬编码颜色 -                   color: Colors.grey[500],
-  • lib/features/translation/presentation/widgets/translation_popover.dart:154: 硬编码颜色 -                 const Icon(Icons.info_outline, color: Colors.white, size: 20),
-  • lib/features/translation/presentation/widgets/translation_popover.dart:159: 硬编码颜色 -             backgroundColor: Colors.orange.shade700,
-  • lib/features/translation/presentation/widgets/translation_popover.dart:163: 硬编码颜色 -               textColor: Colors.white,
-  • lib/features/translation/presentation/widgets/translation_popover.dart:180: 硬编码颜色 -                 const Icon(Icons.speed, color: Colors.white, size: 20),
-  • ... 还有341处
-
-🟡 硬编码间距违规 (113处):
-  • lib/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart:126: 硬编码间距 -           padding: const EdgeInsets.all(8),
-  • lib/features/achievement/presentation/widgets/achievement_unlock_dialog.dart:432: 硬编码间距 -                     margin: EdgeInsets.all(4 * _glowAnimation.value),
-  • lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart:297: 硬编码间距 -         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-  • lib/features/translation/presentation/widgets/translatable_text.dart:108: 硬编码间距 -           padding: const EdgeInsets.all(16),
-  • lib/features/translation/presentation/widgets/translatable_text.dart:224: 硬编码间距 -         padding: const EdgeInsets.all(16),
-  • lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart:108: 硬编码间距 -                 padding: const EdgeInsets.all(16),
-  • lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart:200: 硬编码间距 -                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-  • lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart:241: 硬编码间距 -                   padding: const EdgeInsets.all(16),
-  • lib/features/seed_library/presentation/screens/seed_library_list_screen.dart:93: 硬编码间距 -             padding: const EdgeInsets.all(16),
-  • lib/features/seed_library/presentation/screens/seed_library_list_screen.dart:237: 硬编码间距 -         padding: const EdgeInsets.all(16),
-  • ... 还有103处
-
-🔵 Material按钮使用 (205处):
-  • lib/features/file/presentation/widgets/file_picker_with_presigned.dart:220: 使用Material按钮 -           ElevatedButton(
-  • lib/features/auth/presentation/screens/register_screen.dart:79: 使用Material按钮 -         leading: IconButton(
-  • lib/features/auth/presentation/screens/register_screen.dart:154: 使用Material按钮 -                       suffixIcon: IconButton(
-  • lib/features/auth/presentation/screens/register_screen.dart:192: 使用Material按钮 -                   ElevatedButton(
-  • lib/features/auth/presentation/screens/register_screen.dart:213: 使用Material按钮 -                   TextButton(
-  • lib/features/auth/presentation/screens/login_screen.dart:157: 使用Material按钮 -                       suffixIcon: IconButton(
-  • lib/features/auth/presentation/screens/login_screen.dart:173: 使用Material按钮 -                   ElevatedButton(
-  • lib/features/auth/presentation/screens/login_screen.dart:239: 使用Material按钮 -                   TextButton(
-  • lib/features/auth/presentation/screens/login_screen.dart:247: 使用Material按钮 -                   TextButton(
-  • lib/features/auth/presentation/screens/login_screen.dart:266: 使用Material按钮 -                   TextButton(
-  • ... 还有195处
-
-💡 修复建议：
-  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等
-  2. 硬编码间距 → 使用 DS.lg, DS.xl 等
-  3. Material按钮 → 使用 SparkleButton.primary() 等
+✅ 恭喜！未发现设计系统违规。
 ================================================================================

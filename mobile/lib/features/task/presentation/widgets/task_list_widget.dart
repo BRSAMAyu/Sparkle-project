@@ -38,13 +38,14 @@ class TaskListWidget extends StatelessWidget {
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.bottomRight,
-              child: TextButton.icon(
+              child: SparkleButton(
+                label: '查看所有任务',
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.arrow_forward_ios, size: 16),
                 onPressed: () {
                   // 导航到任务列表页面
                   context.push('/tasks');
                 },
-                icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                label: const Text('查看所有任务'),
               ),
             ),
           ],
@@ -72,7 +73,9 @@ class TaskListWidget extends StatelessWidget {
             ),
           ),
           _buildStatusChip(context, status),
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: 32,
             icon: const Icon(Icons.info_outline, size: 20),
             onPressed: () {
               // 导航到任务详情页面
@@ -99,10 +102,10 @@ class TaskListWidget extends StatelessWidget {
         color = DS.error;
       case 'reflection':
         icon = Icons.psychology;
-        color = Colors.purple;
+        color = DS.rarityEpic;
       case 'social':
         icon = Icons.people;
-        color = Colors.teal;
+        color = DS.info;
       case 'planning':
         icon = Icons.event_note;
         color = DS.success;

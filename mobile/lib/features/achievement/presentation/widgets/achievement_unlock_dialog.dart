@@ -429,7 +429,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 child: AnimatedBuilder(
                   animation: _glowAnimation,
                   builder: (context, child) => Container(
-                    margin: EdgeInsets.all(4 * _glowAnimation.value),
+                    margin: EdgeInsets.all(DS.xs * _glowAnimation.value),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: colors.background,

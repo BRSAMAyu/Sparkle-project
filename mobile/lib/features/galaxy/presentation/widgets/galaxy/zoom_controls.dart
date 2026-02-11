@@ -123,15 +123,15 @@ class _ZoomControlsState extends State<ZoomControls>
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.black.withValues(alpha: 0.7)
-            : Colors.white.withValues(alpha: 0.8),
+            ? DS.surfaceHigh.withValues(alpha: 0.7)
+            : DS.surfacePrimary.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark ? DS.neutral700 : DS.neutral300,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: DS.overlay30.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -140,10 +140,14 @@ class _ZoomControlsState extends State<ZoomControls>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: Icon(Icons.add, color: DS.brandPrimary),
-            onPressed: () => _updateZoom(_currentScale * 1.2),
-            tooltip: 'Zoom In',
+          Tooltip(
+            message: 'Zoom In',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: 36,
+              icon: Icon(Icons.add, color: DS.brandPrimary),
+              onPressed: () => _updateZoom(_currentScale * 1.2),
+            ),
           ),
           SizedBox(
             height: widget.sliderHeight,
@@ -162,8 +166,7 @@ class _ZoomControlsState extends State<ZoomControls>
                       const RoundSliderOverlayShape(overlayRadius: 12),
                 ),
                 child: Slider(
-                  value:
-                      _currentScale.clamp(widget.minScale, widget.maxScale),
+                  value: _currentScale.clamp(widget.minScale, widget.maxScale),
                   min: widget.minScale,
                   max: widget.maxScale,
                   onChanged: _onSliderChanged,
@@ -172,10 +175,14 @@ class _ZoomControlsState extends State<ZoomControls>
               ),
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.remove, color: DS.brandPrimary),
-            onPressed: () => _updateZoom(_currentScale / 1.2),
-            tooltip: 'Zoom Out',
+          Tooltip(
+            message: 'Zoom Out',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: 36,
+              icon: Icon(Icons.remove, color: DS.brandPrimary),
+              onPressed: () => _updateZoom(_currentScale / 1.2),
+            ),
           ),
         ],
       ),

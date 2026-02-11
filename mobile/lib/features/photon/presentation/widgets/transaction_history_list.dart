@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
 
@@ -53,23 +56,23 @@ class _TransactionHistoryListState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 64,
-              color: Colors.red,
+              color: DS.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
             Text(
               state.error!,
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            const SizedBox(height: DS.lg),
+            SparkleButton(
+              label: '重试',
               onPressed: () {
                 ref.read(photonTransactionsProvider.notifier).refresh();
               },
-              child: const Text('重试'),
             ),
           ],
         ),
@@ -84,13 +87,13 @@ class _TransactionHistoryListState
             Icon(
               Icons.receipt_long_outlined,
               size: 64,
-              color: Colors.grey[400],
+              color: DS.textSecondary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
             Text(
               '暂无交易记录',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
+                    color: DS.textSecondary,
                   ),
             ),
           ],
@@ -100,11 +103,11 @@ class _TransactionHistoryListState
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.read(photonTransactionsProvider.notifier).refresh();
+        unawaited(ref.read(photonTransactionsProvider.notifier).refresh());
       },
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         itemCount: state.transactions.length +
             (state.isLoading ? 1 : 0) +
             (state.hasMore ? 0 : 1),
@@ -112,7 +115,7 @@ class _TransactionHistoryListState
           // Loading indicator at the bottom
           if (index == state.transactions.length) {
             return const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(DS.lg),
               child: Center(
                 child: CircularProgressIndicator(),
               ),
@@ -122,12 +125,12 @@ class _TransactionHistoryListState
           // End of list indicator
           if (index == state.transactions.length + 1 && !state.hasMore) {
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DS.lg),
               child: Center(
                 child: Text(
                   '没有更多记录了',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: DS.textSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -155,7 +158,7 @@ class _TransactionHistoryListState
                   child: Text(
                     _formatDateHeader(transaction.createdAt),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.grey[600],
+                          color: DS.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -169,9 +172,10 @@ class _TransactionHistoryListState
     );
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) => date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
+  bool _isSameDay(DateTime date1, DateTime date2) =>
+      date1.year == date2.year &&
+      date1.month == date2.month &&
+      date1.day == date2.day;
 
   String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
@@ -205,14 +209,14 @@ class _TransactionItem extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.surfacePrimary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey[200]!,
+          color: DS.neutral200,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Row(
           children: [
             // Icon
@@ -221,13 +225,13 @@ class _TransactionItem extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isIncome
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.orange.withValues(alpha: 0.1),
+                    ? DS.success.withValues(alpha: 0.1)
+                    : DS.warning.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _getTransactionIcon(transaction.transactionType),
-                color: isIncome ? Colors.green : Colors.orange,
+                color: isIncome ? DS.success : DS.warning,
                 size: 24,
               ),
             ),
@@ -248,7 +252,7 @@ class _TransactionItem extends StatelessWidget {
                   Text(
                     transaction.source ?? '无备注',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
+                          color: DS.textSecondary,
                         ),
                   ),
                 ],
@@ -262,7 +266,7 @@ class _TransactionItem extends StatelessWidget {
                 Text(
                   '${isIncome ? '+' : '-'}${transaction.amount.abs()}',
                   style: TextStyle(
-                    color: isIncome ? Colors.green : Colors.orange,
+                    color: isIncome ? DS.success : DS.warning,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -271,7 +275,7 @@ class _TransactionItem extends StatelessWidget {
                 Text(
                   DateFormat('HH:mm').format(transaction.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: DS.textSecondary,
                       ),
                 ),
               ],

@@ -30,7 +30,8 @@ enum NotificationType { privateMessage, groupMessage, mention }
 // Unread message count provider
 final unreadMessageCountProvider =
     StateNotifierProvider<UnreadMessageCountNotifier, int>(
-        (ref) => UnreadMessageCountNotifier(),);
+  (ref) => UnreadMessageCountNotifier(),
+);
 
 class UnreadMessageCountNotifier extends StateNotifier<int> {
   UnreadMessageCountNotifier() : super(0);
@@ -44,7 +45,8 @@ class UnreadMessageCountNotifier extends StateNotifier<int> {
 // In-app notification stream provider
 final inAppNotificationProvider =
     StateNotifierProvider<InAppNotificationNotifier, NotificationMessage?>(
-        (ref) => InAppNotificationNotifier(),);
+  (ref) => InAppNotificationNotifier(),
+);
 
 class InAppNotificationNotifier extends StateNotifier<NotificationMessage?> {
   InAppNotificationNotifier() : super(null);
@@ -203,14 +205,17 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 Text(
                                   widget.notification.senderName,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold,),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 const SizedBox(width: DS.sm),
                                 if (widget.notification.type !=
                                     NotificationType.privateMessage)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2,),
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: DS.brandPrimary
                                           .withValues(alpha: 0.1),
@@ -222,8 +227,9 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                           ? '提及'
                                           : '群消息',
                                       style: TextStyle(
-                                          fontSize: 10,
-                                          color: DS.brandPrimaryConst,),
+                                        fontSize: 10,
+                                        color: DS.brandPrimaryConst,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -245,11 +251,11 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                           ],
                         ),
                       ),
-                      IconButton(
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 28,
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: widget.onDismiss,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),

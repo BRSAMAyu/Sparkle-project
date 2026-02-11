@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -28,9 +27,9 @@ class NodePreviewCard extends StatelessWidget {
         width: double.infinity,
         constraints: const BoxConstraints(maxWidth: 400),
         child: Material(
-          color: Colors.transparent,
+          color: DS.surfacePrimary.withValues(alpha: 0),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             decoration: BoxDecoration(
               color: DS.brandSecondary.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(16),
@@ -60,13 +59,16 @@ class NodePreviewCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4,),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: sectorStyle.primaryColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: sectorStyle.primaryColor
-                                .withValues(alpha: 0.5),),
+                          color:
+                              sectorStyle.primaryColor.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Text(
                         sectorStyle.name,
@@ -78,11 +80,11 @@ class NodePreviewCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    IconButton(
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 28,
                       icon: Icon(Icons.close, size: 20, color: DS.brandPrimary),
                       onPressed: onClose,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
@@ -140,9 +142,11 @@ class NodePreviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: node.masteryScore / 100,
-                      backgroundColor: DS.surfaceTertiary.withValues(alpha: 0.5),
+                      backgroundColor:
+                          DS.surfaceTertiary.withValues(alpha: 0.5),
                       valueColor: AlwaysStoppedAnimation<Color>(
-                          sectorStyle.primaryColor,),
+                        sectorStyle.primaryColor,
+                      ),
                       minHeight: 6,
                     ),
                   ),
@@ -152,20 +156,10 @@ class NodePreviewCard extends StatelessWidget {
                 // Action Button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
+                  child: SparkleButton(
+                    label: '进入学习',
+                    expand: true,
                     onPressed: onTap,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: sectorStyle.primaryColor,
-                      foregroundColor: ThemeUtils.getContrastSafeText(
-                        sectorStyle.primaryColor,
-                      ),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text('进入学习'),
                   ),
                 ),
               ],

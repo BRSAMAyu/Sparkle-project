@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -24,7 +25,8 @@ class TaskDetailScreen extends ConsumerWidget {
     return MaterialStyler(
       material: AppMaterials.neoGlass,
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Allow glass effect to show
+        backgroundColor: DS.surfacePrimary
+            .withValues(alpha: 0), // Allow glass effect to show
         body: taskAsync.when(
           data: (task) => _TaskDetailView(task: task),
           loading: () => Center(
@@ -66,14 +68,17 @@ class _TaskDetailView extends ConsumerWidget {
                           const SizedBox(height: DS.spacing24),
                           Text(
                             '执行指南',
-                            style:
-                                Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: DS.fontWeightBold,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                           ),
                           const SizedBox(height: DS.spacing12),
                           _buildGuideSection(context),
-                          const SizedBox(height: DS.spacing64), // Space for bottom bar
+                          const SizedBox(
+                              height: DS.spacing64), // Space for bottom bar
                         ],
                       ),
                     ),
@@ -90,44 +95,53 @@ class _TaskDetailView extends ConsumerWidget {
     switch (type) {
       case TaskType.learning:
         return LinearGradient(
-            colors: [DS.brandPrimary.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.training:
         return LinearGradient(
-            colors: [DS.brandPrimary.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.errorFix:
         return LinearGradient(
-            colors: [DS.error.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.error.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.reflection:
         return LinearGradient(
-            colors: [Colors.purple.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.rarityEpicBg, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.social:
         return LinearGradient(
-            colors: [DS.success.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.success.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.planning:
         return LinearGradient(
-            colors: [Colors.teal.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.infoLight, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.ocr:
         return LinearGradient(
-            colors: [Colors.grey.shade50, Colors.grey.shade400],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.neutral50, DS.neutral400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
     }
   }
 
   Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -166,24 +180,30 @@ class _TaskDetailView extends ConsumerWidget {
                           children: [
                             Chip(
                               label: Text(
-                                  toBeginningOfSentenceCase(task.type.name) ??
-                                      task.type.name,
-                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
+                                toBeginningOfSentenceCase(task.type.name) ??
+                                    task.type.name,
+                                style: const TextStyle(fontSize: DS.fontSizeSm),
+                              ),
                               backgroundColor:
                                   DS.brandPrimary.withValues(alpha: 0.8),
-                              avatar: Icon(Icons.category,
-                                  size: DS.iconSizeXs, color: DS.primaryBase,),
+                              avatar: Icon(
+                                Icons.category,
+                                size: DS.iconSizeXs,
+                                color: DS.primaryBase,
+                              ),
                             ),
                             Chip(
                               label: Text(
-                                  toBeginningOfSentenceCase(task.status.name) ??
-                                      task.status.name,
-                                  style: const TextStyle(fontSize: DS.fontSizeSm),),
+                                toBeginningOfSentenceCase(task.status.name) ??
+                                    task.status.name,
+                                style: const TextStyle(fontSize: DS.fontSizeSm),
+                              ),
                               backgroundColor: _getStatusColor(task.status)
                                   .withValues(alpha: 0.2),
                               labelStyle: TextStyle(
-                                  color: _getStatusColor(task.status),
-                                  fontWeight: DS.fontWeightBold,),
+                                color: _getStatusColor(task.status),
+                                fontWeight: DS.fontWeightBold,
+                              ),
                             ),
                           ],
                         ),
@@ -354,28 +374,28 @@ class _InfoTileCardState extends State<_InfoTileCard>
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
-            // Inject the gradient tint into the ceramic material
-            backgroundColor:
-                widget.gradient.colors.first.withValues(alpha: 0.1),
-            borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
-          ),
-          borderRadius: DS.borderRadius12,
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.spacing10),
-                decoration: BoxDecoration(
-                  gradient: widget.gradient,
-                  borderRadius: DS.borderRadius8,
-                  boxShadow: [
+        onTapDown: (_) => _controller.forward(),
+        onTapUp: (_) => _controller.reverse(),
+        onTapCancel: () => _controller.reverse(),
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              // Inject the gradient tint into the ceramic material
+              backgroundColor:
+                  widget.gradient.colors.first.withValues(alpha: 0.1),
+              borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
+            ),
+            borderRadius: DS.borderRadius12,
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing10),
+                  decoration: BoxDecoration(
+                    gradient: widget.gradient,
+                    borderRadius: DS.borderRadius8,
+                    boxShadow: [
                       BoxShadow(
                         color:
                             widget.gradient.colors.first.withValues(alpha: 0.3),
@@ -383,39 +403,40 @@ class _InfoTileCardState extends State<_InfoTileCard>
                         offset: const Offset(0, 2),
                       ),
                     ],
+                  ),
+                  child: Icon(widget.icon,
+                      color: DS.brandPrimaryConst, size: DS.iconSizeSm),
                 ),
-                child: Icon(widget.icon, color: DS.brandPrimaryConst, size: DS.iconSizeSm),
-              ),
-              const SizedBox(width: DS.spacing16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: DS.neutral600,
-                            fontWeight: DS.fontWeightMedium,
-                            letterSpacing: 0.5,
-                          ),
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      widget.content,
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: DS.fontWeightBold,
-                                color: DS.neutral900,
-                              ),
-                    ),
-                  ],
+                const SizedBox(width: DS.spacing16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: DS.neutral600,
+                              fontWeight: DS.fontWeightMedium,
+                              letterSpacing: 0.5,
+                            ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        widget.content,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                  color: DS.neutral900,
+                                ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _BottomActionBar extends ConsumerWidget {
@@ -425,9 +446,8 @@ class _BottomActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Max width for bottom action bar on larger screens
-    final maxBarWidth = context.isMobile
-        ? double.infinity
-        : DS.contentMaxWidthDesktop;
+    final maxBarWidth =
+        context.isMobile ? double.infinity : DS.contentMaxWidthDesktop;
 
     return SafeArea(
       child: Center(
@@ -483,9 +503,10 @@ class _BottomActionBar extends ConsumerWidget {
                     ),
                     borderRadius: DS.borderRadius12,
                   ),
-                  child: IconButton(
+                  child: SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 40,
                     icon: Icon(Icons.delete_outline, color: DS.error),
-                    iconSize: DS.iconSizeBase,
                     onPressed: () {
                       HapticFeedback.mediumImpact();
                       showDialog<void>(

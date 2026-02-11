@@ -35,7 +35,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -52,7 +54,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           textInputAction: TextInputAction.search,
         ),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: _handleSearch,
           ),
@@ -72,7 +76,8 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.all(DS.lg),
               itemCount: groups.length,
-              separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final group = groups[index];
                 return Card(
@@ -80,13 +85,14 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: DS.brandPrimary.shade200,
-                      child: Icon(group.type.name == 'sprint'
-                          ? Icons.timer
-                          : Icons.group,),
+                      child: Icon(
+                        group.type.name == 'sprint' ? Icons.timer : Icons.group,
+                      ),
                     ),
                     title: Text(group.name),
                     subtitle: Text(
-                        '${group.memberCount} members • ${group.totalFlamePower} flame',),
+                      '${group.memberCount} members • ${group.totalFlamePower} flame',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       context.push('/community/groups/${group.id}');

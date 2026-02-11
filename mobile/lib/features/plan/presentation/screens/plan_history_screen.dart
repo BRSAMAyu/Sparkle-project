@@ -15,7 +15,9 @@ class PlanHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -75,40 +77,44 @@ class _PlanHistorySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: DS.spacing12),
-          ...plans.map(
-            (plan) => Card(
-              margin: const EdgeInsets.only(bottom: DS.spacing12),
-              child: ListTile(
-                title: Text(plan.name),
-                subtitle: Text(
-                  '${(plan.progress * 100).toStringAsFixed(0)}% 完成',
+        padding: const EdgeInsets.only(bottom: DS.spacing20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: DS.spacing12),
+            ...plans.map(
+              (plan) => Card(
+                margin: const EdgeInsets.only(bottom: DS.spacing12),
+                child: ListTile(
+                  title: Text(plan.name),
+                  subtitle: Text(
+                    '${(plan.progress * 100).toStringAsFixed(0)}% 完成',
+                  ),
+                  trailing: Tooltip(
+                    message: '恢复计划',
+                    child: SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: DS.touchTargetMinSize,
+                      icon: const Icon(Icons.restore_rounded),
+                      onPressed: () async {
+                        await ref
+                            .read(planListProvider.notifier)
+                            .restorePlan(plan.id);
+                        if (context.mounted) {
+                          AppFeedback.success(context, '计划已恢复');
+                        }
+                      },
+                    ),
+                  ),
+                  onTap: () => context.push('/plans/${plan.id}'),
                 ),
-                trailing: TextButton.icon(
-                  onPressed: () async {
-                    await ref.read(planListProvider.notifier).restorePlan(plan.id);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('计划已恢复')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.restore_rounded),
-                  label: const Text('恢复'),
-                ),
-                onTap: () => context.push('/plans/${plan.id}'),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }

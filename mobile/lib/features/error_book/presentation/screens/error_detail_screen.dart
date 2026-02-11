@@ -27,7 +27,9 @@ class ErrorDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -35,10 +37,14 @@ class ErrorDetailScreen extends ConsumerWidget {
         actions: [
           // 编辑按钮
           errorAsync.whenOrNull(
-                data: (error) => IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: '编辑',
-                  onPressed: () => _navigateToEdit(context, error),
+                data: (error) => Tooltip(
+                  message: '编辑',
+                  child: SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _navigateToEdit(context, error),
+                  ),
                 ),
               ) ??
               const SizedBox.shrink(),
@@ -60,18 +66,21 @@ class ErrorDetailScreen extends ConsumerWidget {
                       child: Row(
                         children: [
                           Icon(Icons.psychology_outlined),
-                          SizedBox(width: 12),
+                          SizedBox(width: DS.spacing12),
                           Text('重新分析'),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, color: Colors.red),
-                          SizedBox(width: 12),
-                          Text('删除错题', style: TextStyle(color: Colors.red)),
+                          Icon(Icons.delete_outline, color: DS.error),
+                          SizedBox(width: DS.spacing12),
+                          Text(
+                            '删除错题',
+                            style: TextStyle(color: DS.error),
+                          ),
                         ],
                       ),
                     ),
@@ -148,7 +157,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -157,10 +166,10 @@ class ErrorDetailScreen extends ConsumerWidget {
             children: [
               SubjectChip(subjectCode: error.subject),
               if (error.chapter != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.spacing8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing10, vertical: DS.spacing4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
@@ -189,7 +198,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               _buildMasteryBadge(theme, error.masteryLevel),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
 
           // 创建时间
           Row(
@@ -215,13 +224,14 @@ class ErrorDetailScreen extends ConsumerWidget {
 
   Widget _buildMasteryBadge(ThemeData theme, double mastery) {
     final color = mastery >= 0.8
-        ? Colors.green
+        ? DS.success
         : mastery >= 0.5
-            ? Colors.orange
-            : Colors.red;
+            ? DS.warningLight
+            : DS.error;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12, vertical: DS.spacing6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -255,75 +265,80 @@ class ErrorDetailScreen extends ConsumerWidget {
   Widget _buildSemanticSummarySection(
     BuildContext context,
     AsyncValue<ErrorSemanticSummary> summaryAsync,
-  ) => summaryAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (summary) {
-        final hasContent = (summary.rootCause?.isNotEmpty ?? false) ||
-            summary.strategies.isNotEmpty ||
-            summary.similarErrors.isNotEmpty;
-        if (!hasContent) {
-          return const SizedBox.shrink();
-        }
+  ) =>
+      summaryAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (summary) {
+          final hasContent = (summary.rootCause?.isNotEmpty ?? false) ||
+              summary.strategies.isNotEmpty ||
+              summary.similarErrors.isNotEmpty;
+          if (!hasContent) {
+            return const SizedBox.shrink();
+          }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader(context, '同类错因总结'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (summary.rootCause != null &&
-                      summary.rootCause!.isNotEmpty) ...[
-                    _buildLabeledText(
-                      context,
-                      label: '主要错因',
-                      value: summary.rootCause!,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (summary.strategies.isNotEmpty) ...[
-                    _buildSectionSubtitle(context, '建议策略'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: summary.strategies
-                          .map((strategy) =>
-                              _buildTagChip(context, strategy.title),)
-                          .toList(),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (summary.similarErrors.isNotEmpty) ...[
-                    _buildSectionSubtitle(context, '同类错题'),
-                    const SizedBox(height: 8),
-                    ...summary.similarErrors.map(
-                      (item) => _buildBulletText(
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader(context, '同类错因总结'),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing16, vertical: DS.spacing12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (summary.rootCause != null &&
+                        summary.rootCause!.isNotEmpty) ...[
+                      _buildLabeledText(
                         context,
-                        '${item.subjectCode} • ${item.rootCause ?? '同类错因'}',
+                        label: '主要错因',
+                        value: summary.rootCause!,
                       ),
-                    ),
+                      const SizedBox(height: DS.spacing12),
+                    ],
+                    if (summary.strategies.isNotEmpty) ...[
+                      _buildSectionSubtitle(context, '建议策略'),
+                      const SizedBox(height: DS.spacing8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: summary.strategies
+                            .map(
+                              (strategy) =>
+                                  _buildTagChip(context, strategy.title),
+                            )
+                            .toList(),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                    ],
+                    if (summary.similarErrors.isNotEmpty) ...[
+                      _buildSectionSubtitle(context, '同类错题'),
+                      const SizedBox(height: DS.spacing8),
+                      ...summary.similarErrors.map(
+                        (item) => _buildBulletText(
+                          context,
+                          '${item.subjectCode} • ${item.rootCause ?? '同类错因'}',
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-          ],
-        );
-      },
-    );
+              const Divider(height: 1),
+            ],
+          );
+        },
+      );
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+          DS.spacing16, DS.spacing12, DS.spacing16, DS.spacing4),
       child: Text(
         title,
-        style: theme.textTheme.titleMedium
-            ?.copyWith(fontWeight: FontWeight.bold),
+        style:
+            theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -370,7 +385,8 @@ class ErrorDetailScreen extends ConsumerWidget {
   Widget _buildTagChip(BuildContext context, String text) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10, vertical: DS.spacing6),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -387,7 +403,7 @@ class ErrorDetailScreen extends ConsumerWidget {
   Widget _buildBulletText(BuildContext context, String text) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: DS.spacing6),
       child: Row(
         children: [
           Icon(
@@ -414,7 +430,7 @@ class ErrorDetailScreen extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -424,11 +440,12 @@ class ErrorDetailScreen extends ConsumerWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.spacing16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: SelectableText(
@@ -439,14 +456,14 @@ class ErrorDetailScreen extends ConsumerWidget {
             ),
           ),
           if (error.questionImageUrl != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.spacing12),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 error.questionImageUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stack) => Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(DS.spacing16),
                   color: theme.colorScheme.errorContainer,
                   child: Row(
                     children: [
@@ -454,7 +471,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                         Icons.broken_image_outlined,
                         color: theme.colorScheme.error,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: DS.spacing8),
                       Text(
                         '图片加载失败',
                         style: TextStyle(color: theme.colorScheme.error),
@@ -474,7 +491,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -484,7 +501,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.spacing16),
 
           // 你的答案
           _buildAnswerCard(
@@ -495,7 +512,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             color: theme.colorScheme.error,
             isCorrect: false,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
 
           // 正确答案
           _buildAnswerCard(
@@ -503,7 +520,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             label: '正确答案',
             content: error.correctAnswer,
             icon: Icons.check_circle_outline,
-            color: Colors.green,
+            color: DS.success,
             isCorrect: true,
           ),
         ],
@@ -522,7 +539,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
@@ -547,7 +564,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
           SelectableText(
             content,
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -561,7 +578,7 @@ class ErrorDetailScreen extends ConsumerWidget {
 
   Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) =>
       Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -572,7 +589,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                   size: 20,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.spacing8),
                 Text(
                   'AI 智能分析',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -588,7 +605,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             AnalysisCard(analysis: error.latestAnalysis!),
           ],
         ),
@@ -598,7 +615,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -609,7 +626,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 size: 20,
                 color: theme.colorScheme.primary,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.spacing8),
               Text(
                 '关联知识点',
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -618,7 +635,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -651,7 +668,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final isMobile = context.isMobile;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -661,7 +678,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.spacing16),
           if (isMobile)
             Column(
               children: [
@@ -670,19 +687,19 @@ class ErrorDetailScreen extends ConsumerWidget {
                   label: '复习次数',
                   value: error.reviewCount.toString(),
                   icon: Icons.repeat,
-                  color: Colors.blue,
+                  color: DS.info,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
                 _buildStatCard(
                   context: context,
                   label: '掌握度',
                   value: '${(error.masteryLevel * 100).toInt()}%',
                   icon: Icons.trending_up,
                   color: error.masteryLevel >= 0.8
-                      ? Colors.green
+                      ? DS.success
                       : error.masteryLevel >= 0.5
-                          ? Colors.orange
-                          : Colors.red,
+                          ? DS.warningLight
+                          : DS.error,
                 ),
               ],
             )
@@ -695,10 +712,10 @@ class ErrorDetailScreen extends ConsumerWidget {
                     label: '复习次数',
                     value: error.reviewCount.toString(),
                     icon: Icons.repeat,
-                    color: Colors.blue,
+                    color: DS.info,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: _buildStatCard(
                     context: context,
@@ -706,15 +723,15 @@ class ErrorDetailScreen extends ConsumerWidget {
                     value: '${(error.masteryLevel * 100).toInt()}%',
                     icon: Icons.trending_up,
                     color: error.masteryLevel >= 0.8
-                        ? Colors.green
+                        ? DS.success
                         : error.masteryLevel >= 0.5
-                            ? Colors.orange
-                            : Colors.red,
+                            ? DS.warningLight
+                            : DS.error,
                   ),
                 ),
               ],
             ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.spacing12),
           if (error.lastReviewedAt != null)
             _buildInfoRow(
               context,
@@ -723,7 +740,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               Icons.history,
             ),
           if (error.nextReviewAt != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             _buildInfoRow(
               context,
               '下次复习',
@@ -746,7 +763,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -757,7 +774,7 @@ class ErrorDetailScreen extends ConsumerWidget {
       child: Column(
         children: [
           Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.spacing8),
           Text(
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
@@ -792,7 +809,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           size: 16,
           color: theme.colorScheme.onSurfaceVariant,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: DS.spacing8),
         Text(
           '$label: ',
           style: theme.textTheme.bodyMedium?.copyWith(
@@ -816,12 +833,12 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) =>
       SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: DS.textPrimary.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -847,12 +864,12 @@ class ErrorDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.red,
+              color: DS.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             const Text(
               '加载失败',
               style: TextStyle(
@@ -860,16 +877,16 @@ class ErrorDetailScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               error,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
             FilledButton.icon(
               onPressed: () {
                 ref.invalidate(errorDetailProvider(errorId));
@@ -919,7 +936,7 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) async {
     // TODO: 调用重新分析 API
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
             SizedBox(
@@ -927,10 +944,10 @@ class ErrorDetailScreen extends ConsumerWidget {
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(DS.neutral0),
               ),
             ),
-            SizedBox(width: 12),
+            SizedBox(width: DS.spacing12),
             Text('AI 正在重新分析...'),
           ],
         ),
@@ -951,14 +968,14 @@ class ErrorDetailScreen extends ConsumerWidget {
         title: const Text('确认删除'),
         content: const Text('删除后将无法恢复，是否继续？'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            label: '取消',
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: DS.error,
             ),
             child: const Text('删除'),
           ),
@@ -973,9 +990,9 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           Navigator.of(context).pop(true); // 返回列表页
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('删除成功'),
-              backgroundColor: Colors.green,
+              backgroundColor: DS.success,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -985,7 +1002,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('删除失败: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: DS.error,
               behavior: SnackBarBehavior.floating,
             ),
           );

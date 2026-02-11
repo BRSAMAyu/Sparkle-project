@@ -41,7 +41,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSocialLogin(
-      Future<SocialAuthResult?> Function() loginMethod,) async {
+    Future<SocialAuthResult?> Function() loginMethod,
+  ) async {
     try {
       final result = await loginMethod();
       if (result != null) {
@@ -59,12 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login Failed: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      AppFeedback.error(context, 'Login Failed: $e');
     }
   }
 
@@ -82,16 +78,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ErrorMessages.getLocalizedMessage(
-                l10n,
-                'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-                next.error,
-              ),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
+        AppFeedback.error(
+          context,
+          ErrorMessages.getLocalizedMessage(
+            l10n,
+            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
+            next.error,
           ),
         );
       }
@@ -140,9 +132,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.person_outline),
                     ),
-                    validator: (value) => value!.isEmpty
-                        ? l10n.pleaseEnterUsername
-                        : null,
+                    validator: (value) =>
+                        value!.isEmpty ? l10n.pleaseEnterUsername : null,
                   ),
                   const SizedBox(height: DS.lg),
 
@@ -154,14 +145,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
+                      suffixIcon: SparkleIconButton(
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility_off
                               : Icons.visibility,
                         ),
                         onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible,),
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
                       ),
                     ),
                     validator: (value) =>
@@ -170,23 +164,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: DS.xl),
 
                   // Login Button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: DS.brandPrimary,
-                      foregroundColor: Colors.white,
-                    ),
+                  SparkleButton(
+                    label: l10n.login,
                     onPressed: authState.isLoading ? null : _submit,
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(l10n.login),
+                    variant: ButtonVariant.primary,
+                    expand: true,
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
                   ),
 
                   const SizedBox(height: DS.xl),
@@ -194,7 +178,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       const Expanded(child: Divider()),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing16),
                         child: Text(
                           l10n.orText,
                           style: TextStyle(color: DS.brandPrimary),
@@ -236,49 +221,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: DS.lg),
 
                   // Register Link
-                  TextButton(
+                  SparkleButton.ghost(
+                    label: l10n.noAccount,
                     onPressed: () => context.go('/register'),
-                    child: Text(l10n.noAccount),
                   ),
 
                   const SizedBox(height: DS.sm),
 
                   // Guest Mode
-                  TextButton(
-                    onPressed: authState.isLoading ? null : () async {
-                      await ref.read(authProvider.notifier).loginAsGuest();
-                    },
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            l10n.continueAsGuest,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
+                  SparkleButton(
+                    label: l10n.continueAsGuest,
+                    onPressed: authState.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .loginAsGuest();
+                          },
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                    variant: ButtonVariant.ghost,
+                    expand: true,
                   ),
 
                   // Demo Account Mode
-                  TextButton(
-                    onPressed: authState.isLoading ? null : () async {
-                      await ref.read(authProvider.notifier).loginAsDemoAccount();
-                    },
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            '演示账号登录',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
+                  SparkleButton(
+                    label: '演示账号登录',
+                    onPressed: authState.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .loginAsDemoAccount();
+                          },
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                    variant: ButtonVariant.ghost,
+                    expand: true,
                   ),
                 ],
               ),

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
 /// Photon Transfer Screen
@@ -38,7 +41,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
         title: const Text('转账光子'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DS.xl),
         child: Form(
           key: _formKey,
           child: Column(
@@ -50,7 +53,10 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                      Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.8),
                       Theme.of(context).colorScheme.primary,
                     ],
                     begin: Alignment.topLeft,
@@ -60,9 +66,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.flash_on_rounded,
-                      color: Colors.white,
+                      color: DS.neutral0,
                       size: 32,
                     ),
                     const SizedBox(width: 16),
@@ -72,15 +78,15 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                         Text(
                           '当前余额',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: DS.neutral0.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '$currentBalance',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: DS.neutral0,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
@@ -116,7 +122,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 },
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.xl),
 
               // Amount
               Text(
@@ -132,7 +138,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 decoration: InputDecoration(
                   hintText: '请输入转账数量',
                   prefixIcon: const Icon(Icons.flash_on_outlined),
-                  suffixIcon: IconButton(
+                  suffixIcon: SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 32,
                     icon: const Icon(Icons.add_circle_outline),
                     onPressed: () {
                       // Show quick amount options
@@ -159,7 +167,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                 },
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.xl),
 
               // Message (Optional)
               Text(
@@ -185,7 +193,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: ElevatedButton(
+                child: SparkleButton(
+                  label: '确认转账',
+                  expand: true,
                   onPressed: _isTransferring
                       ? null
                       : () {
@@ -193,19 +203,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                             _confirmTransfer(currentBalance);
                           }
                         },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: _isTransferring
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          '确认转账',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  loading: _isTransferring,
                 ),
               ),
 
@@ -215,7 +213,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
               Text(
                 '• 转账后无法撤销\n• 单次转账上限10000光子\n• 请确认接收人ID正确',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
+                      color: DS.textSecondary,
                     ),
               ),
             ],
@@ -231,41 +229,41 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '选择金额',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: quickAmounts.map((amount) {
-                  final isEnabled = amount <= currentBalance;
-                  return ActionChip(
-                    label: Text('$amount'),
-                    onPressed: isEnabled
-                        ? () {
-                            _amountController.text = amount.toString();
-                            Navigator.of(context).pop();
-                          }
-                        : null,
-                    backgroundColor: isEnabled
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey,
-                    labelStyle: TextStyle(
-                      color: isEnabled ? Colors.white : Colors.white70,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.all(DS.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '选择金额',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: DS.lg),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: quickAmounts.map((amount) {
+                final isEnabled = amount <= currentBalance;
+                return ActionChip(
+                  label: Text('$amount'),
+                  onPressed: isEnabled
+                      ? () {
+                          _amountController.text = amount.toString();
+                          Navigator.of(context).pop();
+                        }
+                      : null,
+                  backgroundColor: isEnabled
+                      ? Theme.of(context).colorScheme.primary
+                      : DS.surfaceTertiary,
+                  labelStyle: TextStyle(
+                    color: isEnabled ? DS.neutral0 : DS.textSecondary,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
+      ),
     );
   }
 
@@ -276,38 +274,38 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-          title: const Text('确认转账'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('接收人ID：$recipientId'),
-              const SizedBox(height: 8),
-              Text('转账数量：$amount 光子'),
-              const SizedBox(height: 8),
-              Text('剩余余额：${currentBalance - amount} 光子'),
-              if (_messageController.text.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('附言：${_messageController.text}'),
-              ],
-              const SizedBox(height: 16),
-              const Text('转账后无法撤销，确认继续？'),
+        title: const Text('确认转账'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('接收人ID：$recipientId'),
+            const SizedBox(height: DS.sm),
+            Text('转账数量：$amount 光子'),
+            const SizedBox(height: DS.sm),
+            Text('剩余余额：${currentBalance - amount} 光子'),
+            if (_messageController.text.isNotEmpty) ...[
+              const SizedBox(height: DS.sm),
+              Text('附言：${_messageController.text}'),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _performTransfer();
-              },
-              child: const Text('确认'),
-            ),
+            const SizedBox(height: DS.lg),
+            const Text('转账后无法撤销，确认继续？'),
           ],
         ),
+        actions: [
+          SparkleButton.ghost(
+            label: '取消',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          SparkleButton(
+            label: '确认',
+            onPressed: () {
+              Navigator.of(context).pop();
+              unawaited(_performTransfer());
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -322,22 +320,12 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
       await Future<void>.delayed(const Duration(seconds: 2));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('转账成功'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppFeedback.success(context, '转账成功');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('转账失败：$e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppFeedback.error(context, '转账失败：$e');
       }
     } finally {
       if (mounted) {
