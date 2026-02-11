@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 
 /// Sparkle Button V2 - 原子组件
 ///
@@ -205,9 +206,20 @@ class SparkleButton extends StatelessWidget {
 
     switch (variant) {
       case ButtonVariant.primary:
+        return ThemeUtils.getContrastSafeText(
+          colors.brandPrimary,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.secondary:
+        return ThemeUtils.getContrastSafeText(
+          colors.brandSecondary,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.destructive:
-        return DS.brandPrimary;
+        return ThemeUtils.getContrastSafeText(
+          colors.semanticError,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
         return colors.brandPrimary;
@@ -405,9 +417,20 @@ class SparkleIconButton extends StatelessWidget {
     if (disabled) return colors.textDisabled;
     switch (variant) {
       case ButtonVariant.primary:
+        return ThemeUtils.getContrastSafeText(
+          colors.brandPrimary,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.secondary:
+        return ThemeUtils.getContrastSafeText(
+          colors.brandSecondary,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.destructive:
-        return DS.brandPrimary;
+        return ThemeUtils.getContrastSafeText(
+          colors.semanticError,
+          darkText: colors.textPrimary,
+        );
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
         return colors.brandPrimary;

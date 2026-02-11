@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Agent 状态枚举
 ///
@@ -49,15 +50,21 @@ class AgentStatusIndicator extends StatelessWidget {
 
     final theme = Theme.of(context);
     final color = _getStatusColor(status, theme);
+    final shouldAnimate = _isBusyStatus(status) && !context.reduceMotion;
 
     if (compact) {
-      return _buildCompactIndicator(theme, color);
+      return _buildCompactIndicator(theme, color, shouldAnimate);
     }
 
-    return _buildFullIndicator(theme, color);
+    return _buildFullIndicator(theme, color, shouldAnimate);
   }
 
-  Widget _buildFullIndicator(ThemeData theme, Color color) => Container(
+  Widget _buildFullIndicator(
+    ThemeData theme,
+    Color color,
+    bool animate,
+  ) =>
+      Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
@@ -73,6 +80,7 @@ class AgentStatusIndicator extends StatelessWidget {
               icon: status.icon,
               color: color,
               size: 16,
+              animate: animate,
             ),
             const SizedBox(width: 6),
             Text(
@@ -86,7 +94,12 @@ class AgentStatusIndicator extends StatelessWidget {
         ),
       );
 
-  Widget _buildCompactIndicator(ThemeData theme, Color color) => Tooltip(
+  Widget _buildCompactIndicator(
+    ThemeData theme,
+    Color color,
+    bool animate,
+  ) =>
+      Tooltip(
         message: status.label,
         child: Container(
           width: 24,
@@ -103,20 +116,34 @@ class AgentStatusIndicator extends StatelessWidget {
             icon: status.icon,
             color: color,
             size: 14,
+            animate: animate,
           ),
         ),
       );
+
+  bool _isBusyStatus(AgentStatus value) {
+    switch (value) {
+      case AgentStatus.thinking:
+      case AgentStatus.searching:
+      case AgentStatus.executingTool:
+      case AgentStatus.generating:
+        return true;
+      case AgentStatus.idle:
+      case AgentStatus.error:
+        return false;
+    }
+  }
 
   Color _getStatusColor(AgentStatus status, ThemeData theme) {
     switch (status) {
       case AgentStatus.thinking:
         return theme.colorScheme.primary;
       case AgentStatus.searching:
-        return Colors.blue;
+        return DS.info;
       case AgentStatus.executingTool:
-        return Colors.orange;
+        return DS.warning;
       case AgentStatus.generating:
-        return Colors.green;
+        return DS.success;
       case AgentStatus.error:
         return theme.colorScheme.error;
       case AgentStatus.idle:
@@ -133,10 +160,12 @@ class _AnimatedIcon extends StatefulWidget {
     required this.icon,
     required this.color,
     required this.size,
+    required this.animate,
   });
   final IconData icon;
   final Color color;
   final double size;
+  final bool animate;
 
   @override
   State<_AnimatedIcon> createState() => _AnimatedIconState();
@@ -153,7 +182,21 @@ class _AnimatedIconState extends State<_AnimatedIcon>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    unawaited(_controller.repeat());
+    if (widget.animate) {
+      unawaited(_controller.repeat());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate == widget.animate) return;
+    if (widget.animate) {
+      unawaited(_controller.repeat());
+      return;
+    }
+    _controller.stop();
+    _controller.value = 0;
   }
 
   @override
@@ -164,7 +207,7 @@ class _AnimatedIconState extends State<_AnimatedIcon>
 
   @override
   Widget build(BuildContext context) => RotationTransition(
-        turns: _controller,
+        turns: widget.animate ? _controller : kAlwaysDismissedAnimation,
         child: Icon(
           widget.icon,
           size: widget.size,
@@ -190,6 +233,7 @@ class AgentTypingIndicator extends StatefulWidget {
 class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _shouldAnimate = false;
 
   @override
   void initState() {
@@ -198,7 +242,23 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
       duration: const Duration(milliseconds: 1400),
       vsync: this,
     );
-    unawaited(_controller.repeat());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final reduceMotion = (mediaQuery?.disableAnimations ?? false) ||
+        (mediaQuery?.accessibleNavigation ?? false);
+    final shouldAnimate = !reduceMotion;
+    if (_shouldAnimate == shouldAnimate) return;
+    _shouldAnimate = shouldAnimate;
+    if (_shouldAnimate) {
+      unawaited(_controller.repeat());
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
   }
 
   @override
@@ -242,6 +302,19 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
   Widget _buildDot(int index) => AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
+          if (!_shouldAnimate) {
+            return Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+            );
+          }
           final value = (_controller.value + index * 0.33) % 1.0;
           final opacity = (1 - (value - 0.5).abs() * 2).clamp(0.3, 1.0);
           final scale =

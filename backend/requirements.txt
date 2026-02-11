@@ -97,8 +97,6 @@ jinja2>=3.1.0
 celery>=5.3.6
 y-py>=0.6.0
 
-# Dictionary (MDX/MDD)
-# python-lzo>=1.15  # Commented out: fails to build in Docker, unused in codebase
-readmdict>=0.1.1
+# Dictionary/HTML parsing (MDX feature is disabled by default)
 beautifulsoup4>=4.12.0
 lxml>=5.0.0

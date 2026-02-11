@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -79,14 +81,14 @@ class _TaskCardState extends ConsumerState<TaskCard>
             type: MaterialType.transparency,
             child: GestureDetector(
               onTapDown: (_) {
-                HapticFeedback.lightImpact();
-                if (mounted) _controller.forward();
+                unawaited(HapticFeedback.lightImpact());
+                if (mounted) unawaited(_controller.forward());
               },
               onTapUp: (_) {
-                if (mounted) _controller.reverse();
+                if (mounted) unawaited(_controller.reverse());
               },
               onTapCancel: () {
-                if (mounted) _controller.reverse();
+                if (mounted) unawaited(_controller.reverse());
               },
               onTap: widget.onTap,
               child: RepaintBoundary(
@@ -134,14 +136,17 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                   width: 4,
                                   decoration: BoxDecoration(
                                     gradient: _getTypeGradient(
-                                        context, widget.task.type,),
+                                      context,
+                                      widget.task.type,
+                                    ),
                                   ),
                                 ),
                                 // Content
                                 Expanded(
                                   child: Padding(
                                     padding: EdgeInsets.all(
-                                        context.sparkleSpacing.md,),
+                                      context.sparkleSpacing.md,
+                                    ),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -186,17 +191,20 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                               TaskPill(
                                                 type: widget.task.type,
                                                 label: _typeLabel(
-                                                    widget.task.type,),
+                                                  widget.task.type,
+                                                ),
                                                 tone:
                                                     _typeTone(widget.task.type),
                                               ),
                                               if (widget.task.status ==
                                                   TaskStatus.completed) ...[
                                                 const SizedBox(width: 4),
-                                                Icon(Icons.check_circle,
-                                                    color: context.sparkleColors
-                                                        .semanticSuccess,
-                                                    size: 16,),
+                                                Icon(
+                                                  Icons.check_circle,
+                                                  color: context.sparkleColors
+                                                      .semanticSuccess,
+                                                  size: 16,
+                                                ),
                                               ] else if (widget.task.status !=
                                                   TaskStatus.pending) ...[
                                                 const SizedBox(width: 4),
@@ -204,10 +212,11 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                   type: widget.task.type,
                                                   label:
                                                       toBeginningOfSentenceCase(
-                                                          widget.task.status
-                                                              .name,)!,
+                                                    widget.task.status.name,
+                                                  )!,
                                                   tone: _statusTone(
-                                                      widget.task.status,),
+                                                    widget.task.status,
+                                                  ),
                                                 ),
                                               ],
                                             ],
@@ -218,32 +227,39 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                           children: [
                                             if (widget.task.dueDate !=
                                                 null) ...[
-                                              Icon(Icons.calendar_today,
-                                                  size: 14,
-                                                  color: context.sparkleColors
-                                                      .textSecondary,),
+                                              Icon(
+                                                Icons.calendar_today,
+                                                size: 14,
+                                                color: context.sparkleColors
+                                                    .textSecondary,
+                                              ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 DateFormat.yMd().format(
-                                                    widget.task.dueDate!,),
+                                                  widget.task.dueDate!,
+                                                ),
                                                 style: TextStyle(
-                                                    color: context.sparkleColors
-                                                        .textSecondary,
-                                                    fontSize: 12,),
+                                                  color: context.sparkleColors
+                                                      .textSecondary,
+                                                  fontSize: 12,
+                                                ),
                                               ),
                                               const SizedBox(width: 12),
                                             ],
-                                            Icon(Icons.timer_outlined,
-                                                size: 14,
-                                                color: context.sparkleColors
-                                                    .textSecondary,),
+                                            Icon(
+                                              Icons.timer_outlined,
+                                              size: 14,
+                                              color: context
+                                                  .sparkleColors.textSecondary,
+                                            ),
                                             const SizedBox(width: 4),
                                             Text(
                                               '${widget.task.estimatedMinutes} min',
                                               style: TextStyle(
-                                                  color: context.sparkleColors
-                                                      .textSecondary,
-                                                  fontSize: 12,),
+                                                color: context.sparkleColors
+                                                    .textSecondary,
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -252,8 +268,9 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                           Row(
                                             children: [
                                               _DifficultyStars(
-                                                  difficulty:
-                                                      widget.task.difficulty,),
+                                                difficulty:
+                                                    widget.task.difficulty,
+                                              ),
                                               const Spacer(),
                                               if (widget.onStart != null &&
                                                   widget.task.status !=
@@ -264,8 +281,10 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                   color: context.sparkleColors
                                                       .brandPrimary,
                                                   onPressed: () {
-                                                    HapticFeedback
-                                                        .selectionClick();
+                                                    unawaited(
+                                                      HapticFeedback
+                                                          .selectionClick(),
+                                                    );
                                                     widget.onStart!();
                                                   },
                                                 ),
@@ -278,8 +297,10 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                   color: context.sparkleColors
                                                       .semanticSuccess,
                                                   onPressed: () {
-                                                    HapticFeedback
-                                                        .mediumImpact();
+                                                    unawaited(
+                                                      HapticFeedback
+                                                          .mediumImpact(),
+                                                    );
                                                     widget.onComplete!();
                                                   },
                                                 ),
@@ -309,18 +330,31 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.cloud_off,
-                                              color: context
-                                                  .sparkleColors.brandPrimary,
-                                              size: 32,),
+                                          Icon(
+                                            Icons.cloud_off,
+                                            color:
+                                                ThemeUtils.getContrastSafeText(
+                                              context
+                                                  .sparkleColors.semanticError,
+                                              darkText: context
+                                                  .sparkleColors.textPrimary,
+                                            ),
+                                            size: 32,
+                                          ),
                                           const SizedBox(height: 8),
                                           Text(
                                             widget.task.syncError ??
                                                 'Sync Failed',
                                             style: TextStyle(
-                                                color: context
-                                                    .sparkleColors.brandPrimary,
-                                                fontWeight: FontWeight.bold,),
+                                              color: ThemeUtils
+                                                  .getContrastSafeText(
+                                                context.sparkleColors
+                                                    .semanticError,
+                                                darkText: context
+                                                    .sparkleColors.textPrimary,
+                                              ),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                           const SizedBox(height: 12),
                                           Row(
@@ -330,49 +364,68 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                               TextButton(
                                                 onPressed: () {
                                                   ref
-                                                      .read(taskListProvider
-                                                          .notifier,)
+                                                      .read(
+                                                        taskListProvider
+                                                            .notifier,
+                                                      )
                                                       .discardChange(
-                                                          widget.task.id,);
+                                                        widget.task.id,
+                                                      );
                                                 },
                                                 style: TextButton.styleFrom(
-                                                    foregroundColor: context
+                                                  foregroundColor: ThemeUtils
+                                                      .getContrastSafeText(
+                                                    context.sparkleColors
+                                                        .semanticError,
+                                                    darkText: context
                                                         .sparkleColors
-                                                        .brandPrimary,),
+                                                        .textPrimary,
+                                                  ),
+                                                ),
                                                 child: const Text('Discard'),
                                               ),
-                                            const SizedBox(width: 8),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                ref
-                                                    .read(taskListProvider
-                                                        .notifier,)
-                                                    .retryCompleteTask(
-                                                      widget.task.id,
-                                                      widget.task
-                                                              .actualMinutes ??
+                                              const SizedBox(width: 8),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  unawaited(
+                                                    ref
+                                                        .read(
+                                                          taskListProvider
+                                                              .notifier,
+                                                        )
+                                                        .retryCompleteTask(
+                                                          widget.task.id,
                                                           widget.task
-                                                              .estimatedMinutes,
-                                                      widget.task.userNote,
-                                                    );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: context
-                                                    .sparkleColors.brandPrimary,
-                                                foregroundColor: context
-                                                    .sparkleColors
-                                                    .semanticError,
+                                                                  .actualMinutes ??
+                                                              widget.task
+                                                                  .estimatedMinutes,
+                                                          widget.task.userNote,
+                                                        ),
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: ThemeUtils
+                                                      .getContrastSafeText(
+                                                    context.sparkleColors
+                                                        .semanticError,
+                                                    darkText: context
+                                                        .sparkleColors
+                                                        .textPrimary,
+                                                  ),
+                                                  foregroundColor: context
+                                                      .sparkleColors
+                                                      .semanticError,
+                                                ),
+                                                child: const Text('Retry'),
                                               ),
-                                              child: const Text('Retry'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
                             ),
 
                           // Syncing Indicator
@@ -386,7 +439,8 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                      context.sparkleColors.brandPrimary,),
+                                    context.sparkleColors.brandPrimary,
+                                  ),
                                 ),
                               ),
                             ),
@@ -403,8 +457,11 @@ class _TaskCardState extends ConsumerState<TaskCard>
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton(
-      {required this.icon, required this.color, required this.onPressed,});
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
   final IconData icon;
   final Color color;
   final VoidCallback onPressed;
@@ -441,7 +498,7 @@ class _DifficultyStars extends StatelessWidget {
             ).createShader(bounds),
             child: Icon(
               index < difficulty ? Icons.star : Icons.star_border,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 16,
             ),
           ),

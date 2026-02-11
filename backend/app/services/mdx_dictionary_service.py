@@ -2,25 +2,35 @@
 MDX/MDD 词典查询服务
 MDX/MDD Dictionary Query Service
 
-依赖: pip install readmdict python-lzo beautifulsoup4 lxml
+默认关闭。仅当 ENABLE_MDX_DICTIONARY=true 时才尝试加载 MDX 依赖。
 """
 import html
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-try:
-    from bs4 import BeautifulSoup
-    from readmdict import MDD, MDX
-    MDX_AVAILABLE = True
-except ImportError:
+ENABLE_MDX_DICTIONARY = os.getenv("ENABLE_MDX_DICTIONARY", "false").lower() in {"1", "true", "yes", "on"}
+
+if ENABLE_MDX_DICTIONARY:
+    try:
+        from bs4 import BeautifulSoup
+        from readmdict import MDD, MDX
+        MDX_AVAILABLE = True
+    except BaseException as e:
+        MDX_AVAILABLE = False
+        MDX = None
+        MDD = None
+        BeautifulSoup = None
+        logger.warning("MDX dictionary dependencies unavailable, feature disabled: %s", e)
+else:
     MDX_AVAILABLE = False
     MDX = None
     MDD = None
     BeautifulSoup = None
-    logger.warning("readmdict or beautifulsoup4 not available. MDX dictionary service disabled.")
+    logger.info("MDX dictionary disabled by config (ENABLE_MDX_DICTIONARY=false)")
 
 
 class MDXDictionaryService:
