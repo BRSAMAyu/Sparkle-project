@@ -44,30 +44,31 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         ),
         child: SafeArea(
           child: ContentConstraint(
-          child: Column(
-            children: [
-              // Custom app bar
-              _buildAppBar(context),
+            child: Column(
+              children: [
+                // Custom app bar
+                _buildAppBar(context),
 
-              // Content
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadPatterns,
-                  child: cognitiveState.isLoading &&
-                          cognitiveState.patterns.isEmpty
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                DS.brandPrimary70,),
-                          ),
-                        )
-                      : cognitiveState.patterns.isEmpty
-                          ? _buildEmptyState()
-                          : _buildPatternList(cognitiveState.patterns),
+                // Content
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadPatterns,
+                    child: cognitiveState.isLoading &&
+                            cognitiveState.patterns.isEmpty
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                DS.brandPrimary70,
+                              ),
+                            ),
+                          )
+                        : cognitiveState.patterns.isEmpty
+                            ? _buildEmptyState()
+                            : _buildPatternList(cognitiveState.patterns),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -75,12 +76,19 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing8,
+          DS.spacing8,
+          DS.spacing16,
+          DS.spacing16,
+        ),
         child: Row(
           children: [
-            IconButton(
+            SparkleIconButton(
               onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
             Expanded(
               child: Text(
@@ -152,10 +160,10 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 
   Widget _buildPatternList(List<BehaviorPatternModel> patterns) =>
       ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         itemCount: patterns.length,
         itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: DS.spacing16),
           child: _PatternCard(pattern: patterns[index]),
         ),
       );
@@ -294,26 +302,13 @@ class _PatternCard extends StatelessWidget {
                   // Action Button (Phase 6.2)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton.icon(
+                    child: SparkleButton.ghost(
+                      label: '立即行动',
                       onPressed: () {
                         // Smart routing based on pattern type could be added here
                         context.push('/focus');
                       },
-                      icon: Icon(Icons.arrow_forward,
-                          size: 16, color: DS.brandPrimaryConst,),
-                      label: Text(
-                        '立即行动',
-                        style: TextStyle(
-                            color: DS.brandPrimaryConst,
-                            fontWeight: FontWeight.bold,),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8,),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),),
-                      ),
+                      icon: const Icon(Icons.arrow_forward),
                     ),
                   ),
                 ],

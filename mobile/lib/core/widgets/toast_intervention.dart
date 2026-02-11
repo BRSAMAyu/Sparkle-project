@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class ToastIntervention extends StatelessWidget {
-
   const ToastIntervention({
-    required this.intervention, required this.onAction, required this.onDismiss, super.key,
+    required this.intervention,
+    required this.onAction,
+    required this.onDismiss,
+    super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;
@@ -20,9 +23,9 @@ class ToastIntervention extends StatelessWidget {
           ]
         : intervention.actions;
     return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 32,
+      left: DS.md,
+      right: DS.md,
+      bottom: DS.spacing32,
       child: GestureDetector(
         onTap: () {},
         child: Material(
@@ -30,7 +33,7 @@ class ToastIntervention extends StatelessWidget {
           color: theme.colorScheme.surface,
           elevation: 12,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,22 +42,20 @@ class ToastIntervention extends StatelessWidget {
                   intervention.content.renderedMessage,
                   style: theme.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
+                    SparkleButton.outline(
+                      label: actions.length > 1 ? actions[1].label : '稍后',
                       onPressed: actions.length > 1
                           ? () => onAction(actions[1].id)
                           : onDismiss,
-                      child: Text(
-                        actions.length > 1 ? actions[1].label : '稍后',
-                      ),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
+                    const SizedBox(width: DS.sm),
+                    SparkleButton.primary(
+                      label: actions.first.label,
                       onPressed: () => onAction(actions.first.id),
-                      child: Text(actions.first.label),
                     ),
                   ],
                 ),

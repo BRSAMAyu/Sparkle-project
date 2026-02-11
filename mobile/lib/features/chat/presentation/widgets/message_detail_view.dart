@@ -20,16 +20,15 @@ class MessageDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isUserMessage = message.role == MessageRole.user;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.overlay30.withValues(alpha: 0),
       body: GestureDetector(
         // 点击背景关闭
         onTap: () => Navigator.of(context).pop(),
         child: Container(
-          color: Colors.black.withValues(alpha: 0.5),
+          color: DS.textPrimary.withValues(alpha: 0.5),
           child: GestureDetector(
             // 阻止点击内容区域时关闭
             onTap: () {},
@@ -48,7 +47,7 @@ class MessageDetailView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: DS.textPrimary.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -58,20 +57,20 @@ class MessageDetailView extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // 顶部工具栏
-                      _buildHeader(context, isUserMessage, isDark),
+                      _buildHeader(context, isUserMessage),
 
                       // 内容区域（可滚动）
                       Flexible(
                         child: Hero(
                           tag: heroTag,
                           child: Material(
-                            color: Colors.transparent,
+                            color: DS.overlay30.withValues(alpha: 0),
                             child: SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: DS.lg,
                                 vertical: DS.md,
                               ),
-                              child: _buildContent(context, isUserMessage, isDark),
+                              child: _buildContent(context, isUserMessage),
                             ),
                           ),
                         ),
@@ -90,16 +89,17 @@ class MessageDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isUserMessage, bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isUserMessage) {
+    final roleColor = isUserMessage ? DS.primaryBase : DS.secondaryBase;
+    final roleTextColor = DS.onBrandPrimary;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.lg,
         vertical: DS.md,
       ),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.02),
+        color: DS.surfaceTertiary.withValues(alpha: 0.35),
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(20),
         ),
@@ -113,7 +113,7 @@ class MessageDetailView extends StatelessWidget {
               vertical: DS.xs,
             ),
             decoration: BoxDecoration(
-              color: isUserMessage ? DS.primaryBase : DS.secondaryBase,
+              color: roleColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -122,13 +122,13 @@ class MessageDetailView extends StatelessWidget {
                 Icon(
                   isUserMessage ? Icons.person : Icons.smart_toy,
                   size: 16,
-                  color: Colors.white,
+                  color: roleTextColor,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   isUserMessage ? '我' : 'AI助手',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: roleTextColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -143,7 +143,7 @@ class MessageDetailView extends StatelessWidget {
           Text(
             DateFormat('MM/dd HH:mm').format(message.createdAt),
             style: TextStyle(
-              color: isDark ? Colors.white60 : Colors.black54,
+              color: DS.textSecondary,
               fontSize: 12,
             ),
           ),
@@ -151,24 +151,25 @@ class MessageDetailView extends StatelessWidget {
           const Spacer(),
 
           // 关闭按钮
-          IconButton(
-            icon: const Icon(Icons.close, size: 20),
+          SparkleIconButton(
+            icon: const Icon(Icons.close, size: DS.iconSizeSm),
             onPressed: () => Navigator.of(context).pop(),
-            tooltip: '关闭',
-            visualDensity: VisualDensity.compact,
+            semanticLabel: '关闭',
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, bool isUserMessage, bool isDark) {
+  Widget _buildContent(BuildContext context, bool isUserMessage) {
     if (message.content.isEmpty) {
       return Center(
         child: Text(
           '无内容',
           style: TextStyle(
-            color: isDark ? Colors.white38 : Colors.black38,
+            color: DS.textTertiary,
             fontSize: 14,
           ),
         ),
@@ -182,7 +183,7 @@ class MessageDetailView extends StatelessWidget {
         style: TextStyle(
           fontSize: 16,
           height: 1.6,
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
         ),
       );
     }
@@ -195,53 +196,47 @@ class MessageDetailView extends StatelessWidget {
         p: TextStyle(
           fontSize: 16,
           height: 1.6,
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
         ),
         h1: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
           height: 1.4,
         ),
         h2: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
           height: 1.4,
         ),
         h3: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
           height: 1.4,
         ),
         code: TextStyle(
           fontSize: 14,
-          backgroundColor: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
+          backgroundColor: DS.surfaceTertiary.withValues(
+            alpha: 0.5,
+          ),
           color: DS.primaryBase,
           fontFamily: 'monospace',
         ),
         codeblockDecoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.03),
+          color: DS.surfaceTertiary.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.1),
+            color: DS.border.withValues(alpha: 0.6),
           ),
         ),
         blockquote: TextStyle(
-          color: isDark ? Colors.white70 : Colors.black54,
+          color: DS.textSecondary,
           fontStyle: FontStyle.italic,
         ),
         blockquoteDecoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.03),
+          color: DS.surfaceTertiary.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(4),
           border: Border(
             left: BorderSide(
@@ -251,7 +246,7 @@ class MessageDetailView extends StatelessWidget {
           ),
         ),
         listBullet: TextStyle(
-          color: isDark ? Colors.white : Colors.black87,
+          color: DS.textPrimary,
         ),
         a: TextStyle(
           color: DS.primaryBase,
@@ -270,9 +265,7 @@ class MessageDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.02),
+        color: DS.surfaceTertiary.withValues(alpha: 0.35),
         borderRadius: const BorderRadius.vertical(
           bottom: Radius.circular(20),
         ),
@@ -286,13 +279,7 @@ class MessageDetailView extends StatelessWidget {
             label: '复制',
             onPressed: () {
               Clipboard.setData(ClipboardData(text: message.content));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('已复制到剪贴板'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              AppFeedback.info(context, '已复制到剪贴板');
             },
           ),
 
@@ -323,8 +310,6 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(12),
@@ -339,14 +324,14 @@ class _ActionButton extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: isDark ? Colors.white70 : Colors.black54,
+              color: DS.textSecondary,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.white70 : Colors.black54,
+                color: DS.textSecondary,
               ),
             ),
           ],

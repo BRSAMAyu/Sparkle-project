@@ -50,9 +50,9 @@ class AgentConfig {
   static AgentConfig forType(AgentType type) {
     switch (type) {
       case AgentType.orchestrator:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.psychology, // 大脑图标
-          color: Color(0xFF9C27B0), // 紫色 (Sparkle Purple)
+          color: DS.prismPurple,
           displayName: 'Orchestrator',
           animation: '呼吸脉冲', // 思考中
         );
@@ -66,9 +66,9 @@ class AgentConfig {
         );
 
       case AgentType.math:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.calculate, // 计算器图标
-          color: Color(0xFFFFC107), // 琥珀色 (Amber)
+          color: DS.warning,
           displayName: 'MathAgent',
           animation: '数字跳动', // 计算中
         );
@@ -82,65 +82,65 @@ class AgentConfig {
         );
 
       case AgentType.writing:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.edit, // 笔图标
-          color: Color(0xFFF59E0B), // 琥珀色
+          color: DS.warning,
           displayName: 'WritingAgent',
           animation: '文字流动',
         );
 
       case AgentType.science:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.science, // 科学图标
-          color: Color(0xFF10B981), // 绿色
+          color: DS.success,
           displayName: 'ScienceAgent',
           animation: '实验分析',
         );
 
       case AgentType.search:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.search, // 搜索图标
-          color: Color(0xFF3B82F6), // 蓝色
+          color: DS.info,
           displayName: 'SearchAgent',
           animation: '扫描搜索',
         );
 
       case AgentType.dataAnalysis:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.analytics, // 数据分析图标
-          color: Color(0xFF8B5CF6), // 紫罗兰色
+          color: DS.capsuleAccent,
           displayName: 'DataAnalyst',
           animation: '数据流动',
         );
 
       case AgentType.translation:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.translate, // 翻译图标
-          color: Color(0xFF06B6D4), // 青色
+          color: DS.infoLight,
           displayName: 'Translator',
           animation: '语言转换',
         );
 
       case AgentType.image:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.image, // 图像图标
-          color: Color(0xFFEC4899), // 粉色
+          color: DS.brandSecondary,
           displayName: 'ImageAgent',
           animation: '像素渲染',
         );
 
       case AgentType.audio:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.audiotrack, // 音频图标
-          color: Color(0xFFF59E0B), // 橙色
+          color: DS.warning,
           displayName: 'AudioAgent',
           animation: '音波震动',
         );
 
       case AgentType.reasoning:
-        return const AgentConfig(
+        return AgentConfig(
           icon: Icons.lightbulb, // 灯泡图标
-          color: Color(0xFFEAB308), // 黄色
+          color: DS.warningLight,
           displayName: 'ReasoningAgent',
           animation: '逻辑推演',
         );

@@ -3,6 +3,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 可池化对象接口
 abstract class Poolable {
@@ -116,7 +117,7 @@ class PoolableParticle implements Poolable {
   Offset position = Offset.zero;
   double size = 0;
   double opacity = 1.0;
-  Color color = Colors.white;
+  Color color = DS.neutral0;
   double angle = 0;
   double velocity = 0;
   double lifetime = 0;
@@ -128,7 +129,7 @@ class PoolableParticle implements Poolable {
     position = Offset.zero;
     size = 0;
     opacity = 1.0;
-    color = Colors.white;
+    color = DS.neutral0;
     angle = 0;
     velocity = 0;
     lifetime = 0;

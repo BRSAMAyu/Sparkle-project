@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
@@ -21,44 +22,44 @@ class IntentAnalysisButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => InkWell(
-      onTap: () => _showIntentPreview(context),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+        onTap: () => _showIntentPreview(context),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: Theme.of(context).primaryColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '分析意图',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              size: 16,
-              color: Theme.of(context).primaryColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '分析意图',
-              style: TextStyle(
-                color: Theme.of(context).primaryColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      );
 
   Future<void> _showIntentPreview(BuildContext context) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => IntentPreviewDialog(
         message: message,
         onConfirm: onConfirm,

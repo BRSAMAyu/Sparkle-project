@@ -8,20 +8,32 @@ import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 
 /// Arbitration priority options
 enum ArbitrationPriority {
-  low('low', '低', Colors.grey),
-  normal('normal', '正常', Colors.blue),
-  high('high', '高', Colors.orange),
-  urgent('urgent', '紧急', Colors.red);
+  low('low', '低'),
+  normal('normal', '正常'),
+  high('high', '高'),
+  urgent('urgent', '紧急');
 
-  const ArbitrationPriority(this.value, this.label, this.color);
+  const ArbitrationPriority(this.value, this.label);
   final String value;
   final String label;
-  final Color color;
+
+  Color get color {
+    switch (this) {
+      case ArbitrationPriority.low:
+        return DS.neutral500;
+      case ArbitrationPriority.normal:
+        return DS.info;
+      case ArbitrationPriority.high:
+        return DS.warning;
+      case ArbitrationPriority.urgent:
+        return DS.error;
+    }
+  }
 
   static ArbitrationPriority fromString(String value) => values.firstWhere(
-      (p) => p.value == value,
-      orElse: () => normal,
-    );
+        (p) => p.value == value,
+        orElse: () => normal,
+      );
 }
 
 /// Escalation reason options
@@ -39,22 +51,34 @@ enum EscalationReason {
   final String label;
 
   static EscalationReason fromString(String value) => values.firstWhere(
-      (r) => r.value == value,
-      orElse: () => lowConfidence,
-    );
+        (r) => r.value == value,
+        orElse: () => lowConfidence,
+      );
 }
 
 /// Appeal decision options
 enum AppealDecision {
-  approved('approved', '通过申诉', Colors.green),
-  rejected('rejected', '拒绝申诉', Colors.red),
-  partiallyApproved('partially_approved', '部分通过', Colors.orange),
-  escalated('escalated', '进一步升级', Colors.purple);
+  approved('approved', '通过申诉'),
+  rejected('rejected', '拒绝申诉'),
+  partiallyApproved('partially_approved', '部分通过'),
+  escalated('escalated', '进一步升级');
 
-  const AppealDecision(this.value, this.label, this.color);
+  const AppealDecision(this.value, this.label);
   final String value;
   final String label;
-  final Color color;
+
+  Color get color {
+    switch (this) {
+      case AppealDecision.approved:
+        return DS.success;
+      case AppealDecision.rejected:
+        return DS.error;
+      case AppealDecision.partiallyApproved:
+        return DS.warning;
+      case AppealDecision.escalated:
+        return DS.taskReflection;
+    }
+  }
 }
 
 /// Arbitration case data model
@@ -81,36 +105,38 @@ class ArbitrationCase {
     this.evidence = const {},
   });
 
-  factory ArbitrationCase.fromJson(Map<String, dynamic> json) => ArbitrationCase(
-      caseId: json['case_id'] as String? ?? '',
-      appealId: json['appeal_id'] as String? ?? '',
-      reviewId: json['review_id'] as String? ?? '',
-      userId: json['user_id'] as String? ?? '',
-      escalationReason: EscalationReason.fromString(
-        json['escalation_reason'] as String? ?? 'low_confidence',
-      ),
-      priority: ArbitrationPriority.fromString(
-        json['priority'] as String? ?? 'normal',
-      ),
-      createdAt: json['created_at'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      assignedTo: json['assigned_to'] as String?,
-      assignedAt: json['assigned_at'] as String?,
-      originalReviewScore:
-          (json['original_review_score'] as num?)?.toDouble() ?? 0.0,
-      secondaryReviewScore: (json['secondary_review_score'] as num?)?.toDouble(),
-      scoreDiscrepancy:
-          (json['score_discrepancy'] as num?)?.toDouble() ?? 0.0,
-      resolution: json['resolution'] as String?,
-      finalDecision: json['final_decision'] as String?,
-      resolvedAt: json['resolved_at'] as String?,
-      resolvedBy: json['resolved_by'] as String?,
-      notes: (json['notes'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-      evidence: json['evidence'] as Map<String, dynamic>? ?? {},
-    );
+  factory ArbitrationCase.fromJson(Map<String, dynamic> json) =>
+      ArbitrationCase(
+        caseId: json['case_id'] as String? ?? '',
+        appealId: json['appeal_id'] as String? ?? '',
+        reviewId: json['review_id'] as String? ?? '',
+        userId: json['user_id'] as String? ?? '',
+        escalationReason: EscalationReason.fromString(
+          json['escalation_reason'] as String? ?? 'low_confidence',
+        ),
+        priority: ArbitrationPriority.fromString(
+          json['priority'] as String? ?? 'normal',
+        ),
+        createdAt: json['created_at'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        assignedTo: json['assigned_to'] as String?,
+        assignedAt: json['assigned_at'] as String?,
+        originalReviewScore:
+            (json['original_review_score'] as num?)?.toDouble() ?? 0.0,
+        secondaryReviewScore:
+            (json['secondary_review_score'] as num?)?.toDouble(),
+        scoreDiscrepancy:
+            (json['score_discrepancy'] as num?)?.toDouble() ?? 0.0,
+        resolution: json['resolution'] as String?,
+        finalDecision: json['final_decision'] as String?,
+        resolvedAt: json['resolved_at'] as String?,
+        resolvedBy: json['resolved_by'] as String?,
+        notes: (json['notes'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [],
+        evidence: json['evidence'] as Map<String, dynamic>? ?? {},
+      );
 
   final String caseId;
   final String appealId;
@@ -150,20 +176,21 @@ class ArbitrationQueueStats {
     this.byReason = const {},
   });
 
-  factory ArbitrationQueueStats.fromJson(Map<String, dynamic> json) => ArbitrationQueueStats(
-      totalPending: json['total_pending'] as int? ?? 0,
-      totalAssigned: json['total_assigned'] as int? ?? 0,
-      totalInReview: json['total_in_review'] as int? ?? 0,
-      totalResolvedToday: json['total_resolved_today'] as int? ?? 0,
-      avgResolutionTimeHours:
-          (json['avg_resolution_time_hours'] as num?)?.toDouble() ?? 0.0,
-      byPriority: (json['by_priority'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v as int)) ??
-          {},
-      byReason: (json['by_reason'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, v as int)) ??
-          {},
-    );
+  factory ArbitrationQueueStats.fromJson(Map<String, dynamic> json) =>
+      ArbitrationQueueStats(
+        totalPending: json['total_pending'] as int? ?? 0,
+        totalAssigned: json['total_assigned'] as int? ?? 0,
+        totalInReview: json['total_in_review'] as int? ?? 0,
+        totalResolvedToday: json['total_resolved_today'] as int? ?? 0,
+        avgResolutionTimeHours:
+            (json['avg_resolution_time_hours'] as num?)?.toDouble() ?? 0.0,
+        byPriority: (json['by_priority'] as Map<String, dynamic>?)
+                ?.map((k, v) => MapEntry(k, v as int)) ??
+            {},
+        byReason: (json['by_reason'] as Map<String, dynamic>?)
+                ?.map((k, v) => MapEntry(k, v as int)) ??
+            {},
+      );
 
   final int totalPending;
   final int totalAssigned;
@@ -280,26 +307,31 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
 
       if (result.success && result.cases.isNotEmpty) {
         setState(() {
-          _cases = result.cases.map((info) => ArbitrationCase(
-              caseId: info.caseId,
-              appealId: info.appealId,
-              reviewId: info.reviewId,
-              userId: info.userId,
-              escalationReason: EscalationReason.fromString(info.escalationReason),
-              priority: ArbitrationPriority.fromString(info.priority),
-              createdAt: info.createdAt,
-              status: info.status,
-              assignedTo: info.assignedTo,
-              assignedAt: info.assignedAt,
-              originalReviewScore: info.originalReviewScore,
-              secondaryReviewScore: info.secondaryReviewScore,
-              scoreDiscrepancy: info.scoreDiscrepancy,
-              resolution: info.resolution,
-              finalDecision: info.finalDecision,
-              resolvedAt: info.resolvedAt,
-              resolvedBy: info.resolvedBy,
-              notes: info.notes,
-            ),).toList();
+          _cases = result.cases
+              .map(
+                (info) => ArbitrationCase(
+                  caseId: info.caseId,
+                  appealId: info.appealId,
+                  reviewId: info.reviewId,
+                  userId: info.userId,
+                  escalationReason:
+                      EscalationReason.fromString(info.escalationReason),
+                  priority: ArbitrationPriority.fromString(info.priority),
+                  createdAt: info.createdAt,
+                  status: info.status,
+                  assignedTo: info.assignedTo,
+                  assignedAt: info.assignedAt,
+                  originalReviewScore: info.originalReviewScore,
+                  secondaryReviewScore: info.secondaryReviewScore,
+                  scoreDiscrepancy: info.scoreDiscrepancy,
+                  resolution: info.resolution,
+                  finalDecision: info.finalDecision,
+                  resolvedAt: info.resolvedAt,
+                  resolvedBy: info.resolvedBy,
+                  notes: info.notes,
+                ),
+              )
+              .toList();
         });
       } else {
         // Fallback to empty list when no cases available
@@ -328,33 +360,16 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         // Refresh cases after assignment
         await _loadCases();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? '案件已分配'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.success(context, result.message ?? '案件已分配');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? '分配失败'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.error(context, result.message ?? '分配失败');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('分配失败: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.error(context, '分配失败: $e');
       }
     }
   }
@@ -384,48 +399,32 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         await _loadStats();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? '决策已提交: ${decision.label}'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.success(
+              context, result.message ?? '决策已提交: ${decision.label}');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? '提交失败'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.error(context, result.message ?? '提交失败');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('提交失败: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.error(context, '提交失败: $e');
       }
     }
   }
 
   List<ArbitrationCase> get _filteredCases => _cases.where((c) {
-      if (_priorityFilter != null && c.priority != _priorityFilter) {
-        return false;
-      }
-      if (_statusFilter == 'pending' && !c.isPending) return false;
-      if (_statusFilter == 'assigned' && !c.isAssigned && !c.isInReview) {
-        return false;
-      }
-      if (_statusFilter == 'resolved' && !c.isResolved) return false;
-      return true;
-    }).toList();
+        if (_priorityFilter != null && c.priority != _priorityFilter) {
+          return false;
+        }
+        if (_statusFilter == 'pending' && !c.isPending) return false;
+        if (_statusFilter == 'assigned' && !c.isAssigned && !c.isInReview) {
+          return false;
+        }
+        if (_statusFilter == 'resolved' && !c.isResolved) return false;
+        return true;
+      }).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -445,13 +444,14 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
+              Icon(Icons.error_outline, size: 48, color: DS.error),
+              const SizedBox(height: DS.md),
               Text('加载失败: $_error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
+              const SizedBox(height: DS.md),
+              SparkleButton.outline(
+                label: '重试',
                 onPressed: _loadData,
-                child: const Text('重试'),
+                icon: const Icon(Icons.refresh),
               ),
             ],
           ),
@@ -463,10 +463,15 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
       appBar: AppBar(
         title: const Text('申诉仲裁管理'),
         actions: [
-          IconButton(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+          Padding(
+            padding: const EdgeInsets.only(right: DS.sm),
+            child: SparkleIconButton(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              variant: ButtonVariant.ghost,
+              size: 40,
+              semanticLabel: '刷新',
+            ),
           ),
         ],
       ),
@@ -497,7 +502,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -507,7 +512,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 Text(
                   '今日已解决: ${stats.totalResolvedToday}',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -522,33 +527,33 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
           // Stats cards
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DS.md),
               children: [
                 _buildStatCard(
                   theme: theme,
                   label: '待分配',
                   value: stats.totalPending.toString(),
-                  color: Colors.orange,
+                  color: DS.warning,
                   icon: Icons.inbox,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
                 _buildStatCard(
                   theme: theme,
                   label: '处理中',
                   value: (stats.totalAssigned + stats.totalInReview).toString(),
-                  color: Colors.blue,
+                  color: DS.info,
                   icon: Icons.pending,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
                 _buildStatCard(
                   theme: theme,
                   label: '平均处理时间',
                   value: '${stats.avgResolutionTimeHours.toStringAsFixed(1)}h',
-                  color: Colors.green,
+                  color: DS.success,
                   icon: Icons.schedule,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.lg),
 
                 // By priority breakdown
                 Text(
@@ -557,12 +562,12 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 ...ArbitrationPriority.values.map((p) {
                   final count = stats.byPriority[p.value] ?? 0;
                   if (count == 0) return const SizedBox.shrink();
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: DS.xs),
                     child: Row(
                       children: [
                         Container(
@@ -573,7 +578,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: DS.sm),
                         Expanded(child: Text(p.label)),
                         Text(count.toString()),
                       ],
@@ -581,7 +586,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   );
                 }),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.md),
 
                 // By reason breakdown
                 Text(
@@ -590,15 +595,15 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 ...stats.byReason.entries.map((entry) {
                   final reason = EscalationReason.fromString(entry.key);
                   final count = entry.value;
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: DS.xs),
                     child: Row(
                       children: [
-                        const SizedBox(width: 8),
+                        const SizedBox(width: DS.sm),
                         Expanded(child: Text(reason.label)),
                         Text(count.toString()),
                       ],
@@ -619,42 +624,43 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     required String value,
     required Color color,
     required IconData icon,
-  }) => Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
           ),
-        ],
-      ),
-    );
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildCasesList(ThemeData theme) {
     final cases = _filteredCases;
@@ -740,67 +746,55 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
   }
 
   Widget _buildCaseCard(ThemeData theme, ArbitrationCase caseData) => Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedCase = caseData;
-          });
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Priority indicator
-              Container(
-                width: 4,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: caseData.priority.color,
-                  borderRadius: BorderRadius.circular(2),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedCase = caseData;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Priority indicator
+                Container(
+                  width: 4,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: caseData.priority.color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              // Case info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '案件 #${caseData.caseId}',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
+                // Case info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            '案件 #${caseData.caseId}',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildStatusChip(theme, caseData),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      caseData.escalationReason.label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                          const SizedBox(width: 8),
+                          _buildStatusChip(theme, caseData),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.star_border,
-                          size: 14,
+                      const SizedBox(height: 4),
+                      Text(
+                        caseData.escalationReason.label,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '原评分: ${(caseData.originalReviewScore * 100).toInt()}%',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                        if (caseData.secondaryReviewScore != null) ...[
-                          const SizedBox(width: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
                           Icon(
                             Icons.star_border,
                             size: 14,
@@ -808,45 +802,57 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '复评: ${(caseData.secondaryReviewScore! * 100).toInt()}%',
+                            '原评分: ${(caseData.originalReviewScore * 100).toInt()}%',
                             style: theme.textTheme.bodySmall,
                           ),
-                        ],
-                        const Spacer(),
-                        Text(
-                          _formatTime(caseData.createdAt),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          if (caseData.secondaryReviewScore != null) ...[
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.star_border,
+                              size: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '复评: ${(caseData.secondaryReviewScore! * 100).toInt()}%',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                          const Spacer(),
+                          Text(
+                            _formatTime(caseData.createdAt),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildStatusChip(ThemeData theme, ArbitrationCase caseData) {
     Color color;
     String label;
 
     if (caseData.isPending) {
-      color = Colors.orange;
+      color = DS.warning;
       label = '待分配';
     } else if (caseData.isAssigned || caseData.isInReview) {
-      color = Colors.blue;
+      color = DS.info;
       label = '处理中';
     } else {
-      color = Colors.green;
+      color = DS.success;
       label = '已解决';
     }
 
@@ -877,13 +883,16 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              IconButton(
+              SparkleIconButton(
                 onPressed: () {
                   setState(() {
                     _selectedCase = null;
                   });
                 },
                 icon: const Icon(Icons.arrow_back),
+                variant: ButtonVariant.ghost,
+                size: 40,
+                semanticLabel: '返回',
               ),
               Expanded(
                 child: Text(
@@ -924,7 +933,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     _buildDetailChip(
                       theme: theme,
                       label: caseData.escalationReason.label,
-                      color: Colors.blue,
+                      color: DS.info,
                       icon: Icons.info_outline,
                     ),
                   ],
@@ -966,12 +975,12 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
+                      color: DS.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning, size: 16, color: Colors.orange),
+                        Icon(Icons.warning, size: 16, color: DS.warning),
                         const SizedBox(width: 8),
                         Text(
                           '分数差异: ${(caseData.scoreDiscrepancy * 100).toInt()}%',
@@ -997,7 +1006,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                 _buildInfoRow(theme, '申诉ID', caseData.appealId),
                 _buildInfoRow(theme, '审查ID', caseData.reviewId),
                 _buildInfoRow(theme, '用户ID', caseData.userId),
-                _buildInfoRow(theme, '创建时间', _formatDateTime(caseData.createdAt)),
+                _buildInfoRow(
+                    theme, '创建时间', _formatDateTime(caseData.createdAt)),
                 if (caseData.assignedTo != null)
                   _buildInfoRow(theme, '分配给', caseData.assignedTo!),
 
@@ -1012,7 +1022,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...caseData.notes.map((note) => Padding(
+                  ...caseData.notes.map(
+                    (note) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         note,
@@ -1020,7 +1031,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -1033,7 +1045,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...AppealDecision.values.map((decision) => Padding(
+                  ...AppealDecision.values.map(
+                    (decision) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: FilledButton.tonal(
                         onPressed: () => _showDecisionDialog(
@@ -1041,7 +1054,8 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           decision,
                         ),
                         style: FilledButton.styleFrom(
-                          backgroundColor: decision.color.withValues(alpha: 0.2),
+                          backgroundColor:
+                              decision.color.withValues(alpha: 0.2),
                           foregroundColor: decision.color,
                         ),
                         child: Row(
@@ -1052,13 +1066,14 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
                           ],
                         ),
                       ),
-                    ),),
+                    ),
+                  ),
                 ] else ...[
                   Text(
                     '已解决',
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Colors.green,
+                      color: DS.success,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1084,10 +1099,10 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
   }) {
     final percentage = (score * 100).toInt();
     final color = percentage >= 70
-        ? Colors.green
+        ? DS.success
         : percentage >= 50
-            ? Colors.orange
-            : Colors.red;
+            ? DS.warning
+            : DS.error;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1121,53 +1136,54 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     required String label,
     required Color color,
     required IconData icon,
-  }) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: color,
-            ),
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
           ),
-        ],
-      ),
-    );
-
-  Widget _buildInfoRow(ThemeData theme, String label, String value) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
               label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodySmall,
+          ],
+        ),
+      );
+
+  Widget _buildInfoRow(ThemeData theme, String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 100,
+              child: Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+            Expanded(
+              child: Text(
+                value,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
 
   IconData _getDecisionIcon(AppealDecision decision) {
     switch (decision) {
@@ -1186,48 +1202,50 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  '选择优先级',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                '选择优先级',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              ...ArbitrationPriority.values.map((p) => ListTile(
-                  leading: Icon(Icons.circle, color: p.color, size: 12),
-                  title: Text(p.label),
-                  onTap: () {
-                    setState(() {
-                      if (_priorityFilter == p) {
-                        _priorityFilter = null;
-                      } else {
-                        _priorityFilter = p;
-                      }
-                    });
-                    Navigator.pop(context);
-                  },
-                  trailing: _priorityFilter == p
-                      ? const Icon(Icons.check, color: Colors.green)
-                      : null,
-                ),),
-              ListTile(
-                title: const Center(child: Text('清除筛选')),
+            ),
+            ...ArbitrationPriority.values.map(
+              (p) => ListTile(
+                leading: Icon(Icons.circle, color: p.color, size: 12),
+                title: Text(p.label),
                 onTap: () {
                   setState(() {
-                    _priorityFilter = null;
+                    if (_priorityFilter == p) {
+                      _priorityFilter = null;
+                    } else {
+                      _priorityFilter = p;
+                    }
                   });
                   Navigator.pop(context);
                 },
+                trailing: _priorityFilter == p
+                    ? Icon(Icons.check, color: DS.success)
+                    : null,
               ),
-            ],
-          ),
+            ),
+            ListTile(
+              title: const Center(child: Text('清除筛选')),
+              onTap: () {
+                setState(() {
+                  _priorityFilter = null;
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
+      ),
     );
   }
 
@@ -1237,34 +1255,34 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-          title: Text(decision.label),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: '请输入决策说明...',
-                  border: OutlineInputBorder(),
-                ),
+        title: Text(decision.label),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: '请输入决策说明...',
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _submitDecision(caseId, decision, controller.text);
-              },
-              child: const Text('提交'),
             ),
           ],
         ),
+        actions: [
+          SparkleButton.outline(
+            label: '取消',
+            onPressed: () => Navigator.pop(context),
+          ),
+          SparkleButton.primary(
+            label: '提交',
+            onPressed: () {
+              Navigator.pop(context);
+              _submitDecision(caseId, decision, controller.text);
+            },
+          ),
+        ],
+      ),
     );
   }
 

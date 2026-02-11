@@ -193,7 +193,7 @@ class SparkleButton extends StatelessWidget {
       case ButtonVariant.secondary:
         return colors.brandSecondary;
       case ButtonVariant.outline:
-        return Colors.transparent;
+        return colors.surfacePrimary.withValues(alpha: 0);
       case ButtonVariant.ghost:
         return colors.surfacePrimary.withValues(alpha: 0.1);
       case ButtonVariant.destructive:
@@ -227,7 +227,7 @@ class SparkleButton extends StatelessWidget {
   }
 
   Color _getShadowColor(SparkleColors colors, BreakpointInfo info) {
-    if (disabled) return Colors.transparent;
+    if (disabled) return colors.surfacePrimary.withValues(alpha: 0);
     return colors.textPrimary.withValues(alpha: 0.1);
   }
 
@@ -405,7 +405,7 @@ class SparkleIconButton extends StatelessWidget {
       case ButtonVariant.secondary:
         return colors.brandSecondary;
       case ButtonVariant.outline:
-        return Colors.transparent;
+        return colors.surfacePrimary.withValues(alpha: 0);
       case ButtonVariant.ghost:
         return colors.surfacePrimary.withValues(alpha: 0.1);
       case ButtonVariant.destructive:

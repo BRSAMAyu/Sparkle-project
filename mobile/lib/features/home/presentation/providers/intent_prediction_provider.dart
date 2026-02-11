@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -61,8 +62,7 @@ class IntentPredictionState {
 
 /// Intent prediction notifier
 class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
-  IntentPredictionNotifier(this._ref)
-      : super(IntentPredictionState()) {
+  IntentPredictionNotifier(this._ref) : super(IntentPredictionState()) {
     _generateIdlePredictions();
   }
 
@@ -83,7 +83,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
           label: '冲刺冲刺',
           icon: Icons.flash_on_rounded,
           confidence: 0.9,
-          color: const Color(0xFFFFA726),
+          color: DS.warning,
           action: _navigateToFocus,
         ),
       // Next task prediction
@@ -218,9 +218,9 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         if (response.confidence < 0.5) return;
         if (response.confidence + 0.05 < localConfidence) return;
 
-        final backendPredictions =
-            _predictionsForIntent(backendIntent, response.confidence, normalized)
-              ..sort((a, b) => b.confidence.compareTo(a.confidence));
+        final backendPredictions = _predictionsForIntent(
+            backendIntent, response.confidence, normalized)
+          ..sort((a, b) => b.confidence.compareTo(a.confidence));
         if (backendPredictions.isEmpty) return;
 
         state = state.copyWith(
@@ -266,7 +266,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '创建任务',
             icon: Icons.add_task_rounded,
             confidence: confidence,
-            color: const Color(0xFF66BB6A),
+            color: DS.success,
             action: () => _navigateToTaskCreate(text),
           ),
           PredictedAction(
@@ -282,7 +282,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '记录想法',
             icon: Icons.lightbulb_rounded,
             confidence: confidence,
-            color: const Color(0xFFAB47BC),
+            color: DS.prismPurple,
             action: () => _createCognitiveFragment(text),
           ),
           PredictedAction(
@@ -298,7 +298,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '翻译文本',
             icon: Icons.translate_rounded,
             confidence: confidence,
-            color: const Color(0xFF26C6DA),
+            color: DS.info,
             action: () => _sendChatMessage(text),
           ),
           PredictedAction(
@@ -314,7 +314,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '查看认知棱镜',
             icon: Icons.psychology_rounded,
             confidence: confidence,
-            color: const Color(0xFF7E57C2),
+            color: DS.brandSecondary,
             action: _navigateToPatterns,
           ),
           PredictedAction(
@@ -330,7 +330,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '开始冲刺',
             icon: Icons.flash_on_rounded,
             confidence: confidence,
-            color: const Color(0xFFFFA726),
+            color: DS.warning,
             action: _navigateToFocus,
           ),
           PredictedAction(
@@ -346,7 +346,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '开始学习',
             icon: Icons.school_rounded,
             confidence: confidence,
-            color: const Color(0xFFEC407A),
+            color: DS.brandPrimary,
             action: () => _sendChatMessage(text),
           ),
           PredictedAction(
@@ -362,7 +362,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '开始复习',
             icon: Icons.replay_rounded,
             confidence: confidence,
-            color: const Color(0xFF5C6BC0),
+            color: DS.info.shade700,
             action: () => _sendChatMessage('请帮我复习：$text'),
           ),
           PredictedAction(
@@ -378,7 +378,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
             label: '发送给AI',
             icon: Icons.auto_awesome_rounded,
             confidence: confidence,
-            color: const Color(0xFF42A5F5),
+            color: DS.prismBlue,
             action: () => _sendChatMessage(text),
           ),
         ];
@@ -494,11 +494,12 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   bool _isCurrentRoute(String path) {
     final context = navigatorKey.currentContext;
     if (context == null) return false;
-    
+
     try {
       // Use routerDelegate.currentConfiguration to reliably get location from root context
       // GoRouterState.of(context) can fail if context is not below a GoRoute
-      final location = GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+      final location =
+          GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
       return location == path || location.startsWith('$path/');
     } catch (e) {
       debugPrint('Error checking current route: $e');
@@ -509,10 +510,11 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   Future<void> _createCognitiveFragment(String text) async {
     try {
       // Create the cognitive fragment
-      final fragment = await _ref.read(cognitiveProvider.notifier).createFragment(
-            content: text,
-            sourceType: 'intent_prediction',
-          );
+      final fragment =
+          await _ref.read(cognitiveProvider.notifier).createFragment(
+                content: text,
+                sourceType: 'intent_prediction',
+              );
 
       if (fragment != null) {
         // Navigate to capsule screen after successful creation

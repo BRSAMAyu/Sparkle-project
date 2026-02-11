@@ -91,7 +91,8 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 
 /// Provider for background tasks
 final backgroundTaskProvider =
-    StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>((ref) => BackgroundTaskNotifier());
+    StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>(
+        (ref) => BackgroundTaskNotifier());
 
 /// Task monitor screen
 class TaskMonitorScreen extends ConsumerStatefulWidget {
@@ -128,174 +129,177 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           '后台任务监控',
           style: TextStyle(color: DS.brandPrimary),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: DS.brandPrimary),
+        leading: SparkleIconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
       ),
       body: ContentConstraint(
         child: Column(
           children: [
-          _buildFilterChips(state.selectedFilter),
-          Expanded(
-            child: state.isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
-                    ),
-                  )
-                : filteredTasks.isEmpty
-                    ? _buildEmptyState()
-                    : _buildTaskList(filteredTasks),
-          ),
-        ],
+            _buildFilterChips(state.selectedFilter),
+            Expanded(
+              child: state.isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(DS.primaryBase),
+                      ),
+                    )
+                  : filteredTasks.isEmpty
+                      ? _buildEmptyState()
+                      : _buildTaskList(filteredTasks),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) => Container(
-      padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
-      child: Wrap(
-        spacing: DS.sm,
-        children: BackgroundTaskFilter.values.map((filter) {
-          final isSelected = selectedFilter == filter;
-          return FilterChip(
-            label: Text(filter.label),
-            selected: isSelected,
-            onSelected: (_) {
-              ref.read(backgroundTaskProvider.notifier).setFilter(filter);
-            },
-            backgroundColor: DS.brandPrimary10,
-            selectedColor: DS.primaryBase.withValues(alpha: 0.3),
-            checkmarkColor: DS.primaryBase,
-            labelStyle: TextStyle(
-              color: isSelected ? DS.primaryBase : DS.brandPrimary70,
-              fontSize: 13,
-            ),
-            side: BorderSide.none,
-          );
-        }).toList(),
-      ),
-    );
+        padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
+        child: Wrap(
+          spacing: DS.sm,
+          children: BackgroundTaskFilter.values.map((filter) {
+            final isSelected = selectedFilter == filter;
+            return FilterChip(
+              label: Text(filter.label),
+              selected: isSelected,
+              onSelected: (_) {
+                ref.read(backgroundTaskProvider.notifier).setFilter(filter);
+              },
+              backgroundColor: DS.brandPrimary10,
+              selectedColor: DS.primaryBase.withValues(alpha: 0.3),
+              checkmarkColor: DS.primaryBase,
+              labelStyle: TextStyle(
+                color: isSelected ? DS.primaryBase : DS.brandPrimary70,
+                fontSize: 13,
+              ),
+              side: BorderSide.none,
+            );
+          }).toList(),
+        ),
+      );
 
   Widget _buildEmptyState() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.task_alt,
-            size: 64,
-            color: DS.brandPrimary38Const,
-          ),
-          const SizedBox(height: DS.md),
-          Text(
-            '暂无后台任务',
-            style: TextStyle(
-              color: DS.brandPrimary54,
-              fontSize: 16,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.task_alt,
+              size: 64,
+              color: DS.brandPrimary38Const,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.md),
+            Text(
+              '暂无后台任务',
+              style: TextStyle(
+                color: DS.brandPrimary54,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildTaskList(List<BackgroundTaskModel> tasks) => RefreshIndicator(
-      onRefresh: () async {
-        // TODO: Refresh tasks from API
-      },
-      color: DS.primaryBase,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(DS.md),
-        itemCount: tasks.length,
-        itemBuilder: (context, index) => _buildTaskCard(tasks[index]),
-      ),
-    );
+        onRefresh: () async {
+          // TODO: Refresh tasks from API
+        },
+        color: DS.primaryBase,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(DS.md),
+          itemCount: tasks.length,
+          itemBuilder: (context, index) => _buildTaskCard(tasks[index]),
+        ),
+      );
 
   Widget _buildTaskCard(BackgroundTaskModel task) => Container(
-      margin: const EdgeInsets.only(bottom: DS.md),
-      padding: const EdgeInsets.all(DS.md),
-      decoration: BoxDecoration(
-        color: DS.surfaceBase,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _getStatusColor(task.status).withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _buildStatusIcon(task.status),
-              const SizedBox(width: DS.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.name,
-                      style: TextStyle(
-                        color: DS.brandPrimaryConst,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (task.progressMessage != null)
-                      Text(
-                        task.progressMessage!,
-                        style: TextStyle(
-                          color: DS.brandPrimary54,
-                          fontSize: 13,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              _buildStatusChip(task.status),
-            ],
+        margin: const EdgeInsets.only(bottom: DS.md),
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: DS.surfaceBase,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _getStatusColor(task.status).withValues(alpha: 0.3),
           ),
-          if (task.isActive || task.isFailed) ...[
-            const SizedBox(height: DS.md),
-            _buildProgressBar(task),
-          ],
-          if (task.errorMessage != null && task.isFailed) ...[
-            const SizedBox(height: DS.sm),
-            Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: BoxDecoration(
-                color: DS.semanticError.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                task.errorMessage!,
-                style: TextStyle(
-                  color: DS.semanticError,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-          if (task.isFailed) ...[
-            const SizedBox(height: DS.sm),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                TextButton.icon(
-                  onPressed: () {
-                    // TODO: Retry task
-                  },
-                  icon: Icon(Icons.refresh, size: 16, color: DS.primaryBase),
-                  label: Text(
-                    '重试',
-                    style: TextStyle(color: DS.primaryBase, fontSize: 13),
+                _buildStatusIcon(task.status),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.name,
+                        style: TextStyle(
+                          color: DS.brandPrimaryConst,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (task.progressMessage != null)
+                        Text(
+                          task.progressMessage!,
+                          style: TextStyle(
+                            color: DS.brandPrimary54,
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+                _buildStatusChip(task.status),
               ],
             ),
+            if (task.isActive || task.isFailed) ...[
+              const SizedBox(height: DS.md),
+              _buildProgressBar(task),
+            ],
+            if (task.errorMessage != null && task.isFailed) ...[
+              const SizedBox(height: DS.sm),
+              Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  color: DS.semanticError.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  task.errorMessage!,
+                  style: TextStyle(
+                    color: DS.semanticError,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+            if (task.isFailed) ...[
+              const SizedBox(height: DS.sm),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      // TODO: Retry task
+                    },
+                    icon: Icon(Icons.refresh, size: 16, color: DS.primaryBase),
+                    label: Text(
+                      '重试',
+                      style: TextStyle(color: DS.primaryBase, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 
   Widget _buildStatusIcon(BackgroundTaskStatus status) {
     IconData icon;
@@ -373,46 +377,46 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
   }
 
   Widget _buildProgressBar(BackgroundTaskModel task) => Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary10Const,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: task.progress,
-                    child: Container(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        color: _getStatusColor(task.status),
+                        color: DS.brandPrimary10Const,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                ],
+                    FractionallySizedBox(
+                      widthFactor: task.progress,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(task.status),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: DS.sm),
-            Text(
-              '${task.progressPercent}%',
-              style: TextStyle(
-                color: DS.brandPrimary70Const,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+              const SizedBox(width: DS.sm),
+              Text(
+                '${task.progressPercent}%',
+                style: TextStyle(
+                  color: DS.brandPrimary70Const,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
-    );
+            ],
+          ),
+        ],
+      );
 
   Color _getStatusColor(BackgroundTaskStatus status) {
     switch (status) {

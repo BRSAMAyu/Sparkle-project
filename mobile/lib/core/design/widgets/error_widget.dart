@@ -273,7 +273,7 @@ class CustomErrorWidget extends StatelessWidget {
           boxShadow: DS.shadowMd,
         ),
         child: Material(
-          color: Colors.transparent,
+          color: DS.neutral0.withValues(alpha: 0),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.spacing16,
@@ -318,13 +318,17 @@ class CustomErrorWidget extends StatelessWidget {
                 // 关闭按钮
                 if (onClose != null) ...[
                   const SizedBox(width: DS.spacing12),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    color: DS.brandPrimaryConst,
-                    iconSize: DS.iconSizeSm,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: onClose,
+                  InkWell(
+                    onTap: onClose,
+                    borderRadius: BorderRadius.circular(DS.radius8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing4),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: DS.brandPrimaryConst,
+                        size: DS.iconSizeSm,
+                      ),
+                    ),
                   ),
                 ],
               ],

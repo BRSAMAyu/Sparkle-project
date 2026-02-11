@@ -13,6 +13,12 @@ from app.services.llm_service import llm_service
 
 class FocusService:
     @staticmethod
+    def _to_utc_naive(ts: datetime.datetime) -> datetime.datetime:
+        if ts.tzinfo is None:
+            return ts
+        return ts.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+
+    @staticmethod
     async def log_session(
         db: AsyncSession,
         user_id: UUID,
@@ -24,6 +30,9 @@ class FocusService:
         status: FocusStatus = FocusStatus.COMPLETED
     ) -> dict[str, Any]:
         """Log a completed focus session and award flame points"""
+        start_time = FocusService._to_utc_naive(start_time)
+        end_time = FocusService._to_utc_naive(end_time)
+
         session = FocusSession(
             user_id=user_id,
             task_id=task_id,

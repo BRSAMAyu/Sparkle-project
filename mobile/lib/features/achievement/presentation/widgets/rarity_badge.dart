@@ -128,12 +128,12 @@ class RarityBadge extends StatelessWidget {
           background: DS.rarityLegendaryBg,
           border: DS.rarityLegendary,
           text: DS.rarityLegendaryText,
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [
-              Color(0xFFFF6B6B),
-              Color(0xFFFFD93D),
-              Color(0xFF6BCB77),
-              Color(0xFF4D96FF),
+              DS.error,
+              DS.warning,
+              DS.success,
+              DS.info,
             ],
             stops: [0.0, 0.33, 0.66, 1.0],
           ),
@@ -212,12 +212,12 @@ class RarityColorProvider {
           colors: [DS.rarityEpic, DS.rarityEpic.withValues(alpha: 0.7)],
         );
       case AchievementRarity.legendary:
-        return const LinearGradient(
+        return LinearGradient(
           colors: [
-            Color(0xFFFF6B6B),
-            Color(0xFFFFD93D),
-            Color(0xFF6BCB77),
-            Color(0xFF4D96FF),
+            DS.error,
+            DS.warning,
+            DS.success,
+            DS.info,
           ],
           stops: [0.0, 0.33, 0.66, 1.0],
         );

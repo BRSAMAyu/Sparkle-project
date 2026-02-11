@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Review feedback types
 enum ReviewFeedbackType {
@@ -76,17 +77,18 @@ class ReviewRatingDialog extends StatefulWidget {
     required Future<bool> Function(ReviewFeedbackData feedback) onSubmit,
     int? initialRating,
     bool showDetailedFeedback = false,
-  }) => showModalBottomSheet<ReviewFeedbackData>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => ReviewRatingDialog(
-        reviewId: reviewId,
-        onSubmit: onSubmit,
-        initialRating: initialRating,
-        showDetailedFeedback: showDetailedFeedback,
-      ),
-    );
+  }) =>
+      showModalBottomSheet<ReviewFeedbackData>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (ctx) => ReviewRatingDialog(
+          reviewId: reviewId,
+          onSubmit: onSubmit,
+          initialRating: initialRating,
+          showDetailedFeedback: showDetailedFeedback,
+        ),
+      );
 
   @override
   State<ReviewRatingDialog> createState() => _ReviewRatingDialogState();
@@ -133,13 +135,14 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(DS.spacing20)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,15 +150,15 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             // Handle bar
             Center(
               child: Container(
-                width: 40,
-                height: 4,
+                width: DS.spacing40,
+                height: DS.spacing4,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(DS.spacing4 / 2),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
 
             // Title
             Text(
@@ -165,7 +168,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               '您的反馈将帮助我们改进审查质量',
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -173,66 +176,68 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
 
             // Star rating
             _buildStarRating(theme),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
 
             // Quick feedback buttons
             _buildQuickFeedback(theme),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
 
             // Accuracy feedback
             if (widget.showDetailedFeedback || _showAdvancedOptions) ...[
               _buildAccuracySection(theme),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.spacing16),
 
               // Specificity feedback
               _buildSpecificitySection(theme),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.spacing16),
 
               // Inaccurate points
               if (_wasAccurate == false) ...[
                 _buildInaccuratePointsSection(theme),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.spacing16),
               ],
 
               // Tags
               _buildTagsSection(theme),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.spacing16),
             ],
 
             // Show more options toggle
             if (!widget.showDetailedFeedback)
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _showAdvancedOptions = !_showAdvancedOptions;
-                  });
-                },
-                icon: Icon(
-                  _showAdvancedOptions
-                      ? Icons.expand_less
-                      : Icons.expand_more,
-                ),
-                label: Text(
-                  _showAdvancedOptions ? '收起详细选项' : '更多反馈选项',
+              Center(
+                child: SparkleButton.ghost(
+                  label: _showAdvancedOptions ? '收起详细选项' : '更多反馈选项',
+                  icon: Icon(
+                    _showAdvancedOptions
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showAdvancedOptions = !_showAdvancedOptions;
+                    });
+                  },
                 ),
               ),
 
             // Comments
             _buildCommentsSection(theme),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
 
             // Submit button
-            _buildSubmitButton(theme),
-            const SizedBox(height: 8),
+            _buildSubmitButton(),
+            const SizedBox(height: DS.spacing8),
 
             // Cancel button
-            TextButton(
+            SparkleButton(
+              label: '取消',
               onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-              child: const Text('取消'),
+              variant: ButtonVariant.ghost,
+              expand: true,
             ),
           ],
         ),
@@ -241,75 +246,75 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   }
 
   Widget _buildStarRating(ThemeData theme) => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (index) {
-        final starValue = index + 1;
-        final isSelected = _rating != null && starValue <= _rating!;
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(5, (index) {
+          final starValue = index + 1;
+          final isSelected = _rating != null && starValue <= _rating!;
 
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _rating = starValue;
-              // Auto-set helpful based on rating
-              if (starValue >= 4) {
-                _wasHelpful = true;
-              } else if (starValue <= 2) {
-                _wasHelpful = false;
-              }
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 150),
-              scale: isSelected ? 1.1 : 1.0,
-              child: Icon(
-                isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
-                size: 44,
-                color: isSelected
-                    ? Colors.amber
-                    : theme.colorScheme.outline.withValues(alpha: 0.5),
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _rating = starValue;
+                // Auto-set helpful based on rating
+                if (starValue >= 4) {
+                  _wasHelpful = true;
+                } else if (starValue <= 2) {
+                  _wasHelpful = false;
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing4),
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 150),
+                scale: isSelected ? 1.1 : 1.0,
+                child: Icon(
+                  isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 44,
+                  color: isSelected
+                      ? DS.warning
+                      : theme.colorScheme.outline.withValues(alpha: 0.5),
+                ),
               ),
             ),
-          ),
-        );
-      }),
-    );
+          );
+        }),
+      );
 
   Widget _buildQuickFeedback(ThemeData theme) => Row(
-      children: [
-        Expanded(
-          child: _buildQuickButton(
-            theme: theme,
-            icon: Icons.thumb_up_outlined,
-            selectedIcon: Icons.thumb_up,
-            label: '有帮助',
-            isSelected: _wasHelpful ?? false,
-            onTap: () {
-              setState(() {
-                _wasHelpful = _wasHelpful ?? false ? null : true;
-              });
-            },
+        children: [
+          Expanded(
+            child: _buildQuickButton(
+              theme: theme,
+              icon: Icons.thumb_up_outlined,
+              selectedIcon: Icons.thumb_up,
+              label: '有帮助',
+              isSelected: _wasHelpful ?? false,
+              onTap: () {
+                setState(() {
+                  _wasHelpful = _wasHelpful ?? false ? null : true;
+                });
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickButton(
-            theme: theme,
-            icon: Icons.thumb_down_outlined,
-            selectedIcon: Icons.thumb_down,
-            label: '没帮助',
-            isSelected: _wasHelpful == false,
-            isNegative: true,
-            onTap: () {
-              setState(() {
-                _wasHelpful = _wasHelpful == false ? null : false;
-              });
-            },
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: _buildQuickButton(
+              theme: theme,
+              icon: Icons.thumb_down_outlined,
+              selectedIcon: Icons.thumb_down,
+              label: '没帮助',
+              isSelected: _wasHelpful == false,
+              isNegative: true,
+              onTap: () {
+                setState(() {
+                  _wasHelpful = _wasHelpful == false ? null : false;
+                });
+              },
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildQuickButton({
     required ThemeData theme,
@@ -320,31 +325,33 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     required VoidCallback onTap,
     bool isNegative = false,
   }) {
-    final selectedColor = isNegative
-        ? theme.colorScheme.error
-        : theme.colorScheme.primary;
+    final selectedColor =
+        isNegative ? theme.colorScheme.error : theme.colorScheme.primary;
 
     return Material(
       color: isSelected
           ? selectedColor.withValues(alpha: 0.1)
           : theme.colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(DS.spacing12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DS.spacing12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          padding: const EdgeInsets.symmetric(
+            vertical: DS.spacing12,
+            horizontal: DS.spacing16,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 isSelected ? selectedIcon : icon,
-                size: 20,
+                size: DS.iconSizeSm,
                 color: isSelected
                     ? selectedColor
                     : theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.spacing8),
               Text(
                 label,
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -362,79 +369,87 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   }
 
   Widget _buildAccuracySection(ThemeData theme) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '审查是否准确？',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildChoiceChip(
-                theme: theme,
-                label: '准确',
-                icon: Icons.check_circle_outline,
-                isSelected: _wasAccurate ?? false,
-                onTap: () {
-                  setState(() {
-                    _wasAccurate = _wasAccurate ?? false ? null : true;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildChoiceChip(
-                theme: theme,
-                label: '不准确',
-                icon: Icons.error_outline,
-                isSelected: _wasAccurate == false,
-                isNegative: true,
-                onTap: () {
-                  setState(() {
-                    _wasAccurate = _wasAccurate == false ? null : false;
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-
-  Widget _buildSpecificitySection(ThemeData theme) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '审查的详细程度',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: SpecificityLevel.values.map((level) => Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: level == SpecificityLevel.values.first ? 0 : 4,
-                  right: level == SpecificityLevel.values.last ? 0 : 4,
-                ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '审查是否准确？',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: [
+              Expanded(
                 child: _buildChoiceChip(
                   theme: theme,
-                  label: level.label,
-                  isSelected: _specificityLevel == level,
+                  label: '准确',
+                  icon: Icons.check_circle_outline,
+                  isSelected: _wasAccurate ?? false,
                   onTap: () {
                     setState(() {
-                      _specificityLevel =
-                          _specificityLevel == level ? null : level;
+                      _wasAccurate = _wasAccurate ?? false ? null : true;
                     });
                   },
                 ),
               ),
-            ),).toList(),
-        ),
-      ],
-    );
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: _buildChoiceChip(
+                  theme: theme,
+                  label: '不准确',
+                  icon: Icons.error_outline,
+                  isSelected: _wasAccurate == false,
+                  isNegative: true,
+                  onTap: () {
+                    setState(() {
+                      _wasAccurate = _wasAccurate == false ? null : false;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+  Widget _buildSpecificitySection(ThemeData theme) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '审查的详细程度',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: SpecificityLevel.values
+                .map(
+                  (level) => Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: level == SpecificityLevel.values.first
+                            ? 0
+                            : DS.spacing4,
+                        right: level == SpecificityLevel.values.last
+                            ? 0
+                            : DS.spacing4,
+                      ),
+                      child: _buildChoiceChip(
+                        theme: theme,
+                        label: level.label,
+                        isSelected: _specificityLevel == level,
+                        onTap: () {
+                          setState(() {
+                            _specificityLevel =
+                                _specificityLevel == level ? null : level;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      );
 
   Widget _buildChoiceChip({
     required ThemeData theme,
@@ -444,20 +459,22 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
     IconData? icon,
     bool isNegative = false,
   }) {
-    final selectedColor = isNegative
-        ? theme.colorScheme.error
-        : theme.colorScheme.primary;
+    final selectedColor =
+        isNegative ? theme.colorScheme.error : theme.colorScheme.primary;
 
     return Material(
       color: isSelected
           ? selectedColor.withValues(alpha: 0.1)
           : theme.colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(DS.spacing8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DS.spacing8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          padding: const EdgeInsets.symmetric(
+            vertical: DS.spacing10,
+            horizontal: DS.spacing12,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
@@ -465,12 +482,12 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               if (icon != null) ...[
                 Icon(
                   icon,
-                  size: 16,
+                  size: DS.iconSizeXs,
                   color: isSelected
                       ? selectedColor
                       : theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: DS.spacing4),
               ],
               Flexible(
                 child: Text(
@@ -494,58 +511,64 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   }
 
   Widget _buildInaccuratePointsSection(ThemeData theme) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '哪些地方不准确？',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _inaccuratePointController,
-                decoration: InputDecoration(
-                  hintText: '输入不准确的具体内容',
-                  isDense: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '哪些地方不准确？',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _inaccuratePointController,
+                  decoration: InputDecoration(
+                    hintText: '输入不准确的具体内容',
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(DS.spacing8),
+                    ),
                   ),
+                  onSubmitted: _addInaccuratePoint,
                 ),
-                onSubmitted: _addInaccuratePoint,
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: () => _addInaccuratePoint(
-                _inaccuratePointController.text,
+              SparkleIconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: () => _addInaccuratePoint(
+                  _inaccuratePointController.text,
+                ),
+                semanticLabel: '添加不准确项',
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
-              icon: const Icon(Icons.add_circle_outline),
+            ],
+          ),
+          if (_inaccuratePoints.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing4,
+              children: _inaccuratePoints
+                  .map(
+                    (point) => Chip(
+                      label: Text(
+                        point,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      onDeleted: () {
+                        setState(() {
+                          _inaccuratePoints.remove(point);
+                        });
+                      },
+                      deleteIcon: const Icon(Icons.close, size: DS.iconSizeXs),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
-        ),
-        if (_inaccuratePoints.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: _inaccuratePoints.map((point) => Chip(
-                label: Text(
-                  point,
-                  style: theme.textTheme.bodySmall,
-                ),
-                onDeleted: () {
-                  setState(() {
-                    _inaccuratePoints.remove(point);
-                  });
-                },
-                deleteIcon: const Icon(Icons.close, size: 16),
-              ),).toList(),
-          ),
         ],
-      ],
-    );
+      );
 
   void _addInaccuratePoint(String point) {
     final trimmed = point.trim();
@@ -558,78 +581,67 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   }
 
   Widget _buildTagsSection(ThemeData theme) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '标签（可选）',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _availableTags.map((tag) {
-            final isSelected = _selectedTags.contains(tag);
-            return FilterChip(
-              label: Text(tag),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedTags.add(tag);
-                  } else {
-                    _selectedTags.remove(tag);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '标签（可选）',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: _availableTags.map((tag) {
+              final isSelected = _selectedTags.contains(tag);
+              return FilterChip(
+                label: Text(tag),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedTags.add(tag);
+                    } else {
+                      _selectedTags.remove(tag);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
 
   Widget _buildCommentsSection(ThemeData theme) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '其他意见（可选）',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _commentsController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: '请分享您对这次审查的看法...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '其他意见（可选）',
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: DS.spacing8),
+          TextField(
+            controller: _commentsController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: '请分享您对这次审查的看法...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DS.spacing12),
+              ),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
-  Widget _buildSubmitButton(ThemeData theme) {
+  Widget _buildSubmitButton() {
     final hasValidFeedback = _rating != null || _wasHelpful != null;
 
-    return FilledButton(
+    return SparkleButton(
+      label: '提交反馈',
       onPressed: hasValidFeedback && !_isSubmitting ? _handleSubmit : null,
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      child: _isSubmitting
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : const Text('提交反馈'),
+      variant: ButtonVariant.primary,
+      loading: _isSubmitting,
+      disabled: !hasValidFeedback || _isSubmitting,
+      expand: true,
     );
   }
 
@@ -659,19 +671,9 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
       if (mounted) {
         if (success) {
           Navigator.pop(context, feedback);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('感谢您的反馈！'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.success(context, '感谢您的反馈！');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('提交失败，请重试'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.error(context, '提交失败，请重试');
         }
       }
     } finally {

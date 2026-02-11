@@ -21,7 +21,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(24),
+          top: Radius.circular(DS.spacing24),
         ),
       ),
       child: SafeArea(
@@ -30,12 +30,12 @@ class ChatModeSelectorSheet extends ConsumerWidget {
           children: [
             // Handle bar
             Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: DS.spacing40,
+              height: DS.spacing4,
+              margin: const EdgeInsets.symmetric(vertical: DS.spacing12),
               decoration: BoxDecoration(
                 color: isDark ? DS.neutral700 : DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(DS.spacing4 / 2),
               ),
             ),
 
@@ -62,9 +62,11 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
+                  SparkleIconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
                   ),
                 ],
               ),
@@ -73,11 +75,13 @@ class ChatModeSelectorSheet extends ConsumerWidget {
             const Divider(height: 1),
 
             // Mode options
-            ...ChatMode.values.map((mode) => _ModeListTile(
-                  mode: mode,
-                  isSelected: currentMode == mode,
-                  isDark: isDark,
-                ),),
+            ...ChatMode.values.map(
+              (mode) => _ModeListTile(
+                mode: mode,
+                isSelected: currentMode == mode,
+                isDark: isDark,
+              ),
+            ),
 
             const SizedBox(height: DS.spacing16),
           ],
@@ -100,78 +104,81 @@ class _ModeListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.pop(context, mode);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing20,
-          vertical: DS.spacing16,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? mode.color.withValues(alpha: 0.1)
-              : Colors.transparent,
-          border: Border(
-            left: BorderSide(
-              color: isSelected ? mode.color : Colors.transparent,
-              width: 4,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.pop(context, mode);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing20,
+            vertical: DS.spacing16,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? mode.color.withValues(alpha: 0.1)
+                : DS.surfacePrimary.withValues(alpha: 0),
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? mode.color
+                    : DS.surfacePrimary.withValues(alpha: 0),
+                width: 4,
+              ),
             ),
           ),
-        ),
-        child: Row(
-          children: [
-            // Icon container
-            Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: mode.color.withValues(alpha: 0.15),
-                borderRadius: DS.borderRadius12,
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: mode.color.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius12,
+                ),
+                child: Icon(
+                  mode.icon,
+                  color: mode.color,
+                  size: DS.iconSizeBase,
+                ),
               ),
-              child: Icon(
-                mode.icon,
-                color: mode.color,
-                size: DS.iconSizeBase,
-              ),
-            ),
-            const SizedBox(width: DS.spacing16),
+              const SizedBox(width: DS.spacing16),
 
-            // Text content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    mode.label,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight:
-                          isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                      color: isDark ? DS.textPrimary : DS.neutral900,
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mode.label,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeBase,
+                        fontWeight: isSelected
+                            ? DS.fontWeightSemibold
+                            : DS.fontWeightMedium,
+                        color: isDark ? DS.textPrimary : DS.neutral900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    mode.description,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: DS.neutral500,
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      mode.description,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.neutral500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Selection indicator
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: mode.color,
-                size: DS.iconSizeBase,
-              ),
-          ],
+              // Selection indicator
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: mode.color,
+                  size: DS.iconSizeBase,
+                ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

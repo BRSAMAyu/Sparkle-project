@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 
@@ -18,7 +19,8 @@ class IntentPreviewDialog extends ConsumerStatefulWidget {
   final VoidCallback onConfirm;
 
   @override
-  ConsumerState<IntentPreviewDialog> createState() => _IntentPreviewDialogState();
+  ConsumerState<IntentPreviewDialog> createState() =>
+      _IntentPreviewDialogState();
 }
 
 class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
@@ -37,58 +39,61 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          _buildHeader(),
-
-          // Content
-          Flexible(
-            child: _buildContent(),
-          ),
-
-          // Actions
-          _buildActions(),
-        ],
-      ),
-    );
-
-  Widget _buildHeader() => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey[200]!,
-          ),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.auto_awesome, color: Colors.blue),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              '意图分析',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            _buildHeader(context),
+
+            // Content
+            Flexible(
+              child: _buildContent(context),
+            ),
+
+            // Actions
+            _buildActions(context),
+          ],
+        ),
+      );
+
+  Widget _buildHeader(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: DS.border,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-        ],
-      ),
-    );
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: DS.info),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Text(
+                '意图分析',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: DS.textPrimary,
+                ),
+              ),
+            ),
+            SparkleIconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(false),
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+            ),
+          ],
+        ),
+      );
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     if (_isAnalyzing) {
       return const SizedBox(
         height: 200,
@@ -112,14 +117,18 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-              const SizedBox(height: 16),
-              Text(_errorMessage!),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _analyzeIntents,
-                child: const Text('重试'),
+              Icon(Icons.error_outline, color: DS.error, size: 48),
+              const SizedBox(height: DS.md),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: DS.md),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(color: DS.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
               ),
+              const SizedBox(height: DS.md),
+              SparkleButton.outline(label: '重试', onPressed: _analyzeIntents),
             ],
           ),
         ),
@@ -133,14 +142,17 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.info_outline, color: Colors.blue, size: 48),
-              const SizedBox(height: 16),
-              const Text('识别到单一意图'),
-              const SizedBox(height: 8),
+              Icon(Icons.info_outline, color: DS.info, size: 48),
+              const SizedBox(height: DS.md),
+              Text(
+                '识别到单一意图',
+                style: TextStyle(color: DS.textPrimary),
+              ),
+              const SizedBox(height: DS.sm),
               Text(
                 '"${widget.message}"',
-                style: const TextStyle(
-                  color: Colors.grey,
+                style: TextStyle(
+                  color: DS.textSecondary,
                   fontStyle: FontStyle.italic,
                 ),
                 maxLines: 2,
@@ -153,36 +165,138 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '识别到 ${_intents.length} 个意图：',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
+              color: DS.textPrimary,
             ),
           ),
-          const SizedBox(height: 12),
-          ...List.generate(_intents.length, (index) => _buildIntentItem(_intents[index], index + 1)),
-          const SizedBox(height: 12),
-          _buildExecutionPlan(),
+          const SizedBox(height: DS.spacing12),
+          ...List.generate(
+            _intents.length,
+            (index) => _buildIntentItem(context, _intents[index], index + 1),
+          ),
+          const SizedBox(height: DS.spacing12),
+          _buildExecutionPlan(context),
         ],
       ),
     );
   }
 
-  Widget _buildIntentItem(IntentData intent, int index) => Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+  Widget _buildIntentItem(BuildContext context, IntentData intent, int index) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: DS.spacing12),
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _getIntentColor(intent.type).withValues(alpha: 0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.sm,
+                    vertical: DS.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getIntentColor(intent.type),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '#$index',
+                    style: TextStyle(
+                      color: DS.onBrandPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                Expanded(
+                  child: Text(
+                    _getIntentLabel(intent.type),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: DS.textPrimary,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getConfidenceColor(intent.confidence),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${(intent.confidence * 100).toInt()}%',
+                    style: TextStyle(
+                      color: DS.onBrandPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              intent.content,
+              style: TextStyle(
+                fontSize: 14,
+                color: DS.textPrimary,
+              ),
+            ),
+            if (intent.agentRole != null) ...[
+              const SizedBox(height: DS.xs),
+              Row(
+                children: [
+                  Icon(
+                    Icons.person,
+                    size: 14,
+                    color: DS.textSecondary,
+                  ),
+                  const SizedBox(width: DS.xs),
+                  Text(
+                    '助手: ${_getAgentRoleLabel(intent.agentRole!)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+
+  Widget _buildExecutionPlan(BuildContext context) {
+    final planText = _executionPlan ?? _generateExecutionPlan();
+    final timeText = _estimatedTime != null ? ' (约 ${_estimatedTime!} 秒)' : '';
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        color: DS.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _getIntentColor(intent.type).withValues(alpha: 0.3),
-          width: 2,
+          color: DS.info.withValues(alpha: 0.25),
         ),
       ),
       child: Column(
@@ -190,166 +304,87 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getIntentColor(intent.type),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '#$index',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _getIntentLabel(intent.type),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _getConfidenceColor(intent.confidence),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${(intent.confidence * 100).toInt()}%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            intent.content,
-            style: const TextStyle(fontSize: 14),
-          ),
-          if (intent.agentRole != null) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.person, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  '助手: ${_getAgentRoleLabel(intent.agentRole!)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-
-  Widget _buildExecutionPlan() {
-    final planText = _executionPlan ?? _generateExecutionPlan();
-    final timeText = _estimatedTime != null ? ' (约 ${_estimatedTime!} 秒)' : '';
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.schedule, size: 16, color: Colors.blue[700]),
-              const SizedBox(width: 8),
+              Icon(Icons.schedule, size: 16, color: DS.info),
+              const SizedBox(width: DS.sm),
               Text(
                 '执行计划$timeText',
                 style: TextStyle(
-                  color: Colors.blue[700],
+                  color: DS.info,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           Text(
             planText,
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(
+              fontSize: 12,
+              color: DS.textPrimary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActions() => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[200]!,
+  Widget _buildActions(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: DS.border,
+            ),
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
+        child: Row(
+          children: [
+            Expanded(
+              child: SparkleButton.outline(
+                label: '取消',
+                onPressed: () => Navigator.of(context).pop(false),
+                expand: true,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _isExecuting ? null : _executeIntents,
-              child: _isExecuting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('确认执行'),
+            const SizedBox(width: DS.md),
+            Expanded(
+              child: SparkleButton(
+                label: '确认执行',
+                onPressed: _executeIntents,
+                expand: true,
+                loading: _isExecuting,
+                disabled: _isExecuting,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Color _getIntentColor(String type) {
     switch (type) {
       case 'task_management':
-        return Colors.orange;
+        return DS.taskPlanning;
       case 'knowledge_query':
-        return Colors.blue;
+        return DS.info;
       case 'time_planning':
-        return Colors.green;
+        return DS.success;
       case 'social':
-        return Colors.purple;
+        return DS.taskSocial;
       case 'learning':
-        return Colors.teal;
+        return DS.taskLearning;
       case 'reflection':
-        return Colors.indigo;
+        return DS.taskReflection;
       case 'tool_call':
-        return Colors.red;
+        return DS.error;
       default:
-        return Colors.grey;
+        return DS.neutral500;
     }
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return Colors.green;
-    if (confidence >= 0.6) return Colors.orange;
-    return Colors.red;
+    if (confidence >= 0.8) return DS.success;
+    if (confidence >= 0.6) return DS.warning;
+    return DS.error;
   }
 
   String _getIntentLabel(String type) {
@@ -451,24 +486,14 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         } else {
           // 执行失败，显示错误
           final errorMsg = result?.errorMessages ?? '执行失败，请重试';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppFeedback.error(context, errorMsg);
         }
       }
     } catch (e) {
       if (mounted) {
         // 错误时也关闭弹窗
         Navigator.of(context).pop(false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('执行失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppFeedback.error(context, '执行失败: $e');
       }
     }
   }

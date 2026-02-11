@@ -84,7 +84,14 @@ class TaskViewSwitcher extends ConsumerWidget {
 
 class _ViewTab extends StatelessWidget {
   const _ViewTab({
-    required this.mode, required this.isSelected, required this.height, required this.fontSize, required this.iconSize, required this.horizontalPadding, required this.onTap, super.key,
+    required this.mode,
+    required this.isSelected,
+    required this.height,
+    required this.fontSize,
+    required this.iconSize,
+    required this.horizontalPadding,
+    required this.onTap,
+    super.key,
   });
 
   final TaskViewMode mode;
@@ -99,7 +106,7 @@ class _ViewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // Get colors dynamically based on current theme
     final selectedColor = DS.brandPrimary;
-    const unselectedColor = Colors.transparent;
+    final unselectedColor = DS.surfacePrimary.withValues(alpha: 0);
     final selectedTextColor = DS.onBrandPrimary;
     final unselectedTextColor = DS.textSecondary;
 
@@ -144,16 +151,16 @@ class _ViewTab extends StatelessWidget {
   }
 
   IconData _getIcon(TaskViewMode mode) => switch (mode) {
-      TaskViewMode.schedule => Icons.calendar_today_rounded,
-      TaskViewMode.priority => Icons.flag_rounded,
-      TaskViewMode.plan => Icons.view_week_rounded,
-      TaskViewMode.sprint => Icons.flash_on_rounded,
-    };
+        TaskViewMode.schedule => Icons.calendar_today_rounded,
+        TaskViewMode.priority => Icons.flag_rounded,
+        TaskViewMode.plan => Icons.view_week_rounded,
+        TaskViewMode.sprint => Icons.flash_on_rounded,
+      };
 
   String _getLabel(TaskViewMode mode) => switch (mode) {
-      TaskViewMode.schedule => '日程',
-      TaskViewMode.priority => '重要性',
-      TaskViewMode.plan => '方案',
-      TaskViewMode.sprint => '冲刺',
-    };
+        TaskViewMode.schedule => '日程',
+        TaskViewMode.priority => '重要性',
+        TaskViewMode.plan => '方案',
+        TaskViewMode.sprint => '冲刺',
+      };
 }

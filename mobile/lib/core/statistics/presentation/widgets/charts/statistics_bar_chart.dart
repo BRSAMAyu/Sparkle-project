@@ -4,9 +4,9 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// Bar chart widget for statistics data visualization
 class StatisticsBarChart extends StatelessWidget {
-
   const StatisticsBarChart({
-    required this.dataPoints, super.key,
+    required this.dataPoints,
+    super.key,
     this.barColor,
     this.useGradient = true,
     this.xLabels,
@@ -16,6 +16,7 @@ class StatisticsBarChart extends StatelessWidget {
     this.tooltipFormatter,
     this.isHorizontal = false,
   });
+
   /// Data points to display
   final List<StatisticsDataPoint> dataPoints;
 
@@ -70,23 +71,31 @@ class StatisticsBarChart extends StatelessWidget {
 
   BarChartData _buildVerticalChartData(List<String> labels) {
     final baseColor = barColor ?? StatisticsChartConfig.primaryColor;
-    final groups = dataPoints.asMap().entries.map((entry) => BarChartGroupData(
-        x: entry.key,
-        barRods: [
-          BarChartRodData(
-            toY: entry.value.value,
-            color: useGradient ? null : baseColor,
-            gradient: useGradient
-                ? StatisticsChartConfig.getBarGradient(color: baseColor)
-                : null,
-            width: _calculateBarWidth(dataPoints.length),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(StatisticsChartConfig.barBorderRadius),
-              topRight: Radius.circular(StatisticsChartConfig.barBorderRadius),
-            ),
+    final groups = dataPoints
+        .asMap()
+        .entries
+        .map(
+          (entry) => BarChartGroupData(
+            x: entry.key,
+            barRods: [
+              BarChartRodData(
+                toY: entry.value.value,
+                color: useGradient ? null : baseColor,
+                gradient: useGradient
+                    ? StatisticsChartConfig.getBarGradient(color: baseColor)
+                    : null,
+                width: _calculateBarWidth(dataPoints.length),
+                borderRadius: const BorderRadius.only(
+                  topLeft:
+                      Radius.circular(StatisticsChartConfig.barBorderRadius),
+                  topRight:
+                      Radius.circular(StatisticsChartConfig.barBorderRadius),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),).toList();
+        )
+        .toList();
 
     return BarChartData(
       barGroups: groups,
@@ -94,10 +103,10 @@ class StatisticsBarChart extends StatelessWidget {
       maxY: maxY,
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => const FlLine(
-            color: StatisticsChartConfig.gridColor,
-            strokeWidth: StatisticsChartConfig.gridThickness,
-          ),
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: StatisticsChartConfig.gridColor,
+          strokeWidth: StatisticsChartConfig.gridThickness,
+        ),
       ),
       titlesData: FlTitlesData(
         bottomTitles: AxisTitles(
@@ -112,7 +121,7 @@ class StatisticsBarChart extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     labels[index],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: StatisticsChartConfig.axisLabelSize,
                       color: StatisticsChartConfig.axisLabelColor,
                     ),
@@ -129,20 +138,16 @@ class StatisticsBarChart extends StatelessWidget {
             reservedSize: 40,
             interval: maxY != null ? (maxY! - minY) / 4 : null,
             getTitlesWidget: (value, meta) => Text(
-                _formatYValue(value),
-                style: const TextStyle(
-                  fontSize: StatisticsChartConfig.axisLabelSize,
-                  color: StatisticsChartConfig.axisLabelColor,
-                ),
+              _formatYValue(value),
+              style: TextStyle(
+                fontSize: StatisticsChartConfig.axisLabelSize,
+                color: StatisticsChartConfig.axisLabelColor,
               ),
+            ),
           ),
         ),
-        topTitles: const AxisTitles(
-          
-        ),
-        rightTitles: const AxisTitles(
-          
-        ),
+        topTitles: const AxisTitles(),
+        rightTitles: const AxisTitles(),
       ),
       borderData: FlBorderData(show: false),
     );
@@ -150,23 +155,31 @@ class StatisticsBarChart extends StatelessWidget {
 
   BarChartData _buildHorizontalChartData(List<String> labels) {
     final baseColor = barColor ?? StatisticsChartConfig.primaryColor;
-    final groups = dataPoints.asMap().entries.map((entry) => BarChartGroupData(
-        x: entry.key,
-        barRods: [
-          BarChartRodData(
-            toY: entry.value.value,
-            color: useGradient ? null : baseColor,
-            gradient: useGradient
-                ? StatisticsChartConfig.getBarGradient(color: baseColor)
-                : null,
-            width: _calculateBarWidth(dataPoints.length),
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(StatisticsChartConfig.barBorderRadius),
-              bottomRight: Radius.circular(StatisticsChartConfig.barBorderRadius),
-            ),
+    final groups = dataPoints
+        .asMap()
+        .entries
+        .map(
+          (entry) => BarChartGroupData(
+            x: entry.key,
+            barRods: [
+              BarChartRodData(
+                toY: entry.value.value,
+                color: useGradient ? null : baseColor,
+                gradient: useGradient
+                    ? StatisticsChartConfig.getBarGradient(color: baseColor)
+                    : null,
+                width: _calculateBarWidth(dataPoints.length),
+                borderRadius: const BorderRadius.only(
+                  topRight:
+                      Radius.circular(StatisticsChartConfig.barBorderRadius),
+                  bottomRight:
+                      Radius.circular(StatisticsChartConfig.barBorderRadius),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),).toList();
+        )
+        .toList();
 
     return BarChartData(
       barGroups: groups,
@@ -174,15 +187,13 @@ class StatisticsBarChart extends StatelessWidget {
       maxY: maxY,
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => const FlLine(
-            color: StatisticsChartConfig.gridColor,
-            strokeWidth: StatisticsChartConfig.gridThickness,
-          ),
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: StatisticsChartConfig.gridColor,
+          strokeWidth: StatisticsChartConfig.gridThickness,
+        ),
       ),
       titlesData: FlTitlesData(
-        bottomTitles: const AxisTitles(
-          
-        ),
+        bottomTitles: const AxisTitles(),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -192,7 +203,7 @@ class StatisticsBarChart extends StatelessWidget {
               if (index >= 0 && index < labels.length) {
                 return Text(
                   labels[index],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: StatisticsChartConfig.axisLabelSize,
                     color: StatisticsChartConfig.axisLabelColor,
                   ),
@@ -202,20 +213,18 @@ class StatisticsBarChart extends StatelessWidget {
             },
           ),
         ),
-        topTitles: const AxisTitles(
-          
-        ),
+        topTitles: const AxisTitles(),
         rightTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 40,
             getTitlesWidget: (value, meta) => Text(
-                _formatYValue(value),
-                style: const TextStyle(
-                  fontSize: StatisticsChartConfig.axisLabelSize,
-                  color: StatisticsChartConfig.axisLabelColor,
-                ),
+              _formatYValue(value),
+              style: TextStyle(
+                fontSize: StatisticsChartConfig.axisLabelSize,
+                color: StatisticsChartConfig.axisLabelColor,
               ),
+            ),
           ),
         ),
       ),
@@ -224,28 +233,29 @@ class StatisticsBarChart extends StatelessWidget {
   }
 
   Widget _buildEmptyState() => Container(
-      height: 200,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.bar_chart,
-            size: 48,
-            color: StatisticsChartConfig.emptyStateColor,
-          ),
-          const SizedBox(height: DS.md),
-          Text(
-            '暂无数据',
-            style: DS.bodyStyle.copyWith(
-              color: DS.neutral400,
+        height: 200,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bar_chart,
+              size: 48,
+              color: StatisticsChartConfig.emptyStateColor,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.md),
+            Text(
+              '暂无数据',
+              style: DS.bodyStyle.copyWith(
+                color: DS.neutral400,
+              ),
+            ),
+          ],
+        ),
+      );
 
-  String _formatLabel(DateTime timestamp) => '${timestamp.month}/${timestamp.day}';
+  String _formatLabel(DateTime timestamp) =>
+      '${timestamp.month}/${timestamp.day}';
 
   String _formatYValue(double value) {
     if (unit != null) {
@@ -262,7 +272,8 @@ class StatisticsBarChart extends StatelessWidget {
 
   double _calculateBarWidth(int dataPointCount) {
     final availableWidth = 600.0 / dataPointCount;
-    final calculatedWidth = availableWidth - StatisticsChartConfig.barGroupSpacing;
+    final calculatedWidth =
+        availableWidth - StatisticsChartConfig.barGroupSpacing;
     return calculatedWidth.clamp(
       StatisticsChartConfig.minBarWidth,
       StatisticsChartConfig.maxBarWidth,
@@ -272,15 +283,16 @@ class StatisticsBarChart extends StatelessWidget {
 
 /// Grouped bar chart for comparing multiple categories
 class StatisticsGroupedBarChart extends StatelessWidget {
-
   const StatisticsGroupedBarChart({
-    required this.dataGroups, super.key,
+    required this.dataGroups,
+    super.key,
     this.barColors,
     this.xLabels,
     this.groupLabels,
     this.maxY,
     this.minY = 0,
   });
+
   /// Data groups to display (each group has multiple bars)
   final List<List<StatisticsDataPoint>> dataGroups;
 
@@ -368,10 +380,10 @@ class StatisticsGroupedBarChart extends StatelessWidget {
       maxY: maxY,
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => const FlLine(
-            color: StatisticsChartConfig.gridColor,
-            strokeWidth: StatisticsChartConfig.gridThickness,
-          ),
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: StatisticsChartConfig.gridColor,
+          strokeWidth: StatisticsChartConfig.gridThickness,
+        ),
       ),
       titlesData: FlTitlesData(
         bottomTitles: AxisTitles(
@@ -385,7 +397,7 @@ class StatisticsGroupedBarChart extends StatelessWidget {
                 if (index >= 0 && index < labels.length) {
                   return Text(
                     labels[index],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: StatisticsChartConfig.axisLabelSize,
                       color: StatisticsChartConfig.axisLabelColor,
                     ),
@@ -401,20 +413,16 @@ class StatisticsGroupedBarChart extends StatelessWidget {
             showTitles: true,
             reservedSize: 40,
             getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: const TextStyle(
-                  fontSize: StatisticsChartConfig.axisLabelSize,
-                  color: StatisticsChartConfig.axisLabelColor,
-                ),
+              value.toInt().toString(),
+              style: TextStyle(
+                fontSize: StatisticsChartConfig.axisLabelSize,
+                color: StatisticsChartConfig.axisLabelColor,
               ),
+            ),
           ),
         ),
-        topTitles: const AxisTitles(
-          
-        ),
-        rightTitles: const AxisTitles(
-          
-        ),
+        topTitles: const AxisTitles(),
+        rightTitles: const AxisTitles(),
       ),
       borderData: FlBorderData(show: false),
     );
@@ -434,7 +442,9 @@ class StatisticsGroupedBarChart extends StatelessWidget {
         spacing: DS.lg,
         runSpacing: DS.sm,
         alignment: WrapAlignment.center,
-        children: List.generate(groupLabels!.length, (index) => Row(
+        children: List.generate(
+          groupLabels!.length,
+          (index) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
@@ -453,7 +463,8 @@ class StatisticsGroupedBarChart extends StatelessWidget {
                 style: StatisticsChartConfig.legendTextStyle,
               ),
             ],
-          ),),
+          ),
+        ),
       ),
     );
   }

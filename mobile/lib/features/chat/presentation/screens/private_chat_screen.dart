@@ -59,9 +59,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: Row(
           children: [
@@ -69,7 +71,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: DS.spacing8),
                 child: SparkleAvatar(
-                    url: _avatarUrl, fallbackText: _displayName,),
+                  url: _avatarUrl,
+                  fallbackText: _displayName,
+                ),
               ),
             Text(_displayName ?? '聊天'),
           ],
@@ -86,28 +90,34 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.chat_bubble_outline,
-                              size: DS.iconSize3xl, color: DS.neutral300,),
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: DS.iconSize3xl,
+                            color: DS.neutral300,
+                          ),
                           const SizedBox(height: DS.spacing24),
-                          Text('开始对话吧!', style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeBase)),
+                          Text('开始对话吧!',
+                              style: TextStyle(
+                                  color: DS.neutral500,
+                                  fontSize: DS.fontSizeBase)),
                         ],
                       ),
                     );
                   }
                   return ListView.builder(
                     reverse: true,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8, vertical: DS.spacing16),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
                       return ChatBubble(
                         message: message,
                         currentUserId: currentUser?.id,
-                        onQuote: (msg) =>
-                            setState(() => notifier.setQuote(msg as PrivateMessageInfo?)),
-                        onRevoke: (msg) =>
-                            notifier.revokeMessage((msg as PrivateMessageInfo).id),
+                        onQuote: (msg) => setState(() =>
+                            notifier.setQuote(msg as PrivateMessageInfo?)),
+                        onRevoke: (msg) => notifier
+                            .revokeMessage((msg as PrivateMessageInfo).id),
                       );
                     },
                   );

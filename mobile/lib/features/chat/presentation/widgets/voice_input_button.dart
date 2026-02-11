@@ -11,9 +11,10 @@ import 'package:sparkle/features/chat/data/services/audio_recording_service.dart
 /// 语音输入按钮组件
 /// 长按开始录音，松开停止录音
 class VoiceInputButton extends ConsumerStatefulWidget {
-
   const VoiceInputButton({
-    required this.onTranscription, required this.onError, super.key,
+    required this.onTranscription,
+    required this.onError,
+    super.key,
     this.onRecordingStarted,
     this.onRecordingStopped,
   });
@@ -72,12 +73,12 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         title: const Text('需要麦克风权限'),
         content: const Text('语音输入需要访问您的麦克风。请在设置中授予麦克风权限。'),
         actions: [
-          TextButton(
-            child: const Text('取消'),
+          SparkleButton.ghost(
+            label: '取消',
             onPressed: () => Navigator.pop(context),
           ),
-          TextButton(
-            child: const Text('去设置'),
+          SparkleButton.primary(
+            label: '去设置',
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();

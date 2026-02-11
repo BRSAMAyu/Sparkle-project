@@ -60,7 +60,9 @@ class DashboardScreen extends ConsumerWidget {
     // Adjust MultiAgentBar position based on whether IntentPredictionBar is shown
     final showIntentBar = hasPredictions;
     final finalMultiAgentBarBottom = showIntentBar
-        ? intentBarBottom + 36.0 + spacing // ~108 (IntentPredictionBar is ~36px)
+        ? intentBarBottom +
+            36.0 +
+            spacing // ~108 (IntentPredictionBar is ~36px)
         : baseMultiAgentBarBottom;
 
     // IntentPredictionBar only shows when has predictions
@@ -83,7 +85,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       body: Stack(
         children: [
           // Layer 1: Weather Background
@@ -102,7 +104,8 @@ class DashboardScreen extends ConsumerWidget {
                 slivers: [
                   // Top Overlay with theme toggle button
                   SliverToBoxAdapter(
-                      child: _buildTopOverlay(context, ref, user, l10n),),
+                    child: _buildTopOverlay(context, ref, user, l10n),
+                  ),
 
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
@@ -197,9 +200,18 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildTopOverlay(
-          BuildContext context, WidgetRef ref, UserModel? user, AppLocalizations l10n,) =>
+    BuildContext context,
+    WidgetRef ref,
+    UserModel? user,
+    AppLocalizations l10n,
+  ) =>
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing8,
+          DS.spacing8,
+          DS.spacing8,
+        ),
         child: Row(
           children: [
             // Avatar and user info
@@ -208,8 +220,9 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundImage:
-                        user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                    backgroundImage: user?.avatarUrl != null
+                        ? NetworkImage(user!.avatarUrl!)
+                        : null,
                     backgroundColor: DS.primaryBase,
                     child: user?.avatarUrl == null
                         ? Text((user?.nickname ?? 'U')[0].toUpperCase())
@@ -229,7 +242,8 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
+                          user?.nickname ??
+                              (user?.username ?? l10n.exploreGalaxy),
                           style: TextStyle(
                             fontSize: DS.fontSizeSm,
                             fontWeight: DS.fontWeightBold,
@@ -245,9 +259,11 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             // Theme toggle button
-            _ThemeToggleButton(onTap: () {
-              ref.read(themeManagerProvider).toggleDarkMode();
-            },),
+            _ThemeToggleButton(
+              onTap: () {
+                ref.read(themeManagerProvider).toggleDarkMode();
+              },
+            ),
           ],
         ),
       );
@@ -276,47 +292,47 @@ class DashboardScreen extends ConsumerWidget {
           mainAxisSpacing: DS.spacing12,
           crossAxisSpacing: DS.spacing12,
           children: [
-          // Card A: Focus Core (2x1)
-          StaggeredGridTile.count(
-            crossAxisCellCount: 2,
-            mainAxisCellCount: 1,
-            child: FocusCard(onTap: () => context.push('/focus')),
-          ),
-          // Card E: Calendar Heatmap (fit height to avoid overlap when expanded)
-          const StaggeredGridTile.fit(
-            crossAxisCellCount: 1,
-            child: CalendarHeatmapCard(),
-          ),
-          // Card B: Cognitive Prism (1x1)
-          const StaggeredGridTile.count(
-            crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
-            child: PrismCard(),
-          ),
-          // Card H: Streak Indicator (1x1) - Achievement Integration
-          StaggeredGridTile.count(
-            crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
-            child: _StreakCard(onTap: () => context.push('/achievements')),
-          ),
-          // Card C: Next Actions (1x1) - Resized
-          StaggeredGridTile.count(
-            crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
-            child: NextActionsCard(onViewAll: () => context.push('/tasks')),
-          ),
-          // Card F: Curiosity Capsule (1x1)
-          const StaggeredGridTile.count(
-            crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
-            child: DashboardCuriosityCard(),
-          ),
-          // Card G: Long Term Plan (1x1) - Bottom Right
-          const StaggeredGridTile.count(
-            crossAxisCellCount: 1,
-            mainAxisCellCount: 1,
-            child: LongTermPlanCard(),
-          ),
+            // Card A: Focus Core (2x1)
+            StaggeredGridTile.count(
+              crossAxisCellCount: 2,
+              mainAxisCellCount: 1,
+              child: FocusCard(onTap: () => context.push('/focus')),
+            ),
+            // Card E: Calendar Heatmap (fit height to avoid overlap when expanded)
+            const StaggeredGridTile.fit(
+              crossAxisCellCount: 1,
+              child: CalendarHeatmapCard(),
+            ),
+            // Card B: Cognitive Prism (1x1)
+            const StaggeredGridTile.count(
+              crossAxisCellCount: 1,
+              mainAxisCellCount: 1,
+              child: PrismCard(),
+            ),
+            // Card H: Streak Indicator (1x1) - Achievement Integration
+            StaggeredGridTile.count(
+              crossAxisCellCount: 1,
+              mainAxisCellCount: 1,
+              child: _StreakCard(onTap: () => context.push('/achievements')),
+            ),
+            // Card C: Next Actions (1x1) - Resized
+            StaggeredGridTile.count(
+              crossAxisCellCount: 1,
+              mainAxisCellCount: 1,
+              child: NextActionsCard(onViewAll: () => context.push('/tasks')),
+            ),
+            // Card F: Curiosity Capsule (1x1)
+            const StaggeredGridTile.count(
+              crossAxisCellCount: 1,
+              mainAxisCellCount: 1,
+              child: DashboardCuriosityCard(),
+            ),
+            // Card G: Long Term Plan (1x1) - Bottom Right
+            const StaggeredGridTile.count(
+              crossAxisCellCount: 1,
+              mainAxisCellCount: 1,
+              child: LongTermPlanCard(),
+            ),
           ],
         ),
       ),
@@ -332,56 +348,56 @@ class _StreakCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DS.warning.withValues(alpha: 0.15),
-              DS.warning.withValues(alpha: 0.05),
-            ],
-          ),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(
-            color: DS.warning.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.local_fire_department_rounded,
-                  color: DS.warning,
-                  size: DS.iconSizeSm,
-                ),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  '连胜',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.chevron_right,
-                  size: DS.iconSizeSm,
-                  color: DS.textTertiary,
-                ),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                DS.warning.withValues(alpha: 0.15),
+                DS.warning.withValues(alpha: 0.05),
               ],
             ),
-            const SizedBox(height: DS.spacing12),
-            const DashboardStreakIndicator(),
-          ],
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: DS.warning.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    color: DS.warning,
+                    size: DS.iconSizeSm,
+                  ),
+                  const SizedBox(width: DS.spacing6),
+                  Text(
+                    '连胜',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right,
+                    size: DS.iconSizeSm,
+                    color: DS.textTertiary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              const DashboardStreakIndicator(),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// Theme toggle button widget

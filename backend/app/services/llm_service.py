@@ -812,6 +812,7 @@ class LLMService:
                     for tc in message.tool_calls:
                         tool_calls_dicts.append({
                             "id": tc.id,
+                            "type": "function",
                             "function": {
                                 "name": tc.function.name,
                                 "arguments": tc.function.arguments,
@@ -835,11 +836,31 @@ class LLMService:
         将工具执行结果反馈给 LLM，获取最终回复
         """
         messages = conversation_history[:]
-        for result in tool_results:
-            messages.append({
+        fallback_tool_call_ids: list[str] = []
+        for msg in reversed(messages):
+            if msg.get("role") != "assistant":
+                continue
+            tool_calls = msg.get("tool_calls") or []
+            if isinstance(tool_calls, list):
+                for tc in tool_calls:
+                    if isinstance(tc, dict) and tc.get("id"):
+                        fallback_tool_call_ids.append(tc["id"])
+            if fallback_tool_call_ids:
+                break
+
+        for idx, result in enumerate(tool_results):
+            tool_message = {
                 "role": "tool",
                 "content": json.dumps(result, ensure_ascii=False)
-            })
+            }
+            tool_call_id = (
+                (result.get("tool_call_id") if isinstance(result, dict) else None)
+                or (result.get("id") if isinstance(result, dict) else None)
+                or (fallback_tool_call_ids[idx] if idx < len(fallback_tool_call_ids) else None)
+            )
+            if tool_call_id:
+                tool_message["tool_call_id"] = tool_call_id
+            messages.append(tool_message)
 
         if not self.provider:
             raise HTTPException(
