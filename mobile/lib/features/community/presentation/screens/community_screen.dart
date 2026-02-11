@@ -13,9 +13,13 @@ class CommunityScreen extends ConsumerWidget {
     final feedState = ref.watch(feedProvider);
 
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // Background handled by parent scaffold/stack
-      floatingActionButton: FloatingActionButton(
+      backgroundColor: DS.surfacePrimary.withValues(
+        alpha: 0,
+      ), // Background handled by parent scaffold/stack
+      floatingActionButton: SparkleIconButton(
+        variant: ButtonVariant.primary,
+        size: DS.touchTargetMinSize,
+        icon: const Icon(Icons.edit),
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -23,8 +27,6 @@ class CommunityScreen extends ConsumerWidget {
             ),
           );
         },
-        backgroundColor: DS.primaryBase,
-        child: const Icon(Icons.edit),
       ),
       body: SafeArea(
         child: ContentConstraint(

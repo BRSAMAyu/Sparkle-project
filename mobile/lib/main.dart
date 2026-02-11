@@ -14,6 +14,8 @@ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 
+const _startupErrorPadding = 24.0;
+
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +47,8 @@ void main() async {
 
     // Initialize OpenTelemetry Tracing
     const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');
-    final collectorUri = otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
+    final collectorUri =
+        otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
     await TracingService.instance.initialize(collectorUri: collectorUri);
 
     // Enable Demo Mode via --dart-define=DEMO_MODE=true
@@ -70,14 +73,14 @@ void main() async {
   } catch (e, stack) {
     debugPrint('❌ FATAL ERROR DURING STARTUP: $e');
     debugPrint(stack.toString());
-    
+
     // Show a minimal error app instead of just crashing
     runApp(
       MaterialApp(
         home: Scaffold(
           body: Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(_startupErrorPadding),
               child: SelectableText('App failed to start:\n\n$e\n\n$stack'),
             ),
           ),

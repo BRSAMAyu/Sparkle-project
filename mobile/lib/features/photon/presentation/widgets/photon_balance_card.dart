@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
 /// Photon Balance Card Widget
@@ -41,7 +42,8 @@ class PhotonBalanceCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -56,12 +58,12 @@ class PhotonBalanceCard extends ConsumerWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: DS.neutral0.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.flash_on_rounded,
-                  color: Colors.white,
+                  color: DS.neutral0,
                   size: 32,
                 ),
               ),
@@ -75,26 +77,26 @@ class PhotonBalanceCard extends ConsumerWidget {
                     Text(
                       '光子积分',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: DS.neutral0.withValues(alpha: 0.9),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
                     if (balanceState.isLoading)
-                      const SizedBox(
+                      SizedBox(
                         height: 28,
                         width: 100,
                         child: LinearProgressIndicator(
-                          color: Colors.white,
-                          backgroundColor: Colors.white24,
+                          color: DS.neutral0,
+                          backgroundColor: DS.neutral0.withValues(alpha: 0.24),
                         ),
                       )
                     else if (balanceState.error != null)
                       Text(
                         '加载失败',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: DS.neutral0.withValues(alpha: 0.7),
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -102,8 +104,8 @@ class PhotonBalanceCard extends ConsumerWidget {
                     else
                       Text(
                         '${balanceState.balance?.balance ?? 0}',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: DS.neutral0,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
@@ -114,13 +116,15 @@ class PhotonBalanceCard extends ConsumerWidget {
 
               // Refresh Button
               if (showRefreshButton)
-                IconButton(
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 36,
                   onPressed: () {
                     ref.read(photonBalanceProvider.notifier).refreshBalance();
                   },
                   icon: Icon(
                     Icons.refresh_rounded,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: DS.neutral0.withValues(alpha: 0.9),
                   ),
                 ),
             ],
@@ -137,11 +141,11 @@ class TransactionHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-      appBar: AppBar(
-        title: const Text('交易历史'),
-      ),
-      body: const Center(
-        child: Text('Transaction History - To be implemented'),
-      ),
-    );
+        appBar: AppBar(
+          title: const Text('交易历史'),
+        ),
+        body: const Center(
+          child: Text('Transaction History - To be implemented'),
+        ),
+      );
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -29,9 +31,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     // Load initial data
-    Future.microtask(() {
-      ref.read(leaderboardProvider.notifier).loadAllLeaderboards();
-    });
+    unawaited(
+      Future.microtask(() {
+        unawaited(ref.read(leaderboardProvider.notifier).loadAllLeaderboards());
+      }),
+    );
   }
 
   @override
@@ -52,9 +56,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           tabs: _tabs.map((type) => Tab(text: _getTabLabel(type))).toList(),
         ),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshCurrentTab,
+            onPressed: () {
+              unawaited(_refreshCurrentTab());
+            },
           ),
         ],
       ),
@@ -110,129 +117,137 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Widget _buildPodium(List<LeaderboardEntry> topThree) => Container(
-      height: 180,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Second place
-          if (topThree.length > 1)
-            Expanded(
-              child: _buildPodiumItem(
-                topThree[1],
-                120,
-                Colors.grey[400]!,
-                '🥈',
+        height: 180,
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Second place
+            if (topThree.length > 1)
+              Expanded(
+                child: _buildPodiumItem(
+                  topThree[1],
+                  120,
+                  DS.rarityCommon,
+                  '🥈',
+                ),
               ),
-            ),
-          const SizedBox(width: 8),
+            const SizedBox(width: DS.spacing8),
 
-          // First place
-          if (topThree.isNotEmpty)
-            Expanded(
-              child: _buildPodiumItem(
-                topThree[0],
-                160,
-              Colors.amber[400]!,
-                '🥇',
+            // First place
+            if (topThree.isNotEmpty)
+              Expanded(
+                child: _buildPodiumItem(
+                  topThree[0],
+                  160,
+                  DS.rarityRare,
+                  '🥇',
+                ),
               ),
-            ),
-          const SizedBox(width: 8),
+            const SizedBox(width: DS.spacing8),
 
-          // Third place
-          if (topThree.length > 2)
-            Expanded(
-              child: _buildPodiumItem(
-                topThree[2],
-                100,
-              Colors.brown[400]!,
-                '🥉',
+            // Third place
+            if (topThree.length > 2)
+              Expanded(
+                child: _buildPodiumItem(
+                  topThree[2],
+                  100,
+                  DS.warning,
+                  '🥉',
+                ),
               ),
-            ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildPodiumItem(
     LeaderboardEntry entry,
     double height,
     Color color,
     String emoji,
-  ) => Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            image: entry.avatarUrl != null
-                ? DecorationImage(
-                    image: NetworkImage(entry.avatarUrl!),
-                    fit: BoxFit.cover,
+  ) =>
+      Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              image: entry.avatarUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(entry.avatarUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: entry.avatarUrl == null
+                ? CircleAvatar(
+                    backgroundColor: color.withValues(alpha: 0.3),
+                    child: Text(
+                      entry.username.isNotEmpty
+                          ? entry.username[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    ),
                   )
                 : null,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            emoji,
+            style: const TextStyle(fontSize: 32),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Container(
+            width: double.infinity,
+            height: height,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(DS.spacing8),
+              ),
             ),
-          child: entry.avatarUrl == null
-              ? CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.3),
-                  child: Text(
-                    entry.username.isNotEmpty ? entry.username[0].toUpperCase() : '?',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  entry.username,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
-                )
-              : null,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          emoji,
-          style: const TextStyle(fontSize: 32),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          height: height,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                entry.username,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                entry.scoreLabel,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  entry.scoreLabel,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildMyRankBanner(LeaderboardData leaderboard) {
     if (leaderboard.myRank == null) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing12,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: DS.borderRadius12,
       ),
       child: Row(
         children: [
@@ -259,86 +274,94 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Widget _buildLeaderboardEntry(LeaderboardEntry entry) => ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _getRankColor(entry.rank),
-        backgroundImage: entry.avatarUrl != null
-            ? NetworkImage(entry.avatarUrl!)
-            : null,
-        child: entry.avatarUrl == null
-            ? Text(
-                entry.rank.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
-            : null,
-      ),
-      title: Text(
-        entry.username,
-        style: TextStyle(
-          fontWeight: entry.isMe ? FontWeight.bold : FontWeight.normal,
+        leading: CircleAvatar(
+          backgroundColor: _getRankColor(entry.rank),
+          backgroundImage:
+              entry.avatarUrl != null ? NetworkImage(entry.avatarUrl!) : null,
+          child: entry.avatarUrl == null
+              ? Text(
+                  entry.rank.toString(),
+                  style: TextStyle(
+                    color: DS.textOnPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : null,
         ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (entry.badge != null)
-            Text(
-              entry.badge!,
-              style: const TextStyle(fontSize: 20),
-            ),
-          const SizedBox(width: 8),
-          Text(
-            entry.scoreLabel,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+        title: Text(
+          entry.username,
+          style: TextStyle(
+            fontWeight: entry.isMe ? FontWeight.bold : FontWeight.normal,
           ),
-        ],
-      ),
-    );
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (entry.badge != null)
+              Text(
+                entry.badge!,
+                style: const TextStyle(fontSize: 20),
+              ),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              entry.scoreLabel,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildEmptyView(LeaderboardType type) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.leaderboard_outlined, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            '暂无${_getTabLabel(type)}数据',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.leaderboard_outlined,
+              size: 64,
+              color: DS.textSecondary,
+            ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '暂无${_getTabLabel(type)}数据',
+              style: TextStyle(
+                fontSize: 16,
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildErrorView() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          const Text(
-            '加载失败，请重试',
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(leaderboardProvider.notifier).loadAllLeaderboards();
-            },
-            child: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: DS.error),
+            const SizedBox(height: DS.spacing16),
+            const Text(
+              '加载失败，请重试',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: DS.spacing8),
+            SparkleButton.primary(
+              onPressed: () {
+                unawaited(
+                  ref.read(leaderboardProvider.notifier).loadAllLeaderboards(),
+                );
+              },
+              label: '重试',
+            ),
+          ],
+        ),
+      );
 
   Color _getRankColor(int rank) {
-    if (rank == 1) return Colors.amber;
-    if (rank == 2) return Colors.grey[400]!;
-    if (rank == 3) return Colors.brown[400]!;
-    return Colors.blue;
+    if (rank == 1) return DS.rarityRare;
+    if (rank == 2) return DS.rarityCommon;
+    if (rank == 3) return DS.warning;
+    return DS.info;
   }
 
   String _getTabLabel(LeaderboardType type) {

@@ -361,7 +361,9 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              TextButton(
+                                              SparkleButton(
+                                                label: 'Discard',
+                                                variant: ButtonVariant.ghost,
                                                 onPressed: () {
                                                   ref
                                                       .read(
@@ -372,20 +374,10 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                         widget.task.id,
                                                       );
                                                 },
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor: ThemeUtils
-                                                      .getContrastSafeText(
-                                                    context.sparkleColors
-                                                        .semanticError,
-                                                    darkText: context
-                                                        .sparkleColors
-                                                        .textPrimary,
-                                                  ),
-                                                ),
-                                                child: const Text('Discard'),
                                               ),
                                               const SizedBox(width: 8),
-                                              ElevatedButton(
+                                              SparkleButton(
+                                                label: 'Retry',
                                                 onPressed: () {
                                                   unawaited(
                                                     ref
@@ -403,20 +395,6 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                                         ),
                                                   );
                                                 },
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: ThemeUtils
-                                                      .getContrastSafeText(
-                                                    context.sparkleColors
-                                                        .semanticError,
-                                                    darkText: context
-                                                        .sparkleColors
-                                                        .textPrimary,
-                                                  ),
-                                                  foregroundColor: context
-                                                      .sparkleColors
-                                                      .semanticError,
-                                                ),
-                                                child: const Text('Retry'),
                                               ),
                                             ],
                                           ),

@@ -23,7 +23,9 @@ class ThemeSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -42,45 +44,40 @@ class ThemeSettingsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // Theme Mode Section
-              _ThemeModeSection(
-                currentMode: currentMode,
-                onModeChanged: themeManager.setAppThemeMode,
-              ),
-              const SizedBox(height: DS.xl),
+                // Theme Mode Section
+                _ThemeModeSection(
+                  currentMode: currentMode,
+                  onModeChanged: themeManager.setAppThemeMode,
+                ),
+                const SizedBox(height: DS.xl),
 
-              // Brand Preset Section
-              _BrandPresetSection(
-                currentPreset: currentPreset,
-                onPresetChanged: themeManager.setBrandPreset,
-              ),
-              const SizedBox(height: DS.xl),
+                // Brand Preset Section
+                _BrandPresetSection(
+                  currentPreset: currentPreset,
+                  onPresetChanged: themeManager.setBrandPreset,
+                ),
+                const SizedBox(height: DS.xl),
 
-              // High Contrast Section
-              _HighContrastSection(
-                highContrast: highContrast,
-                onToggled: themeManager.toggleHighContrast,
-              ),
-              const SizedBox(height: DS.xl),
+                // High Contrast Section
+                _HighContrastSection(
+                  highContrast: highContrast,
+                  onToggled: themeManager.toggleHighContrast,
+                ),
+                const SizedBox(height: DS.xl),
 
-              // Reset to Defaults Button
-              _ResetButton(
-                onPressed: () {
-                  themeManager.reset();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('已恢复为默认设置'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: DS.xl),
+                // Reset to Defaults Button
+                _ResetButton(
+                  onPressed: () {
+                    themeManager.reset();
+                    if (context.mounted) {
+                      AppFeedback.success(context, '已恢复为默认设置');
+                    }
+                  },
+                ),
+                const SizedBox(height: DS.xl),
 
-              // Color Preview Section
-              const _ColorPreviewSection(),
+                // Color Preview Section
+                const _ColorPreviewSection(),
               ],
             ),
           ),
@@ -149,7 +146,9 @@ class _SegmentedThemeButton extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: DS.md),
                 decoration: BoxDecoration(
-                  color: isSelected ? DS.brandPrimary : Colors.transparent,
+                  color: isSelected
+                      ? DS.brandPrimary
+                      : DS.surfacePrimary.withValues(alpha: 0),
                   borderRadius: index == 0
                       ? const BorderRadius.only(
                           topLeft: Radius.circular(DS.md - 2),
@@ -172,7 +171,7 @@ class _SegmentedThemeButton extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? Colors.white
+                          ? DS.textOnPrimary
                           : Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -228,7 +227,9 @@ class _BrandPresetSection extends StatelessWidget {
                       width: isSelected ? 2 : 1,
                     ),
                     borderRadius: BorderRadius.circular(DS.md),
-                    color: isSelected ? DS.brandPrimary12 : Colors.transparent,
+                    color: isSelected
+                        ? DS.brandPrimary12
+                        : DS.surfacePrimary.withValues(alpha: 0),
                   ),
                   child: Text(
                     presetName,
@@ -303,16 +304,10 @@ class _ResetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
-        child: OutlinedButton(
+        child: SparkleButton.outline(
           onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: DS.brandPrimary),
-            padding: const EdgeInsets.symmetric(vertical: DS.lg),
-          ),
-          child: Text(
-            '恢复默认设置',
-            style: TextStyle(color: DS.brandPrimary),
-          ),
+          label: '恢复默认设置',
+          expand: true,
         ),
       );
 }

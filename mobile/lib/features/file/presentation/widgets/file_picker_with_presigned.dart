@@ -128,7 +128,8 @@ class _FilePickerWithPresignedUploadState
         // Use surfaceSecondary to match Dashboard ceramic cards
         color: DS.surfaceSecondary,
         borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(DS.borderRadiusXl),),
+          top: Radius.circular(DS.borderRadiusXl),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -172,21 +173,28 @@ class _FilePickerWithPresignedUploadState
                     ? Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.cloud_upload_outlined,
-                              size: 48, color: DS.primaryBase,),
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            size: 48,
+                            color: DS.primaryBase,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             '点击选择文件',
                             style: TextStyle(
-                                color: DS.textSecondary,),
+                              color: DS.textSecondary,
+                            ),
                           ),
                         ],
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.insert_drive_file,
-                              size: 40, color: DS.primaryBase,),
+                          Icon(
+                            Icons.insert_drive_file,
+                            size: 40,
+                            color: DS.primaryBase,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             _selectedFile!.path.split('/').last,
@@ -201,7 +209,8 @@ class _FilePickerWithPresignedUploadState
                             Text(
                               '上传中 ${(_progress * 100).toStringAsFixed(0)}%',
                               style: TextStyle(
-                                  color: DS.textSecondary,),
+                                color: DS.textSecondary,
+                              ),
                             ),
                         ],
                       ),
@@ -217,28 +226,15 @@ class _FilePickerWithPresignedUploadState
                 style: TextStyle(color: DS.error, fontSize: 12),
               ),
             ),
-          ElevatedButton(
-            onPressed:
-                _selectedFile == null || _isUploading ? null : _startUpload,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 52),
-              backgroundColor: DS.primaryBase,
-              foregroundColor: DS.brandPrimaryConst,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),),
-              elevation: 0,
-            ),
-            child: _isUploading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    _resumeSession == null ? '开始上传' : '继续上传',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold,),
-                  ),
+          SparkleButton(
+            expand: true,
+            label: _resumeSession == null ? '开始上传' : '继续上传',
+            onPressed: _selectedFile == null || _isUploading
+                ? null
+                : () {
+                    _startUpload();
+                  },
+            loading: _isUploading,
           ),
         ],
       ),

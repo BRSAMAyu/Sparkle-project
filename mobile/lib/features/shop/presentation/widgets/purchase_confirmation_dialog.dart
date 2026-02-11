@@ -101,7 +101,7 @@ class _PurchaseConfirmationDialogState
 
             // Price Breakdown
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DS.spacing16),
               decoration: BoxDecoration(
                 color: DS.surfaceTertiary,
                 borderRadius: BorderRadius.circular(12),
@@ -127,7 +127,7 @@ class _PurchaseConfirmationDialogState
                             ),
                           ),
                           if (widget.item.originalPrice != null) ...[
-                            const SizedBox(width: 8),
+                            const SizedBox(width: DS.spacing8),
                             Text(
                               '${widget.item.originalPrice}',
                               style: TextStyle(
@@ -140,7 +140,7 @@ class _PurchaseConfirmationDialogState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: DS.spacing12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

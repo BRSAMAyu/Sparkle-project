@@ -142,7 +142,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -151,33 +153,45 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         centerTitle: false,
         actions: [
           // Focus mode indicator and toggle
-          IconButton(
-            icon: Icon(
-              focusMode
-                  ? Icons.do_not_disturb_on
-                  : Icons.do_not_disturb_off_outlined,
-              color: focusMode ? DS.warning : null,
+          Tooltip(
+            message: focusMode ? '专注模式开启中' : '开启专注模式',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: Icon(
+                focusMode
+                    ? Icons.do_not_disturb_on
+                    : Icons.do_not_disturb_off_outlined,
+                color: focusMode ? DS.warning : null,
+              ),
+              onPressed: () {
+                ref.read(focusModeProvider.notifier).toggle();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(focusMode ? '已关闭专注模式' : '已开启专注模式，消息将不会打扰您'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
             ),
-            tooltip: focusMode ? '专注模式开启中' : '开启专注模式',
-            onPressed: () {
-              ref.read(focusModeProvider.notifier).toggle();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(focusMode ? '已关闭专注模式' : '已开启专注模式，消息将不会打扰您'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
           ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: '搜索',
-            onPressed: _showSearchOptions,
+          Tooltip(
+            message: '搜索',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.search),
+              onPressed: _showSearchOptions,
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.person_add_outlined),
-            tooltip: '添加',
-            onPressed: _showAddOptions,
+          Tooltip(
+            message: '添加',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.person_add_outlined),
+              onPressed: _showAddOptions,
+            ),
           ),
         ],
         bottom: TabBar(
@@ -196,10 +210,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _handleFabPressed,
-        tooltip: _tabController.index == 0 ? '添加好友' : '创建群组',
-        child: const Icon(Icons.add),
+      floatingActionButton: Tooltip(
+        message: _tabController.index == 0 ? '添加好友' : '创建群组',
+        child: SparkleIconButton(
+          size: 56,
+          icon: const Icon(Icons.add),
+          onPressed: _handleFabPressed,
+        ),
       ),
     );
   }
@@ -231,14 +248,17 @@ class _FriendsListTab extends ConsumerWidget {
             final f = friends[index];
             return InkWell(
               onTap: () => context.push(
-                  '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',),
+                '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',
+              ),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     StatusAvatar(
-                        status: f.friend.status, url: f.friend.avatarUrl,),
+                      status: f.friend.status,
+                      url: f.friend.avatarUrl,
+                    ),
                     const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
@@ -247,7 +267,9 @@ class _FriendsListTab extends ConsumerWidget {
                           Text(
                             f.friend.displayName,
                             style: const TextStyle(
-                                fontWeight: FontWeight.w500, fontSize: 16,),
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -278,7 +300,9 @@ class _FriendsListTab extends ConsumerWidget {
                               Text(
                                 'Lv.${f.friend.flameLevel}',
                                 style: TextStyle(
-                                    color: DS.neutral500, fontSize: 12,),
+                                  color: DS.neutral500,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -342,25 +366,43 @@ class _GroupsListTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(g.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16,),),
+                            Text(
+                              g.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                             const SizedBox(height: DS.xs),
                             Row(
                               children: [
-                                Icon(Icons.people,
-                                    size: 14, color: DS.neutral500,),
+                                Icon(
+                                  Icons.people,
+                                  size: 14,
+                                  color: DS.neutral500,
+                                ),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.memberCount} 成员',
-                                    style: TextStyle(
-                                        color: DS.neutral500, fontSize: 12,),),
+                                Text(
+                                  '${g.memberCount} 成员',
+                                  style: TextStyle(
+                                    color: DS.neutral500,
+                                    fontSize: 12,
+                                  ),
+                                ),
                                 const SizedBox(width: DS.md),
-                                Icon(Icons.local_fire_department,
-                                    size: 14, color: DS.brandPrimaryConst,),
+                                Icon(
+                                  Icons.local_fire_department,
+                                  size: 14,
+                                  color: DS.brandPrimaryConst,
+                                ),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.totalFlamePower}',
-                                    style: TextStyle(
-                                        color: DS.neutral500, fontSize: 12,),),
+                                Text(
+                                  '${g.totalFlamePower}',
+                                  style: TextStyle(
+                                    color: DS.neutral500,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ],

@@ -36,8 +36,11 @@ class FocusStatsHeatmap extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.calendar_month,
-                color: DS.brandPrimary.shade600, size: 20,),
+            Icon(
+              Icons.calendar_month,
+              color: DS.brandPrimary.shade600,
+              size: 20,
+            ),
             const SizedBox(width: DS.sm),
             const Text(
               '活跃热力图',
@@ -113,18 +116,19 @@ class FocusStatsHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCell(DateTime date, double minutes, double intensity) => Tooltip(
-      message: '${_formatDate(date)}\n专注时长: ${minutes.toInt()}分钟',
-      child: Container(
-        width: 12,
-        height: 12,
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          color: _getColorForIntensity(intensity),
-          borderRadius: BorderRadius.circular(2),
+  Widget _buildDayCell(DateTime date, double minutes, double intensity) =>
+      Tooltip(
+        message: '${_formatDate(date)}\n专注时长: ${minutes.toInt()}分钟',
+        child: Container(
+          width: 12,
+          height: 12,
+          margin: const EdgeInsets.all(1),
+          decoration: BoxDecoration(
+            color: _getColorForIntensity(intensity),
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
-      ),
-    );
+      );
 
   double _getMinutesForDate(DateTime date) {
     // Find data for this date (ignoring time)
@@ -145,12 +149,11 @@ class FocusStatsHeatmap extends StatelessWidget {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Color _getColorForIntensity(double intensity) {
-    final low = lowColor ?? const Color(0xFFE0E0E0);
+    final low = lowColor ?? DS.neutral300;
     final high = highColor ?? DS.brandPrimary;
     if (intensity == 0) return low;
     return Color.lerp(low, high, intensity) ?? low;
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.month}/${date.day}';
+  String _formatDate(DateTime date) => '${date.month}/${date.day}';
 }

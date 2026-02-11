@@ -90,7 +90,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       case 'vector':
         return DS.brandPrimary.shade400;
       case 'graph':
-        return Colors.purple.shade400;
+        return DS.prismPurple;
       case 'user_interest':
         return DS.success.shade400;
       default:
@@ -176,7 +176,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
 
               // 统计信息
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                padding: const EdgeInsets.fromLTRB(DS.md, 0, DS.md, DS.sm),
                 child: _buildStats(trace),
               ),
             ],
@@ -212,7 +212,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
           _buildStatItem(
             '图谱',
             trace.graphSearchCount.toString(),
-            Colors.purple.shade400,
+            DS.prismPurple,
           ),
           _buildStatItem(
             '时间',
@@ -368,8 +368,8 @@ class GraphRAGTrace {
         vectorSearchCount: json['vector_search_count'] as int,
         graphSearchCount: json['graph_search_count'] as int,
         userInterestCount: json['user_interest_count'] as int,
-        timing: (json['timing'] as Map<String, dynamic>?)
-                ?.map((key, value) => MapEntry(key, (value as num).toDouble())) ??
+        timing: (json['timing'] as Map<String, dynamic>?)?.map(
+                (key, value) => MapEntry(key, (value as num).toDouble())) ??
             const <String, double>{},
       );
   final String traceId;

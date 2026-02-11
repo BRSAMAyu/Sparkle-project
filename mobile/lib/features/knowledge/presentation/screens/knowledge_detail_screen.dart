@@ -26,9 +26,10 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               Text('Error: $error'),
               const SizedBox(height: DS.lg),
               SparkleButton.primary(
-                  label: 'Retry',
-                  onPressed: () =>
-                      ref.invalidate(knowledgeDetailProvider(nodeId)),),
+                label: 'Retry',
+                onPressed: () =>
+                    ref.invalidate(knowledgeDetailProvider(nodeId)),
+              ),
             ],
           ),
         ),
@@ -46,22 +47,20 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'learning_path_fab',
+      floatingActionButton: SparkleButton(
+        label: '生成学习路径',
+        icon: const Icon(Icons.timeline),
         onPressed: () {
           showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
-            backgroundColor: Colors.transparent,
+            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
             builder: (context) => LearningPathDialog(
               targetNodeId: nodeId,
               targetNodeName: detail.node.name,
             ),
           );
         },
-        label: const Text('生成学习路径'),
-        icon: const Icon(Icons.timeline),
-        backgroundColor: sectorStyle.primaryColor,
       ),
       body: CustomScrollView(
         slivers: [
@@ -70,12 +69,16 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             expandedHeight: 200,
             pinned: true,
             backgroundColor: sectorStyle.primaryColor,
-            leading: IconButton(
+            leading: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
               icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
               onPressed: () => context.pop(),
             ),
             actions: [
-              IconButton(
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
                 icon: Icon(
                   detail.userStats.isFavorite ? Icons.star : Icons.star_border,
                   color: DS.brandPrimaryConst,
@@ -280,7 +283,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             ),
                             title: Text(plan.title),
                             subtitle: Text(
-                                plan.planType == 'sprint' ? '冲刺计划' : '成长计划',),
+                              plan.planType == 'sprint' ? '冲刺计划' : '成长计划',
+                            ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               if (plan.planType == 'sprint') {
@@ -425,8 +429,11 @@ class _MasteryCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.pause_circle,
-                          color: DS.brandPrimaryConst, size: 20,),
+                      Icon(
+                        Icons.pause_circle,
+                        color: DS.brandPrimaryConst,
+                        size: 20,
+                      ),
                       const SizedBox(width: DS.smConst),
                       Text(
                         '遗忘衰减已暂停',
@@ -442,7 +449,7 @@ class _MasteryCard extends StatelessWidget {
       );
 
   Color _getMasteryColor() {
-    if (stats.masteryScore >= 95) return Colors.purple;
+    if (stats.masteryScore >= 95) return DS.prismPurple;
     if (stats.masteryScore >= 80) return DS.success;
     if (stats.masteryScore >= 30) return DS.brandPrimary;
     if (stats.masteryScore > 0) return DS.brandPrimary;

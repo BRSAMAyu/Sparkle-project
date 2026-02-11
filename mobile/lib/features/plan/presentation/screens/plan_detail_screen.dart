@@ -23,21 +23,28 @@ class PlanDetailScreen extends ConsumerWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: const Text('计划详情'),
           actions: [
             planAsync.maybeWhen(
-              data: (plan) => IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () => showShareResourceSheet(
-                  context,
-                  resourceType: 'plan',
-                  resourceId: plan.id,
-                  title: plan.name,
-                  subtitle: plan.description ?? plan.subject ?? '',
+              data: (plan) => Tooltip(
+                message: '分享计划',
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () => showShareResourceSheet(
+                    context,
+                    resourceType: 'plan',
+                    resourceId: plan.id,
+                    title: plan.name,
+                    subtitle: plan.description ?? plan.subject ?? '',
+                  ),
                 ),
               ),
               orElse: () => const SizedBox.shrink(),
@@ -150,29 +157,23 @@ class _PlanOverviewTab extends ConsumerWidget {
 
   Widget _buildArchiveActions(BuildContext context, WidgetRef ref) {
     if (plan.isActive) {
-      return ElevatedButton.icon(
+      return SparkleButton.destructive(
         onPressed: () => _confirmArchive(context, ref),
         icon: const Icon(Icons.archive_outlined),
-        label: const Text('归档计划'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: DS.error.withValues(alpha: 0.08),
-          foregroundColor: DS.error,
-        ),
+        label: '归档计划',
       );
     }
 
-    return ElevatedButton.icon(
+    return SparkleButton(
       onPressed: () async {
         await ref.read(planListProvider.notifier).restorePlan(plan.id);
         ref.invalidate(planDetailProvider(plan.id));
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('计划已恢复')),
-          );
+          AppFeedback.success(context, '计划已恢复');
         }
       },
       icon: const Icon(Icons.restore_rounded),
-      label: const Text('恢复计划'),
+      label: '恢复计划',
     );
   }
 
@@ -183,13 +184,13 @@ class _PlanOverviewTab extends ConsumerWidget {
         title: const Text('归档计划'),
         content: const Text('归档后将从活跃列表移除，可在历史计划中恢复。'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('确认归档'),
+            label: '确认归档',
           ),
         ],
       ),
@@ -200,9 +201,7 @@ class _PlanOverviewTab extends ConsumerWidget {
     await ref.read(planListProvider.notifier).archivePlan(plan.id);
     ref.invalidate(planDetailProvider(plan.id));
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('计划已归档')),
-      );
+      AppFeedback.success(context, '计划已归档');
     }
   }
 }
@@ -219,7 +218,8 @@ class _PlanProgressTab extends StatelessWidget {
       return const Center(child: Text('暂无可视化数据'));
     }
 
-    final completed = tasks.where((t) => t.status == TaskStatus.completed).length;
+    final completed =
+        tasks.where((t) => t.status == TaskStatus.completed).length;
     final total = tasks.length;
     final completionRate = total > 0 ? completed / total : 0.0;
 
@@ -251,8 +251,8 @@ class _PlanProgressTab extends StatelessWidget {
                         title: '${(completionRate * 100).toStringAsFixed(0)}%',
                         color: DS.primaryBase,
                         radius: 55,
-                        titleStyle: const TextStyle(
-                          color: Colors.white,
+                        titleStyle: TextStyle(
+                          color: DS.textOnPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -294,7 +294,8 @@ class _PlanProgressTab extends StatelessWidget {
                           interval: 1,
                           getTitlesWidget: (value, meta) => Text(
                             value.toInt().toString(),
-                            style: TextStyle(color: DS.neutral500, fontSize: 10),
+                            style:
+                                TextStyle(color: DS.neutral500, fontSize: 10),
                           ),
                         ),
                       ),
@@ -309,7 +310,9 @@ class _PlanProgressTab extends StatelessWidget {
                               child: Text(
                                 label,
                                 style: TextStyle(
-                                    color: DS.neutral500, fontSize: 10,),
+                                  color: DS.neutral500,
+                                  fontSize: 10,
+                                ),
                               ),
                             );
                           },
@@ -367,7 +370,8 @@ class _PlanProgressTab extends StatelessWidget {
                           interval: 1,
                           getTitlesWidget: (value, meta) => Text(
                             value.toInt().toString(),
-                            style: TextStyle(color: DS.neutral500, fontSize: 10),
+                            style:
+                                TextStyle(color: DS.neutral500, fontSize: 10),
                           ),
                         ),
                       ),
@@ -385,7 +389,9 @@ class _PlanProgressTab extends StatelessWidget {
                               child: Text(
                                 dayBuckets[index].label,
                                 style: TextStyle(
-                                    color: DS.neutral500, fontSize: 10,),
+                                  color: DS.neutral500,
+                                  fontSize: 10,
+                                ),
                               ),
                             );
                           },

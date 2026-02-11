@@ -30,13 +30,15 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation>
     // Scale from tiny to overshoot then settle
     _scaleAnim = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: 50.0)
-              .chain(CurveTween(curve: Curves.easeInExpo)),
-          weight: 40,),
+        tween: Tween(begin: 0.0, end: 50.0)
+            .chain(CurveTween(curve: Curves.easeInExpo)),
+        weight: 40,
+      ),
       TweenSequenceItem(
-          tween: Tween(begin: 50.0, end: 1.0)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 60,),
+        tween: Tween(begin: 50.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 60,
+      ),
     ]).animate(_mainController);
 
     // Opacity for flash
@@ -76,7 +78,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation>
                       spreadRadius: 10,
                     ),
                     BoxShadow(
-                      color: Colors.purpleAccent.withValues(alpha: 0.3),
+                      color: DS.prismPurple.withValues(alpha: 0.3),
                       blurRadius: 40,
                       spreadRadius: 20,
                     ),

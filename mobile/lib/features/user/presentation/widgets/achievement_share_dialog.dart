@@ -194,12 +194,10 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
               const SizedBox(height: DS.md),
 
               // Close button
-              TextButton(
+              SparkleButton(
+                label: '关闭',
+                variant: ButtonVariant.ghost,
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  '关闭',
-                  style: TextStyle(color: DS.textSecondary),
-                ),
               ),
             ],
           ),

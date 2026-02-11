@@ -48,251 +48,272 @@ class GroupDetailScreen extends ConsumerWidget {
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-        SliverAppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          expandedHeight: 200.0,
-          pinned: true,
-          stretch: true,
-          flexibleSpace: FlexibleSpaceBar(
-            title: Text(
-              group.name,
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
-              ),
+          SliverAppBar(
+            leading: SparkleIconButton(
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
             ),
-            background: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: isSprint
-                    ? LinearGradient(
-                        colors: [Colors.deepOrange, DS.warningAccent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : LinearGradient(
-                        colors: [DS.primaryBase, DS.secondaryBase],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+            expandedHeight: 200.0,
+            pinned: true,
+            stretch: true,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                group.name,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
+                ),
               ),
-              child: Center(
-                child: Hero(
-                  tag: 'group-avatar-${group.id}',
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 40),
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(
+              background: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: isSprint
+                      ? LinearGradient(
+                          colors: [Colors.deepOrange, DS.warningAccent],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : LinearGradient(
+                          colors: [DS.primaryBase, DS.secondaryBase],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                ),
+                child: Center(
+                  child: Hero(
+                    tag: 'group-avatar-${group.id}',
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 40),
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(
                           color: DS.brandPrimary.withValues(alpha: 0.5),
-                          width: 2,),
-                    ),
-                    child: Icon(
-                      isSprint ? Icons.timer_outlined : Icons.school_outlined,
-                      size: 40,
-                      color: DS.brandPrimaryConst,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        isSprint ? Icons.timer_outlined : Icons.school_outlined,
+                        size: 40,
+                        color: DS.brandPrimaryConst,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+            actions: [
+              if (isMember)
+                SparkleIconButton(
+                  size: DS.touchTargetMinSize,
+                  icon: Icon(Icons.more_vert, color: DS.brandPrimary),
+                  onPressed: () => _showGroupOptions(context, ref, group),
+                ),
+            ],
           ),
-          actions: [
-            if (isMember)
-              IconButton(
-                icon: Icon(Icons.more_vert, color: DS.brandPrimary),
-                onPressed: () => _showGroupOptions(context, ref, group),
-              ),
-          ],
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (group.isSprint && group.daysRemaining != null)
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8,),
-                      decoration: BoxDecoration(
-                        color: DS.error.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: DS.error.shade100),
-                      ),
-                      child: Text(
-                        'Sprint ends in ${group.daysRemaining} days',
-                        style: TextStyle(
-                          color: DS.error.shade700,
-                          fontWeight: FontWeight.bold,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (group.isSprint && group.daysRemaining != null)
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DS.error.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: DS.error.shade100),
+                        ),
+                        child: Text(
+                          'Sprint ends in ${group.daysRemaining} days',
+                          style: TextStyle(
+                            color: DS.error.shade700,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                const SizedBox(height: DS.xl),
+                  const SizedBox(height: DS.xl),
 
-                // Bonfire with fade-in animation
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOutBack,
-                  builder: (context, value, child) => Transform.scale(
-                    scale: value,
-                    child: Opacity(opacity: value, child: child),
-                  ),
-                  child: Center(
-                    child: BonfireWidget(
-                      level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
-                      size: 140,
+                  // Bonfire with fade-in animation
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) => Transform.scale(
+                      scale: value,
+                      child: Opacity(opacity: value, child: child),
+                    ),
+                    child: Center(
+                      child: BonfireWidget(
+                        level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
+                        size: 140,
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: DS.xxl),
-
-                // Stats Cards
-                Row(
-                  children: [
-                    Expanded(
-                        child: _buildStatCard(
-                            context,
-                            'Members',
-                            '${group.memberCount}/${group.maxMembers}',
-                            Icons.people,),),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                        child: _buildStatCard(
-                            context,
-                            'Total Flame',
-                            '${group.totalFlamePower}',
-                            Icons.local_fire_department,),),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                        child: _buildStatCard(context, 'Check-ins',
-                            '${group.todayCheckinCount}', Icons.check_circle,),),
-                  ],
-                ),
-
-                const SizedBox(height: DS.xxl),
-
-                // Description
-                Text('About',
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),),
-                const SizedBox(height: DS.sm),
-                Text(
-                  group.description ?? 'No description provided.',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: DS.neutral700, height: 1.5),
-                ),
-
-                const SizedBox(height: DS.xl),
-
-                // Tags
-                if (group.focusTags.isNotEmpty) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: group.focusTags
-                        .map(
-                          (tag) => Chip(
-                            label: Text(tag),
-                            backgroundColor: DS.neutral100,
-                            labelStyle: TextStyle(color: DS.neutral800),
-                          ),
-                        )
-                        .toList(),
-                  ),
                   const SizedBox(height: DS.xxl),
-                ],
 
-                // Actions
-                if (isMember) ...[
-                  CustomButton.primary(
-                    text: 'Enter Chat',
-                    icon: Icons.chat_bubble_outline,
-                    size: CustomButtonSize.large,
-                    onPressed: () {
-                      context.push('/chat/group/$groupId');
-                    },
-                  ),
-                  const SizedBox(height: DS.lg),
+                  // Stats Cards
                   Row(
                     children: [
                       Expanded(
-                        child: CustomButton.secondary(
-                          text: 'Tasks',
-                          icon: Icons.task_alt,
-                          onPressed: () {
-                            context.push('/community/groups/$groupId/tasks');
-                          },
+                        child: _buildStatCard(
+                          context,
+                          'Members',
+                          '${group.memberCount}/${group.maxMembers}',
+                          Icons.people,
                         ),
                       ),
-                      const SizedBox(width: DS.lg),
+                      const SizedBox(width: DS.md),
                       Expanded(
-                        child: CustomButton.secondary(
-                          text: 'Members',
-                          icon: Icons.people_outline,
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (context) => GroupMembersScreen(
-                                  groupId: groupId,
-                                  groupName: group.name,
-                                  myRole: group.myRole,
-                                ),
-                              ),
-                            );
-                          },
+                        child: _buildStatCard(
+                          context,
+                          'Total Flame',
+                          '${group.totalFlamePower}',
+                          Icons.local_fire_department,
+                        ),
+                      ),
+                      const SizedBox(width: DS.md),
+                      Expanded(
+                        child: _buildStatCard(
+                          context,
+                          'Check-ins',
+                          '${group.todayCheckinCount}',
+                          Icons.check_circle,
                         ),
                       ),
                     ],
                   ),
-                ] else ...[
-                  CustomButton.primary(
-                    text: 'Join Group',
-                    onPressed: () async {
-                      HapticFeedback.lightImpact();
-                      try {
-                        await ref
-                            .read(groupDetailProvider(groupId).notifier)
-                            .joinGroup();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Welcome to the group!'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to join: $e')),);
-                        }
-                      }
-                    },
+
+                  const SizedBox(height: DS.xxl),
+
+                  // Description
+                  Text(
+                    'About',
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    group.description ?? 'No description provided.',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: DS.neutral700, height: 1.5),
+                  ),
+
+                  const SizedBox(height: DS.xl),
+
+                  // Tags
+                  if (group.focusTags.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: group.focusTags
+                          .map(
+                            (tag) => Chip(
+                              label: Text(tag),
+                              backgroundColor: DS.neutral100,
+                              labelStyle: TextStyle(color: DS.neutral800),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: DS.xxl),
+                  ],
+
+                  // Actions
+                  if (isMember) ...[
+                    CustomButton.primary(
+                      text: 'Enter Chat',
+                      icon: Icons.chat_bubble_outline,
+                      size: CustomButtonSize.large,
+                      onPressed: () {
+                        context.push('/chat/group/$groupId');
+                      },
+                    ),
+                    const SizedBox(height: DS.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomButton.secondary(
+                            text: 'Tasks',
+                            icon: Icons.task_alt,
+                            onPressed: () {
+                              context.push('/community/groups/$groupId/tasks');
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: DS.lg),
+                        Expanded(
+                          child: CustomButton.secondary(
+                            text: 'Members',
+                            icon: Icons.people_outline,
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (context) => GroupMembersScreen(
+                                    groupId: groupId,
+                                    groupName: group.name,
+                                    myRole: group.myRole,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    CustomButton.primary(
+                      text: 'Join Group',
+                      onPressed: () async {
+                        HapticFeedback.lightImpact();
+                        try {
+                          await ref
+                              .read(groupDetailProvider(groupId).notifier)
+                              .joinGroup();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Welcome to the group!'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to join: $e')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 40),
                 ],
-                const SizedBox(height: 40),
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
 
   Widget _buildStatCard(
-          BuildContext context, String label, String value, IconData icon,) =>
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) =>
       Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
@@ -329,7 +350,7 @@ class GroupDetailScreen extends ConsumerWidget {
   void _showGroupOptions(BuildContext context, WidgetRef ref, GroupInfo group) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => DecoratedBox(
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
@@ -352,13 +373,22 @@ class GroupDetailScreen extends ConsumerWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                      color: DS.error.shade50, shape: BoxShape.circle,),
-                  child: Icon(Icons.exit_to_app,
-                      color: DS.error.shade700, size: 20,),
+                    color: DS.error.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.exit_to_app,
+                    color: DS.error.shade700,
+                    size: 20,
+                  ),
                 ),
-                title: Text('Leave Group',
-                    style: TextStyle(
-                        color: DS.error.shade700, fontWeight: FontWeight.bold,),),
+                title: Text(
+                  'Leave Group',
+                  style: TextStyle(
+                    color: DS.error.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(context);
                   final confirm = await showDialog<bool>(
@@ -366,16 +396,16 @@ class GroupDetailScreen extends ConsumerWidget {
                     builder: (context) => AlertDialog(
                       title: const Text('Leave Group?'),
                       content: const Text(
-                          'Are you sure you want to leave this group?',),
+                        'Are you sure you want to leave this group?',
+                      ),
                       actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),),
-                        TextButton(
+                        SparkleButton.ghost(
+                          label: 'Cancel',
+                          onPressed: () => Navigator.pop(context, false),
+                        ),
+                        SparkleButton.destructive(
+                          label: 'Leave',
                           onPressed: () => Navigator.pop(context, true),
-                          style:
-                              TextButton.styleFrom(foregroundColor: DS.error),
-                          child: const Text('Leave'),
                         ),
                       ],
                     ),
@@ -421,13 +451,16 @@ class _DetailLoading extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                          child: Container(height: 80, color: DS.brandPrimary),),
+                        child: Container(height: 80, color: DS.brandPrimary),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
-                          child: Container(height: 80, color: DS.brandPrimary),),
+                        child: Container(height: 80, color: DS.brandPrimary),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
-                          child: Container(height: 80, color: DS.brandPrimary),),
+                        child: Container(height: 80, color: DS.brandPrimary),
+                      ),
                     ],
                   ),
                 ],

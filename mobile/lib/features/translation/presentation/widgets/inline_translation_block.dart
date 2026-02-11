@@ -90,118 +90,118 @@ class _InlineTranslationBlockState
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: const EdgeInsets.symmetric(vertical: DS.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Original text
-          SelectableText(
-            widget.sourceText,
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.6,
-              color: Colors.black87,
-            ),
-          ),
-
-          const SizedBox(height: DS.xs),
-
-          // Toggle button
-          InkWell(
-            onTap: _toggleExpansion,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: DS.xs),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: DS.brandPrimaryConst,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _isExpanded ? '隐藏译文' : '显示译文',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: DS.brandPrimaryConst,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (_result != null && _result!.isCacheHit) ...[
-                    const SizedBox(width: DS.xs),
-                    Icon(
-                      Icons.flash_on,
-                      size: 14,
-                      color: Colors.grey[400],
-                    ),
-                  ],
-                ],
+        margin: const EdgeInsets.symmetric(vertical: DS.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Original text
+            SelectableText(
+              widget.sourceText,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.6,
+                color: DS.textPrimary,
               ),
             ),
-          ),
 
-          // Translation (collapsible)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _isExpanded
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: DS.sm),
-                      if (_isLoading)
-                        _buildLoading()
-                      else if (_errorMessage != null)
-                        _buildError()
-                      else if (_result != null)
-                        _buildTranslation(),
+            const SizedBox(height: DS.xs),
+
+            // Toggle button
+            InkWell(
+              onTap: _toggleExpansion,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: DS.xs),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                      color: DS.brandPrimaryConst,
+                    ),
+                    const SizedBox(width: DS.spacing4),
+                    Text(
+                      _isExpanded ? '隐藏译文' : '显示译文',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: DS.brandPrimaryConst,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (_result != null && _result!.isCacheHit) ...[
+                      const SizedBox(width: DS.xs),
+                      Icon(
+                        Icons.flash_on,
+                        size: 14,
+                        color: DS.neutral400,
+                      ),
                     ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
+                  ],
+                ),
+              ),
+            ),
+
+            // Translation (collapsible)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: _isExpanded
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: DS.sm),
+                        if (_isLoading)
+                          _buildLoading()
+                        else if (_errorMessage != null)
+                          _buildError()
+                        else if (_result != null)
+                          _buildTranslation(),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildLoading() => Container(
-      padding: const EdgeInsets.all(DS.md),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          SizedBox(width: DS.sm),
-          Text('翻译中...', style: TextStyle(fontSize: 14)),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: DS.sm),
+            Text('翻译中...', style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      );
 
   Widget _buildError() => Container(
-      padding: const EdgeInsets.all(DS.md),
-      decoration: BoxDecoration(
-        color: DS.error.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, size: 18, color: DS.error),
-          const SizedBox(width: DS.sm),
-          Expanded(
-            child: Text(
-              '翻译失败，请重试',
-              style: TextStyle(fontSize: 14, color: DS.error),
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: DS.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, size: 18, color: DS.error),
+            const SizedBox(width: DS.sm),
+            Expanded(
+              child: Text(
+                '翻译失败，请重试',
+                style: TextStyle(fontSize: 14, color: DS.error),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildTranslation() {
     if (_result == null) return const SizedBox.shrink();
@@ -242,7 +242,7 @@ class _InlineTranslationBlockState
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: DS.xs,
-                        vertical: 2,
+                        vertical: DS.spacing4 / 2,
                       ),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.15),
@@ -272,7 +272,7 @@ class _InlineTranslationBlockState
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.sm,
-                    vertical: 4,
+                    vertical: DS.spacing4,
                   ),
                 ),
               ),
@@ -288,14 +288,14 @@ class _InlineTranslationBlockState
                 '${_result!.provider} · ${_result!.latencyMs}ms',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.grey[500],
+                  color: DS.neutral500,
                 ),
               ),
               Text(
                 '${_result!.sourceLang} → ${_result!.targetLang}',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.grey[500],
+                  color: DS.neutral500,
                 ),
               ),
             ],

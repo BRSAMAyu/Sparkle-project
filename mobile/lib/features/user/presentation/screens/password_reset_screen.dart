@@ -40,17 +40,12 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             _newPasswordController.text,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: const Text('密码修改成功'), backgroundColor: DS.successConst,),
-        );
+        AppFeedback.success(context, '密码修改成功');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('修改失败: $e'), backgroundColor: DS.error),
-        );
+        AppFeedback.error(context, '修改失败: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -64,7 +59,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -75,78 +72,68 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.spacing24),
           child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '请确保您的新密码包含至少 8 个字符。',
-                style: TextStyle(
-                  color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: DS.spacing24),
-              _buildPasswordField(
-                label: '当前密码',
-                controller: _oldPasswordController,
-                obscureText: _obscureOld,
-                onToggle: () => setState(() => _obscureOld = !_obscureOld),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return '请输入当前密码';
-                  return null;
-                },
-              ),
-              const SizedBox(height: DS.spacing16),
-              _buildPasswordField(
-                label: '新密码',
-                controller: _newPasswordController,
-                obscureText: _obscureNew,
-                onToggle: () => setState(() => _obscureNew = !_obscureNew),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return '请输入新密码';
-                  if (value.length < 8) return '密码长度至少为 8 位';
-                  return null;
-                },
-              ),
-              const SizedBox(height: DS.spacing16),
-              _buildPasswordField(
-                label: '确认新密码',
-                controller: _confirmPasswordController,
-                obscureText: _obscureConfirm,
-                onToggle: () =>
-                    setState(() => _obscureConfirm = !_obscureConfirm),
-                validator: (value) {
-                  if (value != _newPasswordController.text) return '两次输入的密码不一致';
-                  return null;
-                },
-              ),
-              const SizedBox(height: DS.spacing32),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleReset,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: DS.primaryBase,
-                  foregroundColor: DS.brandPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: DS.borderRadius12,
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '请确保您的新密码包含至少 8 个字符。',
+                  style: TextStyle(
+                    color:
+                        isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
+                    fontSize: 14,
                   ),
-                  elevation: 0,
                 ),
-                child: _isLoading
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                            color: DS.brandPrimaryConst, strokeWidth: 2,),
-                      )
-                    : const Text('更新密码',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600,),),
-              ),
-            ],
+                const SizedBox(height: DS.spacing24),
+                _buildPasswordField(
+                  label: '当前密码',
+                  controller: _oldPasswordController,
+                  obscureText: _obscureOld,
+                  onToggle: () => setState(() => _obscureOld = !_obscureOld),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return '请输入当前密码';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: DS.spacing16),
+                _buildPasswordField(
+                  label: '新密码',
+                  controller: _newPasswordController,
+                  obscureText: _obscureNew,
+                  onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return '请输入新密码';
+                    if (value.length < 8) return '密码长度至少为 8 位';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: DS.spacing16),
+                _buildPasswordField(
+                  label: '确认新密码',
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirm,
+                  onToggle: () =>
+                      setState(() => _obscureConfirm = !_obscureConfirm),
+                  validator: (value) {
+                    if (value != _newPasswordController.text)
+                      return '两次输入的密码不一致';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: DS.spacing32),
+                SparkleButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          _handleReset();
+                        },
+                  label: '更新密码',
+                  loading: _isLoading,
+                  expand: true,
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -180,7 +167,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           validator: validator,
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-            suffixIcon: IconButton(
+            suffixIcon: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.spacing32,
               icon: Icon(
                 obscureText
                     ? Icons.visibility_off_outlined
@@ -195,23 +184,25 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             border: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
               borderSide: BorderSide(
-                  color: isDark
-                      ? DS.brandPrimary.shade700
-                      : DS.brandPrimary.shade300,),
+                color: isDark
+                    ? DS.brandPrimary.shade700
+                    : DS.brandPrimary.shade300,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
               borderSide: BorderSide(
-                  color: isDark
-                      ? DS.brandPrimary.shade700
-                      : DS.brandPrimary.shade300,),
+                color: isDark
+                    ? DS.brandPrimary.shade700
+                    : DS.brandPrimary.shade300,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
               borderSide: BorderSide(color: DS.primaryBase, width: 2),
             ),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
           ),
         ),
       ],

@@ -25,7 +25,8 @@ class CandidateActionSheet extends ConsumerStatefulWidget {
   final void Function(CandidateActionModel)? onDismiss;
 
   @override
-  ConsumerState<CandidateActionSheet> createState() => _CandidateActionSheetState();
+  ConsumerState<CandidateActionSheet> createState() =>
+      _CandidateActionSheetState();
 }
 
 class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
@@ -105,7 +106,9 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                   ],
                 ),
               ),
-              IconButton(
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                size: 36,
                 icon: const Icon(Icons.close, size: 20),
                 onPressed: () {
                   // Record implicit ignore for all visible candidates
@@ -121,11 +124,13 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
           const SizedBox(height: DS.md),
 
           // Candidate cards
-          ...visibleCandidates.map((candidate) => _CandidateCard(
-                candidate: candidate,
-                onAccept: () => _handleAccept(candidate),
-                onDismiss: () => _handleDismiss(candidate),
-              ),),
+          ...visibleCandidates.map(
+            (candidate) => _CandidateCard(
+              candidate: candidate,
+              onAccept: () => _handleAccept(candidate),
+              onDismiss: () => _handleDismiss(candidate),
+            ),
+          ),
 
           const SizedBox(height: DS.sm),
 
@@ -232,32 +237,16 @@ class _CandidateCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
+              SparkleButton(
+                label: '不感兴趣',
+                variant: ButtonVariant.ghost,
                 onPressed: onDismiss,
-                style: TextButton.styleFrom(
-                  foregroundColor: DS.neutral500,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.md,
-                    vertical: DS.sm,
-                  ),
-                ),
-                child: const Text('不感兴趣'),
               ),
               const SizedBox(width: DS.sm),
-              ElevatedButton(
+              SparkleButton(
+                label: '试试看',
                 onPressed: onAccept,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.lg,
-                    vertical: DS.sm,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('试试看'),
+                icon: Icon(Icons.play_arrow_rounded, color: color),
               ),
             ],
           ),
@@ -297,11 +286,11 @@ class _ConfidenceBadge extends StatelessWidget {
 
   Color _getConfidenceColor(double confidence) {
     if (confidence >= 0.75) {
-      return const Color(0xFF4CAF50); // Green
+      return DS.success;
     } else if (confidence >= 0.65) {
-      return const Color(0xFFFF9800); // Orange
+      return DS.warning;
     } else {
-      return const Color(0xFF9E9E9E); // Grey
+      return DS.textSecondary;
     }
   }
 }

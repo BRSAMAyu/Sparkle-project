@@ -25,20 +25,20 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('同步中心'),
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('同步中心'),
           actions: [
             PopupMenuButton<String>(
               onSelected: (value) async {
                 if (value == 'retry_all') {
                   await service.retryAll();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已触发全量重试')),
-                    );
+                    AppFeedback.success(context, '已触发全量重试');
                   }
                 }
               },
@@ -63,92 +63,93 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
           child: Padding(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              statsAsync.when(
-                data: (stats) => _StatsView(stats: stats),
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (error, stackTrace) => Text('加载失败: $error'),
-              ),
-              const SizedBox(height: DS.spacing16),
-              _TopicFilter(
-                value: _topicFilter,
-                onChanged: (value) {
-                  setState(() {
-                    _topicFilter = value;
-                  });
-                },
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final diagnostics = await service.buildDiagnostics();
-                    await Clipboard.setData(
-                      ClipboardData(text: diagnostics),
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已复制诊断信息')),
-                      );
-                    }
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                statsAsync.when(
+                  data: (stats) => _StatsView(stats: stats),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stackTrace) => Text('加载失败: $error'),
+                ),
+                const SizedBox(height: DS.spacing16),
+                _TopicFilter(
+                  value: _topicFilter,
+                  onChanged: (value) {
+                    setState(() {
+                      _topicFilter = value;
+                    });
                   },
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy diagnostics'),
                 ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              const Text(
-                '最多展示 200 条',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _ItemsList(
-                      query: SyncCenterQuery(topicFilter: _topicFilter),
-                    ),
-                    _ItemsList(
-                      query: SyncCenterQuery(
-                        statusFilter: SyncStatus.failed,
-                        topicFilter: _topicFilter,
-                      ),
-                    ),
-                    _ItemsList(
-                      query: SyncCenterQuery(
-                        statusFilter: SyncStatus.waitingAck,
-                        topicFilter: _topicFilter,
-                      ),
-                    ),
-                    _ItemsList(
-                      query: SyncCenterQuery(
-                        statusFilter: SyncStatus.pending,
-                        topicFilter: _topicFilter,
-                      ),
-                    ),
-                  ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SparkleButton.ghost(
+                    onPressed: () async {
+                      final diagnostics = await service.buildDiagnostics();
+                      await Clipboard.setData(
+                        ClipboardData(text: diagnostics),
+                      );
+                      if (context.mounted) {
+                        AppFeedback.success(context, '已复制诊断信息');
+                      }
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: 'Copy diagnostics',
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  '最多展示 200 条',
+                  style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.spacing8),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _ItemsList(
+                        query: SyncCenterQuery(topicFilter: _topicFilter),
+                      ),
+                      _ItemsList(
+                        query: SyncCenterQuery(
+                          statusFilter: SyncStatus.failed,
+                          topicFilter: _topicFilter,
+                        ),
+                      ),
+                      _ItemsList(
+                        query: SyncCenterQuery(
+                          statusFilter: SyncStatus.waitingAck,
+                          topicFilter: _topicFilter,
+                        ),
+                      ),
+                      _ItemsList(
+                        query: SyncCenterQuery(
+                          statusFilter: SyncStatus.pending,
+                          topicFilter: _topicFilter,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.fromLTRB(
-              DS.spacing16, 0, DS.spacing16, DS.spacing16,),
-          child: ElevatedButton.icon(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing16,
+          ),
+          child: SparkleButton(
             onPressed: () async {
               await service.retryFailed();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已触发失败重试')),
-                );
+                AppFeedback.success(context, '已触发失败重试');
               }
             },
             icon: const Icon(Icons.sync),
-            label: const Text('Retry failed'),
+            label: 'Retry failed',
+            expand: true,
           ),
         ),
       ),
@@ -179,7 +180,7 @@ class _StatsView extends StatelessWidget {
         const SizedBox(height: DS.spacing8),
         Text(
           '最近同步: $lastSuccessLabel',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing12),
         const Text(
@@ -230,27 +231,27 @@ class _TopicFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      children: [
-        const Text('Topic:'),
-        const SizedBox(width: DS.spacing8),
-        DropdownButton<String>(
-          value: value,
-          onChanged: (next) {
-            if (next != null) {
-              onChanged(next);
-            }
-          },
-          items: const [
-            DropdownMenuItem(value: 'all', child: Text('All')),
-            DropdownMenuItem(value: 'cognitive', child: Text('认知碎片')),
-            DropdownMenuItem(value: 'knowledge', child: Text('知识图谱')),
-            DropdownMenuItem(value: 'crdt', child: Text('协同')),
-            DropdownMenuItem(value: 'analytics', child: Text('分析')),
-            DropdownMenuItem(value: 'legacy', child: Text('Legacy')),
-          ],
-        ),
-      ],
-    );
+        children: [
+          const Text('Topic:'),
+          const SizedBox(width: DS.spacing8),
+          DropdownButton<String>(
+            value: value,
+            onChanged: (next) {
+              if (next != null) {
+                onChanged(next);
+              }
+            },
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('All')),
+              DropdownMenuItem(value: 'cognitive', child: Text('认知碎片')),
+              DropdownMenuItem(value: 'knowledge', child: Text('知识图谱')),
+              DropdownMenuItem(value: 'crdt', child: Text('协同')),
+              DropdownMenuItem(value: 'analytics', child: Text('分析')),
+              DropdownMenuItem(value: 'legacy', child: Text('Legacy')),
+            ],
+          ),
+        ],
+      );
 }
 
 class _ItemsList extends ConsumerWidget {
@@ -332,8 +333,7 @@ class _OutboxItemCard extends StatelessWidget {
     final opType = item.opType ?? item.type ?? 'unknown';
     final statusLabel = item.status.name;
     final errorLabel = _errorLabel(item.lastErrorCode);
-    final nextAttemptAt =
-        item.nextAttemptAt?.toLocal();
+    final nextAttemptAt = item.nextAttemptAt?.toLocal();
 
     return Card(
       child: Padding(
@@ -359,7 +359,9 @@ class _OutboxItemCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                IconButton(
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.spacing32,
                   icon: const Icon(Icons.copy, size: 16),
                   onPressed: onCopyEntityId,
                 ),
@@ -389,7 +391,9 @@ class _OutboxItemCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                IconButton(
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.spacing32,
                   icon: const Icon(Icons.copy, size: 16),
                   onPressed: onCopyTraceId,
                 ),
@@ -398,9 +402,9 @@ class _OutboxItemCard extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Row(
               children: [
-                ElevatedButton(
+                SparkleButton(
                   onPressed: onRetry,
-                  child: const Text('Retry this'),
+                  label: 'Retry this',
                 ),
               ],
             ),

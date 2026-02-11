@@ -73,7 +73,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
   Widget build(BuildContext context) => SlideTransition(
         position: _slideAnimation,
         child: Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           insetPadding: const EdgeInsets.all(DS.xl),
           child: Container(
             padding: const EdgeInsets.all(DS.xl),

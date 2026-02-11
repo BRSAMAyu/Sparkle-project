@@ -49,7 +49,9 @@ class _SchedulePreferencesScreenState
   }
 
   Future<void> _selectTime(
-      BuildContext context, TextEditingController controller,) async {
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -82,16 +84,12 @@ class _SchedulePreferencesScreenState
         'schedule_preferences': newPrefs,
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Preferences saved')),
-        );
+        AppFeedback.success(context, 'Preferences saved');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving preferences: $e')),
-        );
+        AppFeedback.error(context, 'Error saving preferences: $e');
       }
     }
   }
@@ -99,13 +97,17 @@ class _SchedulePreferencesScreenState
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Schedule Preferences'),
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('Schedule Preferences'),
           actions: [
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
               onPressed: _save,
               icon: const Icon(Icons.save),
             ),
@@ -117,22 +119,22 @@ class _SchedulePreferencesScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Text(
-                'Set your fragmented time slots to receive proactive task suggestions.',
-                style: TextStyle(color: DS.brandPrimary),
-              ),
-              const SizedBox(height: 20),
-              _buildTimeSlot(
-                'Commute Time',
-                _commuteStartController,
-                _commuteEndController,
-              ),
-              const SizedBox(height: 20),
-              _buildTimeSlot(
-                'Lunch Break',
-                _lunchStartController,
-                _lunchEndController,
-              ),
+                Text(
+                  'Set your fragmented time slots to receive proactive task suggestions.',
+                  style: TextStyle(color: DS.brandPrimary),
+                ),
+                const SizedBox(height: 20),
+                _buildTimeSlot(
+                  'Commute Time',
+                  _commuteStartController,
+                  _commuteEndController,
+                ),
+                const SizedBox(height: 20),
+                _buildTimeSlot(
+                  'Lunch Break',
+                  _lunchStartController,
+                  _lunchEndController,
+                ),
               ],
             ),
           ),

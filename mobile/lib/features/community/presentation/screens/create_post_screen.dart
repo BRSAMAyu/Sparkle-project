@@ -38,12 +38,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       _selectedLocation = '模拟位置';
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('位置选择功能开发中，使用模拟位置'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    AppFeedback.info(context, '位置选择功能开发中，使用模拟位置');
   }
 
   Future<void> _submit() async {
@@ -67,9 +62,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to post: $e')),
-        );
+        AppFeedback.error(context, 'Failed to post: $e');
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);
@@ -80,33 +73,23 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           title: const Text('New Post'),
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: TextButton(
+              padding: const EdgeInsets.only(right: DS.md),
+              child: SparkleButton(
+                label: 'Post',
                 onPressed: _isPosting ? null : _submit,
-                style: TextButton.styleFrom(
-                  backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                  foregroundColor: DS.brandPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: _isPosting
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            color: DS.brandPrimaryConst, strokeWidth: 2,),
-                      )
-                    : const Text('Post',
-                        style: TextStyle(fontWeight: FontWeight.bold),),
+                variant: ButtonVariant.ghost,
+                size: ButtonSize.small,
+                loading: _isPosting,
               ),
             ),
           ],
@@ -115,55 +98,61 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
             child: Column(
-            children: [
-              TextField(
-                controller: _contentController,
-                autofocus: true,
-                maxLines: 8,
-                style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
-                decoration: InputDecoration(
-                  hintText: "What's on your mind?",
-                  hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.3)),
-                  border: InputBorder.none,
-                ),
-              ),
-              Divider(color: DS.brandPrimary.withValues(alpha: 0.24)),
-              TextField(
-                controller: _topicController,
-                style: TextStyle(color: DS.brandSecondary),
-                decoration: InputDecoration(
-                  prefixText: '# ',
-                  hintText: 'Topic (optional)',
-                  hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.3)),
-                  border: InputBorder.none,
-                ),
-              ),
-              const Spacer(),
-              // Toolbar (Placeholder)
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.image_outlined,
-                      color: _selectedImage != null
-                          ? DS.brandPrimary
-                          : DS.brandPrimary,
-                    ),
-                    onPressed: _pickImage,
+              children: [
+                TextField(
+                  controller: _contentController,
+                  autofocus: true,
+                  maxLines: 8,
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: "What's on your mind?",
+                    hintStyle: TextStyle(
+                        color: DS.brandPrimary.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.location_on_outlined,
-                      color: _selectedLocation != null
-                          ? DS.brandPrimary
-                          : DS.brandPrimary,
-                    ),
-                    onPressed: _pickLocation,
+                ),
+                Divider(color: DS.brandPrimary.withValues(alpha: 0.24)),
+                TextField(
+                  controller: _topicController,
+                  style: TextStyle(color: DS.brandSecondary),
+                  decoration: InputDecoration(
+                    prefixText: '# ',
+                    hintText: 'Topic (optional)',
+                    hintStyle: TextStyle(
+                        color: DS.brandPrimary.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const Spacer(),
+                // Toolbar (Placeholder)
+                Row(
+                  children: [
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: DS.touchTargetMinSize,
+                      icon: Icon(
+                        Icons.image_outlined,
+                        color: _selectedImage != null
+                            ? DS.brandPrimary
+                            : DS.brandPrimary,
+                      ),
+                      onPressed: _pickImage,
+                    ),
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: DS.touchTargetMinSize,
+                      icon: Icon(
+                        Icons.location_on_outlined,
+                        color: _selectedLocation != null
+                            ? DS.brandPrimary
+                            : DS.brandPrimary,
+                      ),
+                      onPressed: _pickLocation,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       );

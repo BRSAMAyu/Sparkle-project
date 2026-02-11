@@ -10,7 +10,8 @@ class CreateLibraryScreen extends ConsumerStatefulWidget {
   const CreateLibraryScreen({super.key});
 
   @override
-  ConsumerState<CreateLibraryScreen> createState() => _CreateLibraryScreenState();
+  ConsumerState<CreateLibraryScreen> createState() =>
+      _CreateLibraryScreenState();
 }
 
 class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
@@ -54,19 +55,15 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
       );
 
       if (mounted) {
+        AppFeedback.success(context, '种子库创建成功');
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('种子库创建成功')),
-        );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isCreating = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败：$e')),
-        );
+        AppFeedback.error(context, '创建失败：$e');
       }
     }
   }
@@ -75,9 +72,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
     final tag = _tagsController.text.trim();
     if (tag.isEmpty) return;
     if (_tags.contains(tag)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('标签已存在')),
-      );
+      AppFeedback.info(context, '标签已存在');
       return;
     }
 
@@ -95,168 +90,165 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(
-        title: const Text('创建种子库'),
-      ),
-      body: ContentConstraint(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-            // Name field
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: '名称',
-                hintText: '输入种子库名称',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return '请输入名称';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Description field
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: '描述',
-                hintText: '输入种子库描述（可选）',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-
-            // Category selection
-            Text(
-              '分类',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: LibraryCategory.values.map((category) {
-                final isSelected = _selectedCategory == category;
-                return ChoiceChip(
-                  label: Text(category.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedCategory = category;
-                    });
-                  },
-                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // Visibility selection
-            Text(
-              '可见性',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: LibraryVisibility.values.map((visibility) {
-                final isSelected = _selectedVisibility == visibility;
-                return ChoiceChip(
-                  label: Text(visibility.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedVisibility = visibility;
-                    });
-                  },
-                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // Tags
-            Text(
-              '标签',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-
-            // Tags input
-            Row(
+        appBar: AppBar(
+          title: const Text('创建种子库'),
+        ),
+        body: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(DS.spacing16),
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _tagsController,
-                    decoration: const InputDecoration(
-                      hintText: '输入标签',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
+                // Name field
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: '名称',
+                    hintText: '输入种子库名称',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '请输入名称';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: DS.spacing16),
+
+                // Description field
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: '描述',
+                    hintText: '输入种子库描述（可选）',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: DS.spacing24),
+
+                // Category selection
+                Text(
+                  '分类',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  children: LibraryCategory.values.map((category) {
+                    final isSelected = _selectedCategory == category;
+                    return ChoiceChip(
+                      label: Text(category.displayName),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedCategory = category;
+                        });
+                      },
+                      selectedColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: DS.spacing24),
+
+                // Visibility selection
+                Text(
+                  '可见性',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  children: LibraryVisibility.values.map((visibility) {
+                    final isSelected = _selectedVisibility == visibility;
+                    return ChoiceChip(
+                      label: Text(visibility.displayName),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedVisibility = visibility;
+                        });
+                      },
+                      selectedColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: DS.spacing24),
+
+                // Tags
+                Text(
+                  '标签',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+
+                // Tags input
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _tagsController,
+                        decoration: const InputDecoration(
+                          hintText: '输入标签',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: DS.spacing12,
+                            vertical: DS.spacing12,
+                          ),
+                        ),
+                        onSubmitted: (_) => _addTag(),
                       ),
                     ),
-                    onSubmitted: (_) => _addTag(),
-                  ),
+                    const SizedBox(width: DS.spacing8),
+                    SparkleIconButton(
+                      variant: ButtonVariant.secondary,
+                      size: DS.touchTargetMinSize,
+                      icon: const Icon(Icons.add),
+                      onPressed: _addTag,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _addTag,
-                  style: IconButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
+
+                // Tags display
+                if (_tags.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing12),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: _tags
+                        .map(
+                          (tag) => Chip(
+                            label: Text(tag),
+                            deleteIcon: const Icon(Icons.close, size: 18),
+                            onDeleted: () => _removeTag(tag),
+                          ),
+                        )
+                        .toList(),
                   ),
-                ),
+                ],
               ],
             ),
-
-            // Tags display
-            if (_tags.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _tags.map((tag) => Chip(
-                    label: Text(tag),
-                    deleteIcon: const Icon(Icons.close, size: 18),
-                    onDeleted: () => _removeTag(tag),
-                  ),).toList(),
-              ),
-            ],
-            ],
           ),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton(
-            onPressed: _isCreating ? null : _createLibrary,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: SparkleButton(
+              label: '创建种子库',
+              onPressed: _createLibrary,
+              loading: _isCreating,
+              expand: true,
             ),
-            child: _isCreating
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('创建种子库'),
           ),
         ),
-      ),
-    );
+      );
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 
 /// Seed Item Card Widget
 /// Displays a seed item in a card format
 class SeedItemCard extends StatelessWidget {
   const SeedItemCard({
-    required this.item, super.key,
+    required this.item,
+    super.key,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -18,169 +20,179 @@ class SeedItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Type icon
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _getItemTypeColor().withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+        margin: const EdgeInsets.only(bottom: DS.spacing8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(DS.radius12),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: Row(
+              children: [
+                // Type icon
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing10),
+                  decoration: BoxDecoration(
+                    color: _getItemTypeColor().withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _getItemTypeIcon(),
+                    color: _getItemTypeColor(),
+                    size: DS.iconSizeBase,
+                  ),
                 ),
-                child: Icon(
-                  _getItemTypeIcon(),
-                  color: _getItemTypeColor(),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: DS.spacing12),
 
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title ?? _getItemTypeDisplayName(),
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title ?? _getItemTypeDisplayName(),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Difficulty badge
+                          if (item.difficultyLevel != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing8,
+                                vertical: DS.spacing4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getDifficultyColor()
+                                    .withValues(alpha: 0.2),
+                                borderRadius:
+                                    BorderRadius.circular(DS.radius12),
+                                border: Border.all(
+                                  color: _getDifficultyColor(),
                                 ),
-                            maxLines: 1,
+                              ),
+                              child: Text(
+                                item.difficultyLevelDisplayName!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getDifficultyColor(),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      // Content preview
+                      if (item.content != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing4),
+                          child: Text(
+                            item.content!,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Difficulty badge
-                        if (item.difficultyLevel != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getDifficultyColor().withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _getDifficultyColor(),
-                              ),
-                            ),
-                            child: Text(
-                              item.difficultyLevelDisplayName!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: _getDifficultyColor(),
-                              ),
-                            ),
+
+                      // Metadata
+                      if (item.subject != null ||
+                          (item.tags?.isNotEmpty ?? false))
+                        Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing6),
+                          child: Wrap(
+                            spacing: DS.spacing6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (item.subject != null)
+                                Chip(
+                                  label: Text(
+                                    item.subject!,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: DS.spacing6,
+                                    vertical: 2,
+                                  ),
+                                  backgroundColor:
+                                      DS.info.withValues(alpha: 0.1),
+                                ),
+                              ...?item.tags?.take(2).map(
+                                    (tag) => Chip(
+                                      label: Text(
+                                        tag,
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: DS.spacing6,
+                                        vertical: 2,
+                                      ),
+                                      backgroundColor: DS.surfaceTertiary,
+                                    ),
+                                  ),
+                            ],
                           ),
-                      ],
-                    ),
-
-                    // Content preview
-                    if (item.content != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          item.content!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[700],
-                              ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-
-                    // Metadata
-                    if (item.subject != null || (item.tags?.isNotEmpty ?? false))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Wrap(
-                          spacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (item.subject != null)
-                              Chip(
-                                label: Text(
-                                  item.subject!,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                backgroundColor: Colors.blue.shade50,
-                              ),
-                            ...?item.tags?.take(2).map((tag) => Chip(
-                                label: Text(
-                                  tag,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                backgroundColor: Colors.grey.shade200,
-                              ),),
-                          ],
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // Action buttons
-              if (onEdit != null || onDelete != null)
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'edit':
-                        onEdit?.call();
-                      case 'delete':
-                        _showDeleteDialog(context);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (onEdit != null)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 18),
-                            SizedBox(width: 12),
-                            Text('编辑'),
-                          ],
+                // Action buttons
+                if (onEdit != null || onDelete != null)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          onEdit?.call();
+                        case 'delete':
+                          _showDeleteDialog(context);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (onEdit != null)
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 18),
+                              SizedBox(width: DS.spacing12),
+                              Text('编辑'),
+                            ],
+                          ),
                         ),
-                      ),
-                    if (onDelete != null)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
-                            SizedBox(width: 12),
-                            Text('删除', style: TextStyle(color: Colors.red)),
-                          ],
+                      if (onDelete != null)
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, size: 18, color: DS.error),
+                              const SizedBox(width: DS.spacing12),
+                              Text('删除', style: TextStyle(color: DS.error)),
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-            ],
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   IconData _getItemTypeIcon() {
     switch (item.itemType) {
@@ -200,15 +212,15 @@ class SeedItemCard extends StatelessWidget {
   Color _getItemTypeColor() {
     switch (item.itemType) {
       case ItemType.example:
-        return Colors.amber;
+        return DS.warning;
       case ItemType.exercise:
-        return Colors.green;
+        return DS.success;
       case ItemType.knowledge:
-        return Colors.purple;
+        return DS.brandSecondary;
       case ItemType.template:
-        return Colors.blue;
+        return DS.info;
       case ItemType.flashcard:
-        return Colors.orange;
+        return DS.warningLight;
     }
   }
 
@@ -217,15 +229,15 @@ class SeedItemCard extends StatelessWidget {
   Color _getDifficultyColor() {
     switch (item.difficultyLevel) {
       case DifficultyLevel.beginner:
-        return Colors.green;
+        return DS.success;
       case DifficultyLevel.intermediate:
-        return Colors.blue;
+        return DS.info;
       case DifficultyLevel.advanced:
-        return Colors.orange;
+        return DS.warningLight;
       case DifficultyLevel.expert:
-        return Colors.red;
+        return DS.error;
       case null:
-        return Colors.grey;
+        return DS.textSecondary;
     }
   }
 
@@ -236,20 +248,16 @@ class SeedItemCard extends StatelessWidget {
         title: const Text('删除内容'),
         content: const Text('确定要删除这个内容吗？'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          ElevatedButton(
+          SparkleButton.destructive(
             onPressed: () {
               Navigator.pop(context);
               onDelete?.call();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('删除'),
+            label: '删除',
           ),
         ],
       ),

@@ -170,7 +170,7 @@ class ShopItemCard extends StatelessWidget {
 
                 // Info Section
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(DS.spacing12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -204,7 +204,7 @@ class ShopItemCard extends StatelessWidget {
                             ),
                           ),
                           if (item.originalPrice != null) ...[
-                            const SizedBox(width: 8),
+                            const SizedBox(width: DS.spacing8),
                             Text(
                               '${item.originalPrice}',
                               style: TextStyle(

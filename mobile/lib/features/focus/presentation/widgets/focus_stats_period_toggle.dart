@@ -31,7 +31,7 @@ class FocusStatsPeriodToggle extends StatelessWidget {
             selected: isSelected,
             label: p.label,
             child: Material(
-              color: Colors.transparent,
+              color: DS.surfacePrimary.withValues(alpha: 0),
               borderRadius: BorderRadius.circular(DS.sm),
               child: InkWell(
                 onTap: () => onChanged(p),
@@ -46,7 +46,9 @@ class FocusStatsPeriodToggle extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? DS.brandPrimary : Colors.transparent,
+                    color: isSelected
+                        ? DS.brandPrimary
+                        : DS.surfacePrimary.withValues(alpha: 0),
                     borderRadius: BorderRadius.circular(DS.sm),
                   ),
                   child: Text(

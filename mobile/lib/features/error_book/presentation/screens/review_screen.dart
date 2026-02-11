@@ -56,16 +56,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(widget.mode.label),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: '退出复习',
-            onPressed: () => _confirmExit(context),
+          Tooltip(
+            message: '退出复习',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.close),
+              onPressed: () => _confirmExit(context),
+            ),
           ),
         ],
       ),
@@ -92,19 +98,20 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           return ContentConstraint(
             child: Column(
               children: [
-              // 进度条
-              _buildProgressBar(context, _currentIndex, filteredErrors.length),
+                // 进度条
+                _buildProgressBar(
+                    context, _currentIndex, filteredErrors.length),
 
-              // 卡片内容
-              Expanded(
-                child: _buildReviewCard(context, currentError),
-              ),
+                // 卡片内容
+                Expanded(
+                  child: _buildReviewCard(context, currentError),
+                ),
 
-              // 底部操作栏
-              if (_showAnswer)
-                _buildActionBar(context, currentError, filteredErrors.length)
-              else
-                _buildRevealButton(context),
+                // 底部操作栏
+                if (_showAnswer)
+                  _buildActionBar(context, currentError, filteredErrors.length)
+                else
+                  _buildRevealButton(context),
               ],
             ),
           );
@@ -141,7 +148,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final progress = total > 0 ? (current / total) : 0.0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16, vertical: DS.spacing12),
       child: Column(
         children: [
           Row(
@@ -162,7 +170,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.spacing8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -183,7 +191,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -192,7 +200,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             children: [
               SubjectChip(subjectCode: error.subject),
               if (error.chapter != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.spacing8),
                 Chip(
                   label: Text(error.chapter!),
                   avatar: const Icon(Icons.folder_outlined, size: 16),
@@ -207,7 +215,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: theme.colorScheme.outline.withValues(alpha: 0.2),
@@ -223,7 +232,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.spacing12),
                 SelectableText(
                   error.questionText,
                   style: theme.textTheme.bodyLarge?.copyWith(
@@ -232,7 +241,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                 ),
                 if (error.questionImageUrl != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: DS.spacing16),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
@@ -247,10 +256,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
           // 显示答案和分析
           if (_showAnswer) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             _buildAnswerSection(context, error),
             if (_showAnalysis && error.latestAnalysis != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.spacing16),
               _buildAnalysisSection(context, error),
             ],
           ],
@@ -266,7 +275,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       children: [
         // 你的答案
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
@@ -294,7 +303,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.spacing8),
               SelectableText(
                 error.userAnswer,
                 style: theme.textTheme.bodyMedium,
@@ -302,16 +311,16 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DS.spacing12),
 
         // 正确答案
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: DS.success.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.green.withValues(alpha: 0.3),
+              color: DS.success.withValues(alpha: 0.3),
             ),
           ),
           child: Column(
@@ -319,22 +328,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.check_circle,
                     size: 18,
-                    color: Colors.green,
+                    color: DS.success,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '正确答案',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: Colors.green,
+                      color: DS.success,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.spacing8),
               SelectableText(
                 error.correctAnswer,
                 style: theme.textTheme.bodyMedium,
@@ -370,19 +379,19 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.spacing8),
           AnalysisCard(analysis: error.latestAnalysis!),
         ],
       );
 
   Widget _buildRevealButton(BuildContext context) => SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: DS.textPrimary.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -400,7 +409,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 icon: const Icon(Icons.visibility),
                 label: const Text('查看答案'),
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                   minimumSize: const Size(double.infinity, 0),
                   textStyle: const TextStyle(
                     fontSize: 16,
@@ -408,7 +417,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.spacing8),
               Text(
                 '先思考答案，再点击查看',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -429,12 +438,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: DS.textPrimary.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -454,7 +463,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 icon: const Icon(Icons.psychology_outlined, size: 18),
                 label: const Text('查看 AI 分析'),
               ),
-            if (_showAnalysis) const SizedBox(height: 12),
+            if (_showAnalysis) const SizedBox(height: DS.spacing12),
 
             // 评价按钮
             ReviewPerformanceButtons(
@@ -502,7 +511,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('提交失败: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DS.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -518,26 +527,26 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             Icon(
               Icons.check_circle_outline,
               size: 80,
-              color: Colors.green.shade300,
+              color: DS.successLight,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             Text(
               customMessage ?? '暂无需要复习的错题',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            const SizedBox(height: DS.spacing8),
+            Text(
               '做得很好！继续保持',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back),
@@ -558,7 +567,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -567,16 +576,16 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: DS.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.celebration,
                 size: 50,
-                color: Colors.green,
+                color: DS.success,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
 
             Text(
               '复习完成！',
@@ -584,21 +593,21 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               '本次共复习 $totalReviewed 道题',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: DS.spacing32),
 
             // 统计卡片
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -617,21 +626,21 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                         context,
                         '记住了',
                         remembered.toString(),
-                        Colors.green,
+                        DS.success,
                         Icons.check_circle,
                       ),
                       _buildStatColumn(
                         context,
                         '模糊',
                         fuzzy.toString(),
-                        Colors.orange,
+                        DS.warningLight,
                         Icons.help_outline,
                       ),
                       _buildStatColumn(
                         context,
                         '忘记了',
                         forgotten.toString(),
-                        Colors.red,
+                        DS.error,
                         Icons.cancel_outlined,
                       ),
                     ],
@@ -639,7 +648,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: DS.spacing32),
 
             // 鼓励语
             Text(
@@ -650,7 +659,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: DS.spacing32),
 
             // 操作按钮
             Row(
@@ -661,11 +670,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     icon: const Icon(Icons.arrow_back),
                     label: const Text('返回列表'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: DS.spacing16),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () {
@@ -681,7 +691,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     icon: const Icon(Icons.replay),
                     label: const Text('再来一轮'),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: DS.spacing16),
                     ),
                   ),
                 ),
@@ -705,7 +716,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.spacing8),
         Text(
           value,
           style: theme.textTheme.headlineMedium?.copyWith(
@@ -743,12 +754,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.red,
+              color: DS.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             const Text(
               '加载失败',
               style: TextStyle(
@@ -756,16 +767,16 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               error,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
             FilledButton.icon(
               onPressed: () {
                 ref.invalidate(todayReviewListProvider);
@@ -789,9 +800,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         title: const Text('确认退出'),
         content: const Text('复习还未完成，确定要退出吗？'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('继续复习'),
+            label: '继续复习',
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
