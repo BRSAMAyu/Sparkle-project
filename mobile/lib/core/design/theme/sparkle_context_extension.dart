@@ -8,8 +8,10 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
 extension SparkleContextExtension on BuildContext {
   SparkleThemeExtension get sparkle {
     final extension = Theme.of(this).extension<SparkleThemeExtension>();
-    assert(extension != null,
-        'SparkleThemeExtension is not registered on ThemeData.',);
+    assert(
+      extension != null,
+      'SparkleThemeExtension is not registered on ThemeData.',
+    );
     return extension!;
   }
 
@@ -22,4 +24,11 @@ extension SparkleContextExtension on BuildContext {
   bool get canBlur => sparkle.enableBlur;
   bool get canGlow => sparkle.enableGlow;
   bool get canComplexAnimate => sparkle.enableComplexAnimation;
+
+  /// Whether the OS requests reduced motion or simplified navigation effects.
+  bool get reduceMotion {
+    final mediaQuery = MediaQuery.maybeOf(this);
+    if (mediaQuery == null) return false;
+    return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+  }
 }

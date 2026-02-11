@@ -109,8 +109,8 @@ class Settings(BaseSettings):
     SERVICE_ROLE: str = "api"  # api | grpc
 
     # Security
-    # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
-    SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
+    # Prefer JWT_SECRET to keep Python-issued JWT fully compatible with Gateway verification.
+    SECRET_KEY: str = Field("", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
     JWT_ISSUER: str = "sparkle-gateway"
     JWT_AUDIENCE: str = "sparkle-app"
 

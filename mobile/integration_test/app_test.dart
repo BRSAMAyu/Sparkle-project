@@ -9,7 +9,12 @@ void main() {
 
   testWidgets('app boots without crashing', (tester) async {
     app.main();
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+      if (find.byType(MaterialApp).evaluate().isNotEmpty) {
+        break;
+      }
+    }
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

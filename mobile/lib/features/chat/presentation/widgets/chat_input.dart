@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -44,47 +46,49 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showAttachmentSheet() {
     if (widget.onFileUploaded != null) {
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => FilePickerWithPresignedUpload(
-          groupId: widget.fileUploadGroupId,
-          onUploaded: (file) {
-            Navigator.pop(context);
-            widget.onFileUploaded?.call(file);
-          },
-          onError: (message) => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
+      unawaited(
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => FilePickerWithPresignedUpload(
+            groupId: widget.fileUploadGroupId,
+            onUploaded: (file) {
+              Navigator.pop(context);
+              widget.onFileUploaded?.call(file);
+            },
+            onError: (message) => AppFeedback.error(context, message),
           ),
         ),
       );
       return;
     }
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DocumentCleanerSheet(
-        onResult: (result) {
-          // 🔧 修复：检查widget是否仍然挂载
-          if (mounted) {
-            setState(() {
-              _controller.text = result;
-            });
-            // 🔧 Android输入法修复：延迟焦点请求
-            if (!_isFocusChanging) {
-              _isFocusChanging = true;
-              Future.delayed(const Duration(milliseconds: 150), () {
-                if (mounted && _focusNode.canRequestFocus) {
-                  _focusNode.requestFocus();
-                }
-                _isFocusChanging = false;
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DocumentCleanerSheet(
+          onResult: (result) {
+            // 🔧 修复：检查widget是否仍然挂载
+            if (mounted) {
+              setState(() {
+                _controller.text = result;
               });
+              // 🔧 Android输入法修复：延迟焦点请求
+              if (!_isFocusChanging) {
+                _isFocusChanging = true;
+                Future.delayed(const Duration(milliseconds: 150), () {
+                  if (mounted && _focusNode.canRequestFocus) {
+                    _focusNode.requestFocus();
+                  }
+                  _isFocusChanging = false;
+                });
+              }
             }
-          }
-        },
+          },
+        ),
       ),
     );
   }
@@ -135,7 +139,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (widget.onSend != null) {
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
       _controller.clear();
-      if (widget.onCancelQuote != null) widget.onCancelQuote!();
+      widget.onCancelQuote?.call();
 
       // 🔧 Android输入法修复：延迟焦点请求，避免与输入法冲突
       if (!_isFocusChanging) {
@@ -173,6 +177,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final reduceMotion = context.reduceMotion;
     // Use ResponsiveSystem instead of MediaQuery width for consistency
     final isNarrow = ResponsiveSystem.isMobile(context);
     final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
@@ -235,9 +240,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   },
                   onError: (error) {
                     // 显示错误提示
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(error)),
-                    );
+                    AppFeedback.error(context, error);
                   },
                   onRecordingStarted: () {
                     _isFocusChanging = true;
@@ -281,9 +284,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               : TextInputAction.newline,
                           // 🔧 Android输入法修复：确保键盘类型正确
                           keyboardType: TextInputType.multiline,
-                          // 🔧 Android输入法修复：启用自动纠正和建议
-                          autocorrect: true,
-                          enableSuggestions: true,
                           decoration: InputDecoration(
                             hintText: widget.hintText ?? 'Type a message...',
                             hintStyle: TextStyle(
@@ -305,27 +305,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
-                GestureDetector(
-                  onTapDown: (_) => setState(() => _isButtonPressed = true),
-                  onTapUp: (_) => setState(() => _isButtonPressed = false),
-                  onTapCancel: () => setState(() => _isButtonPressed = false),
-                  onTap: () {
-                    final hasText = _controller.text.trim().isNotEmpty;
+                ValueListenableBuilder<bool>(
+                  valueListenable: _textNotEmpty,
+                  builder: (context, hasText, child) {
                     final canSend = widget.enabled && !_isSending && hasText;
-                    if (canSend) _handleSend();
-                  },
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _textNotEmpty,
-                    builder: (context, hasText, child) {
-                      final canSend = widget.enabled && !_isSending && hasText;
-                      return AnimatedScale(
+                    return Semantics(
+                      button: true,
+                      enabled: canSend,
+                      label: 'Send message',
+                      child: AnimatedScale(
                         scale: _isButtonPressed ? 0.9 : 1.0,
-                        duration: const Duration(milliseconds: 100),
+                        duration: reduceMotion ? Duration.zero : DS.quick,
                         curve: Curves.easeInOut,
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 48,
-                          height: 48,
+                          duration: reduceMotion ? Duration.zero : DS.normal,
+                          width: DS.touchTargetMinSize,
+                          height: DS.touchTargetMinSize,
                           decoration: BoxDecoration(
                             gradient: canSend ? DS.primaryGradient : null,
                             color: canSend ? null : DS.surfaceTertiary,
@@ -333,35 +328,48 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             boxShadow: canSend
                                 ? [
                                     BoxShadow(
-                                      color:
-                                          DS.brandPrimary.withValues(alpha: 0.3),
+                                      color: DS.brandPrimary
+                                          .withValues(alpha: 0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 4),
                                     ),
                                   ]
                                 : null,
                           ),
-                          child: Center(
-                            child: _isSending
-                                ? SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: DS.brandPrimaryConst,),
-                                  )
-                                : Icon(
-                                    Icons.arrow_upward_rounded,
-                                    color: canSend
-                                        ? DS.brandPrimary
-                                        : DS.textSecondary,
-                                    size: 24,
-                                  ),
+                          child: Material(
+                            color: Colors.transparent,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: canSend ? _handleSend : null,
+                              onHighlightChanged: (pressed) {
+                                if (!mounted) return;
+                                setState(() => _isButtonPressed = pressed);
+                              },
+                              child: Center(
+                                child: _isSending
+                                    ? SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: DS.textOnPrimary,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.arrow_upward_rounded,
+                                        color: canSend
+                                            ? DS.textOnPrimary
+                                            : DS.textSecondary,
+                                        size: DS.iconSizeBase,
+                                      ),
+                              ),
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -377,7 +385,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           // Use surfaceSecondary for dark mode to match Dashboard ceramic cards
-          color: isDark ? DS.surfaceSecondary : DS.brandPrimary.withValues(alpha: 0.1),
+          color: isDark
+              ? DS.surfaceSecondary
+              : DS.brandPrimary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border(
             left: BorderSide(color: DS.brandPrimaryConst, width: 4),
@@ -420,8 +430,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   color: DS.textSecondary,
                 ),
                 onPressed: widget.onCancelQuote,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(12),
               ),
             ),
           ],
