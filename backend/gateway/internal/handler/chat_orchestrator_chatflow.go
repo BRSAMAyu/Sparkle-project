@@ -21,6 +21,53 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	defaultChatMode = "standard"
+	expertModeAuto  = "expert_auto"
+	expertModePref  = "expert::"
+)
+
+func normalizeChatMode(mode string) string {
+	trimmed := strings.TrimSpace(mode)
+	if trimmed == "" {
+		return defaultChatMode
+	}
+	if strings.HasPrefix(trimmed, expertModePref) {
+		return trimmed
+	}
+	switch trimmed {
+	case defaultChatMode, "deep_analysis", "study_plan", "error_diagnosis", expertModeAuto:
+		return trimmed
+	default:
+		return defaultChatMode
+	}
+}
+
+func workflowIDForChatMode(mode string) string {
+	normalized := normalizeChatMode(mode)
+	switch normalized {
+	case defaultChatMode:
+		return "standard_chat"
+	case "deep_analysis":
+		return "deep_analysis_workflow"
+	case "study_plan":
+		return "study_plan_workflow"
+	case "error_diagnosis":
+		return "error_diagnosis_workflow"
+	case expertModeAuto:
+		return "expert_auto_workflow"
+	default:
+		if strings.HasPrefix(normalized, expertModePref) {
+			expertID := strings.TrimSpace(strings.TrimPrefix(normalized, expertModePref))
+			if expertID == "" {
+				expertID = "unknown"
+			}
+			return "expert_" + expertID + "_workflow"
+		}
+		return "standard_chat"
+	}
+}
+
 func (h *ChatOrchestrator) resolveUserUUID(ctx context.Context, userID string) (uuid.UUID, string, error) {
 	if parsed, err := uuid.Parse(userID); err == nil {
 		return parsed, userID, nil
@@ -76,54 +123,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	traceID := ""
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
 		traceID = span.SpanContext().TraceID().String()
-	}
-
-	// P0: Semantic Cache Check
-	if h.semantic != nil {
-		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
-		cachedResp, err := h.semantic.SearchExact(cacheCtx, input.Message)
-		cacheSpan.End()
-
-		if err == nil && cachedResp != "" {
-			isCacheHit = true
-			log.Printf("Semantic cache hit for user=%s", userID)
-
-			// Construct cached response
-			now := time.Now()
-			resp := &agentv1.ChatResponse{
-				ResponseId:    uuid.New().String(),
-				CreatedAt:     now.Unix(),
-				RequestId:     requestID,
-				TraceId:       traceID,
-				WorkflowId:    "standard_chat",
-				PromptVersion: "v1",
-				Content:       &agentv1.ChatResponse_FullText{FullText: cachedResp},
-				FinishReason:  agentv1.FinishReason_STOP,
-				EventTime:     timestamppb.New(now),
-			}
-
-			// Send response
-			switch r := responder.(type) {
-			case *envelopeResponder:
-				_ = r.SendChatResponse(resp)
-				_ = r.SendMeta(map[string]interface{}{
-					"latency_ms":   time.Since(startTime).Milliseconds(),
-					"is_cache_hit": true,
-				})
-			default:
-				conn := responder.(*websocket.Conn)
-				conn.WriteJSON(convertResponseToJSON(resp, input.SessionID))
-				conn.WriteJSON(gin.H{
-					"type": "meta",
-					"meta": map[string]interface{}{
-						"latency_ms":   time.Since(startTime).Milliseconds(),
-						"is_cache_hit": true,
-					},
-				})
-			}
-
-			return false
-		}
 	}
 
 	// Resolve user identity to UUID (token sub may be email)
@@ -189,6 +188,56 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, userID, input.SessionID, reqID)
 	}
 
+	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
+	normalizedChatMode := normalizeChatMode(input.ChatMode)
+	cacheScope := fmt.Sprintf("user:%s|mode:%s", userID, normalizedChatMode)
+	if h.semantic != nil {
+		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
+		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)
+		cacheSpan.End()
+
+		if err == nil && cachedResp != "" {
+			isCacheHit = true
+			log.Printf("Semantic cache hit for user=%s scope=%s", userID, cacheScope)
+
+			// Construct cached response
+			now := time.Now()
+			resp := &agentv1.ChatResponse{
+				ResponseId:    uuid.New().String(),
+				CreatedAt:     now.Unix(),
+				RequestId:     reqID,
+				TraceId:       traceID,
+				WorkflowId:    workflowIDForChatMode(normalizedChatMode),
+				PromptVersion: "v1",
+				Content:       &agentv1.ChatResponse_FullText{FullText: cachedResp},
+				FinishReason:  agentv1.FinishReason_STOP,
+				EventTime:     timestamppb.New(now),
+			}
+
+			// Send response
+			switch r := responder.(type) {
+			case *envelopeResponder:
+				_ = r.SendChatResponse(resp)
+				_ = r.SendMeta(map[string]interface{}{
+					"latency_ms":   time.Since(startTime).Milliseconds(),
+					"is_cache_hit": true,
+				})
+			default:
+				conn := responder.(*websocket.Conn)
+				conn.WriteJSON(convertResponseToJSON(resp, input.SessionID))
+				conn.WriteJSON(gin.H{
+					"type": "meta",
+					"meta": map[string]interface{}{
+						"latency_ms":   time.Since(startTime).Milliseconds(),
+						"is_cache_hit": true,
+					},
+				})
+			}
+
+			return false
+		}
+	}
+
 	var dailyLimit int64
 	var dailyUsageStart int64
 	skipQuota := false
@@ -239,7 +288,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		},
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
-		ChatMode:          input.ChatMode,
+		ChatMode:          normalizedChatMode,
 		UserProfile: &agentv1.UserProfile{
 			Nickname:     input.Nickname,
 			Timezone:     "Asia/Shanghai",
@@ -434,12 +483,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if fullText != "" && input.SessionID != "" {
 		// Capture values for goroutine before returning input to pool
 		sessionID := input.SessionID
+		queryText := input.Message
 		result := fullText
 
 		go func() {
 			// Update Semantic Cache
 			if h.semantic != nil {
-				if err := h.semantic.SetExact(context.Background(), input.Message, result); err != nil {
+				if err := h.semantic.SetExact(context.Background(), cacheScope, queryText, result); err != nil {
 					log.Printf("Failed to update cache: %v", err)
 				}
 			}

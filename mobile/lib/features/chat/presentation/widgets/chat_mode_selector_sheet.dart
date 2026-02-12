@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
 
 /// Chat Mode Selector Sheet
 ///
@@ -16,6 +19,18 @@ class ChatModeSelectorSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentMode = ref.watch(chatModeProvider);
+    final catalog = ref.watch(multiAgentCatalogProvider);
+    final expertModes = catalog.when(
+      data: (value) => value.experts
+          .where((expert) => expert.enabled)
+          .map((expert) => ChatModeExpert(
+                expertId: expert.id,
+                expertName: expert.displayName,
+              ))
+          .toList(),
+      loading: () => <ChatMode>[],
+      error: (_, __) => <ChatMode>[],
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -82,6 +97,31 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                 isDark: isDark,
               ),
             ),
+            if (expertModes.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '专家直达',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.neutral500,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              ...expertModes.map(
+                (mode) => _ModeListTile(
+                  mode: mode,
+                  isSelected: currentMode == mode,
+                  isDark: isDark,
+                ),
+              ),
+            ],
 
             const SizedBox(height: DS.spacing16),
           ],
@@ -105,7 +145,7 @@ class _ModeListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: () {
-          HapticFeedback.lightImpact();
+          unawaited(HapticFeedback.lightImpact());
           Navigator.pop(context, mode);
         },
         child: Container(

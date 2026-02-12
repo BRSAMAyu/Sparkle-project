@@ -47,7 +47,9 @@ class MultiAgentWorkflowAdapter:
         session_id: str,
         context_data: dict[str, Any],
         stream_callback,
+        result_holder: dict[str, Any] | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        result_holder = result_holder if result_holder is not None else {}
         config = get_workflow_config(chat_mode)
         if not config:
             async for chunk in self._fallback_simple_stream(
@@ -86,6 +88,9 @@ class MultiAgentWorkflowAdapter:
         )
 
         plan = self._apply_tool_policy(plan, config, context_data)
+        result_holder["collaboration_mode"] = plan.collaboration_mode
+        result_holder["agents_involved"] = list(plan.agents_involved or [])
+        result_holder["tool_calls_count"] = len(plan.tool_calls or [])
 
         if not plan.tool_calls:
             async for chunk in self._fallback_simple_stream(
@@ -109,16 +114,25 @@ class MultiAgentWorkflowAdapter:
         execution_result = await self.orchestrator.tool_executor.execute_plan(
             plan=plan,
             user_id=user_id,
-            db_session=self.orchestrator.db_session,
+            db_session=context_data.get("db_session"),
         )
 
-        validation_result = await self._validate_plan(plan, execution_result, user_id)
+        db_session = context_data.get("db_session")
+        validation_result = await self._validate_plan(
+            plan=plan,
+            execution_result=execution_result,
+            user_id=user_id,
+            db_session=db_session,
+        )
+        summary_text = self._format_execution_summary(execution_result, validation_result)
+        result_holder["execution_summary"] = summary_text
         await self._publish_feedback(
             plan=plan,
             execution_result=execution_result,
             validation_result=validation_result,
             user_id=user_id,
             session_id=session_id,
+            db_session=db_session,
         )
 
         async for chunk in self._stream_synthesis_response(
@@ -126,6 +140,7 @@ class MultiAgentWorkflowAdapter:
             user_message=message,
             execution_result=execution_result,
             validation_result=validation_result,
+            execution_summary=summary_text,
             synthesis_template=config.synthesis_template,
         ):
             yield chunk
@@ -150,10 +165,10 @@ class MultiAgentWorkflowAdapter:
             plan.execution_order = [layer for layer in plan.execution_order if layer]
         return plan
 
-    async def _validate_plan(self, plan, execution_result, user_id: str):
+    async def _validate_plan(self, plan, execution_result, user_id: str, db_session=None):
         record_service = None
-        if self.orchestrator.db_session is not None:
-            record_service = PlanExecutionRecordService(self.orchestrator.db_session)
+        if db_session is not None:
+            record_service = PlanExecutionRecordService(db_session)
         validator = PlanExecutionValidator(record_service=record_service)
         try:
             user_uuid = uuid.UUID(str(user_id))
@@ -173,8 +188,9 @@ class MultiAgentWorkflowAdapter:
         validation_result,
         user_id: str,
         session_id: str,
+        db_session=None,
     ) -> None:
-        if self.orchestrator.db_session is None:
+        if db_session is None:
             return
         try:
             collector = StepFeedbackCollector()
@@ -187,7 +203,7 @@ class MultiAgentWorkflowAdapter:
             )
             from app.orchestration.adaptive_replanner import AdaptiveReplanner
 
-            replanner = AdaptiveReplanner(self.orchestrator.db_session, redis=self.orchestrator.redis)
+            replanner = AdaptiveReplanner(db_session, redis=self.orchestrator.redis)
             await replanner.on_plan_execution_completed(
                 user_id=uuid.UUID(str(user_id)),
                 plan_id=uuid.UUID(str(plan.plan_id)),
@@ -203,9 +219,10 @@ class MultiAgentWorkflowAdapter:
         user_message: str,
         execution_result,
         validation_result,
+        execution_summary: str,
         synthesis_template: str,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
-        summary = self._format_execution_summary(execution_result, validation_result)
+        summary = execution_summary
         system_prompt = synthesis_template or self._default_synthesis_prompt(chat_mode)
         messages = [
             {"role": "system", "content": system_prompt},
@@ -220,6 +237,7 @@ class MultiAgentWorkflowAdapter:
         ]
 
         first_chunk = True
+        emitted_content = False
         async for chunk in self.llm_service.stream_chat(messages=messages, model=None, temperature=0.5):
             if not chunk:
                 continue
@@ -232,7 +250,23 @@ class MultiAgentWorkflowAdapter:
                     )
                 )
                 first_chunk = False
+            emitted_content = True
             yield agent_service_pb2.ChatResponse(delta=chunk)
+        if not emitted_content:
+            if first_chunk:
+                yield agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.GENERATING,
+                        details="正在合成最终结果...",
+                        active_agent=agent_service_pb2.ORCHESTRATOR,
+                    )
+                )
+            fallback_text = (
+                "已完成多Agent执行，以下是结构化摘要：\n"
+                f"{summary}\n\n"
+                "如需我继续输出完整报告，请告诉我你关注的重点。"
+            )
+            yield agent_service_pb2.ChatResponse(delta=fallback_text)
 
     def _format_execution_summary(self, execution_result, validation_result) -> str:
         lines = []
@@ -364,6 +398,7 @@ async def execute_multi_agent_workflow(
     session_id: str,
     context_data: dict[str, Any],
     stream_callback,
+    result_holder: dict[str, Any] | None = None,
 ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
     """Backward-compatible module function."""
     adapter = MultiAgentWorkflowAdapter(orchestrator=orchestrator)
@@ -374,6 +409,7 @@ async def execute_multi_agent_workflow(
         session_id=session_id,
         context_data=context_data,
         stream_callback=stream_callback,
+        result_holder=result_holder,
     ):
         yield resp
 

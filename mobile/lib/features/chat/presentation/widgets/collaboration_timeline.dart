@@ -323,6 +323,8 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
         return '渐进式深度探索模式';
       case 'error_diagnosis':
         return '错题诊断循环模式';
+      case 'expert_routing':
+        return '专家路由模式';
       default:
         return '协作模式';
     }
@@ -373,36 +375,63 @@ class AgentTimelineStep {
   final String? outputSummary;
 
   static IconData _getAgentIcon(String agentName) {
-    if (agentName.contains('StudyPlanner')) {
+    final normalized = agentName.toLowerCase();
+    if (normalized.contains('studyplanner') ||
+        normalized.contains('time_tutor')) {
       return Icons.calendar_today;
-    } else if (agentName.contains('ProblemSolver')) {
+    } else if (normalized.contains('problemsolver') ||
+        normalized.contains('error_analyst')) {
       return Icons.lightbulb_outline;
-    } else if (agentName.contains('Math')) {
+    } else if (normalized.contains('math')) {
       return Icons.calculate;
-    } else if (agentName.contains('Code')) {
+    } else if (normalized.contains('code')) {
       return Icons.code;
-    } else if (agentName.contains('Writing')) {
+    } else if (normalized.contains('writing')) {
       return Icons.edit_note;
-    } else if (agentName.contains('Science')) {
+    } else if (normalized.contains('science')) {
       return Icons.science_outlined;
+    } else if (normalized.contains('galaxy_guide') ||
+        normalized.contains('knowledge')) {
+      return Icons.auto_awesome;
+    } else if (normalized.contains('exam_oracle')) {
+      return Icons.quiz;
+    } else if (normalized.contains('study_buddy')) {
+      return Icons.favorite_border;
+    } else if (normalized.contains('search')) {
+      return Icons.search;
+    } else if (normalized.contains('deep_analyst')) {
+      return Icons.psychology_alt;
     } else {
       return Icons.hub_outlined;
     }
   }
 
   static Color _getAgentColor(String agentName) {
-    if (agentName.contains('StudyPlanner')) {
+    final normalized = agentName.toLowerCase();
+    if (normalized.contains('studyplanner') ||
+        normalized.contains('time_tutor')) {
       return DS.success;
-    } else if (agentName.contains('ProblemSolver')) {
+    } else if (normalized.contains('problemsolver') ||
+        normalized.contains('error_analyst')) {
       return DS.brandPrimary;
-    } else if (agentName.contains('Math')) {
+    } else if (normalized.contains('math')) {
       return DS.brandPrimary;
-    } else if (agentName.contains('Code')) {
+    } else if (normalized.contains('code')) {
       return DS.prismPurple;
-    } else if (agentName.contains('Writing')) {
+    } else if (normalized.contains('writing')) {
       return DS.info;
-    } else if (agentName.contains('Science')) {
+    } else if (normalized.contains('science')) {
       return DS.error;
+    } else if (normalized.contains('galaxy_guide')) {
+      return DS.infoLight;
+    } else if (normalized.contains('exam_oracle')) {
+      return DS.warning;
+    } else if (normalized.contains('study_buddy')) {
+      return DS.capsuleAccent;
+    } else if (normalized.contains('search')) {
+      return DS.info;
+    } else if (normalized.contains('deep_analyst')) {
+      return DS.brandSecondary;
     } else {
       return DS.capsuleAccent;
     }

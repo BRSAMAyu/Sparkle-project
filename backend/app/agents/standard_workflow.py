@@ -171,15 +171,16 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     # P1 Improvement: Enhanced intent instructions with stronger constraints
     plan_metadata = state.context_data.get("plan_metadata", {})
     route_reason = plan_metadata.get("route_reason", "")
+    route_reason_lc = str(route_reason).lower()
     intent_instruction = None
 
-    if "Intent: translation" in route_reason:
+    if "intent: translation" in route_reason_lc or "unified:translation" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants TRANSLATION.
 You MUST use the 'translate' tool to translate the user's text.
 DO NOT provide translation yourself - always use the tool.
 """
-    elif "Intent: prism" in route_reason:
+    elif "intent: prism" in route_reason_lc or "unified:cognitive_prism" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants BEHAVIOR ANALYSIS (Cognitive Prism).
 You MUST use the 'get_user_behavior_patterns' tool to retrieve their behavior patterns.
@@ -190,7 +191,7 @@ The tool will return:
 - emotional patterns: emotional responses during study
 - execution patterns: task execution habits
 """
-    elif "Intent: sprint" in route_reason:
+    elif "intent: sprint" in route_reason_lc or "unified:sprint_plan" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants to enter FOCUS/SPRINT MODE.
 You MUST use the 'suggest_focus_session' tool to recommend a focus session.
@@ -719,7 +720,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         if stream_callback:
             await stream_callback(agent_service_pb2.ChatResponse(
                 status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.MULTI_AGENT_COLLABORATION,
+                    state=agent_service_pb2.AgentStatus.THINKING,
                     details=f"Executing {intent} collaboration workflow...",
                     active_agent=agent_service_pb2.ORCHESTRATOR
                 )

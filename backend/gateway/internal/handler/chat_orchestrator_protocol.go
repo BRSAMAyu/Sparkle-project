@@ -32,6 +32,11 @@ var jsonMetadataKeys = map[string]bool{
 	"review_data":            true,
 	"state_change_event":     true,
 	"visualization":          true,
+	"selected_experts":       true,
+	"routing_strategy":       true,
+	"fallback_reason":        true,
+	"route_confidence":       true,
+	"expert_entry_source":    true,
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
@@ -39,6 +44,15 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if jsonMetadataKeys[key] {
+			trimmed := strings.TrimSpace(value)
+			if trimmed == "" {
+				metadata[key] = value
+				continue
+			}
+			if !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "[") {
+				metadata[key] = value
+				continue
+			}
 			var decoded interface{}
 			if err := json.Unmarshal([]byte(value), &decoded); err == nil {
 				metadata[key] = decoded
@@ -282,6 +296,7 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 		return fmt.Errorf("unsupported chat_request input")
 	}
 	input.SessionID = req.GetSessionId()
+	input.RequestID = req.GetRequestId()
 	input.ChatMode = req.GetChatMode()
 	input.Nickname = req.GetUserProfile().GetNickname()
 	input.FileIds = req.GetFileIds()

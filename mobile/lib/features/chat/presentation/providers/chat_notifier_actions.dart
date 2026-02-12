@@ -17,7 +17,8 @@ extension ChatNotifierActions on ChatNotifier {
 
     final authState = _ref.read(authProvider);
     final user = authState.user;
-    final userId = user?.id ?? await _ref.read(guestServiceProvider).getGuestId();
+    final userId =
+        user?.id ?? await _ref.read(guestServiceProvider).getGuestId();
     final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
           AgentSessionScope.plan,
           planId,
@@ -81,7 +82,8 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     debugPrint(
-        '✅ Action confirmed: ${action.type} (tool_result_id: $toolResultId)',);
+      '✅ Action confirmed: ${action.type} (tool_result_id: $toolResultId)',
+    );
 
     // TODO: 可以添加乐观更新 - 立即在 UI 中标记为已确认
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: true));
@@ -124,7 +126,8 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     debugPrint(
-        '❌ Action dismissed: ${action.type} (tool_result_id: $toolResultId)',);
+      '❌ Action dismissed: ${action.type} (tool_result_id: $toolResultId)',
+    );
 
     // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
@@ -137,13 +140,25 @@ extension ChatNotifierActions on ChatNotifier {
       return;
     }
 
+    final selectedExpertsRaw = message.agentCollaboration?['selected_experts'];
+    String? selectedExpertsMeta;
+    if (selectedExpertsRaw is List) {
+      selectedExpertsMeta = selectedExpertsRaw.map((e) => '$e').join(',');
+    } else if (selectedExpertsRaw is String && selectedExpertsRaw.isNotEmpty) {
+      selectedExpertsMeta = selectedExpertsRaw;
+    }
+
     _chatRepository.sendResponseFeedback(
       responseId: responseId,
       feedbackType: feedbackType,
       workflowId: message.workflowId,
       promptVersion: message.promptVersion,
       traceId: message.traceId,
-      meta: {'message_id': message.id},
+      meta: {
+        'message_id': message.id,
+        if (selectedExpertsMeta != null)
+          'selected_experts': selectedExpertsMeta,
+      },
     );
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
   }
@@ -199,7 +214,8 @@ extension ChatNotifierActions on ChatNotifier {
   /// 处理成就里程碑事件
   void _handleAchievementMilestone(AchievementMilestoneEvent event) {
     debugPrint(
-        '📊 Achievement milestone: ${event.achievementName} - ${event.milestonePercent}%',);
+      '📊 Achievement milestone: ${event.achievementName} - ${event.milestonePercent}%',
+    );
 
     // 显示里程碑通知（可以作为轻量级提示）
     state = state.copyWith(
@@ -227,7 +243,8 @@ extension ChatNotifierActions on ChatNotifier {
   /// 处理 ActionCard 状态更新
   void _handleActionStatus(ActionStatusEvent event) {
     debugPrint(
-        '📥 Action status received: ${event.status} for ${event.actionId}',);
+      '📥 Action status received: ${event.status} for ${event.actionId}',
+    );
 
     // 显示用户友好的提示消息
     final message = event.message ?? _getDefaultStatusMessage(event.status);
@@ -284,7 +301,8 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     debugPrint(
-        '📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})',);
+      '📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})',
+    );
   }
 
   /// 处理 State Change Event (计划归档/恢复/删除、设置更新等重大状态变更)
@@ -300,13 +318,15 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     debugPrint(
-        '📢 State change notification added: ${event.changeType} (${event.interventionLevel})',);
+      '📢 State change notification added: ${event.changeType} (${event.interventionLevel})',
+    );
   }
 
   /// 处理 Plan Review Status Event
   void _handlePlanReviewStatus(PlanReviewStatusEvent event) {
     debugPrint(
-        '📥 Plan review status received: ${event.status} for ${event.reviewId}',);
+      '📥 Plan review status received: ${event.status} for ${event.reviewId}',
+    );
 
     // Show user-friendly message
     final message = event.message ?? _getPlanReviewStatusMessage(event.status);
@@ -363,7 +383,8 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(pendingContentReview: review);
 
     debugPrint(
-        '📋 Content review ready: ${review.decision} (review_id: ${review.reviewId})',);
+      '📋 Content review ready: ${review.decision} (review_id: ${review.reviewId})',
+    );
   }
 
   /// 处理 Content Reflection Result Event
@@ -372,7 +393,8 @@ extension ChatNotifierActions on ChatNotifier {
 
     final reflectionData = event.reflectionData;
     final outcome = reflectionData['outcome'] as String? ?? 'unknown';
-    final scoreDelta = (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
+    final scoreDelta =
+        (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
     final rounds = reflectionData['rounds'] as int? ?? 0;
 
     // Show user-friendly message about reflection result
@@ -395,9 +417,11 @@ extension ChatNotifierActions on ChatNotifier {
         issues: currentReview.issues,
         suggestions: currentReview.suggestions,
         reviewedAt: currentReview.reviewedAt,
-        reflectionStatus:
-            outcome == 'fixed' || outcome == 'improved' ? 'completed' : 'failed',
-        scoreLabel: _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
+        reflectionStatus: outcome == 'fixed' || outcome == 'improved'
+            ? 'completed'
+            : 'failed',
+        scoreLabel:
+            _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
       );
 
       state = state.copyWith(pendingContentReview: updatedReview);
@@ -414,7 +438,8 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   /// Get user-friendly reflection result message
-  String _getReflectionResultMessage(String outcome, double scoreDelta, int rounds) {
+  String _getReflectionResultMessage(
+      String outcome, double scoreDelta, int rounds) {
     final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
     switch (outcome) {
       case 'fixed':

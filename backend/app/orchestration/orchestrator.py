@@ -18,7 +18,15 @@ from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
 from app.core.business_metrics import COLLABORATION_LATENCY, COLLABORATION_SUCCESS, HITL_REQUESTED
-from app.core.metrics import ACTIVE_SESSIONS, REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE
+from app.core.metrics import (
+    ACTIVE_SESSIONS,
+    ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+    RESPONSE_FALLBACK_GENERATED_TOTAL,
+    ROUTING_SUMMARY_CONTEXT_TOTAL,
+    TOKEN_USAGE,
+)
 from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType
@@ -38,7 +46,13 @@ from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 
 # Multi-Agent Mode Support
-from app.orchestration.chat_modes import CHAT_MODE_STANDARD
+from app.orchestration.chat_modes import (
+    CHAT_MODE_STANDARD,
+    is_expert_chat_mode,
+    normalize_chat_mode,
+)
+from app.orchestration.expert_strategy import ExpertStrategyV1
+from app.orchestration.mode_workflow_config import get_workflow_config
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
@@ -331,7 +345,7 @@ class ChatOrchestrator:
         Returns:
             Optional[Dict]: Cached response if duplicate, None otherwise
         """
-        if not self.state_manager:
+        if not self.state_manager or not request_id:
             return None
 
         return await self.state_manager.get_cached_response(session_id, request_id)
@@ -350,7 +364,7 @@ class ChatOrchestrator:
 
     async def _cache_response(self, session_id: str, request_id: str, response_data: dict[str, Any]):
         """Cache response for idempotency"""
-        if self.state_manager:
+        if self.state_manager and request_id:
             await self.state_manager.cache_response(session_id, request_id, response_data)
 
     def _format_review_message(self, review_result) -> str:
@@ -1043,13 +1057,17 @@ class ChatOrchestrator:
         state: WorkflowState,
     ) -> tuple[RouteDecision, Any | None]:
         unified_routing_result = None
+        has_summary = self._has_conversation_summary(conversation_context)
+        if has_summary:
+            ROUTING_SUMMARY_CONTEXT_TOTAL.labels(phase="router_input").inc()
+        routing_history = self._build_routing_history(conversation_context)
         try:
             unified_routing_result = await self.unified_router.route(
                 message=user_message,
                 user_id=user_id,
                 session_id=session_id,
                 payload=grpc_context,
-                conversation_history=(conversation_context or {}).get("history", []),
+                conversation_history=routing_history,
             )
             logger.info(
                 f"Unified routing: {unified_routing_result.primary_intent.value} "
@@ -1084,14 +1102,166 @@ class ChatOrchestrator:
                 context_version=None,
             )
 
+        route_decision, adaptive_notes = self._apply_adaptive_routing_policy(
+            route_decision=route_decision,
+            unified_routing_result=unified_routing_result,
+            user_message=user_message,
+            conversation_context=conversation_context,
+        )
+        if adaptive_notes:
+            state.context_data["adaptive_routing"] = {
+                "notes": adaptive_notes,
+                "execution_mode": route_decision.execution_mode,
+                "risk_level": route_decision.risk_level,
+                "reason": route_decision.reason,
+            }
+        if unified_routing_result and "unified_intent" in state.context_data:
+            state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
+            state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
+
         state.context_data["plan_metadata"] = {
             "context_version": route_decision.context_version,
             "execution_mode": route_decision.execution_mode,
             "risk_level": route_decision.risk_level,
+            "confidence": route_decision.confidence,
             "route_reason": route_decision.reason,
+            "routing_layer": unified_routing_result.routing_layer if unified_routing_result else "fallback",
+            "adaptive_notes": ",".join(adaptive_notes) if adaptive_notes else "",
+            "summary_used_for_routing": "true" if has_summary else "false",
         }
         state.context_data["grounding_validator"] = self.grounding_validator
         return route_decision, unified_routing_result
+
+    @staticmethod
+    def _build_routing_history(conversation_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+        if not isinstance(conversation_context, dict):
+            return []
+        messages = conversation_context.get("messages")
+        history: list[dict[str, Any]] = [m for m in messages if isinstance(m, dict)] if isinstance(messages, list) else []
+        summary = conversation_context.get("summary")
+        if isinstance(summary, str) and summary.strip():
+            summary_content = summary.strip()
+            if len(summary_content) > 600:
+                summary_content = summary_content[:600] + "..."
+            history = [{"role": "system", "content": f"Summary of prior conversation: {summary_content}"}] + history
+        return history
+
+    @staticmethod
+    def _has_conversation_summary(conversation_context: dict[str, Any] | None) -> bool:
+        if not isinstance(conversation_context, dict):
+            return False
+        summary = conversation_context.get("summary")
+        return isinstance(summary, str) and bool(summary.strip())
+
+    @staticmethod
+    def _is_complex_user_query(message: str) -> bool:
+        if not message:
+            return False
+        msg_lower = message.lower()
+        complex_keywords = {
+            "方案", "策略", "权衡", "分阶段", "multi-step", "tradeoff", "design", "architecture",
+            "学习计划", "复习计划", "错误诊断", "knowledge graph", "then", "after that", "首先", "然后", "接着",
+        }
+        if any(keyword in msg_lower for keyword in complex_keywords):
+            return True
+        sentence_count = (
+            message.count("。")
+            + message.count(".")
+            + message.count("!")
+            + message.count("?")
+            + message.count("！")
+            + message.count("？")
+        )
+        return len(message) > 90 and sentence_count >= 2
+
+    @staticmethod
+    def _is_context_dependent_query(message: str) -> bool:
+        if not message:
+            return False
+        msg_lower = message.lower()
+        context_markers = {
+            "继续", "接着", "刚才", "上面", "这个", "那个", "如前所述", "继续上次",
+            "continue", "as above", "that one", "the previous", "what we discussed",
+        }
+        return any(marker in msg_lower for marker in context_markers)
+
+    @staticmethod
+    def _extract_route_intent(reason: str) -> str:
+        if not reason:
+            return "unknown"
+        reason_lc = str(reason).lower()
+        if reason_lc.startswith("unified:"):
+            return reason_lc.split(":", 1)[1] or "unknown"
+        if reason_lc.startswith("adaptive:"):
+            parts = reason_lc.split(":")
+            if len(parts) >= 3:
+                return parts[-1] or "unknown"
+        if ":" in reason_lc:
+            return reason_lc.split(":", 1)[0]
+        return reason_lc
+
+    def _apply_adaptive_routing_policy(
+        self,
+        *,
+        route_decision: RouteDecision,
+        unified_routing_result: Any | None,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> tuple[RouteDecision, list[str]]:
+        notes: list[str] = []
+        if not route_decision:
+            return route_decision, notes
+
+        confidence = route_decision.confidence if route_decision.confidence is not None else 0.5
+        is_complex = self._is_complex_user_query(user_message)
+        is_context_dependent = self._is_context_dependent_query(user_message)
+        has_summary = bool(isinstance(conversation_context, dict) and str(conversation_context.get("summary") or "").strip())
+
+        inferred_intent = (
+            unified_routing_result.primary_intent.value
+            if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+            else self._extract_route_intent(route_decision.reason)
+        )
+
+        if route_decision.risk_level != "high" and route_decision.execution_mode == "direct":
+            if confidence < 0.6 and is_complex:
+                from_mode = route_decision.execution_mode
+                route_decision.execution_mode = "hybrid"
+                if route_decision.risk_level == "low":
+                    route_decision.risk_level = "medium"
+                route_decision.reason = f"adaptive:low_confidence_complex:{inferred_intent}"
+                notes.append("upgraded_to_hybrid_low_confidence_complex")
+                ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL.labels(
+                    action="upgrade",
+                    trigger="low_confidence_complex",
+                    from_mode=from_mode,
+                    to_mode=route_decision.execution_mode,
+                ).inc()
+            elif confidence < 0.7 and is_context_dependent and has_summary:
+                from_mode = route_decision.execution_mode
+                route_decision.execution_mode = "hybrid"
+                route_decision.reason = f"adaptive:context_continuity:{inferred_intent}"
+                notes.append("upgraded_to_hybrid_context_continuity")
+                ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL.labels(
+                    action="upgrade",
+                    trigger="context_continuity",
+                    from_mode=from_mode,
+                    to_mode=route_decision.execution_mode,
+                ).inc()
+
+        if route_decision.execution_mode == "hybrid" and confidence >= 0.92 and not is_complex and not is_context_dependent:
+            from_mode = route_decision.execution_mode
+            route_decision.execution_mode = "direct"
+            route_decision.reason = f"adaptive:high_confidence_simple:{inferred_intent}"
+            notes.append("downgraded_to_direct_high_confidence_simple")
+            ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL.labels(
+                action="downgrade",
+                trigger="high_confidence_simple",
+                from_mode=from_mode,
+                to_mode=route_decision.execution_mode,
+            ).inc()
+
+        return route_decision, notes
 
     async def _stream_hitl_escalation(
         self,
@@ -1407,6 +1577,11 @@ class ChatOrchestrator:
             if msg["role"] == "assistant":
                 full_response = msg["content"]
                 break
+        used_fallback_response = False
+        if not full_response or not full_response.strip():
+            full_response = self._build_nonempty_fallback_response(final_state=final_state, executable_plan=executable_plan)
+            used_fallback_response = True
+            RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="standard_empty_final").inc()
 
         llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
         response_metadata = {
@@ -1415,11 +1590,22 @@ class ChatOrchestrator:
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
         }
+        if used_fallback_response:
+            response_metadata["response_fallback"] = "generated"
         if route_decision and "sprint" in route_decision.reason.lower():
             response_metadata["switch_to_sprint"] = True
         if plan_switched and plan_id:
             response_metadata["plan_switched"] = True
             response_metadata["switched_to_plan_id"] = str(plan_id)
+        expert_metadata = final_state.context_data.get("expert_routing_metadata")
+        if isinstance(expert_metadata, dict):
+            response_metadata.update(expert_metadata)
+        selected_experts = final_state.context_data.get("selected_experts")
+        if isinstance(selected_experts, list) and selected_experts:
+            response_metadata["selected_experts"] = json.dumps(
+                [str(expert) for expert in selected_experts],
+                ensure_ascii=False,
+            )
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
@@ -1462,6 +1648,44 @@ class ChatOrchestrator:
             finish_reason=agent_service_pb2.STOP,
         )
         return final_response, final_response_data
+
+    def _build_nonempty_fallback_response(
+        self,
+        *,
+        final_state: WorkflowState,
+        executable_plan: ExecutablePlan | None,
+    ) -> str:
+        plan_result = final_state.context_data.get("plan_execution_result")
+        success_count = 0
+        failed_count = 0
+        failed_tools: list[str] = []
+        if plan_result is not None and hasattr(plan_result, "step_results"):
+            for step in getattr(plan_result, "step_results", []) or []:
+                tool_result = getattr(step, "tool_result", None)
+                tool_name = getattr(step, "tool_name", "unknown_tool")
+                if getattr(tool_result, "success", False):
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    failed_tools.append(str(tool_name))
+
+        if success_count > 0 or failed_count > 0:
+            summary_parts = [f"已完成执行：成功 {success_count} 项"]
+            if failed_count > 0:
+                summary_parts.append(f"失败 {failed_count} 项")
+            detail = "，".join(summary_parts)
+            if failed_tools:
+                failed_preview = "、".join(failed_tools[:3])
+                detail += f"。失败工具：{failed_preview}"
+            detail += "。如果你希望，我可以基于当前结果继续细化下一步行动。"
+            return detail
+
+        if executable_plan and executable_plan.tool_calls:
+            tool_names = [tc.name for tc in executable_plan.tool_calls[:3]]
+            tool_list = "、".join(tool_names)
+            return f"我已生成并执行任务流程（{tool_list}）。当前结果未形成完整文本答案，你可以让我继续输出详细结论或下一步计划。"
+
+        return "我已经完成本轮处理，但结果文本为空。请告诉我你希望我优先输出：结论摘要、执行细节，或下一步行动计划。"
 
     async def _cleanup(
         self,
@@ -1598,23 +1822,43 @@ class ChatOrchestrator:
         user_context_payload: dict[str, Any] | None,
         conversation_context: dict[str, Any] | None,
         plan_context: dict[str, Any] | None,
+        active_db: AsyncSession | None,
+        workflow_id: str,
+        prompt_version: str,
         stream_callback,
+        result_holder: dict[str, Any] | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """Handle non-standard chat modes (multi-agent workflows).
 
         Yields ChatResponse items directly; caller should ``return`` after iteration.
         """
         logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+        result_holder = result_holder if result_holder is not None else {}
         multi_agent_context = {
             "user_id": user_id,
             "session_id": session_id,
             "user_context": user_context_payload,
             "conversation_context": conversation_context,
             "plan_context": plan_context,
+            "db_session": active_db,
         }
+        full_text_parts: list[str] = []
+        full_text_override = ""
+        metadata_map: dict[str, str] = {}
+        had_error = False
+        mode_config = get_workflow_config(chat_mode)
 
         try:
             response_count = 0
+            agents = list(mode_config.collaboration_agents) if mode_config else []
+            collaboration_mode = mode_config.collaboration_mode if mode_config else "single"
+            if agents and collaboration_mode != "single":
+                await self.observability.log_collaboration_start(
+                    user_id=user_id,
+                    session_id=session_id,
+                    agents=agents,
+                    mode=collaboration_mode,
+                )
             if settings.ENABLE_MODE_WORKFLOW_V2:
                 response_stream = self.multi_agent_adapter.execute_mode_workflow(
                     chat_mode=chat_mode,
@@ -1623,6 +1867,7 @@ class ChatOrchestrator:
                     session_id=session_id,
                     context_data=multi_agent_context,
                     stream_callback=stream_callback,
+                    result_holder=result_holder,
                 )
             else:
                 response_stream = execute_multi_agent_workflow(
@@ -1633,6 +1878,7 @@ class ChatOrchestrator:
                     session_id=session_id,
                     context_data=multi_agent_context,
                     stream_callback=stream_callback,
+                    result_holder=result_holder,
                 )
 
             async for response in response_stream:
@@ -1641,16 +1887,75 @@ class ChatOrchestrator:
                 response.request_id = request_id
                 response.trace_id = response.trace_id or trace_id
                 response.workflow_id = f"multi_agent_{chat_mode}"
+                response.prompt_version = response.prompt_version or prompt_version
                 response_count += 1
                 content_type = response.WhichOneof("content")
                 logger.info(
                     f"[Orchestrator] Multi-agent response #{response_count}: "
                     f"type={content_type}, delta_len={len(response.delta) if response.delta else 0}"
                 )
+                if response.delta:
+                    full_text_parts.append(response.delta)
+                if response.full_text:
+                    full_text_override = response.full_text
+                if response.metadata:
+                    for k, v in response.metadata.items():
+                        metadata_map[str(k)] = str(v)
+                if response.finish_reason == agent_service_pb2.ERROR or response.HasField("error"):
+                    had_error = True
                 yield response
 
             logger.info(f"[Orchestrator] Multi-agent workflow completed with {response_count} responses")
             await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
+            final_text = full_text_override or "".join(full_text_parts)
+            if not had_error and (not final_text or not final_text.strip()):
+                execution_summary = str(result_holder.get("execution_summary", "")).strip()
+                if execution_summary:
+                    final_text = (
+                        "执行已完成，以下是关键结果摘要：\n"
+                        f"{execution_summary}\n\n"
+                        "如需我继续，我可以进一步输出完整分析与下一步计划。"
+                    )
+                    metadata_map["response_fallback"] = "mode_execution_summary"
+                    RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="mode_empty_final").inc()
+            if not had_error and final_text:
+                await self._persist_assistant_message(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    full_response=final_text,
+                )
+                llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
+                await self._record_decision(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_context_payload=user_context_payload,
+                    llm_profile_meta=llm_profile_meta,
+                    full_response=final_text,
+                )
+                response_metadata = {
+                    "response_id": response_id,
+                    "trace_id": trace_id,
+                    "workflow_id": workflow_id,
+                    "prompt_version": prompt_version,
+                    **metadata_map,
+                }
+                result_holder["final_response_data"] = {
+                    "message": final_text,
+                    "full_text": final_text,
+                    "tool_results": [],
+                    "metadata": response_metadata,
+                }
+            tool_calls_count = int(result_holder.get("tool_calls_count", 0))
+            if agents and collaboration_mode != "single":
+                await self.observability.log_collaboration_end(
+                    user_id=user_id,
+                    session_id=session_id,
+                    agents=agents,
+                    mode=collaboration_mode,
+                    tool_calls_count=tool_calls_count,
+                    latency_ms=(time.time() - start_time) * 1000.0,
+                )
 
         except Exception as e:
             logger.error(f"Multi-agent workflow error: {e}")
@@ -1799,6 +2104,21 @@ class ChatOrchestrator:
                 plan_id=plan_id_str,
             )
 
+            chat_mode = str(state.context_data.get("chat_mode", CHAT_MODE_STANDARD))
+            mode_config = get_workflow_config(chat_mode)
+            selected_experts = state.context_data.get("selected_experts", [])
+            state_overrides: dict[str, Any] = {}
+            if isinstance(selected_experts, list) and selected_experts:
+                cleaned = [str(expert).strip() for expert in selected_experts if str(expert).strip()]
+                if cleaned:
+                    state_overrides["next_step"] = cleaned[0]
+                    state_overrides["collaboration_agents"] = cleaned
+                    state_overrides["collaboration_mode"] = "sequential"
+                    state_overrides["collaboration_order"] = [
+                        {"agent": expert, "task": user_message} for expert in cleaned
+                    ]
+                    state_overrides["collaboration_index"] = 0
+
             executable_plan = await self.lang_graph_planner.plan(
                 message=user_message,
                 snapshot=snapshot,
@@ -1807,6 +2127,8 @@ class ChatOrchestrator:
                 conversation_history=conversation_history,
                 plan_id=plan_id_str,
                 execution_feedback=execution_feedback,
+                mode_config=mode_config,
+                state_overrides=state_overrides or None,
             )
 
             await self.observability.log_langgraph_plan(
@@ -2225,7 +2547,7 @@ class ChatOrchestrator:
 
                 # Step 3: Initialize state & extract message
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
-                chat_mode = request.chat_mode or CHAT_MODE_STANDARD
+                chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
                 if not user_message and request.HasField("tool_result"):
                     tr = request.tool_result
@@ -2234,6 +2556,38 @@ class ChatOrchestrator:
                 # Step 4: Build full context
                 grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = \
                     await self._build_full_context(request=request, active_db=active_db, user_id=user_id, session_id=session_id, user_message=user_message, request_id=request_id, tracer=tracer)
+
+                expert_routing_decision = None
+                if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
+                    user_preferences = (user_context_payload or {}).get("preferences", {})
+                    expert_routing_decision = ExpertStrategyV1.route(
+                        message=user_message,
+                        chat_mode=chat_mode,
+                        user_preferences=user_preferences if isinstance(user_preferences, dict) else {},
+                    )
+                    for expert_id in expert_routing_decision.selected_experts:
+                        await self.observability.log_expert_selected(
+                            user_id=user_id,
+                            session_id=session_id,
+                            expert_id=expert_id,
+                            strategy=expert_routing_decision.routing_strategy,
+                            entry_source=expert_routing_decision.expert_entry_source,
+                            workflow_id=workflow_id,
+                        )
+                        await self.observability.log_expert_invoked(
+                            user_id=user_id,
+                            session_id=session_id,
+                            expert_id=expert_id,
+                            workflow_id=workflow_id,
+                        )
+                    if expert_routing_decision.fallback_reason:
+                        await self.observability.log_expert_fallback(
+                            user_id=user_id,
+                            session_id=session_id,
+                            reason=expert_routing_decision.fallback_reason,
+                            from_mode=chat_mode,
+                            workflow_id=workflow_id,
+                        )
 
                 state = WorkflowState()
                 state.append_message("user", user_message)
@@ -2272,16 +2626,29 @@ class ChatOrchestrator:
                     file_ids=list(request.file_ids), include_references=bool(request.include_references),
                     workflow_id=workflow_id, prompt_version=prompt_version,
                 )
+                state.context_data["chat_mode"] = chat_mode
+                if expert_routing_decision:
+                    state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
+                    state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
+                    state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
 
                 # Step 9: Multi-agent mode (early exit)
-                if chat_mode != CHAT_MODE_STANDARD:
+                if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
+                    mode_result: dict[str, Any] = {}
                     async for resp in self._handle_multi_agent_mode(
                         chat_mode=chat_mode, user_message=user_message, user_id=user_id, session_id=session_id,
                         response_id=response_id, request_id=request_id, trace_id=trace_id, start_time=start_time,
                         user_context_payload=user_context_payload, conversation_context=conversation_context,
-                        plan_context=plan_context, stream_callback=stream_callback,
+                        plan_context=plan_context, active_db=active_db, workflow_id=workflow_id,
+                        prompt_version=prompt_version, stream_callback=stream_callback, result_holder=mode_result,
                     ):
                         yield resp
+                    final_response_data = mode_result.get("final_response_data")
+                    if isinstance(final_response_data, dict):
+                        with tracer.start_as_current_span("orchestrator.cache_mode_response"):
+                            await self._cache_response(session_id, request_id, final_response_data)
+                        for update_resp in await self._emit_system_updates(user_id):
+                            yield update_resp
                     return
 
                 # Step 10: Route
@@ -2289,6 +2656,13 @@ class ChatOrchestrator:
                     user_message=user_message, user_id=user_id, session_id=session_id,
                     grpc_context=grpc_context, conversation_context=conversation_context, state=state,
                 )
+                if settings.ENABLE_UNIFIED_GRAPH_ROUTING and chat_mode != CHAT_MODE_STANDARD:
+                    route_decision.execution_mode = "langgraph"
+                    route_decision.reason = (
+                        f"{route_decision.reason} | unified_mode:{chat_mode}"
+                        if route_decision.reason
+                        else f"unified_mode:{chat_mode}"
+                    )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
@@ -2300,10 +2674,20 @@ class ChatOrchestrator:
                     return
 
                 # Step 12: Log route decision
+                route_intent = (
+                    unified_routing_result.primary_intent.value
+                    if unified_routing_result
+                    else self._extract_route_intent(route_decision.reason)
+                )
+                plan_meta = state.context_data.get("plan_metadata", {})
                 await self.observability.log_route_decision(
                     user_id=user_id, session_id=session_id, message=user_message,
                     decision={"execution_mode": route_decision.execution_mode, "risk_level": route_decision.risk_level,
-                              "reason": route_decision.reason, "intent": route_decision.reason.split(":")[0] if ":" in route_decision.reason else "unknown"},
+                              "reason": route_decision.reason, "intent": route_intent,
+                              "confidence": route_decision.confidence,
+                              "routing_layer": plan_meta.get("routing_layer", "unknown"),
+                              "adaptive_notes": plan_meta.get("adaptive_notes", ""),
+                              "summary_used_for_routing": plan_meta.get("summary_used_for_routing", "false")},
                 )
 
                 # Step 13: Execute graph
@@ -2327,6 +2711,15 @@ class ChatOrchestrator:
                         )
                     with tracer.start_as_current_span("orchestrator.cache_response"):
                         await self._cache_response(session_id, request_id, final_response_data)
+                    if executable_plan and executable_plan.collaboration_mode != "single":
+                        await self.observability.log_collaboration_end(
+                            user_id=user_id,
+                            session_id=session_id,
+                            agents=executable_plan.agents_involved,
+                            mode=executable_plan.collaboration_mode,
+                            tool_calls_count=len(executable_plan.tool_calls or []),
+                            latency_ms=(time.time() - start_time) * 1000.0,
+                        )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
                     for update_resp in await self._emit_system_updates(user_id):

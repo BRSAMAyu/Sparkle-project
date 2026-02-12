@@ -358,12 +358,14 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'full_text':
+        final metadata = data['metadata'] as Map<String, dynamic>?;
         return FullTextEvent(
           content: data['full_text'] as String? ?? '',
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          metadata: metadata,
         );
 
       case 'error':
@@ -810,6 +812,7 @@ class WebSocketChatServiceV2 {
     required String message,
     required String userId,
     String? sessionId,
+    String? requestId,
     String? nickname,
     Map<String, dynamic>? extraContext,
     String? token,
@@ -832,6 +835,7 @@ class WebSocketChatServiceV2 {
     final messagePayload = {
       'message': message,
       'session_id': _currentSessionId,
+      'request_id': requestId ?? _generateRequestId(),
       if (nickname != null) 'nickname': nickname,
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
@@ -1486,6 +1490,13 @@ class WebSocketChatServiceV2 {
   /// 生成 session ID
   String _generateSessionId() =>
       'session_${DateTime.now().millisecondsSinceEpoch}';
+
+  /// 生成 request ID（用于端到端幂等）
+  String _generateRequestId() {
+    final now = DateTime.now().microsecondsSinceEpoch;
+    final rand = math.Random().nextInt(1 << 20);
+    return 'req_${now}_$rand';
+  }
 
   /// 手动重连
   Future<void> manualReconnect() async {

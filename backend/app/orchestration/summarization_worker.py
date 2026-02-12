@@ -203,23 +203,20 @@ class SummarizationWorker:
         prompt = self._build_summary_prompt(history)
 
         # 调用 LLM 服务
-        # 注意：这里使用 chat_stream_with_tools 的简化版本
-        # 或者使用专门的 generate_summary 方法（如果存在）
         try:
-            # 方式1: 使用现有的 LLM 服务
-            summary = await llm_service.generate_summary(prompt)
-
-            # 方式2: 如果没有专门的 generate_summary，使用通用方法
-            if not summary:
-                # 降级到通用调用
-                response = await llm_service.chat(
-                    system_prompt="你是一个专业的对话总结助手。请用简洁的语言总结对话的核心内容。",
-                    user_message=prompt,
-                    temperature=0.3,
-                    max_tokens=500
-                )
-                summary = response.content
-
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一个专业的对话总结助手。请用简洁的语言总结对话核心内容。",
+                },
+                {"role": "user", "content": prompt},
+            ]
+            summary = await llm_service.chat(
+                messages=messages,
+                model=None,
+                temperature=0.3,
+                max_tokens=500,
+            )
             return summary
 
         except Exception as e:

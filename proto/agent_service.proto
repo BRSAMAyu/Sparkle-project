@@ -115,7 +115,8 @@ message ChatRequest {
   repeated string active_tools = 12;
 
   // Chat mode for AI collaboration strategy.
-  // Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis"
+  // Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis",
+  //         "expert_auto", "expert::<expert_id>"
   string chat_mode = 13;
 }
 

@@ -28,6 +28,20 @@ func TestChatInputUnmarshalWithFiles(t *testing.T) {
 	assert.True(t, input.IncludeReferences)
 }
 
+func TestNormalizeChatMode(t *testing.T) {
+	assert.Equal(t, "standard", normalizeChatMode(""))
+	assert.Equal(t, "standard", normalizeChatMode("unknown"))
+	assert.Equal(t, "expert_auto", normalizeChatMode("expert_auto"))
+	assert.Equal(t, "expert::math_agent", normalizeChatMode("expert::math_agent"))
+}
+
+func TestWorkflowIDForChatMode(t *testing.T) {
+	assert.Equal(t, "standard_chat", workflowIDForChatMode("standard"))
+	assert.Equal(t, "deep_analysis_workflow", workflowIDForChatMode("deep_analysis"))
+	assert.Equal(t, "expert_auto_workflow", workflowIDForChatMode("expert_auto"))
+	assert.Equal(t, "expert_code_agent_workflow", workflowIDForChatMode("expert::code_agent"))
+}
+
 func TestConvertResponseToJSONCitations(t *testing.T) {
 	resp := &agentv1.ChatResponse{
 		ResponseId: "resp-1",
@@ -128,6 +142,32 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
+}
+
+func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-expert-meta",
+		RequestId:  "req-expert-meta",
+		Metadata: map[string]string{
+			"selected_experts":    `["deep_analyst","code_agent"]`,
+			"routing_strategy":    "auto_multi_expert",
+			"fallback_reason":     "",
+			"route_confidence":    "0.82",
+			"expert_entry_source": "auto",
+		},
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "done",
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	selected, ok := meta["selected_experts"].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, selected, 2)
+	assert.Equal(t, "auto_multi_expert", meta["routing_strategy"])
+	assert.Equal(t, "0.82", meta["route_confidence"])
 }
 
 func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {

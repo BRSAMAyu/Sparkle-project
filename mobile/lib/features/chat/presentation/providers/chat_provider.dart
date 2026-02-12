@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -247,6 +248,48 @@ class ChatNotifier extends StateNotifier<ChatState> {
               planContextInjected = true;
             }
           }
+          if (metadata != null) {
+            final selectedExpertsRaw = metadata['selected_experts'];
+            final routingStrategy = metadata['routing_strategy'];
+            final fallbackReason = metadata['fallback_reason'];
+            final routeConfidence = metadata['route_confidence'];
+            final expertEntrySource = metadata['expert_entry_source'];
+            if (selectedExpertsRaw != null ||
+                routingStrategy != null ||
+                fallbackReason != null ||
+                routeConfidence != null ||
+                expertEntrySource != null) {
+              List<String> selectedExperts = const [];
+              if (selectedExpertsRaw is List) {
+                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
+              } else if (selectedExpertsRaw is String &&
+                  selectedExpertsRaw.isNotEmpty) {
+                if (selectedExpertsRaw.trim().startsWith('[')) {
+                  try {
+                    final decoded = jsonDecode(selectedExpertsRaw);
+                    if (decoded is List) {
+                      selectedExperts = decoded.map((e) => '$e').toList();
+                    }
+                  } catch (_) {}
+                }
+                if (selectedExperts.isEmpty) {
+                  selectedExperts = selectedExpertsRaw
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList();
+                }
+              }
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'selected_experts': selectedExperts,
+                'routing_strategy': routingStrategy,
+                'fallback_reason': fallbackReason,
+                'route_confidence': routeConfidence,
+                'expert_entry_source': expertEntrySource,
+              };
+            }
+          }
           // 流式文本片段（delta）
           accumulatedContent += event.content;
           pendingStreamingContent = accumulatedContent;
@@ -272,6 +315,49 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
+          final metadata = event.metadata;
+          if (metadata != null) {
+            final selectedExpertsRaw = metadata['selected_experts'];
+            final routingStrategy = metadata['routing_strategy'];
+            final fallbackReason = metadata['fallback_reason'];
+            final routeConfidence = metadata['route_confidence'];
+            final expertEntrySource = metadata['expert_entry_source'];
+            if (selectedExpertsRaw != null ||
+                routingStrategy != null ||
+                fallbackReason != null ||
+                routeConfidence != null ||
+                expertEntrySource != null) {
+              List<String> selectedExperts = const [];
+              if (selectedExpertsRaw is List) {
+                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
+              } else if (selectedExpertsRaw is String &&
+                  selectedExpertsRaw.isNotEmpty) {
+                if (selectedExpertsRaw.trim().startsWith('[')) {
+                  try {
+                    final decoded = jsonDecode(selectedExpertsRaw);
+                    if (decoded is List) {
+                      selectedExperts = decoded.map((e) => '$e').toList();
+                    }
+                  } catch (_) {}
+                }
+                if (selectedExperts.isEmpty) {
+                  selectedExperts = selectedExpertsRaw
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList();
+                }
+              }
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'selected_experts': selectedExperts,
+                'routing_strategy': routingStrategy,
+                'fallback_reason': fallbackReason,
+                'route_confidence': routeConfidence,
+                'expert_entry_source': expertEntrySource,
+              };
+            }
+          }
           accumulatedContent = event.content;
           pendingStreamingContent = accumulatedContent;
           flushPending(immediate: true);

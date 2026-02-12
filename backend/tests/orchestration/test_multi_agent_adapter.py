@@ -35,6 +35,12 @@ class _LLM:
         yield "ok"
 
 
+class _EmptyLLM:
+    async def stream_chat(self, messages, model=None, temperature=0.5):
+        if False:
+            yield ""
+
+
 @pytest.mark.asyncio
 async def test_execute_mode_workflow_runs_plan_and_returns_stop(monkeypatch):
     orchestrator = type("O", (), {})()
@@ -46,7 +52,7 @@ async def test_execute_mode_workflow_runs_plan_and_returns_stop(monkeypatch):
     adapter = MultiAgentWorkflowAdapter(orchestrator)
     adapter.llm_service = _LLM()
 
-    async def _validate(plan, execution_result, user_id):
+    async def _validate(plan, execution_result, user_id, db_session=None):
         return ExecutionValidationResult(
             plan_id=plan.plan_id,
             validation_status="passed",
@@ -74,3 +80,44 @@ async def test_execute_mode_workflow_runs_plan_and_returns_stop(monkeypatch):
     assert any(r.WhichOneof("content") == "status_update" for r in responses)
     assert any(r.delta == "ok" for r in responses)
     assert responses[-1].finish_reason == 1  # STOP
+
+
+@pytest.mark.asyncio
+async def test_execute_mode_workflow_falls_back_when_stream_empty(monkeypatch):
+    orchestrator = type("O", (), {})()
+    orchestrator.lang_graph_planner = _Planner()
+    orchestrator.tool_executor = _Executor()
+    orchestrator.db_session = None
+    orchestrator.redis = None
+
+    adapter = MultiAgentWorkflowAdapter(orchestrator)
+    adapter.llm_service = _EmptyLLM()
+
+    async def _validate(plan, execution_result, user_id, db_session=None):
+        return ExecutionValidationResult(
+            plan_id=plan.plan_id,
+            validation_status="passed",
+            quality_score=1.0,
+            criteria_results={"all_passed": True, "checks": {}},
+            tool_summary={"total": 1, "successful": 1, "failed": 0},
+            issues=[],
+            step_validations=[],
+            aborted=False,
+        )
+
+    monkeypatch.setattr(adapter, "_validate_plan", _validate)
+
+    responses = []
+    async for resp in adapter.execute_mode_workflow(
+        chat_mode=CHAT_MODE_DEEP_ANALYSIS,
+        message="分析这个问题",
+        user_id=str(uuid4()),
+        session_id=str(uuid4()),
+        context_data={"conversation_context": {"messages": []}},
+        stream_callback=lambda x: None,
+    ):
+        responses.append(resp)
+
+    deltas = [r.delta for r in responses if r.delta]
+    assert any("结构化摘要" in d for d in deltas)
+    assert responses[-1].finish_reason == 1

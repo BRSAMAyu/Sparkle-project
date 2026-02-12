@@ -31,6 +31,7 @@ from app.core.rate_limiting import setup_rate_limiting
 from app.core.websocket import manager
 from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
+from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
@@ -110,6 +111,21 @@ async def lifespan(app: FastAPI):
         task_consumer_task = asyncio.create_task(task_consumer.start())
         app.state.task_consumer_task = task_consumer_task
 
+    summarization_worker_task = None
+    summarization_worker = None
+    if cache_service.redis and settings.ENABLE_SUMMARIZATION_WORKER:
+        try:
+            summarization_worker = create_summarization_worker(
+                cache_service.redis,
+                worker_id="main-app-worker",
+            )
+            summarization_worker_task = asyncio.create_task(summarization_worker.start())
+            app.state.summarization_worker = summarization_worker
+            app.state.summarization_worker_task = summarization_worker_task
+            logger.info("SummarizationWorker started")
+        except Exception as e:
+            logger.error(f"Failed to start SummarizationWorker: {e}")
+
     # Start Galaxy Services (Phase 4)
     if cache_service.redis:
         from app.services.galaxy.streaming_service import init_galaxy_streaming_service
@@ -181,6 +197,16 @@ async def lifespan(app: FastAPI):
         task_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await task_consumer_task
+
+    # Stop summarization worker
+    summarization_worker = getattr(app.state, "summarization_worker", None)
+    summarization_worker_task = getattr(app.state, "summarization_worker_task", None)
+    if summarization_worker:
+        await summarization_worker.stop()
+    if summarization_worker_task:
+        summarization_worker_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await summarization_worker_task
 
     # Stop Galaxy Streaming Service
     galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)

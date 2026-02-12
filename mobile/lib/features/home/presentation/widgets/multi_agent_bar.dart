@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
 
 /// Multi Agent Bar Widget
 ///
@@ -20,7 +23,22 @@ class MultiAgentBar extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Multi-agent modes (excluding standard)
-    final multiAgentModes = ChatMode.values.where((m) => m.isMultiAgent).toList();
+    final multiAgentModes =
+        ChatMode.values.where((m) => m.isMultiAgent).toList();
+    final catalog = ref.watch(multiAgentCatalogProvider);
+    final expertModes = catalog.when(
+      data: (value) => value.experts
+          .where((expert) => expert.enabled)
+          .take(6)
+          .map((expert) => ChatModeExpert(
+                expertId: expert.id,
+                expertName: expert.displayName,
+              ))
+          .toList(),
+      loading: () => <ChatMode>[],
+      error: (_, __) => <ChatMode>[],
+    );
+    final entryModes = [...multiAgentModes, ...expertModes];
 
     return MaterialStyler(
       material: AppMaterials.neoGlass.copyWith(
@@ -57,9 +75,9 @@ class MultiAgentBar extends ConsumerWidget {
             Expanded(
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: multiAgentModes.length,
+                itemCount: entryModes.length,
                 itemBuilder: (context, index) {
-                  final mode = multiAgentModes[index];
+                  final mode = entryModes[index];
                   return _ModeChip(
                     mode: mode,
                     isDark: isDark,
@@ -80,12 +98,12 @@ class MultiAgentBar extends ConsumerWidget {
     WidgetRef ref,
     ChatMode mode,
   ) {
-    HapticFeedback.lightImpact();
+    unawaited(HapticFeedback.lightImpact());
     // Set the mode before navigating
     ref.read(chatModeNotifierProvider.notifier).setMode(mode);
     ref.read(lastMultiAgentModeProvider.notifier).state = mode;
     // Navigate to chat
-    context.push('/chat');
+    unawaited(context.push('/chat'));
   }
 }
 
@@ -109,49 +127,51 @@ class _ModeChipState extends State<_ModeChip> {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
-        duration: AnimationSystem.quick,
-        curve: AnimationSystem.smooth,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing6,
-          ),
-          decoration: BoxDecoration(
-            color: widget.mode.color.withValues(alpha: _isPressed ? 0.25 : 0.15),
-            borderRadius: DS.borderRadiusFull,
-            border: Border.all(
-              color: widget.mode.color.withValues(alpha: _isPressed ? 0.5 : 0.3),
-              width: _isPressed ? 1.5 : 1.0,
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedScale(
+          scale: _isPressed ? 0.95 : 1.0,
+          duration: AnimationSystem.quick,
+          curve: AnimationSystem.smooth,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing6,
+            ),
+            decoration: BoxDecoration(
+              color:
+                  widget.mode.color.withValues(alpha: _isPressed ? 0.25 : 0.15),
+              borderRadius: DS.borderRadiusFull,
+              border: Border.all(
+                color:
+                    widget.mode.color.withValues(alpha: _isPressed ? 0.5 : 0.3),
+                width: _isPressed ? 1.5 : 1.0,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.mode.icon,
+                  size: DS.iconSizeXs,
+                  color: widget.mode.color,
+                ),
+                const SizedBox(width: DS.spacing4),
+                Text(
+                  widget.mode.label,
+                  style: TextStyle(
+                    color: widget.isDark ? DS.neutral100 : DS.neutral900,
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.mode.icon,
-                size: DS.iconSizeXs,
-                color: widget.mode.color,
-              ),
-              const SizedBox(width: DS.spacing4),
-              Text(
-                widget.mode.label,
-                style: TextStyle(
-                  color: widget.isDark ? DS.neutral100 : DS.neutral900,
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightMedium,
-                ),
-              ),
-            ],
-          ),
         ),
-      ),
-    );
+      );
 }

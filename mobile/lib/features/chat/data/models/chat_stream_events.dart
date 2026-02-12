@@ -277,6 +277,7 @@ class FullTextEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
   });
   final String content;
 }
