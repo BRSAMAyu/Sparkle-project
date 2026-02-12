@@ -1,7 +1,9 @@
 import asyncio
-from typing import Dict, Any, Callable, List, Optional, Union, Coroutine
-from dataclasses import dataclass, field
 import inspect
+from collections.abc import Callable, Coroutine
+from dataclasses import dataclass, field
+from typing import Any
+
 from loguru import logger
 
 # ==========================================
@@ -14,13 +16,13 @@ class WorkflowState:
     工作流状态黑板
     在节点间传递的共享状态
     """
-    messages: List[Dict[str, str]] = field(default_factory=list)
-    context_data: Dict[str, Any] = field(default_factory=dict)
-    next_step: Optional[str] = None
-    errors: List[str] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
+    context_data: dict[str, Any] = field(default_factory=dict)
+    next_step: str | None = None
+    errors: list[str] = field(default_factory=list)
     is_finished: bool = False
 
-    def update(self, new_data: Dict[str, Any]):
+    def update(self, new_data: dict[str, Any]):
         """更新上下文数据"""
         self.context_data.update(new_data)
 
@@ -43,9 +45,9 @@ class StateGraph:
     - 异步执行
     """
     def __init__(self):
-        self.nodes: Dict[str, Callable] = {}
-        self.edges: Dict[str, Union[str, Callable]] = {}
-        self.entry_point: Optional[str] = None
+        self.nodes: dict[str, Callable] = {}
+        self.edges: dict[str, str | Callable] = {}
+        self.entry_point: str | None = None
         self._compiled = False
 
     def add_node(self, name: str, action: Callable[[WorkflowState], Coroutine[Any, Any, WorkflowState]]):
@@ -94,17 +96,17 @@ class StateGraph:
         while current_node_name != "__end__" and steps < max_steps:
             steps += 1
             logger.info(f"📍 executing node: {current_node_name}")
-            
+
             # 1. 执行当前节点
             node_func = self.nodes[current_node_name]
-            
+
             try:
                 # 支持异步和同步函数
                 if inspect.iscoroutinefunction(node_func):
                     new_state = await node_func(state)
                 else:
                     new_state = node_func(state)
-                
+
                 # 状态通常是原地修改的，但支持返回新状态
                 if new_state:
                     state = new_state
@@ -118,7 +120,7 @@ class StateGraph:
             # 2. 决定下一跳
             if current_node_name in self.edges:
                 edge = self.edges[current_node_name]
-                
+
                 if isinstance(edge, str):
                     # 静态边
                     next_node = edge
@@ -206,34 +208,34 @@ async def practice_node(state: WorkflowState) -> WorkflowState:
 async def main():
     # 1. 定义图
     graph = StateGraph()
-    
+
     # 2. 添加节点
     graph.add_node("analyzer", analyze_node)
     graph.add_node("teacher", teacher_node)
     graph.add_node("check_understanding", check_understanding_node)
     graph.add_node("simplifier", simplifier_node)
     graph.add_node("practice", practice_node)
-    
+
     # 3. 添加边
     # Start -> Analyzer -> Teacher -> Check -> [Router]
     graph.set_entry_point("analyzer")
     graph.add_edge("analyzer", "teacher")
     graph.add_edge("teacher", "check_understanding")
-    
+
     # Router: Check -> (Simplifier OR Practice)
     graph.add_conditional_edge("check_understanding", router_logic)
-    
+
     # Simplifier -> Teacher (Loop back!)
     graph.add_edge("simplifier", "teacher")
-    
+
     # Practice -> End
     graph.add_edge("practice", "__end__")
-    
+
     # 4. 运行
     print("\n=== Starting Workflow Execution ===\n")
     initial_state = WorkflowState()
     final_state = await graph.invoke(initial_state)
-    
+
     print("\n=== Execution History ===")
     for msg in final_state.messages:
         print(f"[{msg['role'].upper()}]: {msg['content']}")

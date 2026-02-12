@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart' as feature;
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
+    as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
 
@@ -22,7 +23,9 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(feature.focusStatisticsProvider.notifier).loadTodayStats();
       ref.read(feature.focusStatisticsProvider.notifier).loadWeeklyStats();
-      ref.read(feature.focusStatisticsProvider.notifier).loadSessionHistory(limit: 5);
+      ref
+          .read(feature.focusStatisticsProvider.notifier)
+          .loadSessionHistory(limit: 5);
     });
   }
 
@@ -33,8 +36,11 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
     return Container(
       padding: const EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
+        color: DS.surfaceSecondary,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(
+          top: BorderSide(color: DS.border, width: 0.5),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -46,29 +52,32 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
               Container(
                 padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade50,
+                  color: DS.primaryBase.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(
                     Icons.bar_chart,
-                    color: Colors.deepPurple,
+                    color: DS.primaryBase,
                     size: 24,
                   ),
                 ),
               ),
               const SizedBox(width: DS.md),
-              const Text(
+              Text(
                 '专注统计',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: DS.textPrimary,
                 ),
               ),
               const Spacer(),
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -76,11 +85,11 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
 
           // Loading indicator
           if (state.isLoading)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(DS.xl),
+                padding: const EdgeInsets.all(DS.xl),
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: DS.primaryBase,
                 ),
               ),
             ),
@@ -93,7 +102,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   child: _buildStatCard(
                     '今日专注',
                     state.todayFormatted,
-                    Colors.deepPurple,
+                    DS.info,
                   ),
                 ),
                 const SizedBox(width: DS.md),
@@ -101,7 +110,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   child: _buildStatCard(
                     '本周累计',
                     state.weekTotalFormatted,
-                    DS.brandPrimary,
+                    DS.primaryBase,
                   ),
                 ),
                 const SizedBox(width: DS.md),
@@ -109,7 +118,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                   child: _buildStatCard(
                     '连续天数',
                     '${state.streakDays}天',
-                    Colors.orange,
+                    DS.warning,
                   ),
                 ),
               ],
@@ -122,19 +131,20 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '本周趋势',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: DS.textPrimary,
                   ),
                 ),
                 const SizedBox(height: DS.lg),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: DS.surfacePrimaryElevated,
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: DS.border, width: 0.5),
                   ),
                   padding: const EdgeInsets.all(DS.md),
                   child: FocusStatsChart(
@@ -154,12 +164,12 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '最近会话',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: DS.textPrimary,
                   ),
                 ),
                 const SizedBox(height: DS.md),
@@ -184,9 +194,9 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
   Widget _buildStatCard(String label, String value, Color color) => Container(
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +204,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
+                color: DS.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -215,21 +225,22 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
   Widget _buildEmptyState(String message) => Container(
         padding: const EdgeInsets.all(DS.xl),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: DS.surfacePrimaryElevated,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.border, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.info_outline,
-              color: Colors.white.withValues(alpha: 0.6),
+              color: DS.textSecondary,
             ),
             const SizedBox(width: DS.sm),
             Text(
               message,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: DS.textSecondary,
                 fontSize: 14,
               ),
             ),

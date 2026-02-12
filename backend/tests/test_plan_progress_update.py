@@ -5,7 +5,7 @@ Verifies that completing a task automatically updates the associated plan's prog
 """
 import pytest
 from uuid import uuid4
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,10 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.plan import Plan, PlanType
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -36,7 +40,7 @@ async def test_plan_progress_updates_on_task_completion(db_session: AsyncSession
         type=PlanType.SPRINT,
         subject="数学",
         progress=0.0,  # Initially 0%
-        target_date=datetime.utcnow() + timedelta(days=7),
+        target_date=_utcnow() + timedelta(days=7),
         is_active=True,
     )
     db_session.add(plan)
@@ -111,7 +115,7 @@ async def test_plan_progress_update_via_api_endpoint(db_session: AsyncSession):
         type=PlanType.SPRINT,
         subject="英语",
         progress=0.0,
-        target_date=datetime.utcnow() + timedelta(days=5),
+        target_date=_utcnow() + timedelta(days=5),
         is_active=True,
     )
     db_session.add(plan)
@@ -141,7 +145,7 @@ async def test_plan_progress_update_via_api_endpoint(db_session: AsyncSession):
 
     # Simulate direct API endpoint logic (from tasks.py lines 242-254)
     task1.status = TaskStatus.COMPLETED
-    task1.completed_at = datetime.utcnow()
+    task1.completed_at = _utcnow()
     task1.actual_minutes = 22
     await db_session.commit()
     await db_session.refresh(task1)

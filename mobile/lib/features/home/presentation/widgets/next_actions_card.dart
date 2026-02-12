@@ -88,20 +88,30 @@ class _NextActionItem extends ConsumerWidget {
   final TaskData task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => GestureDetector(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // 深色模式背景已暗，用低透明度；浅色模式背景已亮，用高透明度
+    final itemColor = isDark
+        ? DS.brandPrimary.withValues(alpha: 0.08)
+        : DS.brandPrimary.withValues(alpha: 0.15);
+
+    return Consumer(
+      builder: (context, ref, child) => GestureDetector(
         onTap: () {
           final taskModel = _toTaskModel(task);
+          // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+          ref.read(activeTaskProvider.notifier).state = taskModel;
           context.push('/tasks/${taskModel.id}/execute');
         },
         child: Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        padding: const EdgeInsets.all(DS.sm),
+        decoration: BoxDecoration(
+          color: itemColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
               Text(
                 task.title,
                 style: TextStyle(
@@ -143,14 +153,19 @@ class _NextActionItem extends ConsumerWidget {
                       );
                     },
                     child: Icon(Icons.check_circle_outline_rounded,
-                        color: DS.brandPrimary.withValues(alpha: 0.7), size: 14,),
+                        color: isDark
+                            ? DS.brandPrimary.withValues(alpha: 0.7)
+                            : DS.brandPrimary.withValues(alpha: 0.85),
+                        size: 14),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
       );
+    }
 
   Color _getTypeColor(String type) {
     switch (type) {

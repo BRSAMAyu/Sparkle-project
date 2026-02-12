@@ -1,20 +1,26 @@
 
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
-from typing import Dict, Any, List, Optional
-from datetime import datetime, date, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, and_, func
 
-from app.models.task import Task, TaskStatus
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
+from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.models.cognitive import CognitiveFragment, BehaviorPattern
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class DashboardService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_dashboard_status(self, user_id: UUID) -> Dict[str, Any]:
+    async def get_dashboard_status(self, user_id: UUID) -> dict[str, Any]:
         """
         Get all data for the dashboard
         """
@@ -51,7 +57,7 @@ class DashboardService:
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one()
 
-    async def _get_next_actions(self, user_id: UUID) -> List[Dict]:
+    async def _get_next_actions(self, user_id: UUID) -> list[dict]:
         """Top 3 pending tasks"""
         query = (
             select(Task)
@@ -71,13 +77,13 @@ class DashboardService:
             } for t in tasks
         ]
 
-    async def _get_active_sprint(self, user_id: UUID) -> Optional[Dict]:
+    async def _get_active_sprint(self, user_id: UUID) -> dict | None:
         """Get first active sprint plan"""
         query = (
             select(Plan)
             .where(and_(
-                Plan.user_id == user_id, 
-                Plan.is_active == True,
+                Plan.user_id == user_id,
+                Plan.is_active,
                 Plan.type == PlanType.SPRINT
             ))
             .order_by(Plan.target_date) # Closest deadline
@@ -85,7 +91,7 @@ class DashboardService:
         )
         result = await self.db.execute(query)
         plan = result.scalar_one_or_none()
-        
+
         if plan:
             days_left = (plan.target_date - datetime.now().date()).days if plan.target_date else 0
             return {
@@ -111,7 +117,7 @@ class DashboardService:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def _get_cognitive_summary(self, user_id: UUID) -> Dict:
+    async def _get_cognitive_summary(self, user_id: UUID) -> dict:
         """Get cognitive prism summary for dashboard"""
         # Get the latest active behavior pattern
         pattern_query = (
@@ -119,7 +125,7 @@ class DashboardService:
             .where(
                 and_(
                     BehaviorPattern.user_id == user_id,
-                    BehaviorPattern.is_archived == False
+                    not BehaviorPattern.is_archived
                 )
             )
             .order_by(desc(BehaviorPattern.created_at))
@@ -129,7 +135,7 @@ class DashboardService:
         latest_pattern = result.scalar_one_or_none()
 
         # Check if there are new patterns created in last 24 hours
-        yesterday = datetime.utcnow() - timedelta(days=1)
+        yesterday = _utcnow() - timedelta(days=1)
         new_pattern_query = select(func.count(BehaviorPattern.id)).where(
             and_(
                 BehaviorPattern.user_id == user_id,
@@ -160,7 +166,7 @@ class DashboardService:
 
     async def _get_recent_anxiety_level(self, user_id: UUID) -> float:
         """Check recent cognitive fragments for anxiety"""
-        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        two_days_ago = _utcnow() - timedelta(days=2)
 
         query = select(CognitiveFragment).where(
             and_(
@@ -177,7 +183,7 @@ class DashboardService:
         anxiety_count = sum(1 for f in fragments if f.sentiment == "anxious")
         return anxiety_count / len(fragments)
 
-    async def _calculate_weather(self, user_id: UUID, user: User, sprint: Optional[Dict]) -> Dict:
+    async def _calculate_weather(self, user_id: UUID, user: User, sprint: dict | None) -> dict:
         """
         Calculate inner weather based on rules.
         """
@@ -197,7 +203,7 @@ class DashboardService:
                 condition = "势头正旺"
 
         # 2. Check recent study records (if no task completed for 2 days -> cloudy)
-        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        two_days_ago = _utcnow() - timedelta(days=2)
         recent_task_query = select(func.count(Task.id)).where(
             and_(
                 Task.user_id == user_id,

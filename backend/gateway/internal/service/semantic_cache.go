@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -28,12 +29,31 @@ func (s *SemanticCacheService) Canonicalize(input string) string {
 	return sStr
 }
 
+func (s *SemanticCacheService) canonicalizeScope(scope string) string {
+	clean := strings.TrimSpace(strings.ToLower(scope))
+	if clean == "" {
+		return "global"
+	}
+	clean = strings.ReplaceAll(clean, " ", "_")
+	clean = strings.ReplaceAll(clean, ":", "_")
+	clean = strings.ReplaceAll(clean, "|", "_")
+	return clean
+}
+
 // SearchExact performs a precise text match using the canonicalized query
-func (s *SemanticCacheService) SearchExact(ctx context.Context, query string) (string, error) {
-	key := "cache:text:" + s.Canonicalize(query)
+func (s *SemanticCacheService) SearchExact(ctx context.Context, scope, query string) (string, error) {
+	key := fmt.Sprintf("cache:text:%s:%s", s.canonicalizeScope(scope), s.Canonicalize(query))
 	val, err := s.rdb.Get(ctx, key).Result()
 	if err == redis.Nil {
-		return "", nil
+		legacyKey := "cache:text:" + s.Canonicalize(query)
+		legacyVal, legacyErr := s.rdb.Get(ctx, legacyKey).Result()
+		if legacyErr == redis.Nil {
+			return "", nil
+		}
+		if legacyErr != nil {
+			return "", legacyErr
+		}
+		return legacyVal, nil
 	}
 	if err != nil {
 		return "", err
@@ -42,8 +62,8 @@ func (s *SemanticCacheService) SearchExact(ctx context.Context, query string) (s
 }
 
 // SetExact stores the response for a precise text match
-func (s *SemanticCacheService) SetExact(ctx context.Context, query, response string) error {
-	key := "cache:text:" + s.Canonicalize(query)
+func (s *SemanticCacheService) SetExact(ctx context.Context, scope, query, response string) error {
+	key := fmt.Sprintf("cache:text:%s:%s", s.canonicalizeScope(scope), s.Canonicalize(query))
 	return s.rdb.Set(ctx, key, response, defaultCacheTTL).Err()
 }
 

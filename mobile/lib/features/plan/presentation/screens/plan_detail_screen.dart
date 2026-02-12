@@ -23,21 +23,28 @@ class PlanDetailScreen extends ConsumerWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: const Text('计划详情'),
           actions: [
             planAsync.maybeWhen(
-              data: (plan) => IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () => showShareResourceSheet(
-                  context,
-                  resourceType: 'plan',
-                  resourceId: plan.id,
-                  title: plan.name,
-                  subtitle: plan.description ?? plan.subject ?? '',
+              data: (plan) => Tooltip(
+                message: '分享计划',
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () => showShareResourceSheet(
+                    context,
+                    resourceType: 'plan',
+                    resourceId: plan.id,
+                    title: plan.name,
+                    subtitle: plan.description ?? plan.subject ?? '',
+                  ),
                 ),
               ),
               orElse: () => const SizedBox.shrink(),
@@ -59,6 +66,7 @@ class PlanDetailScreen extends ConsumerWidget {
           ),
           loading: () => const Center(child: LoadingIndicator()),
           error: (err, _) => CustomErrorWidget.page(
+            context: context,
             message: '计划加载失败：$err',
             onRetry: () => ref.refresh(planDetailProvider(planId)),
           ),
@@ -78,96 +86,94 @@ class _PlanOverviewTab extends ConsumerWidget {
         ? DateFormat.yMMMd().format(plan.targetDate!)
         : null;
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: [
-        Card(
-          elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  plan.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                if (plan.description != null &&
-                    plan.description!.isNotEmpty) ...[
-                  const SizedBox(height: DS.sm),
-                  Text(plan.description!,
-                      style: Theme.of(context).textTheme.bodyMedium,),
-                ],
-                const SizedBox(height: DS.lg),
-                LinearProgressIndicator(
-                  value: plan.progress,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: DS.sm),
-                Text('${(plan.progress * 100).toStringAsFixed(0)}% 进度'),
-                if (targetDate != null) ...[
-                  const SizedBox(height: DS.md),
-                  Row(
-                    children: [
-                      Icon(Icons.event, size: 16, color: DS.textSecondary),
-                      const SizedBox(width: DS.xs),
-                      Text('目标日期: $targetDate'),
-                    ],
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
+          Card(
+            elevation: 2,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    plan.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
+                  if (plan.description != null &&
+                      plan.description!.isNotEmpty) ...[
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      plan.description!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  const SizedBox(height: DS.lg),
+                  LinearProgressIndicator(
+                    value: plan.progress,
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text('${(plan.progress * 100).toStringAsFixed(0)}% 进度'),
+                  if (targetDate != null) ...[
+                    const SizedBox(height: DS.md),
+                    Row(
+                      children: [
+                        Icon(Icons.event, size: 16, color: DS.textSecondary),
+                        const SizedBox(width: DS.xs),
+                        Text('目标日期: $targetDate'),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: DS.lg),
-        Text('相关任务', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: DS.sm),
-        if (plan.tasks == null || plan.tasks!.isEmpty)
-          Text('暂无任务', style: TextStyle(color: DS.textSecondary))
-        else
-          ...plan.tasks!.map(
-            (task) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(task.title),
-              subtitle: Text(task.status.name),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/tasks/${task.id}'),
+          const SizedBox(height: DS.lg),
+          Text('相关任务', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: DS.sm),
+          if (plan.tasks == null || plan.tasks!.isEmpty)
+            Text('暂无任务', style: TextStyle(color: DS.textSecondary))
+          else
+            ...plan.tasks!.map(
+              (task) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(task.title),
+                subtitle: Text(task.status.name),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/tasks/${task.id}'),
+              ),
             ),
-          ),
-        const SizedBox(height: DS.lg),
-        _buildArchiveActions(context, ref),
-      ],
+          const SizedBox(height: DS.lg),
+          _buildArchiveActions(context, ref),
+        ],
+      ),
     );
   }
 
   Widget _buildArchiveActions(BuildContext context, WidgetRef ref) {
     if (plan.isActive) {
-      return ElevatedButton.icon(
+      return SparkleButton.destructive(
         onPressed: () => _confirmArchive(context, ref),
         icon: const Icon(Icons.archive_outlined),
-        label: const Text('归档计划'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: DS.error.withValues(alpha: 0.08),
-          foregroundColor: DS.error,
-        ),
+        label: '归档计划',
       );
     }
 
-    return ElevatedButton.icon(
+    return SparkleButton(
       onPressed: () async {
         await ref.read(planListProvider.notifier).restorePlan(plan.id);
         ref.invalidate(planDetailProvider(plan.id));
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('计划已恢复')),
-          );
+          AppFeedback.success(context, '计划已恢复');
         }
       },
       icon: const Icon(Icons.restore_rounded),
-      label: const Text('恢复计划'),
+      label: '恢复计划',
     );
   }
 
@@ -178,13 +184,13 @@ class _PlanOverviewTab extends ConsumerWidget {
         title: const Text('归档计划'),
         content: const Text('归档后将从活跃列表移除，可在历史计划中恢复。'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('确认归档'),
+            label: '确认归档',
           ),
         ],
       ),
@@ -195,9 +201,7 @@ class _PlanOverviewTab extends ConsumerWidget {
     await ref.read(planListProvider.notifier).archivePlan(plan.id);
     ref.invalidate(planDetailProvider(plan.id));
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('计划已归档')),
-      );
+      AppFeedback.success(context, '计划已归档');
     }
   }
 }
@@ -214,7 +218,8 @@ class _PlanProgressTab extends StatelessWidget {
       return const Center(child: Text('暂无可视化数据'));
     }
 
-    final completed = tasks.where((t) => t.status == TaskStatus.completed).length;
+    final completed =
+        tasks.where((t) => t.status == TaskStatus.completed).length;
     final total = tasks.length;
     final completionRate = total > 0 ? completed / total : 0.0;
 
@@ -225,176 +230,207 @@ class _PlanProgressTab extends StatelessWidget {
 
     final dayBuckets = _buildDailyCompletionBuckets(tasks);
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.lg),
-      children: [
-        const _SectionHeader(title: '完成率'),
-        const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: PieChart(
-            PieChartData(
-              centerSpaceRadius: 60,
-              sectionsSpace: 2,
-              sections: [
-                PieChartSectionData(
-                  value: completed.toDouble(),
-                  title: '${(completionRate * 100).toStringAsFixed(0)}%',
-                  color: DS.primaryBase,
-                  radius: 55,
-                  titleStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                PieChartSectionData(
-                  value: (total - completed).toDouble(),
-                  title: '',
-                  color: DS.neutral300,
-                  radius: 45,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: DS.spacing24),
-        const _SectionHeader(title: '任务类型分布'),
-        const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: (byType.values.isEmpty ? 1 : byType.values.reduce((a, b) => a > b ? a : b)) + 1,
-              titlesData: FlTitlesData(
-                topTitles: const AxisTitles(),
-                rightTitles: const AxisTitles(),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: TextStyle(color: DS.neutral500, fontSize: 10),
-                    ),
-                  ),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      final label = _taskTypeLabel(_taskTypes[value.toInt()]);
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          label,
-                          style: TextStyle(color: DS.neutral500, fontSize: 10),
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
+          const _SectionHeader(title: '完成率'),
+          const SizedBox(height: DS.spacing12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chartHeight = context.isMobile ? 220.0 : 280.0;
+              return SizedBox(
+                height: chartHeight,
+                child: PieChart(
+                  PieChartData(
+                    centerSpaceRadius: 60,
+                    sectionsSpace: 2,
+                    sections: [
+                      PieChartSectionData(
+                        value: completed.toDouble(),
+                        title: '${(completionRate * 100).toStringAsFixed(0)}%',
+                        color: DS.primaryBase,
+                        radius: 55,
+                        titleStyle: TextStyle(
+                          color: DS.textOnPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              gridData: FlGridData(
-                horizontalInterval: 1,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: DS.neutral200,
-                  strokeWidth: 1,
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              barGroups: List.generate(
-                _taskTypes.length,
-                (index) {
-                  final type = _taskTypes[index];
-                  final count = byType[type] ?? 0;
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: count.toDouble(),
-                        color: DS.brandPrimary,
-                        borderRadius: BorderRadius.circular(6),
-                        width: 16,
+                      ),
+                      PieChartSectionData(
+                        value: (total - completed).toDouble(),
+                        title: '',
+                        color: DS.neutral300,
+                        radius: 45,
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
-        const SizedBox(height: DS.spacing24),
-        const _SectionHeader(title: '每日完成趋势'),
-        const SizedBox(height: DS.spacing12),
-        SizedBox(
-          height: 220,
-          child: LineChart(
-            LineChartData(
-              titlesData: FlTitlesData(
-                topTitles: const AxisTitles(),
-                rightTitles: const AxisTitles(),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: TextStyle(color: DS.neutral500, fontSize: 10),
+          const SizedBox(height: DS.spacing24),
+          const _SectionHeader(title: '任务类型分布'),
+          const SizedBox(height: DS.spacing12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chartHeight = context.isMobile ? 220.0 : 280.0;
+              return SizedBox(
+                height: chartHeight,
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: (byType.values.isEmpty
+                            ? 1
+                            : byType.values.reduce((a, b) => a > b ? a : b)) +
+                        1,
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          interval: 1,
+                          getTitlesWidget: (value, meta) => Text(
+                            value.toInt().toString(),
+                            style:
+                                TextStyle(color: DS.neutral500, fontSize: 10),
+                          ),
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final label =
+                                _taskTypeLabel(_taskTypes[value.toInt()]);
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: DS.neutral500,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      horizontalInterval: 1,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: DS.neutral200,
+                        strokeWidth: 1,
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    barGroups: List.generate(
+                      _taskTypes.length,
+                      (index) {
+                        final type = _taskTypes[index];
+                        final count = byType[type] ?? 0;
+                        return BarChartGroupData(
+                          x: index,
+                          barRods: [
+                            BarChartRodData(
+                              toY: count.toDouble(),
+                              color: DS.brandPrimaryConst,
+                              borderRadius: BorderRadius.circular(6),
+                              width: 16,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index < 0 || index >= dayBuckets.length) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          dayBuckets[index].label,
-                          style: TextStyle(color: DS.neutral500, fontSize: 10),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              gridData: FlGridData(
-                horizontalInterval: 1,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: DS.neutral200,
-                  strokeWidth: 1,
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    for (var i = 0; i < dayBuckets.length; i++)
-                      FlSpot(i.toDouble(), dayBuckets[i].count.toDouble()),
-                  ],
-                  isCurved: true,
-                  color: DS.secondaryBase,
-                  barWidth: 3,
-                  dotData: const FlDotData(),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: DS.secondaryBase.withValues(alpha: 0.2),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
-        ),
-      ],
+          const SizedBox(height: DS.spacing24),
+          const _SectionHeader(title: '每日完成趋势'),
+          const SizedBox(height: DS.spacing12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chartHeight = context.isMobile ? 220.0 : 280.0;
+              return SizedBox(
+                height: chartHeight,
+                child: LineChart(
+                  LineChartData(
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          interval: 1,
+                          getTitlesWidget: (value, meta) => Text(
+                            value.toInt().toString(),
+                            style:
+                                TextStyle(color: DS.neutral500, fontSize: 10),
+                          ),
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 1,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index < 0 || index >= dayBuckets.length) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                dayBuckets[index].label,
+                                style: TextStyle(
+                                  color: DS.neutral500,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      horizontalInterval: 1,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: DS.neutral200,
+                        strokeWidth: 1,
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: [
+                          for (var i = 0; i < dayBuckets.length; i++)
+                            FlSpot(
+                              i.toDouble(),
+                              dayBuckets[i].count.toDouble(),
+                            ),
+                        ],
+                        isCurved: true,
+                        color: DS.secondaryBase,
+                        barWidth: 3,
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: DS.secondaryBase.withValues(alpha: 0.2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -447,6 +483,8 @@ class _PlanProgressTab extends StatelessWidget {
         return '社交';
       case TaskType.planning:
         return '规划';
+      case TaskType.ocr:
+        return 'OCR';
     }
   }
 }
@@ -484,5 +522,5 @@ class _DayBucket {
 
   final String label;
   final DateTime date;
-  int count;
+  int count = 0;
 }

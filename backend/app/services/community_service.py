@@ -2,28 +2,36 @@
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
-from typing import Optional, List, Tuple, Dict, Any
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc
 from sqlalchemy.orm import selectinload
 
 from app.core.websocket import manager
-from app.models.user import User
 from app.models.community import (
-    Friendship, FriendshipStatus,
-    Group, GroupType, GroupRole,
-    GroupMember, GroupMessage, MessageType,
-    GroupTask, GroupTaskClaim
+    Friendship,
+    FriendshipStatus,
+    Group,
+    GroupMember,
+    GroupMessage,
+    GroupRole,
+    GroupTask,
+    GroupTaskClaim,
+    MessageType,
 )
-from app.schemas.community import (
-    GroupCreate, GroupUpdate, GroupTaskCreate,
-    MessageSend, MessageEdit, CheckinRequest
-)
+from app.models.user import User
+from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
 
-def _is_visible_to(content_data: Optional[dict], user_id: UUID) -> bool:
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime compatible with existing DB fields."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _is_visible_to(content_data: dict | None, user_id: UUID) -> bool:
     if not content_data:
         return True
     visibility = content_data.get("visibility")
@@ -45,7 +53,7 @@ class FriendshipService:
         db: AsyncSession,
         user_id: UUID,
         target_id: UUID,
-        match_reason: Optional[dict] = None
+        match_reason: dict | None = None
     ) -> Friendship:
         """
         发送好友请求
@@ -69,7 +77,7 @@ class FriendshipService:
             )
         )
         existing_reverse = reverse_pending.scalar_one_or_none()
-        
+
         if existing_reverse:
             # 自动接受
             existing_reverse.status = FriendshipStatus.ACCEPTED
@@ -115,7 +123,7 @@ class FriendshipService:
         user_id: UUID,
         friendship_id: UUID,
         accept: bool
-    ) -> Optional[Friendship]:
+    ) -> Friendship | None:
         """
         响应好友请求
 
@@ -149,7 +157,7 @@ class FriendshipService:
         status: FriendshipStatus = FriendshipStatus.ACCEPTED,
         limit: int = 50,
         offset: int = 0
-    ) -> List[Tuple[Friendship, User]]:
+    ) -> list[tuple[Friendship, User]]:
         """获取好友列表（分页）"""
         query = select(Friendship, User).join(
             User, or_(
@@ -161,7 +169,7 @@ class FriendshipService:
             Friendship.status == status,
             Friendship.not_deleted_filter()
         ).limit(limit).offset(offset)
-        
+
         result = await db.execute(query)
         return result.all()
 
@@ -169,7 +177,7 @@ class FriendshipService:
     async def get_pending_requests(
         db: AsyncSession,
         user_id: UUID
-    ) -> List[Friendship]:
+    ) -> list[Friendship]:
         """获取待处理的好友请求（收到的）"""
         result = await db.execute(
             select(Friendship).where(
@@ -219,8 +227,8 @@ class GroupService:
             group_id=group.id,
             user_id=creator_id,
             role=GroupRole.OWNER,
-            joined_at=datetime.utcnow(),
-            last_active_at=datetime.utcnow()
+            joined_at=_utcnow(),
+            last_active_at=_utcnow()
         )
         db.add(owner)
 
@@ -232,8 +240,8 @@ class GroupService:
     async def get_group(
         db: AsyncSession,
         group_id: UUID,
-        user_id: Optional[UUID] = None
-    ) -> Optional[Dict[str, Any]]:
+        user_id: UUID | None = None
+    ) -> dict[str, Any] | None:
         """
         获取群组详情
 
@@ -269,7 +277,7 @@ class GroupService:
         # 计算剩余天数
         days_remaining = None
         if group.deadline:
-            delta = group.deadline - datetime.utcnow()
+            delta = group.deadline - _utcnow()
             days_remaining = max(0, delta.days)
 
         return {
@@ -332,8 +340,8 @@ class GroupService:
             group_id=group_id,
             user_id=user_id,
             role=GroupRole.MEMBER,
-            joined_at=datetime.utcnow(),
-            last_active_at=datetime.utcnow()
+            joined_at=_utcnow(),
+            last_active_at=_utcnow()
         )
         db.add(member)
         await db.flush()
@@ -368,7 +376,7 @@ class GroupService:
     async def get_my_groups(
         db: AsyncSession,
         user_id: UUID
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取用户加入的所有群组"""
         # Optimized query with subquery for member counts
         member_count_subquery = (
@@ -396,7 +404,7 @@ class GroupService:
         for group, membership, count in result.all():
             days_remaining = None
             if group.deadline:
-                delta = group.deadline - datetime.utcnow()
+                delta = group.deadline - _utcnow()
                 days_remaining = max(0, delta.days)
 
             groups.append({
@@ -438,15 +446,15 @@ class GroupService:
 
         # 2. 软删除群组
         await group.delete(db, soft=True)
-        
+
         # 3. 软删除所有成员关系
         from sqlalchemy import update
         await db.execute(
             update(GroupMember)
             .where(GroupMember.group_id == group_id)
-            .values(is_deleted=True, deleted_at=datetime.utcnow())
+            .values(is_deleted=True, deleted_at=_utcnow())
         )
-        
+
         return True
 
     @staticmethod
@@ -488,12 +496,12 @@ class GroupService:
         # 3. 执行转让
         owner_member.role = GroupRole.ADMIN # 原群主降级为管理员
         new_owner_member.role = GroupRole.OWNER
-        
+
         # 4. 发送系统消息
         await GroupMessageService.send_system_message(
-            db, group_id, f"群主已转让给新成员"
+            db, group_id, "群主已转让给新成员"
         )
-        
+
         return True
 
 
@@ -521,7 +529,7 @@ class GroupMessageService:
             # 尝试踢出已断开连接但仍在 active_connections 中的用户（容错）
             await manager.kick_user_from_group(str(group_id), str(sender_id), "Not a member")
             raise ValueError("不是群组成员")
-            
+
         if member.is_muted:
             # 如果被禁言，可以在此处显式断开其群组 WS
             # await manager.kick_user_from_group(str(group_id), str(sender_id), "Muted")
@@ -554,16 +562,16 @@ class GroupMessageService:
         db.add(message)
 
         # 更新最后活跃时间
-        member.last_active_at = datetime.utcnow()
+        member.last_active_at = _utcnow()
 
         await db.flush()
-        
+
         # Re-fetch with relationships to ensure reply_to is loaded
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
             selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
         ).where(GroupMessage.id == message.id)
-        
+
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -596,7 +604,7 @@ class GroupMessageService:
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
 
-        msg.edited_at = datetime.utcnow()
+        msg.edited_at = _utcnow()
         db.add(msg)
         await db.flush()
 
@@ -635,14 +643,14 @@ class GroupMessageService:
         if not is_sender and not is_admin:
             raise ValueError("无权限撤回该消息")
 
-        if is_sender and datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+        if is_sender and (_utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         if msg.is_revoked:
             return msg
 
         msg.is_revoked = True
-        msg.revoked_at = datetime.utcnow()
+        msg.revoked_at = _utcnow()
         msg.content = None
         msg.content_data = None
         msg.reactions = None
@@ -712,7 +720,7 @@ class GroupMessageService:
         user_id: UUID,
         thread_root_id: UUID,
         limit: int = 100
-    ) -> List[GroupMessage]:
+    ) -> list[GroupMessage]:
         """获取线程消息"""
         membership_result = await db.execute(
             select(GroupMember).where(
@@ -755,7 +763,7 @@ class GroupMessageService:
         user_id: UUID,
         keyword: str,
         limit: int = 50
-    ) -> List[GroupMessage]:
+    ) -> list[GroupMessage]:
         """搜索群消息"""
         membership_result = await db.execute(
             select(GroupMember).where(
@@ -784,9 +792,9 @@ class GroupMessageService:
         db: AsyncSession,
         group_id: UUID,
         user_id: UUID, # Added user_id for permission check
-        before_id: Optional[UUID] = None,
+        before_id: UUID | None = None,
         limit: int = 50
-    ) -> List[GroupMessage]:
+    ) -> list[GroupMessage]:
         """获取群消息（分页）"""
         # Check membership first
         membership_result = await db.execute(
@@ -823,7 +831,7 @@ class GroupMessageService:
         db: AsyncSession,
         group_id: UUID,
         content: str,
-        content_data: Optional[dict] = None
+        content_data: dict | None = None
     ) -> GroupMessage:
         """发送系统消息"""
         message = GroupMessage(
@@ -847,7 +855,7 @@ class CheckinService:
         db: AsyncSession,
         user_id: UUID,
         data: CheckinRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         群组打卡
 
@@ -871,7 +879,7 @@ class CheckinService:
             raise ValueError("不是群组成员")
 
         # 检查今日是否已打卡
-        today = datetime.utcnow().date()
+        today = _utcnow().date()
         if member.last_checkin_date and member.last_checkin_date.date() == today:
             raise ValueError("今日已打卡")
 
@@ -882,7 +890,7 @@ class CheckinService:
         else:
             member.checkin_streak = 1
 
-        member.last_checkin_date = datetime.utcnow()
+        member.last_checkin_date = _utcnow()
 
         # 计算火苗奖励
         base_flame = 10
@@ -992,7 +1000,7 @@ class GroupTaskService:
             .with_for_update()
         )
         group_task = result.scalar_one_or_none()
-        
+
         if not group_task:
             raise ValueError("任务不存在")
 
@@ -1008,13 +1016,13 @@ class GroupTaskService:
             raise ValueError("已认领此任务")
 
         # 创建个人任务副本
-        from app.services.task_service import TaskService
-        from app.schemas.task import TaskCreate
         from app.models.task import TaskType as PersonalTaskType
-        
+        from app.schemas.task import TaskCreate
+        from app.services.task_service import TaskService
+
         # 转换日期 (DateTime -> Date)
         personal_due_date = group_task.due_date.date() if group_task.due_date else None
-        
+
         personal_task_in = TaskCreate(
             title=f"[{group_task.group.name}] {group_task.title}" if group_task.group else f"[群任务] {group_task.title}",
             type=PersonalTaskType.LEARNING, # 默认设为学习类
@@ -1024,7 +1032,7 @@ class GroupTaskService:
             due_date=personal_due_date,
             priority=2 # 中高优先级
         )
-        
+
         # 注意：这里调用 TaskService.create，它内部会执行 commit
         # 但我们在事务中，最好让外部统一 commit。
         # 修改：TaskService.create 目前内部有 commit，这在复合操作中不太理想。
@@ -1036,7 +1044,7 @@ class GroupTaskService:
             group_task_id=task_id,
             user_id=user_id,
             personal_task_id=personal_task.id,
-            claimed_at=datetime.utcnow()
+            claimed_at=_utcnow()
         )
         db.add(claim)
 
@@ -1051,14 +1059,14 @@ class GroupTaskService:
     async def complete_task(
         db: AsyncSession,
         claim_id: UUID
-    ) -> Optional[GroupTaskClaim]:
+    ) -> GroupTaskClaim | None:
         """完成群任务（由个人任务完成时触发）"""
         claim = await GroupTaskClaim.get_by_id(db, claim_id)
         if not claim or claim.is_completed:
             return claim
 
         claim.is_completed = True
-        claim.completed_at = datetime.utcnow()
+        claim.completed_at = _utcnow()
 
         # 更新群任务完成计数
         group_task = await GroupTask.get_by_id(db, claim.group_task_id)
@@ -1087,21 +1095,37 @@ class GroupTaskService:
     async def get_group_tasks(
         db: AsyncSession,
         group_id: UUID,
-        user_id: Optional[UUID] = None
-    ) -> List[Dict[str, Any]]:
+        user_id: UUID | None = None
+    ) -> list[dict[str, Any]]:
         """获取群任务列表"""
         result = await db.execute(
             select(GroupTask).where(
                 GroupTask.group_id == group_id,
                 GroupTask.not_deleted_filter()
             ).options(
-                selectinload(GroupTask.creator),
-                selectinload(GroupTask.claims)
+                selectinload(GroupTask.creator)
+                # 注意：不使用 selectinload(GroupTask.claims)
+                # 因为模型中配置了 lazy="dynamic"，与 selectinload 不兼容
+                # 改为在循环中按需查询或使用统计字段
             ).order_by(desc(GroupTask.created_at))
         )
 
+        task_rows = result.scalars().all()
+        user_claims_by_task: dict[UUID, GroupTaskClaim] = {}
+        if user_id and task_rows:
+            claim_result = await db.execute(
+                select(GroupTaskClaim).where(
+                    GroupTaskClaim.group_task_id.in_([task.id for task in task_rows]),
+                    GroupTaskClaim.user_id == user_id,
+                    GroupTaskClaim.not_deleted_filter()
+                )
+            )
+            user_claims_by_task = {
+                claim.group_task_id: claim for claim in claim_result.scalars().all()
+            }
+
         tasks = []
-        for task in result.scalars():
+        for task in task_rows:
             completion_rate = (
                 task.total_completions / task.total_claims
                 if task.total_claims > 0 else 0
@@ -1126,11 +1150,10 @@ class GroupTaskService:
             }
 
             if user_id:
-                for claim in task.claims:
-                    if claim.user_id == user_id and not claim.is_deleted:
-                        task_dict['is_claimed_by_me'] = True
-                        task_dict['my_completion_status'] = claim.is_completed
-                        break
+                user_claim = user_claims_by_task.get(task.id)
+                if user_claim:
+                    task_dict['is_claimed_by_me'] = True
+                    task_dict['my_completion_status'] = user_claim.is_completed
 
             tasks.append(task_dict)
 
@@ -1147,8 +1170,8 @@ class PrivateMessageService:
         data: Any # PrivateMessageSend
     ) -> Any: # PrivateMessage
         """发送私聊消息"""
-        from app.models.community import PrivateMessage, Friendship, FriendshipStatus
-        
+        from app.models.community import Friendship, FriendshipStatus, PrivateMessage
+
         # 检查是否被拉黑
         u1, u2 = (sender_id, data.target_user_id) if str(sender_id) < str(data.target_user_id) else (data.target_user_id, sender_id)
         rel_result = await db.execute(
@@ -1188,18 +1211,18 @@ class PrivateMessageService:
             reply_to_id=data.reply_to_id,
             thread_root_id=data.thread_root_id,
             mention_user_ids=mention_user_ids,
-            created_at=datetime.utcnow()
+            created_at=_utcnow()
         )
         db.add(message)
         await db.flush()
-        
+
         # Re-fetch with relationships
         stmt = select(PrivateMessage).options(
             selectinload(PrivateMessage.sender),
             selectinload(PrivateMessage.receiver),
             selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
         ).where(PrivateMessage.id == message.id)
-        
+
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -1233,7 +1256,7 @@ class PrivateMessageService:
         if msg.message_type == MessageType.TEXT and not msg.content:
             raise ValueError("文本消息必须有内容")
 
-        msg.edited_at = datetime.utcnow()
+        msg.edited_at = _utcnow()
         db.add(msg)
         await db.flush()
 
@@ -1262,11 +1285,11 @@ class PrivateMessageService:
             raise ValueError("无权限撤回该消息")
         if msg.is_revoked:
             return msg
-        if datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+        if (_utcnow() - msg.created_at).total_seconds() > 86400:
             raise ValueError("超过撤回时限")
 
         msg.is_revoked = True
-        msg.revoked_at = datetime.utcnow()
+        msg.revoked_at = _utcnow()
         msg.content = None
         msg.content_data = None
         msg.reactions = None
@@ -1331,7 +1354,7 @@ class PrivateMessageService:
         friend_id: UUID,
         keyword: str,
         limit: int = 50
-    ) -> List[Any]:
+    ) -> list[Any]:
         """搜索私聊消息"""
         from app.models.community import PrivateMessage
 
@@ -1356,12 +1379,12 @@ class PrivateMessageService:
         db: AsyncSession,
         user_id: UUID,
         friend_id: UUID,
-        before_id: Optional[UUID] = None,
+        before_id: UUID | None = None,
         limit: int = 50
-    ) -> List[Any]: # List[PrivateMessage]
+    ) -> list[Any]: # List[PrivateMessage]
         """获取与某好友的私聊记录"""
         from app.models.community import PrivateMessage
-        
+
         query = select(PrivateMessage).where(
             or_(
                 and_(PrivateMessage.sender_id == user_id, PrivateMessage.receiver_id == friend_id),
@@ -1391,17 +1414,20 @@ class PrivateMessageService:
         sender_id: UUID
     ) -> int:
         """标记来自某人的消息为已读"""
+        from sqlalchemy import and_, update
+
         from app.models.community import PrivateMessage
-        from sqlalchemy import update
-        
+
         stmt = update(PrivateMessage).where(
-            PrivateMessage.receiver_id == user_id,
-            PrivateMessage.sender_id == sender_id,
-            PrivateMessage.is_read == False
+            and_(
+                PrivateMessage.receiver_id == user_id,
+                PrivateMessage.sender_id == sender_id,
+                PrivateMessage.is_read == False
+            )
         ).values(
             is_read=True,
-            read_at=datetime.utcnow()
+            read_at=_utcnow()
         )
-        
+
         result = await db.execute(stmt)
         return result.rowcount

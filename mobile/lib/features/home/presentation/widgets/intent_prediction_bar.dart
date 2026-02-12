@@ -14,6 +14,7 @@ class IntentPredictionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brightness = Theme.of(context).brightness;
     final predictionState = ref.watch(intentPredictionProvider);
     final predictions = predictionState.isTyping
         ? predictionState.typingPredictions
@@ -24,6 +25,7 @@ class IntentPredictionBar extends ConsumerWidget {
     }
 
     return MaterialStyler(
+      key: ValueKey('intent_prediction_bar_$brightness'),
       material: AppMaterials.neoGlass.copyWith(
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0.8),
       ),
@@ -41,7 +43,10 @@ class IntentPredictionBar extends ConsumerWidget {
               const SizedBox(width: DS.spacing8),
           itemBuilder: (context, index) {
             final prediction = predictions[index];
-            return _PredictionChip(prediction: prediction);
+            return _PredictionChip(
+              key: ValueKey('prediction_${index}_$brightness'),
+              prediction: prediction,
+            );
           },
         ),
       ),
@@ -50,7 +55,9 @@ class IntentPredictionBar extends ConsumerWidget {
 }
 
 class _PredictionChip extends StatelessWidget {
-  const _PredictionChip({required this.prediction});
+  const _PredictionChip({
+    required this.prediction, super.key,
+  });
 
   final PredictedAction prediction;
 

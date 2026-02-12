@@ -55,7 +55,7 @@ class FocusStatsChart extends StatelessWidget {
   }
 }
 
-enum _ChartType { bar, line }
+enum _ChartType { bar }
 
 class _BarChart extends StatelessWidget {
   const _BarChart({
@@ -189,7 +189,7 @@ class _LineChart extends StatelessWidget {
           LineChartBarData(
             spots: dataPoints,
             isCurved: true,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             barWidth: 2.5,
             isStrokeCapRound: true,
             dotData: FlDotData(

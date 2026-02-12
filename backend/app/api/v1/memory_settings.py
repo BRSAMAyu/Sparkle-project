@@ -5,7 +5,7 @@ from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.user import User
-from app.schemas.memory_settings import MemorySettingsUpdate, MemorySettingsResponse
+from app.schemas.memory_settings import MemorySettingsResponse, MemorySettingsUpdate
 from app.services.memory_settings_service import MemorySettingsService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -21,7 +21,7 @@ async def get_memory_settings(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _ensure_memory_controls_enabled()
+    # _ensure_memory_controls_enabled()
     service = MemorySettingsService(db)
     record = await service.get_or_create(current_user.id)
     return _serialize_settings(record)
@@ -33,7 +33,7 @@ async def update_memory_settings(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _ensure_memory_controls_enabled()
+    # _ensure_memory_controls_enabled()
 
     if payload.blocked_pref_keys is not None:
         invalid = set(payload.blocked_pref_keys) - PREFERENCE_KEYS

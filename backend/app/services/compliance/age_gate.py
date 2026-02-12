@@ -1,15 +1,19 @@
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.models.user import User
 
 
 @dataclass
 class AgeGateDecision:
-    is_minor: Optional[bool]
+    is_minor: bool | None
     should_collect_sensitive: bool
-    source: Optional[str]
+    source: str | None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AgeGateService:
@@ -18,7 +22,7 @@ class AgeGateService:
     """
 
     @staticmethod
-    def evaluate(user: User, payload: Dict[str, Any]) -> AgeGateDecision:
+    def evaluate(user: User, payload: dict[str, Any]) -> AgeGateDecision:
         declared_age = payload.get("declared_age")
         parent_mode = payload.get("parental_control_enabled")
         registration_verified = payload.get("registration_age_verified")
@@ -51,4 +55,4 @@ class AgeGateService:
         user.is_minor = decision.is_minor
         user.age_verified = True
         user.age_verification_source = decision.source
-        user.age_verified_at = datetime.utcnow()
+        user.age_verified_at = _utcnow()

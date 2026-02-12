@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 
 /// Sparkle 动效设计系统
 ///
@@ -16,29 +17,29 @@ class SparkleMotion {
   static const Duration instant = Duration.zero;
 
   /// 快速交互反馈 (150ms) - 按钮点击、开关、复选框
-  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration fast = AnimationSystem.quick;
 
   /// 标准过渡 (250ms) - 列表项入场、小组件展开
-  static const Duration normal = Duration(milliseconds: 250);
+  static const Duration normal = AnimationSystem.normal;
 
-  /// 复杂动画 (350ms) - 页面转场、模态框弹出
-  static const Duration slow = Duration(milliseconds: 350);
+  /// 复杂动画 (400ms) - 页面转场、模态框弹出
+  static const Duration slow = AnimationSystem.slow;
 
-  /// 入场/退场动画 (500ms) - 启动画面、大面积内容变化
-  static const Duration slower = Duration(milliseconds: 500);
+  /// 入场/退场动画 (600ms) - 启动画面、大面积内容变化
+  static const Duration slower = AnimationSystem.deliberate;
 
   // ---------------------------------------------------------------------------
   // 2. 标准曲线 (Curves)
   // ---------------------------------------------------------------------------
 
   /// 标准曲线 (EaseInOut) - 最通用的曲线，用于大多数UI变化
-  static const Curve standard = Curves.easeInOut;
+  static const Curve standard = AnimationSystem.smooth;
 
   /// 入场曲线 (EaseOut) - 元素进入屏幕，快速开始慢速结束
-  static const Curve enter = Curves.easeOut;
+  static const Curve enter = AnimationSystem.easeOut;
 
   /// 退场曲线 (EaseIn) - 元素离开屏幕，慢速开始快速结束
-  static const Curve exit = Curves.easeIn;
+  static const Curve exit = AnimationSystem.easeIn;
 
   /// 弹性效果 (ElasticOut) - 用于强调性动画
   static const Curve bounce = Curves.elasticOut;

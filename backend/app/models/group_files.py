@@ -2,10 +2,10 @@
 Group file sharing models
 群组文件共享模型
 """
-from sqlalchemy import Column, ForeignKey, Enum, String, JSON, UniqueConstraint, Index
+from sqlalchemy import JSON, Column, Enum, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 from app.models.community import GroupRole
 
 

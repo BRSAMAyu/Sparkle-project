@@ -2,15 +2,14 @@
 社群功能 Pydantic Schemas
 Community Schemas - 好友、群组、消息、任务相关的请求/响应模型
 """
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from typing import Any, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import BaseSchema
-
 
 # ============ 枚举类型 ============
 
@@ -62,8 +61,8 @@ class UserBrief(BaseModel):
     """用户简要信息（用于社群场景）"""
     id: UUID = Field(description="用户ID")
     username: str = Field(description="用户名")
-    nickname: Optional[str] = Field(default=None, description="昵称")
-    avatar_url: Optional[str] = Field(default=None, description="头像URL")
+    nickname: str | None = Field(default=None, description="昵称")
+    avatar_url: str | None = Field(default=None, description="头像URL")
     flame_level: int = Field(default=1, description="火苗等级")
     flame_brightness: float = Field(default=0.5, description="火苗亮度")
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="在线状态")
@@ -83,7 +82,7 @@ class UserStatusUpdate(BaseModel):
 class FriendRequest(BaseModel):
     """发起好友请求"""
     target_user_id: UUID = Field(description="目标用户ID")
-    message: Optional[str] = Field(default=None, max_length=200, description="请求留言")
+    message: str | None = Field(default=None, max_length=200, description="请求留言")
 
 
 class FriendResponse(BaseModel):
@@ -96,7 +95,7 @@ class FriendshipInfo(BaseSchema):
     """好友关系信息"""
     friend: UserBrief = Field(description="好友信息")
     status: FriendshipStatusEnum = Field(description="关系状态")
-    match_reason: Optional[Dict[str, Any]] = Field(default=None, description="匹配原因")
+    match_reason: dict[str, Any] | None = Field(default=None, description="匹配原因")
     initiated_by_me: bool = Field(default=False, description="是否由我发起")
 
 
@@ -104,7 +103,7 @@ class FriendRecommendation(BaseModel):
     """好友推荐"""
     user: UserBrief = Field(description="推荐用户")
     match_score: float = Field(ge=0, le=1, description="匹配得分")
-    match_reasons: List[str] = Field(description="匹配原因列表")
+    match_reasons: list[str] = Field(description="匹配原因列表")
 
     class Config:
         from_attributes = True
@@ -115,13 +114,13 @@ class FriendRecommendation(BaseModel):
 class GroupCreate(BaseModel):
     """创建群组"""
     name: str = Field(min_length=2, max_length=100, description="群组名称")
-    description: Optional[str] = Field(default=None, max_length=500, description="群组描述")
+    description: str | None = Field(default=None, max_length=500, description="群组描述")
     type: GroupTypeEnum = Field(description="群组类型")
-    focus_tags: List[str] = Field(default_factory=list, max_length=10, description="关注标签")
+    focus_tags: list[str] = Field(default_factory=list, max_length=10, description="关注标签")
 
     # 冲刺群专用
-    deadline: Optional[datetime] = Field(default=None, description="冲刺截止日期")
-    sprint_goal: Optional[str] = Field(default=None, max_length=500, description="冲刺目标")
+    deadline: datetime | None = Field(default=None, description="冲刺截止日期")
+    sprint_goal: str | None = Field(default=None, max_length=500, description="冲刺目标")
 
     # 设置
     max_members: int = Field(default=50, ge=2, le=200, description="最大成员数")
@@ -140,27 +139,27 @@ class GroupCreate(BaseModel):
 
 class GroupUpdate(BaseModel):
     """更新群组信息"""
-    name: Optional[str] = Field(default=None, min_length=2, max_length=100, description="群组名称")
-    description: Optional[str] = Field(default=None, max_length=500, description="群组描述")
-    focus_tags: Optional[List[str]] = Field(default=None, max_length=10, description="关注标签")
-    deadline: Optional[datetime] = Field(default=None, description="冲刺截止日期")
-    sprint_goal: Optional[str] = Field(default=None, max_length=500, description="冲刺目标")
-    is_public: Optional[bool] = Field(default=None, description="是否公开")
-    join_requires_approval: Optional[bool] = Field(default=None, description="加入需要审批")
+    name: str | None = Field(default=None, min_length=2, max_length=100, description="群组名称")
+    description: str | None = Field(default=None, max_length=500, description="群组描述")
+    focus_tags: list[str] | None = Field(default=None, max_length=10, description="关注标签")
+    deadline: datetime | None = Field(default=None, description="冲刺截止日期")
+    sprint_goal: str | None = Field(default=None, max_length=500, description="冲刺目标")
+    is_public: bool | None = Field(default=None, description="是否公开")
+    join_requires_approval: bool | None = Field(default=None, description="加入需要审批")
 
 
 class GroupInfo(BaseSchema):
     """群组详细信息"""
     name: str = Field(description="群组名称")
-    description: Optional[str] = Field(description="群组描述")
-    avatar_url: Optional[str] = Field(description="群组头像")
+    description: str | None = Field(description="群组描述")
+    avatar_url: str | None = Field(description="群组头像")
     type: GroupTypeEnum = Field(description="群组类型")
-    focus_tags: List[str] = Field(description="关注标签")
+    focus_tags: list[str] = Field(description="关注标签")
 
     # 冲刺群信息
-    deadline: Optional[datetime] = Field(description="冲刺截止日期")
-    sprint_goal: Optional[str] = Field(description="冲刺目标")
-    days_remaining: Optional[int] = Field(default=None, description="距离截止日期天数")
+    deadline: datetime | None = Field(description="冲刺截止日期")
+    sprint_goal: str | None = Field(description="冲刺目标")
+    days_remaining: int | None = Field(default=None, description="距离截止日期天数")
 
     # 统计
     member_count: int = Field(description="成员数量")
@@ -174,7 +173,7 @@ class GroupInfo(BaseSchema):
     join_requires_approval: bool = Field(description="加入需要审批")
 
     # 当前用户在群组中的角色（如果是成员）
-    my_role: Optional[GroupRoleEnum] = Field(default=None, description="我的角色")
+    my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
 
 class GroupListItem(BaseModel):
@@ -184,10 +183,10 @@ class GroupListItem(BaseModel):
     type: GroupTypeEnum = Field(description="群组类型")
     member_count: int = Field(description="成员数量")
     total_flame_power: int = Field(description="火苗总能量")
-    deadline: Optional[datetime] = Field(description="冲刺截止日期")
-    days_remaining: Optional[int] = Field(description="剩余天数")
-    focus_tags: List[str] = Field(description="关注标签")
-    my_role: Optional[GroupRoleEnum] = Field(default=None, description="我的角色")
+    deadline: datetime | None = Field(description="冲刺截止日期")
+    days_remaining: int | None = Field(description="剩余天数")
+    focus_tags: list[str] = Field(description="关注标签")
+    my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
     class Config:
         from_attributes = True
@@ -220,12 +219,12 @@ class MemberRoleUpdate(BaseModel):
 class MessageSend(BaseModel):
     """发送消息"""
     message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT, description="消息类型")
-    content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
-    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
-    reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
-    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
-    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
-    nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
+    content: str | None = Field(default=None, max_length=2000, description="消息内容")
+    content_data: dict[str, Any] | None = Field(default=None, description="结构化内容")
+    reply_to_id: UUID | None = Field(default=None, description="回复的消息ID")
+    thread_root_id: UUID | None = Field(default=None, description="线程根消息ID")
+    mention_user_ids: list[UUID] | None = Field(default=None, description="提及用户ID列表")
+    nonce: str | None = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
     @classmethod
@@ -239,33 +238,32 @@ class MessageSend(BaseModel):
     @classmethod
     def validate_content_data(cls, v, info):
         msg_type = info.data.get('message_type')
-        if msg_type == MessageTypeEnum.FILE_SHARE:
-            if not isinstance(v, dict) or not v.get('file_id'):
-                raise ValueError('文件消息必须包含 file_id')
+        if msg_type == MessageTypeEnum.FILE_SHARE and (not isinstance(v, dict) or not v.get('file_id')):
+            raise ValueError('文件消息必须包含 file_id')
         return v
 
 
 class MessageInfo(BaseSchema):
     """消息信息"""
-    sender: Optional[UserBrief] = Field(description="发送者（系统消息为空）")
+    sender: UserBrief | None = Field(description="发送者（系统消息为空）")
     message_type: MessageTypeEnum = Field(description="消息类型")
-    content: Optional[str] = Field(description="消息内容")
-    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
-    reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
-    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
-    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
-    reactions: Optional[Dict[str, List[UUID]]] = Field(default=None, description="表情反应")
+    content: str | None = Field(description="消息内容")
+    content_data: dict[str, Any] | None = Field(description="结构化内容")
+    reply_to_id: UUID | None = Field(description="回复的消息ID")
+    thread_root_id: UUID | None = Field(default=None, description="线程根消息ID")
+    mention_user_ids: list[UUID] | None = Field(default=None, description="提及用户ID列表")
+    reactions: dict[str, list[UUID]] | None = Field(default=None, description="表情反应")
     is_revoked: bool = Field(default=False, description="是否已撤回")
-    revoked_at: Optional[datetime] = Field(default=None, description="撤回时间")
-    edited_at: Optional[datetime] = Field(default=None, description="编辑时间")
+    revoked_at: datetime | None = Field(default=None, description="撤回时间")
+    edited_at: datetime | None = Field(default=None, description="编辑时间")
     quoted_message: Optional['MessageInfo'] = Field(default=None, description="引用消息详情")
 
 
 class MessageEdit(BaseModel):
     """编辑消息"""
-    content: Optional[str] = Field(default=None, max_length=2000, description="新内容")
-    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
-    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
+    content: str | None = Field(default=None, max_length=2000, description="新内容")
+    content_data: dict[str, Any] | None = Field(default=None, description="结构化内容")
+    mention_user_ids: list[UUID] | None = Field(default=None, description="提及用户ID列表")
 
 
 class MessageReactionUpdate(BaseModel):
@@ -285,9 +283,9 @@ class GroupFilePermissions(BaseModel):
 
 class GroupFileShareRequest(BaseModel):
     """分享文件到群组"""
-    category: Optional[str] = Field(default=None, max_length=64, description="分类")
-    tags: Optional[List[str]] = Field(default=None, description="标签")
-    permissions: Optional[GroupFilePermissions] = Field(default=None, description="权限设置")
+    category: str | None = Field(default=None, max_length=64, description="分类")
+    tags: list[str] | None = Field(default=None, description="标签")
+    permissions: GroupFilePermissions | None = Field(default=None, description="权限设置")
     send_message: bool = Field(default=True, description="是否发送文件分享消息")
 
 
@@ -300,9 +298,9 @@ class GroupFileInfo(BaseSchema):
     """群文件信息"""
     group_id: UUID = Field(description="群组ID")
     file_id: UUID = Field(description="文件ID")
-    shared_by: Optional[UserBrief] = Field(description="分享者")
-    category: Optional[str] = Field(description="分类")
-    tags: List[str] = Field(default_factory=list, description="标签")
+    shared_by: UserBrief | None = Field(description="分享者")
+    category: str | None = Field(description="分类")
+    tags: list[str] = Field(default_factory=list, description="标签")
     view_role: GroupRoleEnum = Field(description="查看权限")
     download_role: GroupRoleEnum = Field(description="下载权限")
     manage_role: GroupRoleEnum = Field(description="管理权限")
@@ -317,7 +315,7 @@ class GroupFileInfo(BaseSchema):
 
 class GroupFileCategoryStat(BaseModel):
     """群文件分类统计"""
-    category: Optional[str] = Field(description="分类")
+    category: str | None = Field(description="分类")
     count: int = Field(description="数量")
 
 
@@ -326,29 +324,29 @@ class GroupFileCategoryStat(BaseModel):
 class GroupTaskCreate(BaseModel):
     """创建群任务"""
     title: str = Field(min_length=2, max_length=200, description="任务标题")
-    description: Optional[str] = Field(default=None, max_length=1000, description="任务描述")
-    tags: List[str] = Field(default_factory=list, max_length=5, description="标签")
+    description: str | None = Field(default=None, max_length=1000, description="任务描述")
+    tags: list[str] = Field(default_factory=list, max_length=5, description="标签")
     estimated_minutes: int = Field(default=10, ge=1, le=480, description="预估时长（分钟）")
     difficulty: int = Field(default=1, ge=1, le=5, description="难度等级")
-    due_date: Optional[datetime] = Field(default=None, description="截止日期")
+    due_date: datetime | None = Field(default=None, description="截止日期")
 
 
 class GroupTaskInfo(BaseSchema):
     """群任务信息"""
     title: str = Field(description="任务标题")
-    description: Optional[str] = Field(description="任务描述")
-    tags: List[str] = Field(description="标签")
+    description: str | None = Field(description="任务描述")
+    tags: list[str] = Field(description="标签")
     estimated_minutes: int = Field(description="预估时长")
     difficulty: int = Field(description="难度等级")
     total_claims: int = Field(description="认领次数")
     total_completions: int = Field(description="完成次数")
     completion_rate: float = Field(description="完成率")
-    due_date: Optional[datetime] = Field(description="截止日期")
+    due_date: datetime | None = Field(description="截止日期")
     creator: UserBrief = Field(description="创建者")
 
     # 当前用户状态
     is_claimed_by_me: bool = Field(default=False, description="是否已认领")
-    my_completion_status: Optional[bool] = Field(default=None, description="我的完成状态")
+    my_completion_status: bool | None = Field(default=None, description="我的完成状态")
 
 
 # ============ 打卡 Schemas ============
@@ -356,7 +354,7 @@ class GroupTaskInfo(BaseSchema):
 class CheckinRequest(BaseModel):
     """打卡请求"""
     group_id: UUID = Field(description="群组ID")
-    message: Optional[str] = Field(default=None, max_length=200, description="打卡留言")
+    message: str | None = Field(default=None, max_length=200, description="打卡留言")
     today_duration_minutes: int = Field(ge=0, description="今日学习时长（分钟）")
 
 
@@ -385,7 +383,7 @@ class GroupFlameStatus(BaseModel):
     """群组火堆状态"""
     group_id: UUID = Field(description="群组ID")
     total_power: int = Field(description="总能量")
-    flames: List[FlameStatus] = Field(description="所有成员的火苗")
+    flames: list[FlameStatus] = Field(description="所有成员的火苗")
     bonfire_level: int = Field(ge=1, le=5, description="火堆等级")
 
 
@@ -403,10 +401,10 @@ class SharedResourceCreate(BaseModel):
     """创建共享资源请求"""
     resource_type: SharedResourceTypeEnum = Field(description="资源类型")
     resource_id: UUID = Field(description="资源ID")
-    target_group_id: Optional[UUID] = Field(default=None, description="分享给群组ID")
-    target_user_id: Optional[UUID] = Field(default=None, description="分享给好友ID")
+    target_group_id: UUID | None = Field(default=None, description="分享给群组ID")
+    target_user_id: UUID | None = Field(default=None, description="分享给好友ID")
     permission: str = Field(default="view", pattern="^(view|comment|edit)$", description="权限")
-    comment: Optional[str] = Field(default=None, max_length=500, description="分享留言")
+    comment: str | None = Field(default=None, max_length=500, description="分享留言")
 
 
 class SharedResourceInfo(BaseSchema):
@@ -414,28 +412,28 @@ class SharedResourceInfo(BaseSchema):
     resource_type: str = Field(description="资源类型") # Simplified for response
     # We return the embedded object if possible, or just IDs?
     # Ideally return a summary of the object.
-    # For simplicity, we return generic info and client fetches details if needed, 
+    # For simplicity, we return generic info and client fetches details if needed,
     # OR we embed a brief summary.
-    
+
     # IDs
-    plan_id: Optional[UUID] = None
-    task_id: Optional[UUID] = None
-    cognitive_fragment_id: Optional[UUID] = None
-    curiosity_capsule_id: Optional[UUID] = None
-    behavior_pattern_id: Optional[UUID] = None
-    
+    plan_id: UUID | None = None
+    task_id: UUID | None = None
+    cognitive_fragment_id: UUID | None = None
+    curiosity_capsule_id: UUID | None = None
+    behavior_pattern_id: UUID | None = None
+
     # Metadata
     permission: str
-    comment: Optional[str]
+    comment: str | None
     view_count: int
     save_count: int
-    
+
     sharer: UserBrief
-    
+
     # Embedded Briefs (Optional)
     # Ideally we'd have a 'resource_title' or 'resource_summary' field computed
-    resource_title: Optional[str] = None
-    resource_summary: Optional[str] = None
+    resource_title: str | None = None
+    resource_summary: str | None = None
 
     class Config:
         from_attributes = True
@@ -447,12 +445,12 @@ class PrivateMessageSend(BaseModel):
     """发送私聊消息"""
     target_user_id: UUID = Field(description="接收用户ID")
     message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT, description="消息类型")
-    content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
-    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
-    reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
-    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
-    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
-    nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
+    content: str | None = Field(default=None, max_length=2000, description="消息内容")
+    content_data: dict[str, Any] | None = Field(default=None, description="结构化内容")
+    reply_to_id: UUID | None = Field(default=None, description="回复的消息ID")
+    thread_root_id: UUID | None = Field(default=None, description="线程根消息ID")
+    mention_user_ids: list[UUID] | None = Field(default=None, description="提及用户ID列表")
+    nonce: str | None = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
     @classmethod
@@ -466,9 +464,8 @@ class PrivateMessageSend(BaseModel):
     @classmethod
     def validate_content_data(cls, v, info):
         msg_type = info.data.get('message_type')
-        if msg_type == MessageTypeEnum.FILE_SHARE:
-            if not isinstance(v, dict) or not v.get('file_id'):
-                raise ValueError('文件消息必须包含 file_id')
+        if msg_type == MessageTypeEnum.FILE_SHARE and (not isinstance(v, dict) or not v.get('file_id')):
+            raise ValueError('文件消息必须包含 file_id')
         return v
 
 
@@ -477,17 +474,17 @@ class PrivateMessageInfo(BaseSchema):
     sender: UserBrief = Field(description="发送者")
     receiver: UserBrief = Field(description="接收者")
     message_type: MessageTypeEnum = Field(description="消息类型")
-    content: Optional[str] = Field(description="消息内容")
-    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
-    reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
-    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
-    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
-    reactions: Optional[Dict[str, List[UUID]]] = Field(default=None, description="表情反应")
+    content: str | None = Field(description="消息内容")
+    content_data: dict[str, Any] | None = Field(description="结构化内容")
+    reply_to_id: UUID | None = Field(description="回复的消息ID")
+    thread_root_id: UUID | None = Field(default=None, description="线程根消息ID")
+    mention_user_ids: list[UUID] | None = Field(default=None, description="提及用户ID列表")
+    reactions: dict[str, list[UUID]] | None = Field(default=None, description="表情反应")
     is_revoked: bool = Field(default=False, description="是否已撤回")
-    revoked_at: Optional[datetime] = Field(default=None, description="撤回时间")
-    edited_at: Optional[datetime] = Field(default=None, description="编辑时间")
+    revoked_at: datetime | None = Field(default=None, description="撤回时间")
+    edited_at: datetime | None = Field(default=None, description="编辑时间")
     is_read: bool = Field(description="是否已读")
-    read_at: Optional[datetime] = Field(description="阅读时间")
+    read_at: datetime | None = Field(description="阅读时间")
     quoted_message: Optional['PrivateMessageInfo'] = Field(default=None, description="引用消息详情")
 
 # Handle recursive references
@@ -501,28 +498,28 @@ class EncryptionKeyCreate(BaseModel):
     """创建加密密钥"""
     public_key: str = Field(description="Base64编码的公钥")
     key_type: str = Field(default="x25519", pattern="^(x25519|rsa)$", description="密钥类型")
-    device_id: Optional[str] = Field(default=None, max_length=100, description="设备ID")
+    device_id: str | None = Field(default=None, max_length=100, description="设备ID")
 
 
 class EncryptionKeyInfo(BaseSchema):
     """加密密钥信息"""
     public_key: str = Field(description="Base64编码的公钥")
     key_type: str = Field(description="密钥类型")
-    device_id: Optional[str] = Field(description="设备ID")
+    device_id: str | None = Field(description="设备ID")
     is_active: bool = Field(description="是否激活")
-    expires_at: Optional[datetime] = Field(description="过期时间")
+    expires_at: datetime | None = Field(description="过期时间")
 
 
 class EncryptedMessageSend(BaseModel):
     """发送加密消息"""
     encrypted_content: str = Field(description="加密后的内容")
-    content_signature: Optional[str] = Field(default=None, max_length=512, description="消息签名")
+    content_signature: str | None = Field(default=None, max_length=512, description="消息签名")
     encryption_version: int = Field(default=1, ge=1, le=10, description="加密版本")
     # 其他字段同普通消息
     message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT)
-    content_data: Optional[Dict[str, Any]] = Field(default=None)
-    reply_to_id: Optional[UUID] = Field(default=None)
-    nonce: Optional[str] = Field(default=None)
+    content_data: dict[str, Any] | None = Field(default=None)
+    reply_to_id: UUID | None = Field(default=None)
+    nonce: str | None = Field(default=None)
 
 
 # ============ 举报相关 Schemas ============
@@ -552,47 +549,47 @@ class ModerationActionEnum(str, Enum):
 
 class MessageReportCreate(BaseModel):
     """创建消息举报"""
-    group_message_id: Optional[UUID] = Field(default=None, description="群消息ID")
-    private_message_id: Optional[UUID] = Field(default=None, description="私聊消息ID")
+    group_message_id: UUID | None = Field(default=None, description="群消息ID")
+    private_message_id: UUID | None = Field(default=None, description="私聊消息ID")
     reason: ReportReasonEnum = Field(description="举报原因")
-    description: Optional[str] = Field(default=None, max_length=500, description="详细描述")
+    description: str | None = Field(default=None, max_length=500, description="详细描述")
 
 
 class MessageReportInfo(BaseSchema):
     """消息举报信息"""
     reporter: UserBrief = Field(description="举报人")
     reason: ReportReasonEnum = Field(description="举报原因")
-    description: Optional[str] = Field(description="详细描述")
+    description: str | None = Field(description="详细描述")
     status: ReportStatusEnum = Field(description="状态")
-    reviewed_by: Optional[UserBrief] = Field(default=None, description="审核人")
-    reviewed_at: Optional[datetime] = Field(default=None, description="审核时间")
-    action_taken: Optional[ModerationActionEnum] = Field(default=None, description="处理动作")
+    reviewed_by: UserBrief | None = Field(default=None, description="审核人")
+    reviewed_at: datetime | None = Field(default=None, description="审核时间")
+    action_taken: ModerationActionEnum | None = Field(default=None, description="处理动作")
 
 
 class MessageReportReview(BaseModel):
     """审核消息举报"""
     status: ReportStatusEnum = Field(description="审核状态")
-    action_taken: Optional[ModerationActionEnum] = Field(default=None, description="处理动作")
+    action_taken: ModerationActionEnum | None = Field(default=None, description="处理动作")
 
 
 # ============ 收藏相关 Schemas ============
 
 class MessageFavoriteCreate(BaseModel):
     """创建消息收藏"""
-    group_message_id: Optional[UUID] = Field(default=None, description="群消息ID")
-    private_message_id: Optional[UUID] = Field(default=None, description="私聊消息ID")
-    note: Optional[str] = Field(default=None, max_length=500, description="个人备注")
-    tags: Optional[List[str]] = Field(default=None, max_length=10, description="自定义标签")
+    group_message_id: UUID | None = Field(default=None, description="群消息ID")
+    private_message_id: UUID | None = Field(default=None, description="私聊消息ID")
+    note: str | None = Field(default=None, max_length=500, description="个人备注")
+    tags: list[str] | None = Field(default=None, max_length=10, description="自定义标签")
 
 
 class MessageFavoriteInfo(BaseSchema):
     """消息收藏信息"""
-    group_message_id: Optional[UUID] = Field(default=None)
-    private_message_id: Optional[UUID] = Field(default=None)
-    note: Optional[str] = Field(default=None)
-    tags: Optional[List[str]] = Field(default=None)
+    group_message_id: UUID | None = Field(default=None)
+    private_message_id: UUID | None = Field(default=None)
+    note: str | None = Field(default=None)
+    tags: list[str] | None = Field(default=None)
     # 可选：嵌入消息摘要
-    message_preview: Optional[str] = Field(default=None, description="消息预览")
+    message_preview: str | None = Field(default=None, description="消息预览")
 
 
 # ============ 转发相关 Schemas ============
@@ -601,9 +598,9 @@ class MessageForwardRequest(BaseModel):
     """转发消息请求"""
     source_message_id: UUID = Field(description="源消息ID")
     source_type: str = Field(pattern="^(group|private)$", description="源消息类型")
-    target_group_id: Optional[UUID] = Field(default=None, description="目标群组ID")
-    target_user_id: Optional[UUID] = Field(default=None, description="目标用户ID")
-    comment: Optional[str] = Field(default=None, max_length=200, description="转发留言")
+    target_group_id: UUID | None = Field(default=None, description="目标群组ID")
+    target_user_id: UUID | None = Field(default=None, description="目标用户ID")
+    comment: str | None = Field(default=None, max_length=200, description="转发留言")
 
 
 # ============ 广播相关 Schemas ============
@@ -611,16 +608,16 @@ class MessageForwardRequest(BaseModel):
 class BroadcastMessageCreate(BaseModel):
     """创建跨群广播"""
     content: str = Field(min_length=1, max_length=2000, description="广播内容")
-    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
-    target_group_ids: List[UUID] = Field(min_length=1, max_length=50, description="目标群组ID列表")
+    content_data: dict[str, Any] | None = Field(default=None, description="结构化内容")
+    target_group_ids: list[UUID] = Field(min_length=1, max_length=50, description="目标群组ID列表")
 
 
 class BroadcastMessageInfo(BaseSchema):
     """广播消息信息"""
     sender: UserBrief = Field(description="发送者")
     content: str = Field(description="广播内容")
-    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
-    target_group_ids: List[UUID] = Field(description="目标群组ID列表")
+    content_data: dict[str, Any] | None = Field(description="结构化内容")
+    target_group_ids: list[UUID] = Field(description="目标群组ID列表")
     delivered_count: int = Field(description="已送达数量")
 
 
@@ -628,21 +625,21 @@ class BroadcastMessageInfo(BaseSchema):
 
 class GroupAnnouncementUpdate(BaseModel):
     """更新群公告"""
-    announcement: Optional[str] = Field(default=None, max_length=2000, description="群公告内容")
+    announcement: str | None = Field(default=None, max_length=2000, description="群公告内容")
 
 
 class GroupModerationSettings(BaseModel):
     """群管理设置"""
-    keyword_filters: Optional[List[str]] = Field(default=None, max_length=100, description="敏感词列表")
-    mute_all: Optional[bool] = Field(default=None, description="全员禁言")
-    slow_mode_seconds: Optional[int] = Field(default=None, ge=0, le=3600, description="慢速模式秒数")
+    keyword_filters: list[str] | None = Field(default=None, max_length=100, description="敏感词列表")
+    mute_all: bool | None = Field(default=None, description="全员禁言")
+    slow_mode_seconds: int | None = Field(default=None, ge=0, le=3600, description="慢速模式秒数")
 
 
 class MemberMuteRequest(BaseModel):
     """禁言成员请求"""
     user_id: UUID = Field(description="用户ID")
     duration_minutes: int = Field(ge=1, le=43200, description="禁言时长（分钟）")  # 最多30天
-    reason: Optional[str] = Field(default=None, max_length=200, description="禁言原因")
+    reason: str | None = Field(default=None, max_length=200, description="禁言原因")
 
 
 class MemberWarnRequest(BaseModel):
@@ -667,27 +664,27 @@ class OfflineMessageInfo(BaseSchema):
     target_id: UUID = Field(description="目标ID")
     status: OfflineMessageStatusEnum = Field(description="状态")
     retry_count: int = Field(description="重试次数")
-    error_message: Optional[str] = Field(default=None, description="错误信息")
+    error_message: str | None = Field(default=None, description="错误信息")
     created_at: datetime = Field(description="创建时间")
 
 
 class OfflineMessageRetryRequest(BaseModel):
     """重试离线消息请求"""
-    message_ids: List[UUID] = Field(min_length=1, max_length=50, description="消息ID列表")
+    message_ids: list[UUID] = Field(min_length=1, max_length=50, description="消息ID列表")
 
 
 # ============ 搜索相关 Schemas ============
 
 class MessageSearchRequest(BaseModel):
     """消息搜索请求"""
-    keyword: Optional[str] = Field(default=None, max_length=100, description="关键词")
-    sender_id: Optional[UUID] = Field(default=None, description="发送者ID")
-    start_date: Optional[datetime] = Field(default=None, description="开始时间")
-    end_date: Optional[datetime] = Field(default=None, description="结束时间")
-    message_types: Optional[List[MessageTypeEnum]] = Field(default=None, description="消息类型")
-    topic: Optional[str] = Field(default=None, max_length=100, description="话题")
-    tags: Optional[List[str]] = Field(default=None, max_length=10, description="标签")
-    has_attachments: Optional[bool] = Field(default=None, description="是否有附件")
+    keyword: str | None = Field(default=None, max_length=100, description="关键词")
+    sender_id: UUID | None = Field(default=None, description="发送者ID")
+    start_date: datetime | None = Field(default=None, description="开始时间")
+    end_date: datetime | None = Field(default=None, description="结束时间")
+    message_types: list[MessageTypeEnum] | None = Field(default=None, description="消息类型")
+    topic: str | None = Field(default=None, max_length=100, description="话题")
+    tags: list[str] | None = Field(default=None, max_length=10, description="标签")
+    has_attachments: bool | None = Field(default=None, description="是否有附件")
     # 分页
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
@@ -695,7 +692,7 @@ class MessageSearchRequest(BaseModel):
 
 class MessageSearchResult(BaseModel):
     """消息搜索结果"""
-    messages: List[MessageInfo] = Field(description="消息列表")
+    messages: list[MessageInfo] = Field(description="消息列表")
     total: int = Field(description="总数")
     page: int = Field(description="当前页码")
     page_size: int = Field(description="每页数量")

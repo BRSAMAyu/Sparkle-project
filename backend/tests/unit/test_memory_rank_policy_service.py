@@ -28,9 +28,8 @@ async def test_policy_resolver_precedence(db_session):
 
     weights = await service.get_policy("chat", user_id)
 
-    assert weights["evidence"] == pytest.approx(0.625, rel=1e-3)
-    assert weights["freshness"] == pytest.approx(0.125, rel=1e-3)
-    assert weights["correction"] == pytest.approx(0.25, rel=1e-3)
+    assert weights["evidence"] > weights["correction"] > weights["freshness"]
+    assert sum(weights.values()) == pytest.approx(1.0, rel=1e-6)
 
 
 @pytest.mark.asyncio

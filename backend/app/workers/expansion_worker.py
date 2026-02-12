@@ -4,8 +4,7 @@
 """
 import asyncio
 import logging
-from datetime import datetime
-from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -133,7 +132,7 @@ class ExpansionWorker:
 
 
 # 全局 Worker 实例
-expansion_worker: Optional[ExpansionWorker] = None
+expansion_worker: ExpansionWorker | None = None
 
 
 async def start_expansion_worker():

@@ -134,9 +134,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
           ..addAll(updated.blockedSources);
         _saving = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('记忆设置已更新')),
-      );
+      AppFeedback.success(context, '记忆设置已更新');
     } catch (e) {
       if (!mounted) {
         return;
@@ -152,13 +150,15 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('记忆控制', style: TextStyle(color: DS.brandPrimary)),
+          leading: SparkleIconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+          ),
+          title: Text('记忆控制', style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
         ),
         body: _loading
@@ -189,101 +189,108 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         ),
       );
 
-  Widget _buildContent(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(DS.lg),
-        children: [
-          _buildSectionTitle('总开关'),
-          SwitchListTile(
-            value: _enabled,
-            onChanged: (value) => setState(() => _enabled = value),
-            title: const Text('启用长期记忆'),
-            subtitle: const Text('关闭后将暂停所有记忆写入'),
-          ),
-          const SizedBox(height: DS.lg),
-          _buildSectionTitle('记忆类型'),
-          SwitchListTile(
-            value: _allowPreferences,
-            onChanged: _enabled
-                ? (value) => setState(() => _allowPreferences = value)
-                : null,
-            title: const Text('偏好'),
-          ),
-          SwitchListTile(
-            value: _allowGoals,
-            onChanged:
-                _enabled ? (value) => setState(() => _allowGoals = value) : null,
-            title: const Text('目标'),
-          ),
-          SwitchListTile(
-            value: _allowEpisodic,
-            onChanged: _enabled
-                ? (value) => setState(() => _allowEpisodic = value)
-                : null,
-            title: const Text('经历'),
-          ),
-          const SizedBox(height: DS.lg),
-          _buildSectionTitle('捕获强度'),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'low', label: Text('低')),
-              ButtonSegment(value: 'medium', label: Text('中')),
-              ButtonSegment(value: 'high', label: Text('高')),
-            ],
-            selected: {_captureLevel},
-            onSelectionChanged: _enabled
-                ? (selection) {
-                    setState(() => _captureLevel = selection.first);
-                  }
-                : null,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                (states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return DS.primaryBase;
-                  }
-                  return DS.brandPrimary10;
-                },
-              ),
-              foregroundColor: WidgetStateProperty.all(DS.brandPrimary),
+  Widget _buildContent(BuildContext context) => ContentConstraint(
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            _buildSectionTitle('总开关'),
+            SwitchListTile(
+              value: _enabled,
+              onChanged: (value) => setState(() => _enabled = value),
+              title: const Text('启用长期记忆'),
+              subtitle: const Text('关闭后将暂停所有记忆写入'),
             ),
-          ),
-          const SizedBox(height: DS.lg),
-          _buildSectionTitle('屏蔽偏好'),
-          Wrap(
-            spacing: DS.sm,
-            runSpacing: DS.sm,
-            children: _prefKeyOptions
-                .map((key) => FilterChip(
+            const SizedBox(height: DS.lg),
+            _buildSectionTitle('记忆类型'),
+            SwitchListTile(
+              value: _allowPreferences,
+              onChanged: _enabled
+                  ? (value) => setState(() => _allowPreferences = value)
+                  : null,
+              title: const Text('偏好'),
+            ),
+            SwitchListTile(
+              value: _allowGoals,
+              onChanged: _enabled
+                  ? (value) => setState(() => _allowGoals = value)
+                  : null,
+              title: const Text('目标'),
+            ),
+            SwitchListTile(
+              value: _allowEpisodic,
+              onChanged: _enabled
+                  ? (value) => setState(() => _allowEpisodic = value)
+                  : null,
+              title: const Text('经历'),
+            ),
+            const SizedBox(height: DS.lg),
+            _buildSectionTitle('捕获强度'),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'low', label: Text('低')),
+                ButtonSegment(value: 'medium', label: Text('中')),
+                ButtonSegment(value: 'high', label: Text('高')),
+              ],
+              selected: {_captureLevel},
+              onSelectionChanged: _enabled
+                  ? (selection) {
+                      setState(() => _captureLevel = selection.first);
+                    }
+                  : null,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return DS.primaryBase;
+                    }
+                    return DS.brandPrimary10;
+                  },
+                ),
+                foregroundColor: WidgetStateProperty.all(DS.brandPrimary),
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            _buildSectionTitle('屏蔽偏好'),
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.sm,
+              children: _prefKeyOptions
+                  .map(
+                    (key) => FilterChip(
                       label: Text(key),
                       selected: _blockedPrefKeys.contains(key),
                       onSelected: _enabled && _allowPreferences
                           ? (selected) => _togglePrefKey(key, selected)
                           : null,
-                    ),)
-                .toList(),
-          ),
-          const SizedBox(height: DS.lg),
-          _buildSectionTitle('屏蔽来源'),
-          Wrap(
-            spacing: DS.sm,
-            runSpacing: DS.sm,
-            children: _sourceOptions
-                .map((source) => FilterChip(
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: DS.lg),
+            _buildSectionTitle('屏蔽来源'),
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.sm,
+              children: _sourceOptions
+                  .map(
+                    (source) => FilterChip(
                       label: Text(source),
                       selected: _blockedSources.contains(source),
                       onSelected: _enabled
                           ? (selected) => _toggleSource(source, selected)
                           : null,
-                    ),)
-                .toList(),
-          ),
-          const SizedBox(height: DS.xl),
-          SparkleButton.primary(
-            label: _saving ? '保存中...' : '保存设置',
-            onPressed: _saving ? () {} : _saveSettings,
-          ),
-        ],
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: DS.xl),
+            SparkleButton.primary(
+              label: _saving ? '保存中...' : '保存设置',
+              onPressed: _saving ? () {} : _saveSettings,
+            ),
+          ],
+        ),
       );
 
   Widget _buildSectionTitle(String title) => Padding(

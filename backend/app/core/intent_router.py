@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class IntentRouter:
-    def get_intent(self, payload: Dict[str, Any]) -> str:
+    def get_intent(self, payload: dict[str, Any]) -> str:
         if not payload:
             return "chat"
         explicit = payload.get("intent")

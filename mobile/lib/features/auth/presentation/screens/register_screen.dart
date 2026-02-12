@@ -58,16 +58,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ErrorMessages.getLocalizedMessage(
-                l10n,
-                'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-                next.error,
-              ),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
+        AppFeedback.error(
+          context,
+          ErrorMessages.getLocalizedMessage(
+            l10n,
+            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
+            next.error,
           ),
         );
       }
@@ -76,142 +72,141 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/login'),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: Text(l10n.register),
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                Text(
-                  l10n.joinSparkle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                ),
-                const SizedBox(height: DS.xxl),
-
-                // Username field
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.username,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person_outline),
+        child: ContentConstraint(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(DS.xl),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: DS.spacing20),
+                  Text(
+                    l10n.joinSparkle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return l10n.pleaseEnterUsername;
-                    }
-                    if (value.length < 3) {
-                      return l10n.usernameMinLength;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.lg),
+                  const SizedBox(height: DS.xxl),
 
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: l10n.email,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.email_outlined),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null ||
-                        !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return l10n.invalidEmail;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.lg),
-
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: l10n.password,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () => setState(
-                          () => _isPasswordVisible = !_isPasswordVisible,),
+                  // Username field
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: l10n.username,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person_outline),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return l10n.pleaseEnterUsername;
+                      }
+                      if (value.length < 3) {
+                        return l10n.usernameMinLength;
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return l10n.passwordMinLength;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.lg),
+                  const SizedBox(height: DS.lg),
 
-                // Confirm Password field
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: l10n.confirmPassword,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_person_outlined),
+                  // Email field
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: l10n.email,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.email_outlined),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null ||
+                          !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                        return l10n.invalidEmail;
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return l10n.passwordsDoNotMatch;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: DS.xl),
+                  const SizedBox(height: DS.lg),
 
-                // Register Button
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: DS.brandPrimary,
-                    foregroundColor: DS.brandPrimary,
+                  // Password field
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: l10n.password,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: SparkleIconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.length < 6) {
+                        return l10n.passwordMinLength;
+                      }
+                      return null;
+                    },
                   ),
-                  onPressed: authState.isLoading ? null : _submit,
-                  child: authState.isLoading
-                      ? SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: DS.brandPrimary,),
-                        )
-                      : Text(l10n.register),
-                ),
-                const SizedBox(height: DS.lg),
+                  const SizedBox(height: DS.lg),
 
-                // Login Link
-                TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: Text(l10n.hasAccount),
-                ),
-              ],
+                  // Confirm Password field
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: l10n.confirmPassword,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_person_outlined),
+                    ),
+                    validator: (value) {
+                      if (value != _passwordController.text) {
+                        return l10n.passwordsDoNotMatch;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: DS.xl),
+
+                  // Register Button
+                  SparkleButton(
+                    label: l10n.register,
+                    onPressed: authState.isLoading ? null : _submit,
+                    variant: ButtonVariant.primary,
+                    expand: true,
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                  ),
+                  const SizedBox(height: DS.lg),
+
+                  // Login Link
+                  SparkleButton.ghost(
+                    label: l10n.hasAccount,
+                    onPressed: () => context.go('/login'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

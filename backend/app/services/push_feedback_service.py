@@ -1,17 +1,21 @@
 """
 推送反馈服务 - 更新 consecutive_ignores
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import PushPreference
-from app.models.notification import PushHistory
-from app.services.personalization.preference_service import PreferenceService
 from app.core.cache import cache_service
+from app.models.notification import PushHistory
+from app.models.user import PushPreference
+from app.services.personalization.preference_service import PreferenceService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PushFeedbackService:
@@ -33,7 +37,7 @@ class PushFeedbackService:
             ).values(
                 interaction_type=interaction_type,
                 status=self._map_status(interaction_type),
-                interacted_at=datetime.utcnow(),
+                interacted_at=_utcnow(),
             )
         )
 

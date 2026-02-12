@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,7 +77,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   void _initializeWithTask(TaskModel task) {
     if (_isInitialized) return;
     _isInitialized = true;
-    
+
     // 启动正念模式
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(mindfulnessProvider.notifier).start(task);
@@ -256,7 +258,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       ),
       error: (err, stack) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
-        body: Center(child: Text('加载失败: $err', style: TextStyle(color: DS.brandPrimaryConst))),
+        body: Center(
+            child: Text('加载失败: $err',
+                style: TextStyle(color: DS.brandPrimaryConst))),
       ),
     );
   }
@@ -290,7 +294,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             ),
 
             // 暂停按钮
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: 40,
               icon: Icon(
                 state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                 color: DS.brandPrimary.withValues(alpha: 0.7),
@@ -307,15 +313,12 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
       );
 
-  Widget _buildBackToTaskButton() => TextButton.icon(
+  Widget _buildBackToTaskButton() => SparkleButton(
+        label: '返回任务',
+        variant: ButtonVariant.ghost,
         icon: const Icon(Icons.arrow_back_rounded, size: 18),
-        label: const Text('返回任务'),
-        style: TextButton.styleFrom(
-          foregroundColor: DS.brandPrimary.withValues(alpha: 0.6),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        ),
-        onPressed: () async {
-          await _returnToTaskExecution();
+        onPressed: () {
+          unawaited(_returnToTaskExecution());
         },
       );
 
@@ -330,7 +333,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         title: Text(
           '返回任务执行',
           style: TextStyle(
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -341,20 +344,14 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           ),
         ),
         actions: [
-          TextButton(
+          SparkleButton(
+            label: '取消',
+            variant: ButtonVariant.ghost,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('取消',
-                style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),),
           ),
-          TextButton(
+          SparkleButton(
+            label: '确认返回',
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              '确认返回',
-              style: TextStyle(
-                color: DS.primaryBase,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
           ),
         ],
       ),
@@ -363,6 +360,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     if ((confirmed ?? false) && mounted) {
       await ref.read(mindfulnessProvider.notifier).stop();
       if (mounted) {
+        // 🔧 修复：从mindfulnessProvider获取完整任务并设置activeTaskProvider
+        final currentTask = ref.read(mindfulnessProvider).currentTask;
+        if (currentTask != null) {
+          ref.read(activeTaskProvider.notifier).state = currentTask;
+        }
         context.push('/tasks/${widget.taskId}/execute');
       }
     }
@@ -459,20 +461,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
   Widget _buildExitButton() => Padding(
         padding: const EdgeInsets.all(DS.xl),
-        child: TextButton(
+        child: SparkleButton(
+          label: '退出正念模式',
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.exit_to_app_rounded, size: 18),
           onPressed: _handleExit,
-          style: TextButton.styleFrom(
-            foregroundColor: DS.brandPrimary.withValues(alpha: 0.5),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.exit_to_app_rounded, size: 18),
-              SizedBox(width: DS.sm),
-              Text('退出正念模式'),
-            ],
-          ),
         ),
       );
 }

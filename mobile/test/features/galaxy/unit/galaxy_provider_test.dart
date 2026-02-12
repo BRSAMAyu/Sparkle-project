@@ -8,8 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   FakeEnhancedGalaxyRepository({
@@ -52,7 +54,8 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
 
   @override
   Future<NetworkResult<KnowledgeDetailResponse>> getNodeDetail(
-          String nodeId,) async =>
+    String nodeId,
+  ) async =>
       NetworkResult.failure(GalaxyError.unknown('Not implemented'));
 
   @override
@@ -61,7 +64,8 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
 
   @override
   Future<NetworkResult<List<GalaxySearchResult>>> searchNodes(
-          String query,) async =>
+    String query,
+  ) async =>
       NetworkResult.success(const []);
 
   @override
@@ -83,7 +87,9 @@ void main() {
   late FakeEnhancedGalaxyRepository mockRepository;
   late ProviderContainer container;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await ViewStorageService.ensureInitialized();
     mockRepository = FakeEnhancedGalaxyRepository();
 
     container = ProviderContainer(
@@ -456,14 +462,18 @@ void main() {
         await notifier.loadGalaxy();
 
         // Verify initial state
-        expect(container.read(galaxyProvider).nodes[0].masteryScore,
-            equals(initialMastery),);
+        expect(
+          container.read(galaxyProvider).nodes[0].masteryScore,
+          equals(initialMastery),
+        );
 
         // Simulate event from backend
-        eventsController.add(SSEEvent(
-          event: 'galaxy.node.updated',
-          data: '{"node_id": "$targetNodeId", "new_mastery": $newMastery}',
-        ),);
+        eventsController.add(
+          SSEEvent(
+            event: 'galaxy.node.updated',
+            data: '{"node_id": "$targetNodeId", "new_mastery": $newMastery}',
+          ),
+        );
 
         // Wait for event loop to process
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -479,18 +489,31 @@ void main() {
       test('handles nodes_expanded and triggers reload', () async {
         final eventsController = StreamController<SSEEvent>();
         mockRepository.eventsStream = eventsController.stream;
+        mockRepository.graphResult = NetworkResult.success(
+          GalaxyGraphResponse(
+            nodes: _generateMockNodes(3),
+            edges: const [],
+            userFlameIntensity: 0.5,
+          ),
+        );
+
+        final notifier = container.read(galaxyProvider.notifier);
+        await notifier.loadGalaxy();
+        final callsBeforeEvent = mockRepository.getGraphCalls;
 
         // Simulate expansion event
-        eventsController.add(SSEEvent(
-          event: 'nodes_expanded',
-          data: '{"nodes": []}',
-        ),);
+        eventsController.add(
+          SSEEvent(
+            event: 'nodes_expanded',
+            data: '{"nodes": []}',
+          ),
+        );
 
         // Wait for event loop
         await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        // Should have triggered loadGalaxy
-        expect(mockRepository.getGraphCalls, 1);
+        // Should have triggered a reload
+        expect(mockRepository.getGraphCalls, greaterThan(callsBeforeEvent));
 
         eventsController.close();
       });

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/user_preferences_service.dart';
 
 part 'transparency_settings_screen.g.dart';
 
@@ -19,116 +20,132 @@ class TransparencySettingsScreen extends ConsumerWidget {
         title: const Text('透明模式设置'),
       ),
       body: preferences.when(
-        data: (prefs) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Global toggle
-            Card(
-              child: SwitchListTile(
-                title: const Text('启用透明模式'),
-                subtitle: Text(
-                  '显示AI处理步骤、Agent切换和Token使用情况',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                value: prefs.enabled,
-                onChanged: (value) {
-                  ref.read(transparencyPreferencesProvider.notifier).setEnabled(value);
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Detailed options
-            if (prefs.enabled) ...[
-              Text(
-                '显示选项',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
+        data: (prefs) => ContentConstraint(
+          child: ListView(
+            padding: const EdgeInsets.all(DS.md),
+            children: [
+              // Global toggle
               Card(
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      title: const Text('Token使用情况'),
-                      subtitle: Text(
-                        '显示每次对话的Token消耗和成本估算',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      value: prefs.showTokenUsage,
-                      onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowTokenUsage(value);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    SwitchListTile(
-                      title: const Text('Agent切换'),
-                      subtitle: Text(
-                        '显示不同Agent之间的切换过程',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      value: prefs.showAgentSwitching,
-                      onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowAgentSwitching(value);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    SwitchListTile(
-                      title: const Text('推理步骤'),
-                      subtitle: Text(
-                        '显示LLM的详细推理过程',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      value: prefs.showReasoningSteps,
-                      onChanged: (value) {
-                        ref.read(transparencyPreferencesProvider.notifier).setShowReasoningSteps(value);
-                      },
-                    ),
-                  ],
+                child: SwitchListTile(
+                  title: const Text('启用透明模式'),
+                  subtitle: Text(
+                    '显示AI处理步骤、Agent切换和Token使用情况',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  value: prefs.enabled,
+                  onChanged: (value) {
+                    ref
+                        .read(transparencyPreferencesNotifierProvider.notifier)
+                        .setEnabled(value);
+                  },
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.md),
 
-              // Performance warning
-              Card(
-                color: Colors.orange.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+              // Detailed options
+              if (prefs.enabled) ...[
+                Text(
+                  '显示选项',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: DS.sm),
+                Card(
+                  child: Column(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.orange.shade700,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '启用详细选项可能会略微增加响应延迟',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.orange.shade900,
-                              ),
+                      SwitchListTile(
+                        title: const Text('Token使用情况'),
+                        subtitle: Text(
+                          '显示每次对话的Token消耗和成本估算',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        value: prefs.showTokenUsage,
+                        onChanged: (value) {
+                          ref
+                              .read(transparencyPreferencesNotifierProvider
+                                  .notifier)
+                              .setShowTokenUsage(value);
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: const Text('Agent切换'),
+                        subtitle: Text(
+                          '显示不同Agent之间的切换过程',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showAgentSwitching,
+                        onChanged: (value) {
+                          ref
+                              .read(transparencyPreferencesNotifierProvider
+                                  .notifier)
+                              .setShowAgentSwitching(value);
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: const Text('推理步骤'),
+                        subtitle: Text(
+                          '显示LLM的详细推理过程',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        value: prefs.showReasoningSteps,
+                        onChanged: (value) {
+                          ref
+                              .read(transparencyPreferencesNotifierProvider
+                                  .notifier)
+                              .setShowReasoningSteps(value);
+                        },
                       ),
                     ],
                   ),
                 ),
-              ),
+                const SizedBox(height: DS.lg),
+
+                // Performance warning
+                Card(
+                  color: DS.warning.withValues(alpha: 0.1),
+                  child: Padding(
+                    padding: const EdgeInsets.all(DS.md),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: DS.warning,
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Expanded(
+                          child: Text(
+                            '启用详细选项可能会略微增加响应延迟',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: DS.warning,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
+              Icon(Icons.error_outline, size: 64, color: DS.error),
+              const SizedBox(height: DS.md),
               Text(
                 '加载设置失败',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.sm),
               Text(
                 error.toString(),
                 style: Theme.of(context).textTheme.bodyMedium,
@@ -151,42 +168,38 @@ class TransparencyPreferences {
     required this.showReasoningSteps,
   });
 
+  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) =>
+      TransparencyPreferences(
+        enabled: json['enabled'] as bool? ?? false,
+        showTokenUsage: json['showTokenUsage'] as bool? ?? true,
+        showAgentSwitching: json['showAgentSwitching'] as bool? ?? true,
+        showReasoningSteps: json['showReasoningSteps'] as bool? ?? true,
+      );
+
   final bool enabled;
   final bool showTokenUsage;
   final bool showAgentSwitching;
   final bool showReasoningSteps;
 
-  factory TransparencyPreferences.fromJson(Map<String, dynamic> json) {
-    return TransparencyPreferences(
-      enabled: json['enabled'] ?? false,
-      showTokenUsage: json['showTokenUsage'] ?? true,
-      showAgentSwitching: json['showAgentSwitching'] ?? true,
-      showReasoningSteps: json['showReasoningSteps'] ?? true,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'enabled': enabled,
-      'showTokenUsage': showTokenUsage,
-      'showAgentSwitching': showAgentSwitching,
-      'showReasoningSteps': showReasoningSteps,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        'showTokenUsage': showTokenUsage,
+        'showAgentSwitching': showAgentSwitching,
+        'showReasoningSteps': showReasoningSteps,
+      };
 
   TransparencyPreferences copyWith({
     bool? enabled,
     bool? showTokenUsage,
     bool? showAgentSwitching,
     bool? showReasoningSteps,
-  }) {
-    return TransparencyPreferences(
-      enabled: enabled ?? this.enabled,
-      showTokenUsage: showTokenUsage ?? this.showTokenUsage,
-      showAgentSwitching: showAgentSwitching ?? this.showAgentSwitching,
-      showReasoningSteps: showReasoningSteps ?? this.showReasoningSteps,
-    );
-  }
+  }) =>
+      TransparencyPreferences(
+        enabled: enabled ?? this.enabled,
+        showTokenUsage: showTokenUsage ?? this.showTokenUsage,
+        showAgentSwitching: showAgentSwitching ?? this.showAgentSwitching,
+        showReasoningSteps: showReasoningSteps ?? this.showReasoningSteps,
+      );
 }
 
 /// Provider for transparency preferences
@@ -212,9 +225,10 @@ Future<TransparencyPreferences> transparencyPreferences(Ref ref) async {
 
 /// Notifier for transparency preferences
 @riverpod
-class TransparencyPreferencesNotifier extends _$TransparencyPreferencesNotifier {
+class TransparencyPreferencesNotifier
+    extends _$TransparencyPreferencesNotifier {
   Future<void> _updatePreferences(TransparencyPreferences prefs) async {
-    state = await AsyncValue.data(prefs);
+    state = AsyncValue.data(prefs);
 
     final service = ref.read(userPreferencesServiceProvider);
     await service.updatePreferences({

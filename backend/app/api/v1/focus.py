@@ -2,17 +2,17 @@
 专注模式 API
 Focus API - 番茄钟、统计、LLM辅助
 """
-from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.models.focus import FocusStatus, FocusType
 from app.models.user import User
-from app.models.focus import FocusType, FocusStatus
 from app.services.focus_service import focus_service
 
 router = APIRouter()
@@ -20,7 +20,7 @@ router = APIRouter()
 # ============ Schemas ============
 
 class FocusSessionLog(BaseModel):
-    task_id: Optional[UUID] = None
+    task_id: UUID | None = None
     start_time: datetime
     end_time: datetime
     duration_minutes: int
@@ -33,13 +33,13 @@ class FocusStats(BaseModel):
     today_date: str
 
 class LLMGuideRequest(BaseModel):
-    task_id: Optional[UUID] = None
+    task_id: UUID | None = None
     task_context: str
     user_input: str
 
 class LLMBreakdownRequest(BaseModel):
     task_title: str
-    task_description: Optional[str] = ""
+    task_description: str | None = ""
 
 # ============ Endpoints ============
 
@@ -64,12 +64,12 @@ async def log_focus_session(
             FocusStatus(data.status)
         )
         await db.commit()
-        
+
         session = result["session"]
         rewards = result["rewards"]
-        
+
         return {
-            "success": True, 
+            "success": True,
             "id": str(session.id),
             "rewards": rewards # {flame_earned, leveled_up, new_level}
         }

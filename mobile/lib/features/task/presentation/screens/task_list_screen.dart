@@ -42,14 +42,22 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     var tasks = _filterTasks(taskListState.tasks, filter);
     if (_searchController.text.isNotEmpty) {
       tasks = tasks
-          .where((t) => t.title
-              .toLowerCase()
-              .contains(_searchController.text.toLowerCase()),)
+          .where(
+            (t) => t.title
+                .toLowerCase()
+                .contains(_searchController.text.toLowerCase()),
+          )
           .toList();
     }
 
     return Scaffold(
       appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: DS.primaryGradient,
@@ -83,7 +91,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: const EdgeInsets.all(DS.spacing8),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: DS.borderRadius8,
@@ -91,25 +99,30 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       child: Icon(
                         Icons.task_alt_rounded,
                         color: DS.brandPrimaryConst,
-                        size: 20,
+                        size: DS.iconSizeSm,
                       ),
                     ),
-                    const SizedBox(width: DS.md),
+                    const SizedBox(width: DS.spacing16),
                     Text(
                       '我的任务',
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontWeight: DS.fontWeightBold,
+                        fontSize: DS.fontSizeLg,
                       ),
                     ),
                   ],
                 ),
         ),
         actions: [
-          IconButton(
-            icon:
-                Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            color: DS.brandPrimaryConst,
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+            icon: Icon(
+              _isSearching ? Icons.close_rounded : Icons.search_rounded,
+              size: DS.iconSizeBase,
+              color: DS.brandPrimaryConst,
+            ),
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -121,42 +134,38 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(taskListProvider.notifier).refreshTasks(),
-        child: Column(
-          children: [
-            if (!_isSearching) _FilterChips(),
-            Expanded(
-              child: _buildTaskList(context, taskListState, tasks, ref),
-            ),
-          ],
+        child: ContentConstraint(
+          child: Column(
+            children: [
+              if (!_isSearching) const _FilterChips(),
+              Expanded(
+                child: _buildTaskList(context, taskListState, tasks, ref),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: SparkleIconButton(
+        size: 60,
         onPressed: () {
           HapticFeedback.mediumImpact();
           context.push('/tasks/new');
         },
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: DS.primaryGradient,
-            shape: BoxShape.circle,
-            boxShadow: DS.shadowPrimary,
-          ),
-          child: Icon(
-            Icons.add_rounded,
-            color: DS.brandPrimaryConst,
-            size: 32,
-          ),
+        icon: Icon(
+          Icons.add_rounded,
+          color: DS.brandPrimaryConst,
+          size: 32,
         ),
       ),
     );
   }
 
-  Widget _buildTaskList(BuildContext context, TaskListState state,
-      List<TaskModel> tasks, WidgetRef ref,) {
+  Widget _buildTaskList(
+    BuildContext context,
+    TaskListState state,
+    List<TaskModel> tasks,
+    WidgetRef ref,
+  ) {
     if (state.isLoading && tasks.isEmpty) {
       return Center(
         child: LoadingIndicator.circular(
@@ -168,6 +177,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
     if (state.error != null) {
       return CustomErrorWidget.page(
+        context: context,
         message: state.error!,
         onRetry: () => ref.read(taskListProvider.notifier).refreshTasks(),
       );
@@ -223,7 +233,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   }
 
   List<TaskModel> _filterTasks(
-      List<TaskModel> tasks, TaskFilterOptions filter,) {
+    List<TaskModel> tasks,
+    TaskFilterOptions filter,
+  ) {
     switch (filter) {
       case TaskFilterOptions.pending:
         return tasks.where((t) => t.status == TaskStatus.pending).toList();
@@ -238,24 +250,27 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 }
 
 class _FilterChips extends ConsumerWidget {
+  const _FilterChips();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFilter = ref.watch(taskFilterProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(
+          vertical: DS.spacing12, horizontal: DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: DS.shadowSm,
       ),
       child: SizedBox(
-        height: 40,
+        height: DS.spacing40,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: TaskFilterOptions.values.map((filter) {
             final isSelected = currentFilter == filter;
             return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
+              padding: const EdgeInsets.only(right: DS.spacing8),
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();

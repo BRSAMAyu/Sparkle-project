@@ -2,41 +2,38 @@
 Seed Libraries API Endpoints
 种子内容库 API 接口
 """
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.db.session import get_db
-from app.api.deps import get_current_user, get_current_active_superuser
 from app.models.user import User
-from app.services.seed_library_service import SeedLibraryService
+from app.schemas.common import PaginationMeta
 from app.schemas.seed_content import (
+    FewShotExample,
+    ItemCreate,
+    ItemInfo,
+    ItemListParams,
+    ItemListResponse,
+    ItemQueryRequest,
+    ItemQueryResponse,
+    ItemResponse,
+    ItemUpdate,
     LibraryCreate,
-    LibraryUpdate,
     LibraryInfo,
     LibraryListParams,
     LibraryListResponse,
     LibraryResponse,
-    ItemCreate,
-    ItemUpdate,
-    ItemInfo,
-    ItemListParams,
-    ItemListResponse,
-    ItemResponse,
+    LibraryUpdate,
+    PromoteToOfficialRequest,
     SubscriptionCreate,
-    SubscriptionUpdate,
     SubscriptionInfo,
     SubscriptionListResponse,
     SubscriptionResponse,
-    ItemQueryRequest,
-    ItemQueryResponse,
-    FewShotExamplesRequest,
-    FewShotExample,
-    PromoteToOfficialRequest,
 )
-from app.schemas.common import PaginationMeta
+from app.services.seed_library_service import SeedLibraryService
 
 router = APIRouter()
 service = SeedLibraryService()
@@ -75,19 +72,19 @@ async def create_library(
     description="浏览可用的种子内容库，支持分类、标签、可见性筛选"
 )
 async def list_libraries(
-    category: Optional[str] = Query(None, description="库分类"),
-    visibility: Optional[str] = Query(None, description="可见性"),
-    language: Optional[str] = Query(None, description="语言代码"),
-    is_official: Optional[bool] = Query(None, description="仅官方库"),
-    is_featured: Optional[bool] = Query(None, description="仅精选库"),
-    owner_id: Optional[UUID] = Query(None, description="创建者ID"),
-    search: Optional[str] = Query(None, description="搜索关键词"),
-    tags: Optional[List[str]] = Query(None, description="标签筛选"),
+    category: str | None = Query(None, description="库分类"),
+    visibility: str | None = Query(None, description="可见性"),
+    language: str | None = Query(None, description="语言代码"),
+    is_official: bool | None = Query(None, description="仅官方库"),
+    is_featured: bool | None = Query(None, description="仅精选库"),
+    owner_id: UUID | None = Query(None, description="创建者ID"),
+    search: str | None = Query(None, description="搜索关键词"),
+    tags: list[str] | None = Query(None, description="标签筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: str = Query("created_at", description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """获取库列表"""
@@ -109,10 +106,13 @@ async def list_libraries(
     user_id = current_user.id if current_user else None
     libraries, total = await service.list_libraries(db, params, user_id)
 
-    # 获取统计信息
+    # 批量获取统计信息（避免 N+1 查询）
+    lib_ids = [lib.id for lib in libraries]
+    stats_map = await service.batch_get_library_stats(db, lib_ids)
+
     data = []
     for lib in libraries:
-        stats = await service.get_library_stats(db, lib.id)
+        stats = stats_map.get(lib.id, {"item_count": 0, "subscriber_count": 0})
         lib_info = LibraryInfo.model_validate(lib)
         lib_info.item_count = stats["item_count"]
         lib_info.subscriber_count = stats["subscriber_count"]
@@ -251,12 +251,12 @@ async def add_item(
 )
 async def get_items(
     library_id: UUID,
-    item_type: Optional[str] = Query(None, description="内容类型"),
-    subject: Optional[str] = Query(None, description="学科"),
-    difficulty_level: Optional[str] = Query(None, description="难度等级"),
-    tags: Optional[List[str]] = Query(None, description="标签筛选"),
-    is_active: Optional[bool] = Query(True, description="仅启用的项"),
-    search: Optional[str] = Query(None, description="搜索关键词"),
+    item_type: str | None = Query(None, description="内容类型"),
+    subject: str | None = Query(None, description="学科"),
+    difficulty_level: str | None = Query(None, description="难度等级"),
+    tags: list[str] | None = Query(None, description="标签筛选"),
+    is_active: bool | None = Query(True, description="仅启用的项"),
+    search: str | None = Query(None, description="搜索关键词"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: str = Query("order_index", description="排序字段"),
@@ -409,7 +409,7 @@ async def unsubscribe_library(
     description="获取当前用户的所有订阅"
 )
 async def get_my_subscriptions(
-    is_enabled: Optional[bool] = Query(None, description="仅返回启用的订阅"),
+    is_enabled: bool | None = Query(None, description="仅返回启用的订阅"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -462,14 +462,14 @@ async def query_items(
 
 @router.get(
     "/seed-libraries/examples/few-shot",
-    response_model=List[FewShotExample],
+    response_model=list[FewShotExample],
     summary="获取 Few-shot 示例",
     description="获取用于 LLM prompt 增强的 few-shot 学习示例"
 )
 async def get_few_shot_examples(
-    subject: Optional[str] = Query(None, description="学科筛选"),
-    difficulty_level: Optional[str] = Query(None, description="难度筛选"),
-    task_type: Optional[str] = Query(None, description="任务类型筛选"),
+    subject: str | None = Query(None, description="学科筛选"),
+    difficulty_level: str | None = Query(None, description="难度筛选"),
+    task_type: str | None = Query(None, description="任务类型筛选"),
     count: int = Query(3, ge=1, le=10, description="需要的示例数量"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

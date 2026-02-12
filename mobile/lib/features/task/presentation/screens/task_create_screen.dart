@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
@@ -38,16 +39,26 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   // Nudge suggestions state
   List<TaskNudge> _nudges = [];
   bool _showNudgesAfterCreation = false;
+  bool _didInitQuery = false;
 
   @override
   void initState() {
     super.initState();
-    // Read pre-filled title from query parameter
-    final titleQueryParam = GoRouterState.of(context).uri.queryParameters['title'];
+    _titleController.addListener(_onTitleChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitQuery) {
+      return;
+    }
+    _didInitQuery = true;
+    final titleQueryParam =
+        GoRouterState.of(context).uri.queryParameters['title'];
     if (titleQueryParam != null && titleQueryParam.isNotEmpty) {
       _titleController.text = titleQueryParam;
     }
-    _titleController.addListener(_onTitleChanged);
   }
 
   @override
@@ -140,10 +151,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       );
 
       // Use createTaskWithNudges to get behavioral suggestions
-      final result = await ref.read(taskRepositoryProvider).createTaskWithNudges(
-            taskCreate,
-            generateGuide: _generateGuide,
-          );
+      final result =
+          await ref.read(taskRepositoryProvider).createTaskWithNudges(
+                taskCreate,
+                generateGuide: _generateGuide,
+              );
+
+      // 🔧 修复：刷新任务列表以确保任务看板显示新任务
+      await ref.read(taskListProvider.notifier).refreshTasks();
 
       if (mounted) {
         if (result.nudges.isNotEmpty) {
@@ -210,337 +225,408 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         appBar: AppBar(
           title: const Text('新建任务'),
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(DS.lg),
-            children: [
-              // Title
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: '任务标题',
-                  hintText: '例如：完成数学第三章习题',
-                  border: OutlineInputBorder(),
+        body: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(DS.lg),
+              children: [
+                // Title
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: '任务标题',
+                    hintText: '例如：完成数学第三章习题',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '请输入标题';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '请输入标题';
-                  }
-                  return null;
-                },
-              ),
-              if (_isLoadingSuggestions)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
-              if (_suggestions != null &&
-                  _suggestions!.suggestedNodes.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('建议关联知识点',
+                if (_isLoadingSuggestions)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+                if (_suggestions != null &&
+                    _suggestions!.suggestedNodes.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '建议关联知识点',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 12,),),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 8,
-                        children: _suggestions!.suggestedNodes
-                            .map(
-                              (node) => ActionChip(
-                                avatar: Icon(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          children: _suggestions!.suggestedNodes
+                              .map(
+                                (node) => ActionChip(
+                                  avatar: Icon(
                                     node.isNew
                                         ? Icons.add_circle_outline
                                         : Icons.link,
-                                    size: 16,),
-                                label: Text(node.name),
-                                onPressed: () => _applySuggestion(node),
-                                tooltip: node.reason,
-                                backgroundColor: node.isNew
-                                    ? Colors.green.shade50
-                                    : DS.brandPrimary.withValues(alpha: 0.1),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: DS.lg),
-
-              // Type Selector
-              DropdownButtonFormField<TaskType>(
-                initialValue: _selectedType,
-                decoration: const InputDecoration(
-                  labelText: '任务类型',
-                  border: OutlineInputBorder(),
-                ),
-                items: TaskType.values
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Row(
-                          children: [
-                            Icon(_getTypeIcon(type), size: 18),
-                            const SizedBox(width: DS.sm),
-                            Text(_getTypeLabel(type)),
-                          ],
+                                    size: 16,
+                                  ),
+                                  label: Text(node.name),
+                                  onPressed: () => _applySuggestion(node),
+                                  tooltip: node.reason,
+                                  backgroundColor: node.isNew
+                                      ? DS.success.withValues(alpha: 0.1)
+                                      : DS.brandPrimary.withValues(alpha: 0.1),
+                                ),
+                              )
+                              .toList(),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedType = value);
-                  }
-                },
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Tags
-              TextFormField(
-                controller: _tagsController,
-                decoration: const InputDecoration(
-                  labelText: '标签 (用逗号分隔)',
-                  hintText: '数学, 习题, 重点',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.label_outline),
-                ),
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Estimated Time & Difficulty Row
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _estimatedMinutes,
-                      decoration: const InputDecoration(
-                        labelText: '预计时长',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.timer_outlined),
-                      ),
-                      items: [15, 25, 45, 60, 90, 120]
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m,
-                              child: Text('$m 分钟'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _estimatedMinutes = v!),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: DS.lg),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _difficulty,
-                      decoration: const InputDecoration(
-                        labelText: '难度',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.bar_chart),
-                      ),
-                      items: [1, 2, 3, 4, 5]
-                          .map(
-                            (l) => DropdownMenuItem(
-                              value: l,
-                              child: Text('Level $l'),
+                const SizedBox(height: DS.lg),
+
+                // Type Selector
+                DropdownButtonFormField<TaskType>(
+                  initialValue: _selectedType,
+                  decoration: const InputDecoration(
+                    labelText: '任务类型',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: TaskType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Row(
+                            children: [
+                              Icon(_getTypeIcon(type), size: 18),
+                              const SizedBox(width: DS.sm),
+                              Text(_getTypeLabel(type)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: DS.lg),
+
+                // Tags
+                TextFormField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: '标签 (用逗号分隔)',
+                    hintText: '数学, 习题, 重点',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.label_outline),
+                  ),
+                ),
+                const SizedBox(height: DS.lg),
+
+                // Estimated Time & Difficulty - Responsive layout
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 500;
+                    if (isNarrow) {
+                      // Narrow screen: Column layout
+                      return Column(
+                        children: [
+                          DropdownButtonFormField<int>(
+                            initialValue: _estimatedMinutes,
+                            decoration: const InputDecoration(
+                              labelText: '预计时长',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.timer_outlined),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _difficulty = v!),
+                            items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                                    .toList()
+                                  ..sort())
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m,
+                                    child: Text('$m 分钟'),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null)
+                                setState(() => _estimatedMinutes = v);
+                            },
+                          ),
+                          const SizedBox(height: DS.lg),
+                          DropdownButtonFormField<int>(
+                            initialValue: _difficulty,
+                            decoration: const InputDecoration(
+                              labelText: '难度',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.bar_chart),
+                            ),
+                            items: [1, 2, 3, 4, 5]
+                                .map(
+                                  (l) => DropdownMenuItem(
+                                    value: l,
+                                    child: Text('Level $l'),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) setState(() => _difficulty = v);
+                            },
+                          ),
+                        ],
+                      );
+                    }
+                    // Wide screen: Row layout
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            initialValue: _estimatedMinutes,
+                            decoration: const InputDecoration(
+                              labelText: '预计时长',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.timer_outlined),
+                            ),
+                            items: ({15, 25, 45, 60, 90, 120, _estimatedMinutes}
+                                    .toList()
+                                  ..sort())
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m,
+                                    child: Text('$m 分钟'),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null)
+                                setState(() => _estimatedMinutes = v);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: DS.lg),
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            initialValue: _difficulty,
+                            decoration: const InputDecoration(
+                              labelText: '难度',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.bar_chart),
+                            ),
+                            items: [1, 2, 3, 4, 5]
+                                .map(
+                                  (l) => DropdownMenuItem(
+                                    value: l,
+                                    child: Text('Level $l'),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) setState(() => _difficulty = v);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: DS.lg),
+
+                // Energy Cost
+                DropdownButtonFormField<int>(
+                  initialValue: _energyCost,
+                  decoration: const InputDecoration(
+                    labelText: '能量消耗',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.bolt),
+                  ),
+                  items: [1, 2, 3, 4, 5]
+                      .map(
+                        (l) => DropdownMenuItem(
+                          value: l,
+                          child: Text('$l 火苗'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => _energyCost = v!),
+                ),
+                const SizedBox(height: DS.lg),
+
+                // Due Date
+                ListTile(
+                  title: const Text('截止日期'),
+                  subtitle: Text(
+                    _dueDate == null
+                        ? '未设置'
+                        : DateFormat('yyyy-MM-dd').format(_dueDate!),
+                  ),
+                  leading: const Icon(Icons.calendar_today),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                        color: DS.brandPrimary.withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      setState(() => _dueDate = date);
+                    }
+                  },
+                  trailing: _dueDate != null
+                      ? SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 32,
+                          icon: const Icon(Icons.clear),
+                          onPressed: () => setState(() => _dueDate = null),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: DS.lg),
+
+                // AI Guide Switch
+                SwitchListTile(
+                  title: const Text('生成 AI 执行指南'),
+                  subtitle: const Text('根据任务类型和你的偏好生成分步指导'),
+                  value: _generateGuide,
+                  onChanged: (v) => setState(() => _generateGuide = v),
+                  secondary: const Icon(Icons.auto_awesome),
+                ),
+
+                // Nudge Suggestions (shown after task creation)
+                if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
+                  const SizedBox(height: DS.lg),
+                  Container(
+                    padding: const EdgeInsets.all(DS.md),
+                    decoration: BoxDecoration(
+                      color: DS.prismPurple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: DS.prismPurple.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.lightbulb,
+                                color: DS.prismPurple, size: 20),
+                            const SizedBox(width: DS.sm),
+                            const Text(
+                              '行为模式建议',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.sm),
+                        ..._nudges.map(
+                          (nudge) => Padding(
+                            padding: const EdgeInsets.only(bottom: DS.sm),
+                            child: Card(
+                              elevation: 0,
+                              color: DS.prismPurple.withValues(alpha: 0.05),
+                              child: Padding(
+                                padding: const EdgeInsets.all(DS.sm),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            nudge.title,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (nudge.suggestedValue != null)
+                                          SparkleButton(
+                                            label: '应用',
+                                            variant: ButtonVariant.ghost,
+                                            onPressed: () => _applyNudge(nudge),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      nudge.message,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: DS.textSecondary,
+                                      ),
+                                    ),
+                                    if (nudge.confidence != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '置信度: ${(nudge.confidence! * 100).toInt()}%',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: DS.textTertiary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DS.sm),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            SparkleButton(
+                              label: '忽略建议',
+                              variant: ButtonVariant.ghost,
+                              onPressed: _dismissNudges,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: DS.lg),
+                const SizedBox(height: DS.xxl),
 
-              // Energy Cost
-              DropdownButtonFormField<int>(
-                initialValue: _energyCost,
-                decoration: const InputDecoration(
-                  labelText: '能量消耗',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.bolt),
-                ),
-                items: [1, 2, 3, 4, 5]
-                    .map(
-                      (l) => DropdownMenuItem(
-                        value: l,
-                        child: Text('$l 火苗'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _energyCost = v!),
-              ),
-              const SizedBox(height: DS.lg),
-
-              // Due Date
-              ListTile(
-                title: const Text('截止日期'),
-                subtitle: Text(
-                  _dueDate == null
-                      ? '未设置'
-                      : DateFormat('yyyy-MM-dd').format(_dueDate!),
-                ),
-                leading: const Icon(Icons.calendar_today),
-                shape: RoundedRectangleBorder(
-                  side:
-                      BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    setState(() => _dueDate = date);
-                  }
-                },
-                trailing: _dueDate != null
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => _dueDate = null),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: DS.lg),
-
-              // AI Guide Switch
-              SwitchListTile(
-                title: const Text('生成 AI 执行指南'),
-                subtitle: const Text('根据任务类型和你的偏好生成分步指导'),
-                value: _generateGuide,
-                onChanged: (v) => setState(() => _generateGuide = v),
-                secondary: const Icon(Icons.auto_awesome),
-              ),
-
-              // Nudge Suggestions (shown after task creation)
-              if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
-                const SizedBox(height: DS.lg),
-                Container(
-                  padding: const EdgeInsets.all(DS.md),
-                  decoration: BoxDecoration(
-                    color: DS.prismPurple.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: DS.prismPurple.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.lightbulb, color: DS.prismPurple, size: 20),
-                          const SizedBox(width: DS.sm),
-                          const Text(
-                            '行为模式建议',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                // Submit Button
+                FilledButton.icon(
+                  onPressed: _isSubmitting ? null : _submitTask,
+                  icon: _isSubmitting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: DS.textOnPrimary,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: DS.sm),
-                      ..._nudges.map(
-                        (nudge) => Padding(
-                          padding: const EdgeInsets.only(bottom: DS.sm),
-                          child: Card(
-                            elevation: 0,
-                            color: DS.prismPurple.withValues(alpha: 0.05),
-                            child: Padding(
-                              padding: const EdgeInsets.all(DS.sm),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          nudge.title,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      if (nudge.suggestedValue != null)
-                                        TextButton(
-                                          onPressed: () => _applyNudge(nudge),
-                                          style: TextButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: DS.sm,
-                                              vertical: 4,
-                                            ),
-                                          ),
-                                          child: const Text('应用'),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    nudge.message,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                  if (nudge.confidence != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '置信度: ${(nudge.confidence! * 100).toInt()}%',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: DS.sm),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: _dismissNudges,
-                            child: const Text('忽略建议'),
-                          ),
-                        ],
-                      ),
-                    ],
+                        )
+                      : const Icon(Icons.check),
+                  label: Text(_isSubmitting ? '创建中...' : '创建任务'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ],
-              const SizedBox(height: DS.xxl),
-
-              // Submit Button
-              FilledButton.icon(
-                onPressed: _isSubmitting ? null : _submitTask,
-                icon: _isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white,),)
-                    : const Icon(Icons.check),
-                label: Text(_isSubmitting ? '创建中...' : '创建任务'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -559,6 +645,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         return Icons.people;
       case TaskType.planning:
         return Icons.map;
+      case TaskType.ocr:
+        return Icons.document_scanner_outlined;
     }
   }
 
@@ -576,6 +664,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         return '社交';
       case TaskType.planning:
         return '规划';
+      case TaskType.ocr:
+        return 'OCR';
     }
   }
 }

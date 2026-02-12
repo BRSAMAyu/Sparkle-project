@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
@@ -65,13 +66,17 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: _showSearch ? _buildSearchField() : const Text('错题档案'),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             onPressed: () {
               setState(() {
@@ -83,7 +88,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               });
             },
           ),
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.filter_list),
             onPressed: () => _showFilterDialog(context),
           ),
@@ -96,7 +103,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('全部'),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: DS.spacing8),
                   _buildStatsBadge(statsAsync, 'total'),
                 ],
               ),
@@ -106,7 +113,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('待复习'),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: DS.spacing8),
                   _buildStatsBadge(statsAsync, 'needReview'),
                 ],
               ),
@@ -114,74 +121,87 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // 如果有认知维度筛选，显示提示条
-          if (filterState.cognitiveDimension != null)
-             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-              child: Row(
-                children: [
-                  Icon(Icons.psychology, size: 16, color: theme.colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    '正针对 "${filterState.cognitiveDimension!.label}" 维度进行针对性复习',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+      body: ContentConstraint(
+        child: Column(
+          children: [
+            // 如果有认知维度筛选，显示提示条
+            if (filterState.cognitiveDimension != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                color:
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                child: Row(
+                  children: [
+                    Icon(Icons.psychology,
+                        size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: DS.spacing8),
+                    Text(
+                      '正针对 "${filterState.cognitiveDimension!.label}" 维度进行针对性复习',
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () => ref
+                          .read(errorFilterProvider.notifier)
+                          .setCognitiveDimension(null),
+                      borderRadius: DS.borderRadiusFull,
+                      child: const Padding(
+                        padding: EdgeInsets.all(DS.spacing4),
+                        child: Icon(Icons.close, size: DS.iconSizeXs),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // 科目筛选条
+            ColoredBox(
+              color: theme.colorScheme.surface,
+              child: Column(
+                children: [
+                  const SizedBox(height: DS.spacing12),
+                  SubjectFilterChips(
+                    selectedSubject: filterState.selectedSubject,
+                    onSelected: (subject) {
+                      ref
+                          .read(errorFilterProvider.notifier)
+                          .setSubject(subject);
+                    },
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: () => ref.read(errorFilterProvider.notifier).setCognitiveDimension(null),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                  const SizedBox(height: DS.spacing12),
                 ],
               ),
             ),
 
-          // 科目筛选条
-          ColoredBox(
-            color: theme.colorScheme.surface,
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                SubjectFilterChips(
-                  selectedSubject: filterState.selectedSubject,
-                  onSelected: (subject) {
-                    ref.read(errorFilterProvider.notifier).setSubject(subject);
-                  },
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
+            // 列表内容
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // 全部错题
+                  _buildErrorList(errorListAsync, query),
 
-          // 列表内容
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // 全部错题
-                _buildErrorList(errorListAsync, query),
-
-                // 待复习错题
-                _buildErrorList(
-                  ref.watch(
-                    errorListProvider(
-                      query.copyWith(needReview: true),
+                  // 待复习错题
+                  _buildErrorList(
+                    ref.watch(
+                      errorListProvider(
+                        query.copyWith(needReview: true),
+                      ),
                     ),
+                    query.copyWith(needReview: true),
                   ),
-                  query.copyWith(needReview: true),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToAddError(context),
@@ -217,17 +237,18 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           if (count == 0) return const SizedBox.shrink();
 
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing6, vertical: 2),
             decoration: BoxDecoration(
               color: type == 'needReview'
-                  ? Colors.red
+                  ? DS.error
                   : Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               count.toString(),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: DS.textOnPrimary,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -277,27 +298,27 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             Icon(
               isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
               size: 80,
-              color: Colors.grey,
+              color: DS.textTertiary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             Text(
               isReviewTab ? '暂无需要复习的错题' : '还没有错题记录',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               isReviewTab ? '做得很好！继续保持' : '点击右下角 + 按钮添加错题',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
             ),
             if (!isReviewTab) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.spacing24),
               FilledButton.icon(
                 onPressed: () => _navigateToAddError(context),
                 icon: const Icon(Icons.add),
@@ -312,12 +333,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.red,
+              color: DS.error,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             const Text(
               '加载失败',
               style: TextStyle(
@@ -325,16 +346,16 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               error,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: DS.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
             FilledButton.icon(
               onPressed: () {
                 ref.invalidate(errorListProvider(query));
@@ -379,23 +400,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       await ref.read(errorOperationsProvider.notifier).deleteError(errorId);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('删除成功'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.success(context, '删除成功');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('删除失败: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.error(context, '删除失败: $e');
       }
     }
   }
@@ -408,12 +417,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         title: const Text('筛选选项'),
         content: const Text('更多筛选功能开发中...'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () {
               ref.read(errorFilterProvider.notifier).reset();
               Navigator.of(context).pop();
             },
-            child: const Text('重置'),
+            label: '重置',
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),

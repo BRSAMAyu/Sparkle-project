@@ -101,28 +101,34 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
+          leading: SparkleIconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+          ),
+          title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
-            IconButton(
+            SparkleIconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _loadAll,
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
           ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? _buildError(context)
-                : AppFeatureFlags.enableMemoryPanelV2
-                    ? _buildV2Panel(context)
-                    : _buildV1Panel(context),
+            : ContentConstraint(
+                child: _error != null
+                    ? _buildError(context)
+                    : AppFeatureFlags.enableMemoryPanelV2
+                        ? _buildV2Panel(context)
+                        : _buildV1Panel(context),
+              ),
       );
 
   Widget _buildError(BuildContext context) => Center(
@@ -275,18 +281,16 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ],
               ),
               const Spacer(),
-              TextButton.icon(
+              SparkleButton.ghost(
+                label: _dateRange == null
+                    ? '日期'
+                    : '${_dateRange!.start.month}/${_dateRange!.start.day}'
+                        ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
                 onPressed: _pickDateRange,
                 icon: const Icon(Icons.date_range),
-                label: Text(
-                  _dateRange == null
-                      ? '日期'
-                      : '${_dateRange!.start.month}/${_dateRange!.start.day}'
-                          ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
-                ),
               ),
               const SizedBox(width: DS.sm),
-              IconButton(
+              SparkleIconButton(
                 icon: Icon(
                   _viewMode == MemoryViewMode.compact
                       ? Icons.view_agenda
@@ -297,6 +301,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       ? MemoryViewMode.expanded
                       : MemoryViewMode.compact;
                 }),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -316,7 +322,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildPreferenceCard(MemoryPreferenceItem item) => _MemoryCard(
         title: item.prefKey,
         subtitle: _formatUpdated(item.updatedAt),
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -327,7 +334,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildGoalCard(MemoryGoalItem item) => _MemoryCard(
         title: item.title,
         subtitle: item.status,
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -338,7 +346,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildEpisodicCard(EpisodicMemoryItem item) => _MemoryCard(
         title: item.summary,
         subtitle: _formatUpdated(item.occurredAt),
-        badge: MemoryEvidenceBadge(status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
+        badge: MemoryEvidenceBadge(
+            status: _statusFor(item.evidenceMissing, item.evidenceRefs)),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -366,26 +375,33 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   Text(_formatMetrics(entry)),
                 ],
               ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            MemoryEvidenceBadge(status: entry.evidenceStatus),
-            if (entry.correctionCount > 0) ...[
-              const SizedBox(height: 6),
-              _CorrectionBadge(count: entry.correctionCount),
+        trailing: SizedBox(
+          width: 176,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              MemoryEvidenceBadge(status: entry.evidenceStatus),
+              if (entry.correctionCount > 0) ...[
+                const SizedBox(width: 6),
+                _CorrectionBadge(count: entry.correctionCount),
+              ],
+              const SizedBox(width: 4),
+              SparkleIconButton(
+                icon: Icon(
+                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                ),
+                onPressed: () => setState(() {
+                  if (isPinned) {
+                    _pinnedIds.remove(entry.id);
+                  } else {
+                    _pinnedIds.add(entry.id);
+                  }
+                }),
+                variant: ButtonVariant.ghost,
+                size: 32,
+              ),
             ],
-            const SizedBox(height: 6),
-            IconButton(
-              icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined),
-              onPressed: () => setState(() {
-                if (isPinned) {
-                  _pinnedIds.remove(entry.id);
-                } else {
-                  _pinnedIds.add(entry.id);
-                }
-              }),
-            ),
-          ],
+          ),
         ),
         onTap: () => _openDetail(context, entry.detailArgs),
       ),
@@ -496,21 +512,23 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     return entries;
   }
 
-  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) => entries.where((entry) {
-      if (_filterType != null && entry.type != _filterType) {
-        return false;
-      }
-      if (_filterEvidence != null && entry.evidenceStatus != _filterEvidence) {
-        return false;
-      }
-      if (_dateRange != null && entry.updatedAt != null) {
-        if (entry.updatedAt!.isBefore(_dateRange!.start) ||
-            entry.updatedAt!.isAfter(_dateRange!.end)) {
+  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) =>
+      entries.where((entry) {
+        if (_filterType != null && entry.type != _filterType) {
           return false;
         }
-      }
-      return true;
-    }).toList();
+        if (_filterEvidence != null &&
+            entry.evidenceStatus != _filterEvidence) {
+          return false;
+        }
+        if (_dateRange != null && entry.updatedAt != null) {
+          if (entry.updatedAt!.isBefore(_dateRange!.start) ||
+              entry.updatedAt!.isAfter(_dateRange!.end)) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
 
   List<MemoryEntry> _applySort(List<MemoryEntry> entries) {
     entries.sort((a, b) {
@@ -610,12 +628,12 @@ class _MemoryCard extends StatelessWidget {
         child: ListTile(
           title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(subtitle),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               badge,
               if (correctionCount > 0) ...[
-                const SizedBox(height: 6),
+                const SizedBox(width: 6),
                 _CorrectionBadge(count: correctionCount),
               ],
             ],
@@ -632,7 +650,7 @@ class _CorrectionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Chip(
-        label: Text('纠错 $count', style: TextStyle(color: DS.semanticWarning)),
+        label: Text('纠错 $count', style: TextStyle(color: DS.textPrimary)),
         backgroundColor: DS.semanticWarning.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

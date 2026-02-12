@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class ParallaxStarBackground extends StatelessWidget {
   const ParallaxStarBackground({
@@ -64,14 +65,13 @@ class _ParallaxLayersPainter extends CustomPainter {
       final center = Offset(size.width / 2, size.height / 2);
       // Light mode uses slightly brighter blue-purple, dark mode uses deeper night sky
       final startColor = isDark
-          ? const Color(0xFF0A0E27)  // Dark mode: Deep night
-          : const Color(0xFF1A2540); // Light mode: Slightly brighter blue-purple
+          ? DS.deepSpaceStart
+          : DS.deepSpaceStart.withValues(alpha: 0.95);
       final midColor = isDark
-          ? const Color(0xFF0E1533)
-          : const Color(0xFF222A48);
-      final endColor = isDark
-          ? const Color(0xFF141838)
-          : const Color(0xFF2A3050);  // Still maintains night sky feel in light mode
+          ? DS.deepSpaceSurface
+          : DS.deepSpaceSurface.withValues(alpha: 0.92);
+      final endColor =
+          isDark ? DS.deepSpaceEnd : DS.deepSpaceEnd.withValues(alpha: 0.9);
 
       final gradient = ui.Gradient.radial(
         center,
@@ -140,8 +140,9 @@ class _ParallaxLayersPainter extends CustomPainter {
       // r = r * (0.5 + scale * 0.5);
 
       // Always use white stars for night sky effect
-      paint.color = Colors.white.withValues(
-          alpha: opacityBase * (0.5 + random.nextDouble() * 0.5),);
+      paint.color = DS.white.withValues(
+        alpha: opacityBase * (0.5 + random.nextDouble() * 0.5),
+      );
       canvas.drawCircle(Offset(x, y), r, paint);
     }
   }

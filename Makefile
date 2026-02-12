@@ -1,8 +1,9 @@
-.PHONY: dev-up sync-db proto-gen db-migrate db-dump db-sqlc db-validate env-check smoke
+.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
+PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -107,26 +108,57 @@ smoke:
 	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
 	echo "✅ Smoke checks passed."
 
-# 生成 Protobuf 代码 (使用 Buf 工具链)
-# P1: Modernized protocol management with buf.build
+quality-baseline:
+	@echo "📊 Collecting quality baseline metrics..."
+	python3 scripts/collect_quality_baseline.py --output quality/baseline_snapshot.json
+
+quality-baseline-full:
+	@echo "📊 Collecting full quality baseline (includes runtime checks)..."
+	python3 scripts/collect_quality_baseline.py --run-checks --output quality/baseline_snapshot_full.json
+
+quality-budget-check:
+	@echo "🧱 Enforcing technical debt budget..."
+	python3 scripts/check_tech_debt_budget.py
+
+openapi-contract-check:
+	@echo "🧾 Checking OpenAPI contract snapshot..."
+	python3 scripts/check_openapi_contract.py
+
+flutter-analyze-gate:
+	@echo "📱 Running Flutter analyze gate..."
+	python3 scripts/check_flutter_analyze_gate.py --project-dir mobile --budget-file quality/flutter_analyze_allowlist.json --write-report quality/flutter_analyze_report.json
+
+mobile-design-lint:
+	@echo "🎨 Running mobile design system lint..."
+	cd mobile && dart lib/core/design/validation/design_system_linter.dart lib
+
+# Build proto toolchain container image (single source of truth for local + CI)
+proto-tools-build:
+	@echo "🐳 Building proto toolchain image $(PROTO_TOOLCHAIN_IMAGE)..."
+	docker build -f docker/proto-toolchain.Dockerfile -t $(PROTO_TOOLCHAIN_IMAGE) .
+
+# 生成 Protobuf 代码 (默认使用容器化工具链)
 proto-gen:
-	@echo "🚀 Generating Protobuf Code with Buf..."
-	@if command -v buf >/dev/null 2>&1; then \
-		buf generate; \
-		echo "✅ Protobuf code generated successfully via Buf!"; \
-	else \
-		echo "⚠️  Buf not installed, falling back to protoc..."; \
-		make proto-gen-legacy; \
-	fi
+	@echo "🚀 Generating Protobuf Code via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh gen
+	@echo "✅ Protobuf code generated successfully."
 
 # Buf linting and breaking change detection
 proto-lint:
-	@echo "🔍 Linting Protobuf files..."
-	buf lint
+	@echo "🔍 Linting Protobuf files via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh lint
 
 proto-breaking:
-	@echo "🔍 Checking for breaking changes..."
-	buf breaking --against '.git#branch=main'
+	@echo "🔍 Checking for breaking changes via unified toolchain..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+proto-check-generated:
+	@echo "🔍 Verifying generated code is up-to-date..."
+	@PROTO_TOOLCHAIN_IMAGE=$(PROTO_TOOLCHAIN_IMAGE) scripts/proto_toolchain.sh check-generated
+
+proto-deprecation-check:
+	@echo "🔍 Validating proto deprecation windows..."
+	python3 scripts/check_proto_deprecated_windows.py
 
 # Legacy proto generation (fallback if buf not installed)
 proto-gen-legacy:
@@ -162,12 +194,34 @@ proto-gen-legacy:
 	       --grpc_python_out=backend/app/gen/galaxy/v1 \
 	       --pyi_out=backend/app/gen/galaxy/v1 \
 	       proto/galaxy_service.proto
+	python -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen \
+	       --pyi_out=backend/app/gen \
+	       proto/websocket.proto
+	@echo "  → Dart..."
+	@if [ -x "$$HOME/.pub-cache/bin/protoc-gen-dart" ]; then \
+		if PATH="$$HOME/.pub-cache/bin:$$PATH" protoc --proto_path=proto \
+			--dart_out=grpc:mobile/lib/gen \
+			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto; then \
+			echo "✅ Dart protobuf generated"; \
+		else \
+			echo "⚠️  Dart protobuf generation failed in current environment"; \
+		fi; \
+	else \
+		echo "⚠️  protoc-gen-dart not found; skipped Dart generation"; \
+	fi
 	@echo "✅ Protobuf code generated successfully!"
 
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	cd backend && python grpc_server.py
+	@bash backend/scripts/run_grpc_with_env.sh
+
+# Python FastAPI 服务
+api-server:
+	@echo "🚀 Starting Python FastAPI Server..."
+	cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."
@@ -268,9 +322,10 @@ dev-all:
 	@echo "✅ Step 1 Complete! Infrastructure is ready."
 	@echo ""
 	@echo "Next steps (run in separate terminals):"
-	@echo "  2️⃣  make celery-up      # Start Celery task queue"
-	@echo "  3️⃣  make grpc-server    # Start Python gRPC server"
-	@echo "  4️⃣  make gateway-run    # Start Go Gateway"
+	@echo "  2️⃣  make api-server     # Start Python FastAPI server"
+	@echo "  3️⃣  make celery-up      # Start Celery task queue"
+	@echo "  4️⃣  make grpc-server    # Start Python gRPC server"
+	@echo "  5️⃣  make gateway-run    # Start Go Gateway"
 	@echo ""
 	@echo "📊 Monitoring:"
 	@echo "   - Flower: http://localhost:5555"

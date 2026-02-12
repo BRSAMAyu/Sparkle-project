@@ -33,19 +33,19 @@ class ReviewMetric {
     this.passed,
   });
 
-  final String name;           // 指标名称
-  final double score;          // 0-1分数
-  final double weight;         // 权重
-  final double? threshold;     // 通过阈值
-  final bool? passed;          // 是否通过
+  final String name; // 指标名称
+  final double score; // 0-1分数
+  final double weight; // 权重
+  final double? threshold; // 通过阈值
+  final bool? passed; // 是否通过
 
   static ReviewMetric fromJson(Map<String, dynamic> json) => ReviewMetric(
-    name: json['metric'] as String? ?? 'unknown',
-    score: (json['score'] as num?)?.toDouble() ?? 0.0,
-    weight: json['weight'] as double? ?? 1.0,
-    threshold: (json['threshold'] as num?)?.toDouble(),
-    passed: json['passed'] as bool?,
-  );
+        name: json['metric'] as String? ?? 'unknown',
+        score: (json['score'] as num?)?.toDouble() ?? 0.0,
+        weight: json['weight'] as double? ?? 1.0,
+        threshold: (json['threshold'] as num?)?.toDouble(),
+        passed: json['passed'] as bool?,
+      );
 
   /// 获取本地化名称
   String getDisplayName(BuildContext context) {
@@ -86,19 +86,19 @@ class ReviewIssue {
     this.affectedContent,
   });
 
-  final String category;        // 问题类别
-  final String severity;        // critical/warning/info
-  final String description;     // 问题描述
-  final String? suggestedFix;   // 修复建议
+  final String category; // 问题类别
+  final String severity; // critical/warning/info
+  final String description; // 问题描述
+  final String? suggestedFix; // 修复建议
   final String? affectedContent; // 受影响的内容
 
   static ReviewIssue fromJson(Map<String, dynamic> json) => ReviewIssue(
-    category: json['category'] as String? ?? 'general',
-    severity: json['severity'] as String? ?? 'info',
-    description: json['description'] as String? ?? '',
-    suggestedFix: json['suggested_fix'] as String?,
-    affectedContent: json['affected_content'] as String?,
-  );
+        category: json['category'] as String? ?? 'general',
+        severity: json['severity'] as String? ?? 'info',
+        description: json['description'] as String? ?? '',
+        suggestedFix: json['suggested_fix'] as String?,
+        affectedContent: json['affected_content'] as String?,
+      );
 
   /// 获取严重程度颜色
   Color getColor(BuildContext context) {
@@ -166,30 +166,32 @@ class ContentReviewResult {
   final List<String> suggestions;
   final String reviewedAt;
   final bool requiresReflection;
-  final String? reflectionStatus;  // "pending", "in_progress", "completed", "failed"
-  final String? scoreLabel;       // "优秀", "良好", "及格", "需改进"
+  final String?
+      reflectionStatus; // "pending", "in_progress", "completed", "failed"
+  final String? scoreLabel; // "优秀", "良好", "及格", "需改进"
 
-  static ContentReviewResult fromJson(Map<String, dynamic> json) => ContentReviewResult(
-    reviewId: json['review_id'] as String? ?? '',
-    decision: _parseDecision(json['decision'] as String? ?? ''),
-    overallScore: (json['overall_score'] as num?)?.toDouble() ?? 0.0,
-    metrics: (json['metrics'] as List<dynamic>?)
-            ?.map((e) => ReviewMetric.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [],
-    issues: (json['issues'] as List<dynamic>?)
-            ?.map((e) => ReviewIssue.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [],
-    suggestions: (json['suggestions'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [],
-    reviewedAt: json['reviewed_at'] as String? ?? '',
-    requiresReflection: json['requires_reflection'] as bool? ?? false,
-    reflectionStatus: json['reflection_status'] as String?,
-    scoreLabel: json['score_label'] as String?,
-  );
+  static ContentReviewResult fromJson(Map<String, dynamic> json) =>
+      ContentReviewResult(
+        reviewId: json['review_id'] as String? ?? '',
+        decision: _parseDecision(json['decision'] as String? ?? ''),
+        overallScore: (json['overall_score'] as num?)?.toDouble() ?? 0.0,
+        metrics: (json['metrics'] as List<dynamic>?)
+                ?.map((e) => ReviewMetric.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        issues: (json['issues'] as List<dynamic>?)
+                ?.map((e) => ReviewIssue.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        suggestions: (json['suggestions'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [],
+        reviewedAt: json['reviewed_at'] as String? ?? '',
+        requiresReflection: json['requires_reflection'] as bool? ?? false,
+        reflectionStatus: json['reflection_status'] as String?,
+        scoreLabel: json['score_label'] as String?,
+      );
 
   static ContentReviewDecision _parseDecision(String value) {
     switch (value) {
@@ -250,10 +252,10 @@ class ContentReviewCard extends StatefulWidget {
   final ContentReviewResult review;
   final VoidCallback? onAccept;
   final VoidCallback? onReject;
-  final VoidCallback? onRequestReview;  // 请求人工审查
+  final VoidCallback? onRequestReview; // 请求人工审查
   final OnOverrideCallback? onOverride; // Phase 2e: 用户覆盖审查决策
-  final OnAppealCallback? onAppeal;     // Phase 2e: 用户申诉审查结果
-  final bool collapsed;  // 是否折叠显示
+  final OnAppealCallback? onAppeal; // Phase 2e: 用户申诉审查结果
+  final bool collapsed; // 是否折叠显示
 
   @override
   State<ContentReviewCard> createState() => _ContentReviewCardState();
@@ -261,9 +263,7 @@ class ContentReviewCard extends StatefulWidget {
 
 class _ContentReviewCardState extends State<ContentReviewCard>
     with TickerProviderStateMixin {
-  late AnimationController _shimmerController;
   late AnimationController _slideInController;
-  late Animation<double> _shimmerAnimation;
   late Animation<Offset> _slideInAnimation;
 
   bool _isExpanded = true;
@@ -271,14 +271,6 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   @override
   void initState() {
     super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat();
-    _shimmerAnimation = Tween<double>(begin: -2.0, end: 2.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
-
     _slideInController = AnimationController(
       vsync: this,
       duration: SparkleMotion.normal,
@@ -286,13 +278,13 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     _slideInAnimation = Tween<Offset>(
       begin: const Offset(0, -0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideInController, curve: Curves.easeOut));
+    ).animate(
+        CurvedAnimation(parent: _slideInController, curve: Curves.easeOut));
     _slideInController.forward();
   }
 
   @override
   void dispose() {
-    _shimmerController.dispose();
     _slideInController.dispose();
     super.dispose();
   }
@@ -341,20 +333,20 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     }
   }
 
-  String _getScoreLabel() => widget.review.scoreLabel ??
-        (widget.review.overallScore >= 0.9
-            ? '优秀'
-            : widget.review.overallScore >= 0.7
-                ? '良好'
-                : widget.review.overallScore >= 0.5
-                    ? '及格'
-                    : '需改进');
+  String _getScoreLabel() =>
+      widget.review.scoreLabel ??
+      (widget.review.overallScore >= 0.9
+          ? '优秀'
+          : widget.review.overallScore >= 0.7
+              ? '良好'
+              : widget.review.overallScore >= 0.5
+                  ? '及格'
+                  : '需改进');
 
   @override
   Widget build(BuildContext context) {
     final color = _getDecisionColor();
     final gradient = _getDecisionGradient();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // 如果已通过且折叠，显示简化版本
     if (widget.collapsed && widget.review.passed) {
@@ -446,140 +438,133 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     Color color,
     LinearGradient gradient,
-  ) => Container(
-      margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing8,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
+  ) =>
+      Container(
+        margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _getDecisionIcon(),
-            color: color,
-            size: 16,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
           ),
-          const SizedBox(width: DS.spacing8),
-          Text(
-            '内容已通过审查',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.neutral900,
-                  fontWeight: DS.fontWeightMedium,
-                ),
-          ),
-          const Spacer(),
-          Text(
-            '$_getScoreLabel()',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: color,
-                  fontWeight: DS.fontWeightSemibold,
-                ),
-          ),
-        ],
-      ),
-    );
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _getDecisionIcon(),
+              color: color,
+              size: 16,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              '内容已通过审查',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral900,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+            ),
+            const Spacer(),
+            Text(
+              '$_getScoreLabel()',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildHeader(
     BuildContext context,
     Color color,
     LinearGradient gradient,
-  ) => Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(DS.spacing10),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+  ) =>
+      Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing10),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              _getDecisionIcon(),
+              color: DS.textOnPrimary,
+              size: 20,
+            ),
           ),
-          child: Icon(
-            _getDecisionIcon(),
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: DS.spacing12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _getDecisionTitle(),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.neutral900,
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getDecisionTitle(),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.neutral900,
+                      ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      '$_getScoreLabel()',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: color,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
                     ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    '$_getScoreLabel()',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(
-                          color: color,
-                          fontWeight: DS.fontWeightSemibold,
+                    if (widget.review.reflectionStatus != null) ...[
+                      const SizedBox(width: DS.spacing8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing6,
+                          vertical: 2,
                         ),
-                  ),
-                  if (widget.review.reflectionStatus != null) ...[
-                    const SizedBox(width: DS.spacing8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing6,
-                        vertical: 2,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: DS.borderRadius8,
+                        ),
+                        child: Text(
+                          _getReflectionStatusLabel(),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: color,
+                                    fontSize: 10,
+                                  ),
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: DS.borderRadius8,
-                      ),
-                      child: Text(
-                        _getReflectionStatusLabel(),
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(
-                              color: color,
-                              fontSize: 10,
-                            ),
-                      ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
-        // Expand/collapse button
-        InkWell(
-          onTap: () => setState(() => _isExpanded = !_isExpanded),
-          child: Icon(
-            _isExpanded
-                ? Icons.expand_less_rounded
-                : Icons.expand_more_rounded,
-            size: 20,
-            color: DS.neutral400,
+          // Expand/collapse button
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Icon(
+              _isExpanded
+                  ? Icons.expand_less_rounded
+                  : Icons.expand_more_rounded,
+              size: 20,
+              color: DS.neutral400,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildScoreBar(BuildContext context, Color color) {
     final score = widget.review.overallScore;
@@ -642,7 +627,10 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         Wrap(
           spacing: DS.spacing8,
           runSpacing: DS.spacing8,
-          children: metrics.take(5).map((metric) => _buildMetricChip(context, metric)).toList(),
+          children: metrics
+              .take(5)
+              .map((metric) => _buildMetricChip(context, metric))
+              .toList(),
         ),
       ],
     );
@@ -690,9 +678,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     final warningIssues = widget.review.warningIssues;
     final infoIssues = widget.review.infoIssues;
 
-    if (criticalIssues.isEmpty &&
-        warningIssues.isEmpty &&
-        infoIssues.isEmpty) {
+    if (criticalIssues.isEmpty && warningIssues.isEmpty && infoIssues.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -702,14 +688,14 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         if (criticalIssues.isNotEmpty) ...[
           _buildIssueGroup(context, '严重问题', criticalIssues, DS.error),
           if (warningIssues.isNotEmpty || infoIssues.isNotEmpty)
-              const SizedBox(height: DS.spacing8),
+            const SizedBox(height: DS.spacing8),
         ],
         if (warningIssues.isNotEmpty) ...[
           _buildIssueGroup(context, '警告', warningIssues, DS.warning),
-          if (infoIssues.isNotEmpty)
-              const SizedBox(height: DS.spacing8),
+          if (infoIssues.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
-        if (infoIssues.isNotEmpty && widget.review.decision != ContentReviewDecision.passed)
+        if (infoIssues.isNotEmpty &&
+            widget.review.decision != ContentReviewDecision.passed)
           _buildIssueGroup(context, '提示', infoIssues, DS.info),
       ],
     );
@@ -720,30 +706,33 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     String title,
     List<ReviewIssue> issues,
     Color color,
-  ) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              _getSeverityIcon(title),
-              size: 14,
-              color: color,
-            ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: DS.fontWeightSemibold,
-                  ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.spacing6),
-        ...issues.take(3).map((issue) => _buildIssueItem(context, issue, color)),
-      ],
-    );
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getSeverityIcon(title),
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: DS.spacing4),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: color,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing6),
+          ...issues
+              .take(3)
+              .map((issue) => _buildIssueItem(context, issue, color)),
+        ],
+      );
 
   IconData _getSeverityIcon(String title) {
     switch (title) {
@@ -762,65 +751,66 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     BuildContext context,
     ReviewIssue issue,
     Color color,
-  ) => Container(
-      padding: const EdgeInsets.all(DS.spacing10),
-      margin: const EdgeInsets.only(bottom: DS.spacing4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: DS.borderRadius8,
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                issue.getIcon(context),
-                size: 14,
-                color: color,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Expanded(
-                child: Text(
-                  issue.description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.neutral800,
-                      ),
-                ),
-              ),
-            ],
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(DS.spacing10),
+        margin: const EdgeInsets.only(bottom: DS.spacing4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(
+            color: color.withValues(alpha: 0.2),
           ),
-          if (issue.suggestedFix != null) ...[
-            const SizedBox(height: DS.spacing4),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.lightbulb_outline_rounded,
-                  size: 12,
-                  color: DS.neutral500,
+                  issue.getIcon(context),
+                  size: 14,
+                  color: color,
                 ),
-                const SizedBox(width: DS.spacing4),
+                const SizedBox(width: DS.spacing6),
                 Expanded(
                   child: Text(
-                    '建议: ${issue.suggestedFix}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: DS.neutral600,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 11,
+                    issue.description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.neutral800,
                         ),
                   ),
                 ),
               ],
             ),
+            if (issue.suggestedFix != null) ...[
+              const SizedBox(height: DS.spacing4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 12,
+                    color: DS.neutral500,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Expanded(
+                    child: Text(
+                      '建议: ${issue.suggestedFix}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: DS.neutral600,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 11,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 
   Widget _buildSuggestionsSection(BuildContext context) {
     final suggestions = widget.review.suggestions;
@@ -845,29 +835,31 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ],
         ),
         const SizedBox(height: DS.spacing8),
-        ...suggestions.take(3).map((suggestion) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '•',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DS.primaryBase,
-                        ),
-                  ),
-                  const SizedBox(width: DS.spacing6),
-                  Expanded(
-                    child: Text(
-                      suggestion,
+        ...suggestions.take(3).map(
+              (suggestion) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '•',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.neutral800,
+                            color: DS.primaryBase,
                           ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: DS.spacing6),
+                    Expanded(
+                      child: Text(
+                        suggestion,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.neutral800,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),),
+            ),
       ],
     );
   }
@@ -1030,55 +1022,56 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   /// Phase 2e: 更多操作菜单
-  Widget _buildMoreActionsMenu(BuildContext context, Color color) => PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_horiz_rounded,
-        color: DS.neutral500,
-        size: 20,
-      ),
-      padding: EdgeInsets.zero,
-      onSelected: (value) => _handleMenuAction(context, value),
-      itemBuilder: (context) => [
-        if (widget.onOverride != null)
-          PopupMenuItem(
-            value: 'override',
-            child: Row(
-              children: [
-                Icon(
-                  widget.review.passed
-                      ? Icons.thumb_down_rounded
-                      : Icons.thumb_up_rounded,
-                  size: 16,
-                  color: DS.neutral700,
-                ),
-                const SizedBox(width: DS.spacing8),
-                Text(
-                  widget.review.passed ? '不同意通过' : '我认为应该通过',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+  Widget _buildMoreActionsMenu(BuildContext context, Color color) =>
+      PopupMenuButton<String>(
+        icon: Icon(
+          Icons.more_horiz_rounded,
+          color: DS.neutral500,
+          size: 20,
+        ),
+        padding: EdgeInsets.zero,
+        onSelected: (value) => _handleMenuAction(context, value),
+        itemBuilder: (context) => [
+          if (widget.onOverride != null)
+            PopupMenuItem(
+              value: 'override',
+              child: Row(
+                children: [
+                  Icon(
+                    widget.review.passed
+                        ? Icons.thumb_down_rounded
+                        : Icons.thumb_up_rounded,
+                    size: 16,
+                    color: DS.neutral700,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Text(
+                    widget.review.passed ? '不同意通过' : '我认为应该通过',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
-          ),
-        if (widget.onAppeal != null)
-          PopupMenuItem(
-            value: 'appeal',
-            child: Row(
-              children: [
-                Icon(
-                  Icons.report_problem_rounded,
-                  size: 16,
-                  color: DS.warning,
-                ),
-                const SizedBox(width: DS.spacing8),
-                Text(
-                  '报告审查问题',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+          if (widget.onAppeal != null)
+            PopupMenuItem(
+              value: 'appeal',
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.report_problem_rounded,
+                    size: 16,
+                    color: DS.warning,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Text(
+                    '报告审查问题',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
 
   void _handleMenuAction(BuildContext context, String action) {
     if (action == 'override') {
@@ -1091,15 +1084,16 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   /// 显示覆盖决策对话框
   void _showOverrideDialog(BuildContext context) {
     final reasonController = TextEditingController();
-    final currentDecision = widget.review.decision == ContentReviewDecision.passed
-        ? 'passed'
-        : 'failed';
+    final currentDecision =
+        widget.review.decision == ContentReviewDecision.passed
+            ? 'passed'
+            : 'failed';
     final newDecision = currentDecision == 'passed' ? 'failed' : 'passed';
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => Container(
         margin: const EdgeInsets.all(DS.spacing16),
         padding: const EdgeInsets.all(DS.spacing16),
@@ -1112,9 +1106,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              currentDecision == 'passed'
-                  ? '不同意审查通过'
-                  : '我认为内容应该通过审查',
+              currentDecision == 'passed' ? '不同意审查通过' : '我认为内容应该通过审查',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -1144,24 +1136,22 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
+                SparkleButton.ghost(
+                  label: '取消',
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
                 ),
                 const SizedBox(width: DS.spacing8),
-                ElevatedButton(
+                SparkleButton.primary(
+                  label: '确认',
                   onPressed: () async {
                     final reason = reasonController.text.trim();
                     if (reason.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('请填写理由')),
-                      );
+                      AppFeedback.error(context, '请填写理由');
                       return;
                     }
                     Navigator.pop(context);
                     await widget.onOverride?.call(newDecision, reason);
                   },
-                  child: const Text('确认'),
                 ),
               ],
             ),
@@ -1183,10 +1173,10 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       '建议不可行',
     ];
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => Container(
           margin: const EdgeInsets.all(DS.spacing16),
@@ -1279,30 +1269,26 @@ class _ContentReviewCardState extends State<ContentReviewCard>
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
+                  SparkleButton.ghost(
+                    label: '取消',
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('取消'),
                   ),
                   const SizedBox(width: DS.spacing8),
-                  ElevatedButton(
+                  SparkleButton.primary(
+                    label: '提交申诉',
                     onPressed: () async {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请填写详细说明')),
-                        );
+                        AppFeedback.error(context, '请填写详细说明');
                         return;
                       }
                       if (selectedIssues.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请至少选择一个问题类型')),
-                        );
+                        AppFeedback.error(context, '请至少选择一个问题类型');
                         return;
                       }
                       Navigator.pop(context);
                       await widget.onAppeal?.call(reason, selectedIssues);
                     },
-                    child: const Text('提交申诉'),
                   ),
                 ],
               ),

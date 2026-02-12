@@ -10,7 +10,7 @@ Tests:
 import pytest
 import sys
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 sys.path.insert(0, '.')
 
@@ -353,7 +353,6 @@ class TestExecutionValidationIntegration:
             plan=plan,
             tool_results=tool_results,
             user_id=user_id,
-            db_session=db_session,
         )
 
         # Verify validation result
@@ -364,7 +363,7 @@ class TestExecutionValidationIntegration:
         assert result.tool_summary["total"] == 2
 
         # Verify record was persisted
-        records = await record_service.get_records_by_plan(uuid4.UUID(plan.plan_id))
+        records = await record_service.get_records_by_plan(UUID(plan.plan_id))
         assert len(records) >= 1
         assert records[0].validation_status == result.validation_status
         assert records[0].quality_score == result.quality_score

@@ -1,20 +1,22 @@
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
-from loguru import logger
 import grpc
+from loguru import logger
 
-from app.core.cache import cache_service
 from app.config import settings
+from app.core.cache import cache_service
+from google.api import annotations_pb2  # noqa: F401
+
+from app.gen.sparkle.inference.v1 import inference_pb2
+from app.services.candidate_generation_service import candidate_generation_service
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
+from app.services.feature_extraction_service import feature_extraction_service
 from app.services.llm_service import llm_service
 from app.services.quota import get_rate_limiter
-from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
-from app.gen.sparkle.inference.v1 import inference_pb2
-from app.services.feature_extraction_service import feature_extraction_service
 from app.services.signal_generation_service import signal_generation_service
-from app.services.candidate_generation_service import candidate_generation_service
 
 
 @dataclass
@@ -41,7 +43,7 @@ ERROR_REASON_TO_STATUS = {
 
 
 class LLMDispatcher:
-    def __init__(self, cache_config: Optional[CacheConfig] = None):
+    def __init__(self, cache_config: CacheConfig | None = None):
         self.cache_config = cache_config or CacheConfig()
 
     async def run(self, request: inference_pb2.InferenceRequest) -> inference_pb2.InferenceResponse:
@@ -83,10 +85,10 @@ class LLMDispatcher:
                 {"role": msg.role, "content": msg.content}
                 for msg in request.messages
             ]
-            
+
             # 2. Call LLM
             content = await llm_service.chat(messages, model=model_id)
-            
+
             # 3. Record Success
             await circuit_breaker_service.record_success(provider_name)
 
@@ -101,7 +103,7 @@ class LLMDispatcher:
             await self._cache_set(cache_key, {"content": content, "model_id": model_id}, request)
             return response
 
-        except CircuitBreakerOpenException as exc:
+        except CircuitBreakerOpenException:
             logger.warning(f"Circuit open for {provider_name}")
             return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, "Service temporarily unavailable (Circuit Open)")
         except InferenceException as exc:
@@ -109,7 +111,7 @@ class LLMDispatcher:
         except grpc.RpcError as exc:
             # Record failure for network/availability issues
             await circuit_breaker_service.record_failure(provider_name)
-            
+
             reason = inference_pb2.PROVIDER_UNAVAILABLE
             if exc.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                 reason = inference_pb2.TIMEOUT
@@ -117,7 +119,7 @@ class LLMDispatcher:
         except Exception as exc:
             # Record failure for unknown exceptions (likely provider issues)
             await circuit_breaker_service.record_failure(provider_name)
-            
+
             logger.exception("Inference failed")
             return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, str(exc))
 
@@ -253,14 +255,14 @@ class LLMDispatcher:
         schema_key = request.schema_version or request.output_schema
         return f"inference:{model_id}:{request.prompt_version}:{schema_key}:{content_hash}"
 
-    async def _cache_get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def _cache_get(self, key: str) -> dict[str, Any] | None:
         if not cache_service.redis:
             await cache_service.init_redis()
         if not cache_service.redis:
             return None
         return await cache_service.get(key)
 
-    async def _cache_set(self, key: str, value: Dict[str, Any], request: inference_pb2.InferenceRequest) -> None:
+    async def _cache_set(self, key: str, value: dict[str, Any], request: inference_pb2.InferenceRequest) -> None:
         if not cache_service.redis:
             await cache_service.init_redis()
         if not cache_service.redis:

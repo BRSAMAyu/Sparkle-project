@@ -12,7 +12,6 @@ import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_bad
 enum MemoryDetailType { preference, goal, episodic }
 
 class MemoryDetailArgs {
-
   factory MemoryDetailArgs.preference(MemoryPreferenceItem item) =>
       MemoryDetailArgs._(
         MemoryDetailType.preference,
@@ -39,8 +38,16 @@ class MemoryDetailArgs {
         item.evidenceRefs,
         episodic: item,
       );
-  MemoryDetailArgs._(this.type, this.title, this.evidenceMissing, this.refs,
-      {this.prefKey, this.preference, this.goal, this.episodic,});
+  MemoryDetailArgs._(
+    this.type,
+    this.title,
+    this.evidenceMissing,
+    this.refs, {
+    this.prefKey,
+    this.preference,
+    this.goal,
+    this.episodic,
+  });
 
   final MemoryDetailType type;
   final String title;
@@ -162,35 +169,46 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: DS.deepSpaceStart,
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
+          leading: SparkleIconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+          ),
+          title:
+              Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
           iconTheme: IconThemeData(color: DS.brandPrimary),
-          backgroundColor: Colors.transparent,
+          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
             if (AppFeatureFlags.enableMemoryPanelV2)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.copy),
                 onPressed: _copyDetail,
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableMemoryPanelV2)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.file_download),
                 onPressed: _showExportDialog,
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             if (AppFeatureFlags.enableEvidenceViewer)
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.link),
                 onPressed: () => _showEvidence(context),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: _buildBody(context),
+        body: ContentConstraint(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: _buildBody(context),
+          ),
         ),
       );
 
@@ -205,70 +223,66 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     }
   }
 
-  Widget _buildPreferenceDetail(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              MemoryEvidenceBadge(status: _evidenceStatus),
-              const SizedBox(width: DS.sm),
-              Text('当前版本', style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-          const SizedBox(height: DS.md),
-          _buildKeyValue('Key', widget.args.prefKey ?? '-'),
-          _buildKeyValue(
-            'Value',
-            _preference?.prefValue.toString() ?? '-',
-          ),
-          _buildKeyValue(
-            'Confidence',
-            _confidence?.toStringAsFixed(2) ?? '-',
-          ),
-          _buildKeyValue(
-            'Evidence',
-            _evidenceScore?.toStringAsFixed(2) ?? '-',
-          ),
-          _buildKeyValue('Corrections', _correctionCount.toString()),
-          _buildKeyValue(
-            'Updated',
-            _formatDate(_preference?.updatedAt),
-          ),
-          _buildKeyValue(
-            'Retracted',
-            _formatDate(_retractedAt),
-          ),
-          if (AppFeatureFlags.enableMemoryCorrection) ...[
-            const SizedBox(height: DS.md),
-            _buildCorrectionActions(context),
-          ],
-          if (AppFeatureFlags.enableMemoryExplain) ...[
-            const SizedBox(height: DS.lg),
-            _buildWhyMemorySection(),
-          ],
-          const SizedBox(height: DS.lg),
-          Text('版本历史', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: DS.sm),
-          if (_loadingHistory)
-            const Center(child: CircularProgressIndicator())
-          else if (_historyError != null)
-            Text(_historyError!, style: Theme.of(context).textTheme.bodyMedium)
-          else if (AppFeatureFlags.enableMemoryPanelV2)
-            Expanded(
-              child: ListView.builder(
-                itemCount: _history.length,
-                itemBuilder: _buildTimelineCard,
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                itemCount: _history.length,
-                itemBuilder: (context, index) =>
-                    _buildHistoryTile(context, _history[index]),
-              ),
+  Widget _buildPreferenceDetail(BuildContext context) => SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                MemoryEvidenceBadge(status: _evidenceStatus),
+                const SizedBox(width: DS.sm),
+                Text('当前版本', style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
-        ],
+            const SizedBox(height: DS.md),
+            _buildKeyValue('Key', widget.args.prefKey ?? '-'),
+            _buildKeyValue(
+              'Value',
+              _preference?.prefValue.toString() ?? '-',
+            ),
+            _buildKeyValue(
+              'Confidence',
+              _confidence?.toStringAsFixed(2) ?? '-',
+            ),
+            _buildKeyValue(
+              'Evidence',
+              _evidenceScore?.toStringAsFixed(2) ?? '-',
+            ),
+            _buildKeyValue('Corrections', _correctionCount.toString()),
+            _buildKeyValue(
+              'Updated',
+              _formatDate(_preference?.updatedAt),
+            ),
+            _buildKeyValue(
+              'Retracted',
+              _formatDate(_retractedAt),
+            ),
+            if (AppFeatureFlags.enableMemoryCorrection) ...[
+              const SizedBox(height: DS.md),
+              _buildCorrectionActions(context),
+            ],
+            if (AppFeatureFlags.enableMemoryExplain) ...[
+              const SizedBox(height: DS.lg),
+              _buildWhyMemorySection(),
+            ],
+            const SizedBox(height: DS.lg),
+            Text('版本历史', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: DS.sm),
+            if (_loadingHistory)
+              const Center(child: CircularProgressIndicator())
+            else if (_historyError != null)
+              Text(_historyError!,
+                  style: Theme.of(context).textTheme.bodyMedium)
+            else if (AppFeatureFlags.enableMemoryPanelV2)
+              ...List.generate(_history.length, (index) {
+                return _buildTimelineCard(context, index);
+              })
+            else
+              ...List.generate(_history.length, (index) {
+                return _buildHistoryTile(context, _history[index]);
+              }),
+          ],
+        ),
       );
 
   Widget _buildGoalDetail(BuildContext context) {
@@ -307,7 +321,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         const SizedBox(height: DS.md),
         _buildKeyValue('来源', episodic?.sourceType ?? '-'),
         _buildKeyValue('发生时间', _formatDate(episodic?.occurredAt)),
-        _buildKeyValue('重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-'),
+        _buildKeyValue(
+            '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
         _buildKeyValue('最后更新', _formatDate(episodic?.updatedAt)),
@@ -401,8 +416,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           children: [
             Row(
               children: [
-                Text('v${item.version}',
-                    style: Theme.of(context).textTheme.titleMedium,),
+                Text(
+                  'v${item.version}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const Spacer(),
                 MemoryEvidenceBadge(
                   status: _statusFor(item.evidenceMissing, item.evidenceRefs),
@@ -425,15 +442,15 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                   message: AppFeatureFlags.enableMemoryRetraction
                       ? '撤回到此版本'
                       : '需要开启 ENABLE_MEMORY_RETRACTION',
-                  child: TextButton(
-                    onPressed: AppFeatureFlags.enableMemoryRetraction
-                        ? () => _showRevertInfo(context)
-                        : null,
-                    child: const Text('Revert'),
+                  child: SparkleButton(
+                    label: 'Revert',
+                    onPressed: () => _showRevertInfo(context),
+                    variant: ButtonVariant.outline,
+                    disabled: !AppFeatureFlags.enableMemoryRetraction,
                   ),
                 ),
                 const Spacer(),
-                IconButton(
+                SparkleIconButton(
                   icon: const Icon(Icons.link),
                   onPressed: AppFeatureFlags.enableEvidenceViewer
                       ? () => EvidenceDrawer.show(
@@ -442,6 +459,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                             evidenceMissing: item.evidenceMissing,
                           )
                       : null,
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
                 ),
               ],
             ),
@@ -503,8 +522,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Why this memory?',
-                style: Theme.of(context).textTheme.titleMedium,),
+            Text(
+              'Why this memory?',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: DS.sm),
             Text(_explanationText()),
             if (settingsSummary != null) ...[
@@ -533,9 +554,9 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             if (AppFeatureFlags.enableEvidenceViewer)
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton(
+                child: SparkleButton.ghost(
+                  label: '查看证据',
                   onPressed: () => _showEvidence(context),
-                  child: const Text('查看证据'),
                 ),
               ),
           ],
@@ -624,9 +645,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制记忆内容')),
-    );
+    AppFeedback.info(context, '已复制记忆内容');
   }
 
   void _showExportDialog() {
@@ -643,9 +662,9 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           child: SelectableText(payload.toString()),
         ),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: '关闭',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
           ),
         ],
       ),
@@ -662,7 +681,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             runSpacing: DS.sm,
             children: [
               _buildCorrectionButton('Not true', 'reject'),
-              _buildCorrectionButton('No longer applies', 'no_longer_applicable'),
+              _buildCorrectionButton(
+                  'No longer applies', 'no_longer_applicable'),
               _buildCorrectionButton('Lower confidence', 'lower_confidence'),
               _buildCorrectionButton('Merge', 'merge'),
             ],
@@ -670,9 +690,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         ],
       );
 
-  Widget _buildCorrectionButton(String label, String action) => OutlinedButton(
+  Widget _buildCorrectionButton(String label, String action) => SparkleButton(
+        label: label,
         onPressed: () => _submitCorrection(action),
-        child: Text(label),
+        variant: ButtonVariant.outline,
       );
 
   Future<void> _submitCorrection(String action) async {
@@ -681,9 +702,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('合并功能即将上线')),
-        );
+        AppFeedback.info(context, '合并功能即将上线');
         return;
       }
       final service = ref.read(memoryApiServiceProvider);
@@ -716,16 +735,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         _confidence = result.confidence ?? _confidence;
         _retractedAt = result.retractedAt ?? _retractedAt;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已提交纠错: $action')),
-      );
+      AppFeedback.success(context, '已提交纠错: $action');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('纠错失败: $e')),
-      );
+      AppFeedback.error(context, '纠错失败: $e');
     }
   }
 }

@@ -66,13 +66,10 @@ class _LearningModeControlState extends State<LearningModeControl> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    color: isDark
-                        ? DS.surfaceTertiary
-                        : DS.neutral100,
+                    color: isDark ? DS.surfaceTertiary : DS.neutral100,
                     border: Border.all(
-                        color: isDark
-                            ? DS.neutral700
-                            : DS.neutral300,),
+                      color: isDark ? DS.neutral700 : DS.neutral300,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: DS.primaryBase
@@ -85,11 +82,15 @@ class _LearningModeControlState extends State<LearningModeControl> {
                   child: GestureDetector(
                     onPanUpdate: (details) {
                       _updatePosition(
-                          details.localPosition, Size(maxSize, maxSize),);
+                        details.localPosition,
+                        Size(maxSize, maxSize),
+                      );
                     },
                     onTapDown: (details) {
                       _updatePosition(
-                          details.localPosition, Size(maxSize, maxSize),);
+                        details.localPosition,
+                        Size(maxSize, maxSize),
+                      );
                     },
                     child: Stack(
                       children: [
@@ -103,12 +104,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           left: 0,
                           right: 0,
                           child: Center(
-                            child: Text('深度+',
-                                style: TextStyle(
-                                    color: isDark
-                                        ? DS.neutral400
-                                        : DS.neutral600,
-                                    fontSize: 11,),),
+                            child: Text(
+                              '深度+',
+                              style: TextStyle(
+                                color: isDark ? DS.neutral400 : DS.neutral600,
+                                fontSize: 11,
+                              ),
+                            ),
                           ),
                         ),
                         // Depth- at bottom center
@@ -117,12 +119,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           left: 0,
                           right: 0,
                           child: Center(
-                            child: Text('深度-',
-                                style: TextStyle(
-                                    color: isDark
-                                        ? DS.neutral400
-                                        : DS.neutral600,
-                                    fontSize: 11,),),
+                            child: Text(
+                              '深度-',
+                              style: TextStyle(
+                                color: isDark ? DS.neutral400 : DS.neutral600,
+                                fontSize: 11,
+                              ),
+                            ),
                           ),
                         ),
                         // Curiosity+ at right center
@@ -133,12 +136,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           child: Center(
                             child: RotatedBox(
                               quarterTurns: 1,
-                              child: Text('好奇+',
-                                  style: TextStyle(
-                                      color: isDark
-                                          ? DS.neutral400
-                                          : DS.neutral600,
-                                      fontSize: 11,),),
+                              child: Text(
+                                '好奇+',
+                                style: TextStyle(
+                                  color: isDark ? DS.neutral400 : DS.neutral600,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -150,12 +154,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
                           child: Center(
                             child: RotatedBox(
                               quarterTurns: 3,
-                              child: Text('好奇-',
-                                  style: TextStyle(
-                                      color: isDark
-                                          ? DS.neutral400
-                                          : DS.neutral600,
-                                      fontSize: 11,),),
+                              child: Text(
+                                '好奇-',
+                                style: TextStyle(
+                                  color: isDark ? DS.neutral400 : DS.neutral600,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -168,20 +173,24 @@ class _LearningModeControlState extends State<LearningModeControl> {
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.white : DS.brandPrimaryConst,
+                              color:
+                                  isDark ? DS.neutral0 : DS.brandPrimaryConst,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
                                   color: isDark
-                                      ? Colors.white.withValues(alpha: 0.4)
+                                      ? DS.neutral0.withValues(alpha: 0.4)
                                       : DS.primaryBase.withValues(alpha: 0.6),
                                   blurRadius: 8,
                                   spreadRadius: 1,
                                 ),
                               ],
                             ),
-                            child: Icon(Icons.touch_app,
-                                size: 16, color: isDark ? Colors.black87 : DS.primaryBase,),
+                            child: Icon(
+                              Icons.touch_app,
+                              size: 16,
+                              color: isDark ? DS.neutral900 : DS.primaryBase,
+                            ),
                           ),
                         ),
                       ],
@@ -214,7 +223,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.xs),
       decoration: BoxDecoration(
         color:
             isDark ? DS.brandPrimary10 : DS.primaryBase.withValues(alpha: 0.1),

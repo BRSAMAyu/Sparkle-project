@@ -14,21 +14,21 @@ Phase 2c: 集成审查历史和反馈学习
 创建时间: 2026-01-25
 """
 
-import json
 import time
-from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
+
 from loguru import logger
 
 from app.agents.graph.state import (
-    SparkleState,
-    ReviewStatus,
-    ReviewTargetType,
     ReviewContext,
     ReviewHistoryEntry,
+    ReviewStatus,
+    ReviewTargetType,
+    SparkleState,
 )
-from app.agents.reviewer_agent import ReviewerAgent, get_reviewer_agent, ReviewResult
-from app.agents.reflection_agent import ReflectionAgent, get_reflection_agent
+from app.agents.reflection_agent import get_reflection_agent
+from app.agents.reviewer_agent import ReviewerAgent, ReviewResult, get_reviewer_agent
 
 # Phase 2c: 导入审查历史服务
 try:
@@ -40,7 +40,7 @@ except ImportError:
 
 # Phase 2d: 导入模型降级服务
 try:
-    from app.services.model_fallback_service import get_model_fallback_service, FallbackReason
+    from app.services.model_fallback_service import get_model_fallback_service
     FALLBACK_SERVICE_AVAILABLE = True
 except ImportError:
     FALLBACK_SERVICE_AVAILABLE = False
@@ -51,7 +51,11 @@ except ImportError:
 # 全局ReviewerAgent实例
 # ============================================
 
-_reviewer_agent: Optional[ReviewerAgent] = None
+_reviewer_agent: ReviewerAgent | None = None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_reviewer() -> ReviewerAgent:
@@ -97,8 +101,8 @@ async def _record_review_to_history(
     target_id: str,
     target_type: str,
     review_duration_ms: int = 0,
-    content_snapshot: Optional[str] = None,
-    user_query: Optional[str] = None,
+    content_snapshot: str | None = None,
+    user_query: str | None = None,
 ) -> None:
     """记录审查到历史"""
     history_service = _get_review_history_service(state)
@@ -177,7 +181,7 @@ async def _check_and_execute_fallback(
     current_model: str,
     review_score: float,
     review_passed: bool,
-) -> Optional[str]:
+) -> str | None:
     """
     检查并执行模型降级
 
@@ -206,7 +210,7 @@ async def _check_and_execute_fallback(
                 from app.gen.agent.v1 import agent_service_pb2
                 try:
                     await context_data["stream_callback"](agent_service_pb2.ChatResponse(
-                        delta=f"\n\n[系统] 检测到质量问题，切换到更强大的模型重新生成..."
+                        delta="\n\n[系统] 检测到质量问题，切换到更强大的模型重新生成..."
                     ))
                 except Exception as e:
                     logger.warning(f"[ReviewNode] Failed to send fallback notification: {e}")
@@ -315,7 +319,7 @@ def _should_skip_review(state: SparkleState) -> bool:
 # 审查节点实现
 # ============================================
 
-async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
+async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     """
     生成后审查节点 - 审查LLM生成的响应
 
@@ -395,7 +399,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
             "user_id": _state_get(state, "user_id"),
             "session_id": _state_get(state, "session_id"),
             "conversation_history": messages[:last_assistant_idx],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": _utcnow().isoformat()
         }
     )
 
@@ -406,7 +410,8 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
     )
 
     # Phase 2c: Record review to history
-    target_id = response_id or getattr(last_assistant_msg, 'id', '')
+    context_data = _state_get(state, "context_data", {})
+    target_id = context_data.get("response_id") or getattr(last_assistant_msg, 'id', '')
     review_duration = int(time.time() * 1000 - review_start_time) if 'review_start_time' in locals() else 0
     await _record_review_to_history(
         state=state,
@@ -465,7 +470,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
                 }
             ))
 
-            logger.info(f"[ReviewNode] Review result sent to frontend")
+            logger.info("[ReviewNode] Review result sent to frontend")
         except Exception as e:
             logger.warning(f"[ReviewNode] Failed to send review to frontend: {e}")
 
@@ -484,7 +489,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
     # 6. 记录审查历史
     history_entry: ReviewHistoryEntry = {
         "review_id": review_result.review_id,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utcnow().isoformat(),
         "target_type": ReviewTargetType.LLM_RESPONSE,
         "decision": review_result.decision,
         "overall_score": review_result.overall_score,
@@ -499,15 +504,12 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         # 审查通过
         logger.info(f"[ReviewNode] Review PASSED: score={review_result.overall_score:.2f}")
         # 如果有工具调用，去执行；否则结束
-        if _state_get(state, "context_data", {}).get("tool_calls"):
-            next_step = "tool_execution"
-        else:
-            next_step = "__end__"
+        next_step = "tool_execution" if _state_get(state, "context_data", {}).get("tool_calls") else "__end__"
     else:
         # 审查未通过
         if review_result.requires_reflection:
             # 需要自我反思修正
-            logger.info(f"[ReviewNode] Review FAILED, entering reflection")
+            logger.info("[ReviewNode] Review FAILED, entering reflection")
             review_context["status"] = ReviewStatus.REFLECTING
 
             # Phase 2d: 检查是否需要切换模型（连续反思失败）
@@ -525,7 +527,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
         else:
             # 不需要反思，直接结束或需要用户批准
             if review_result.critical_issues:
-                logger.warning(f"[ReviewNode] Review FAILED with critical issues")
+                logger.warning("[ReviewNode] Review FAILED with critical issues")
 
                 # Phase 2d: 严重问题，检查是否需要模型切换
                 fallback_model = await _check_and_execute_fallback(
@@ -543,7 +545,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
                 next_step = "__end__"
             else:
                 # 警告级别问题，可以继续
-                logger.info(f"[ReviewNode] Review passed with warnings")
+                logger.info("[ReviewNode] Review passed with warnings")
                 next_step = "tool_execution" if _state_get(state, "context_data", {}).get("tool_calls") else "__end__"
 
     return {
@@ -553,7 +555,7 @@ async def generation_review_node(state: SparkleState) -> Dict[str, Any]:
     }
 
 
-async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
+async def execution_review_node(state: SparkleState) -> dict[str, Any]:
     """
     执行后审查节点 - 审查工具执行结果
 
@@ -577,7 +579,6 @@ async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
         return {"next_step": "generation"}
 
     reviewer = _get_reviewer()
-    all_passed = True
     issues_summary = []
 
     for tool_result in tool_results:
@@ -590,12 +591,11 @@ async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
             context={
                 "user_id": _state_get(state, "user_id"),
                 "session_id": _state_get(state, "session_id"),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         )
 
         if not review_result.passed:
-            all_passed = False
             for issue in review_result.issues:
                 issues_summary.append(f"[{tool_name}] {issue.description}")
 
@@ -611,7 +611,7 @@ async def execution_review_node(state: SparkleState) -> Dict[str, Any]:
     }
 
 
-async def reflection_node(state: SparkleState) -> Dict[str, Any]:
+async def reflection_node(state: SparkleState) -> dict[str, Any]:
     """
     反思修正节点 - 基于审查结果自动修正内容 (Phase 2a: 完整版)
 
@@ -632,7 +632,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
     logger.info("[ReviewNode] reflection_node invoked (Phase 2a: full ReflectionAgent)")
 
     # 获取当前审查上下文
-    review_context: Optional[ReviewContext] = _state_get(state, "review_context")
+    review_context: ReviewContext | None = _state_get(state, "review_context")
     if not review_context:
         logger.warning("[ReviewNode] No review context, ending reflection")
         return {"next_step": "__end__"}
@@ -765,10 +765,7 @@ async def reflection_node(state: SparkleState) -> Dict[str, Any]:
                     logger.warning(f"[ReviewNode] Failed to send stream notification: {e}")
 
             # 决定下一步
-            if context_data.get("tool_calls"):
-                next_step = "tool_execution"
-            else:
-                next_step = "__end__"
+            next_step = "tool_execution" if context_data.get("tool_calls") else "__end__"
 
         else:
             # 反思未成功
@@ -861,7 +858,7 @@ def route_after_reflection(state: SparkleState) -> str:
     Returns:
         下一步节点名称
     """
-    next_step = _state_get(state, "next_step", "__end__")
+    _state_get(state, "next_step", "__end__")
 
     # 如果反思成功且有工具调用
     context_data = _state_get(state, "context_data", {})

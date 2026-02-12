@@ -5,22 +5,28 @@ Multi-Intent Splitting Service
 从简单字符串匹配升级为 LLM 驱动的智能意图识别
 支持多意图检测、依赖分析、并行执行规划
 """
-import json
-from typing import List, Dict, Any, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
-from datetime import datetime
+
 from loguru import logger
-
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
+from app.core.agent_profiles import AgentRole
 from app.schemas.intent import (
-    IntentType, SubIntent, MultiIntentResult,
-    IntentParseRequest, IntentExecuteRequest, IntentExecuteResponse,
-    IntentAnalysisPreview
+    IntentAnalysisPreview,
+    IntentExecuteRequest,
+    IntentExecuteResponse,
+    IntentParseRequest,
+    IntentType,
+    MultiIntentResult,
+    SubIntent,
 )
-from app.core.agent_profiles import AgentRole, TaskType
 from app.services.llm_service import LLMService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MultiIntentService:
@@ -159,7 +165,7 @@ class MultiIntentService:
         Returns:
             IntentExecuteResponse: 执行结果
         """
-        start_time = datetime.utcnow()
+        start_time = _utcnow()
 
         if not request.confirmed:
             return IntentExecuteResponse(
@@ -200,7 +206,7 @@ class MultiIntentService:
                     logger.error(f"Failed to execute intent {intent.type}: {e}")
                     errors.append(f"{intent.type.value}: {str(e)}")
 
-            total_time = (datetime.utcnow() - start_time).total_seconds()
+            total_time = (_utcnow() - start_time).total_seconds()
 
             return IntentExecuteResponse(
                 success=len(errors) == 0,
@@ -211,7 +217,7 @@ class MultiIntentService:
 
         except Exception as e:
             logger.error(f"Intent execution failed: {e}")
-            total_time = (datetime.utcnow() - start_time).total_seconds()
+            total_time = (_utcnow() - start_time).total_seconds()
 
             return IntentExecuteResponse(
                 success=False,
@@ -252,7 +258,7 @@ class MultiIntentService:
             suggested_agent_roles=suggested_roles
         )
 
-    def _format_context(self, context: Optional[Dict[str, Any]]) -> str:
+    def _format_context(self, context: dict[str, Any] | None) -> str:
         """格式化上下文信息"""
         if not context:
             return ""
@@ -297,7 +303,7 @@ class MultiIntentService:
         intent: SubIntent,
         orchestrator,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行单个意图"""
         # 这里将意图转发给 orchestrator 或相应的服务
         # 根据意图类型选择不同的处理逻辑
@@ -319,7 +325,7 @@ class MultiIntentService:
         self,
         intent: SubIntent,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """处理任务管理意图"""
         # 这里可以调用 task_service
         return {
@@ -332,7 +338,7 @@ class MultiIntentService:
         self,
         intent: SubIntent,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """处理知识查询意图"""
         # 调用 galaxy_service 进行知识查询
         return {
@@ -345,7 +351,7 @@ class MultiIntentService:
         self,
         intent: SubIntent,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """处理时间规划意图"""
         return {
             "action": "time_planning",
@@ -358,7 +364,7 @@ class MultiIntentService:
         intent: SubIntent,
         orchestrator,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """通过 orchestrator 处理意图"""
         # 构造消息发送给 orchestrator
         response = await orchestrator.process_message(
@@ -377,8 +383,8 @@ class MultiIntentService:
 async def parse_user_intents(
     db: AsyncSession,
     message: str,
-    user_id: Optional[UUID] = None,
-    context: Optional[Dict[str, Any]] = None
+    user_id: UUID | None = None,
+    context: dict[str, Any] | None = None
 ) -> MultiIntentResult:
     """解析用户意图的便捷函数"""
     service = MultiIntentService(db)

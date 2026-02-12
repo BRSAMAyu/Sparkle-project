@@ -6,24 +6,27 @@ Tools:
 - QueryPlanTasksTool: Query tasks with filters (status, type, limit)
 - ModifyPlanTaskTool: Modify task properties (title, status, priority, guide_content)
 """
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
+
+from app.models.plan import Plan
+from app.models.task import Task
+from app.models.task import TaskStatus as ModelTaskStatus
+from app.models.task import TaskType as ModelTaskType
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+from app.schemas.task import TaskUpdate
+from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import (
-    QueryPlanTasksParams,
-    ModifyPlanTaskParams,
-    TaskStatusFilter,
     GetTaskDetailsParams,
+    ModifyPlanTaskParams,
     QueryAllTasksParams,
+    QueryPlanTasksParams,
+    TaskStatusFilter,
 )
-from app.models.task import Task, TaskStatus as ModelTaskStatus, TaskType as ModelTaskType
-from app.models.plan import Plan
-from app.models.task_resources import TaskResourceLink, TaskKnowledgeLink, TaskResourceType
-from app.services.task_service import TaskService
-from app.schemas.task import TaskUpdate
 
 
 class QueryPlanTasksTool(BaseTool):
@@ -45,7 +48,7 @@ class QueryPlanTasksTool(BaseTool):
         params: QueryPlanTasksParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -98,13 +101,16 @@ class QueryPlanTasksTool(BaseTool):
                     {
                         "id": str(task.id),
                         "title": task.title,
+                        "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
                         "type": task.type.value,
                         "status": task.status.value,
                         "priority": task.priority,
                         "difficulty": task.difficulty,
+                        "energy_cost": task.energy_cost,  # 🔧 补充：能量消耗
                         "estimated_minutes": task.estimated_minutes,
                         "tags": task.tags or [],
                         "created_at": task.created_at.isoformat() if task.created_at else None,
+                        "user_id": str(user_uuid),  # 🔧 补充：用户ID
                     }
                 )
 
@@ -155,7 +161,7 @@ class ModifyPlanTaskTool(BaseTool):
         params: ModifyPlanTaskParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -222,13 +228,19 @@ class ModifyPlanTaskTool(BaseTool):
                 widget_data={
                     "id": str(updated_task.id),
                     "title": updated_task.title,
+                    "guide_content": updated_task.guide_content,
                     "type": updated_task.type.value,
                     "status": updated_task.status.value,
                     "priority": updated_task.priority,
-                    "guide_content": updated_task.guide_content,
+                    "estimated_minutes": updated_task.estimated_minutes,  # 🔧 补充：预计时间
+                    "difficulty": updated_task.difficulty,  # 🔧 补充：难度
+                    "energy_cost": updated_task.energy_cost,  # 🔧 补充：能量消耗
+                    "tags": updated_task.tags or [],  # 🔧 补充：标签
+                    "created_at": updated_task.created_at.isoformat() if updated_task.created_at else None,
                     "updated_at": updated_task.updated_at.isoformat()
                     if updated_task.updated_at
                     else None,
+                    "user_id": str(user_uuid),  # 🔧 补充：用户ID
                 },
             )
 
@@ -269,7 +281,7 @@ class GetTaskDetailsTool(BaseTool):
         params: GetTaskDetailsParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -557,7 +569,7 @@ class QueryAllTasksTool(BaseTool):
         params: QueryAllTasksParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None,
+        tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -573,7 +585,7 @@ class QueryAllTasksTool(BaseTool):
             # Filter by plan status if needed
             if not params.include_inactive_plans:
                 plan_query = plan_query.where(
-                    Plan.is_active == True
+                    Plan.is_active
                 )
 
             plan_query = plan_query.order_by(Plan.updated_at.desc())
@@ -637,12 +649,17 @@ class QueryAllTasksTool(BaseTool):
                         task_list.append({
                             "id": str(task.id),
                             "title": task.title,
+                            "guide_content": task.guide_content,  # 🔧 修复：添加guide_content
                             "type": task.type.value,
                             "status": task.status.value,
                             "priority": task.priority,
                             "difficulty": task.difficulty,
+                            "energy_cost": task.energy_cost,  # 🔧 补充：能量消耗
                             "estimated_minutes": task.estimated_minutes,
+                            "tags": task.tags or [],  # 🔧 补充：标签
                             "due_date": task.due_date.isoformat() if task.due_date else None,
+                            "created_at": task.created_at.isoformat() if task.created_at else None,
+                            "user_id": str(user_uuid),  # 🔧 补充：用户ID
                         })
 
                     plans_with_tasks.append({
@@ -692,12 +709,17 @@ class QueryAllTasksTool(BaseTool):
                         task_list.append({
                             "id": str(task.id),
                             "title": task.title,
+                            "guide_content": task.guide_content,  # 🔧 修复：添加guide_content
                             "type": task.type.value,
                             "status": task.status.value,
                             "priority": task.priority,
                             "difficulty": task.difficulty,
+                            "energy_cost": task.energy_cost,  # 🔧 补充：能量消耗
                             "estimated_minutes": task.estimated_minutes,
+                            "tags": task.tags or [],  # 🔧 补充：标签
                             "due_date": task.due_date.isoformat() if task.due_date else None,
+                            "created_at": task.created_at.isoformat() if task.created_at else None,
+                            "user_id": str(user_uuid),  # 🔧 补充：用户ID
                         })
 
                     plans_with_tasks.append({

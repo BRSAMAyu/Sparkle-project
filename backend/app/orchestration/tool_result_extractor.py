@@ -3,8 +3,9 @@ ToolResultExtractor - 从 LangGraph State 中提取工具结果
 
 解决工具结果检索问题：从 final_state.messages 中提取 role='tool' 的消息
 """
-from typing import List, Dict, Any, Optional
 import json
+from typing import Any
+
 from loguru import logger
 
 from app.tools.base import ToolResult
@@ -14,8 +15,8 @@ class ToolResultExtractor:
     """从 LangGraph State 消息中提取工具结果"""
 
     def extract_from_messages(
-        self, messages: List[Dict[str, Any]]
-    ) -> List[ToolResult]:
+        self, messages: list[dict[str, Any]]
+    ) -> list[ToolResult]:
         """
         从 LangGraph messages 列表中提取工具执行结果
 
@@ -43,7 +44,7 @@ class ToolResultExtractor:
         logger.info(f"Extracted {len(results)} tool results from {len(messages)} messages")
         return results
 
-    def _parse_tool_message(self, msg: Dict[str, Any]) -> Optional[ToolResult]:
+    def _parse_tool_message(self, msg: dict[str, Any]) -> ToolResult | None:
         """
         解析单个工具消息为 ToolResult
 
@@ -76,7 +77,7 @@ class ToolResultExtractor:
             error_type=error_type,
         )
 
-    def _parse_content(self, content: Any) -> Dict[str, Any]:
+    def _parse_content(self, content: Any) -> dict[str, Any]:
         """解析消息内容"""
         if isinstance(content, dict):
             return content
@@ -95,8 +96,8 @@ class ToolResultExtractor:
         return {"raw": str(content)}
 
     def _determine_success(
-        self, content_data: Dict[str, Any]
-    ) -> tuple[bool, Optional[str], Optional[str]]:
+        self, content_data: dict[str, Any]
+    ) -> tuple[bool, str | None, str | None]:
         """
         判断工具执行是否成功
 
@@ -142,8 +143,8 @@ class ToolResultExtractor:
         return (True, None, None)
 
     def extract_tool_call_summary(
-        self, messages: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, messages: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         提取工具调用摘要
 
@@ -163,7 +164,7 @@ class ToolResultExtractor:
         total = len(results)
         successful = sum(1 for r in results if r.success)
         failed = total - successful
-        tools_used = list(set(r.tool_name for r in results))
+        tools_used = list({r.tool_name for r in results})
 
         return {
             "total_calls": total,

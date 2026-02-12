@@ -1,17 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/statistics/config/statistics_config.dart';
 
 /// Data class for pie chart sections
 class PieChartSection {
-
   const PieChartSection({
     required this.value,
     required this.label,
     this.color,
     this.icon,
   });
+
   /// Value of this section
   final double value;
 
@@ -27,9 +26,9 @@ class PieChartSection {
 
 /// Pie chart widget for statistics data visualization
 class StatisticsPieChart extends StatelessWidget {
-
   const StatisticsPieChart({
-    required this.sections, super.key,
+    required this.sections,
+    super.key,
     this.radius,
     this.innerRadius,
     this.isDonut = true,
@@ -39,6 +38,7 @@ class StatisticsPieChart extends StatelessWidget {
     this.showLegend = true,
     this.legendPosition = LegendPosition.bottom,
   });
+
   /// Data sections to display
   final List<PieChartSection> sections;
 
@@ -101,10 +101,10 @@ class StatisticsPieChart extends StatelessWidget {
   }
 
   Widget _buildChart() {
-    final effectiveRadius = radius ??
-        (isDonut ? StatisticsChartConfig.pieRadius : 80);
-    final effectiveInnerRadius = innerRadius ??
-        (isDonut ? StatisticsChartConfig.pieInnerRadius : 0);
+    final effectiveRadius =
+        radius ?? (isDonut ? StatisticsChartConfig.pieRadius : 80);
+    final effectiveInnerRadius =
+        innerRadius ?? (isDonut ? StatisticsChartConfig.pieInnerRadius : 0);
 
     return SizedBox(
       height: effectiveRadius * 2 + 40,
@@ -126,7 +126,7 @@ class StatisticsPieChart extends StatelessWidget {
 
   List<PieChartSectionData> _buildSections() {
     final total = sections.fold<double>(0, (sum, s) => sum + s.value);
-    const colors = StatisticsChartConfig.pieColors;
+    final palette = StatisticsChartConfig.piePalette;
 
     double startAngle = 0;
 
@@ -137,7 +137,7 @@ class StatisticsPieChart extends StatelessWidget {
       final angle = percentage * 360;
       final midAngle = startAngle + angle / 2;
 
-      final color = section.color ?? colors[index % colors.length];
+      final color = section.color ?? palette[index % palette.length];
 
       final sectionData = PieChartSectionData(
         value: section.value,
@@ -160,30 +160,34 @@ class StatisticsPieChart extends StatelessWidget {
 
   double effectiveRadius() => radius ?? StatisticsChartConfig.pieRadius;
 
-  Widget? _buildBadge(PieChartSection section, double percentage, double angle) {
+  Widget? _buildBadge(
+    PieChartSection section,
+    double percentage,
+    double angle,
+  ) {
     if (!showLabels) return null;
+    final palette = StatisticsChartConfig.piePalette;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: DS.xs),
       decoration: BoxDecoration(
         color: section.color ??
-            StatisticsChartConfig.pieColors[
-                sections.indexOf(section) % StatisticsChartConfig.pieColors.length],
+            palette[sections.indexOf(section) % palette.length],
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         section.label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: DS.onBrandPrimary,
         ),
       ),
     );
   }
 
   Widget _buildLegend() {
-    const colors = StatisticsChartConfig.pieColors;
+    final palette = StatisticsChartConfig.piePalette;
 
     return Padding(
       padding: const EdgeInsets.all(DS.md),
@@ -200,7 +204,7 @@ class StatisticsPieChart extends StatelessWidget {
                 width: StatisticsChartConfig.legendMarkerSize,
                 height: StatisticsChartConfig.legendMarkerSize,
                 decoration: BoxDecoration(
-                  color: section.color ?? colors[index % colors.length],
+                  color: section.color ?? palette[index % palette.length],
                   borderRadius: BorderRadius.circular(
                     StatisticsChartConfig.legendMarkerRadius,
                   ),
@@ -219,39 +223,40 @@ class StatisticsPieChart extends StatelessWidget {
   }
 
   Widget _buildEmptyState() => Container(
-      height: 200,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.pie_chart,
-            size: 48,
-            color: StatisticsChartConfig.emptyStateColor,
-          ),
-          const SizedBox(height: DS.md),
-          Text(
-            '暂无数据',
-            style: DS.bodyStyle.copyWith(
-              color: DS.neutral400,
+        height: 200,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart,
+              size: 48,
+              color: StatisticsChartConfig.emptyStateColor,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.md),
+            Text(
+              '暂无数据',
+              style: DS.bodyStyle.copyWith(
+                color: DS.neutral400,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 /// Donut chart with center content
 class StatisticsDonutChart extends StatelessWidget {
-
   const StatisticsDonutChart({
-    required this.sections, super.key,
+    required this.sections,
+    super.key,
     this.radius,
     this.centerText,
     this.centerValue,
     this.centerUnit,
     this.centerWidget,
   });
+
   /// Data sections to display
   final List<PieChartSection> sections;
 
@@ -272,51 +277,50 @@ class StatisticsDonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StatisticsPieChart(
-      sections: sections,
-      radius: radius,
-      centerWidget: centerWidget ??
-          _buildDefaultCenterWidget(),
-    );
+        sections: sections,
+        radius: radius,
+        centerWidget: centerWidget ?? _buildDefaultCenterWidget(),
+      );
 
   Widget _buildDefaultCenterWidget() => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (centerText != null)
-          Text(
-            centerText!,
-            style: DS.captionStyle.copyWith(
-              color: DS.neutral500,
-            ),
-          ),
-        if (centerValue != null) ...[
-          const SizedBox(height: DS.xs),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                centerValue!,
-                style: DS.headlineStyle.copyWith(
-                  fontSize: 32,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.neutral800,
-                ),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (centerText != null)
+            Text(
+              centerText!,
+              style: DS.captionStyle.copyWith(
+                color: DS.neutral500,
               ),
-              if (centerUnit != null) ...[
-                const SizedBox(width: 2),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    centerUnit!,
-                    style: DS.captionStyle.copyWith(
-                      color: DS.neutral400,
-                    ),
+            ),
+          if (centerValue != null) ...[
+            const SizedBox(height: DS.xs),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  centerValue!,
+                  style: DS.headlineStyle.copyWith(
+                    fontSize: 32,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.neutral800,
                   ),
                 ),
+                if (centerUnit != null) ...[
+                  const SizedBox(width: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      centerUnit!,
+                      style: DS.captionStyle.copyWith(
+                        color: DS.neutral400,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
+          ],
         ],
-      ],
-    );
+      );
 }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -63,7 +64,9 @@ class GalaxyRepository {
       // In the future we can simulate events here
       return const Stream.empty();
     }
-    return _apiClient.getStream(ApiEndpoints.galaxyEvents);
+    // 🔧 后端未实现galaxy/events端点，返回空流避免404错误
+    debugPrint('🌌 Galaxy events stream: endpoint not implemented, returning empty stream');
+    return const Stream.empty();
   }
 
   /// Get detailed information about a specific knowledge node

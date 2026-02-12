@@ -25,106 +25,130 @@ class AchievementStatsPanel extends StatelessWidget {
   }
 
   Widget _buildFullStats() => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
-      ),
-      child: Column(
-        children: [
-          // 顶部统计行
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  '总成就',
-                  '${stats.unlockedCount}/${stats.totalAchievements}',
-                  Icons.emoji_events_outlined,
-                  DS.brandPrimary,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.border),
+        ),
+        child: Column(
+          children: [
+            // 顶部统计行
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    '总成就',
+                    '${stats.unlockedCount}/${stats.totalAchievements}',
+                    Icons.emoji_events_outlined,
+                    DS.brandPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: _buildStatCard(
-                  '完成率',
-                  '${stats.unlockedPercentage.toStringAsFixed(0)}%',
-                  Icons.bar_chart,
-                  DS.semanticSuccess,
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: _buildStatCard(
+                    '完成率',
+                    '${stats.unlockedPercentage.toStringAsFixed(0)}%',
+                    Icons.bar_chart,
+                    DS.semanticSuccess,
+                  ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: _buildStatCard(
-                  '光子',
-                  '${stats.totalPhotons}',
-                  Icons.stars,
-                  const Color(0xFFFFD700),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: _buildStatCard(
+                    '光子',
+                    '${stats.totalPhotons}',
+                    Icons.stars,
+                    DS.warning,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
 
-          // 进度条
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-            child: _buildOverallProgressBar(),
-          ),
+            // 进度条
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+              child: _buildOverallProgressBar(),
+            ),
 
-          // 稀有度分布
-          _buildRarityDistribution(),
-        ],
-      ),
-    );
+            // 稀有度分布
+            _buildRarityDistribution(),
+          ],
+        ),
+      );
 
   Widget _buildCompactStats() => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildCompactStatItem(
-            '${stats.unlockedCount}/${stats.totalAchievements}',
-            '成就',
-          ),
-          _buildVerticalDivider(),
-          _buildCompactStatItem(
-            '${stats.unlockedPercentage.toStringAsFixed(0)}%',
-            '完成率',
-          ),
-          _buildVerticalDivider(),
-          _buildCompactStatItem(
-            '${stats.currentStreak}',
-            '连胜',
-          ),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildCompactStatItem(
+              '${stats.unlockedCount}/${stats.totalAchievements}',
+              '成就',
+            ),
+            _buildVerticalDivider(),
+            _buildCompactStatItem(
+              '${stats.unlockedPercentage.toStringAsFixed(0)}%',
+              '完成率',
+            ),
+            _buildVerticalDivider(),
+            _buildCompactStatItem(
+              '${stats.currentStreak}',
+              '连胜',
+            ),
+          ],
+        ),
+      );
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Column(
+  Widget _buildStatCard(
+          String label, String value, IconData icon, Color color) =>
+      Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: DS.iconSizeBase,
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: DS.fontSizeLg,
+                fontWeight: DS.fontWeightBold,
+                color: color,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildCompactStatItem(String value, String label) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: DS.iconSizeBase,
-          ),
-          const SizedBox(height: DS.spacing4),
           Text(
             value,
             style: TextStyle(
-              fontSize: DS.fontSizeLg,
+              fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
-              color: color,
+              color: DS.textPrimary,
             ),
           ),
           Text(
@@ -135,35 +159,13 @@ class AchievementStatsPanel extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-
-  Widget _buildCompactStatItem(String value, String label) => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: DS.fontSizeBase,
-            fontWeight: DS.fontWeightBold,
-            color: DS.textPrimary,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: DS.fontSizeXs,
-            color: DS.textSecondary,
-          ),
-        ),
-      ],
-    );
+      );
 
   Widget _buildVerticalDivider() => Container(
-      width: 1,
-      height: 24,
-      color: DS.border,
-    );
+        width: 1,
+        height: 24,
+        color: DS.border,
+      );
 
   Widget _buildOverallProgressBar() {
     final progress = stats.unlockedPercentage / 100;
@@ -213,118 +215,117 @@ class AchievementStatsPanel extends StatelessWidget {
   }
 
   Widget _buildRarityDistribution() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '稀有度分布',
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textPrimary,
-          ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Row(
-          children: [
-            _buildRarityBarItem(
-              '普通',
-              stats.commonCount,
-              const Color(0xFF9E9E9E),
-            ),
-            const SizedBox(width: DS.spacing8),
-            _buildRarityBarItem(
-              '稀有',
-              stats.rareCount,
-              const Color(0xFFFFD700),
-            ),
-            const SizedBox(width: DS.spacing8),
-            _buildRarityBarItem(
-              '史诗',
-              stats.epicCount,
-              const Color(0xFF9B59B6),
-            ),
-            const SizedBox(width: DS.spacing8),
-            _buildRarityBarItem(
-              '传说',
-              stats.legendaryCount,
-              const Color(0xFFFF6B6B),
-            ),
-            const Spacer(),
-            if (stats.hiddenFound > 0)
-              _buildHiddenStat(),
-          ],
-        ),
-      ],
-    );
-
-  Widget _buildRarityBarItem(String label, int count, Color color) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: count > 0 ? color : DS.neutral300,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: DS.spacing6),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: DS.textSecondary,
-              ),
-            ),
-            Text(
-              count > 0 ? '$count' : '-',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                fontWeight: DS.fontWeightBold,
-                color: count > 0 ? color : DS.textTertiary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-
-  Widget _buildHiddenStat() => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.purple.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius8,
-        border: Border.all(
-          color: Colors.purple.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.visibility_off,
-            size: DS.iconSizeXs,
-            color: Colors.purple,
-          ),
-          const SizedBox(width: DS.spacing4),
           Text(
-            '隐藏: ${stats.hiddenFound}',
-            style: const TextStyle(
-              fontSize: DS.fontSizeXs,
-              color: Colors.purple,
-              fontWeight: DS.fontWeightMedium,
+            '稀有度分布',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textPrimary,
             ),
+          ),
+          const SizedBox(height: DS.spacing12),
+          Row(
+            children: [
+              _buildRarityBarItem(
+                '普通',
+                stats.commonCount,
+                DS.neutral500,
+              ),
+              const SizedBox(width: DS.spacing8),
+              _buildRarityBarItem(
+                '稀有',
+                stats.rareCount,
+                DS.warning,
+              ),
+              const SizedBox(width: DS.spacing8),
+              _buildRarityBarItem(
+                '史诗',
+                stats.epicCount,
+                DS.prismPurple,
+              ),
+              const SizedBox(width: DS.spacing8),
+              _buildRarityBarItem(
+                '传说',
+                stats.legendaryCount,
+                DS.error,
+              ),
+              const Spacer(),
+              if (stats.hiddenFound > 0) _buildHiddenStat(),
+            ],
           ),
         ],
-      ),
-    );
+      );
+
+  Widget _buildRarityBarItem(String label, int count, Color color) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: count > 0 ? color : DS.neutral300,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: DS.spacing6),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textSecondary,
+                ),
+              ),
+              Text(
+                count > 0 ? '$count' : '-',
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightBold,
+                  color: count > 0 ? color : DS.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+  Widget _buildHiddenStat() => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: DS.prismPurple.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(
+            color: DS.prismPurple.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.visibility_off,
+              size: DS.iconSizeXs,
+              color: DS.prismPurple,
+            ),
+            const SizedBox(width: DS.spacing4),
+            Text(
+              '隐藏: ${stats.hiddenFound}',
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.prismPurple,
+                fontWeight: DS.fontWeightMedium,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 /// 稀有度分布饼图组件
@@ -350,10 +351,10 @@ class RarityPieChart extends StatelessWidget {
     }
 
     final sections = [
-      _PieSection(stats.commonCount, const Color(0xFF9E9E9E)),
-      _PieSection(stats.rareCount, const Color(0xFFFFD700)),
-      _PieSection(stats.epicCount, const Color(0xFF9B59B6)),
-      _PieSection(stats.legendaryCount, const Color(0xFFFF6B6B)),
+      _PieSection(stats.commonCount, DS.neutral500),
+      _PieSection(stats.rareCount, DS.warning),
+      _PieSection(stats.epicCount, DS.prismPurple),
+      _PieSection(stats.legendaryCount, DS.error),
     ];
 
     return SizedBox(
@@ -366,22 +367,22 @@ class RarityPieChart extends StatelessWidget {
   }
 
   Widget _buildEmptyChart() => SizedBox(
-      width: size,
-      height: size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: DS.neutral200,
-        ),
-        child: Center(
-          child: Icon(
-            Icons.pie_chart,
-            size: size * 0.4,
-            color: DS.textTertiary,
+        width: size,
+        height: size,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: DS.neutral200,
+          ),
+          child: Center(
+            child: Icon(
+              Icons.pie_chart,
+              size: size * 0.4,
+              color: DS.textTertiary,
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _PieSection {
@@ -438,5 +439,6 @@ class _PieChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PieChartPainter oldDelegate) => oldDelegate.sections != sections;
+  bool shouldRepaint(_PieChartPainter oldDelegate) =>
+      oldDelegate.sections != sections;
 }

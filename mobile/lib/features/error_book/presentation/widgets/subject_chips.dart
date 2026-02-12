@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 科目定义
 class Subject {
@@ -13,42 +14,49 @@ class Subject {
   final IconData icon;
   final Color color;
 
-  static const List<Subject> all = [
+  static final List<Subject> all = [
     Subject(
-        code: 'math',
-        label: '数学',
-        icon: Icons.calculate,
-        color: Color(0xFF2196F3),),
+      code: 'math',
+      label: '数学',
+      icon: Icons.calculate,
+      color: DS.info,
+    ),
     Subject(
-        code: 'physics',
-        label: '物理',
-        icon: Icons.science,
-        color: Color(0xFF9C27B0),),
+      code: 'physics',
+      label: '物理',
+      icon: Icons.science,
+      color: DS.brandSecondary,
+    ),
     Subject(
-        code: 'chemistry',
-        label: '化学',
-        icon: Icons.science_outlined,
-        color: Color(0xFFFF9800),),
+      code: 'chemistry',
+      label: '化学',
+      icon: Icons.science_outlined,
+      color: DS.warningLight,
+    ),
     Subject(
-        code: 'biology',
-        label: '生物',
-        icon: Icons.park,
-        color: Color(0xFF4CAF50),),
+      code: 'biology',
+      label: '生物',
+      icon: Icons.park,
+      color: DS.success,
+    ),
     Subject(
-        code: 'english',
-        label: '英语',
-        icon: Icons.language,
-        color: Color(0xFFF44336),),
+      code: 'english',
+      label: '英语',
+      icon: Icons.language,
+      color: DS.error,
+    ),
     Subject(
-        code: 'chinese',
-        label: '语文',
-        icon: Icons.menu_book,
-        color: Color(0xFF795548),),
+      code: 'chinese',
+      label: '语文',
+      icon: Icons.menu_book,
+      color: DS.warning,
+    ),
     Subject(
-        code: 'other',
-        label: '其他',
-        icon: Icons.more_horiz,
-        color: Color(0xFF607D8B),),
+      code: 'other',
+      label: '其他',
+      icon: Icons.more_horiz,
+      color: DS.textSecondary,
+    ),
   ];
 
   static Subject? findByCode(String code) {
@@ -75,12 +83,12 @@ class SubjectFilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         child: Row(
           children: [
             // 全部
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: DS.spacing8),
               child: FilterChip(
                 label: const Text('全部'),
                 selected: selectedSubject == null,
@@ -90,9 +98,9 @@ class SubjectFilterChips extends StatelessWidget {
             // 各科目
             ...Subject.all.map(
               (subject) => Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: DS.spacing8),
                 child: FilterChip(
-                  avatar: Icon(subject.icon, size: 16),
+                  avatar: Icon(subject.icon, size: DS.iconSizeXs),
                   label: Text(subject.label),
                   selected: selectedSubject == subject.code,
                   onSelected: (_) => onSelected(subject.code),
@@ -125,8 +133,8 @@ class SubjectChip extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 6 : 8,
-        vertical: compact ? 2 : 4,
+        horizontal: compact ? DS.spacing6 : DS.spacing8,
+        vertical: compact ? 2 : DS.spacing4,
       ),
       decoration: BoxDecoration(
         color: subject.color.withValues(alpha: 0.15),
@@ -136,12 +144,13 @@ class SubjectChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(subject.icon, size: compact ? 12 : 14, color: subject.color),
-          SizedBox(width: compact ? 2 : 4),
+          Icon(subject.icon,
+              size: compact ? DS.spacing12 : 14, color: subject.color),
+          SizedBox(width: compact ? 2 : DS.spacing4),
           Text(
             subject.label,
             style: TextStyle(
-              fontSize: compact ? 10 : 12,
+              fontSize: compact ? 10 : DS.fontSizeXs,
               fontWeight: FontWeight.w500,
               color: subject.color,
             ),

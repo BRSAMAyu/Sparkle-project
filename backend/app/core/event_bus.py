@@ -1,14 +1,19 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Callable, List
+import asyncio
 import json
 import os
-import asyncio
-from datetime import datetime
-from loguru import logger
+from contextlib import suppress
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
+
 import redis.asyncio as redis
+from loguru import logger
 from redis.exceptions import ResponseError
+
 from app.config import settings
-from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
+from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+
 
 class Event(ABC):
     """Event base class"""
@@ -21,7 +26,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -39,7 +44,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -53,11 +58,11 @@ class NodeMasteryUpdatedEvent(Event):
         }
 
 class ErrorCreated(Event):
-    def __init__(self, user_id: str, error_id: str, linked_node_ids: List[str] = None):
+    def __init__(self, user_id: str, error_id: str, linked_node_ids: list[str] = None):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -71,7 +76,7 @@ class ErrorCreated(Event):
 class TaskCompleted(Event):
     def __init__(self, user_id: str, task_id: str, estimated_minutes: int,
                  actual_minutes: int, difficulty: int, completion_rate: float,
-                 user_note: Optional[str] = None, plan_id: Optional[str] = None):
+                 user_note: str | None = None, plan_id: str | None = None):
         self.user_id = user_id
         self.task_id = task_id
         self.estimated_minutes = estimated_minutes
@@ -80,7 +85,7 @@ class TaskCompleted(Event):
         self.completion_rate = completion_rate
         self.user_note = user_note
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -97,16 +102,16 @@ class TaskCompleted(Event):
         }
 
 class TaskAbandoned(Event):
-    def __init__(self, user_id: str, task_id: str, reason: Optional[str] = None,
-                 estimated_minutes: Optional[int] = None, time_spent: Optional[int] = None,
-                 plan_id: Optional[str] = None):
+    def __init__(self, user_id: str, task_id: str, reason: str | None = None,
+                 estimated_minutes: int | None = None, time_spent: int | None = None,
+                 plan_id: str | None = None):
         self.user_id = user_id
         self.task_id = task_id
         self.reason = reason
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -125,11 +130,12 @@ class EventBus:
     Event Bus - Redis Streams Implementation
     Supports asynchronous publishing and consumer groups.
     """
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         # We delay connection until needed or explicitly initialized
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        self.redis: Optional[redis.Redis] = None
+        self.redis: redis.Redis | None = None
         self._consumers = []
+        self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
 
     async def connect(self):
@@ -163,20 +169,26 @@ class EventBus:
     async def close(self):
         """Close connection and stop consumers"""
         self._running = False
+        for task in self._consumer_tasks:
+            task.cancel()
+        for task in self._consumer_tasks:
+            with suppress(asyncio.CancelledError):
+                await task
+        self._consumer_tasks.clear()
         if self.redis:
             await self.redis.close()
             self.redis = None
             logger.info("Redis Event Bus connection closed")
 
-    async def publish(self, event_type: str, payload: dict, stream: str = "sparkle_events") -> Optional[str]:
+    async def publish(self, event_type: str, payload: dict, stream: str = "sparkle_events") -> str | None:
         """
         Publish event to Redis Stream
-        
+
         Args:
             event_type: Type of the event (used as key in payload usually, but here just for logging/logic)
             payload: Dictionary data to send
             stream: Redis Stream key name
-            
+
         Returns:
             Message ID if successful, None otherwise
         """
@@ -191,14 +203,14 @@ class EventBus:
             message = payload.copy()
             if "event_type" not in message:
                 message["event_type"] = event_type
-            
+
             # Serialize complex types if necessary (Redis expects str->str dict for simpler usage)
             # We use json dumps for the whole payload or individual fields.
             # Here we dump the whole payload into a 'data' field to avoid field limitation issues,
             # or we flatten it. For simplicity and flexibility, let's put it in 'data'.
-            # However, standard stream usage often puts fields directly. 
+            # However, standard stream usage often puts fields directly.
             # Let's stringify values.
-            
+
             msg_body = {}
             for k, v in message.items():
                 if isinstance(v, (dict, list)):
@@ -215,10 +227,10 @@ class EventBus:
             logger.error(f"Failed to publish event {event_type}: {e}")
             return None
 
-    async def subscribe(self, stream: str, group_name: str, consumer_name: str, callback: Callable[[Dict], Any]):
+    async def subscribe(self, stream: str, group_name: str, consumer_name: str, callback: Callable[[dict], Any]):
         """
         Start a background consumer for a consumer group.
-        
+
         Args:
             stream: Redis Stream key
             group_name: Consumer Group name
@@ -241,11 +253,12 @@ class EventBus:
 
         # 2. Start Consumption Loop
         self._running = True
-        asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        self._consumer_tasks.append(task)
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")
-        
+
         while self._running:
             try:
                 if not self.redis:
@@ -265,7 +278,7 @@ class EventBus:
                 if not entries:
                     continue
 
-                for stream_name, messages in entries:
+                for _stream_name, messages in entries:
                     for message_id, data in messages:
                         try:
                             # Parse data (handling json strings if we did that)
@@ -275,17 +288,17 @@ class EventBus:
                                     parsed_data[k] = json.loads(v)
                                 except (json.JSONDecodeError, TypeError):
                                     parsed_data[k] = v
-                            
+
                             # Invoke callback
                             await callback(parsed_data)
-                            
+
                             # ACK
                             await self.redis.xack(stream, group_name, message_id)
-                            
+
                         except Exception as e:
                             logger.error(f"Error processing message {message_id}: {e}")
                             # TODO: Implement Dead Letter Queue or Retry logic here
-                            
+
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
                 await asyncio.sleep(1) # Backoff

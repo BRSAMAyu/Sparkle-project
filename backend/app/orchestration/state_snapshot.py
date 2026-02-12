@@ -7,14 +7,19 @@ Responsibilities:
 3. Provide version comparison functionality
 4. Track context versions for conflict detection
 """
-from typing import Dict, Any, Optional
-from loguru import logger
-from dataclasses import dataclass, field
-from datetime import datetime
-import uuid
+import contextlib
 import json
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from loguru import logger
 
 from app.orchestration.schemas import StateSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StateSnapshotManager:
@@ -74,7 +79,7 @@ class StateSnapshotManager:
 
         return snapshot
 
-    async def get_snapshot(self, snapshot_id: str) -> Optional[StateSnapshot]:
+    async def get_snapshot(self, snapshot_id: str) -> StateSnapshot | None:
         """Retrieve a snapshot by ID
 
         Args:
@@ -100,8 +105,8 @@ class StateSnapshotManager:
     async def compare_versions(
         self,
         snapshot: StateSnapshot,
-        current_versions: Dict[str, str]
-    ) -> Dict[str, Any]:
+        current_versions: dict[str, str]
+    ) -> dict[str, Any]:
         """Compare snapshot versions with current versions
 
         Args:
@@ -181,7 +186,7 @@ class StateSnapshotManager:
             logger.warning(f"Failed to invalidate snapshots for user {user_id}: {e}")
             return 0
 
-    async def _load_context_versions(self, user_id: str) -> Dict[str, str]:
+    async def _load_context_versions(self, user_id: str) -> dict[str, str]:
         """Load context versions from Redis
 
         Args:
@@ -240,6 +245,7 @@ class StateSnapshotManager:
         """
         try:
             from sqlalchemy import select
+
             from app.models.task import Task, TaskStatus
 
             result = await db_session.execute(
@@ -266,6 +272,7 @@ class StateSnapshotManager:
         """
         try:
             from sqlalchemy import select
+
             from app.models.user import User
 
             result = await db_session.execute(
@@ -286,7 +293,7 @@ class StateSnapshotManager:
             await self._safe_rollback(db_session)
             return 100
 
-    async def _get_active_focus(self, user_id: str, db_session) -> Optional[str]:
+    async def _get_active_focus(self, user_id: str, db_session) -> str | None:
         """Get active focus ID for user
 
         Args:
@@ -297,7 +304,8 @@ class StateSnapshotManager:
             Active focus ID or None
         """
         try:
-            from sqlalchemy import select, desc
+            from sqlalchemy import desc, select
+
             from app.models.focus import FocusSession
 
             result = await db_session.execute(
@@ -314,10 +322,8 @@ class StateSnapshotManager:
             return None
 
     async def _safe_rollback(self, db_session) -> None:
-        try:
+        with contextlib.suppress(Exception):
             await db_session.rollback()
-        except Exception:
-            pass
 
     async def update_context_version(
         self,
@@ -341,14 +347,11 @@ class StateSnapshotManager:
         try:
             # Get existing versions
             raw = await self.redis.get(key)
-            if raw:
-                versions = json.loads(raw)
-            else:
-                versions = {}
+            versions = json.loads(raw) if raw else {}
 
             # Update the domain
             versions[domain] = version
-            versions["_last_updated"] = datetime.utcnow().isoformat()
+            versions["_last_updated"] = _utcnow().isoformat()
 
             # Save back
             payload = json.dumps(versions, ensure_ascii=False)

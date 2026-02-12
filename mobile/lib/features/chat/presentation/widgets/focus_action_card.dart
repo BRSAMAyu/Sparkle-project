@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class FocusActionCard extends StatelessWidget {
@@ -59,15 +61,19 @@ class FocusActionCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: DS.md),
-            CustomButton.primary(
-              text: '开始专注',
-              icon: Icons.play_arrow_rounded,
-              customGradient: DS.secondaryGradient,
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                context.push('/tasks/${taskModel.id}/execute');
-              },
-              size: CustomButtonSize.small,
+            Consumer(
+              builder: (context, ref, child) => CustomButton.primary(
+                text: '开始专注',
+                icon: Icons.play_arrow_rounded,
+                customGradient: DS.secondaryGradient,
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+                  ref.read(activeTaskProvider.notifier).state = taskModel;
+                  context.push('/tasks/${taskModel.id}/execute');
+                },
+                size: CustomButtonSize.small,
+              ),
             ),
           ],
         ),

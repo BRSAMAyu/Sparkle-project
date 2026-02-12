@@ -99,30 +99,6 @@ class LocalTranslationRepository {
     return records.map(_toHistoryItem).toList();
   }
 
-  /// Build query based on filter - returns the collection filter builder
-  dynamic _buildFilterQuery(TranslationFilter filter) {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-
-    switch (filter) {
-      case TranslationFilter.favorites:
-        return _collection
-            .filter()
-            .isFavoritedEqualTo(true);
-      case TranslationFilter.highRating:
-        return _collection
-            .filter()
-            .ratingGreaterThan(4);
-      case TranslationFilter.recent:
-        return _collection
-            .filter()
-            .createdAtGreaterThan(weekAgo);
-      case TranslationFilter.all:
-      default:
-        return _collection.filter();
-    }
-  }
-
   /// Search translation history
   Future<List<TranslationHistoryItem>> search(String query) async {
     final lowerQuery = query.toLowerCase();

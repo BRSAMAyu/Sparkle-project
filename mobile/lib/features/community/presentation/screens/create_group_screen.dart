@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
@@ -59,15 +58,16 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Discard Group?'),
         content: const Text(
-            'You have unsaved changes. Are you sure you want to discard them?',),
+          'You have unsaved changes. Are you sure you want to discard them?',
+        ),
         actions: [
           SparkleButton.ghost(
-              label: 'Keep Editing',
-              onPressed: () => Navigator.of(context).pop(false),),
-          TextButton(
+            label: 'Keep Editing',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          SparkleButton.destructive(
+            label: 'Discard',
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: DS.error),
-            child: const Text('Discard'),
           ),
         ],
       ),
@@ -89,10 +89,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     }
 
     if (_type == GroupType.sprint && _deadline == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please select a deadline for the sprint group'),),
-      );
+      AppFeedback.info(
+          context, 'Please select a deadline for the sprint group');
       return;
     }
 
@@ -125,9 +123,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating group: $e')),
-        );
+        AppFeedback.error(context, 'Error creating group: $e');
       }
     } finally {
       if (mounted) {
@@ -152,132 +148,144 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         },
         child: Scaffold(
           appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Create Group'),),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Group Name',
-                      hintText: 'e.g., Daily Algorithm Squad',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a name';
-                      }
-                      if (value.length < 2) return 'Name too short';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  DropdownButtonFormField<GroupType>(
-                    initialValue: _type,
-                    decoration: const InputDecoration(
-                      labelText: 'Group Type',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: GroupType.squad,
-                        child: Text('Study Squad (Long-term)'),
+            leading: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+            title: const Text('Create Group'),
+          ),
+          body: ContentConstraint(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Group Name',
+                        hintText: 'e.g., Daily Algorithm Squad',
+                        border: OutlineInputBorder(),
                       ),
-                      DropdownMenuItem(
-                        value: GroupType.sprint,
-                        child: Text('Sprint Group (Short-term with DDL)'),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a name';
+                        }
+                        if (value.length < 2) return 'Name too short';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    DropdownButtonFormField<GroupType>(
+                      initialValue: _type,
+                      decoration: const InputDecoration(
+                        labelText: 'Group Type',
+                        border: OutlineInputBorder(),
                       ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _type = value;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  TextFormField(
-                    controller: _descController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  TextFormField(
-                    controller: _tagsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Focus Tags',
-                      hintText: 'Separate by comma, e.g., Math, CS, Exam',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  if (_type == GroupType.sprint) ...[
-                    const SizedBox(height: DS.spacing16),
-                    const Divider(),
-                    const SizedBox(height: DS.spacing8),
-                    Text('Sprint Settings',
-                        style: Theme.of(context).textTheme.titleMedium,),
-                    const SizedBox(height: DS.spacing16),
-                    ListTile(
-                      title: const Text('Deadline'),
-                      subtitle: Text(_deadline == null
-                          ? 'Select Date'
-                          : _deadline.toString().split(' ')[0],),
-                      trailing: const Icon(Icons.calendar_today),
-                      tileColor: DS.brandPrimary.shade100,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),),
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate:
-                              DateTime.now().add(const Duration(days: 7)),
-                          firstDate: DateTime.now(),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (date != null) {
+                      items: const [
+                        DropdownMenuItem(
+                          value: GroupType.squad,
+                          child: Text('Study Squad (Long-term)'),
+                        ),
+                        DropdownMenuItem(
+                          value: GroupType.sprint,
+                          child: Text('Sprint Group (Short-term with DDL)'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
                           setState(() {
-                            _deadline = date;
+                            _type = value;
                           });
                         }
                       },
                     ),
                     const SizedBox(height: DS.spacing16),
                     TextFormField(
-                      controller: _goalController,
+                      controller: _descController,
                       decoration: const InputDecoration(
-                        labelText: 'Sprint Goal',
-                        hintText: 'e.g., Complete 50 LeetCode problems',
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    TextFormField(
+                      controller: _tagsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Focus Tags',
+                        hintText: 'Separate by comma, e.g., Math, CS, Exam',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) {
-                        if (_type == GroupType.sprint &&
-                            (value == null || value.trim().isEmpty)) {
-                          return 'Please enter a goal for sprint';
-                        }
-                        return null;
-                      },
+                    ),
+                    if (_type == GroupType.sprint) ...[
+                      const SizedBox(height: DS.spacing16),
+                      const Divider(),
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        'Sprint Settings',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      ListTile(
+                        title: const Text('Deadline'),
+                        subtitle: Text(
+                          _deadline == null
+                              ? 'Select Date'
+                              : _deadline.toString().split(' ')[0],
+                        ),
+                        trailing: const Icon(Icons.calendar_today),
+                        tileColor: DS.brandPrimary.shade100,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                DateTime.now().add(const Duration(days: 7)),
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() {
+                              _deadline = date;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      TextFormField(
+                        controller: _goalController,
+                        decoration: const InputDecoration(
+                          labelText: 'Sprint Goal',
+                          hintText: 'e.g., Complete 50 LeetCode problems',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (_type == GroupType.sprint &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Please enter a goal for sprint';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: DS.spacing32),
+                    SparkleButton(
+                      label: 'Create Group',
+                      onPressed: _isSubmitting ? null : _submit,
+                      loading: _isSubmitting,
+                      expand: true,
                     ),
                   ],
-                  const SizedBox(height: DS.spacing32),
-                  CustomButton.primary(
-                    text: _isSubmitting ? 'Creating...' : 'Create Group',
-                    onPressed: _isSubmitting ? null : _submit,
-                  ),
-                ],
+                ),
               ),
             ),
           ),

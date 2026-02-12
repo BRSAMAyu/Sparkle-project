@@ -6,17 +6,21 @@
 - 删除关联的 embeddings
 - 清理 MinIO 存储
 """
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from loguru import logger
 
-from app.models.file_storage import StoredFile
-from app.models.document_chunks import DocumentChunk
-from app.models.galaxy import KnowledgeNode
+from loguru import logger
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config.phase5_config import phase5_config
+from app.models.document_chunks import DocumentChunk
+from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FileCascadeService:
@@ -34,7 +38,7 @@ class FileCascadeService:
     async def soft_delete_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None
+        user_id: UUID | None = None
     ) -> dict:
         """
         软删除文件及其关联数据
@@ -52,7 +56,7 @@ class FileCascadeService:
         Returns:
             dict: 删除操作的统计信息
         """
-        now = datetime.utcnow()
+        now = _utcnow()
         stats = {
             "file_deleted": False,
             "chunks_deleted": 0,
@@ -129,7 +133,7 @@ class FileCascadeService:
     async def hard_delete_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
         force: bool = False
     ) -> dict:
         """
@@ -183,7 +187,7 @@ class FileCascadeService:
 
                 # 检查保留期是否已过
                 retention_days = phase5_config.DELETION_RETENTION_DAYS
-                cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+                cutoff_date = _utcnow() - timedelta(days=retention_days)
 
                 if file.deleted_at > cutoff_date:
                     stats["errors"].append(
@@ -259,7 +263,7 @@ class FileCascadeService:
 
         try:
             retention_days = phase5_config.DELETION_RETENTION_DAYS
-            cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+            cutoff_date = _utcnow() - timedelta(days=retention_days)
 
             # 1. 查找过期的软删除文件
             expired_files_stmt = select(StoredFile).where(
@@ -297,7 +301,7 @@ class FileCascadeService:
     async def restore_soft_deleted_file(
         self,
         file_id: UUID,
-        user_id: Optional[UUID] = None
+        user_id: UUID | None = None
     ) -> dict:
         """
         恢复软删除的文件
@@ -455,7 +459,7 @@ class FileCascadeService:
 async def cascade_delete_file(
     db: AsyncSession,
     file_id: UUID,
-    user_id: Optional[UUID] = None,
+    user_id: UUID | None = None,
     hard: bool = False,
     force: bool = False
 ) -> dict:

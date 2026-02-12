@@ -7,15 +7,19 @@ Tool History Service - 工具执行历史记录和学习服务
 3. 支持路由器的偏好学习
 4. 性能监控
 """
-import json
 import uuid
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-from sqlalchemy import select, and_, desc, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from app.models.tool_history import UserToolHistory, ToolSuccessRateView, UserToolPreference
+from loguru import logger
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.tool_history import ToolSuccessRateView, UserToolHistory, UserToolPreference
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ToolHistoryService:
@@ -29,13 +33,13 @@ class ToolHistoryService:
         user_id: uuid.UUID,
         tool_name: str,
         success: bool,
-        execution_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
-        error_type: Optional[str] = None,
-        tool_category: Optional[str] = None,
-        context_snapshot: Optional[Dict[str, Any]] = None,
-        input_args: Optional[Dict[str, Any]] = None,
-        output_summary: Optional[str] = None,
+        execution_time_ms: int | None = None,
+        error_message: str | None = None,
+        error_type: str | None = None,
+        tool_category: str | None = None,
+        context_snapshot: dict[str, Any] | None = None,
+        input_args: dict[str, Any] | None = None,
+        output_summary: str | None = None,
     ) -> UserToolHistory:
         """
         记录工具执行结果
@@ -100,7 +104,7 @@ class ToolHistoryService:
         Returns:
             成功率 (0-100)
         """
-        since = datetime.utcnow() - timedelta(days=days)
+        since = _utcnow() - timedelta(days=days)
 
         query = select(
             func.count(UserToolHistory.id).label('total'),
@@ -131,7 +135,7 @@ class ToolHistoryService:
         user_id: uuid.UUID,
         limit: int = 10,
         days: int = 30
-    ) -> List[UserToolPreference]:
+    ) -> list[UserToolPreference]:
         """
         获取用户偏好的工具列表（按成功率和使用频率排序）
 
@@ -143,7 +147,7 @@ class ToolHistoryService:
         Returns:
             UserToolPreference列表
         """
-        since = datetime.utcnow() - timedelta(days=days)
+        since = _utcnow() - timedelta(days=days)
 
         query = select(
             UserToolHistory.tool_name,
@@ -208,7 +212,7 @@ class ToolHistoryService:
         Returns:
             ToolSuccessRateView: 统计视图
         """
-        since = datetime.utcnow() - timedelta(days=days)
+        since = _utcnow() - timedelta(days=days)
 
         query = select(
             UserToolHistory.tool_name,
@@ -256,7 +260,7 @@ class ToolHistoryService:
         self,
         user_id: uuid.UUID,
         limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户最近失败的工具
 
@@ -288,7 +292,7 @@ class ToolHistoryService:
         record_id: int,
         satisfaction_rating: int,
         was_helpful: bool
-    ) -> Optional[UserToolHistory]:
+    ) -> UserToolHistory | None:
         """
         更新用户对工具执行结果的反馈
 
@@ -322,7 +326,7 @@ class ToolHistoryService:
         Returns:
             删除的记录数
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         query = select(UserToolHistory).where(
             UserToolHistory.created_at < cutoff_date

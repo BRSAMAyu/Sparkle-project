@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/breakpoints.dart';
 
 /// 间距系统 - 基于8pt网格和黄金比例
 @immutable
@@ -62,10 +63,13 @@ class SpacingSystem {
     double? tablet,
     double? desktop,
   }) {
-    final width = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final shortestSide = size.shortestSide;
 
-    if (width >= 1024 && desktop != null) return desktop;
-    if (width >= 768 && tablet != null) return tablet;
+    if (shortestSide < LayoutBreakpoints.tablet) return mobile;
+    if (width >= LayoutBreakpoints.desktop && desktop != null) return desktop;
+    if (width >= LayoutBreakpoints.tablet && tablet != null) return tablet;
     return mobile;
   }
 
@@ -76,10 +80,13 @@ class SpacingSystem {
     EdgeInsets? tablet,
     EdgeInsets? desktop,
   }) {
-    final width = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final shortestSide = size.shortestSide;
 
-    if (width >= 1024 && desktop != null) return desktop;
-    if (width >= 768 && tablet != null) return tablet;
+    if (shortestSide < LayoutBreakpoints.tablet) return mobile;
+    if (width >= LayoutBreakpoints.desktop && desktop != null) return desktop;
+    if (width >= LayoutBreakpoints.tablet && tablet != null) return tablet;
     return mobile;
   }
 
@@ -97,11 +104,13 @@ class SpacingSystem {
 
   /// 密度调整 - 根据设备类别
   static double density(BuildContext context, double base) {
-    final width = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final shortestSide = size.shortestSide;
 
-    if (width < 480) return base * 0.875; // 紧凑
-    if (width < 768) return base; // 正常
-    if (width < 1024) return base * 1.125; // 舒适
+    if (shortestSide < 480) return base * 0.875; // 紧凑
+    if (shortestSide < LayoutBreakpoints.tablet) return base; // 正常
+    if (width < LayoutBreakpoints.desktop) return base * 1.125; // 舒适
     return base * 1.25; // 宽松
   }
 }

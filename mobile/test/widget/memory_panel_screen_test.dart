@@ -10,58 +10,61 @@ import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen
 class _FakeMemoryApiService implements MemoryApiService {
   @override
   Future<List<MemoryPreferenceItem>> getPreferences() async => [
-      MemoryPreferenceItem(
-        id: 'pref_1',
-        prefKey: 'depth_preference',
-        prefValue: {'value': 0.8},
-        version: 2,
-        evidenceMissing: true,
-        evidenceRefs: [
-          EvidenceRefModel(type: 'event', id: 'evt_1'),
-        ],
-        evidenceScore: 0.4,
-        correctionCount: 1,
-      ),
-    ];
+        MemoryPreferenceItem(
+          id: 'pref_1',
+          prefKey: 'depth_preference',
+          prefValue: {'value': 0.8},
+          version: 2,
+          evidenceMissing: true,
+          evidenceRefs: [
+            EvidenceRefModel(type: 'event', id: 'evt_1'),
+          ],
+          evidenceScore: 0.4,
+          correctionCount: 1,
+        ),
+      ];
 
   @override
   Future<List<MemoryGoalItem>> getGoals({
     String? status,
     bool includeExpired = false,
     int limit = 20,
-  }) async => [
-      MemoryGoalItem(
-        id: 'goal_1',
-        title: 'Goal',
-        status: 'active',
-        evidenceMissing: false,
-        evidenceRefs: [],
-        evidenceScore: 0.3,
-        correctionCount: 0,
-      ),
-    ];
+  }) async =>
+      [
+        MemoryGoalItem(
+          id: 'goal_1',
+          title: 'Goal',
+          status: 'active',
+          evidenceMissing: false,
+          evidenceRefs: [],
+          evidenceScore: 0.3,
+          correctionCount: 0,
+        ),
+      ];
 
   @override
   Future<List<EpisodicMemoryItem>> getEpisodic({
     DateTime? start,
     DateTime? end,
     int limit = 20,
-  }) async => [
-      EpisodicMemoryItem(
-        id: 'mem_1',
-        summary: 'Memory',
-        sourceType: 'analysis',
-        evidenceMissing: false,
-        evidenceRefs: [],
-        evidenceScore: 0.5,
-        correctionCount: 0,
-      ),
-    ];
+  }) async =>
+      [
+        EpisodicMemoryItem(
+          id: 'mem_1',
+          summary: 'Memory',
+          sourceType: 'analysis',
+          evidenceMissing: false,
+          evidenceRefs: [],
+          evidenceScore: 0.5,
+          correctionCount: 0,
+        ),
+      ];
 
   @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
     String prefKey,
-  ) async => [];
+  ) async =>
+      [];
 
   @override
   Future<void> retractMemory({
@@ -86,8 +89,7 @@ class _FakeMemoryApiService implements MemoryApiService {
       );
 
   @override
-  Future<MemorySettingsModel> getMemorySettings() async =>
-      MemorySettingsModel(
+  Future<MemorySettingsModel> getMemorySettings() async => MemorySettingsModel(
         enabled: true,
         allowPreferences: true,
         allowGoals: true,
@@ -108,21 +110,24 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
   @override
   Future<List<EvidenceResolveItem>> resolveEvidence(
     List<EvidenceRefModel> refs,
-  ) async => [
-      EvidenceResolveItem(
-        type: 'event',
-        id: 'evt_1',
-        status: 'ok',
-        payload: const {
-          'event': {'event_type': 'test'},
-        },
-      ),
-    ];
+  ) async =>
+      [
+        EvidenceResolveItem(
+          type: 'event',
+          id: 'evt_1',
+          status: 'ok',
+          payload: const {
+            'event': {'event_type': 'test'},
+          },
+        ),
+      ];
 }
 
 void main() {
   testWidgets('Memory panel renders sections and opens detail',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     AppFeatureFlags.enableMemoryPanelV2 = false;
     AppFeatureFlags.enableEvidenceViewer = false;
     AppFeatureFlags.enableMemoryExplain = false;

@@ -2,21 +2,30 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
-from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, update, func, or_
-from loguru import logger
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
-from app.models.achievement import (
-    Achievement, UserAchievement, UserStreakStats,
-    AchievementRarity, AchievementType, SparkContract,
-    GalaxySkin, UserGalaxySkin, UserTitle, ContractStatus, VisualEffectType
-)
-from app.models.user import User
-from app.models.galaxy import UserNodeStatus, KnowledgeNode, StudyRecord
-from app.core.cache import cache_service
+from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.achievement import (
+    Achievement,
+    AchievementRarity,
+    ContractStatus,
+    SparkContract,
+    UserAchievement,
+    UserGalaxySkin,
+    UserStreakStats,
+    UserTitle,
+)
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AchievementEvent:
@@ -50,7 +59,7 @@ class AchievementEngine:
     """成就引擎 - 核心服务"""
 
     # 成就定义缓存（内存缓存）
-    _achievement_cache: Dict[str, Achievement] = {}
+    _achievement_cache: dict[str, Achievement] = {}
     _cache_last_update: datetime = None
     _cache_ttl = timedelta(minutes=5)
 
@@ -59,7 +68,7 @@ class AchievementEngine:
 
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
-        now = datetime.utcnow()
+        now = _utcnow()
         if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
             return
 
@@ -70,12 +79,12 @@ class AchievementEngine:
         self._achievement_cache = {a.id: a for a in achievements}
         self._cache_last_update = now
 
-    async def _get_achievement(self, achievement_id: str) -> Optional[Achievement]:
+    async def _get_achievement(self, achievement_id: str) -> Achievement | None:
         """获取成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return self._achievement_cache.get(achievement_id)
 
-    async def _get_all_achievements(self) -> List[Achievement]:
+    async def _get_all_achievements(self) -> list[Achievement]:
         """获取所有成就定义（带缓存）"""
         await self._refresh_achievement_cache()
         return list(self._achievement_cache.values())
@@ -85,7 +94,7 @@ class AchievementEngine:
         user_id: str,
         event_type: str,
         **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         处理用户事件，检查并解锁成就
 
@@ -159,7 +168,7 @@ class AchievementEngine:
 
         return unlocked
 
-    async def _get_relevant_achievements(self, event_type: str) -> List[Achievement]:
+    async def _get_relevant_achievements(self, event_type: str) -> list[Achievement]:
         """获取与事件类型相关的成就"""
         all_achievements = await self._get_all_achievements()
 
@@ -279,7 +288,7 @@ class AchievementEngine:
                 query = select(func.count()).select_from(UserNodeStatus).where(
                     and_(
                         UserNodeStatus.user_id == user_id,
-                        UserNodeStatus.is_unlocked == True
+                        UserNodeStatus.is_unlocked
                     )
                 )
                 result = await self.db.execute(query)
@@ -310,7 +319,7 @@ class AchievementEngine:
                     and_(
                         UserNodeStatus.user_id == user_id,
                         KnowledgeNode.sector_code == sector,
-                        UserNodeStatus.is_unlocked == True
+                        UserNodeStatus.is_unlocked
                     )
                 )
                 result = await self.db.execute(query)
@@ -340,8 +349,8 @@ class AchievementEngine:
 
             # 深夜学习（隐藏成就）
             case "NIGHT_OWL_STUDY":
-                hour = datetime.utcnow().hour
-                if 23 <= hour or hour <= 5:
+                hour = _utcnow().hour
+                if hour >= 23 or hour <= 5:
                     # 检查累计次数
                     cache_key = f"night_owl:{user_id}"
                     count = await cache_service.get(cache_key) or 0
@@ -372,7 +381,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False  # 已归档（完成/放弃）
+                        not Plan.is_active  # 已归档（完成/放弃）
                     )
                 )
                 result = await self.db.execute(query)
@@ -388,7 +397,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False,
+                        not Plan.is_active,
                         Plan.progress >= 1.0
                     )
                 )
@@ -406,7 +415,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False
+                        not Plan.is_active
                     )
                 ).order_by(Plan.updated_at.desc())
 
@@ -440,7 +449,7 @@ class AchievementEngine:
                     and_(
                         Plan.user_id == user_id,
                         Plan.type == PlanType.SPRINT,
-                        Plan.is_active == False,
+                        not Plan.is_active,
                         Plan.progress >= 1.0,
                         Plan.target_date.isnot(None)
                     )
@@ -480,7 +489,7 @@ class AchievementEngine:
             user_achievement.progress = min(progress, 1.0)
             user_achievement.progress_value = current_value
             user_achievement.progress_target = target_value
-            user_achievement.last_progress_update = datetime.utcnow()
+            user_achievement.last_progress_update = _utcnow()
         else:
             # 创建新记录
             user_achievement = UserAchievement(
@@ -489,7 +498,7 @@ class AchievementEngine:
                 progress=min(progress, 1.0),
                 progress_value=current_value,
                 progress_target=target_value,
-                last_progress_update=datetime.utcnow()
+                last_progress_update=_utcnow()
             )
             self.db.add(user_achievement)
 
@@ -499,9 +508,9 @@ class AchievementEngine:
         self,
         user_id: str,
         achievement: Achievement
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """解锁成就"""
-        now = datetime.utcnow()
+        now = _utcnow()
 
         # 更新用户成就记录
         query = select(UserAchievement).where(
@@ -595,8 +604,24 @@ class AchievementEngine:
                     await self.db.flush()
 
                 case "photon":
-                    # 光子积分（暂时只记录，不实际发放）
-                    logger.info(f"Grant {reward.get('quantity', 0)} photons to user {user_id}")
+                    # 光子积分 - 实际发放
+                    try:
+                        from app.services.photon_service import PhotonService, PhotonTransactionType
+
+                        photon_service = PhotonService(self.db)
+                        quantity = reward.get("quantity", 0)
+
+                        await photon_service.grant_photons(
+                            user_id=user_id,
+                            amount=quantity,
+                            source=f"achievement:{achievement.id}",
+                            transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+                            metadata={"achievement_name": achievement.name}
+                        )
+
+                        logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
 
     async def _unlock_title(self, user_id: str, title_id: str, display: str, achievement_id: str):
         """解锁称号"""
@@ -616,7 +641,7 @@ class AchievementEngine:
                 title_name=display,
                 title_display=display,
                 source_achievement_id=achievement_id,
-                unlocked_at=datetime.utcnow()
+                unlocked_at=_utcnow()
             )
             self.db.add(user_title)
             await self.db.flush()
@@ -636,22 +661,61 @@ class AchievementEngine:
             user_skin = UserGalaxySkin(
                 user_id=user_id,
                 skin_id=skin_id,
-                unlocked_at=datetime.utcnow(),
+                unlocked_at=_utcnow(),
                 unlock_source="achievement"
             )
             self.db.add(user_skin)
             await self.db.flush()
 
-    async def _notify_unlocks(self, user_id: str, unlocked: List[Dict]):
+    async def _notify_unlocks(self, user_id: str, unlocked: list[dict]):
         """发送成就解锁通知"""
-        # TODO: 实现通知发送
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+
         for unlock in unlocked:
             logger.info(f"Achievement unlocked for user {user_id}: {unlock['name']}")
+
+            # 提取光子奖励信息（显式）
+            photon_granted = 0
+            rewards = unlock.get("rewards", [])
+            if rewards:
+                for reward in rewards:
+                    if reward.get("type") == "photon":
+                        photon_granted = reward.get("quantity", 0)
+                        break
+
+            # 通过 WebSocket 发送成就解锁事件
+            message = {
+                "type": "achievement_unlock",
+                "achievement_data": {
+                    "achievement_id": unlock["achievement_id"],
+                    "name": unlock["name"],
+                    "rarity": unlock["rarity"].value if hasattr(unlock["rarity"], "value") else unlock["rarity"],
+                    "visual_effect": unlock.get("visual_effect"),
+                    "visual_effect_type": unlock.get("visual_effect_type"),
+                    "rewards": unlock.get("rewards"),
+                    "is_first": unlock.get("is_first", False),
+                    "unlocked_at": unlock["unlocked_at"].isoformat() if isinstance(unlock["unlocked_at"], datetime) else unlock["unlocked_at"],
+                    # 添加连击信息
+                    "combo_info": unlock.get("combo_info"),
+                    # 显式添加光子奖励信息
+                    "photon_granted": photon_granted,
+                    "has_photon_reward": photon_granted > 0
+                }
+            }
+
+            # 使用 WebSocket 发送
+            try:
+                await ws_manager.send_personal_message(message, user_id)
+                logger.debug(f"Sent achievement unlock notification to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send achievement unlock notification: {e}")
 
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
-        today = datetime.utcnow().date()
+        today = _utcnow().date()
 
         # 只有核心活动才更新连胜
         if event_type not in [AchievementEvent.DAILY_CHECKIN,
@@ -689,7 +753,7 @@ class AchievementEngine:
             if stats.freeze_charges >= days_missed:
                 # 使用保护卡
                 stats.freeze_charges -= days_missed
-                stats.last_freeze_used_at = datetime.utcnow()
+                stats.last_freeze_used_at = _utcnow()
                 stats.current_streak += 1  # 今天也算
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
             else:
@@ -726,10 +790,10 @@ class AchievementEngine:
     async def get_user_achievements(
         self,
         user_id: str,
-        category: Optional[str] = None,
-        rarity: Optional[AchievementRarity] = None,
+        category: str | None = None,
+        rarity: AchievementRarity | None = None,
         include_hidden: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """获取用户成就列表"""
         all_achievements = await self._get_all_achievements()
 
@@ -759,7 +823,7 @@ class AchievementEngine:
         user_progress = {ua.achievement_id: ua for ua in result.scalars().all()}
 
         # 组装结果
-        from app.schemas.achievement import AchievementDetail, UserAchievementDetail, AchievementWithProgress
+        from app.schemas.achievement import AchievementDetail, AchievementWithProgress, UserAchievementDetail
 
         result_list = []
         for achievement in filtered:
@@ -800,14 +864,14 @@ class AchievementEngine:
             }
         }
 
-    async def get_achievement_map(self, user_id: str) -> Dict[str, Any]:
+    async def get_achievement_map(self, user_id: str) -> dict[str, Any]:
         """获取成就地图数据"""
         all_achievements = await self._get_all_achievements()
 
         # 按类别分组获取位置
         categories = {}
         positions = {}
-        x, y = 0, 0
+        _x, _y = 0, 0
         row_width = 5
 
         for achievement in all_achievements:
@@ -873,14 +937,14 @@ class AchievementEngine:
             "categories": category_info
         }
 
-    async def get_streak_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_streak_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
 
         from app.schemas.achievement import StreakStatsResponse
         return StreakStatsResponse.model_validate(stats).model_dump()
 
-    async def get_achievement_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_achievement_stats(self, user_id: str) -> dict[str, Any]:
         """获取用户成就统计"""
         all_achievements = await self._get_all_achievements()
 
@@ -894,10 +958,10 @@ class AchievementEngine:
         result = await self.db.execute(query)
         unlocked = result.scalars().all()
 
-        unlocked_ids = {ua.achievement_id for ua in unlocked}
+        {ua.achievement_id for ua in unlocked}
 
         # 按稀有度统计
-        rarity_count = {r: 0 for r in AchievementRarity}
+        rarity_count = dict.fromkeys(AchievementRarity, 0)
         hidden_count = 0
 
         for ua in unlocked:
@@ -910,6 +974,11 @@ class AchievementEngine:
         # 连胜统计
         stats = await self._get_or_create_streak_stats(user_id)
 
+        # 获取用户光子余额
+        from app.services.photon_service import PhotonService
+        photon_service = PhotonService(self.db)
+        total_photons = await photon_service.get_balance(user_id)
+
         from app.schemas.achievement import AchievementStatsResponse
         return AchievementStatsResponse(
             total_achievements=len(all_achievements),
@@ -921,7 +990,7 @@ class AchievementEngine:
             legendary_count=rarity_count[AchievementRarity.LEGENDARY],
             hidden_found=hidden_count,
             current_streak=stats.current_streak,
-            total_photons=0  # TODO: 计算从成就获得的光子总数
+            total_photons=total_photons
         ).model_dump()
 
     # ========== Enhancement Methods: Combo, Milestone, Daily First ==========
@@ -944,7 +1013,7 @@ class AchievementEngine:
         achievement: Achievement,
         old_progress: float,
         new_progress: float
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         检查进度里程碑（每25%进度）
 
@@ -971,7 +1040,7 @@ class AchievementEngine:
         self,
         user_id: str,
         unlock_count: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         处理成就连击检测
 
@@ -996,17 +1065,32 @@ class AchievementEngine:
             }
         return None
 
-    async def _notify_milestones(self, user_id: str, milestones: List[Dict[str, Any]]):
+    async def _notify_milestones(self, user_id: str, milestones: list[dict[str, Any]]):
         """发送里程碑通知"""
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+
         for milestone in milestones:
             logger.info(f"Milestone for user {user_id}: {milestone['message']}")
-            # TODO: 通过WebSocket发送里程碑通知到前端
+
+            # 通过 WebSocket 发送里程碑事件
+            message = {
+                "type": "achievement_milestone",
+                "data": milestone
+            }
+
+            try:
+                await ws_manager.send_personal_message(message, user_id)
+                logger.debug(f"Sent achievement milestone notification to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send milestone notification: {e}")
 
     async def check_daily_first(
         self,
         user_id: str,
         db: AsyncSession
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         检查今日首胜奖励
 
@@ -1042,8 +1126,8 @@ class AchievementEngine:
         self,
         user_id: str,
         threshold: float = 0.8,
-        category: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        category: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         获取接近解锁的成就（用于临界提示）
 
@@ -1120,8 +1204,8 @@ class ContractService:
             target_study_minutes=study_minutes,
             target_days=days,
             photon_stake=photon_stake,
-            start_date=datetime.utcnow(),
-            end_date=datetime.utcnow() + timedelta(days=days),
+            start_date=_utcnow(),
+            end_date=_utcnow() + timedelta(days=days),
             status=ContractStatus.ACTIVE
         )
         self.db.add(contract)
@@ -1129,7 +1213,7 @@ class ContractService:
         await self.db.refresh(contract)
         return contract
 
-    async def _get_active_contract(self, user_id: str) -> Optional[SparkContract]:
+    async def _get_active_contract(self, user_id: str) -> SparkContract | None:
         """获取活跃契约"""
         query = select(SparkContract).where(
             and_(
@@ -1140,13 +1224,13 @@ class ContractService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def check_contract_status(self, user_id: str) -> Optional[Dict]:
+    async def check_contract_status(self, user_id: str) -> dict | None:
         """检查契约状态"""
         contract = await self._get_active_contract(user_id)
         if not contract:
             return None
 
-        today = datetime.utcnow()
+        today = _utcnow()
 
         # 检查是否过期
         if today > contract.end_date:
@@ -1174,13 +1258,49 @@ class ContractService:
 
     async def _grant_rewards(self, contract: SparkContract):
         """发放契约奖励"""
-        # TODO: 实际发放光子积分
-        logger.info(f"Contract rewards granted: {contract.photon_stake * contract.reward_multiplier}")
+        try:
+            from app.services.photon_service import PhotonService, PhotonTransactionType
+
+            photon_service = PhotonService(self.db)
+            reward_amount = contract.photon_stake * contract.reward_multiplier
+
+            await photon_service.grant_photons(
+                user_id=contract.user_id,
+                amount=reward_amount,
+                source=f"contract:{contract.id}",
+                transaction_type=PhotonTransactionType.GRANT_CONTRACT,
+                metadata={
+                    "contract_id": contract.id,
+                    "stake": contract.photon_stake,
+                    "multiplier": contract.reward_multiplier
+                }
+            )
+
+            logger.info(f"Contract rewards granted: {reward_amount} photons to user {contract.user_id}")
+        except Exception as e:
+            logger.error(f"Failed to grant contract rewards for {contract.id}: {e}")
 
     async def _deduct_photons(self, contract: SparkContract):
         """扣除光子积分"""
-        # TODO: 实际扣除光子积分
-        logger.info(f"Contract photons deducted: {contract.photon_stake}")
+        try:
+            from app.services.photon_service import PhotonService, PhotonTransactionType
+
+            photon_service = PhotonService(self.db)
+
+            await photon_service.deduct_photons(
+                user_id=contract.user_id,
+                amount=contract.photon_stake,
+                reason=f"Contract failed: {contract.id}",
+                transaction_type=PhotonTransactionType.DEDUCT_CONTRACT,
+                metadata={
+                    "contract_id": contract.id,
+                    "failure_reason": contract.failure_reason
+                }
+            )
+
+            logger.info(f"Contract photons deducted: {contract.photon_stake} from user {contract.user_id}")
+        except Exception as e:
+            logger.error(f"Failed to deduct photons for failed contract {contract.id}: {e}")
 
     async def update_daily_progress(self, user_id: str, study_minutes: int):
         """更新每日契约进度"""

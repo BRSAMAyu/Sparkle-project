@@ -12,8 +12,9 @@ class SplashScreen extends ConsumerWidget {
 
     // The UI to show while the check is in progress.
     return Scaffold(
-      body: Center(
-        child: Column(
+      body: ContentConstraint(
+        child: Center(
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Placeholder for Sparkle Logo/Animation
@@ -34,6 +35,7 @@ class SplashScreen extends ConsumerWidget {
             const SizedBox(height: 40),
             const CircularProgressIndicator(),
           ],
+        ),
         ),
       ),
     );

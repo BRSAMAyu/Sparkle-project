@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-import 'package:sparkle/shared/models/api_response_model.dart';
 
 /// Achievement Repository
 /// 成就数据仓库
@@ -16,29 +16,6 @@ class AchievementRepository {
     final errorMessage = e.response?.data?['detail'] ??
         'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
-  }
-
-  Map<String, dynamic> _unwrapResponseMap(dynamic data, {String? action}) {
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-    if (data == null) {
-      throw Exception('${action ?? "Operation"} response is empty');
-    }
-    throw Exception('Unexpected response format');
-  }
-
-  List<dynamic> _unwrapResponseList(dynamic data) {
-    if (data is List) {
-      return data;
-    }
-    if (data is Map<String, dynamic>) {
-      final listData = data['data'];
-      if (listData is List) {
-        return listData;
-      }
-    }
-    throw Exception('Unexpected response format, expected List');
   }
 
   /// Get achievements list
@@ -121,7 +98,7 @@ class AchievementRepository {
         ApiEndpoints.achievementsStats,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getAchievementStats');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAchievementStats');
       return AchievementStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getAchievementStats');
@@ -139,7 +116,7 @@ class AchievementRepository {
         ApiEndpoints.achievementsMap,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getAchievementMap');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getAchievementMap');
       return AchievementMapData.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getAchievementMap');
@@ -167,7 +144,7 @@ class AchievementRepository {
         ApiEndpoints.achievementsStreak,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getStreakStats');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getStreakStats');
       return StreakStats.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getStreakStats');
@@ -185,7 +162,7 @@ class AchievementRepository {
         ApiEndpoints.contractsStatus,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getContractStatus');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getContractStatus');
       if (payload['has_active_contract'] == false) {
         return null;
       }
@@ -215,7 +192,7 @@ class AchievementRepository {
         },
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'createContract');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createContract');
       final contractData = payload['data'] as Map<String, dynamic>?;
       if (contractData == null) {
         throw Exception('createContract: data is null');
@@ -250,7 +227,7 @@ class AchievementRepository {
         ApiEndpoints.galaxySkins,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getGalaxySkins');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getGalaxySkins');
       final dataList = payload['data'] as List<dynamic>?;
 
       final skins = dataList?.map((json) => GalaxySkin.fromJson(
@@ -289,7 +266,7 @@ class AchievementRepository {
         ApiEndpoints.titles,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getTitles');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getTitles');
       final dataList = payload['data'] as List<dynamic>?;
 
       return dataList?.map((json) => UserTitle.fromJson(
@@ -337,7 +314,7 @@ class AchievementRepository {
         data: eventData,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'processEvent');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'processEvent');
       final unlockedList = payload['unlocked'] as List<dynamic>?;
 
       return unlockedList?.map((json) => AchievementUnlockEvent.fromJson(
@@ -370,7 +347,7 @@ class AchievementRepository {
         queryParameters: queryParams,
       );
 
-      final payload = _unwrapResponseMap(response.data, action: 'getCloseToUnlockAchievements');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getCloseToUnlockAchievements');
       final dataList = payload['data'] as List<dynamic>?;
 
       return dataList?.map((json) => AchievementWithProgress.fromJson(

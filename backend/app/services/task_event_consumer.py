@@ -2,19 +2,22 @@
 Task 事件消费者 - 处理任务完成/放弃事件，分析行为模式
 """
 import asyncio
-from uuid import UUID, uuid4
-from datetime import datetime
-from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
+from uuid import UUID
 
-from app.core.event_bus import EventBus
+from loguru import logger
 from sqlalchemy import select
 
 from app.core.cache import cache_service
+from app.core.event_bus import EventBus
+from app.db.session import AsyncSessionLocal
 from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.cognitive_service import CognitiveService
-from app.db.session import AsyncSessionLocal
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskEventConsumer:
@@ -39,7 +42,7 @@ class TaskEventConsumer:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"task-{datetime.utcnow().timestamp()}",
+                    consumer_name=f"task-{_utcnow().timestamp()}",
                     callback=self.handle_event
                 )
                 break

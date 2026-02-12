@@ -2,15 +2,15 @@
 Memory Evolution Models
 记忆演化模型 - 支持记忆变化追踪和预测
 """
-from datetime import datetime
-from typing import Optional, List, Any, Dict
-from sqlalchemy import Column, String, DateTime, Float, Integer, ForeignKey, JSON, ARRAY
+from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
+# SQLite compatibility for JSONB and ARRAY
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+ArrayGUIDCompat = ARRAY(GUID()).with_variant(JSON(), "sqlite")
+ArrayIntegerCompat = ARRAY(Integer()).with_variant(JSON(), "sqlite")
 
 
 class MemoryEvolution(BaseModel):
@@ -57,7 +57,7 @@ class MemoryEvolution(BaseModel):
     # Evidence changes
     evidence_count_before = Column(Integer, nullable=False, default=0, doc="变化前证据数量")
     evidence_count_after = Column(Integer, nullable=False, default=0, doc="变化后证据数量")
-    new_evidence_ids = Column(ARRAY(GUID()), nullable=True, doc="新增证据ID列表")
+    new_evidence_ids = Column(ArrayGUIDCompat, nullable=True, doc="新增证据ID列表")
 
     # Impact analysis
     impact_score = Column(
@@ -67,12 +67,12 @@ class MemoryEvolution(BaseModel):
         doc="影响分数 0-1"
     )
     affected_decisions = Column(
-        ARRAY(GUID()),
+        ArrayGUIDCompat,
         nullable=True,
         doc="受影响的决策ID列表"
     )
     affected_memories = Column(
-        ARRAY(GUID()),
+        ArrayGUIDCompat,
         nullable=True,
         doc="受影响的其他记忆ID列表"
     )
@@ -124,7 +124,7 @@ class EvolutionPrediction(BaseModel):
 
     # Influencing factors
     factors = Column(JSONBCompat, nullable=True, doc="影响因素分析")
-    similar_evolutions = Column(ARRAY(Integer()), nullable=True, doc="相似演化历史ID列表")
+    similar_evolutions = Column(ArrayIntegerCompat, nullable=True, doc="相似演化历史ID列表")
 
     # Validation
     created_at = Column(DateTime, nullable=False, index=True, doc="预测创建时间")

@@ -4,15 +4,19 @@ Budget Optimization Service
 
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
-from typing import Dict, List, Optional
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from loguru import logger
+import math
+from datetime import UTC, datetime, timedelta
 
-from app.models.context_pack import ContextPackRun, ContextBudgetProfile
-from app.models.memory import MemoryPreference
+from loguru import logger
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.context_pack import ContextPackRun
 from app.services.budget_tuning_service import BudgetTuningService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BudgetOptimizationService:
@@ -26,9 +30,9 @@ class BudgetOptimizationService:
         self,
         user_id: str,
         total_budget: int,
-        context_packs: List[str],
+        context_packs: list[str],
         performance_window_days: int = 7,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         优化预算分配
 
@@ -73,9 +77,9 @@ class BudgetOptimizationService:
     async def _get_pack_performance(
         self,
         user_id: str,
-        context_pack_ids: List[str],
+        context_pack_ids: list[str],
         days: int,
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> dict[str, dict[str, float]]:
         """
         获取上下文包性能数据
 
@@ -87,21 +91,25 @@ class BudgetOptimizationService:
         Returns:
             Dict mapping pack_id to performance metrics
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         performance = {}
 
         for pack_id in context_pack_ids:
+            filters = [
+                ContextPackRun.user_id == user_id,
+                ContextPackRun.created_at >= cutoff_date,
+            ]
+            if hasattr(ContextPackRun, "context_pack_id"):
+                filters.append(ContextPackRun.context_pack_id == pack_id)
+            elif hasattr(ContextPackRun, "intent"):
+                # Backward compatibility for schema versions where pack_id was not persisted.
+                filters.append(ContextPackRun.intent == pack_id)
+
             # Get recent runs
             result = await self.db.execute(
                 select(ContextPackRun)
-                .where(
-                    and_(
-                        ContextPackRun.user_id == user_id,
-                        ContextPackRun.context_pack_id == pack_id,
-                        ContextPackRun.created_at >= cutoff_date,
-                    )
-                )
+                .where(and_(*filters))
                 .order_by(ContextPackRun.created_at.desc())
             )
             runs = result.scalars().all()
@@ -121,12 +129,21 @@ class BudgetOptimizationService:
             successful_runs = 0
 
             for run in runs:
+                def _read(field: str, default):
+                    if isinstance(run, dict):
+                        return run.get(field, default)
+                    value = getattr(run, field, None)
+                    if value is None and hasattr(run, "metadata_payload"):
+                        metadata = getattr(run, "metadata_payload", {}) or {}
+                        return metadata.get(field, default)
+                    return value if value is not None else default
+
                 # Simple reward: 1.0 if success, 0.0 otherwise
                 # In practice, use more sophisticated reward
-                reward = 1.0 if run.get('success', False) else 0.0
+                reward = 1.0 if _read("success", False) else 0.0
                 total_reward += reward
-                total_tokens += run.get('tokens_used', 0)
-                if run.get('success', False):
+                total_tokens += _read("tokens_used", 0)
+                if _read("success", False):
                     successful_runs += 1
 
             performance[pack_id] = {
@@ -141,8 +158,8 @@ class BudgetOptimizationService:
     async def _ucb1_allocate(
         self,
         total_budget: int,
-        performance: Dict[str, Dict[str, float]],
-    ) -> Dict[str, int]:
+        performance: dict[str, dict[str, float]],
+    ) -> dict[str, int]:
         """
         使用UCB1算法分配预算
 
@@ -172,7 +189,8 @@ class BudgetOptimizationService:
                 scores[pack_id] = float('inf')
             else:
                 # UCB1 formula
-                exploration_bonus = (2 * float(total_count).ln() / count) ** 0.5
+                safe_total_count = max(1, total_count)
+                exploration_bonus = (2 * math.log(safe_total_count) / count) ** 0.5
                 scores[pack_id] = avg_reward + exploration_bonus
 
         # Allocate budget proportionally to scores
@@ -190,11 +208,11 @@ class BudgetOptimizationService:
 
     async def _apply_constraints(
         self,
-        allocation: Dict[str, int],
+        allocation: dict[str, int],
         total_budget: int,
         min_budget_per_pack: int,
         max_budget_per_pack: int,
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         应用约束条件
 
@@ -232,7 +250,7 @@ class BudgetOptimizationService:
         user_id: str,
         context_pack_id: str,
         days: int = 30,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         评估预算使用ROI (投资回报率)
 

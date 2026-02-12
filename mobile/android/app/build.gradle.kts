@@ -21,7 +21,7 @@ val applicationIdValue =
 
 android {
     namespace = applicationIdValue
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Updated to support newer Android libraries (required by plugins)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,27 +38,10 @@ android {
         applicationId = applicationIdValue
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = flutter.minSdkVersion  // Minimum supported Android version
+        targetSdk = 34  // Target Android 14
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-    }
-
-    buildTypes {
-        release {
-            signingConfig = if (hasReleaseSigning) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
-            
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
     }
 
     signingConfigs {
@@ -69,6 +52,23 @@ android {
                 storeFile = keystoreProperties["storeFile"]?.let { file(it as String) }
                 storePassword = keystoreProperties["storePassword"] as String?
             }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

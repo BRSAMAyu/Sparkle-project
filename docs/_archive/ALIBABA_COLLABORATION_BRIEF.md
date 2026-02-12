@@ -78,7 +78,7 @@ graph TD
     - **缓存**: 云数据库 Redis 版。
 
 2.  **AI/模型服务**:
-    - **Model Serving**: 考虑使用 **阿里云百炼 (Model Studio)** 接入通义千问 (Qwen-Turbo/Max) 以获得更低的延迟与更优的中文理解能力。
+    - **Model Serving**: 考虑使用 **阿里云百炼 (Model Studio)** 接入通义千问 (Qwen-Plus/Max) 以获得更低的延迟与更优的中文理解能力。
     - **Embedding**: 使用阿里云提供的向量嵌入服务优化 RAG 检索效果。
 
 3.  **网络与安全**:
@@ -95,4 +95,3 @@ graph TD
     - API 参考: `docs/02_技术设计文档/03_API参考.md`
 - **演示/测试**:
     - 本地启动: `make dev-all` (需 Docker 环境)
-

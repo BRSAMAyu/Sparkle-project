@@ -16,9 +16,8 @@ class _HeatmapColor {
   static Color forLevel(BuildContext context, int level) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = DS.brandPrimary;
-    final alphaValues = isDark
-        ? [0.15, 0.35, 0.55, 0.75, 1.0]
-        : [0.2, 0.4, 0.6, 0.8, 1.0];
+    final alphaValues =
+        isDark ? [0.15, 0.35, 0.55, 0.75, 1.0] : [0.2, 0.4, 0.6, 0.8, 1.0];
     final safeIndex = level.clamp(0, alphaValues.length - 1);
     return baseColor.withValues(alpha: alphaValues[safeIndex]);
   }
@@ -35,13 +34,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
     // Load task data for current month
     final now = DateTime.now();
     final calendarState = ref.watch(taskCalendarProvider);
-
-    // Only load if the current month's data hasn't been loaded yet
-    // This prevents unnecessary reloads on every rebuild
-    final currentMonthKey = DateTime(now.year, now.month);
-    final hasCurrentMonthData = calendarState.taskSummaries.keys.any((date) =>
-        date.year == now.year && date.month == now.month,);
-    if (!hasCurrentMonthData) {
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    if (!calendarState.loadedMonths.contains(monthKey)) {
       ref.read(taskCalendarProvider.notifier).loadTasksForMonth(now);
     }
 
@@ -62,8 +56,8 @@ class CalendarHeatmapCard extends ConsumerWidget {
                 const SizedBox(height: DS.md),
                 Flexible(
                   child: LayoutBuilder(
-                    builder: (context, constraints) =>
-                        _buildMonthGrid(context, ref, constraints, calendarState),
+                    builder: (context, constraints) => _buildMonthGrid(
+                        context, ref, constraints, calendarState),
                   ),
                 ),
                 const SizedBox(height: DS.sm),
@@ -78,49 +72,49 @@ class CalendarHeatmapCard extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) => Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: Text(
-            DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: DS.textPrimary,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: DS.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        Icon(
-          Icons.calendar_month_rounded,
-          size: 16,
-          color: DS.textSecondary,
-        ),
-      ],
-    );
+          Icon(
+            Icons.calendar_month_rounded,
+            size: 16,
+            color: DS.textSecondary,
+          ),
+        ],
+      );
 
   Widget _buildLegend(BuildContext context) => Wrap(
-      alignment: WrapAlignment.end,
-      spacing: 2,
-      runSpacing: 2,
-      children: [
-        Text(
-          'Less',
-          style: TextStyle(fontSize: 10, color: DS.textSecondary),
-        ),
-        const SizedBox(width: DS.xs),
-        _buildLegendItem(context, 0),
-        _buildLegendItem(context, 1),
-        _buildLegendItem(context, 2),
-        _buildLegendItem(context, 3),
-        _buildLegendItem(context, 4),
-        const SizedBox(width: DS.xs),
-        Text(
-          'More',
-          style: TextStyle(fontSize: 10, color: DS.textSecondary),
-        ),
-      ],
-    );
+        alignment: WrapAlignment.end,
+        spacing: 2,
+        runSpacing: 2,
+        children: [
+          Text(
+            'Less',
+            style: TextStyle(fontSize: 10, color: DS.textSecondary),
+          ),
+          const SizedBox(width: DS.xs),
+          _buildLegendItem(context, 0),
+          _buildLegendItem(context, 1),
+          _buildLegendItem(context, 2),
+          _buildLegendItem(context, 3),
+          _buildLegendItem(context, 4),
+          const SizedBox(width: DS.xs),
+          Text(
+            'More',
+            style: TextStyle(fontSize: 10, color: DS.textSecondary),
+          ),
+        ],
+      );
 
   Widget _buildLegendItem(BuildContext context, int level) => Container(
         width: 8,
@@ -252,7 +246,9 @@ class _DayCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
       onTap: hasTasks ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -272,18 +268,29 @@ class _DayCell extends StatelessWidget {
               : null,
         ),
         alignment: Alignment.center,
-        child: isToday
-            ? Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w600,
-                  color: DS.brandPrimary70,
-                ),
-              )
-            : null,
+        child: Text(
+          '$day',
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+            color: _getTextColor(isDark, intensity),
+          ),
+        ),
       ),
     );
+  }
+
+  Color _getTextColor(bool isDark, int intensity) {
+    // High intensity (3-4) or selected = white text
+    if (intensity >= 3 || isSelected) {
+      return DS.textOnPrimary;
+    }
+    // Low intensity (0-2) = use contrast color based on theme
+    if (isDark) {
+      return isToday ? DS.primaryBase : DS.textSecondary;
+    }
+    return isToday ? DS.primaryBase : DS.textPrimary;
+  }
 
   Border? _buildBorder() {
     if (isSelected) {

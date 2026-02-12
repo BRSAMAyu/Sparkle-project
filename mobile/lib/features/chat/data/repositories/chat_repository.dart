@@ -2,17 +2,21 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 
 class ChatRepository {
   ChatRepository(
     this._dio, {
+    required ProviderContainer container,
     WebSocketChatServiceV2? wsService,
-  }) : _wsService = wsService ?? WebSocketChatServiceV2();
+  }) : _wsService = wsService ?? WebSocketChatServiceV2(container: container);
   final Dio _dio;
   final WebSocketChatServiceV2 _wsService;
 
@@ -33,11 +37,15 @@ class ChatRepository {
 
   /// 发送任务相关消息 (非流式)
   Future<ChatResponseModel> sendMessageToTask(
-      String taskId, String message, String? conversationId,) async {
+    String taskId,
+    String message,
+    String? conversationId,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return ChatResponseModel(
-          message: 'Demo response to task: $message',
-          conversationId: 'demo_id',);
+        message: 'Demo response to task: $message',
+        conversationId: 'demo_id',
+      );
     }
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/chat/task/$taskId',
@@ -46,7 +54,9 @@ class ChatRepository {
         'conversation_id': conversationId,
       },
     );
-    return ChatResponseModel.fromJson(response.data!);
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
+    return ChatResponseModel.fromJson(payload);
   }
 
   /// 获取对话历史
@@ -63,13 +73,14 @@ class ChatRepository {
     if (limit != null) queryParams['limit'] = limit;
     if (offset != null) queryParams['offset'] = offset;
 
-    final response = await _dio.get<List<dynamic>>(
+    final response = await _dio.get<dynamic>(
       '/api/v1/chat/history/$conversationId',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final list = response.data ?? [];
-    return list
+    final data = ApiResponseParser.unwrapList(response.data,
+        action: 'getConversationHistory');
+    return data
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();
   }
@@ -85,11 +96,18 @@ class ChatRepository {
         },
       ];
     }
-    final response = await _dio.get<List<dynamic>>('/api/v1/chat/sessions');
-    final data = response.data ?? [];
+    final response = await _dio.get<dynamic>('/api/v1/chat/sessions');
+    final data = ApiResponseParser.unwrapList(response.data,
+        action: 'getRecentConversations');
     return List<Map<String, dynamic>>.from(
       data.map((item) => item as Map<String, dynamic>),
     );
+  }
+
+  Future<MultiAgentCatalog> getMultiAgentCatalog() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/v1/multi-agent/catalog');
+    return MultiAgentCatalog.fromJson(response.data ?? const {});
   }
 
   /// 流式聊天（WebSocket）
@@ -104,11 +122,8 @@ class ChatRepository {
     bool includeReferences = false,
     String? chatMode,
   }) {
-    if (DemoDataService.isDemoMode) {
-      // Mock stream generator
-      return _mockChatStream(message);
-    }
-
+    // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
+    // 只有历史数据使用预设内容
     // 使用 WebSocket 服务
     return _wsService.sendMessage(
       message: message,
@@ -174,11 +189,13 @@ class ChatRepository {
   void sendPlanReviewFeedback({
     required String reviewId,
     required String userDecision,
+    String? planId,
     String? userComment,
   }) {
     _wsService.sendPlanReviewFeedback(
       reviewId: reviewId,
       userDecision: userDecision,
+      planId: planId,
       userComment: userComment,
     );
   }
@@ -186,7 +203,9 @@ class ChatRepository {
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(
-      String message, String? conversationId,) {
+    String message,
+    String? conversationId,
+  ) {
     late StreamController<ChatStreamEvent> controller;
     controller = StreamController<ChatStreamEvent>(
       onCancel: () {
@@ -205,22 +224,6 @@ class ChatRepository {
     );
 
     return controller.stream;
-  }
-
-  Stream<ChatStreamEvent> _mockChatStream(String message) async* {
-    yield TextEvent(content: 'Received: $message\n');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    yield TextEvent(content: 'Thinking...\n');
-    yield ToolStartEvent(toolName: 'demo_tool');
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    yield ToolResultEvent(
-        result:
-            ToolResultModel(success: true, toolName: 'demo_tool', data: {}),);
-    yield TextEvent(content: 'This is a simulated response in Demo Mode.\n');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    yield TextEvent(
-        content: 'I can show you Markdown too:\n\n* Item 1\n* Item 2',);
-    yield DoneEvent();
   }
 
   Future<void> _startSSEConnection({
@@ -291,7 +294,8 @@ class ChatRepository {
 
       case 'tool_result':
         return ToolResultEvent(
-          result: ToolResultModel.fromJson(data['result'] as Map<String, dynamic>),
+          result:
+              ToolResultModel.fromJson(data['result'] as Map<String, dynamic>),
         );
 
       case 'widget':
@@ -301,13 +305,13 @@ class ChatRepository {
         );
 
       case 'intervention':
-        final intervention = data['intervention'] as Map<String, dynamic>? ?? {};
+        final intervention =
+            data['intervention'] as Map<String, dynamic>? ?? {};
         final content = intervention['content'] as Map<String, dynamic>? ?? {};
         final widgetType =
             content['widget_type'] as String? ?? 'intervention_card';
-        final widgetData =
-            (content['widget_data'] as Map<String, dynamic>?) ??
-                Map<String, dynamic>.from(content);
+        final widgetData = (content['widget_data'] as Map<String, dynamic>?) ??
+            Map<String, dynamic>.from(content);
         widgetData['intervention_id'] ??= intervention['id'];
         widgetData['intervention_topic'] ??= intervention['topic'];
         widgetData['intervention_level'] ??= intervention['level'];
@@ -322,6 +326,15 @@ class ChatRepository {
           status: data['status'] as String? ?? 'unknown',
           message: data['message'] as String?,
           widgetType: 'intervention',
+          timestamp: data['timestamp'] as int?,
+        );
+
+      case 'response_feedback_ack':
+        return ActionStatusEvent(
+          actionId: data['response_id'] as String? ?? '',
+          status: data['status'] as String? ?? 'unknown',
+          message: data['message'] as String?,
+          widgetType: 'response_feedback',
           timestamp: data['timestamp'] as int?,
         );
 

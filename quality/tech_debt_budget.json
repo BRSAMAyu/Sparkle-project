@@ -1,0 +1,37 @@
+{
+  "metadata": {
+    "version": 1,
+    "updated_at": "2026-02-07T00:00:00Z",
+    "policy": "No metric is allowed to increase above budget in feature-freeze period"
+  },
+  "budgets": [
+    {
+      "id": "backend_datetime_utcnow",
+      "description": "Occurrences of datetime.utcnow() in backend app/tests",
+      "command": "rg -n \"datetime\\.utcnow\\(\" backend/app backend/tests | wc -l",
+      "max": 467,
+      "severity": "P1"
+    },
+    {
+      "id": "backend_pydantic_class_config",
+      "description": "Legacy class Config declarations in backend app/tests",
+      "command": "rg -n \"class Config:\" backend/app backend/tests | wc -l",
+      "max": 61,
+      "severity": "P1"
+    },
+    {
+      "id": "backend_pydantic_json_encoders",
+      "description": "Legacy json_encoders usage in backend app/tests",
+      "command": "rg -n \"json_encoders\" backend/app backend/tests | wc -l",
+      "max": 1,
+      "severity": "P1"
+    },
+    {
+      "id": "backend_pydantic_min_items",
+      "description": "Legacy min_items usage in backend app/tests",
+      "command": "rg -n \"min_items=\" backend/app backend/tests | wc -l",
+      "max": 1,
+      "severity": "P1"
+    }
+  ]
+}

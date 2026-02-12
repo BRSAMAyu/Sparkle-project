@@ -33,7 +33,7 @@ class KnowledgeIntegrationService {
     try {
       debugPrint('📚 Creating vocabulary node: $sourceText → $translation');
 
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/galaxy/vocabulary',
         data: {
           'source_text': sourceText,
@@ -47,9 +47,9 @@ class KnowledgeIntegrationService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        debugPrint('✅ Vocabulary node created/updated: ${response.data['node_id']}');
-        return VocabularyNodeResult.fromJson(response.data as Map<String, dynamic>);
+      if (response.statusCode == 200 && response.data?['success'] == true) {
+        debugPrint('✅ Vocabulary node created/updated: ${response.data?['node_id']}');
+        return VocabularyNodeResult.fromJson(response.data!);
       } else {
         debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
         return null;
@@ -106,9 +106,9 @@ class KnowledgeIntegrationService {
     try {
       debugPrint('🗑️ Deleting draft node: $nodeId');
 
-      final response = await _dio.delete('/galaxy/node/$nodeId/draft');
+      final response = await _dio.delete<Map<String, dynamic>>('/galaxy/node/$nodeId/draft');
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data?['success'] == true) {
         debugPrint('✅ Draft node deleted: $nodeId');
         return true;
       } else {
@@ -131,7 +131,7 @@ class KnowledgeIntegrationService {
     try {
       debugPrint('✏️ Updating node content: $nodeId');
 
-      final response = await _dio.patch(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '/galaxy/node/$nodeId/content',
         data: {
           if (name != null) 'name': name,
@@ -140,7 +140,7 @@ class KnowledgeIntegrationService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data?['success'] == true) {
         debugPrint('✅ Node content updated: $nodeId');
         return true;
       } else {

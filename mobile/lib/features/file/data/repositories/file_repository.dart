@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/features/file/file.dart';
 
 final fileRepositoryProvider = Provider<FileRepository>((ref) {
@@ -27,7 +28,8 @@ class FileRepository {
         'mime_type': mimeType,
       },
     );
-    return UploadSession.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'prepareUpload');
+    return UploadSession.fromJson(payload);
   }
 
   Future<StoredFile> completeUpload({
@@ -45,7 +47,8 @@ class FileRepository {
         if (description != null) 'description': description,
       },
     );
-    return StoredFile.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
+    return StoredFile.fromJson(payload);
   }
 
   Future<StoredFile> getFile(String fileId, {String? groupId}) async {
@@ -55,7 +58,8 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    return StoredFile.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
+    return StoredFile.fromJson(payload);
   }
 
   Future<PresignedUrl> getDownloadUrl(String fileId, {String? groupId}) async {
@@ -65,8 +69,8 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    return PresignedUrl.fromJson(
-        response.data as Map<String, dynamic>, 'download_url',);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getDownloadUrl');
+    return PresignedUrl.fromJson(payload, 'download_url');
   }
 
   Future<PresignedUrl> getThumbnailUrl(String fileId, {String? groupId}) async {
@@ -76,8 +80,8 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    return PresignedUrl.fromJson(
-        response.data as Map<String, dynamic>, 'thumbnail_url',);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getThumbnailUrl');
+    return PresignedUrl.fromJson(payload, 'thumbnail_url');
   }
 
   Future<List<StoredFile>> listMyFiles(
@@ -90,7 +94,7 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = response.data ?? <dynamic>[];
+    final data = ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -105,7 +109,7 @@ class FileRepository {
         'limit': limit,
       },
     );
-    final data = response.data ?? <dynamic>[];
+    final data = ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -125,7 +129,7 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = response.data ?? <dynamic>[];
+    final data = ApiResponseParser.unwrapList(response.data, action: 'listGroupFiles');
     return data
         .map((item) => GroupFileInfo.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -148,7 +152,8 @@ class FileRepository {
         'send_message': sendMessage,
       },
     );
-    return GroupFileInfo.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'shareToGroup');
+    return GroupFileInfo.fromJson(payload);
   }
 
   Future<GroupFileInfo> updateGroupFilePermissions(
@@ -162,14 +167,15 @@ class FileRepository {
         'permissions': permissions.toJson(),
       },
     );
-    return GroupFileInfo.fromJson(response.data as Map<String, dynamic>);
+    final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateGroupFilePermissions');
+    return GroupFileInfo.fromJson(payload);
   }
 
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
       String groupId,) async {
     final response =
         await _dio.get<List<dynamic>>(ApiEndpoints.groupFileCategories(groupId));
-    final data = response.data ?? <dynamic>[];
+    final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupFileCategories');
     return data
         .map((item) =>
             GroupFileCategoryStat.fromJson(item as Map<String, dynamic>),)

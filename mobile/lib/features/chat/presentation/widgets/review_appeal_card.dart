@@ -51,7 +51,8 @@ class ReviewAppealData {
   final String? secondaryDecision;
   final double? secondaryScore;
 
-  static ReviewAppealData fromJson(Map<String, dynamic> json) => ReviewAppealData(
+  static ReviewAppealData fromJson(Map<String, dynamic> json) =>
+      ReviewAppealData(
         appealId: json['appeal_id'] as String? ?? '',
         reviewId: json['review_id'] as String? ?? '',
         status: _parseStatus(json['status'] as String? ?? 'pending'),
@@ -81,10 +82,12 @@ class ReviewAppealData {
     }
   }
 
-  bool get isResolved => status == AppealStatus.resolved || status == AppealStatus.rejected;
+  bool get isResolved =>
+      status == AppealStatus.resolved || status == AppealStatus.rejected;
   bool get isApproved => status == AppealStatus.resolved;
   bool get isRejected => status == AppealStatus.rejected;
-  bool get isPending => status == AppealStatus.pending || status == AppealStatus.inReview;
+  bool get isPending =>
+      status == AppealStatus.pending || status == AppealStatus.inReview;
   bool get isEscalated => status == AppealStatus.escalated;
 }
 
@@ -108,7 +111,8 @@ class ReviewAppealCard extends StatefulWidget {
   final String? reviewId;
 
   /// 提交申诉回调
-  final Future<bool> Function(String reason, List<String> issues)? onSubmitAppeal;
+  final Future<bool> Function(String reason, List<String> issues)?
+      onSubmitAppeal;
 
   /// 取消申诉回调
   final VoidCallback? onCancelAppeal;
@@ -271,21 +275,21 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                       AnimatedBuilder(
                         animation: _pulseController,
                         builder: (context, child) => Container(
-                            padding: const EdgeInsets.all(DS.spacing10),
-                            decoration: BoxDecoration(
-                              color: color.withValues(
-                                alpha: isPending
-                                    ? 0.15 + _pulseController.value * 0.1
-                                    : 0.15,
-                              ),
-                              shape: BoxShape.circle,
+                          padding: const EdgeInsets.all(DS.spacing10),
+                          decoration: BoxDecoration(
+                            color: color.withValues(
+                              alpha: isPending
+                                  ? 0.15 + _pulseController.value * 0.1
+                                  : 0.15,
                             ),
-                            child: Icon(
-                              _getStatusIcon(),
-                              color: color,
-                              size: 20,
-                            ),
+                            shape: BoxShape.circle,
                           ),
+                          child: Icon(
+                            _getStatusIcon(),
+                            color: color,
+                            size: 20,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: DS.spacing12),
                       Expanded(
@@ -481,206 +485,206 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
   }
 
   Widget _buildAppealForm(BuildContext context) => Container(
-      margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius16,
-        boxShadow: DS.shadowMd,
-        border: Border.all(
-          color: DS.warning.withValues(alpha: 0.3),
-          width: 1.5,
+        margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          boxShadow: DS.shadowMd,
+          border: Border.all(
+            color: DS.warning.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: DS.borderRadius16,
-        child: Stack(
-          children: [
-            // Warning stripe
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 4,
-              child: Container(color: DS.warning),
-            ),
+        child: ClipRRect(
+          borderRadius: DS.borderRadius16,
+          child: Stack(
+            children: [
+              // Warning stripe
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                child: Container(color: DS.warning),
+              ),
 
-            Padding(
-              padding: const EdgeInsets.all(DS.spacing16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(DS.spacing10),
-                          decoration: BoxDecoration(
-                            color: DS.warning.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.report_problem_rounded,
-                            color: DS.warning,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(
-                          child: Text(
-                            '报告审查问题',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                  color: DS.neutral900,
-                                ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: DS.neutral400,
-                            size: 20,
-                          ),
-                          onPressed: widget.onCancelAppeal,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: DS.spacing12),
-
-                    // Issue chips
-                    Text(
-                      '选择问题类型（可多选）',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.neutral600,
-                            fontWeight: DS.fontWeightMedium,
-                          ),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: _issueOptions.map((issue) {
-                        final isSelected = _selectedIssues.contains(issue);
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              if (isSelected) {
-                                _selectedIssues.remove(issue);
-                              } else {
-                                _selectedIssues.add(issue);
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing10,
-                              vertical: DS.spacing6,
-                            ),
+              Padding(
+                padding: const EdgeInsets.all(DS.spacing16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(DS.spacing10),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? DS.warning.withValues(alpha: 0.15)
-                                  : DS.neutral100,
-                              borderRadius: DS.borderRadius20,
-                              border: Border.all(
-                                color: isSelected
-                                    ? DS.warning.withValues(alpha: 0.5)
-                                    : DS.neutral300,
-                              ),
+                              color: DS.warning.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
                             ),
+                            child: Icon(
+                              Icons.report_problem_rounded,
+                              color: DS.warning,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: DS.spacing12),
+                          Expanded(
                             child: Text(
-                              issue,
+                              '报告审查问题',
                               style: Theme.of(context)
                                   .textTheme
-                                  .labelSmall
+                                  .titleSmall
                                   ?.copyWith(
-                                    color: isSelected
-                                        ? DS.warning
-                                        : DS.neutral700,
-                                    fontWeight: isSelected
-                                        ? DS.fontWeightSemibold
-                                        : DS.fontWeightMedium,
+                                    fontWeight: DS.fontWeightBold,
+                                    color: DS.neutral900,
                                   ),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: DS.spacing12),
-
-                    // Reason input
-                    Text(
-                      '详细说明',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DS.neutral600,
-                            fontWeight: DS.fontWeightMedium,
+                          InkWell(
+                            onTap: widget.onCancelAppeal,
+                            borderRadius: DS.borderRadiusFull,
+                            child: Icon(
+                              Icons.close_rounded,
+                              color: DS.neutral400,
+                              size: DS.iconSizeSm,
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: DS.spacing6),
-                    TextFormField(
-                      controller: _reasonController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: '请描述审查结果存在的问题...',
-                        hintStyle: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: DS.neutral400),
-                        filled: true,
-                        fillColor: DS.neutral100,
-                        border: OutlineInputBorder(
-                          borderRadius: DS.borderRadius8,
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.all(DS.spacing10),
+                        ],
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '请填写申诉理由';
-                        }
-                        if (value.trim().length < 10) {
-                          return '请提供更详细的说明（至少10个字符）';
-                        }
-                        return null;
-                      },
-                    ),
 
-                    const SizedBox(height: DS.spacing16),
+                      const SizedBox(height: DS.spacing12),
 
-                    // Submit button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        CustomButton.text(
-                          text: '取消',
-                          onPressed: widget.onCancelAppeal,
-                          size: CustomButtonSize.small,
+                      // Issue chips
+                      Text(
+                        '选择问题类型（可多选）',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.neutral600,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: _issueOptions.map((issue) {
+                          final isSelected = _selectedIssues.contains(issue);
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedIssues.remove(issue);
+                                } else {
+                                  _selectedIssues.add(issue);
+                                }
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing10,
+                                vertical: DS.spacing6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? DS.warning.withValues(alpha: 0.15)
+                                    : DS.neutral100,
+                                borderRadius: DS.borderRadius20,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? DS.warning.withValues(alpha: 0.5)
+                                      : DS.neutral300,
+                                ),
+                              ),
+                              child: Text(
+                                issue,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: isSelected
+                                          ? DS.warning
+                                          : DS.neutral700,
+                                      fontWeight: isSelected
+                                          ? DS.fontWeightSemibold
+                                          : DS.fontWeightMedium,
+                                    ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: DS.spacing12),
+
+                      // Reason input
+                      Text(
+                        '详细说明',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.neutral600,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                      ),
+                      const SizedBox(height: DS.spacing6),
+                      TextFormField(
+                        controller: _reasonController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: '请描述审查结果存在的问题...',
+                          hintStyle: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: DS.neutral400),
+                          filled: true,
+                          fillColor: DS.neutral100,
+                          border: const OutlineInputBorder(
+                            borderRadius: DS.borderRadius8,
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.all(DS.spacing10),
                         ),
-                        const SizedBox(width: DS.spacing8),
-                        CustomButton.primary(
-                          text: widget.isSubmitting ? '提交中...' : '提交申诉',
-                          icon: Icons.send_rounded,
-                          onPressed: widget.isSubmitting ? null : _handleSubmit,
-                          size: CustomButtonSize.small,
-                        ),
-                      ],
-                    ),
-                  ],
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '请填写申诉理由';
+                          }
+                          if (value.trim().length < 10) {
+                            return '请提供更详细的说明（至少10个字符）';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: DS.spacing16),
+
+                      // Submit button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          CustomButton.text(
+                            text: '取消',
+                            onPressed: widget.onCancelAppeal,
+                            size: CustomButtonSize.small,
+                          ),
+                          const SizedBox(width: DS.spacing8),
+                          CustomButton.primary(
+                            text: widget.isSubmitting ? '提交中...' : '提交申诉',
+                            icon: Icons.send_rounded,
+                            onPressed:
+                                widget.isSubmitting ? null : _handleSubmit,
+                            size: CustomButtonSize.small,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {

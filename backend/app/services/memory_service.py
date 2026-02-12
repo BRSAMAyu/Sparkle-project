@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-from datetime import date, datetime
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from datetime import UTC, date, datetime
+from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
 from app.config import settings
-from app.core.business_metrics import MEMORY_WRITE_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_CORRECTION_TOTAL
+from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
 from app.core.memory_constants import PREFERENCE_KEYS
-from app.services.evidence_scoring import compute_score
+from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.services.evidence_health_service import EvidenceHealthService
-from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
+from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_evolution_service import MemoryEvolutionService
+from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.system_update_service import SystemUpdateService, build_system_update
-from loguru import logger
-
 
 ALLOWED_EVIDENCE_TYPES = {
     "event",
@@ -33,6 +33,10 @@ ALLOWED_EVIDENCE_TYPES = {
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
 SUMMARY_MAX_LEN = 48
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:
@@ -51,11 +55,11 @@ class MemoryService:
         self,
         user_id: UUID,
         pref_key: str,
-        pref_value: Dict[str, Any],
+        pref_value: dict[str, Any],
         evidence_refs: Iterable[Any],
-        confidence: Optional[float] = None,
-        source_type: Optional[str] = None,
-    ) -> Optional[MemoryPreference]:
+        confidence: float | None = None,
+        source_type: str | None = None,
+    ) -> MemoryPreference | None:
         if pref_key not in PREFERENCE_KEYS:
             raise ValueError(f"Unsupported pref_key: {pref_key}")
         if not await self._allow_write(
@@ -99,7 +103,7 @@ class MemoryService:
 
         if latest is not None:
             latest.replaced_by_id = record.id
-            latest.updated_at = datetime.utcnow()
+            latest.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(record)
@@ -157,14 +161,14 @@ class MemoryService:
         user_id: UUID,
         title: str,
         status: str = "active",
-        target_date: Optional[date] = None,
-        expires_at: Optional[datetime] = None,
-        linked_task_id: Optional[UUID] = None,
-        linked_plan_id: Optional[UUID] = None,
-        evidence_refs: Optional[Iterable[Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        source_type: Optional[str] = None,
-    ) -> Optional[MemoryGoal]:
+        target_date: date | None = None,
+        expires_at: datetime | None = None,
+        linked_task_id: UUID | None = None,
+        linked_plan_id: UUID | None = None,
+        evidence_refs: Iterable[Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+        source_type: str | None = None,
+    ) -> MemoryGoal | None:
         if not await self._allow_write(
             user_id=user_id,
             kind="goal",
@@ -212,7 +216,7 @@ class MemoryService:
         user_id: UUID,
         goal_id: UUID,
         **updates: Any,
-    ) -> Optional[MemoryGoal]:
+    ) -> MemoryGoal | None:
         result = await self.db.execute(
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
@@ -280,8 +284,8 @@ class MemoryService:
             logger.warning(f"Failed to track goal evolution: {exc}")
         return record
 
-    async def list_active_goals(self, user_id: UUID, now: Optional[datetime] = None) -> List[MemoryGoal]:
-        now = now or datetime.utcnow()
+    async def list_active_goals(self, user_id: UUID, now: datetime | None = None) -> list[MemoryGoal]:
+        now = now or _utcnow()
         result = await self.db.execute(
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
@@ -293,9 +297,9 @@ class MemoryService:
         )
         return list(result.scalars().all())
 
-    async def list_preferences(self, user_id: UUID) -> Dict[str, Any]:
+    async def list_preferences(self, user_id: UUID) -> dict[str, Any]:
         records = await self.list_preference_records(user_id)
-        latest_by_key: Dict[str, Any] = {}
+        latest_by_key: dict[str, Any] = {}
         for record in records:
             latest_by_key[record.pref_key] = record.pref_value
         return latest_by_key
@@ -304,7 +308,7 @@ class MemoryService:
         self,
         user_id: UUID,
         preference_id: UUID,
-    ) -> Optional[MemoryPreference]:
+    ) -> MemoryPreference | None:
         result = await self.db.execute(
             select(MemoryPreference).where(
                 MemoryPreference.user_id == user_id,
@@ -319,7 +323,7 @@ class MemoryService:
         self,
         user_id: UUID,
         pref_key: str,
-    ) -> Optional[MemoryPreference]:
+    ) -> MemoryPreference | None:
         result = await self.db.execute(
             select(MemoryPreference)
             .where(
@@ -337,12 +341,12 @@ class MemoryService:
         self,
         user_id: UUID,
         preference_id: UUID,
-        pref_key: Optional[str] = None,
-        pref_value: Optional[Dict[str, Any]] = None,
-        value: Optional[Dict[str, Any]] = None,
-        confidence: Optional[float] = None,
-        evidence_refs: Optional[Iterable[Any]] = None,
-    ) -> Optional[MemoryPreference]:
+        pref_key: str | None = None,
+        pref_value: dict[str, Any] | None = None,
+        value: dict[str, Any] | None = None,
+        confidence: float | None = None,
+        evidence_refs: Iterable[Any] | None = None,
+    ) -> MemoryPreference | None:
         record = await self.get_preference_record(user_id, preference_id)
         if record is None:
             return None
@@ -369,7 +373,7 @@ class MemoryService:
         self,
         user_id: UUID,
         preference_id: UUID,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> bool:
         return await self.retract_memory(
             kind="preference",
@@ -378,7 +382,7 @@ class MemoryService:
             reason=reason or "batch_delete",
         )
 
-    async def list_preference_records(self, user_id: UUID) -> List[MemoryPreference]:
+    async def list_preference_records(self, user_id: UUID) -> list[MemoryPreference]:
         result = await self.db.execute(
             select(MemoryPreference)
             .where(
@@ -388,13 +392,13 @@ class MemoryService:
             )
             .order_by(MemoryPreference.pref_key.asc(), MemoryPreference.version.desc())
         )
-        latest_by_key: Dict[str, MemoryPreference] = {}
+        latest_by_key: dict[str, MemoryPreference] = {}
         for record in result.scalars().all():
             if record.pref_key not in latest_by_key:
                 latest_by_key[record.pref_key] = record
         return list(latest_by_key.values())
 
-    async def list_preference_history(self, user_id: UUID) -> List[MemoryPreference]:
+    async def list_preference_history(self, user_id: UUID) -> list[MemoryPreference]:
         result = await self.db.execute(
             select(MemoryPreference)
             .where(
@@ -409,11 +413,11 @@ class MemoryService:
     async def list_goals(
         self,
         user_id: UUID,
-        status_filter: Optional[str] = None,
+        status_filter: str | None = None,
         include_expired: bool = False,
         limit: int = 20,
-    ) -> List[MemoryGoal]:
-        now = datetime.utcnow()
+    ) -> list[MemoryGoal]:
+        now = _utcnow()
         stmt = select(MemoryGoal).where(
             MemoryGoal.user_id == user_id,
             MemoryGoal.deleted_at.is_(None),
@@ -423,7 +427,7 @@ class MemoryService:
             stmt = stmt.where(MemoryGoal.status == status_filter)
         if not include_expired:
             stmt = stmt.where(
-                (MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
+                MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now)
             )
         stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
         result = await self.db.execute(stmt)
@@ -433,9 +437,9 @@ class MemoryService:
         self,
         user_id: UUID,
         limit: int = 10,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-    ) -> List[EpisodicMemory]:
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> list[EpisodicMemory]:
         stmt = select(EpisodicMemory).where(
             EpisodicMemory.user_id == user_id,
             EpisodicMemory.deleted_at.is_(None),
@@ -454,13 +458,13 @@ class MemoryService:
         user_id: UUID,
         summary: str,
         source_type: str,
-        source_id: Optional[str],
+        source_id: str | None,
         occurred_at: datetime,
-        importance_score: Optional[float],
-        tags: Optional[List[str]],
+        importance_score: float | None,
+        tags: list[str] | None,
         evidence_refs: Iterable[Any],
-        embedding: Optional[List[float]] = None,
-    ) -> Optional[EpisodicMemory]:
+        embedding: list[float] | None = None,
+    ) -> EpisodicMemory | None:
         if not await self._allow_write(
             user_id=user_id,
             kind="episodic",
@@ -514,7 +518,7 @@ class MemoryService:
         kind: str,
         memory_id: UUID,
         user_id: UUID,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> bool:
         if not settings.ENABLE_MEMORY_RETRACTION:
             raise ValueError("Memory retraction is disabled by feature flag")
@@ -564,8 +568,8 @@ class MemoryService:
         memory_id: UUID,
         user_id: UUID,
         action: str,
-        reason: Optional[str] = None,
-    ) -> Optional[Any]:
+        reason: str | None = None,
+    ) -> Any | None:
         if not settings.ENABLE_MEMORY_CORRECTION:
             raise ValueError("Memory correction is disabled by feature flag")
 
@@ -601,7 +605,7 @@ class MemoryService:
             else:
                 current_score = record.evidence_score or 0.0
                 record.evidence_score = max(0.0, current_score - CONFIDENCE_DECREMENT)
-            record.updated_at = datetime.utcnow()
+            record.updated_at = _utcnow()
         else:
             raise ValueError(f"Unsupported correction action: {action}")
 
@@ -642,7 +646,7 @@ class MemoryService:
         )
         return record
 
-    def _apply_retraction(self, record: Any, reason: Optional[str]) -> None:
+    def _apply_retraction(self, record: Any, reason: str | None) -> None:
         updated_refs = []
         for ref in record.evidence_refs or []:
             ref_copy = dict(ref)
@@ -652,11 +656,13 @@ class MemoryService:
             updated_refs.append(ref_copy)
 
         record.evidence_refs = updated_refs
-        record.retracted_at = datetime.utcnow()
-        record.updated_at = datetime.utcnow()
+        record.retracted_at = _utcnow()
+        record.updated_at = _utcnow()
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
+            if not isinstance(snapshot, dict):
+                snapshot = {"history": snapshot}
             snapshot["retraction_reason"] = reason
             snapshot["evidence_refs"] = updated_refs
             record.evidence_snapshot = snapshot
@@ -665,8 +671,8 @@ class MemoryService:
         self,
         user_id: UUID,
         kind: str,
-        pref_key: Optional[str] = None,
-        source_type: Optional[str] = None,
+        pref_key: str | None = None,
+        source_type: str | None = None,
     ) -> bool:
         if not settings.ENABLE_USER_MEMORY_CONTROLS:
             return True
@@ -696,12 +702,12 @@ class MemoryService:
 def _normalize_evidence_refs(
     evidence_refs: Iterable[Any],
     require_non_empty: bool,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     refs = list(evidence_refs or [])
     if require_non_empty and not refs:
         raise ValueError("evidence_refs must be non-empty")
 
-    normalized: List[Dict[str, Any]] = []
+    normalized: list[dict[str, Any]] = []
     for item in refs:
         if isinstance(item, dict):
             ref_type = item.get("type")

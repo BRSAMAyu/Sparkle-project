@@ -49,7 +49,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             end: Alignment.bottomRight,
             colors: [
               DS.brandPrimary.shade50,
-              Colors.purple.shade50,
+              DS.prismPurple.withValues(alpha: 0.08),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
@@ -76,12 +76,12 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
           Container(
             padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100,
+              color: DS.prismPurple.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.timeline,
-              color: Colors.purple.shade700,
+              color: DS.prismPurple,
               size: 20,
             ),
           ),
@@ -95,7 +95,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
+                    color: DS.prismPurple,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -103,7 +103,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   _getWorkflowDisplayName(),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.purple.shade600,
+                    color: DS.prismPurple.withValues(alpha: 0.82),
                   ),
                 ),
               ],
@@ -205,7 +205,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
       );
 
   Widget _buildStepCard(AgentTimelineStep step) => Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(DS.spacing8 + DS.spacing6),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.circular(12),
@@ -323,6 +323,8 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
         return '渐进式深度探索模式';
       case 'error_diagnosis':
         return '错题诊断循环模式';
+      case 'expert_routing':
+        return '专家路由模式';
       default:
         return '协作模式';
     }
@@ -344,12 +346,26 @@ class AgentTimelineStep {
 
   factory AgentTimelineStep.fromJson(Map<String, dynamic> json) =>
       AgentTimelineStep(
-        agentName: json['agent'] as String,
-        action: json['action'] as String,
-        agentIcon: _getAgentIcon(json['agent'] as String),
-        agentColor: _getAgentColor(json['agent'] as String),
-        timestamp: (json['timestamp'] as num?)?.toDouble(),
-        outputSummary: json['output_summary'] as String?,
+        agentName: (json['agent'] as String?) ??
+            (json['agent_name'] as String?) ??
+            'Agent',
+        action: (json['action'] as String?) ?? (json['step'] as String?) ?? '',
+        agentIcon: _getAgentIcon(
+          (json['agent'] as String?) ??
+              (json['agent_name'] as String?) ??
+              'Agent',
+        ),
+        agentColor: _getAgentColor(
+          (json['agent'] as String?) ??
+              (json['agent_name'] as String?) ??
+              'Agent',
+        ),
+        timestamp: (json['timestamp'] as num?)?.toDouble() ??
+            (json['start_time_ms'] is num
+                ? (json['start_time_ms'] as num).toDouble() / 1000.0
+                : null),
+        outputSummary: json['output_summary'] as String? ??
+            json['outputSummary'] as String?,
       );
   final String agentName;
   final String action;
@@ -359,38 +375,65 @@ class AgentTimelineStep {
   final String? outputSummary;
 
   static IconData _getAgentIcon(String agentName) {
-    if (agentName.contains('StudyPlanner')) {
+    final normalized = agentName.toLowerCase();
+    if (normalized.contains('studyplanner') ||
+        normalized.contains('time_tutor')) {
       return Icons.calendar_today;
-    } else if (agentName.contains('ProblemSolver')) {
+    } else if (normalized.contains('problemsolver') ||
+        normalized.contains('error_analyst')) {
       return Icons.lightbulb_outline;
-    } else if (agentName.contains('Math')) {
+    } else if (normalized.contains('math')) {
       return Icons.calculate;
-    } else if (agentName.contains('Code')) {
+    } else if (normalized.contains('code')) {
       return Icons.code;
-    } else if (agentName.contains('Writing')) {
+    } else if (normalized.contains('writing')) {
       return Icons.edit_note;
-    } else if (agentName.contains('Science')) {
+    } else if (normalized.contains('science')) {
       return Icons.science_outlined;
+    } else if (normalized.contains('galaxy_guide') ||
+        normalized.contains('knowledge')) {
+      return Icons.auto_awesome;
+    } else if (normalized.contains('exam_oracle')) {
+      return Icons.quiz;
+    } else if (normalized.contains('study_buddy')) {
+      return Icons.favorite_border;
+    } else if (normalized.contains('search')) {
+      return Icons.search;
+    } else if (normalized.contains('deep_analyst')) {
+      return Icons.psychology_alt;
     } else {
       return Icons.hub_outlined;
     }
   }
 
   static Color _getAgentColor(String agentName) {
-    if (agentName.contains('StudyPlanner')) {
+    final normalized = agentName.toLowerCase();
+    if (normalized.contains('studyplanner') ||
+        normalized.contains('time_tutor')) {
       return DS.success;
-    } else if (agentName.contains('ProblemSolver')) {
+    } else if (normalized.contains('problemsolver') ||
+        normalized.contains('error_analyst')) {
       return DS.brandPrimary;
-    } else if (agentName.contains('Math')) {
+    } else if (normalized.contains('math')) {
       return DS.brandPrimary;
-    } else if (agentName.contains('Code')) {
-      return Colors.purple;
-    } else if (agentName.contains('Writing')) {
-      return Colors.teal;
-    } else if (agentName.contains('Science')) {
+    } else if (normalized.contains('code')) {
+      return DS.prismPurple;
+    } else if (normalized.contains('writing')) {
+      return DS.info;
+    } else if (normalized.contains('science')) {
       return DS.error;
+    } else if (normalized.contains('galaxy_guide')) {
+      return DS.infoLight;
+    } else if (normalized.contains('exam_oracle')) {
+      return DS.warning;
+    } else if (normalized.contains('study_buddy')) {
+      return DS.capsuleAccent;
+    } else if (normalized.contains('search')) {
+      return DS.info;
+    } else if (normalized.contains('deep_analyst')) {
+      return DS.brandSecondary;
     } else {
-      return Colors.indigo;
+      return DS.capsuleAccent;
     }
   }
 }

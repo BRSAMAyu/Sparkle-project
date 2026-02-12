@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
-
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 
@@ -16,10 +16,10 @@ class ConflictNote:
     type: str
     key: str
     reason: str
-    winners: List[str]
-    suppressed: List[str]
+    winners: list[str]
+    suppressed: list[str]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "type": self.type,
             "key": self.key,
@@ -29,7 +29,7 @@ class ConflictNote:
         }
 
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str) -> list[str]:
     return [match.group(0).lower() for match in _TOKEN_RE.finditer(text or "")]
 
 
@@ -51,13 +51,13 @@ def _similar_summary(a: str, b: str) -> bool:
     return overlap >= 0.8
 
 
-def _goal_overlap(a: Optional[date], b: Optional[date]) -> bool:
+def _goal_overlap(a: date | None, b: date | None) -> bool:
     if a is None or b is None:
         return True
     return a == b
 
 
-def _pick_preference_winner(records: List[MemoryPreference]) -> Tuple[MemoryPreference, str]:
+def _pick_preference_winner(records: list[MemoryPreference]) -> tuple[MemoryPreference, str]:
     records_sorted = sorted(
         records,
         key=lambda item: (
@@ -84,20 +84,20 @@ def _pick_preference_winner(records: List[MemoryPreference]) -> Tuple[MemoryPref
 class MemoryConflictResolver:
     def resolve_preferences(
         self,
-        prefs: Dict[str, Any],
+        prefs: dict[str, Any],
         pref_history: Iterable[MemoryPreference],
-    ) -> Tuple[Dict[str, Any], List[MemoryPreference], List[Dict[str, Any]]]:
+    ) -> tuple[dict[str, Any], list[MemoryPreference], list[dict[str, Any]]]:
         history = list(pref_history)
         if not history:
             return prefs, [], []
 
-        by_key: Dict[str, List[MemoryPreference]] = {}
+        by_key: dict[str, list[MemoryPreference]] = {}
         for record in history:
             by_key.setdefault(record.pref_key, []).append(record)
 
-        resolved: Dict[str, Any] = {}
-        winners: List[MemoryPreference] = []
-        conflicts: List[ConflictNote] = []
+        resolved: dict[str, Any] = {}
+        winners: list[MemoryPreference] = []
+        conflicts: list[ConflictNote] = []
 
         for key, records in by_key.items():
             winner, reason = _pick_preference_winner(records)
@@ -121,19 +121,19 @@ class MemoryConflictResolver:
     def resolve_goals(
         self,
         goals: Iterable[MemoryGoal],
-    ) -> Tuple[List[MemoryGoal], List[Dict[str, Any]]]:
+    ) -> tuple[list[MemoryGoal], list[dict[str, Any]]]:
         items = list(goals)
         if len(items) <= 1:
             return items, []
 
-        by_title: Dict[str, List[MemoryGoal]] = {}
+        by_title: dict[str, list[MemoryGoal]] = {}
         for goal in items:
             key = (goal.title or "").strip().lower()
             by_title.setdefault(key, []).append(goal)
 
-        kept: List[MemoryGoal] = []
+        kept: list[MemoryGoal] = []
         suppressed_ids: set[str] = set()
-        conflicts: List[ConflictNote] = []
+        conflicts: list[ConflictNote] = []
 
         for key, group in by_title.items():
             if len(group) == 1:
@@ -158,7 +158,7 @@ class MemoryConflictResolver:
             )
             winner = overlapping[0]
             kept.append(winner)
-            suppressed = [item for item in overlapping[1:]]
+            suppressed = list(overlapping[1:])
             suppressed_ids.update(str(item.id) for item in suppressed)
             conflicts.append(
                 ConflictNote(
@@ -176,7 +176,7 @@ class MemoryConflictResolver:
     def resolve_episodic(
         self,
         episodes: Iterable[EpisodicMemory],
-    ) -> Tuple[List[EpisodicMemory], List[Dict[str, Any]]]:
+    ) -> tuple[list[EpisodicMemory], list[dict[str, Any]]]:
         items = list(episodes)
         if len(items) <= 1:
             return items, []
@@ -188,8 +188,8 @@ class MemoryConflictResolver:
             ),
             reverse=True,
         )
-        kept: List[EpisodicMemory] = []
-        conflicts: List[ConflictNote] = []
+        kept: list[EpisodicMemory] = []
+        conflicts: list[ConflictNote] = []
 
         for episode in items:
             match = None
@@ -218,10 +218,10 @@ class MemoryConflictResolver:
         self,
         goals: Iterable[MemoryGoal],
         episodes: Iterable[EpisodicMemory],
-    ) -> Tuple[List[MemoryGoal], List[EpisodicMemory], List[Dict[str, Any]]]:
+    ) -> tuple[list[MemoryGoal], list[EpisodicMemory], list[dict[str, Any]]]:
         goals_list = list(goals)
         episodes_list = list(episodes)
-        conflicts: List[ConflictNote] = []
+        conflicts: list[ConflictNote] = []
         suppressed_episodic: set[str] = set()
         suppressed_goals: set[str] = set()
 

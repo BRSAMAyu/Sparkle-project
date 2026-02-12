@@ -11,9 +11,10 @@ import 'package:sparkle/features/chat/data/services/audio_recording_service.dart
 /// 语音输入按钮组件
 /// 长按开始录音，松开停止录音
 class VoiceInputButton extends ConsumerStatefulWidget {
-
   const VoiceInputButton({
-    required this.onTranscription, required this.onError, super.key,
+    required this.onTranscription,
+    required this.onError,
+    super.key,
     this.onRecordingStarted,
     this.onRecordingStopped,
   });
@@ -34,7 +35,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   int _recordingDuration = 0;
   Timer? _durationTimer;
   AnimationController? _animationController;
-  String? _currentTranscription;
 
   @override
   void initState() {
@@ -67,18 +67,18 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
   /// 显示权限申请对话框
   void _showPermissionDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('需要麦克风权限'),
         content: const Text('语音输入需要访问您的麦克风。请在设置中授予麦克风权限。'),
         actions: [
-          TextButton(
-            child: const Text('取消'),
+          SparkleButton.ghost(
+            label: '取消',
             onPressed: () => Navigator.pop(context),
           ),
-          TextButton(
-            child: const Text('去设置'),
+          SparkleButton.primary(
+            label: '去设置',
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();
@@ -104,7 +104,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       _isRecording = true;
       _isProcessing = false;
       _recordingDuration = 0;
-      _currentTranscription = null;
     });
 
     _animationController?.forward();
@@ -141,7 +140,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         onTranscription: (text) {
           if (mounted) {
             setState(() {
-              _currentTranscription = text;
               _isProcessing = false;
             });
             // 实时更新父组件的文本
@@ -220,7 +218,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
       setState(() {
         _isRecording = false;
         _isProcessing = false;
-        _currentTranscription = null;
       });
       _animationController?.reverse();
       widget.onRecordingStopped?.call();
@@ -285,7 +282,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         height: 22,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
         ),
       );
     }
@@ -296,14 +293,14 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         children: [
           Icon(
             Icons.mic,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             size: 20,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
               fontSize: 8,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontWeight: DS.fontWeightBold,
             ),
           ),

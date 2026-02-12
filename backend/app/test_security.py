@@ -12,12 +12,10 @@ Tests security characteristics and vulnerability prevention:
 - Sensitive data handling
 """
 
-import pytest
-from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock, patch
-import json
 import re
+from typing import Any
 
+import pytest
 
 # ============================================================
 # Security Testing Utilities
@@ -99,7 +97,7 @@ class MockAuthService:
         self.valid_tokens = {"token-123": {"user_id": "user-1", "expires_at": 9999999999}}
         self.failed_attempts = {}
 
-    async def authenticate(self, username: str, password: str) -> Dict[str, Any]:
+    async def authenticate(self, username: str, password: str) -> dict[str, Any]:
         """Authenticate user"""
         if not username or not password:
             return {"success": False, "error": "Invalid credentials"}
@@ -112,7 +110,7 @@ class MockAuthService:
             "expires_in": 3600,
         }
 
-    async def validate_token(self, token: str) -> Dict[str, Any]:
+    async def validate_token(self, token: str) -> dict[str, Any]:
         """Validate JWT token"""
         if token not in self.valid_tokens:
             return {"valid": False, "error": "Invalid token"}
@@ -167,7 +165,7 @@ class MockInputValidator:
     """Mock input validator"""
 
     @staticmethod
-    async def validate_chat_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    async def validate_chat_message(message: dict[str, Any]) -> dict[str, Any]:
         """Validate chat message"""
         if not isinstance(message, dict):
             return {"valid": False, "error": "Invalid message format"}
@@ -198,10 +196,7 @@ class MockInputValidator:
         if SecurityValidator.is_sql_injection_attempt(input_str):
             return False
 
-        if SecurityValidator.is_xss_attempt(input_str):
-            return False
-
-        return True
+        return not SecurityValidator.is_xss_attempt(input_str)
 
 
 # ============================================================
@@ -453,7 +448,7 @@ class TestRateLimiting:
     @pytest.mark.asyncio
     async def test_rate_limit_allows_under_limit(self, rate_limiter):
         """Test that requests under limit are allowed"""
-        for i in range(50):
+        for _i in range(50):
             is_allowed = await rate_limiter.check_rate_limit("user-1", limit=100)
             assert is_allowed is True
 
@@ -461,7 +456,7 @@ class TestRateLimiting:
     async def test_rate_limit_blocks_over_limit(self, rate_limiter):
         """Test that requests over limit are blocked"""
         # Fill up the limit
-        for i in range(100):
+        for _i in range(100):
             await rate_limiter.check_rate_limit("user-2", limit=100)
 
         # Next request should fail
@@ -472,7 +467,7 @@ class TestRateLimiting:
     async def test_remaining_requests_calculation(self, rate_limiter):
         """Test remaining requests calculation"""
         # Make 20 requests
-        for i in range(20):
+        for _i in range(20):
             await rate_limiter.check_rate_limit("user-3", limit=100)
 
         remaining = await rate_limiter.get_remaining_requests("user-3")
@@ -534,7 +529,7 @@ class TestSensitiveDataHandling:
     async def test_password_in_response_detected(self, security_validator):
         """Test that password in response is detected"""
         response = '{"username": "user", "password": "secret123"}'
-        contains_sensitive = security_validator.contains_sensitive_data(response)
+        security_validator.contains_sensitive_data(response)
         # Note: JSON format with : might not match password\s*[:=] pattern
         # This is acceptable - the important thing is we detect password in logs
         # where it's formatted differently

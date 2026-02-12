@@ -3,17 +3,15 @@ Task Feedback Service
 
 处理任务反馈，更新用户推断偏好
 """
-from typing import Optional, Dict, Any
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.personalization.preference_service import PreferenceService
 
@@ -37,9 +35,9 @@ class TaskFeedbackService:
         self,
         user_id: UUID,
         task_id: UUID,
-        completion_quality: Optional[int] = None,
-        feedback_text: Optional[str] = None,
-        category: Optional[str] = None,
+        completion_quality: int | None = None,
+        feedback_text: str | None = None,
+        category: str | None = None,
     ) -> TaskFeedback:
         """
         提交任务反馈
@@ -132,7 +130,7 @@ class TaskFeedbackService:
 
         return task
 
-    async def _get_existing_feedback(self, user_id: UUID, task_id: UUID) -> Optional[TaskFeedback]:
+    async def _get_existing_feedback(self, user_id: UUID, task_id: UUID) -> TaskFeedback | None:
         """查询现有反馈"""
         result = await self.db.execute(
             select(TaskFeedback).where(
@@ -146,9 +144,9 @@ class TaskFeedbackService:
         self,
         user_id: UUID,
         task_id: UUID,
-        completion_quality: Optional[int],
-        feedback_text: Optional[str],
-        category: Optional[str],
+        completion_quality: int | None,
+        feedback_text: str | None,
+        category: str | None,
         task: Task,
     ) -> TaskFeedback:
         """创建新反馈"""
@@ -169,9 +167,9 @@ class TaskFeedbackService:
     async def _update_feedback(
         self,
         feedback: TaskFeedback,
-        completion_quality: Optional[int],
-        feedback_text: Optional[str],
-        category: Optional[str],
+        completion_quality: int | None,
+        feedback_text: str | None,
+        category: str | None,
     ) -> TaskFeedback:
         """更新现有反馈"""
         if completion_quality is not None:
@@ -185,8 +183,8 @@ class TaskFeedbackService:
     async def _update_inferred_preferences(
         self,
         user_id: UUID,
-        depth_delta: Optional[float],
-        difficulty_delta: Optional[float],
+        depth_delta: float | None,
+        difficulty_delta: float | None,
     ):
         """
         更新用户推断偏好
@@ -219,7 +217,7 @@ class TaskFeedbackService:
     async def get_user_task_feedback_stats(
         self,
         user_id: UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取用户任务反馈统计
 

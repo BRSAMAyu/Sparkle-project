@@ -2,12 +2,13 @@
 Compliance Models
 合规与审计相关模型 (V3.1)
 """
-from sqlalchemy import Column, String, Text, Boolean, DateTime, JSON, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

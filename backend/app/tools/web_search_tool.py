@@ -2,13 +2,15 @@
 智谱联网搜索工具 (Web Search Tool)
 使用 Zhipu GLM 官方搜索 API
 """
-from typing import Any, Dict, List, Optional
-import httpx
 from datetime import datetime
+from typing import Any
+
+import httpx
 from pydantic import BaseModel, Field
-from .base import BaseTool, ToolCategory, ToolResult
+
 from app.config import settings
 
+from .base import BaseTool, ToolCategory, ToolResult
 
 # ============ Schema ============
 
@@ -16,11 +18,11 @@ class WebSearchProParams(BaseModel):
     """智联网搜索参数 (使用 search_pro 高阶引擎)"""
     query: str = Field(..., description="搜索关键词，建议不超过 70 个字符以获得最佳效果", max_length=70)
     count: int = Field(default=10, description="返回结果数量 1-50", ge=1, le=50)
-    recency_filter: Optional[str] = Field(
+    recency_filter: str | None = Field(
         default="noLimit",
         description="时间范围: oneDay/oneWeek/oneMonth/oneYear/noLimit"
     )
-    domain_filter: Optional[str] = Field(None, description="限定搜索域名 (如: www.example.com)")
+    domain_filter: str | None = Field(None, description="限定搜索域名 (如: www.example.com)")
     content_size: str = Field(default="medium", description="内容长度: medium(摘要)/high(详细)")
 
 
@@ -45,7 +47,7 @@ class WebSearchProTool(BaseTool):
         params: WebSearchProParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         if not settings.ZHIPU_API_KEY:
             return ToolResult(

@@ -17,14 +17,18 @@ class GroupListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: const Text('My Community'),
         centerTitle: true,
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.search),
             onPressed: () {
               context.push('/community/groups/search');
@@ -32,14 +36,12 @@ class GroupListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: SparkleButton.primary(
+        label: 'Create',
+        icon: const Icon(Icons.add),
         onPressed: () {
           context.push('/community/groups/create');
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Create'),
-        backgroundColor: DS.primaryBase,
-        elevation: 4,
       ),
       body: groupsState.when(
         data: (groups) {
@@ -55,27 +57,30 @@ class GroupListScreen extends ConsumerWidget {
               ),
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.read(myGroupsProvider.notifier).refresh(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(DS.spacing16),
-              itemCount: groups.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: DS.spacing12),
-              itemBuilder: (context, index) {
-                final group = groups[index];
-                return _AnimatedGroupTile(
-                  group: group,
-                  index: index,
-                );
-              },
+          return ContentConstraint(
+            child: RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(myGroupsProvider.notifier).refresh(),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(DS.spacing16),
+                itemCount: groups.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: DS.spacing12),
+                itemBuilder: (context, index) {
+                  final group = groups[index];
+                  return _AnimatedGroupTile(
+                    group: group,
+                    index: index,
+                  );
+                },
+              ),
             ),
           );
         },
         loading: () => const _GroupListLoading(),
         error: (error, stackTrace) => Center(
           child: CustomErrorWidget.page(
+            context: context,
             message: error.toString(),
             onRetry: () {
               ref.read(myGroupsProvider.notifier).refresh();
@@ -158,7 +163,7 @@ class _GroupListTile extends StatelessWidget {
         border: Border.all(color: DS.neutral100),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: DS.surfacePrimary.withValues(alpha: 0),
         borderRadius: DS.borderRadius16,
         child: InkWell(
           onTap: () {
@@ -180,14 +185,18 @@ class _GroupListTile extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: isSprint
-                          ? LinearGradient(colors: [
-                              DS.brandPrimary.shade100,
-                              DS.brandPrimary.shade50,
-                            ],)
-                          : LinearGradient(colors: [
-                              DS.brandPrimary.shade100,
-                              DS.brandPrimary.shade50,
-                            ],),
+                          ? LinearGradient(
+                              colors: [
+                                DS.brandPrimary.shade100,
+                                DS.brandPrimary.shade50,
+                              ],
+                            )
+                          : LinearGradient(
+                              colors: [
+                                DS.brandPrimary.shade100,
+                                DS.brandPrimary.shade50,
+                              ],
+                            ),
                       boxShadow: [
                         BoxShadow(
                           color: (isSprint ? DS.brandPrimary : DS.brandPrimary)
@@ -199,9 +208,7 @@ class _GroupListTile extends StatelessWidget {
                     ),
                     child: Icon(
                       isSprint ? Icons.timer_outlined : Icons.school_outlined,
-                      color: isSprint
-                          ? Colors.deepOrange
-                          : DS.brandPrimary.shade700,
+                      color: isSprint ? DS.warning : DS.brandPrimary.shade700,
                       size: 28,
                     ),
                   ),
@@ -232,7 +239,9 @@ class _GroupListTile extends StatelessWidget {
                           if (isSprint && group.daysRemaining != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2,),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: DS.error.shade50,
                                 borderRadius: BorderRadius.circular(8),
@@ -280,7 +289,11 @@ class _GroupListTile extends StatelessWidget {
   }
 
   Widget _buildInfoBadge(
-          BuildContext context, IconData icon, String text, Color color,) =>
+    BuildContext context,
+    IconData icon,
+    String text,
+    Color color,
+  ) =>
       Row(
         children: [
           Icon(icon, size: 14, color: color),

@@ -1,17 +1,22 @@
-from typing import List, Dict, Any, Optional
-import uuid
-import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
-from app.models.task import Task, TaskStatus
-from app.models.focus import FocusSession, FocusStatus
-from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.event_bus import event_bus
+from app.models.cognitive import BehaviorPattern
+from app.models.focus import FocusSession, FocusStatus
+from app.models.task import Task, TaskStatus
 from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
+
 # Fixed: Import class from module, not instance
 from app.services.nudge_service import NudgeService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class BehaviorPatternService:
     """
@@ -27,7 +32,7 @@ class BehaviorPatternService:
         self.blindspot_analyzer = BlindspotAnalyzer(db)
         self.nudge_service = NudgeService(db)
 
-    async def analyze_planning_optimism(self, user_id: UUID, task_id: UUID) -> Optional[BehaviorPattern]:
+    async def analyze_planning_optimism(self, user_id: UUID, task_id: UUID) -> BehaviorPattern | None:
         """
         Analyze if a completed task shows 'Planning Optimism'.
         Condition: Actual time > 1.5 * Estimated time
@@ -36,11 +41,11 @@ class BehaviorPatternService:
         # Handle cases where task fields are None
         if not task:
             return None
-            
+
         # Manually extract values to avoid Pylance/SQLAlchemy type confusion
         t_estimated: int = getattr(task, 'estimated_minutes', 0) or 0
         t_actual: int = getattr(task, 'actual_minutes', 0) or 0
-        
+
         if t_estimated <= 0 or t_actual <= 0:
             return None
 
@@ -49,15 +54,15 @@ class BehaviorPatternService:
             # Verify if this is a recurring pattern (last 5 tasks)
             recent_tasks = await self._get_recent_completed_tasks(user_id, limit=5)
             optimism_count = 0
-            
+
             for t in recent_tasks:
                 sub_actual: int = getattr(t, 'actual_minutes', 0) or 0
                 sub_estimated: int = getattr(t, 'estimated_minutes', 0) or 0
                 if sub_estimated > 0 and sub_actual > (sub_estimated * 1.5):
                     optimism_count += 1
-            
+
             confidence = 0.5 + (optimism_count * 0.1) # Base 0.5, increases with frequency
-            
+
             pattern = await self._create_or_update_pattern(
                 user_id=user_id,
                 pattern_name="Planning Optimism",
@@ -67,7 +72,7 @@ class BehaviorPatternService:
                 evidence_id=str(task_id),
                 confidence=min(confidence, 1.0)
             )
-            
+
             # Trigger Nudge
             if confidence > 0.7:
                  await event_bus.publish("nudge.triggered", {
@@ -76,20 +81,20 @@ class BehaviorPatternService:
                     "message": "Looks like tasks are taking longer than planned. Want to adjust your schedule?",
                     "context": {"task_id": str(task_id)}
                 })
-            
+
             return pattern
         return None
 
-    async def analyze_focus_decay(self, user_id: UUID) -> Optional[BehaviorPattern]:
+    async def analyze_focus_decay(self, user_id: UUID) -> BehaviorPattern | None:
         """
         Analyze 'Focus Decay': Average focus session length declining over last 3 days.
         """
         # Get daily averages for last 3 days
         stats = []
-        today = datetime.date.today()
+        today = date.today()
         for i in range(3):
-            date = today - datetime.timedelta(days=i)
-            avg = await self._get_daily_focus_average(user_id, date)
+            target_date = today - timedelta(days=i)
+            avg = await self._get_daily_focus_average(user_id, target_date)
             stats.append(avg) # [Today, Yesterday, 2 Days Ago]
 
         # Check for decay trend: Day 2 > Day 1 > Today (Strict decay) or significant drop
@@ -103,7 +108,7 @@ class BehaviorPatternService:
                 confidence=0.8,
                 evidence_id=f"focus_stats_{today.isoformat()}"
             )
-             
+
              await event_bus.publish("nudge.triggered", {
                 "user_id": str(user_id),
                 "type": "focus_decay",
@@ -114,12 +119,12 @@ class BehaviorPatternService:
 
         return None
 
-    async def analyze_cognitive_blindspots(self, user_id: UUID) -> List[BehaviorPattern]:
+    async def analyze_cognitive_blindspots(self, user_id: UUID) -> list[BehaviorPattern]:
         """
         Wrapper around BlindspotAnalyzer to persist results as patterns.
         """
         blindspots = await self.blindspot_analyzer.analyze_blindspots(str(user_id), limit=3)
-        
+
         results = []
         for bs in blindspots:
             pattern = await self._create_or_update_pattern(
@@ -132,7 +137,7 @@ class BehaviorPatternService:
                 confidence=0.9
             )
             results.append(pattern)
-            
+
             # Trigger Nudge for top blindspot
             if bs == blindspots[0]:
                  await event_bus.publish("nudge.triggered", {
@@ -146,7 +151,7 @@ class BehaviorPatternService:
 
     # --- Helper Methods ---
 
-    async def _get_recent_completed_tasks(self, user_id: UUID, limit: int = 5) -> List[Task]:
+    async def _get_recent_completed_tasks(self, user_id: UUID, limit: int = 5) -> list[Task]:
         query = select(Task).where(
             Task.user_id == user_id,
             Task.status == TaskStatus.COMPLETED
@@ -154,10 +159,10 @@ class BehaviorPatternService:
         result = await self.db.execute(query)
         return result.scalars().all() # type: ignore
 
-    async def _get_daily_focus_average(self, user_id: UUID, date: datetime.date) -> float:
-        start = datetime.datetime.combine(date, datetime.time.min)
-        end = datetime.datetime.combine(date, datetime.time.max)
-        
+    async def _get_daily_focus_average(self, user_id: UUID, date: date) -> float:
+        start = datetime.combine(date, time.min)
+        end = datetime.combine(date, time.max)
+
         query = select(func.avg(FocusSession.duration_minutes)).where(
             FocusSession.user_id == user_id,
             FocusSession.start_time >= start,
@@ -168,14 +173,14 @@ class BehaviorPatternService:
         val = result.scalar()
         return float(val) if val else 0.0
 
-    async def _create_or_update_pattern(self, user_id: UUID, pattern_name: str, pattern_type: str, 
+    async def _create_or_update_pattern(self, user_id: UUID, pattern_name: str, pattern_type: str,
                                       description: str, solution_text: str, evidence_id: str, confidence: float) -> BehaviorPattern:
-        now = datetime.datetime.utcnow()
+        now = _utcnow()
         # Check if pattern exists (active)
         query = select(BehaviorPattern).where(
             BehaviorPattern.user_id == user_id,
             BehaviorPattern.pattern_name == pattern_name,
-            BehaviorPattern.is_archived == False
+            not BehaviorPattern.is_archived
         )
         result = await self.db.execute(query)
         pattern = result.scalars().first()
@@ -188,7 +193,7 @@ class BehaviorPatternService:
             current_freq = getattr(pattern, 'frequency', 0) or 0
             pattern.frequency = current_freq + 1
             pattern.last_observed_at = now
-            
+
             # Add evidence if not present
             current_evidence = getattr(pattern, 'evidence_ids', []) or []
             if evidence_id not in current_evidence:
@@ -209,7 +214,7 @@ class BehaviorPatternService:
                 last_observed_at=now,
             )
             self.db.add(pattern)
-        
+
         await self.db.commit()
         await self.db.refresh(pattern)
         return pattern

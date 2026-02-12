@@ -98,7 +98,7 @@ class TestGetPlanStateTool:
         assert result.data["plan_id"] == str(plan_id)
         assert result.data["version"] == 2
         assert result.data["facts"]["key"] == "value"
-        assert result.widget_type == "plan_state"
+        assert result.widget_type == "plan_context_summary"
 
 
 class TestGetTaskSummaryTool:

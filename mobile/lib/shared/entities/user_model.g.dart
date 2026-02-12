@@ -27,10 +27,13 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
           UserStatus.offline,
       schedulePreferences:
           json['schedule_preferences'] as Map<String, dynamic>?,
-      pushPreferences: json['push_preference'] == null
+      pushPreferences: json['push_preferences'] == null
           ? null
           : PushPreferences.fromJson(
-              json['push_preference'] as Map<String, dynamic>),
+              json['push_preferences'] as Map<String, dynamic>),
+      photonBalance: (json['photon_balance'] as num?)?.toInt() ?? 0,
+      equippedSkin: json['equipped_skin'] as String?,
+      equippedTitle: json['equipped_title'] as String?,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -48,9 +51,12 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'is_active': instance.isActive,
       'status': _$UserStatusEnumMap[instance.status]!,
       'schedule_preferences': instance.schedulePreferences,
-      'push_preference': instance.pushPreferences,
+      'push_preferences': instance.pushPreferences,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
+      'photon_balance': instance.photonBalance,
+      'equipped_skin': instance.equippedSkin,
+      'equipped_title': instance.equippedTitle,
     };
 
 const _$AvatarStatusEnumMap = {

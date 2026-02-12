@@ -2,22 +2,28 @@
 错题档案 API 路由
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 from uuid import UUID
 
-from app.api.deps import get_db, get_current_user_id
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user_id, get_db
+from app.models.galaxy import KnowledgeNode
+from app.schemas.error_book import (
+    ErrorQueryParams,
+    ErrorRecordCreate,
+    ErrorRecordListResponse,
+    ErrorRecordResponse,
+    ErrorRecordUpdate,
+    ErrorTypeEnum,
+    ReviewAction,
+    ReviewStatsResponse,
+    SubjectEnum,
+)
+from app.schemas.semantic_memory import ConceptBrief, ErrorSemanticSummary, SimilarErrorItem, StrategyNodeResponse
 from app.services.error_book_service import ErrorBookService
 from app.services.semantic_memory_service import SemanticMemoryService
-from app.schemas.error_book import (
-    ErrorRecordCreate, ErrorRecordUpdate, ErrorRecordResponse,
-    ErrorRecordListResponse, ErrorQueryParams, ReviewAction,
-    ReviewStatsResponse, SubjectEnum, ErrorTypeEnum
-)
-from app.schemas.semantic_memory import ErrorSemanticSummary, StrategyNodeResponse, SimilarErrorItem, ConceptBrief
-from app.models.galaxy import KnowledgeNode
-from sqlalchemy import select
 
 router = APIRouter(prefix="/errors", tags=["Error Book"])
 
@@ -38,23 +44,23 @@ async def create_error(
     创建错题
     """
     error = await service.create_error(UUID(user_id), data)
-    
+
     # Trigger Async Analysis via BackgroundTasks
     background_tasks.add_task(service.analyze_and_link, error.id, UUID(user_id))
-    
+
     return error
 
 
 @router.get("", response_model=ErrorRecordListResponse)
 async def list_errors(
-    subject: Optional[SubjectEnum] = Query(None, description="按科目筛选"),
-    chapter: Optional[str] = Query(None, description="按章节筛选"),
-    error_type: Optional[ErrorTypeEnum] = Query(None, description="按错因类型筛选"),
-    mastery_min: Optional[float] = Query(None, ge=0, le=1, description="掌握度下限"),
-    mastery_max: Optional[float] = Query(None, ge=0, le=1, description="掌握度上限"),
-    need_review: Optional[bool] = Query(None, description="只看需要复习的"),
-    keyword: Optional[str] = Query(None, description="题目关键词搜索"),
-    cognitive_dimension: Optional[str] = Query(None, description="按认知维度筛选"),
+    subject: SubjectEnum | None = Query(None, description="按科目筛选"),
+    chapter: str | None = Query(None, description="按章节筛选"),
+    error_type: ErrorTypeEnum | None = Query(None, description="按错因类型筛选"),
+    mastery_min: float | None = Query(None, ge=0, le=1, description="掌握度下限"),
+    mastery_max: float | None = Query(None, ge=0, le=1, description="掌握度上限"),
+    need_review: bool | None = Query(None, description="只看需要复习的"),
+    keyword: str | None = Query(None, description="题目关键词搜索"),
+    cognitive_dimension: str | None = Query(None, description="按认知维度筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
@@ -75,9 +81,9 @@ async def list_errors(
         page=page,
         page_size=page_size
     )
-    
+
     items, total = await service.list_errors(UUID(user_id), params)
-    
+
     return ErrorRecordListResponse(
         items=items,
         total=total,
@@ -110,9 +116,9 @@ async def get_today_review_list(
         page=page,
         page_size=page_size
     )
-    
+
     items, total = await service.list_errors(UUID(user_id), params)
-    
+
     return ErrorRecordListResponse(
         items=items,
         total=total,
@@ -132,7 +138,7 @@ async def get_error(
     error = await service.get_error(error_id, UUID(user_id))
     if not error:
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
-    
+
     # knowledge_links is populated by the service on the object
     return error
 
@@ -176,14 +182,14 @@ async def re_analyze_error(
     error = await service.get_error(error_id, UUID(user_id))
     if not error:
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
-    
+
     # 异步执行分析
     background_tasks.add_task(
         service.analyze_and_link,
         error_id,
         UUID(user_id)
     )
-    
+
     return {"message": "分析任务已提交，请稍后刷新查看结果~"}
 
 

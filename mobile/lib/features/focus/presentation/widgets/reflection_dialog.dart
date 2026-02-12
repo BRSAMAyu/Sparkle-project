@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
 class ReflectionDialog extends ConsumerStatefulWidget {
@@ -22,8 +25,7 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      final content =
-          'Focus Session Reflection: I felt $_feeling.\n${_noteController.text}';
+      final content = '专注复盘：本次状态 $_feeling。\n${_noteController.text}';
 
       // Create Fragment
       await ref.read(cognitiveProvider.notifier).createFragment(
@@ -34,15 +36,11 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
 
       if (mounted) {
         context.pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reflection saved to Cognitive Prism')),
-        );
+        AppFeedback.success(context, '复盘已保存到 Cognitive Prism');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
-        );
+        AppFeedback.error(context, '保存失败: $e');
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -62,7 +60,9 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
         title: Text(
           '专注结束',
           style: TextStyle(
-              color: DS.brandPrimaryConst, fontWeight: FontWeight.bold,),
+            color: DS.brandPrimaryConst,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -83,8 +83,12 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
                       backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                       selectedColor: DS.brandPrimary,
                       labelStyle: TextStyle(
-                        color:
-                            _feeling == f ? Colors.black : DS.brandPrimaryConst,
+                        color: _feeling == f
+                            ? ThemeUtils.getContrastSafeText(
+                                DS.brandPrimary,
+                                darkText: DS.textPrimary,
+                              )
+                            : DS.brandPrimaryConst,
                       ),
                     ),
                   )
@@ -95,7 +99,8 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
               controller: _noteController,
               decoration: InputDecoration(
                 hintText: '有什么值得记录的吗？(可选)',
-                hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.5)),
+                hintStyle:
+                    TextStyle(color: DS.brandPrimary.withValues(alpha: 0.5)),
                 enabledBorder: OutlineInputBorder(
                   borderSide:
                       BorderSide(color: DS.brandPrimary.withValues(alpha: 0.3)),
@@ -112,25 +117,19 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
           ],
         ),
         actions: [
-          TextButton(
+          SparkleButton(
+            label: '跳过',
+            variant: ButtonVariant.ghost,
             onPressed: () => context.pop(false),
-            child: Text('跳过',
-                style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),),
           ),
-          ElevatedButton(
-            onPressed: _feeling != null && !_isSubmitting ? _submit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: DS.brandPrimary,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),)
-                : const Text('保存'),
+          SparkleButton(
+            label: '保存',
+            loading: _isSubmitting,
+            onPressed: _feeling != null && !_isSubmitting
+                ? () {
+                    unawaited(_submit());
+                  }
+                : null,
           ),
         ],
       );

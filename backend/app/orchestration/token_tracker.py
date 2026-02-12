@@ -10,11 +10,11 @@ TokenTracker - Token 使用量追踪器
 
 import json
 import time
-from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
-from loguru import logger
+from typing import Any
 
 import redis.asyncio as redis
+from loguru import logger
 
 
 class TokenTracker:
@@ -46,7 +46,7 @@ class TokenTracker:
         prompt_tokens: int,
         completion_tokens: int,
         model: str = "gpt-4",
-        cost: Optional[float] = None
+        cost: float | None = None
     ) -> int:
         """
         记录 Token 使用量
@@ -117,7 +117,7 @@ class TokenTracker:
 
         return total_tokens
 
-    async def get_daily_usage(self, user_id: str, date: Optional[str] = None) -> int:
+    async def get_daily_usage(self, user_id: str, date: str | None = None) -> int:
         """
         获取用户某日的 Token 使用量
 
@@ -144,8 +144,8 @@ class TokenTracker:
         self,
         user_id: str,
         daily_limit: int = 100000,
-        date: Optional[str] = None
-    ) -> Dict[str, Any]:
+        date: str | None = None
+    ) -> dict[str, Any]:
         """
         检查用户配额
 
@@ -180,7 +180,7 @@ class TokenTracker:
         self,
         user_id: str,
         days: int = 7
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         获取用户最近 N 天的使用明细
 
@@ -217,7 +217,7 @@ class TokenTracker:
         self,
         model: str,
         days: int = 7
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取模型使用统计
 
@@ -250,7 +250,7 @@ class TokenTracker:
         self,
         days: int = 7,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取 Token 使用量最高的用户
 
@@ -299,9 +299,9 @@ class TokenTracker:
     async def get_user_details(
         self,
         user_id: str,
-        date: Optional[str] = None,
+        date: str | None = None,
         limit: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户详细使用记录
 
@@ -329,7 +329,7 @@ class TokenTracker:
 
         return details
 
-    async def get_total_stats(self) -> Dict[str, Any]:
+    async def get_total_stats(self) -> dict[str, Any]:
         """
         获取系统整体统计
 
@@ -351,7 +351,7 @@ class TokenTracker:
 
         # 活跃用户数
         active_users = 0
-        async for key in self.redis.scan_iter(match="user:daily_tokens:*:today"):
+        async for _key in self.redis.scan_iter(match="user:daily_tokens:*:today"):
             active_users += 1
 
         return {
@@ -401,7 +401,7 @@ class TokenTracker:
 _token_tracker_instance = None
 
 
-def get_token_tracker(redis_client: Optional[redis.Redis] = None) -> TokenTracker:
+def get_token_tracker(redis_client: redis.Redis | None = None) -> TokenTracker:
     """
     获取 TokenTracker 单例
 

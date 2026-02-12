@@ -3,16 +3,32 @@ PlanExecutionValidator - 方案执行验证服务
 
 负责验证方案执行结果是否符合预期
 """
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass, field
-from datetime import datetime
-from loguru import logger
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
+from loguru import logger
+
 if TYPE_CHECKING:
+    from app.orchestration.executor import PlanExecutionResult, StepResult
     from app.orchestration.schemas import ExecutablePlan
-    from app.tools.base import ToolResult
     from app.services.plan_execution_record_service import PlanExecutionRecordService
+    from app.tools.base import ToolResult
+
+
+@dataclass
+class StepValidation:
+    """Per-step validation result."""
+    step_id: str
+    tool_name: str
+    passed: bool
+    duration_ms: int = 0
+    max_duration_ms: int = 0
+    duration_ok: bool = True
+    output_keys_ok: bool = True
+    missing_output_keys: list[str] = field(default_factory=list)
+    required: bool = True
 
 
 @dataclass
@@ -25,12 +41,14 @@ class ExecutionValidationResult:
     plan_id: str
     validation_status: str  # passed, failed, partial
     quality_score: float  # 0-1
-    criteria_results: Dict[str, Any] = field(default_factory=dict)
-    tool_summary: Dict[str, int] = field(default_factory=dict)
-    issues: List[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    criteria_results: dict[str, Any] = field(default_factory=dict)
+    tool_summary: dict[str, int] = field(default_factory=dict)
+    issues: list[str] = field(default_factory=list)
+    step_validations: list[StepValidation] = field(default_factory=list)
+    aborted: bool = False
+    timestamp: str = field(default_factory=lambda: _utcnow().isoformat())
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "plan_id": self.plan_id,
@@ -39,8 +57,26 @@ class ExecutionValidationResult:
             "criteria_results": self.criteria_results,
             "tool_summary": self.tool_summary,
             "issues": self.issues,
+            "step_validations": [
+                {
+                    "step_id": sv.step_id,
+                    "tool_name": sv.tool_name,
+                    "passed": sv.passed,
+                    "duration_ms": sv.duration_ms,
+                    "duration_ok": sv.duration_ok,
+                    "output_keys_ok": sv.output_keys_ok,
+                    "missing_output_keys": sv.missing_output_keys,
+                    "required": sv.required,
+                }
+                for sv in self.step_validations
+            ],
+            "aborted": self.aborted,
             "timestamp": self.timestamp,
         }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanExecutionValidator:
@@ -56,7 +92,7 @@ class PlanExecutionValidator:
     async def validate_and_record(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
+        tool_results: list["ToolResult"],
         user_id: UUID,
     ) -> ExecutionValidationResult:
         """
@@ -99,7 +135,7 @@ class PlanExecutionValidator:
     async def validate(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
+        tool_results: list["ToolResult"],
     ) -> ExecutionValidationResult:
         """
         验证方案执行结果 (不持久化)
@@ -151,8 +187,8 @@ class PlanExecutionValidator:
         )
 
     def _analyze_tool_results(
-        self, tool_results: List["ToolResult"]
-    ) -> Dict[str, int]:
+        self, tool_results: list["ToolResult"]
+    ) -> dict[str, int]:
         """分析工具执行结果"""
         total = len(tool_results)
         successful = sum(1 for r in tool_results if r.success)
@@ -168,8 +204,8 @@ class PlanExecutionValidator:
     async def _check_success_criteria(
         self,
         plan: "ExecutablePlan",
-        tool_results: List["ToolResult"],
-    ) -> Dict[str, Any]:
+        tool_results: list["ToolResult"],
+    ) -> dict[str, Any]:
         """
         检查方案的成功标准
 
@@ -181,7 +217,7 @@ class PlanExecutionValidator:
         }
         """
         criteria = plan.success_criteria or {}
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "criteria_defined": bool(criteria),
             "checks": {},
         }
@@ -240,8 +276,8 @@ class PlanExecutionValidator:
 
     def _calculate_quality_score(
         self,
-        tool_summary: Dict[str, int],
-        criteria_results: Dict[str, Any],
+        tool_summary: dict[str, int],
+        criteria_results: dict[str, Any],
     ) -> float:
         """
         计算执行质量分数 (0-1)
@@ -273,7 +309,7 @@ class PlanExecutionValidator:
     def _determine_status(
         self,
         quality_score: float,
-        criteria_results: Dict[str, Any],
+        criteria_results: dict[str, Any],
     ) -> str:
         """
         确定验证状态
@@ -293,9 +329,9 @@ class PlanExecutionValidator:
 
     def _collect_issues(
         self,
-        tool_results: List["ToolResult"],
-        criteria_results: Dict[str, Any],
-    ) -> List[str]:
+        tool_results: list["ToolResult"],
+        criteria_results: dict[str, Any],
+    ) -> list[str]:
         """收集问题列表"""
         issues = []
 
@@ -313,3 +349,202 @@ class PlanExecutionValidator:
                 issues.append(f"Criteria '{check_name}' not met")
 
         return issues
+
+    # ------------------------------------------------------------------
+    # DAG-aware validation (Phase 5)
+    # ------------------------------------------------------------------
+
+    async def validate_plan_execution(
+        self,
+        plan: "ExecutablePlan",
+        plan_result: "PlanExecutionResult",
+        user_id: UUID | None = None,
+    ) -> ExecutionValidationResult:
+        """Validate a PlanExecutionResult with per-step criteria.
+
+        Combines plan-level success_criteria validation with per-step
+        StepCriteria checks (expected_output_keys, max_duration_ms).
+        """
+        # Build a spec lookup: step_id -> ToolCallSpec
+        spec_map = {tc.id: tc for tc in plan.tool_calls}
+
+        # 1. Per-step criteria validation
+        step_validations: list[StepValidation] = []
+        for sr in plan_result.step_results:
+            spec = spec_map.get(sr.step_id)
+            criteria = spec.success_criteria if spec else None
+            sv = self._validate_step(sr, criteria)
+            step_validations.append(sv)
+
+        # 2. Plan-level tool summary
+        tool_summary = self._analyze_tool_results(plan_result.tool_results)
+
+        # 3. Plan-level success criteria
+        criteria_results = await self._check_success_criteria(
+            plan, plan_result.tool_results
+        )
+
+        # 4. Incorporate step-level results into criteria
+        step_pass_count = sum(1 for sv in step_validations if sv.passed)
+        step_total = len(step_validations) or 1
+        step_pass_rate = step_pass_count / step_total
+
+        required_failures = [
+            sv for sv in step_validations
+            if not sv.passed and sv.required
+        ]
+
+        criteria_results["checks"]["step_criteria"] = {
+            "step_pass_rate": step_pass_rate,
+            "required_failures": len(required_failures),
+            "passed": len(required_failures) == 0,
+        }
+        criteria_results["criteria_defined"] = True
+
+        # Recompute all_passed
+        criteria_results["all_passed"] = all(
+            check.get("passed", False)
+            for check in criteria_results["checks"].values()
+        )
+
+        # 5. Quality score (weighted: tool 0.4, plan criteria 0.3, step criteria 0.3)
+        quality_score = self._calculate_dag_quality_score(
+            tool_summary, criteria_results, step_pass_rate, plan_result.aborted,
+        )
+
+        # 6. Status
+        validation_status = self._determine_status(quality_score, criteria_results)
+        if plan_result.aborted:
+            validation_status = "failed"
+
+        # 7. Issues
+        issues = self._collect_issues(plan_result.tool_results, criteria_results)
+        for sv in step_validations:
+            if not sv.duration_ok:
+                issues.append(
+                    f"Step '{sv.tool_name}' ({sv.step_id}) exceeded timeout: "
+                    f"{sv.duration_ms}ms > {sv.max_duration_ms}ms"
+                )
+            if not sv.output_keys_ok:
+                issues.append(
+                    f"Step '{sv.tool_name}' ({sv.step_id}) missing output keys: "
+                    f"{sv.missing_output_keys}"
+                )
+        if plan_result.aborted:
+            issues.append(f"Execution aborted: {plan_result.abort_reason}")
+
+        result = ExecutionValidationResult(
+            plan_id=plan.plan_id,
+            validation_status=validation_status,
+            quality_score=quality_score,
+            criteria_results=criteria_results,
+            tool_summary=tool_summary,
+            issues=issues,
+            step_validations=step_validations,
+            aborted=plan_result.aborted,
+        )
+
+        # Persist if record_service available
+        if self.record_service and user_id:
+            try:
+                plan_uuid = UUID(plan.plan_id) if isinstance(plan.plan_id, str) else plan.plan_id
+                await self.record_service.create_record(
+                    plan_id=plan_uuid,
+                    user_id=user_id,
+                    validation_status=result.validation_status,
+                    quality_score=result.quality_score,
+                    criteria_results=result.criteria_results,
+                    tool_summary=result.tool_summary,
+                    issues=result.issues,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to persist execution record: {e}")
+
+        logger.info(
+            "DAG validation complete: plan_id={}, status={}, score={:.2f}, "
+            "steps={}/{} passed, aborted={}",
+            plan.plan_id, validation_status, quality_score,
+            step_pass_count, step_total, plan_result.aborted,
+        )
+
+        return result
+
+    def _validate_step(
+        self,
+        sr: "StepResult",
+        criteria: Any | None,
+    ) -> StepValidation:
+        """Validate a single step against its StepCriteria."""
+        passed = sr.tool_result.success
+        duration_ok = True
+        output_keys_ok = True
+        missing_keys: list[str] = []
+        max_duration = 0
+        required = True
+
+        if criteria:
+            required = criteria.required
+            max_duration = criteria.max_duration_ms
+
+            # Duration check
+            if max_duration > 0 and sr.duration_ms > max_duration:
+                duration_ok = False
+                if required:
+                    passed = False
+
+            # Output keys check
+            if criteria.expected_output_keys and sr.tool_result.success:
+                actual_keys = set(sr.output_data.keys()) if sr.output_data else set()
+                expected = set(criteria.expected_output_keys)
+                missing_keys = list(expected - actual_keys)
+                if missing_keys:
+                    output_keys_ok = False
+                    if required:
+                        passed = False
+
+        return StepValidation(
+            step_id=sr.step_id,
+            tool_name=sr.tool_name,
+            passed=passed,
+            duration_ms=sr.duration_ms,
+            max_duration_ms=max_duration,
+            duration_ok=duration_ok,
+            output_keys_ok=output_keys_ok,
+            missing_output_keys=missing_keys,
+            required=required,
+        )
+
+    @staticmethod
+    def _calculate_dag_quality_score(
+        tool_summary: dict[str, int],
+        criteria_results: dict[str, Any],
+        step_pass_rate: float,
+        aborted: bool,
+    ) -> float:
+        """Quality score with step-level weighting."""
+        if aborted:
+            return max(0.0, step_pass_rate * 0.3)
+
+        score = 0.0
+        success_rate = tool_summary.get("success_rate", 0.0)
+
+        # Tool success rate (weight 0.4)
+        score += success_rate * 0.4
+
+        # Plan-level criteria (weight 0.3)
+        checks = criteria_results.get("checks", {})
+        non_step_checks = {
+            k: v for k, v in checks.items() if k != "step_criteria"
+        }
+        if non_step_checks:
+            passed_rate = sum(
+                1 for c in non_step_checks.values() if c.get("passed", False)
+            ) / len(non_step_checks)
+            score += passed_rate * 0.3
+        else:
+            score += success_rate * 0.3
+
+        # Step criteria (weight 0.3)
+        score += step_pass_rate * 0.3
+
+        return min(1.0, max(0.0, score))

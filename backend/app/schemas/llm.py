@@ -10,10 +10,10 @@ v2.2 增强:
 """
 import re
 from datetime import date, timedelta
-from typing import Any, Optional, List
-from pydantic import BaseModel, BeforeValidator, field_validator, Field
-from typing_extensions import Annotated
+from typing import Annotated, Any
+
 from loguru import logger
+from pydantic import BaseModel, BeforeValidator, Field, field_validator
 
 # ==================== 中文数字映射 ====================
 
@@ -33,7 +33,7 @@ CN_NUM_MAP = {
 }
 
 
-def _parse_chinese_number(s: str) -> Optional[int]:
+def _parse_chinese_number(s: str) -> int | None:
     """
     解析中文数字 (支持 0-999)
 
@@ -155,7 +155,7 @@ def coerce_int(v: Any) -> int:
         s = v.strip()
 
         if not s:
-            raise ValueError(f"Cannot coerce empty string to int")
+            raise ValueError("Cannot coerce empty string to int")
 
         # 1. 提取时间单位和乘数
         s, multiplier = _extract_time_multiplier(s)
@@ -246,7 +246,7 @@ def coerce_bool(v: Any) -> bool:
     raise ValueError(f"Cannot coerce {v!r} to bool")
 
 
-def coerce_str_list(v: Any) -> List[str]:
+def coerce_str_list(v: Any) -> list[str]:
     """
     宽容的字符串列表转换
 
@@ -264,7 +264,7 @@ def coerce_str_list(v: Any) -> List[str]:
     return []
 
 
-def coerce_date(v: Any) -> Optional[str]:
+def coerce_date(v: Any) -> str | None:
     """
     宽容的日期转换 (v2.2)
 
@@ -377,8 +377,8 @@ def coerce_date(v: Any) -> Optional[str]:
 CoercedInt = Annotated[int, BeforeValidator(coerce_int)]
 CoercedFloat = Annotated[float, BeforeValidator(coerce_float)]
 CoercedBool = Annotated[bool, BeforeValidator(coerce_bool)]
-CoercedStrList = Annotated[List[str], BeforeValidator(coerce_str_list)]
-CoercedDate = Annotated[Optional[str], BeforeValidator(coerce_date)]
+CoercedStrList = Annotated[list[str], BeforeValidator(coerce_str_list)]
+CoercedDate = Annotated[str | None, BeforeValidator(coerce_date)]
 
 
 # ==================== LLM Action Schemas ====================
@@ -390,7 +390,7 @@ class CreateTaskParams(BaseModel):
     estimated_minutes: CoercedInt = 15
     tags: CoercedStrList = []
     difficulty: CoercedInt = 3
-    guide_content: Optional[str] = None
+    guide_content: str | None = None
 
     @field_validator("title")
     @classmethod
@@ -442,7 +442,7 @@ class CreatePlanParams(BaseModel):
     name: str
     type: str = "sprint"
     target_date: CoercedDate = None  # v2.2: 自动日期标准化
-    subject: Optional[str] = None
+    subject: str | None = None
     daily_available_minutes: CoercedInt = 60
 
     @field_validator("name")
@@ -469,10 +469,10 @@ class CreatePlanParams(BaseModel):
         extra = "ignore"
 
 class LLMResponse(BaseModel):
-    assistant_message: Optional[str] = None
-    actions: List[Any] = Field(default_factory=list)
+    assistant_message: str | None = None
+    actions: list[Any] = Field(default_factory=list)
     parse_degraded: bool = False
-    degraded_reason: Optional[str] = None
+    degraded_reason: str | None = None
 
     class Config:
         extra = "ignore"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_settings import UserSettings
 
-
-DEFAULT_SETTINGS: Dict[str, Any] = {
+DEFAULT_SETTINGS: dict[str, Any] = {
     "transparency_level": 0,
     "system_update_level": 1,
+    "task_reminders_enabled": True,
+    "task_reminder_times": [1440, 60, 15],  # 1 day, 1 hour, 15 minutes
 }
 
 
@@ -32,7 +33,7 @@ class UserSettingsService:
     async def update_settings(
         self,
         user_id: UUID,
-        updates: Dict[str, Any],
+        updates: dict[str, Any],
     ) -> UserSettings:
         record = await self.get_or_create(user_id)
         for key, value in updates.items():
@@ -44,7 +45,7 @@ class UserSettingsService:
         await self.db.refresh(record)
         return record
 
-    async def _get_settings(self, user_id: UUID) -> Optional[UserSettings]:
+    async def _get_settings(self, user_id: UUID) -> UserSettings | None:
         result = await self.db.execute(
             select(UserSettings).where(
                 UserSettings.user_id == user_id,

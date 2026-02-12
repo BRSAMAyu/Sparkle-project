@@ -7,12 +7,12 @@ Plan Matching Service
 - 考虑计划优先级和主计划状态
 - 支持关键词提取和主题匹配
 """
-from typing import Optional, List, Dict, Any
+from typing import Any
 from uuid import UUID
 
 import numpy as np
 from loguru import logger
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan import Plan, PlanPriority
@@ -44,7 +44,7 @@ class PlanMatchingService:
     def __init__(
         self,
         db: AsyncSession,
-        embedding_service: Optional[EmbeddingService] = None,
+        embedding_service: EmbeddingService | None = None,
         llm_service=None
     ):
         self.db = db
@@ -56,8 +56,8 @@ class PlanMatchingService:
         user_id: UUID,
         task_content: str,
         task_type: str = "chat",
-        current_plan_id: Optional[UUID] = None
-    ) -> Optional[Plan]:
+        current_plan_id: UUID | None = None
+    ) -> Plan | None:
         """
         将任务匹配到最相关的计划
 
@@ -122,7 +122,7 @@ class PlanMatchingService:
         )
         return best_plan
 
-    async def extract_task_keywords(self, task_context: Dict[str, Any]) -> List[str]:
+    async def extract_task_keywords(self, task_context: dict[str, Any]) -> list[str]:
         """
         从任务上下文中提取关键词
 
@@ -174,14 +174,14 @@ class PlanMatchingService:
 
     # ========== 私有方法 ==========
 
-    async def _get_active_plans(self, user_id: UUID) -> List[Plan]:
+    async def _get_active_plans(self, user_id: UUID) -> list[Plan]:
         """获取用户活跃计划"""
         query = (
             select(Plan)
             .where(
                 and_(
                     Plan.user_id == user_id,
-                    Plan.is_active == True
+                    Plan.is_active
                 )
             )
             .order_by(Plan.is_primary.desc(), Plan.created_at.desc())
@@ -192,9 +192,9 @@ class PlanMatchingService:
     async def _calculate_plan_scores(
         self,
         task_content: str,
-        plans: List[Plan],
-        current_plan_id: Optional[UUID] = None
-    ) -> List[tuple]:
+        plans: list[Plan],
+        current_plan_id: UUID | None = None
+    ) -> list[tuple]:
         """
         计算任务与每个计划的匹配分数
 
@@ -255,7 +255,7 @@ class PlanMatchingService:
 
         return float(np.dot(vec1, vec2) / (norm1 * norm2))
 
-    def _get_fallback_plan(self, plans: List[Plan]) -> Optional[Plan]:
+    def _get_fallback_plan(self, plans: list[Plan]) -> Plan | None:
         """获取回退计划（主计划或第一个计划）"""
         if not plans:
             return None
@@ -272,7 +272,7 @@ class PlanMatchingService:
         self,
         content: str,
         task_type: str
-    ) -> List[str]:
+    ) -> list[str]:
         """使用 LLM 提取关键词"""
         if not self.llm_service:
             return []
@@ -288,7 +288,7 @@ class PlanMatchingService:
         response = await self.llm_service.complete(prompt)
         return [k.strip() for k in response.split(",") if k.strip()]
 
-    def _simple_keyword_extraction(self, content: str) -> List[str]:
+    def _simple_keyword_extraction(self, content: str) -> list[str]:
         """简单关键词提取（基于规则）"""
         # 移除标点符号
         import re

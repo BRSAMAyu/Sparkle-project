@@ -22,9 +22,31 @@ class AiStatusIndicator extends StatelessWidget {
     final tone = AiStatusMapper.tone(status!);
     final color = AiStatusMapper.toneToColor(tone, context);
 
-    return AiStatusCapsule(
-      label: AiStatusMapper.label(status!),
-      color: color,
+    final trimmedDetails = details?.trim();
+    final hasDetails = trimmedDetails != null && trimmedDetails.isNotEmpty;
+
+    if (!hasDetails) {
+      return AiStatusCapsule(
+        label: AiStatusMapper.label(status!),
+        color: color,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AiStatusCapsule(
+          label: AiStatusMapper.label(status!),
+          color: color,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          trimmedDetails,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color.withValues(alpha: 0.9),
+              ),
+        ),
+      ],
     );
   }
 }

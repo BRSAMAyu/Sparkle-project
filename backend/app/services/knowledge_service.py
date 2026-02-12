@@ -2,23 +2,26 @@
 Knowledge Retrieval Service (RAG)
 Wraps GalaxyService to provide context for the AI Agent
 """
-from dataclasses import dataclass
 import asyncio
 import time
-from typing import List, Optional
+import uuid
+from dataclasses import dataclass
 from uuid import UUID
+
+from google.protobuf import json_format
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.services.galaxy_service import GalaxyService
-from app.services.embedding_service import embedding_service
-from app.services.llm_service import llm_service
-from app.services.galaxy.rag_router import RagRouter
-from app.schemas.galaxy import SearchResultItem
-from app.models.galaxy import KnowledgeNode
 from app.core.metrics import RAG_RETRIEVAL_LATENCY
+from app.core.sse import sse_manager
+from app.models.galaxy import KnowledgeNode
+from app.schemas.galaxy import SearchResultItem
+from app.services.embedding_service import embedding_service
+from app.services.galaxy.rag_router import RagRouter
+from app.services.galaxy_service import GalaxyService
+from app.services.llm_service import llm_service
 
 
 @dataclass
@@ -46,7 +49,7 @@ class KnowledgeService:
                 f"Focus on including relevant keywords and concepts that might appear in a textbook or knowledge base. "
                 f"Question: {query}"
             )
-            
+
             # Use a fast, cheap call if possible, or just the standard chat
             messages = [{"role": "user", "content": prompt}]
             response = await llm_service.chat(messages, temperature=0.7)
@@ -69,17 +72,17 @@ class KnowledgeService:
         """
         try:
             strategy = RagRouter().select(query)
-            
+
             # LATENCY_BUDGET: Total time allowed for retrieval
-            # We reserve 0.5s for the actual vector search and ranking, 
+            # We reserve 0.5s for the actual vector search and ranking,
             # so HyDE gen must complete within budget - 0.5s
             LATENCY_BUDGET = 1.5
             HYDE_TIMEOUT = max(0.5, LATENCY_BUDGET - 0.5)
 
             vector_query = None
-            
+
             # --- HyDE Guardrails & Parallelization ---
-            
+
             async def _run_raw():
                 # Raw path is always executed
                 return query
@@ -98,16 +101,16 @@ class KnowledgeService:
                 # So we are parallelizing the *generation* of HyDE against the *wait time*.
                 # Ideally we would parallelize Raw-Search vs HyDE-Search, but HyDE-Search depends on Gen.
                 # PR-9 optimization: We treat Raw Search as a fallback that is always ready.
-                
+
                 # Start HyDE Generation
                 hyde_task = asyncio.create_task(_run_hyde())
-                
+
                 try:
                     # Wait for HyDE with timeout
                     # If it finishes, we use it. If not, we downgrade.
                     vector_query = await asyncio.wait_for(hyde_task, timeout=HYDE_TIMEOUT)
                     logger.debug(f"HyDE generated within budget: {vector_query[:50]}...")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Cancel the phantom request to save tokens (if provider supports it) and resources
                     hyde_task.cancel()
                     logger.warning(f"HyDE timed out ({HYDE_TIMEOUT}s), downgraded to Raw strategy")
@@ -115,13 +118,13 @@ class KnowledgeService:
                 except Exception as e:
                     logger.error(f"HyDE generation failed: {e}")
                     # vector_query remains None
-            
+
             # --- End Guardrails ---
 
             # 2. Hybrid Search (Network Call)
             # Use vector_query when available; otherwise default to original query.
             # This step is the "Retrieval" part.
-            results: List[SearchResultItem] = await self.galaxy_service.hybrid_search(
+            results: list[SearchResultItem] = await self.galaxy_service.hybrid_search(
                 user_id=user_id,
                 query=query,
                 vector_query=vector_query,
@@ -129,7 +132,7 @@ class KnowledgeService:
                 threshold=0.4,
                 use_reranker=strategy.use_reranker,
             )
-            
+
             if not results:
                 return ""
 
@@ -142,34 +145,35 @@ class KnowledgeService:
                 query=query,
                 strategy_name=strategy.name + ("_downgraded" if strategy.enable_hyde and vector_query is None else ""),
             )
-            await sse_manager.send_to_user(
-                str(user_id),
-                "evidence_pack",
-                json_format.MessageToDict(
+            try:
+                payload = json_format.MessageToDict(
                     evidence_pack,
                     preserving_proto_field_name=True,
                     including_default_value_fields=False,
-                ),
-            )
-            
+                )
+            except TypeError:
+                payload = json_format.MessageToDict(
+                    evidence_pack,
+                    preserving_proto_field_name=True,
+                )
+
+            await sse_manager.send_to_user(str(user_id), "evidence_pack", payload)
+
             # Format as context string
             context_lines = ["Relevant Knowledge Base (Graph Augmented):"]
             for item in results:
                 node = item.node
                 status = item.user_status
-                
+
                 status_str = "Unknown"
                 if status:
-                    if status.is_unlocked:
-                        status_str = f"Unlocked (Mastery: {status.mastery_score}%)"
-                    else:
-                        status_str = "Locked"
-                
+                    status_str = f"Unlocked (Mastery: {status.mastery_score}%)" if status.is_unlocked else "Locked"
+
                 # Basic Node Info
                 line = f"- [{node.name}]: {node.description or 'No description'} (Status: {status_str})"
                 if node.parent_name:
                     line += f" (Parent: {node.parent_name})"
-                
+
                 if strategy.enable_graph:
                     try:
                         neighbors = await self.galaxy_service.get_node_neighbors(node.id, limit=5)
@@ -182,9 +186,9 @@ class KnowledgeService:
                         logger.warning(f"Failed to fetch neighbors for {node.id}: {e}")
 
                 context_lines.append(line)
-            
+
             return "\n".join(context_lines)
-            
+
         except Exception as e:
             logger.error(f"Failed to retrieve knowledge context: {e}")
             return ""
@@ -194,8 +198,8 @@ class KnowledgeService:
         query: str,
         top_k: int = 5,
         min_similarity: float = 0.3,
-        subject_id: Optional[int] = None
-    ) -> List[KnowledgeSearchHit]:
+        subject_id: int | None = None
+    ) -> list[KnowledgeSearchHit]:
         """
         Minimal vector search for GraphRAG path.
 
@@ -226,7 +230,7 @@ class KnowledgeService:
             result = await self.db.execute(stmt)
             rows = result.all()
 
-            hits: List[KnowledgeSearchHit] = []
+            hits: list[KnowledgeSearchHit] = []
             for node, distance in rows:
                 if distance is None:
                     continue
@@ -250,7 +254,7 @@ class KnowledgeService:
             logger.error(f"Semantic search failed: {e}")
             return []
 
-    async def get_knowledge_version(self) -> Optional[str]:
+    async def get_knowledge_version(self) -> str | None:
         """
         Return cached knowledge version used for semantic cache keys.
         """

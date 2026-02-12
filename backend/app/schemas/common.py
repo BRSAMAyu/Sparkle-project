@@ -1,8 +1,9 @@
 """Common Schemas - General response, pagination, etc."""
-from typing import Generic, TypeVar, Optional, List, Any
-from pydantic import BaseModel, Field
-from uuid import UUID
 from datetime import datetime
+from typing import Any, Generic, TypeVar
+from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 T = TypeVar('T')
 
@@ -13,13 +14,13 @@ class ResponseBase(BaseModel):
 
 class Response(ResponseBase, Generic[T]):
     """Generic response model"""
-    data: Optional[T] = Field(default=None, description="Response data")
+    data: T | None = Field(default=None, description="Response data")
 
 class ErrorResponse(ResponseBase):
     """Error response model"""
     success: bool = Field(default=False, description="Request failed")
-    error_code: Optional[str] = Field(default=None, description="Error code")
-    details: Optional[Any] = Field(default=None, description="Error details")
+    error_code: str | None = Field(default=None, description="Error code")
+    details: Any | None = Field(default=None, description="Error details")
 
 class PaginationParams(BaseModel):
     """Pagination parameters"""
@@ -39,7 +40,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response model"""
     success: bool = Field(default=True, description="Request success")
     message: str = Field(default="Success", description="Response message")
-    data: List[T] = Field(default_factory=list, description="Data list")
+    data: list[T] = Field(default_factory=list, description="Data list")
     meta: PaginationMeta = Field(description="Pagination info")
 
 class BaseSchema(BaseModel):

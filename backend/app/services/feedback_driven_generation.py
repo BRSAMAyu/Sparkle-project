@@ -12,24 +12,28 @@ Feedback-Driven Generation Service - Phase 2f
 """
 
 import uuid
-from typing import Dict, Any, List, Optional, AsyncIterator
-from datetime import datetime, timedelta
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from enum import Enum
+from typing import Any
+
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.review_history_service import get_review_history_service
-from app.services.llm_service import get_llm_service_for_task
 from app.core.agent_profiles import TaskType
 from app.models.review_system import ReviewFeedback as ReviewFeedbackModel
-
+from app.services.llm_service import get_llm_service_for_task
+from app.services.review_history_service import get_review_history_service
 
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class FeedbackType(str, Enum):
     """反馈类型"""
@@ -68,27 +72,27 @@ class ReviewFeedback:
     timestamp: str = ""
 
     # 评分反馈
-    rating: Optional[int] = None  # 1-5
+    rating: int | None = None  # 1-5
 
     # 质量反馈
-    was_helpful: Optional[bool] = None
+    was_helpful: bool | None = None
 
     # 准确性反馈
-    was_accurate: Optional[bool] = None
-    inaccurate_points: List[str] = field(default_factory=list)
+    was_accurate: bool | None = None
+    inaccurate_points: list[str] = field(default_factory=list)
 
     # 具体性反馈
-    specificity_level: Optional[str] = None  # too_vague, appropriate, too_detailed
+    specificity_level: str | None = None  # too_vague, appropriate, too_detailed
 
     # 自由文本反馈
-    comments: Optional[str] = None
+    comments: str | None = None
 
     # 标签
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.timestamp:
-            self.timestamp = datetime.utcnow().isoformat()
+            self.timestamp = _utcnow().isoformat()
 
 
 @dataclass
@@ -101,23 +105,23 @@ class RegenerationRequest:
     regeneration_type: RegenerationType
 
     # 请求详情
-    improvement_hints: List[str] = field(default_factory=list)
-    focus_areas: List[str] = field(default_factory=list)
-    style_preferences: Dict[str, Any] = field(default_factory=dict)
-    custom_instructions: Optional[str] = None
+    improvement_hints: list[str] = field(default_factory=list)
+    focus_areas: list[str] = field(default_factory=list)
+    style_preferences: dict[str, Any] = field(default_factory=dict)
+    custom_instructions: str | None = None
 
     # 状态
     status: RegenerationStatus = RegenerationStatus.PENDING
     created_at: str = ""
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
 
     # 结果
-    new_content_id: Optional[str] = None
-    improvement_summary: Optional[str] = None
+    new_content_id: str | None = None
+    improvement_summary: str | None = None
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -125,10 +129,10 @@ class RegenerationResult:
     """重新生成结果"""
     request_id: str
     success: bool
-    new_content: Optional[str] = None
-    new_content_id: Optional[str] = None
+    new_content: str | None = None
+    new_content_id: str | None = None
     improvement_summary: str = ""
-    changes_made: List[str] = field(default_factory=list)
+    changes_made: list[str] = field(default_factory=list)
     score_improvement: float = 0.0  # 分数提升量
     generation_time_ms: int = 0
 
@@ -146,8 +150,8 @@ class FeedbackPattern:
     accuracy_rate: float = 0.0
 
     # 常见反馈
-    common_issues: List[str] = field(default_factory=list)
-    preferred_style: Optional[str] = None
+    common_issues: list[str] = field(default_factory=list)
+    preferred_style: str | None = None
     detail_preference: str = "appropriate"  # too_vague, appropriate, too_detailed
 
     # 更新时间
@@ -175,9 +179,9 @@ class FeedbackDrivenGenerationService:
         self._llm = get_llm_service_for_task(TaskType.STANDARD_RESPONSE)
 
         # 内存缓存（生产环境应使用Redis）
-        self._feedbacks: Dict[str, ReviewFeedback] = {}
-        self._regeneration_requests: Dict[str, RegenerationRequest] = {}
-        self._feedback_patterns: Dict[str, FeedbackPattern] = {}
+        self._feedbacks: dict[str, ReviewFeedback] = {}
+        self._regeneration_requests: dict[str, RegenerationRequest] = {}
+        self._feedback_patterns: dict[str, FeedbackPattern] = {}
 
     # ============================================
     # 反馈收集
@@ -188,13 +192,13 @@ class FeedbackDrivenGenerationService:
         review_id: str,
         user_id: str,
         feedback_type: FeedbackType,
-        rating: Optional[int] = None,
-        was_helpful: Optional[bool] = None,
-        was_accurate: Optional[bool] = None,
-        inaccurate_points: Optional[List[str]] = None,
-        specificity_level: Optional[str] = None,
-        comments: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        rating: int | None = None,
+        was_helpful: bool | None = None,
+        was_accurate: bool | None = None,
+        inaccurate_points: list[str] | None = None,
+        specificity_level: str | None = None,
+        comments: str | None = None,
+        tags: list[str] | None = None,
     ) -> ReviewFeedback:
         """
         提交审查反馈
@@ -269,7 +273,7 @@ class FeedbackDrivenGenerationService:
         review_id: str,
         user_id: str,
         rating: int,
-        comments: Optional[str] = None,
+        comments: str | None = None,
     ) -> ReviewFeedback:
         """
         简化的评分接口
@@ -305,10 +309,10 @@ class FeedbackDrivenGenerationService:
         review_id: str,
         user_id: str,
         regeneration_type: RegenerationType,
-        improvement_hints: Optional[List[str]] = None,
-        focus_areas: Optional[List[str]] = None,
-        style_preferences: Optional[Dict[str, Any]] = None,
-        custom_instructions: Optional[str] = None,
+        improvement_hints: list[str] | None = None,
+        focus_areas: list[str] | None = None,
+        style_preferences: dict[str, Any] | None = None,
+        custom_instructions: str | None = None,
     ) -> RegenerationRequest:
         """
         请求内容重新生成
@@ -404,7 +408,7 @@ class FeedbackDrivenGenerationService:
 
             # 更新请求状态
             request.status = RegenerationStatus.COMPLETED
-            request.completed_at = datetime.utcnow().isoformat()
+            request.completed_at = _utcnow().isoformat()
             request.new_content_id = new_content_id
             request.improvement_summary = f"Content regenerated with {request.regeneration_type.value}"
 
@@ -506,7 +510,7 @@ class FeedbackDrivenGenerationService:
 
         # 更新请求状态
         request.status = RegenerationStatus.COMPLETED
-        request.completed_at = datetime.utcnow().isoformat()
+        request.completed_at = _utcnow().isoformat()
 
     # ============================================
     # 反馈模式分析
@@ -528,7 +532,7 @@ class FeedbackDrivenGenerationService:
             self._feedback_patterns[user_id] = pattern
 
         pattern.feedback_count += 1
-        pattern.last_updated = datetime.utcnow().isoformat()
+        pattern.last_updated = _utcnow().isoformat()
 
         # 更新评分统计
         if feedback.rating is not None:
@@ -565,14 +569,14 @@ class FeedbackDrivenGenerationService:
     async def get_user_feedback_pattern(
         self,
         user_id: str,
-    ) -> Optional[FeedbackPattern]:
+    ) -> FeedbackPattern | None:
         """获取用户反馈模式"""
         return self._feedback_patterns.get(user_id)
 
     async def get_feedback_statistics(
         self,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取反馈统计
 
@@ -582,7 +586,7 @@ class FeedbackDrivenGenerationService:
         Returns:
             统计数据
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = _utcnow() - timedelta(days=days)
         cutoff_str = cutoff.isoformat()
 
         # 筛选时间范围内的反馈
@@ -637,7 +641,7 @@ class FeedbackDrivenGenerationService:
         """构建重新生成提示词"""
         prompt_parts = []
 
-        prompt_parts.append(f"请根据以下要求重新生成内容:")
+        prompt_parts.append("请根据以下要求重新生成内容:")
         prompt_parts.append(f"重新生成类型: {request.regeneration_type.value}")
 
         if request.improvement_hints:
@@ -654,7 +658,7 @@ class FeedbackDrivenGenerationService:
 
         return "\n".join(prompt_parts)
 
-    def _summarize_changes(self, request: RegenerationRequest) -> List[str]:
+    def _summarize_changes(self, request: RegenerationRequest) -> list[str]:
         """总结变更"""
         changes = []
 
@@ -679,7 +683,7 @@ class FeedbackDrivenGenerationService:
 
     def _infer_regeneration_type(self, feedback: ReviewFeedback) -> RegenerationType:
         """根据反馈推断重新生成类型"""
-        if feedback.was_accurate == False:
+        if not feedback.was_accurate:
             return RegenerationType.FIX_ISSUES
 
         if feedback.specificity_level == "too_vague":
@@ -693,7 +697,7 @@ class FeedbackDrivenGenerationService:
 
         return RegenerationType.IMPROVE_QUALITY
 
-    def _extract_improvement_hints(self, feedback: ReviewFeedback) -> List[str]:
+    def _extract_improvement_hints(self, feedback: ReviewFeedback) -> list[str]:
         """从反馈中提取改进提示"""
         hints = []
 
@@ -723,7 +727,7 @@ class FeedbackDrivenGenerationService:
 # 全局实例管理
 # ============================================
 
-_feedback_services: Dict[int, FeedbackDrivenGenerationService] = {}
+_feedback_services: dict[int, FeedbackDrivenGenerationService] = {}
 
 
 def get_feedback_driven_generation_service(

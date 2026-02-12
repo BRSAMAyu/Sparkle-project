@@ -1,14 +1,14 @@
+import base64
+import io
 import os
 import re
-import io
-import base64
-from typing import List, Dict, Optional, Any
-import pdfplumber
-from docx import Document
-from pptx import Presentation
+from typing import Any
+
+import httpx
+from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
-import httpx
+
 from app.config import settings
 
 try:
@@ -32,7 +32,7 @@ except ImportError:
     HAS_PPTX = False
 
 try:
-    from PIL import Image, ImageOps, ImageEnhance
+    from PIL import ImageOps
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -47,8 +47,8 @@ class ExtractedChunk(BaseModel):
     text: str
     page_num: int
     source: str
-    metadata: Dict = {}  # bold, header, color, etc.
-    ocr_confidence: Optional[float] = None  # 0.0-1.0, None if not from OCR
+    metadata: dict = {}  # bold, header, color, etc.
+    ocr_confidence: float | None = None  # 0.0-1.0, None if not from OCR
 
 class IngestionService:
     """
@@ -56,7 +56,7 @@ class IngestionService:
     Handles PDF, DOCX, PPTX with advanced cleaning and metadata extraction.
     """
 
-    def process_file(self, file_path: str, options: Dict[str, Any] = None) -> List[ExtractedChunk]:
+    def process_file(self, file_path: str, options: dict[str, Any] = None) -> list[ExtractedChunk]:
         """
         Main entry point. Dispatches to specific handlers based on extension.
         Includes Magic Byte validation.
@@ -89,21 +89,73 @@ class IngestionService:
     def _validate_magic_bytes(self, file_path: str):
         """
         Check if the file header matches its extension to prevent spoofing.
+        Enhanced with comprehensive magic byte validation.
         """
         _, ext = os.path.splitext(file_path)
         ext = ext.lower()
 
         with open(file_path, "rb") as f:
-            header = f.read(4)
+            # 读取前512字节用于魔数检测
+            header = f.read(512)
+            if not header:
+                raise ValueError("Empty file or cannot read file header")
 
+        # 验证魔数
         if ext == ".pdf":
-            if header != b"%PDF":
-                raise ValueError(f"Invalid PDF header: {header}")
-        elif ext in [".docx", ".pptx"]:
-            if header != b"PK\x03\x04":
-                raise ValueError(f"Invalid ZIP/Office header: {header}")
+            # PDF文件以 %PDF- 开头
+            if not header.startswith(b"%PDF-"):
+                raise ValueError(
+                    "Invalid PDF file: missing PDF magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
 
-    def _process_pdf(self, path: str, options: Dict[str, Any]) -> List[ExtractedChunk]:
+        elif ext in [".docx", ".xlsx", ".pptx"]:
+            # Office文档都是ZIP格式，以PK\x03\x04开头
+            if not header.startswith(b"PK\x03\x04"):
+                raise ValueError(
+                    "Invalid Office document: missing ZIP magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".png":
+            # PNG以 \x89PNG\r\n\x1a\n 开头
+            png_magic = b'\x89PNG\r\n\x1a\n'
+            if not header.startswith(png_magic):
+                raise ValueError(
+                    "Invalid PNG file: missing PNG magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext in [".jpg", ".jpeg"]:
+            # JPEG以 \xFF\xD8\xFF 开头
+            if not header.startswith(b'\xFF\xD8\xFF'):
+                raise ValueError(
+                    "Invalid JPEG file: missing JPEG magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".gif":
+            # GIF以 GIF87a 或 GIF89a 开头
+            if not (header.startswith(b"GIF87a") or header.startswith(b"GIF89a")):
+                raise ValueError(
+                    "Invalid GIF file: missing GIF magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
+
+        elif ext == ".webp":
+            # WebP以 RIFF....WEBP 开头
+            if len(header) < 12:
+                raise ValueError("File too short to be a valid WebP")
+            if not header.startswith(b"RIFF") or header[8:12] != b"WEBP":
+                raise ValueError(
+                    "Invalid WebP file: missing WebP magic bytes. "
+                    "File may be corrupted or renamed with wrong extension."
+                )
+
+        else:
+            logger.warning(f"No magic byte validation implemented for extension: {ext}")
+
+    def _process_pdf(self, path: str, options: dict[str, Any]) -> list[ExtractedChunk]:
         chunks = []
         # Use pdfplumber for better layout analysis
         with pdfplumber.open(path) as pdf:
@@ -144,7 +196,7 @@ class IngestionService:
                 ))
         return chunks
 
-    def _attempt_ocr(self, page, options: Dict[str, Any]) -> tuple[str, Optional[float]]:
+    def _attempt_ocr(self, page, options: dict[str, Any]) -> tuple[str, float | None]:
         """
         Helper to run OCR on a pdfplumber page object.
         Dispatches to local Tesseract or Remote API based on options.
@@ -157,9 +209,9 @@ class IngestionService:
             # pdfplumber to_image returns a PageImage, .original gives PIL Image
             # Use 300 DPI for better OCR
             im = page.to_image(resolution=300).original
-            
+
             ocr_engine = options.get("ocr_engine", "local") # 'local' or 'deepseek'
-            
+
             if ocr_engine == "deepseek":
                 return self._ocr_via_api(im, options), None
             if not HAS_TESSERACT:
@@ -171,7 +223,7 @@ class IngestionService:
             logger.warning(f"OCR Error: {e}")
             return "", None
 
-    def _ocr_via_local(self, im) -> tuple[str, Optional[float]]:
+    def _ocr_via_local(self, im) -> tuple[str, float | None]:
         """Run local Tesseract OCR with preprocessing"""
         try:
             # --- Image Preprocessing for Accuracy ---
@@ -184,7 +236,7 @@ class IngestionService:
             # 3. Simple Binarization (Thresholding)
             threshold = 200
             im = im.point(lambda p: 255 if p > threshold else 0)
-            
+
             # 4. Run OCR
             try:
                 config = r'--oem 3 --psm 6'
@@ -205,7 +257,7 @@ class IngestionService:
             logger.warning(f"Local OCR Failed: {e}")
             return "", None
 
-    def _ocr_via_api(self, image, options: Dict[str, Any]) -> str:
+    def _ocr_via_api(self, image, options: dict[str, Any]) -> str:
         """
         Run Remote DeepSeek OCR via SiliconFlow API with specialized prompts.
         Modes: 'markdown' (default), 'ocr', 'figure', 'describe'
@@ -213,9 +265,9 @@ class IngestionService:
         if not settings.SILICONFLOW_API_KEY:
             logger.warning("DeepSeek OCR requested but SILICONFLOW_API_KEY not set.")
             return ""
-        
+
         prompt_mode = options.get("ocr_prompt_mode", "markdown")
-        
+
         # Official Prompts mapping
         prompts = {
             "markdown": "<|grounding|>Convert the document to markdown.",
@@ -224,25 +276,25 @@ class IngestionService:
             "figure": "Parse the figure.",
             "describe": "Describe this image in detail.",
         }
-        
+
         # Fallback to markdown if mode not found
         text_prompt = prompts.get(prompt_mode, prompts["markdown"])
-        
+
         try:
             # Convert to base64
             buffered = io.BytesIO()
             # Convert to RGB to ensure compatibility
             if image.mode != "RGB":
                 image = image.convert("RGB")
-                
+
             image.save(buffered, format="JPEG", quality=95)
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            
+
             headers = {
                 "Authorization": f"Bearer {settings.SILICONFLOW_API_KEY}",
                 "Content-Type": "application/json"
             }
-            
+
             data = {
                 "model": settings.SILICONFLOW_OCR_MODEL,
                 "messages": [
@@ -257,24 +309,24 @@ class IngestionService:
                 "max_tokens": 4096,
                 "temperature": 0.0 # Low temperature for deterministic transcription
             }
-            
+
             # Use synchronous calls since we are likely in a thread worker
             with httpx.Client(base_url=settings.SILICONFLOW_BASE_URL, timeout=60.0) as client:
                 response = client.post("/chat/completions", json=data, headers=headers)
-                
+
                 if response.status_code != 200:
                     logger.error(f"DeepSeek OCR API Error: {response.status_code} - {response.text}")
                     return ""
-                    
+
                 result = response.json()
                 content = result['choices'][0]['message']['content']
                 return content
-                
+
         except Exception as e:
             logger.error(f"DeepSeek OCR API Exception: {e}")
             return ""
 
-    def _process_docx(self, path: str) -> List[ExtractedChunk]:
+    def _process_docx(self, path: str) -> list[ExtractedChunk]:
         if not HAS_DOCX:
             raise HTTPException(
                 status_code=501,
@@ -290,10 +342,10 @@ class IngestionService:
             # Feature Engineering: Extract styles
             style_name = para.style.name.lower()
             is_header = "heading" in style_name
-            
+
             # Check for bold/color runs
             is_bold = any(run.bold for run in para.runs)
-            
+
             metadata = {
                 "is_header": is_header,
                 "is_bold": is_bold,
@@ -301,7 +353,7 @@ class IngestionService:
             }
 
             clean_text = self._clean_text(text)
-            
+
             chunks.append(ExtractedChunk(
                 text=clean_text,
                 page_num=i, # Docx doesn't have strict pages, use para index
@@ -310,7 +362,7 @@ class IngestionService:
             ))
         return chunks
 
-    def _process_pptx(self, path: str) -> List[ExtractedChunk]:
+    def _process_pptx(self, path: str) -> list[ExtractedChunk]:
         if not HAS_PPTX:
             raise HTTPException(
                 status_code=501,
@@ -320,12 +372,12 @@ class IngestionService:
         chunks = []
         for i, slide in enumerate(prs.slides):
             slide_text = []
-            
+
             # Extract text from shapes
             for shape in slide.shapes:
                 if hasattr(shape, "text") and shape.text:
                     slide_text.append(shape.text)
-            
+
             # CRITICAL: Extract speaker notes (where the real content often lives)
             if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
                 notes = slide.notes_slide.notes_text_frame.text
@@ -362,7 +414,7 @@ class IngestionService:
 
         # 4. Remove common watermarks (example)
         text = text.replace("Do Not Distribute", "")
-        
+
         # 5. Fix common encoding artifacts
         text = text.replace("\x00", "") # Null bytes
 

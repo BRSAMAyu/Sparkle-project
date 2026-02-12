@@ -67,31 +67,37 @@ class PlanContextSummary extends ConsumerWidget {
   }
 
   Widget _buildLoadingCard(bool isDark) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: isDark ? DS.neutral800 : DS.neutral100,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(
-          color: DS.neutral300,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: isDark ? DS.neutral800 : DS.neutral100,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(
+            color: DS.neutral300,
+          ),
         ),
-      ),
-      child: const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class PlanContextData {
+  const PlanContextData({
+    required this.facts,
+    required this.taskSummary,
+    required this.recentFeedback,
+    this.planId,
+    this.status,
+  });
 
   factory PlanContextData.fromJson(Map<String, dynamic> json) {
-    final taskSummary =
-        (json['task_summary'] as Map<String, dynamic>?) ??
-            (json['task_index'] as Map<String, dynamic>?) ??
-            <String, dynamic>{};
+    final taskSummary = (json['task_summary'] as Map<String, dynamic>?) ??
+        (json['task_index'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
     return PlanContextData(
       planId: json['plan_id'] as String?,
       status: json['status'] as String?,
@@ -103,13 +109,6 @@ class PlanContextData {
           <Map<String, dynamic>>[],
     );
   }
-  const PlanContextData({
-    required this.facts,
-    required this.taskSummary,
-    required this.recentFeedback,
-    this.planId,
-    this.status,
-  });
 
   final String? planId;
   final String? status;
@@ -189,7 +188,9 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              IconButton(
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                size: DS.spacing32,
                 icon: Icon(
                   _expanded
                       ? Icons.keyboard_arrow_up_rounded
@@ -214,7 +215,8 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
   }
 
   Map<String, int> _taskSummary() {
-    final total = (widget.contextData.taskSummary['total'] as num?)?.toInt() ?? 0;
+    final total =
+        (widget.contextData.taskSummary['total'] as num?)?.toInt() ?? 0;
     final completed =
         (widget.contextData.taskSummary['completed'] as num?)?.toInt() ?? 0;
     return {'total': total, 'completed': completed};
@@ -252,8 +254,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
           borderRadius: DS.borderRadius4,
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor:
-                (widget.isDark ? DS.neutral800 : DS.neutral200),
+            backgroundColor: (widget.isDark ? DS.neutral800 : DS.neutral200),
             valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
             minHeight: 6,
           ),
@@ -359,8 +360,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                         content.isEmpty ? '（无内容）' : content,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color:
-                              widget.isDark ? DS.neutral200 : DS.neutral700,
+                          color: widget.isDark ? DS.neutral200 : DS.neutral700,
                         ),
                       ),
                     ),
@@ -529,39 +529,39 @@ class _PlanContextCard extends StatelessWidget {
   }
 
   Widget _buildProgressBar(Color planColor) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '完成进度',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: DS.neutral500,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '完成进度',
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.neutral500,
+                ),
               ),
-            ),
-            Text(
-              '${_getCompletedTasks()}/${_getTotalTasks()} 任务',
-              style: TextStyle(
-                fontSize: DS.fontSizeXs,
-                color: DS.neutral500,
+              Text(
+                '${_getCompletedTasks()}/${_getTotalTasks()} 任务',
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.neutral500,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.spacing4),
-        ClipRRect(
-          borderRadius: DS.borderRadius4,
-          child: LinearProgressIndicator(
-            value: plan.progress,
-            backgroundColor: planColor.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(planColor),
-            minHeight: 6,
+            ],
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing4),
+          ClipRRect(
+            borderRadius: DS.borderRadius4,
+            child: LinearProgressIndicator(
+              value: plan.progress,
+              backgroundColor: planColor.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(planColor),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      );
 
   Widget _buildMetadataRow(Color planColor) {
     String metadata;
@@ -620,30 +620,32 @@ class _PlanContextCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: DS.spacing4),
-        ...nextTasks.take(3).map((task) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing4),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.radio_button_unchecked,
-                    size: 12,
-                    color: _getTaskStatusColor(task.status),
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: Text(
-                      task.title,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: textColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        ...nextTasks.take(3).map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.radio_button_unchecked,
+                      size: 12,
+                      color: _getTaskStatusColor(task.status),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        task.title,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: textColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),),
+            ),
       ],
     );
   }
@@ -651,9 +653,9 @@ class _PlanContextCard extends StatelessWidget {
   Color _getPlanColor() {
     switch (plan.type) {
       case PlanType.sprint:
-        return isDark ? const Color(0xFFFF5252) : const Color(0xFFE53935);
+        return DS.error;
       case PlanType.growth:
-        return isDark ? const Color(0xFF66BB6A) : const Color(0xFF43A047);
+        return DS.success;
     }
   }
 
@@ -675,16 +677,15 @@ class _PlanContextCard extends StatelessWidget {
     }
   }
 
-  int _getCompletedTasks() => plan.tasks?.where((t) => t.status == TaskStatus.completed).length ?? 0;
+  int _getCompletedTasks() =>
+      plan.tasks?.where((t) => t.status == TaskStatus.completed).length ?? 0;
 
   int _getTotalTasks() => plan.tasks?.length ?? 0;
 
   List<TaskModel> _getNextTasks() {
     final tasks = plan.tasks ?? [];
     // Return pending tasks sorted by created date
-    return tasks
-        .where((t) => t.status == TaskStatus.pending)
-        .toList()
+    return tasks.where((t) => t.status == TaskStatus.pending).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 

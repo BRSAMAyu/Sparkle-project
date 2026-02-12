@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SectorCode(str, Enum):
@@ -30,7 +31,7 @@ class NodeStatus(str, Enum):
 # ==========================================
 class SparkRequest(BaseModel):
     study_minutes: int = Field(..., ge=1, le=480, description="学习时长(分钟)")
-    task_id: Optional[UUID] = Field(None, description="关联的任务ID")
+    task_id: UUID | None = Field(None, description="关联的任务ID")
     trigger_expansion: bool = Field(True, description="是否触发知识拓展")
 
 
@@ -42,12 +43,12 @@ class SearchRequest(BaseModel):
 
 class ExpansionFeedbackRequest(BaseModel):
     trigger_node_id: UUID
-    expansion_queue_id: Optional[UUID] = None
-    rating: Optional[int] = Field(None, ge=1, le=5)
-    implicit_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+    expansion_queue_id: UUID | None = None
+    rating: int | None = Field(None, ge=1, le=5)
+    implicit_score: float | None = Field(None, ge=0.0, le=1.0)
     feedback_type: str = Field("explicit")
-    prompt_version: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    prompt_version: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 # ==========================================
@@ -56,14 +57,14 @@ class ExpansionFeedbackRequest(BaseModel):
 class NodeBase(BaseModel):
     id: UUID
     name: str
-    name_en: Optional[str] = None
-    description: Optional[str] = None
+    name_en: str | None = None
+    description: str | None = None
     importance_level: int
     sector_code: SectorCode
     is_seed: bool
-    parent_name: Optional[str] = None # Added for context
+    parent_name: str | None = None # Added for context
     global_spark_count: int = 0
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -74,10 +75,10 @@ class UserStatusInfo(BaseModel):
     is_unlocked: bool
     is_collapsed: bool
     is_favorite: bool
-    last_study_at: Optional[datetime] = None
-    next_review_at: Optional[datetime] = None
+    last_study_at: datetime | None = None
+    next_review_at: datetime | None = None
     decay_paused: bool
-    
+
     # 计算属性
     status: NodeStatus
     brightness: float  # 0-1，用于前端渲染
@@ -85,12 +86,12 @@ class UserStatusInfo(BaseModel):
 
 class NodeWithStatus(NodeBase):
     """节点 + 用户状态"""
-    user_status: Optional[UserStatusInfo] = None
-    
+    user_status: UserStatusInfo | None = None
+
     # 布局信息
     position_angle: float  # 在星域中的角度
     position_radius: float # 距离中心的半径
-    
+
     @classmethod
     def from_models(cls, node, status):
         user_status = None
@@ -98,7 +99,7 @@ class NodeWithStatus(NodeBase):
             # 计算视觉状态
             visual_status = cls._calculate_status(status)
             brightness = cls._calculate_brightness(status)
-            
+
             user_status = UserStatusInfo(
                 mastery_score=status.mastery_score,
                 total_study_minutes=status.total_study_minutes,
@@ -112,7 +113,7 @@ class NodeWithStatus(NodeBase):
                 status=visual_status,
                 brightness=brightness
             )
-        
+
         # 处理 subject 为空的异常情况
         sector_code = SectorCode.VOID
         position_angle = 0.0
@@ -122,7 +123,7 @@ class NodeWithStatus(NodeBase):
                 sector_code = SectorCode(node.subject.sector_code)
             except ValueError:
                 sector_code = SectorCode.VOID
-            
+
             position_angle = float(node.subject.position_angle) if node.subject.position_angle is not None else 0.0
 
         return cls(
@@ -138,14 +139,14 @@ class NodeWithStatus(NodeBase):
             position_angle=position_angle,
             position_radius=100.0 + node.importance_level * 30.0  # 简化计算
         )
-    
+
     @staticmethod
     def _calculate_status(status) -> NodeStatus:
         if status.is_collapsed:
             return NodeStatus.COLLAPSED
         if not status.is_unlocked:
             return NodeStatus.LOCKED
-        
+
         score = status.mastery_score
         if score >= 95:
             return NodeStatus.MASTERED
@@ -157,7 +158,7 @@ class NodeWithStatus(NodeBase):
             return NodeStatus.GLIMMER
         else:
             return NodeStatus.UNLIT
-    
+
     @staticmethod
     def _calculate_brightness(status) -> float:
         if not status.is_unlocked:
@@ -179,14 +180,14 @@ class GalaxyUserStats(BaseModel):
     unlocked_count: int = 0
     mastered_count: int = 0
     total_study_minutes: int = 0
-    sector_distribution: Dict[str, int] = {} # {sector_code: count}
+    sector_distribution: dict[str, int] = {} # {sector_code: count}
     streak_days: int = 0 # 连续学习天数
 
 
 class GalaxyGraphResponse(BaseModel):
     """星图完整数据响应"""
-    nodes: List[NodeWithStatus]
-    relations: List[NodeRelationInfo]
+    nodes: list[NodeWithStatus]
+    relations: list[NodeRelationInfo]
     user_stats: GalaxyUserStats
 
 
@@ -199,7 +200,7 @@ class SparkEvent(BaseModel):
     new_mastery: float
     is_first_unlock: bool  # 首次点亮 (播放特殊动画)
     is_level_up: bool      # 升级 (跨越阈值)
-    
+
     # 前端动画参数
     particle_count: int = 20
     animation_duration_ms: int = 1500
@@ -208,19 +209,19 @@ class SparkEvent(BaseModel):
 class SparkResult(BaseModel):
     spark_event: SparkEvent
     expansion_queued: bool
-    expanded_nodes: Optional[List[NodeBase]] = None  # 如果同步返回
-    updated_status: Optional[Any] = None # UserStatusInfo or dict
+    expanded_nodes: list[NodeBase] | None = None  # 如果同步返回
+    updated_status: Any | None = None # UserStatusInfo or dict
 
 
 class SearchResultItem(BaseModel):
     node: NodeBase
     similarity: float
-    user_status: Optional[UserStatusInfo]
+    user_status: UserStatusInfo | None
 
 
 class SearchResponse(BaseModel):
     query: str
-    results: List[SearchResultItem]
+    results: list[SearchResultItem]
     total_count: int = 0
 
 
@@ -239,10 +240,10 @@ class ReviewSuggestion(BaseModel):
 
 
 class ReviewSuggestionsResponse(BaseModel):
-    suggestions: List[ReviewSuggestion]
+    suggestions: list[ReviewSuggestion]
     next_review_count: int = 0 # 未来 7 天需要复习的总数
-    
+
 class NodeDetailResponse(BaseModel):
     node: NodeWithStatus
-    relations: List[NodeRelationInfo]
+    relations: list[NodeRelationInfo]
     # 可以添加更多详情，如学习记录历史等

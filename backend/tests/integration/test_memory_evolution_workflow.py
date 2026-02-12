@@ -9,14 +9,25 @@ Tests the complete memory evolution tracking workflow:
 4. Predictions can be generated
 5. Visualization data is correct
 """
+import os
 import pytest
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.memory_service import MemoryService
 from app.services.memory_evolution_service import MemoryEvolutionService
+
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("FULL_STACK_TESTS") != "1",
+    reason="Requires full memory evolution data fixtures and services.",
+)
 from app.models.memory import MemoryPreference, MemoryGoal
 from app.models.memory_evolution import MemoryEvolution, EvolutionPrediction
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -37,6 +48,7 @@ async def test_preference_evolution_workflow():
         user_id=user_id,
         pref_key="learning_style",
         pref_value={"style": "visual", "intensity": "moderate"},
+        evidence_refs=[],  # Empty evidence list for initial preference
         confidence=0.5,
         source_type="user_state"
     )
@@ -56,6 +68,7 @@ async def test_preference_evolution_workflow():
         user_id=user_id,
         pref_key="learning_style",
         pref_value={"style": "textual", "intensity": "high"},
+        evidence_refs=["user_feedback"],
         confidence=0.8,
         source_type="user_state"
     )
@@ -91,7 +104,7 @@ async def test_goal_evolution_with_feedback():
     initial_goal = await memory_service.create_goal(
         user_id=user_id,
         title="Learn Python",
-        target_date=datetime.utcnow() + timedelta(days=30),
+        target_date=_utcnow() + timedelta(days=30),
         status="pending",
         metadata={"priority": "high"}
     )
@@ -103,7 +116,7 @@ async def test_goal_evolution_with_feedback():
         user_id=user_id,
         goal_id=initial_goal_id,
         evidence_type="progress",
-        evidence_data={"progress": "30%", "date": datetime.utcnow().isoformat()}
+        evidence_data={"progress": "30%", "date": _utcnow().isoformat()}
     )
 
     # Check evolution was tracked
@@ -239,6 +252,7 @@ async def test_multi_memory_interaction():
         user_id=user_id,
         pref_key="learning_time",
         pref_value={"hours": 2},
+        evidence_refs=[],
         source_type="user_state"
     )
 
@@ -248,6 +262,7 @@ async def test_multi_memory_interaction():
         user_id=user_id,
         pref_key="schedule",
         pref_value={"available_hours": 1},
+        evidence_refs=["pref1"],
         source_type="user_state"
     )
 
@@ -277,6 +292,7 @@ async def test_evolution_with_conflict_resolution():
         user_id=user_id,
         pref_key="learning_style",
         pref_value={"style": "visual"},
+        evidence_refs=[],
         source_type="user_state"
     )
 
@@ -285,6 +301,7 @@ async def test_evolution_with_conflict_resolution():
         user_id=user_id,
         pref_key="learning_style",
         pref_value={"style": "textual"},
+        evidence_refs=["system_inference"],
         source_type="system_inference"
     )
 

@@ -10,9 +10,10 @@ Agent Profile Configuration - 统一的Agent配置管理
 支持运行时动态更新，无需重启服务。
 """
 
-from typing import Dict, List, Optional, Any, Literal
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Literal
+
 from loguru import logger
 
 
@@ -29,6 +30,8 @@ class AgentRole(str, Enum):
     GALAXY_GUIDE = "galaxy_guide"
     EXAM_ORACLE = "exam_oracle"
     TIME_TUTOR = "time_tutor"
+    DEEP_ANALYST = "deep_analyst"
+    ERROR_ANALYST = "error_analyst"
     STUDY_BUDDY = "study_buddy"
 
     # 协作工作流角色
@@ -69,8 +72,11 @@ class TaskType(str, Enum):
 class ModelTier(str, Enum):
     """模型层级（按成本/能力分类）"""
     FAST = "fast"           # 快速响应（如 mimo-v2-flash）
+    FREE_FAST = "free_fast" # 免费快速（如 glm-4.7-flash 非思考模式）
     STANDARD = "standard"   # 标准模型（如 deepseek-chat, glm-4.7）
     REASONING = "reasoning" # 强推理（如 deepseek-reasoner）
+    FREE_REASONING = "free_reasoning" # 免费推理（如 glm-4.7-flash 思考模式）
+    SPECIALIST = "specialist" # 专家模型（如 OCR、翻译等专用模型）
 
 
 @dataclass
@@ -79,18 +85,22 @@ class AgentProfile:
     role: AgentRole
     display_name: str
     description: str
+    public_entry: bool = False
+    entry_tags: list[str] = field(default_factory=list)
+    entry_rank: int = 999
+    entry_enabled: bool = False
 
     # LLM 配置
     model_tier: ModelTier = ModelTier.STANDARD
-    specific_model: Optional[str] = None  # 强制指定具体模型（覆盖 tier）
+    specific_model: str | None = None  # 强制指定具体模型（覆盖 tier）
     temperature: float = 0.7
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
 
     # 系统Prompt
     system_prompt_template: str = ""
 
     # 工具配置
-    allowed_tools: List[str] = field(default_factory=list)
+    allowed_tools: list[str] = field(default_factory=list)
     tool_choice: Literal["auto", "required", "none"] = "auto"
 
     # 行为配置
@@ -100,7 +110,7 @@ class AgentProfile:
     # 成本控制
     cost_tier: int = 1  # 1=便宜, 2=中等, 3=昂贵
 
-    def get_model_config(self, available_models: Dict[str, Any]) -> Dict[str, Any]:
+    def get_model_config(self, available_models: dict[str, Any]) -> dict[str, Any]:
         """获取实际模型配置（考虑 tier 和 specific_model）"""
         if self.specific_model:
             return available_models.get(self.specific_model, {})
@@ -122,7 +132,7 @@ class AgentProfile:
 # 默认 Agent Profiles 配置
 # ============================================
 
-DEFAULT_AGENT_PROFILES: Dict[AgentRole, AgentProfile] = {
+DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
     # ==================== 主系统 Agents ====================
     AgentRole.ORCHESTRATOR: AgentProfile(
         role=AgentRole.ORCHESTRATOR,
@@ -175,6 +185,10 @@ Query: {query}"""
         role=AgentRole.GALAXY_GUIDE,
         display_name="星图向导",
         description="知识图谱专家",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=10,
+        entry_tags=["knowledge", "prerequisite", "learning-path"],
         model_tier=ModelTier.STANDARD,
         temperature=0.5,
         allowed_tools=["query_knowledge", "create_knowledge_node", "link_nodes"],
@@ -193,6 +207,10 @@ Query: {query}"""
         role=AgentRole.EXAM_ORACLE,
         display_name="考试预言家",
         description="考试预测与分析",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=20,
+        entry_tags=["exam", "strategy", "mock"],
         model_tier=ModelTier.REASONING,
         temperature=0.3,
         allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
@@ -209,6 +227,10 @@ Query: {query}"""
         role=AgentRole.TIME_TUTOR,
         display_name="时间导师",
         description="学习计划与时间管理",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=30,
+        entry_tags=["schedule", "tasks", "focus"],
         model_tier=ModelTier.STANDARD,
         temperature=0.6,
         allowed_tools=[
@@ -225,6 +247,44 @@ Query: {query}"""
 2. 管理任务列表
 3. 建议番茄钟安排
 4. 监控学习进度"""
+    ),
+
+    AgentRole.DEEP_ANALYST: AgentProfile(
+        role=AgentRole.DEEP_ANALYST,
+        display_name="深度分析师",
+        description="多视角结构化分析专家",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=40,
+        entry_tags=["analysis", "reasoning", "evidence"],
+        model_tier=ModelTier.REASONING,
+        temperature=0.4,
+        allowed_tools=["query_knowledge", "create_knowledge_node"],
+        system_prompt_template="""你是深度分析师，负责基于证据进行多角度分析。
+
+你的职责：
+1. 提炼关键论点与证据链
+2. 分析边界条件与反例
+3. 给出可执行应用建议"""
+    ),
+
+    AgentRole.ERROR_ANALYST: AgentProfile(
+        role=AgentRole.ERROR_ANALYST,
+        display_name="错题分析师",
+        description="错题诊断与根因分析",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=50,
+        entry_tags=["error-diagnosis", "remediation", "root-cause"],
+        model_tier=ModelTier.REASONING,
+        temperature=0.3,
+        allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
+        system_prompt_template="""你是错题分析师，负责识别错误类型并输出补救策略。
+
+你的职责：
+1. 分类错误并解释根因
+2. 对齐正确解法路径
+3. 设计针对性训练建议"""
     ),
 
     # ==================== 协作工作流 Agents ====================
@@ -250,6 +310,10 @@ Query: {query}"""
         role=AgentRole.MATH_AGENT,
         display_name="数学专家",
         description="数学问题与练习",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=60,
+        entry_tags=["math", "practice", "derivation"],
         model_tier=ModelTier.STANDARD,
         temperature=0.4,
         system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。"""
@@ -259,6 +323,10 @@ Query: {query}"""
         role=AgentRole.CODE_AGENT,
         display_name="编程专家",
         description="代码问题与项目",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=70,
+        entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
         temperature=0.4,
         system_prompt_template="""你是编程专家，负责设计编程项目和讲解代码概念。"""
@@ -268,6 +336,10 @@ Query: {query}"""
         role=AgentRole.SEARCH_AGENT,
         display_name="搜索专家",
         description="知识检索与证据收集",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=90,
+        entry_tags=["search", "evidence", "retrieval"],
         model_tier=ModelTier.FAST,
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
@@ -304,6 +376,10 @@ Query: {query}"""
         role=AgentRole.STUDY_BUDDY,
         display_name="学习伙伴",
         description="日常学习陪伴与闲聊",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=80,
+        entry_tags=["chat", "coaching", "support"],
         specific_model="xiaomi_chat",  # MIMO: 快速响应
         temperature=0.7,
         system_prompt_template="""你是学习伙伴，一个友好、轻松的AI助手。
@@ -319,6 +395,10 @@ Query: {query}"""
         role=AgentRole.WRITING_AGENT,
         display_name="写作专家",
         description="写作指导与文本优化",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=100,
+        entry_tags=["writing", "editing", "expression"],
         specific_model="deepseek_chat",  # DeepSeek: 擅长文本生成
         temperature=0.8,
         system_prompt_template="""你是写作专家，负责指导写作和优化文本。
@@ -334,6 +414,10 @@ Query: {query}"""
         role=AgentRole.SCIENCE_AGENT,
         display_name="科学专家",
         description="科学概念讲解与实验设计",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=110,
+        entry_tags=["science", "concepts", "experiments"],
         specific_model="zhipu_chat",  # GLM-4.7: 支持思考模式
         temperature=0.5,
         system_prompt_template="""你是科学专家，负责讲解科学概念和设计实验。
@@ -351,7 +435,7 @@ Query: {query}"""
 # 任务类型 -> Agent/Model 映射
 # ============================================
 
-TASK_TO_AGENT_PROFILE: Dict[TaskType, Dict[str, Any]] = {
+TASK_TO_AGENT_PROFILE: dict[TaskType, dict[str, Any]] = {
     TaskType.SIMPLE_CHAT: {
         "default_agent": AgentRole.TIME_TUTOR,
         "fallback_agent": AgentRole.STUDY_BUDDY,
@@ -405,10 +489,10 @@ class AgentProfileRegistry:
     """Agent配置注册表（支持运行时更新）"""
 
     def __init__(self):
-        self._profiles: Dict[AgentRole, AgentProfile] = DEFAULT_AGENT_PROFILES.copy()
-        self._model_configs: Dict[str, Any] = {}
+        self._profiles: dict[AgentRole, AgentProfile] = DEFAULT_AGENT_PROFILES.copy()
+        self._model_configs: dict[str, Any] = {}
 
-    def register_model_configs(self, configs: Dict[str, Any]):
+    def register_model_configs(self, configs: dict[str, Any]):
         """注册可用的模型配置"""
         self._model_configs.update(configs)
 
@@ -422,7 +506,7 @@ class AgentProfileRegistry:
         agent_role = task_config.get("default_agent", AgentRole.GENERATION)
         return self.get_profile(agent_role)
 
-    def update_profile(self, role: AgentRole, updates: Dict[str, Any]):
+    def update_profile(self, role: AgentRole, updates: dict[str, Any]):
         """更新Agent配置（运行时）"""
         if role in self._profiles:
             current = self._profiles[role]
@@ -430,7 +514,7 @@ class AgentProfileRegistry:
                 setattr(current, key, value)
             logger.info(f"Updated profile for {role}: {updates}")
 
-    def list_all_profiles(self) -> Dict[AgentRole, Dict[str, Any]]:
+    def list_all_profiles(self) -> dict[AgentRole, dict[str, Any]]:
         """列出所有Agent配置（用于调试）"""
         return {
             role: {
@@ -441,6 +525,66 @@ class AgentProfileRegistry:
             }
             for role, p in self._profiles.items()
         }
+
+    def list_public_entry_profiles(self) -> list[tuple[AgentRole, AgentProfile]]:
+        profiles = [
+            (role, profile)
+            for role, profile in self._profiles.items()
+            if profile.public_entry and profile.entry_enabled
+        ]
+        return sorted(profiles, key=lambda item: (item[1].entry_rank, item[1].display_name))
+
+
+def get_public_agent_catalog() -> list[dict[str, Any]]:
+    """Unified expert catalog for public entry and routing."""
+    catalog: list[dict[str, Any]] = []
+    for role, profile in agent_profile_registry.list_public_entry_profiles():
+        expert_id = role.value
+        catalog.append({
+            "id": expert_id,
+            "display_name": profile.display_name,
+            "description": profile.description,
+            "tags": profile.entry_tags,
+            "entry_chat_mode": f"expert::{expert_id}",
+            "recommended_scenarios": profile.entry_tags[:3],
+            "enabled": profile.entry_enabled,
+            "rank": profile.entry_rank,
+        })
+    return catalog
+
+
+def get_public_mode_catalog() -> list[dict[str, Any]]:
+    """Stable mode catalog returned by /multi-agent/catalog."""
+    return [
+        {
+            "id": "deep_analysis",
+            "label": "深度解析",
+            "description": "多专家协作深度解析问题",
+            "entry_chat_mode": "deep_analysis",
+            "enabled": True,
+        },
+        {
+            "id": "study_plan",
+            "label": "学习计划",
+            "description": "任务分解与学习计划协作",
+            "entry_chat_mode": "study_plan",
+            "enabled": True,
+        },
+        {
+            "id": "error_diagnosis",
+            "label": "错题分析",
+            "description": "错题诊断与分析循环",
+            "entry_chat_mode": "error_diagnosis",
+            "enabled": True,
+        },
+        {
+            "id": "expert_auto",
+            "label": "专家自动路由",
+            "description": "自动选择最合适专家组合",
+            "entry_chat_mode": "expert_auto",
+            "enabled": True,
+        },
+    ]
 
 
 # 全局注册表实例

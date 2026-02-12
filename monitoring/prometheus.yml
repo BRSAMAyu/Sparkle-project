@@ -1,6 +1,9 @@
 global:
   scrape_interval: 15s
 
+rule_files:
+  - "sparkle_slo_alerts.yml"
+
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:

@@ -4,9 +4,10 @@ Sufficiency Checker
 
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
-from typing import Dict, Any, List, Optional, Literal
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Literal
+
 from loguru import logger
 
 
@@ -21,10 +22,11 @@ class SufficiencyStatus(str, Enum):
 class SufficiencyCheckResult:
     """信息充分性检查结果"""
     status: SufficiencyStatus
-    clarification_questions: List[str] = field(default_factory=list)
-    confirmation_message: Optional[str] = None
+    clarification_questions: list[str] = field(default_factory=list)
+    confirmation_message: str | None = None
+    clarification_text: str | None = None
     recommended_action: Literal["proceed", "ask", "confirm"] = "proceed"
-    missing_fields: List[str] = field(default_factory=list)
+    missing_fields: list[str] = field(default_factory=list)
 
 
 class SufficiencyChecker:
@@ -83,6 +85,7 @@ class SufficiencyChecker:
         "clarify_if_missing": [],
         "can_infer": [],
     }
+    LLM_ELIGIBLE_INTENTS = {"create_plan", "time_planning"}
 
     def __init__(self, strict_mode: bool = False):
         """
@@ -94,8 +97,10 @@ class SufficiencyChecker:
     async def check(
         self,
         intent: str,
-        extracted_entities: Dict[str, Any],
-        conversation_context: List[Dict[str, Any]],
+        extracted_entities: dict[str, Any],
+        conversation_context: list[dict[str, Any]],
+        user_message: str | None = None,
+        use_llm_fallback: bool = False,
     ) -> SufficiencyCheckResult:
         """
         检查是否有足够信息执行意图
@@ -115,7 +120,7 @@ class SufficiencyChecker:
 
         required_fields = requirements.get("required", [])
         clarify_fields = requirements.get("clarify_if_missing", [])
-        can_infer_fields = requirements.get("can_infer", [])
+        requirements.get("can_infer", [])
 
         result = SufficiencyCheckResult(status=SufficiencyStatus.SUFFICIENT)
 
@@ -153,6 +158,18 @@ class SufficiencyChecker:
                     intent, extracted_entities
                 )
 
+        if (
+            result.status == SufficiencyStatus.SUFFICIENT
+            and use_llm_fallback
+            and intent in self.LLM_ELIGIBLE_INTENTS
+            and user_message
+        ):
+            llm_specific = await self._llm_refinement(intent=intent, user_message=user_message)
+            if not llm_specific:
+                result.status = SufficiencyStatus.NEED_CLARIFICATION
+                result.recommended_action = "ask"
+                result.clarification_text = await self._generate_clarification(intent, user_message)
+
         logger.debug(
             f"Sufficiency check: intent={intent}, status={result.status}, "
             f"missing_fields={result.missing_fields}"
@@ -160,23 +177,21 @@ class SufficiencyChecker:
 
         return result
 
-    def _has_field_value(self, field: str, entities: Dict[str, Any]) -> bool:
+    def _has_field_value(self, field: str, entities: dict[str, Any]) -> bool:
         """检查字段是否有有效值"""
         value = entities.get(field)
         if value is None:
             return False
         if isinstance(value, str) and not value.strip():
             return False
-        if isinstance(value, list) and len(value) == 0:
-            return False
-        return True
+        return not (isinstance(value, list) and len(value) == 0)
 
     def _infer_from_context(
         self,
         field: str,
         intent: str,
-        context: List[Dict[str, Any]],
-    ) -> Optional[Any]:
+        context: list[dict[str, Any]],
+    ) -> Any | None:
         """从对话上下文推断字段值"""
         if not context:
             return None
@@ -208,7 +223,7 @@ class SufficiencyChecker:
     def _requires_confirmation(
         self,
         intent: str,
-        entities: Dict[str, Any],
+        entities: dict[str, Any],
     ) -> bool:
         """检查是否需要用户确认"""
         # 高风险操作需要确认
@@ -235,7 +250,7 @@ class SufficiencyChecker:
         self,
         field: str,
         intent: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """生成澄清问题"""
         QUESTIONS = {
             "task_title": "请问您想创建什么任务？",
@@ -259,7 +274,7 @@ class SufficiencyChecker:
     def _generate_confirmation_message(
         self,
         intent: str,
-        entities: Dict[str, Any],
+        entities: dict[str, Any],
     ) -> str:
         """生成确认消息"""
         if intent == "delete_task":
@@ -279,6 +294,49 @@ class SufficiencyChecker:
             return f"您正在创建高优先级任务「{title}」，确认继续吗？"
 
         return "请确认是否继续此操作。"
+
+    async def _llm_refinement(self, intent: str, user_message: str) -> bool:
+        from app.services.llm_service import llm_service
+
+        prompt = f"""判断用户消息是否足够具体以执行意图。
+
+意图: {intent}
+用户消息: "{user_message}"
+
+如果信息足够，返回 {{"specific": true}}
+如果信息不足，需要补充澄清，返回 {{"specific": false}}
+仅返回 JSON。"""
+        try:
+            result = await llm_service.chat_json(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+            )
+            return bool(result.get("specific", False))
+        except Exception as e:
+            logger.warning(f"LLM refinement failed: {e}")
+            return True
+
+    async def _generate_clarification(self, intent: str, user_message: str) -> str:
+        from app.services.llm_service import llm_service
+
+        prompt = f"""你是学习助手。用户消息信息不足，请给出一句自然的追问。
+
+意图: {intent}
+用户消息: "{user_message}"
+
+要求：
+1. 一次只问 1-2 个关键问题
+2. 语气自然简短
+3. 直接输出追问文本"""
+        try:
+            text = await llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.6,
+            )
+            return text.strip()
+        except Exception as e:
+            logger.warning(f"Clarification generation failed: {e}")
+            return "为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。"
 
 
 # 全局实例

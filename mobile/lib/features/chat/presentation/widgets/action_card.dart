@@ -6,6 +6,8 @@ import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class ActionCard extends StatefulWidget {
   const ActionCard({
@@ -69,6 +71,28 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       return FocusActionCard(data: widget.action.data);
     }
 
+    if (widget.action.type == 'task_card') {
+      try {
+        final data = Map<String, dynamic>.from(widget.action.data);
+        // 补全默认值，防止后端数据缺失导致解析失败
+        data['user_id'] ??= 'current_user';
+        data['tags'] ??= <String>[];
+        data['difficulty'] ??= 1;
+        data['energy_cost'] ??= 1;
+        final now = DateTime.now().toIso8601String();
+        data['created_at'] ??= now;
+        data['updated_at'] ??= data['created_at'];
+
+        final task = TaskModel.fromJson(data);
+        return TaskCard(
+          task: task,
+          onTap: () => context.push('/tasks/${task.id}'),
+        );
+      } catch (e) {
+        debugPrint('Error parsing task card data: $e');
+      }
+    }
+
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
@@ -115,9 +139,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Colors.transparent,
+                              DS.surfacePrimary.withValues(alpha: 0),
                               DS.brandPrimary.withValues(alpha: 0.1),
-                              Colors.transparent,
+                              DS.surfacePrimary.withValues(alpha: 0),
                             ],
                             stops: [
                               (value - 0.3).clamp(0.0, 1.0),
@@ -228,15 +252,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     return action.type;
   }
 
-  LinearGradient _getActionGradientFor(WidgetPayload action) => _getActionGradient(_resolveActionType(action));
+  LinearGradient _getActionGradientFor(WidgetPayload action) =>
+      _getActionGradient(_resolveActionType(action));
 
-  Color _getActionColorFor(WidgetPayload action) => _getActionColor(_resolveActionType(action));
+  Color _getActionColorFor(WidgetPayload action) =>
+      _getActionColor(_resolveActionType(action));
 
-  IconData _getActionIconFor(WidgetPayload action) => _getActionIcon(_resolveActionType(action));
+  IconData _getActionIconFor(WidgetPayload action) =>
+      _getActionIcon(_resolveActionType(action));
 
   LinearGradient _getActionGradient(String type) {
     switch (type) {
       case 'create_task':
+      case 'task_list':
         return DS.primaryGradient;
       case 'create_plan':
         return DS.secondaryGradient;
@@ -260,6 +288,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   Color _getActionColor(String type) {
     switch (type) {
       case 'create_task':
+      case 'task_list':
         return DS.primaryBase;
       case 'create_plan':
         return DS.secondaryBase;
@@ -290,6 +319,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     switch (type) {
       case 'create_task':
         return Icons.add_task_rounded;
+      case 'task_list':
+        return Icons.format_list_bulleted_rounded;
       case 'create_plan':
         return Icons.map_rounded;
       case 'update_preference':
@@ -323,6 +354,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     switch (type) {
       case 'create_task':
         return 'AI建议：创建任务';
+      case 'task_list':
+        return 'AI任务拆解';
       case 'create_plan':
         return 'AI建议：创建计划';
       case 'update_preference':
@@ -357,6 +390,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
     if (action.type == 'nightly_review') {
       return _buildNightlyReviewContent(context, action);
+    }
+    if (action.type == 'task_list') {
+      return _buildTaskListContent(context, action);
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -406,87 +442,167 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       );
     }
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (action.data['title'] != null) ...[
-            Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _getActionColorFor(action).withValues(alpha: 0.1),
-                    _getActionColorFor(action).withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: DS.borderRadius12,
-                border: Border.all(
-                  color: _getActionColorFor(action).withValues(alpha: 0.2),
-                ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (action.data['title'] != null) ...[
+          Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getActionColorFor(action).withValues(alpha: 0.1),
+                  _getActionColorFor(action).withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Text(
-                action.data['title'] as String,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: DS.fontWeightSemibold,
-                      color: DS.neutral900,
-                    ),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(
+                color: _getActionColorFor(action).withValues(alpha: 0.2),
               ),
             ),
-            const SizedBox(height: DS.spacing12),
-          ],
-          if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: action.data.entries
-                  .where((e) => e.key != 'title')
-                  .map(
-                    (entry) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.neutral100,
-                        borderRadius: DS.borderRadius8,
-                        border: Border.all(color: DS.neutral200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getParamIcon(entry.key),
-                            size: DS.iconSizeXs,
-                            color: DS.neutral600,
-                          ),
-                          const SizedBox(width: DS.spacing4),
-                          Text(
-                            '${_formatParamKey(entry.key)}: ',
-                            style: TextStyle(
-                              color: DS.neutral600,
-                              fontSize: DS.fontSizeSm,
-                            ),
-                          ),
-                          Text(
-                            entry.value.toString(),
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightSemibold,
-                              fontSize: DS.fontSizeSm,
-                              color: DS.neutral900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
+            child: Text(
+              action.data['title'] as String,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral900,
+                  ),
             ),
+          ),
+          const SizedBox(height: DS.spacing12),
         ],
-      );
+        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: action.data.entries
+                .where((e) => e.key != 'title')
+                .map(
+                  (entry) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.neutral100,
+                      borderRadius: DS.borderRadius8,
+                      border: Border.all(color: DS.neutral200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getParamIcon(entry.key),
+                          size: DS.iconSizeXs,
+                          color: DS.neutral600,
+                        ),
+                        const SizedBox(width: DS.spacing4),
+                        Text(
+                          '${_formatParamKey(entry.key)}: ',
+                          style: TextStyle(
+                            color: DS.neutral600,
+                            fontSize: DS.fontSizeSm,
+                          ),
+                        ),
+                        Text(
+                          entry.value.toString(),
+                          style: TextStyle(
+                            fontWeight: DS.fontWeightSemibold,
+                            fontSize: DS.fontSizeSm,
+                            color: DS.neutral900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
   }
 
-  Widget _buildNightlyReviewContent(BuildContext context, WidgetPayload action) {
+  Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
+    final tasks = action.data['tasks'] as List<dynamic>? ?? [];
+    if (tasks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...tasks.take(5).map((item) {
+          final task = item as Map<String, dynamic>;
+          final title = task['title']?.toString() ?? '未命名任务';
+          final minutes = task['estimated_minutes']?.toString() ?? '30';
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing8),
+            child: Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: DS.neutral100,
+                borderRadius: DS.borderRadius12,
+                border: Border.all(color: DS.neutral200),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.spacing4),
+                    decoration: BoxDecoration(
+                      color: DS.primaryBase.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: DS.primaryBase,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: DS.fontWeightSemibold,
+                                    color: DS.neutral900,
+                                  ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$minutes 分钟',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.neutral600,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (tasks.length > 5)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing4),
+            child: Text(
+              '以及其他 ${tasks.length - 5} 个任务...',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral500,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNightlyReviewContent(
+      BuildContext context, WidgetPayload action) {
     final summary = action.data['summary']?.toString() ?? '';
     final reviewDate = action.data['review_date']?.toString() ?? '';
     final rawTodos = action.data['todo_items'] as List<dynamic>? ?? [];
@@ -532,8 +648,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline,
-                      size: DS.iconSizeXs, color: DS.neutral500,),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: DS.iconSizeXs,
+                    color: DS.neutral500,
+                  ),
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
@@ -554,10 +673,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   void _handleFocusCardAction(BuildContext context, WidgetPayload action) {
     final taskData = action.data['task'] as Map<String, dynamic>?;
-    final duration = (action.data['duration_minutes'] as int?) ?? 25;
 
     // 构建任务 ID 或使用默认的快速专注 ID
-    final taskId = taskData?['id']?.toString() ?? 'focus_${DateTime.now().millisecondsSinceEpoch}';
+    final taskId = taskData?['id']?.toString() ??
+        'focus_${DateTime.now().millisecondsSinceEpoch}';
 
     // 导航到正念模式（番茄钟）
     context.push('/focus/mindfulness/$taskId');

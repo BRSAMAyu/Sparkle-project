@@ -5,45 +5,66 @@
 import asyncio
 import grpc
 import os
+import uuid
 from loguru import logger
+from sqlalchemy import text
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.core.security import create_access_token
 from app.config import settings
+from app.db.session import AsyncSessionLocal
+
+
+async def _resolve_test_user_id() -> str:
+    env_user_id = os.getenv("TEST_USER_ID")
+    if env_user_id:
+        return env_user_id
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(text("SELECT id::text FROM users WHERE is_active = true LIMIT 1"))
+        row = result.first()
+        if row and row[0]:
+            return str(row[0])
+
+    raise RuntimeError("No active user found. Set TEST_USER_ID in environment.")
 
 
 async def test_demo_mode():
     """
     测试 DEMO_MODE 下的流式对话
     """
-    logger.info("🧪 Testing gRPC StreamChat with DEMO_MODE...")
+    logger.info("🧪 Testing gRPC StreamChat with REAL_USER...")
+    
+    real_user_id = await _resolve_test_user_id()
+    session_id = str(uuid.uuid4())
 
     async with grpc.aio.insecure_channel('localhost:50051') as channel:
         stub = agent_service_pb2_grpc.AgentServiceStub(channel)
 
-        # 使用预设的演示关键词
+        # 使用非常简单的请求，确保能走到最后的 record_decision
         request = agent_service_pb2.ChatRequest(
-            user_id="demo_user",
-            session_id="demo_session",
-            message="帮我制定高数复习计划",  # 这是 DEMO_MOCK_RESPONSES 中的关键词
+            user_id=real_user_id,
+            session_id=session_id,
+            message="你好，请介绍一下你自己", 
             user_profile=agent_service_pb2.UserProfile(
-                nickname="演示同学",
+                nickname="测试同学",
                 timezone="Asia/Shanghai",
                 language="zh-CN"
             ),
-            request_id="demo_req_001"
+            request_id="fresh_req_v5"
         )
 
-        token = create_access_token({"sub": "demo_user"})
+        token = create_access_token({"sub": real_user_id})
         
-        # Use Internal API Key to bypass JWT secret mismatch issues in dev environment
-        # This matches how Gateway calls Agent
-        # Use settings.INTERNAL_API_KEY which is loaded from .env by Pydantic
-        internal_key = settings.INTERNAL_API_KEY
+        # Use configured internal key for service-to-service authentication.
+        internal_key = os.getenv("INTERNAL_API_KEY") or settings.INTERNAL_API_KEY
+        if not internal_key:
+            logger.error("❌ INTERNAL_API_KEY is not configured")
+            return False
         
         metadata = (
             ("authorization", f"Bearer {token}"),
-            ("user-id", "demo_user"),
+            ("user-id", real_user_id),
             ("x-trace-id", "demo_trace_001"),
             ("x-internal-api-key", internal_key), # Add internal key
         )

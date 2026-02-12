@@ -4,7 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    show CustomButton;
 
 class BreathingTool extends StatefulWidget {
   const BreathingTool({super.key});
@@ -127,10 +128,10 @@ class _BreathingToolState extends State<BreathingTool>
                 Container(
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.shade50,
+                    color: DS.prismBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.air, color: Colors.indigo),
+                  child: Icon(Icons.air, color: DS.prismBlue),
                 ),
                 const SizedBox(width: DS.md),
                 const Text(
@@ -141,9 +142,11 @@ class _BreathingToolState extends State<BreathingTool>
                   ),
                 ),
                 const Spacer(),
-                IconButton(
+                SparkleIconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(context).pop(),
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
                 ),
               ],
             ),
@@ -164,7 +167,7 @@ class _BreathingToolState extends State<BreathingTool>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.indigo.withValues(alpha: 0.1),
+                          color: DS.prismBlue.withValues(alpha: 0.1),
                           width: 2,
                         ),
                       ),
@@ -184,8 +187,8 @@ class _BreathingToolState extends State<BreathingTool>
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  Colors.indigo.shade200.withValues(alpha: 0.3),
-                                  Colors.indigo.shade100.withValues(alpha: 0.1),
+                                  DS.prismBlue.withValues(alpha: 0.3),
+                                  DS.prismBlue.withValues(alpha: 0.1),
                                 ],
                               ),
                             ),
@@ -202,12 +205,12 @@ class _BreathingToolState extends State<BreathingTool>
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.indigo.shade700,
+                            color: DS.prismBlue.shade700,
                           ),
                         ),
                         if (_isPlaying)
                           Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: DS.spacing8),
                             child: Text(
                               '$_completedRounds / $_totalRounds',
                               style: TextStyle(
@@ -232,7 +235,8 @@ class _BreathingToolState extends State<BreathingTool>
                 children: List.generate(_durations.length, (index) {
                   final isSelected = _selectedDurationIndex == index;
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: DS.spacing8),
                     child: InkWell(
                       onTap: () {
                         setState(() {
@@ -243,10 +247,12 @@ class _BreathingToolState extends State<BreathingTool>
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8,),
+                          horizontal: DS.spacing16,
+                          vertical: DS.spacing8,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.indigo
+                              ? DS.prismBlue
                               : DS.brandPrimary.shade100,
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -254,7 +260,7 @@ class _BreathingToolState extends State<BreathingTool>
                           '${_durations[index]}分钟',
                           style: TextStyle(
                             color: isSelected
-                                ? DS.brandPrimary
+                                ? DS.textOnPrimary
                                 : DS.brandPrimary.shade600,
                             fontWeight: FontWeight.w500,
                           ),
@@ -275,7 +281,8 @@ class _BreathingToolState extends State<BreathingTool>
               customGradient: _isPlaying
                   ? DS.warningGradient
                   : LinearGradient(
-                      colors: [Colors.indigo, DS.brandPrimaryConst],),
+                      colors: [DS.prismBlue, DS.brandPrimaryConst],
+                    ),
             ),
           ],
         ),

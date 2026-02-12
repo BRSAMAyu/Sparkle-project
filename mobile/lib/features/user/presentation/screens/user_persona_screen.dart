@@ -52,9 +52,10 @@ class UserPersonaScreen extends ConsumerWidget {
     final fragments =
         (layer3['fragments'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 
-    return ListView(
-      padding: const EdgeInsets.all(DS.spacing16),
-      children: [
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.spacing16),
+        children: [
         _buildOnboardingBanner(context, completed),
         _sectionTitle('L1 用户声明'),
         _subSectionList(
@@ -110,6 +111,7 @@ class UserPersonaScreen extends ConsumerWidget {
           fragments.map(_readonlyRow).toList(),
         ),
       ],
+      ),
     );
   }
 
@@ -126,7 +128,7 @@ class UserPersonaScreen extends ConsumerWidget {
           child: Row(
             children: [
               Icon(Icons.assignment_turned_in_outlined,
-                  color: DS.brandPrimaryConst),
+                  color: DS.brandPrimaryConst,),
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: Text(
@@ -137,7 +139,7 @@ class UserPersonaScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              TextButton(
+              SparkleButton.ghost(
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -145,10 +147,7 @@ class UserPersonaScreen extends ConsumerWidget {
                     ),
                   );
                 },
-                child: Text(
-                  completed ? '再次填写' : '开始',
-                  style: TextStyle(color: DS.brandPrimaryConst),
-                ),
+                label: completed ? '再次填写' : '开始',
               ),
             ],
           ),
@@ -167,48 +166,6 @@ class UserPersonaScreen extends ConsumerWidget {
           ),
         ),
       );
-
-  Widget _subSection(String title, List<String> items) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePrimaryElevated,
-          borderRadius: DS.borderRadius12,
-          boxShadow: DS.shadowSm,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.textSecondary,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              if (items.isEmpty)
-                Text(
-                  '暂无数据',
-                  style: TextStyle(color: DS.neutral500),
-                )
-              else
-                ...items.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: DS.spacing6),
-                    child: Text(
-                      '• $item',
-                      style: TextStyle(color: DS.textPrimary),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
 
   Widget _subSectionList(String title, List<Widget> items) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing16),
@@ -261,14 +218,14 @@ class UserPersonaScreen extends ConsumerWidget {
           child: _metadataRow('$key: ${_formatValue(value)}', meta),
         ),
         if (canEdit)
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => _openEditPreferenceDialog(ref, context, key, value),
-            child: const Text('编辑'),
+            label: '编辑',
           ),
         if (canRollback)
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => _confirmRollback(ref, context, key),
-            child: const Text('回滚'),
+            label: '回滚',
           ),
       ],
     );
@@ -290,30 +247,12 @@ class UserPersonaScreen extends ConsumerWidget {
           child: _metadataRow('$title ($status)', meta),
         ),
         if (goalId != null)
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => _openEditGoalDialog(ref, context, goalId, title, status),
-            child: const Text('编辑'),
+            label: '编辑',
           ),
       ],
     );
-  }
-
-  List<String> _formatCapabilities(Map<String, dynamic> caps) {
-    if (caps.isEmpty) return [];
-    return caps.entries.map((e) => '${e.key}: ${e.value}').toList();
-  }
-
-  String _formatPattern(Map<String, dynamic> item) {
-    final name = item['name']?.toString() ?? 'pattern';
-    final confidence = item['confidence']?.toString() ?? '';
-    return confidence.isEmpty ? name : '$name (置信度 $confidence)';
-  }
-
-  String _formatFragment(Map<String, dynamic> item) {
-    final content = item['content']?.toString() ?? '';
-    final source = item['source_type']?.toString() ?? '';
-    if (source.isEmpty) return content;
-    return '$content [$source]';
   }
 
   String _formatValue(dynamic value) {
@@ -427,7 +366,7 @@ class UserPersonaScreen extends ConsumerWidget {
             child: _metadataRow(label, metadata),
           ),
           if (canSuggest)
-            TextButton(
+            SparkleButton.ghost(
               onPressed: () => _openSuggestionDialog(
                 ref,
                 context,
@@ -435,7 +374,7 @@ class UserPersonaScreen extends ConsumerWidget {
                 fieldName: fieldName,
                 label: label,
               ),
-              child: const Text('建议修正'),
+              label: '建议修正',
             ),
         ],
       ),
@@ -482,11 +421,11 @@ class UserPersonaScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          ElevatedButton(
+          SparkleButton(
             onPressed: () async {
               await repo.submitProfileCorrection({
                 'target_type': targetType,
@@ -495,15 +434,13 @@ class UserPersonaScreen extends ConsumerWidget {
                 'reason': reasonController.text.trim(),
               });
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已提交修正建议')),
-                );
+                AppFeedback.success(context, '已提交修正建议');
               }
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
             },
-            child: const Text('提交'),
+            label: '提交',
           ),
         ],
       ),
@@ -534,18 +471,16 @@ class UserPersonaScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          ElevatedButton(
+          SparkleButton(
             onPressed: () async {
               final nextValue = controller.text.trim();
               if (nextValue.isEmpty) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入偏好值')),
-                  );
+                  AppFeedback.info(context, '请输入偏好值');
                 }
                 return;
               }
@@ -558,7 +493,7 @@ class UserPersonaScreen extends ConsumerWidget {
                 Navigator.of(context).pop();
               }
             },
-            child: const Text('保存'),
+            label: '保存',
           ),
         ],
       ),
@@ -577,13 +512,13 @@ class UserPersonaScreen extends ConsumerWidget {
         title: const Text('回滚偏好'),
         content: const Text('将偏好回滚到上一个版本，可能影响推荐效果。'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            label: '取消',
           ),
-          ElevatedButton(
+          SparkleButton.destructive(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('确认回滚'),
+            label: '确认回滚',
           ),
         ],
       ),
@@ -637,21 +572,19 @@ class UserPersonaScreen extends ConsumerWidget {
             ],
           ),
           actions: [
-            TextButton(
+            SparkleButton.ghost(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              label: '取消',
             ),
-          ElevatedButton(
-            onPressed: () async {
-              final nextTitle = controller.text.trim();
-              if (nextTitle.isEmpty) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入目标内容')),
-                  );
+            SparkleButton(
+              onPressed: () async {
+                final nextTitle = controller.text.trim();
+                if (nextTitle.isEmpty) {
+                  if (context.mounted) {
+                    AppFeedback.info(context, '请输入目标内容');
+                  }
+                  return;
                 }
-                return;
-              }
               await repo.updateGoal(
                 goalId: goalId,
                 title: nextTitle,
@@ -662,7 +595,7 @@ class UserPersonaScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('保存'),
+              label: '保存',
             ),
           ],
         ),

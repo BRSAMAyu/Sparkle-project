@@ -17,6 +17,9 @@ spec:
         image: ghcr.io/sparkle/gateway:latest
         ports:
         - containerPort: 8080
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://tempo:4317"
         envFrom:
         - secretRef:
             name: gateway-secrets

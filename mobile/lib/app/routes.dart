@@ -15,6 +15,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
 import 'package:sparkle/features/memory/memory.dart';
+import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
@@ -169,6 +170,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...UserRoutes.routes,
       ...MemoryRoutes.routes,
       ...AchievementRoutes.routes,
+      ...NotificationCenterRoutes.routes,
     ],
   );
 });

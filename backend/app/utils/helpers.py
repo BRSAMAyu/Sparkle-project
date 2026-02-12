@@ -1,12 +1,12 @@
 import os
-from typing import Iterable, Optional, Set
+from collections.abc import Iterable
 
-from fastapi import UploadFile, HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 DEFAULT_CHUNK_SIZE = 1024 * 1024  # 1MB
 
 
-def _normalize_extensions(allowed_extensions: Optional[Iterable[str]]) -> Set[str]:
+def _normalize_extensions(allowed_extensions: Iterable[str] | None) -> set[str]:
     if not allowed_extensions:
         return set()
     return {ext.lower() for ext in allowed_extensions}
@@ -14,8 +14,8 @@ def _normalize_extensions(allowed_extensions: Optional[Iterable[str]]) -> Set[st
 
 def _validate_upload(
     file: UploadFile,
-    allowed_extensions: Optional[Iterable[str]] = None,
-    allowed_content_types: Optional[Iterable[str]] = None,
+    allowed_extensions: Iterable[str] | None = None,
+    allowed_content_types: Iterable[str] | None = None,
 ) -> str:
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing filename")
@@ -38,8 +38,8 @@ async def save_upload_file(
     file: UploadFile,
     destination: str,
     max_size: int,
-    allowed_extensions: Optional[Iterable[str]] = None,
-    allowed_content_types: Optional[Iterable[str]] = None,
+    allowed_extensions: Iterable[str] | None = None,
+    allowed_content_types: Iterable[str] | None = None,
 ) -> int:
     _validate_upload(file, allowed_extensions, allowed_content_types)
     os.makedirs(os.path.dirname(destination), exist_ok=True)
@@ -71,8 +71,8 @@ async def save_upload_file(
 async def read_upload_file(
     file: UploadFile,
     max_size: int,
-    allowed_extensions: Optional[Iterable[str]] = None,
-    allowed_content_types: Optional[Iterable[str]] = None,
+    allowed_extensions: Iterable[str] | None = None,
+    allowed_content_types: Iterable[str] | None = None,
 ) -> bytes:
     _validate_upload(file, allowed_extensions, allowed_content_types)
 

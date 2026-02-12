@@ -2,10 +2,11 @@
 Analytics Models
 数据分析相关模型
 """
-from sqlalchemy import Column, Integer, Float, Date, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
+
 
 class UserDailyMetric(BaseModel):
     """
@@ -21,7 +22,7 @@ class UserDailyMetric(BaseModel):
     total_focus_minutes = Column(Integer, default=0) # 当日总专注时间
     tasks_completed = Column(Integer, default=0) # 完成任务数
     tasks_created = Column(Integer, default=0) # 创建任务数
-    
+
     # 学习指标 (Learning)
     nodes_studied = Column(Integer, default=0) # 学习的不同节点数
     mastery_gained = Column(Float, default=0.0) # 当日获得的掌握度增量总和
@@ -31,10 +32,10 @@ class UserDailyMetric(BaseModel):
     # 基于 CognitiveFragment 的聚合
     average_mood = Column(Float, nullable=True) # 平均情绪值 (如果有量化)
     anxiety_score = Column(Float, default=0.0) # 焦虑指数 (0-1)
-    
+
     # 系统交互 (System)
     chat_messages_count = Column(Integer, default=0) # 发送的消息数
-    
+
     # 关系
     user = relationship("User", backref="daily_metrics")
 

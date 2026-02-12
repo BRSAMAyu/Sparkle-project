@@ -1,14 +1,14 @@
 """Intent generation for adaptive interventions."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
 class InterventionIntent:
     intent_type: str
     urgency: float
-    context_variables: Dict[str, Any] = field(default_factory=dict)
+    context_variables: dict[str, Any] = field(default_factory=dict)
 
 
 class IntentGenerator:
@@ -18,9 +18,9 @@ class IntentGenerator:
         self,
         trigger_event: str,
         urgency: float,
-        context: Dict[str, Any],
-        edge_state: Dict[str, Any],
-        scaffolding_state: Dict[str, Any],
+        context: dict[str, Any],
+        edge_state: dict[str, Any],
+        scaffolding_state: dict[str, Any],
     ) -> InterventionIntent:
         intent_type = self._map_trigger(trigger_event)
         variables = {

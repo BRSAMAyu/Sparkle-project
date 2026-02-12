@@ -4,11 +4,10 @@
 定义知识星图的顶点和边模型
 """
 
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
-import uuid
+from enum import Enum
+from typing import Any
 
 
 class VertexType(Enum):
@@ -39,11 +38,11 @@ class KnowledgeVertex:
     description: str
     importance: int = 1
     sector: str = "VOID"
-    keywords: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     source_type: str = "seed"
     created_at: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -65,7 +64,7 @@ class UserVertex:
     flame_level: int = 1
     created_at: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "username": self.username,
@@ -84,7 +83,7 @@ class SubjectVertex:
     hex_color: str
     glow_color: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -103,7 +102,7 @@ class RelationEdge:
     strength: float = 0.5
     created_by: str = "seed"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "strength": str(self.strength),
             "created_by": self.created_by
@@ -118,7 +117,7 @@ class UserInterestEdge:
     strength: float = 0.5
     last_accessed: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "strength": str(self.strength),
             "last_accessed": self.last_accessed.isoformat()
@@ -134,7 +133,7 @@ class StudyRecordEdge:
     mastery_delta: float = 0.0
     last_study: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "study_minutes": str(self.study_minutes),
             "mastery_delta": str(self.mastery_delta),
@@ -145,27 +144,27 @@ class StudyRecordEdge:
 @dataclass
 class GraphQueryResult:
     """图查询结果"""
-    nodes: List[Dict[str, Any]]
-    edges: List[Dict[str, Any]]
-    path: Optional[List[str]] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    nodes: list[dict[str, Any]]
+    edges: list[dict[str, Any]]
+    path: list[str] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class GraphSchema:
     """图谱 Schema 管理器"""
 
     @staticmethod
-    def get_vertex_labels() -> List[str]:
+    def get_vertex_labels() -> list[str]:
         """获取所有顶点标签"""
         return [v.value for v in VertexType]
 
     @staticmethod
-    def get_edge_labels() -> List[str]:
+    def get_edge_labels() -> list[str]:
         """获取所有边标签"""
         return [e.value for e in EdgeType]
 
     @staticmethod
-    def get_sector_mapping() -> Dict[str, Dict[str, str]]:
+    def get_sector_mapping() -> dict[str, dict[str, str]]:
         """6+1 星域映射"""
         return {
             "COSMOS": {
@@ -213,7 +212,7 @@ class GraphSchema:
         }
 
     @staticmethod
-    def get_edge_descriptions() -> Dict[str, str]:
+    def get_edge_descriptions() -> dict[str, str]:
         """边类型描述"""
         return {
             "PREREQUISITE": "前置依赖 - 学习A需要先掌握B",

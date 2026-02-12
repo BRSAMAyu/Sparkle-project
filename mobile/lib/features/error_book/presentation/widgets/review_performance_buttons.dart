@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 复习性能评价按钮组
 ///
@@ -24,7 +25,7 @@ class ReviewPerformanceButtons extends StatelessWidget {
                 ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.spacing16),
           Row(
             children: [
               Expanded(
@@ -32,31 +33,31 @@ class ReviewPerformanceButtons extends StatelessWidget {
                   performance: 'forgotten',
                   label: '忘记了',
                   icon: Icons.close,
-                  color: Colors.red,
+                  color: DS.error,
                   description: '下次会提前复习',
                   isLoading: isLoading,
                   onTap: () => onPerformanceSelected('forgotten'),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.spacing12),
               Expanded(
                 child: _PerformanceButton(
                   performance: 'fuzzy',
                   label: '有点模糊',
                   icon: Icons.remove,
-                  color: Colors.orange,
+                  color: DS.warningLight,
                   description: '保持复习间隔',
                   isLoading: isLoading,
                   onTap: () => onPerformanceSelected('fuzzy'),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.spacing12),
               Expanded(
                 child: _PerformanceButton(
                   performance: 'remembered',
                   label: '记住了',
                   icon: Icons.check,
-                  color: Colors.green,
+                  color: DS.success,
                   description: '延长复习间隔',
                   isLoading: isLoading,
                   onTap: () => onPerformanceSelected('remembered'),
@@ -97,7 +98,10 @@ class _PerformanceButton extends StatelessWidget {
         onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          padding: const EdgeInsets.symmetric(
+            vertical: DS.spacing16,
+            horizontal: DS.spacing12,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(12),
@@ -109,7 +113,7 @@ class _PerformanceButton extends StatelessWidget {
                 color: color,
                 size: 32,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.spacing8),
               Text(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -118,7 +122,7 @@ class _PerformanceButton extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: DS.spacing4),
               Text(
                 description,
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -177,7 +181,7 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.spacing8),
             Text(
               '根据你的评价，系统会智能调整下次复习时间',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -185,34 +189,34 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.spacing24),
             _PerformanceOption(
               performance: 'remembered',
               label: '完全记住了 ✓',
               description: '能准确回忆并理解解题思路',
-              color: Colors.green,
+              color: DS.success,
               onTap: () => onPerformanceSelected('remembered'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.spacing12),
             _PerformanceOption(
               performance: 'fuzzy',
               label: '有点模糊 ≈',
               description: '大致记得，但细节不够清晰',
-              color: Colors.orange,
+              color: DS.warningLight,
               onTap: () => onPerformanceSelected('fuzzy'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.spacing12),
             _PerformanceOption(
               performance: 'forgotten',
               label: '完全忘记了 ✗',
               description: '想不起来或记错了',
-              color: Colors.red,
+              color: DS.error,
               onTap: () => onPerformanceSelected('forgotten'),
             ),
-            const SizedBox(height: 16),
-            TextButton(
+            const SizedBox(height: DS.spacing16),
+            SparkleButton.ghost(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              label: '取消',
             ),
           ],
         ),
@@ -246,7 +250,7 @@ class _PerformanceOption extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
             borderRadius: BorderRadius.circular(12),
@@ -266,7 +270,7 @@ class _PerformanceOption extends StatelessWidget {
                   size: 28,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: DS.spacing16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,7 +282,7 @@ class _PerformanceOption extends StatelessWidget {
                         color: color,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: DS.spacing4),
                     Text(
                       description,
                       style: theme.textTheme.bodySmall?.copyWith(

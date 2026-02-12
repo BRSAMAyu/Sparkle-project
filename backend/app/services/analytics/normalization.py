@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 
 class BehaviorNormalizer:
@@ -8,7 +8,7 @@ class BehaviorNormalizer:
     """
 
     @staticmethod
-    def normalize(payload: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize(payload: dict[str, Any]) -> dict[str, Any]:
         duration_ms = payload.get("duration_ms")
         time_spent_ms = payload.get("time_spent_ms")
         device_score = payload.get("device_performance_score", 0.5)

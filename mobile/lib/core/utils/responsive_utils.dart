@@ -10,25 +10,23 @@ class ResponsiveUtils {
 
   /// Returns true if the screen width is mobile scale
   static bool isMobile(BuildContext context) =>
-      MediaQuery.of(context).size.width < DS.breakpointTablet;
+      ResponsiveSystem.isMobile(context);
 
   /// Returns true if the screen width is tablet scale
-  static bool isTablet(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    return width >= DS.breakpointTablet && width < DS.breakpointDesktop;
-  }
+  static bool isTablet(BuildContext context) =>
+      ResponsiveSystem.isTablet(context);
 
   /// Returns true if the screen width is desktop scale
   static bool isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= DS.breakpointDesktop;
+      ResponsiveSystem.isDesktop(context);
 
   /// Returns the current screen width
   static double screenWidth(BuildContext context) =>
-      MediaQuery.of(context).size.width;
+      ResponsiveSystem.width(context);
 
   /// Returns the current screen height
   static double screenHeight(BuildContext context) =>
-      MediaQuery.of(context).size.height;
+      ResponsiveSystem.height(context);
 
   /// Returns true if the current platform is mobile (iOS or Android)
   static bool get isMobilePlatform {

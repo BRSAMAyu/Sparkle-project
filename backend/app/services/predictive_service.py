@@ -8,18 +8,18 @@ Predictive Learning Intelligence Service - 预测学习智能服务
 - 辍学风险检测
 """
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta, timezone
-from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from loguru import logger
 import statistics
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
 
-from app.models.galaxy import UserNodeStatus, KnowledgeNode
-from app.models.user import User
-from app.models.tasks import Task
+from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.study_records import StudyRecord
+from app.models.tasks import Task
 
 
 class EngagementForecast:
@@ -28,7 +28,7 @@ class EngagementForecast:
         self,
         next_active_time: datetime,
         confidence: float,
-        recommended_intervention: Optional[str] = None,
+        recommended_intervention: str | None = None,
         risk_level: str = "low"
     ):
         self.next_active_time = next_active_time
@@ -52,7 +52,7 @@ class DifficultyPrediction:
         topic_id: UUID,
         topic_name: str,
         predicted_difficulty: float,  # 0-1
-        suggested_prerequisites: List[str],
+        suggested_prerequisites: list[str],
         estimated_time_hours: float
     ):
         self.topic_id = topic_id
@@ -99,7 +99,7 @@ class PredictiveService:
         简化版本：基于历史平均间隔 + 时间模式
         """
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # 1. 获取最近30天的学习记录
             query = (
@@ -176,23 +176,23 @@ class PredictiveService:
         except Exception as e:
             logger.error(f"参与度预测失败: {e}")
             return EngagementForecast(
-                next_active_time=datetime.now(timezone.utc) + timedelta(days=1),
+                next_active_time=datetime.now(UTC) + timedelta(days=1),
                 confidence=0.0,
                 recommended_intervention="预测失败",
                 risk_level="unknown"
             )
 
-    def _analyze_weekday_pattern(self, records: List[StudyRecord]) -> Dict[int, int]:
+    def _analyze_weekday_pattern(self, records: list[StudyRecord]) -> dict[int, int]:
         """分析星期模式 (0=Monday, 6=Sunday)"""
-        pattern = {i: 0 for i in range(7)}
+        pattern = dict.fromkeys(range(7), 0)
         for record in records:
             weekday = record.created_at.weekday()
             pattern[weekday] += 1
         return pattern
 
-    def _analyze_hour_pattern(self, records: List[StudyRecord]) -> Dict[int, int]:
+    def _analyze_hour_pattern(self, records: list[StudyRecord]) -> dict[int, int]:
         """分析小时模式 (0-23)"""
-        pattern = {i: 0 for i in range(24)}
+        pattern = dict.fromkeys(range(24), 0)
         for record in records:
             hour = record.created_at.hour
             pattern[hour] += 1
@@ -201,8 +201,8 @@ class PredictiveService:
     def _adjust_to_pattern(
         self,
         predicted_time: datetime,
-        weekday_pattern: Dict[int, int],
-        hour_pattern: Dict[int, int]
+        weekday_pattern: dict[int, int],
+        hour_pattern: dict[int, int]
     ) -> datetime:
         """根据模式调整预测时间"""
         # 找到最常见的星期和时间
@@ -319,14 +319,14 @@ class PredictiveService:
                 estimated_time_hours=10.0
             )
 
-    async def recommend_optimal_time(self, user_id: UUID) -> Dict[str, Any]:
+    async def recommend_optimal_time(self, user_id: UUID) -> dict[str, Any]:
         """
         推荐最佳学习时间
 
         基于历史学习效果（掌握度提升最快的时间段）
         """
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # 获取最近30天的学习记录
             query = (
@@ -400,7 +400,7 @@ class PredictiveService:
                 "reason": f"推荐失败: {str(e)}"
             }
 
-    async def detect_dropout_risk(self, user_id: UUID) -> Dict[str, Any]:
+    async def detect_dropout_risk(self, user_id: UUID) -> dict[str, Any]:
         """
         辍学风险检测
 
@@ -411,7 +411,7 @@ class PredictiveService:
         4. 掌握度增长缓慢
         """
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # 1. 最近活跃度
             recent_7d_query = select(func.count(StudyRecord.id)).where(

@@ -10,16 +10,19 @@ class PlanEditScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.editPlan),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
+      appBar: AppBar(
+        title: Text(l10n.editPlan),
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
         ),
-        body: Center(
+      ),
+      body: ContentConstraint(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -41,10 +44,13 @@ class PlanEditScreen extends StatelessWidget {
               ),
               const SizedBox(height: DS.xl),
               SparkleButton.primary(
-                  label: l10n.back, onPressed: () => context.pop(),),
+                label: l10n.back,
+                onPressed: () => context.pop(),
+              ),
             ],
           ),
         ),
-      );
+      ),
+    );
   }
 }

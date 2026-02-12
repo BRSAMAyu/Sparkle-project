@@ -3,14 +3,16 @@ gRPC Auth Interceptors
 """
 import grpc
 from loguru import logger
+
 from app.core.security import decode_token
+
 
 class AuthInterceptor(grpc.aio.ServerInterceptor):
     """
     gRPC Server Interceptor for JWT Authentication
     Handles both string and bytes metadata keys/values
     """
-    
+
     async def intercept_service(self, continuation, handler_call_details):
         method = handler_call_details.method
         if "grpc.reflection" in method:
@@ -27,7 +29,7 @@ class AuthInterceptor(grpc.aio.ServerInterceptor):
 
         # Allow internal service-to-service communication with INTERNAL_API_KEY
         internal_api_key = metadata.get("x-internal-api-key")
-        
+
         # Check for Internal API Key (Service-to-Service)
         if internal_api_key:
             from app.config import settings

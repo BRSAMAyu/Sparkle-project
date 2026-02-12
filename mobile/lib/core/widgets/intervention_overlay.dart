@@ -1,15 +1,18 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/core/widgets/card_intervention.dart';
 import 'package:sparkle/core/widgets/modal_intervention.dart';
 import 'package:sparkle/core/widgets/toast_intervention.dart';
 
 class InterventionOverlay extends StatelessWidget {
-
   const InterventionOverlay({
-    required this.intervention, required this.onAction, required this.onDismiss, super.key,
+    required this.intervention,
+    required this.onAction,
+    required this.onDismiss,
+    super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;
@@ -48,7 +51,7 @@ class InterventionOverlay extends StatelessWidget {
     return GestureDetector(
       onTap: onDismiss,
       child: ColoredBox(
-        color: Colors.black.withValues(alpha: 0.35),
+        color: DS.textPrimary.withValues(alpha: 0.35),
         child: Stack(
           children: [
             Positioned.fill(

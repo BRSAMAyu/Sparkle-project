@@ -256,6 +256,10 @@ class _CustomButtonState extends State<CustomButton>
   Widget _buildPrimaryButton(BuildContext context, bool isDisabled) {
     final gradient = widget.customGradient ?? DS.primaryGradient;
 
+    // 当使用自定义渐变时，使用白色文字以确保对比度
+    // 因为大多数自定义渐变（warning/error等）都较深，白色文字更清晰
+    final useWhiteText = widget.customGradient != null;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isDisabled ? null : gradient,
@@ -264,7 +268,7 @@ class _CustomButtonState extends State<CustomButton>
         boxShadow: isDisabled ? null : DS.shadowMd,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
           borderRadius: DS.borderRadius12,
@@ -275,8 +279,8 @@ class _CustomButtonState extends State<CustomButton>
                   : DS.spacing24,
             ),
             child: _buildButtonRow(
-              iconColor: DS.brandPrimary,
-              textColor: DS.brandPrimary,
+              iconColor: useWhiteText ? DS.onBrandPrimary : DS.brandPrimary,
+              textColor: useWhiteText ? DS.onBrandPrimary : DS.brandPrimary,
               isDisabled: isDisabled,
             ),
           ),
@@ -288,7 +292,7 @@ class _CustomButtonState extends State<CustomButton>
   Widget _buildSecondaryButton(BuildContext context, bool isDisabled) =>
       DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.transparent,
+          color: DS.neutral0.withValues(alpha: 0),
           border: Border.all(
             color: isDisabled ? DS.neutral300 : DS.primaryBase,
             width: 2.0,
@@ -296,7 +300,7 @@ class _CustomButtonState extends State<CustomButton>
           borderRadius: DS.borderRadius12,
         ),
         child: Material(
-          color: Colors.transparent,
+          color: DS.neutral0.withValues(alpha: 0),
           child: InkWell(
             onTap: isDisabled ? null : widget.onPressed,
             borderRadius: DS.borderRadius12,
@@ -317,7 +321,7 @@ class _CustomButtonState extends State<CustomButton>
       );
 
   Widget _buildTextButton(BuildContext context, bool isDisabled) => Material(
-        color: Colors.transparent,
+        color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
           borderRadius: DS.borderRadius8,
@@ -348,7 +352,7 @@ class _CustomButtonState extends State<CustomButton>
         boxShadow: isDisabled ? null : DS.shadowSm,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: DS.neutral0.withValues(alpha: 0),
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
           borderRadius:

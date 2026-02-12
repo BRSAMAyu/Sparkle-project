@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class CardIntervention extends StatelessWidget {
-
   const CardIntervention({
-    required this.intervention, required this.onAction, required this.onDismiss, super.key,
+    required this.intervention,
+    required this.onAction,
+    required this.onDismiss,
+    super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;
@@ -27,7 +30,12 @@ class CardIntervention extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing20,
+            DS.spacing12,
+            DS.spacing20,
+            DS.spacing24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,25 +50,25 @@ class CardIntervention extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.md),
               Text(
                 intervention.content.renderedMessage,
                 style: theme.textTheme.bodyLarge,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
+                  SparkleButton.outline(
+                    label: actions.length > 1 ? actions[1].label : '关闭',
                     onPressed: actions.length > 1
                         ? () => onAction(actions[1].id)
                         : onDismiss,
-                    child: Text(actions.length > 1 ? actions[1].label : '关闭'),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
+                  const SizedBox(width: DS.sm),
+                  SparkleButton.primary(
+                    label: actions.first.label,
                     onPressed: () => onAction(actions.first.id),
-                    child: Text(actions.first.label),
                   ),
                 ],
               ),

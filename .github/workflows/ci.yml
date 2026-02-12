@@ -16,6 +16,9 @@ env:
   GO_VERSION: '1.22.0'
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
+  COVERAGE_THRESHOLD_GO: '4'
+  COVERAGE_THRESHOLD_PYTHON: '25'
+  COVERAGE_THRESHOLD_FLUTTER: '8'
 
 jobs:
   # ==================== JOB 1: LINT ====================
@@ -47,11 +50,14 @@ jobs:
       - name: Install Python Lint Tools
         run: pip install ruff mypy
 
+      - name: Install quality gate runtime deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Python Lint (Ruff)
         run: ruff check backend/app --output-format=github
 
       - name: Python Type Check (MyPy)
-        run: mypy backend/app --ignore-missing-imports --no-error-summary || true
+        run: mypy backend/app --ignore-missing-imports --no-error-summary
 
       # Flutter Linting
       - name: Set up Flutter
@@ -61,9 +67,15 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter Analyze
-        working-directory: mobile
-        run: flutter analyze --no-fatal-infos
+      - name: Flutter Analyze Gate
+        run: |
+          python3 scripts/check_flutter_analyze_gate.py \
+            --project-dir mobile \
+            --budget-file quality/flutter_analyze_allowlist.json \
+            --write-report quality/flutter_analyze_report_ci.json
+
+      - name: Technical Debt Budget Gate
+        run: python3 scripts/check_tech_debt_budget.py
 
   # ==================== JOB 2: BACKEND TEST ====================
   backend-test:
@@ -103,7 +115,14 @@ jobs:
         working-directory: backend/gateway
         run: |
           go test -v -race -coverprofile=coverage.out ./...
-          go tool cover -func=coverage.out
+          go tool cover -func=coverage.out | tee coverage.txt
+
+      - name: Enforce Go Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind go \
+            --report backend/gateway/coverage.txt \
+            --threshold "${{ env.COVERAGE_THRESHOLD_GO }}"
 
       - name: Upload Go Coverage
         uses: codecov/codecov-action@v4
@@ -140,6 +159,16 @@ jobs:
         run: |
           pytest backend/tests -v --cov=backend/app --cov-report=xml
 
+      - name: OpenAPI Contract Check
+        run: python3 scripts/check_openapi_contract.py
+
+      - name: Enforce Python Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind python \
+            --report coverage.xml \
+            --threshold "${{ env.COVERAGE_THRESHOLD_PYTHON }}"
+
       - name: Upload Python Coverage
         uses: codecov/codecov-action@v4
         with:
@@ -169,6 +198,13 @@ jobs:
       - name: Run Tests with Coverage
         working-directory: mobile
         run: flutter test --coverage
+
+      - name: Enforce Flutter Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind flutter \
+            --report mobile/coverage/lcov.info \
+            --threshold "${{ env.COVERAGE_THRESHOLD_FLUTTER }}"
 
       - name: Upload Flutter Coverage
         uses: codecov/codecov-action@v4
@@ -217,7 +253,7 @@ jobs:
       - name: Python Safety Check
         run: |
           pip install safety
-          safety check -r backend/requirements.txt --full-report || true
+          safety check -r backend/requirements.txt --full-report
 
   # ==================== JOB 5: DB SCHEMA CHECK ====================
   db-schema-check:
@@ -281,7 +317,7 @@ jobs:
   build:
     name: Build Artifacts
     runs-on: ubuntu-latest
-    needs: [backend-test, flutter-test, security-scan, db-schema-check]
+    needs: [backend-test, flutter-test, security-scan, db-schema-check, proto-check]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4
@@ -375,14 +411,64 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: latest
+      - name: Detect changed proto files
+        id: proto_changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${BASE_REF}" --depth=1
+            CHANGED_PROTO=$(git diff --name-only "origin/${BASE_REF}"...HEAD -- 'proto/*.proto')
+          else
+            CHANGED_PROTO=$(git diff --name-only HEAD~1...HEAD -- 'proto/*.proto' || true)
+            if [ -z "$CHANGED_PROTO" ]; then
+              CHANGED_PROTO="(none)"
+            fi
+          fi
+          echo "changed_proto<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED_PROTO" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ -n "$CHANGED_PROTO" ] && [ "$CHANGED_PROTO" != "(none)" ]; then
+            echo "has_proto_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_proto_changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Buf Lint
-        run: buf lint
+      - name: Build Proto Toolchain Image
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: make proto-tools-build
 
       - name: Buf Breaking Change Detection
-        if: github.event_name == 'pull_request'
-        run: buf breaking --against '.git#branch=main'
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+      - name: Enforce Deprecated Removal Milestones
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: python3 scripts/check_proto_deprecated_windows.py
+
+      - name: Enforce Generated Code Consistency
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh check-generated
+
+      - name: Enforce Proto Migration Notes
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -q '^docs/engineering/proto_dual_stack_migration.md$'; then
+            echo "Proto files changed but migration guide was not updated."
+            echo "Changed proto files:"
+            echo "${{ steps.proto_changes.outputs.changed_proto }}"
+            exit 1
+          fi
+
+      - name: Enforce Proto ADR Update
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -Eq '^docs/adr/.*proto.*\.md$'; then
+            echo "Proto files changed but no proto ADR was updated."
+            echo "Please add or update an ADR file under docs/adr/ with 'proto' in file name."
+            exit 1
+          fi

@@ -3,8 +3,7 @@ Empty Capsule Push Strategy
 
 当用户没有未读胶囊时触发异步生成
 """
-from typing import Dict, Any
-from uuid import UUID
+from typing import Any
 
 from app.models.user import User
 from app.services.personalization import PushPolicyProfile
@@ -42,7 +41,7 @@ class EmptyCapsuleStrategy(PushStrategy):
         await self._schedule_capsule_generation(user, policy)
         return True
 
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         """
         返回上下文数据
         """
@@ -57,8 +56,9 @@ class EmptyCapsuleStrategy(PushStrategy):
 
         使用 Celery 异步任务生成胶囊
         """
-        from app.core.celery_app import celery_app
         from loguru import logger
+
+        from app.core.celery_app import celery_app
 
         # 获取用户偏好
         from app.services.personalization.preference_service import PreferenceService

@@ -22,7 +22,11 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPatterns();
+    // 🔧 Riverpod修复：使用addPostFrameCallback在widget构建完成后加载数据
+    // 避免在build过程中修改provider状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPatterns();
+    });
   }
 
   Future<void> _loadPatterns() async {
@@ -39,29 +43,32 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
           gradient: DS.deepSpaceGradient,
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Custom app bar
-              _buildAppBar(context),
+          child: ContentConstraint(
+            child: Column(
+              children: [
+                // Custom app bar
+                _buildAppBar(context),
 
-              // Content
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadPatterns,
-                  child: cognitiveState.isLoading &&
-                          cognitiveState.patterns.isEmpty
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                DS.brandPrimary70,),
-                          ),
-                        )
-                      : cognitiveState.patterns.isEmpty
-                          ? _buildEmptyState()
-                          : _buildPatternList(cognitiveState.patterns),
+                // Content
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadPatterns,
+                    child: cognitiveState.isLoading &&
+                            cognitiveState.patterns.isEmpty
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                DS.brandPrimary70,
+                              ),
+                            ),
+                          )
+                        : cognitiveState.patterns.isEmpty
+                            ? _buildEmptyState()
+                            : _buildPatternList(cognitiveState.patterns),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -69,12 +76,19 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing8,
+          DS.spacing8,
+          DS.spacing16,
+          DS.spacing16,
+        ),
         child: Row(
           children: [
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
+            SparkleIconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
             ),
             Expanded(
               child: Text(
@@ -82,7 +96,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ),
@@ -127,7 +141,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: DS.sm),
@@ -146,10 +160,10 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 
   Widget _buildPatternList(List<BehaviorPatternModel> patterns) =>
       ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         itemCount: patterns.length,
         itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: DS.spacing16),
           child: _PatternCard(pattern: patterns[index]),
         ),
       );
@@ -288,26 +302,13 @@ class _PatternCard extends StatelessWidget {
                   // Action Button (Phase 6.2)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton.icon(
+                    child: SparkleButton.ghost(
+                      label: '立即行动',
                       onPressed: () {
                         // Smart routing based on pattern type could be added here
                         context.push('/focus');
                       },
-                      icon: Icon(Icons.arrow_forward,
-                          size: 16, color: DS.brandPrimary,),
-                      label: Text(
-                        '立即行动',
-                        style: TextStyle(
-                            color: DS.brandPrimary,
-                            fontWeight: FontWeight.bold,),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8,),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),),
-                      ),
+                      icon: const Icon(Icons.arrow_forward),
                     ),
                   ),
                 ],

@@ -38,6 +38,14 @@ subprojects {
         }
     }
 
+    // Ensure isar_flutter_libs is compiled with a high enough SDK for android:attr/lStar
+    project.plugins.withId("com.android.library") {
+        if (project.name == "isar_flutter_libs") {
+            val android = project.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
+            android?.compileSdkVersion(36)
+        }
+    }
+
     project.tasks.whenTaskAdded {
         if (name == "processDebugManifest" || name == "processReleaseManifest") {
             (this as? com.android.build.gradle.tasks.ProcessLibraryManifest)?.let { task ->

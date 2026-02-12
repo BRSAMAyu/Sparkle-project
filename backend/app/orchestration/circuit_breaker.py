@@ -6,15 +6,18 @@ Responsibilities:
 2. Trip to direct mode when failure rate exceeds threshold
 3. Auto-recovery mechanism (half-open state)
 """
-from typing import Optional, Dict, Any
-from loguru import logger
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-import asyncio
 import json
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+
+from loguru import logger
 
 from app.orchestration.schemas import CircuitBreakerState
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CircuitState(Enum):
@@ -47,7 +50,7 @@ class CircuitBreaker:
     def __init__(
         self,
         name: str,
-        config: Optional[CircuitBreakerConfig] = None,
+        config: CircuitBreakerConfig | None = None,
         redis_client=None
     ):
         self.name = name
@@ -58,8 +61,8 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._failure_count = 0
         self._success_count = 0
-        self._last_failure_time: Optional[datetime] = None
-        self._last_state_change = datetime.utcnow()
+        self._last_failure_time: datetime | None = None
+        self._last_state_change = _utcnow()
         self._opened_count = 0
 
         # Sliding window (for failure rate calculation)
@@ -116,7 +119,7 @@ class CircuitBreaker:
             opened_count=self._opened_count
         )
 
-    async def allow_request(self) -> tuple[bool, Optional[str]]:
+    async def allow_request(self) -> tuple[bool, str | None]:
         """Check if request is allowed
 
         Returns:
@@ -136,14 +139,13 @@ class CircuitBreaker:
         self._success_count += 1
 
         # Update sliding window
-        self._result_window.append((datetime.utcnow(), True))
+        self._result_window.append((_utcnow(), True))
         self._trim_window()
 
         # HALF_OPEN state: consecutive success reaches threshold -> CLOSED
-        if self._state == CircuitState.HALF_OPEN:
-            if self._success_count >= self.config.success_threshold:
-                await self._transition_to(CircuitState.CLOSED, "success_threshold_reached")
-                logger.info(f"CircuitBreaker '{self.name}' recovered to CLOSED")
+        if self._state == CircuitState.HALF_OPEN and self._success_count >= self.config.success_threshold:
+            await self._transition_to(CircuitState.CLOSED, "success_threshold_reached")
+            logger.info(f"CircuitBreaker '{self.name}' recovered to CLOSED")
 
         # CLOSED state: reset failure count
         if self._state == CircuitState.CLOSED:
@@ -151,13 +153,13 @@ class CircuitBreaker:
 
         await self.save_state()
 
-    async def on_failure(self, error: Optional[str] = None):
+    async def on_failure(self, error: str | None = None):
         """Record failure"""
         self._failure_count += 1
-        self._last_failure_time = datetime.utcnow()
+        self._last_failure_time = _utcnow()
 
         # Update sliding window
-        self._result_window.append((datetime.utcnow(), False))
+        self._result_window.append((_utcnow(), False))
         self._trim_window()
 
         # Check if should trip
@@ -193,7 +195,7 @@ class CircuitBreaker:
         if not self._last_failure_time:
             return False
 
-        elapsed = (datetime.utcnow() - self._last_failure_time).total_seconds() * 1000
+        elapsed = (_utcnow() - self._last_failure_time).total_seconds() * 1000
         return elapsed >= self.config.timeout_ms
 
     def _calculate_failure_rate(self) -> float:
@@ -206,7 +208,7 @@ class CircuitBreaker:
 
     def _trim_window(self):
         """Trim sliding window"""
-        cutoff = datetime.utcnow() - timedelta(seconds=60)
+        cutoff = _utcnow() - timedelta(seconds=60)
         self._result_window = [
             (ts, success) for ts, success in self._result_window
             if ts > cutoff
@@ -220,7 +222,7 @@ class CircuitBreaker:
         """Transition to new state"""
         old_state = self._state
         self._state = new_state
-        self._last_state_change = datetime.utcnow()
+        self._last_state_change = _utcnow()
 
         if new_state == CircuitState.OPEN:
             self._opened_count += 1
@@ -263,7 +265,7 @@ class CircuitBreaker:
         self._failure_count = 0
         self._success_count = 0
         self._last_failure_time = None
-        self._last_state_change = datetime.utcnow()
+        self._last_state_change = _utcnow()
         self._result_window.clear()
 
 
@@ -271,17 +273,17 @@ class CircuitBreakerRegistry:
     """Circuit breaker registry"""
 
     def __init__(self):
-        self._breakers: Dict[str, CircuitBreaker] = {}
+        self._breakers: dict[str, CircuitBreaker] = {}
 
     def register(self, breaker: CircuitBreaker):
         """Register a circuit breaker"""
         self._breakers[breaker.name] = breaker
 
-    def get(self, name: str) -> Optional[CircuitBreaker]:
+    def get(self, name: str) -> CircuitBreaker | None:
         """Get circuit breaker by name"""
         return self._breakers.get(name)
 
-    def get_all_states(self) -> Dict[str, CircuitBreakerState]:
+    def get_all_states(self) -> dict[str, CircuitBreakerState]:
         """Get all circuit breaker states"""
         return {
             name: breaker.get_state()

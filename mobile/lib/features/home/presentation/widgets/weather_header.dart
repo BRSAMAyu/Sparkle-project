@@ -41,7 +41,7 @@ class WeatherHeader extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? DS.textSecondary : DS.neutral700,
+                        color: DS.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -52,9 +52,7 @@ class WeatherHeader extends ConsumerWidget {
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isDark
-                        ? DS.textSecondary.withValues(alpha: 0.6)
-                        : DS.neutral600.withValues(alpha: 0.8),
+                    color: DS.textSecondary.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -66,11 +64,12 @@ class WeatherHeader extends ConsumerWidget {
   }
 
   LinearGradient _getWeatherGradient(String type, bool isDark) {
+    // Use surface colors from design system for proper dark mode support
     switch (type) {
       case 'sunny':
         return LinearGradient(
           colors: isDark
-              ? [DS.deepSpaceStart, DS.deepSpaceEnd, DS.neutral700]
+              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
               : [DS.neutral50, DS.neutral100, DS.neutral200],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -78,7 +77,7 @@ class WeatherHeader extends ConsumerWidget {
       case 'cloudy':
         return LinearGradient(
           colors: isDark
-              ? [DS.neutral900, DS.neutral800, DS.neutral700]
+              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
               : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -86,7 +85,7 @@ class WeatherHeader extends ConsumerWidget {
       case 'rainy':
         return LinearGradient(
           colors: isDark
-              ? [DS.deepSpaceStart, DS.deepSpaceSurface, DS.neutral700]
+              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.surfaceSecondary]
               : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -94,7 +93,7 @@ class WeatherHeader extends ConsumerWidget {
       case 'meteor':
         return LinearGradient(
           colors: isDark
-              ? [DS.neutral900, DS.neutral800, DS.secondaryBaseDark]
+              ? [DS.surfaceAmbient, DS.surfacePrimary, DS.galaxyBackground]
               : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -102,7 +101,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         return LinearGradient(
           colors: isDark
-              ? [DS.deepSpaceStart, DS.deepSpaceEnd]
+              ? [DS.surfaceAmbient, DS.surfacePrimary]
               : [DS.neutral50, DS.neutral100],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -124,7 +123,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Icon(icon, color: DS.brandPrimary, size: 18);
+    return Icon(icon, color: DS.brandPrimaryConst, size: 18);
   }
 
   String _getWeatherTitle(String type) {

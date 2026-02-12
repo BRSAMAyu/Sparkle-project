@@ -1,32 +1,33 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from functools import lru_cache
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
 try:
     import tiktoken
 except ImportError:  # pragma: no cover - optional runtime dependency
     tiktoken = None
 
 from app.config import settings
-from app.core.context_budget import ContextBudgetScheduler
-from app.core.context_ranker import RankedItem, rank_items
 from app.core.business_metrics import (
     CONTEXT_PACK_BUILD,
-    CONTEXT_PACK_OVER_BUDGET,
     CONTEXT_PACK_INTENT,
+    CONTEXT_PACK_OVER_BUDGET,
 )
-from app.services.memory_service import MemoryService
+from app.core.context_budget import ContextBudgetScheduler
+from app.core.context_ranker import RankedItem, rank_items
+from app.core.plan_context import PlanContextBuilder
 from app.services.context_pack_telemetry_service import ContextPackTelemetryService
+from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
-from app.services.ltm_rollout_service import LtmRolloutService
-from app.core.plan_context import PlanContextBuilder
+from app.services.memory_service import MemoryService
 
 
 @lru_cache(maxsize=1)
@@ -55,8 +56,8 @@ def _serialize(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
-def _trim_list(items: List[Dict[str, Any]], budget: int) -> List[Dict[str, Any]]:
-    trimmed: List[Dict[str, Any]] = []
+def _trim_list(items: list[dict[str, Any]], budget: int) -> list[dict[str, Any]]:
+    trimmed: list[dict[str, Any]] = []
     used = 0
     for item in items:
         item_tokens = estimate_tokens(_serialize(item))
@@ -67,8 +68,8 @@ def _trim_list(items: List[Dict[str, Any]], budget: int) -> List[Dict[str, Any]]
     return trimmed
 
 
-def _trim_preferences(prefs: Dict[str, Any], budget: int) -> Dict[str, Any]:
-    trimmed: Dict[str, Any] = {}
+def _trim_preferences(prefs: dict[str, Any], budget: int) -> dict[str, Any]:
+    trimmed: dict[str, Any] = {}
     used = 0
     for key, value in prefs.items():
         item_tokens = estimate_tokens(_serialize({key: value}))
@@ -80,10 +81,10 @@ def _trim_preferences(prefs: Dict[str, Any], budget: int) -> Dict[str, Any]:
 
 
 def _trim_ranked_preferences(
-    ranked: List[RankedItem[Any]],
+    ranked: list[RankedItem[Any]],
     budget: int,
-) -> tuple[Dict[str, Any], Dict[str, float]]:
-    items: List[Dict[str, Any]] = []
+) -> tuple[dict[str, Any], dict[str, float]]:
+    items: list[dict[str, Any]] = []
     total = 0
     for entry in ranked:
         key = entry.item.pref_key
@@ -105,11 +106,11 @@ def _trim_ranked_preferences(
 
 
 def _trim_ranked_list(
-    payloads: List[Dict[str, Any]],
-    scores: Dict[str, float],
+    payloads: list[dict[str, Any]],
+    scores: dict[str, float],
     budget: int,
-) -> tuple[List[Dict[str, Any]], Dict[str, float]]:
-    entries: List[Dict[str, Any]] = []
+) -> tuple[list[dict[str, Any]], dict[str, float]]:
+    entries: list[dict[str, Any]] = []
     total = 0
     for payload in payloads:
         item_id = payload.get("id")
@@ -131,15 +132,15 @@ def _trim_ranked_list(
 
 
 def _select_with_diversity(
-    ranked: List[RankedItem[Any]],
+    ranked: list[RankedItem[Any]],
     cap: int,
     diversity_key,
-) -> List[RankedItem[Any]]:
+) -> list[RankedItem[Any]]:
     if cap <= 0:
         return []
-    selected: List[RankedItem[Any]] = []
+    selected: list[RankedItem[Any]] = []
     seen = set()
-    remaining: List[RankedItem[Any]] = []
+    remaining: list[RankedItem[Any]] = []
 
     for entry in ranked:
         key = diversity_key(entry.item)
@@ -162,17 +163,17 @@ def _select_with_diversity(
 class ContextPack:
     user_id: UUID
     intent: str
-    preferences: Dict[str, Any]
-    goals: List[Dict[str, Any]]
-    episodic_memories: List[Dict[str, Any]]
-    budgets: Dict[str, int]
-    token_usage: Dict[str, int]
-    budget_remaining: Dict[str, int]
-    pack_id: Optional[UUID] = None
-    metadata: Optional[Dict[str, Any]] = None
-    plan_context: Optional[Dict[str, Any]] = None  # PlanScope context
+    preferences: dict[str, Any]
+    goals: list[dict[str, Any]]
+    episodic_memories: list[dict[str, Any]]
+    budgets: dict[str, int]
+    token_usage: dict[str, int]
+    budget_remaining: dict[str, int]
+    pack_id: UUID | None = None
+    metadata: dict[str, Any] | None = None
+    plan_context: dict[str, Any] | None = None  # PlanScope context
 
-    def to_prompt_context(self) -> Dict[str, Any]:
+    def to_prompt_context(self) -> dict[str, Any]:
         result = {
             "preferences": self.preferences,
             "active_goals": self.goals,
@@ -196,7 +197,7 @@ class ContextPackBuilder:
     def __init__(
         self,
         db: AsyncSession,
-        scheduler: Optional[ContextBudgetScheduler] = None,
+        scheduler: ContextBudgetScheduler | None = None,
         redis=None,
     ) -> None:
         self.db = db
@@ -208,9 +209,9 @@ class ContextPackBuilder:
         self,
         user_id: UUID,
         intent: str,
-        request_id: Optional[str] = None,
-        trace_id: Optional[str] = None,
-        plan_id: Optional[UUID] = None,
+        request_id: str | None = None,
+        trace_id: str | None = None,
+        plan_id: UUID | None = None,
     ) -> ContextPack:
         rollout_enabled = True
         if settings.ENABLE_LTM_ROLLOUT:
@@ -222,7 +223,7 @@ class ContextPackBuilder:
         CONTEXT_PACK_INTENT.labels(intent=intent).inc()
 
         # Build enriched plan context with UserScope cognitive profile if plan_id is provided
-        plan_context: Optional[Dict[str, Any]] = None
+        plan_context: dict[str, Any] | None = None
         if plan_id:
             try:
                 plan_builder = PlanContextBuilder(self.db, self.redis)
@@ -248,14 +249,14 @@ class ContextPackBuilder:
         preference_records = await self.memory_service.list_preference_records(user_id)
         goals = await self.memory_service.list_active_goals(user_id)
         episodic = await self.memory_service.list_recent_episodic(user_id, limit=20)
-        pref_history: List[Any] = []
+        pref_history: list[Any] = []
         if conflict_enabled:
             pref_history = await self.memory_service.list_preference_history(user_id)
 
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
         ranking_enabled = settings.ENABLE_CONTEXT_RANKING and rollout_enabled
-        conflicts: List[Dict[str, Any]] = []
-        weights: Optional[Dict[str, float]] = None
+        conflicts: list[dict[str, Any]] = []
+        weights: dict[str, float] | None = None
         if ranking_enabled and settings.ENABLE_PERSONALIZED_RANKING and rollout_enabled:
             policy_service = MemoryRankPolicyService(self.db)
             weights = await policy_service.get_policy(intent, user_id)
@@ -443,6 +444,46 @@ class ContextPackBuilder:
         preference_source_records = resolved_pref_records if conflict_enabled else preference_records
         goal_source_records = resolved_goals if conflict_enabled else goals
         episodic_source_records = resolved_episodic if conflict_enabled else episodic
+
+        def _iso(dt_value):
+            return dt_value.isoformat() if dt_value else None
+
+        def _top_by_score(items, limit=3):
+            return sorted(items, key=lambda item: getattr(item, "evidence_score", 0.0), reverse=True)[:limit]
+
+        evidence_summary = {
+            "preferences": [
+                {
+                    "key": item.pref_key,
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                }
+                for item in _top_by_score(preference_source_records)
+            ],
+            "goals": [
+                {
+                    "id": str(item.id),
+                    "title": item.title,
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                    "target_date": _iso(item.target_date),
+                }
+                for item in _top_by_score(goal_source_records)
+            ],
+            "episodic": [
+                {
+                    "id": str(item.id),
+                    "summary": item.summary[:60],
+                    "score": item.evidence_score,
+                    "updated_at": _iso(getattr(item, "updated_at", None)),
+                    "occurred_at": _iso(item.occurred_at),
+                }
+                for item in _top_by_score(episodic_source_records)
+            ],
+        }
+
+        if evidence_summary["preferences"] or evidence_summary["goals"] or evidence_summary["episodic"]:
+            metadata["evidence_summary"] = evidence_summary
 
         pack_id = None
         if settings.ENABLE_CONTEXT_PACK_TELEMETRY:

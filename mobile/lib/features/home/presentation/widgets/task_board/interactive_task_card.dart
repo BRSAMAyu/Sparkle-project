@@ -12,7 +12,8 @@ import 'package:sparkle/shared/entities/task_model.dart';
 /// Interactive task card - expandable card with quick actions
 class InteractiveTaskCard extends ConsumerWidget {
   const InteractiveTaskCard({
-    required this.task, super.key,
+    required this.task,
+    super.key,
     this.showDueDate = true,
   });
 
@@ -33,7 +34,9 @@ class InteractiveTaskCard extends ConsumerWidget {
         children: [
           // Compact view (always visible)
           InkWell(
-            onTap: () => ref.read(taskBoardProvider.notifier).toggleTaskExpansion(task.id),
+            onTap: () => ref
+                .read(taskBoardProvider.notifier)
+                .toggleTaskExpansion(task.id),
             child: Padding(
               padding: const EdgeInsets.all(DS.spacing12),
               child: Row(
@@ -63,7 +66,8 @@ class InteractiveTaskCard extends ConsumerWidget {
                               const SizedBox(width: DS.spacing6),
                               Text(
                                 '${task.estimatedMinutes}m',
-                                style: context.sparkleTypography.labelSmall.copyWith(
+                                style: context.sparkleTypography.labelSmall
+                                    .copyWith(
                                   color: DS.textSecondary,
                                 ),
                               ),
@@ -111,89 +115,100 @@ class InteractiveTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpandedContent(BuildContext context, WidgetRef ref, TaskModel task) => Container(
-      padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing12),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: DS.border.withValues(alpha: 0.3),
+  Widget _buildExpandedContent(
+          BuildContext context, WidgetRef ref, TaskModel task) =>
+      Container(
+        padding: const EdgeInsets.fromLTRB(
+            DS.spacing12, 0, DS.spacing12, DS.spacing12),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: DS.border.withValues(alpha: 0.3),
+            ),
           ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Metadata row
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: [
-              _buildTaskTypeChip(task.type),
-              _buildPriorityChip(task.priority),
-              Text(
-                '${task.estimatedMinutes} 分钟',
-                style: context.sparkleTypography.labelSmall.copyWith(
-                  color: DS.textSecondary,
-                ),
-              ),
-              if (task.dueDate != null && showDueDate)
-                _buildDueDateChip(context, task.dueDate!),
-            ],
-          ),
-          if (task.tags.isNotEmpty) ...[
-            const SizedBox(height: DS.spacing8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Metadata row
             Wrap(
-              spacing: DS.spacing6,
-              runSpacing: DS.spacing6,
-              children: task.tags.map((tag) => Chip(
-                label: Text(
-                  tag,
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                _buildTaskTypeChip(task.type),
+                _buildPriorityChip(task.priority),
+                Text(
+                  '${task.estimatedMinutes} 分钟',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    fontSize: 10,
+                    color: DS.textSecondary,
                   ),
                 ),
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                side: BorderSide.none,
-              ),).toList(),
+                if (task.dueDate != null && showDueDate)
+                  _buildDueDateChip(context, task.dueDate!),
+              ],
             ),
-          ],
-          const SizedBox(height: DS.spacing12),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.play_arrow_rounded,
-                  label: '开始',
-                  onTap: () => context.push('/tasks/${task.id}/execute'),
-                  color: DS.success,
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.edit_rounded,
-                  label: '编辑',
-                  onTap: () => context.push('/tasks/${task.id}'),
-                  color: DS.info,
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Expanded(
-                child: _ActionButton(
-                  icon: Icons.delete_outline_rounded,
-                  label: '放弃',
-                  onTap: () => _confirmAbandon(context, ref, task),
-                  color: DS.error,
-                ),
+            if (task.tags.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing6,
+                runSpacing: DS.spacing6,
+                children: task.tags
+                    .map(
+                      (tag) => Chip(
+                        label: Text(
+                          tag,
+                          style: context.sparkleTypography.labelSmall.copyWith(
+                            fontSize: 10,
+                          ),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                        side: BorderSide.none,
+                      ),
+                    )
+                    .toList(),
               ),
             ],
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing12),
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.play_arrow_rounded,
+                    label: '开始',
+                    onTap: () {
+                      // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+                      ref.read(activeTaskProvider.notifier).state = task;
+                      context.push('/tasks/${task.id}/execute');
+                    },
+                    color: DS.success,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.edit_rounded,
+                    label: '编辑',
+                    onTap: () => context.push('/tasks/${task.id}'),
+                    color: DS.info,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.delete_outline_rounded,
+                    label: '放弃',
+                    onTap: () => _confirmAbandon(context, ref, task),
+                    color: DS.error,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildPriorityIndicator(int priority) {
     Color color;
@@ -223,6 +238,7 @@ class InteractiveTaskCard extends ConsumerWidget {
       TaskType.reflection => ('反思', DS.prismPurple),
       TaskType.social => ('社交', DS.info),
       TaskType.planning => ('规划', DS.warning),
+      TaskType.ocr => ('OCR', DS.textSecondary),
     };
 
     return Container(
@@ -289,7 +305,8 @@ class InteractiveTaskCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.push('/calendar?date=${dueDate.toIso8601String()}'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 2),
+        padding:
+            const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
           borderRadius: DS.borderRadius8,
@@ -328,22 +345,23 @@ class InteractiveTaskCard extends ConsumerWidget {
   }
 
   void _confirmAbandon(BuildContext context, WidgetRef ref, TaskModel task) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('放弃任务'),
         content: Text('确定要放弃「${task.title}」吗？'),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: '取消',
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
           ),
-          TextButton(
+          SparkleButton.destructive(
+            label: '放弃',
             onPressed: () {
               Navigator.pop(context);
-              unawaited(ref.read(taskListProvider.notifier).abandonTask(task.id));
+              unawaited(
+                  ref.read(taskListProvider.notifier).abandonTask(task.id));
             },
-            child: Text('放弃', style: TextStyle(color: DS.error)),
           ),
         ],
       ),
@@ -357,22 +375,20 @@ class _QuickCompleteButton extends ConsumerWidget {
   final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => IconButton(
-      icon: const Icon(Icons.check_circle_outline_rounded),
-      color: DS.success.withValues(alpha: 0.7),
-      iconSize: DS.iconSizeSm,
-      onPressed: () async {
-        await ref
-            .read(taskListProvider.notifier)
-            .completeTask(task.id, task.estimatedMinutes, null);
-        await ref.read(dashboardProvider.notifier).refresh();
-      },
-      tooltip: '完成任务',
-      constraints: const BoxConstraints(
-        minWidth: DS.touchTargetMinSize,
-        minHeight: DS.touchTargetMinSize,
-      ),
-    );
+  Widget build(BuildContext context, WidgetRef ref) => Tooltip(
+        message: '完成任务',
+        child: SparkleIconButton(
+          icon: const Icon(Icons.check_circle_outline_rounded),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+          onPressed: () async {
+            await ref
+                .read(taskListProvider.notifier)
+                .completeTask(task.id, task.estimatedMinutes, null);
+            await ref.read(dashboardProvider.notifier).refresh();
+          },
+        ),
+      );
 }
 
 class _ActionButton extends StatelessWidget {
@@ -390,30 +406,30 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-      onTap: onTap,
-      borderRadius: DS.borderRadius8,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: color.withValues(alpha: 0.3),
-          ),
-          borderRadius: DS.borderRadius8,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: DS.iconSizeSm, color: color),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              label,
-              style: context.sparkleTypography.labelSmall.copyWith(
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
+        onTap: onTap,
+        borderRadius: DS.borderRadius8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
             ),
-          ],
+            borderRadius: DS.borderRadius8,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: DS.iconSizeSm, color: color),
+              const SizedBox(width: DS.spacing4),
+              Text(
+                label,
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

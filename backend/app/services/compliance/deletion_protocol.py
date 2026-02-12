@@ -1,19 +1,18 @@
-from dataclasses import dataclass
-from typing import Optional
 import inspect
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.compliance.legal_hold import LegalHoldService
 from app.services.compliance.crypto_erase import CryptoEraseManager
+from app.services.compliance.legal_hold import LegalHoldService
 
 
 @dataclass
 class DeletionResult:
     allowed: bool
-    reason: Optional[str] = None
-    certificate_id: Optional[str] = None
+    reason: str | None = None
+    certificate_id: str | None = None
 
 
 class DeletionProtocol:

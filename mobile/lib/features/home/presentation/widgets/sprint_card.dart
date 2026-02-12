@@ -57,13 +57,13 @@ class SprintCard extends ConsumerWidget {
         Expanded(
           child: Center(
             child: SizedBox(
-              width: 60,
-              height: 60,
+              width: 50,
+              height: 50,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   CustomPaint(
-                    size: const Size(60, 60),
+                    size: const Size(50, 50),
                     painter: _CircularProgressPainter(
                       progress: progress,
                       isUrgent: isUrgent,
@@ -75,7 +75,7 @@ class SprintCard extends ConsumerWidget {
                       Text(
                         '$daysLeft',
                         style: context.sparkleTypography.headingMedium.copyWith(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: isUrgent ? DS.error : DS.brandPrimary,
                         ),
@@ -128,7 +128,7 @@ class SprintCard extends ConsumerWidget {
             ),
             child: Icon(
               Icons.flash_on_rounded,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               size: 20,
             ),
           ),

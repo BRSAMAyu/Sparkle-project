@@ -38,9 +38,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
   Future<void> _openFile(GroupFileInfo file) async {
     if (!file.canDownload) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('暂无下载权限')),
-      );
+      AppFeedback.info(context, '暂无下载权限');
       return;
     }
     final repo = ref.read(fileRepositoryProvider);
@@ -57,25 +55,33 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: const Text('群文件库'),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: Icon(
-                _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,),
+              _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+            ),
             onPressed: () => setState(() => _gridView = !_gridView),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: SparkleIconButton(
+        variant: ButtonVariant.primary,
+        size: DS.touchTargetMinSize,
+        icon: const Icon(Icons.upload_file_rounded),
         onPressed: () {
           showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
-            backgroundColor: Colors.transparent,
+            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
             builder: (context) => FilePickerWithPresignedUpload(
               groupId: widget.groupId,
               onUploaded: (file) async {
@@ -91,93 +97,99 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
             ),
           );
         },
-        child: const Icon(Icons.upload_file_rounded),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '搜索文件',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: isDark ? DS.neutral800 : DS.neutral100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+      body: ContentConstraint(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: DS.lg, vertical: DS.sm),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: '搜索文件',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: isDark ? DS.neutral800 : DS.neutral100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
+                onChanged: (value) => setState(() => _query = value.trim()),
               ),
-              onChanged: (value) => setState(() => _query = value.trim()),
             ),
-          ),
-          SizedBox(
-            height: 36,
-            child: FutureBuilder<List<GroupFileCategoryStat>>(
-              future: _categoriesFuture,
-              builder: (context, snapshot) {
-                final categories = snapshot.data ?? [];
-                return ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: DS.lg),
-                  children: [
-                    _buildCategoryChip('全部', null),
-                    for (final item in categories)
-                      _buildCategoryChip(item.category ?? '未分类', item.category),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: FutureBuilder<List<GroupFileInfo>>(
-              future: _filesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('加载失败: ${snapshot.error}'));
-                }
-
-                final files = (snapshot.data ?? [])
-                    .where((f) =>
-                        _query.isEmpty ||
-                        f.fileName.toLowerCase().contains(_query.toLowerCase()),)
-                    .toList();
-
-                if (files.isEmpty) {
-                  return const Center(child: Text('暂无文件'));
-                }
-
-                if (_gridView) {
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(DS.lg),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.2,
-                    ),
-                    itemCount: files.length,
-                    itemBuilder: (context, index) =>
-                        _buildGridItem(files[index]),
+            SizedBox(
+              height: 36,
+              child: FutureBuilder<List<GroupFileCategoryStat>>(
+                future: _categoriesFuture,
+                builder: (context, snapshot) {
+                  final categories = snapshot.data ?? [];
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                    children: [
+                      _buildCategoryChip('全部', null),
+                      for (final item in categories)
+                        _buildCategoryChip(
+                            item.category ?? '未分类', item.category),
+                    ],
                   );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(DS.lg),
-                  itemCount: files.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _buildListItem(files[index]),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Expanded(
+              child: FutureBuilder<List<GroupFileInfo>>(
+                future: _filesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('加载失败: ${snapshot.error}'));
+                  }
+
+                  final files = (snapshot.data ?? [])
+                      .where(
+                        (f) =>
+                            _query.isEmpty ||
+                            f.fileName
+                                .toLowerCase()
+                                .contains(_query.toLowerCase()),
+                      )
+                      .toList();
+
+                  if (files.isEmpty) {
+                    return const Center(child: Text('暂无文件'));
+                  }
+
+                  if (_gridView) {
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(DS.lg),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: context.isMobile ? 2 : 3,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.2,
+                      ),
+                      itemCount: files.length,
+                      itemBuilder: (context, index) =>
+                          _buildGridItem(files[index]),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(DS.lg),
+                    itemCount: files.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) =>
+                        _buildListItem(files[index]),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -213,12 +225,16 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.fileName,
-                        maxLines: 1, overflow: TextOverflow.ellipsis,),
+                    Text(
+                      file.fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                        '${_formatSize(file.fileSize)} · ${_statusLabel(file.status)}',
-                        style: TextStyle(color: DS.neutral600),),
+                      '${_formatSize(file.fileSize)} · ${_statusLabel(file.status)}',
+                      style: TextStyle(color: DS.neutral600),
+                    ),
                   ],
                 ),
               ),
@@ -243,8 +259,10 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
               const SizedBox(height: 8),
               Text(file.fileName, maxLines: 2, overflow: TextOverflow.ellipsis),
               const Spacer(),
-              Text(_formatSize(file.fileSize),
-                  style: TextStyle(color: DS.neutral600, fontSize: 12),),
+              Text(
+                _formatSize(file.fileSize),
+                style: TextStyle(color: DS.neutral600, fontSize: 12),
+              ),
             ],
           ),
         ),

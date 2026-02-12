@@ -9,17 +9,23 @@ User Service - 生产级实现
 - 容错降级: 缓存/DB 故障时优雅降级
 """
 import json
-from typing import Optional, Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
-from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.models.user import User, PushPreference
-from app.schemas.user import UserContext, UserPreferences, UserRegister
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.metrics import CACHE_HIT_COUNT
 from app.core.security import get_password_hash
+from app.models.user import PushPreference, User
+from app.schemas.user import UserContext, UserPreferences, UserRegister
 from app.services.personalization.preference_service import PreferenceService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserService:
@@ -40,7 +46,7 @@ class UserService:
         logger.info("UserService initialized with cache support")
 
     @staticmethod
-    async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    async def get_by_email(db: AsyncSession, email: str) -> User | None:
         """
         根据邮箱获取用户实体
 
@@ -77,26 +83,26 @@ class UserService:
         await db.refresh(user)
         return user
 
-    async def get_user_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_user_by_id(self, user_id: UUID) -> User | None:
         """
         根据用户 ID 获取用户实体
-        
+
         Args:
             user_id: 用户 ID
-            
+
         Returns:
             Optional[User]: 用户实体，如果不存在则返回 None
         """
         try:
             result = await self.db.execute(
-                select(User).where(User.id == user_id, User.is_active == True)
+                select(User).where(User.id == user_id, User.is_active)
             )
             return result.scalar_one_or_none()
         except Exception as e:
             logger.error(f"Failed to get user {user_id}: {e}")
             return None
 
-    async def get_context(self, user_id: UUID) -> Optional[UserContext]:
+    async def get_context(self, user_id: UUID) -> UserContext | None:
         """
         获取用户上下文（带缓存）
 
@@ -188,7 +194,7 @@ class UserService:
             logger.error(f"Failed to get context for user {user_id}: {e}")
             return None
 
-    async def get_preferences(self, user_id: UUID) -> Optional[UserPreferences]:
+    async def get_preferences(self, user_id: UUID) -> UserPreferences | None:
         """
         获取用户偏好设置（带缓存，用于个性化推荐）
 
@@ -268,7 +274,7 @@ class UserService:
             logger.error(f"Failed to get preferences for user {user_id}: {e}")
             return None
 
-    async def get_analytics_summary(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+    async def get_analytics_summary(self, user_id: UUID) -> dict[str, Any] | None:
         """
         获取用户分析摘要（带缓存）
 
@@ -341,13 +347,13 @@ class UserService:
             logger.error(f"Failed to get analytics summary for user {user_id}: {e}")
             return None
 
-    async def _get_push_preference(self, user_id: UUID) -> Optional[PushPreference]:
+    async def _get_push_preference(self, user_id: UUID) -> PushPreference | None:
         """
         获取推送偏好（内部方法）
-        
+
         Args:
             user_id: 用户 ID
-            
+
         Returns:
             Optional[PushPreference]: 推送偏好
         """
@@ -362,9 +368,9 @@ class UserService:
 
     def _normalize_active_slots(
         self,
-        slots: Optional[List[Dict[str, Any]]],
+        slots: list[dict[str, Any]] | None,
         timezone: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         将字符串格式的时间段转换为分钟数格式
 
@@ -416,10 +422,10 @@ class UserService:
     async def update_last_login(self, user_id: UUID) -> bool:
         """
         更新最后登录时间
-        
+
         Args:
             user_id: 用户 ID
-            
+
         Returns:
             bool: 是否成功
         """
@@ -428,8 +434,8 @@ class UserService:
             if not user:
                 return False
 
-            from datetime import datetime
-            user.last_login_at = datetime.utcnow()
+            from datetime import UTC, datetime
+            user.last_login_at = _utcnow()
             await self.db.commit()
             logger.debug(f"Updated last login for user {user_id}")
             return True
@@ -437,7 +443,7 @@ class UserService:
             logger.error(f"Failed to update last login for user {user_id}: {e}")
             return False
 
-    async def get_user_stats(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+    async def get_user_stats(self, user_id: UUID) -> dict[str, Any] | None:
         """
         获取用户统计信息（带缓存，用于展示和分析）
 
@@ -547,7 +553,7 @@ class UserService:
             logger.error(f"Failed to invalidate cache for user {user_id}: {e}")
             return False
 
-    async def update_user_profile(self, user_id: UUID, updates: Dict[str, Any]) -> bool:
+    async def update_user_profile(self, user_id: UUID, updates: dict[str, Any]) -> bool:
         """
         更新用户资料并使缓存失效
 
@@ -596,7 +602,7 @@ class UserService:
             await self.db.rollback()
             return False
 
-    async def update_user_preferences(self, user_id: UUID, updates: Dict[str, Any]) -> bool:
+    async def update_user_preferences(self, user_id: UUID, updates: dict[str, Any]) -> bool:
         """
         更新用户偏好设置并使缓存失效
 
@@ -651,3 +657,7 @@ class UserService:
             logger.error(f"Failed to update user preferences for {user_id}: {e}")
             await self.db.rollback()
             return False
+
+
+# Optional module-level alias for legacy imports (tests expect this symbol).
+user_service = None

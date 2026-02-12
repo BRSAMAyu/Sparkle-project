@@ -4,7 +4,6 @@ Thumbnail generation service
 """
 import os
 import tempfile
-from typing import Optional
 from uuid import UUID
 
 import httpx
@@ -16,7 +15,7 @@ class ThumbnailService:
         self,
         file_path: str,
         file_id: UUID,
-        upload_url: Optional[str],
+        upload_url: str | None,
     ) -> None:
         if not upload_url:
             return
@@ -31,7 +30,7 @@ class ThumbnailService:
             if os.path.exists(thumbnail_path):
                 os.remove(thumbnail_path)
 
-    async def _generate_thumbnail(self, file_path: str) -> Optional[str]:
+    async def _generate_thumbnail(self, file_path: str) -> str | None:
         _, ext = os.path.splitext(file_path)
         ext = ext.lower()
         if ext != ".pdf":

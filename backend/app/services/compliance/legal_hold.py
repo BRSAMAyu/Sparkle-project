@@ -1,10 +1,14 @@
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.compliance import LegalHold
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LegalHoldService:
@@ -14,12 +18,12 @@ class LegalHoldService:
     async def is_hold_active(self, user_id: UUID) -> bool:
         stmt = select(LegalHold).where(
             LegalHold.user_id == user_id,
-            LegalHold.is_active == True
+            LegalHold.is_active
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def create_hold(self, user_id: UUID, admin_id: UUID, case_ref: str, reason: Optional[str] = None) -> LegalHold:
+    async def create_hold(self, user_id: UUID, admin_id: UUID, case_ref: str, reason: str | None = None) -> LegalHold:
         hold = LegalHold(
             user_id=user_id,
             admin_id=admin_id,
@@ -35,7 +39,7 @@ class LegalHoldService:
     async def release_hold(self, hold: LegalHold, released_by: UUID) -> LegalHold:
         hold.is_active = False
         hold.released_by = released_by
-        hold.released_at = datetime.utcnow()
+        hold.released_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(hold)
         return hold

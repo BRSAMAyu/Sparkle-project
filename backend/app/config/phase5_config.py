@@ -2,9 +2,9 @@
 Phase 5 Configuration - Stability & Evolution
 稳定性护栏和文档引擎的配置参数
 """
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 import os
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(os.path.dirname(os.path.dirname(current_dir)), ".env")

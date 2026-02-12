@@ -3,13 +3,11 @@
 Plan Model - 冲刺计划和成长计划
 """
 import enum
-from sqlalchemy import (
-    Column, String, Integer, Float, Text, Enum,
-    ForeignKey, Date, Boolean, Index, CheckConstraint
-)
+
+from sqlalchemy import Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class PlanType(str, enum.Enum):
@@ -32,6 +30,17 @@ class PlanStage(str, enum.Enum):
     DAILY = "daily"
     REVIEW = "review"
     PAUSED = "paused"
+
+
+class PlanStatus(str, enum.Enum):
+    """计划状态枚举"""
+    DRAFT = "draft"                  # 草稿
+    PENDING_REVIEW = "pending_review"  # 待审核
+    ACTIVE = "active"                # 激活
+    PAUSED = "paused"                # 暂停
+    COMPLETED = "completed"          # 已完成
+    ARCHIVED = "archived"            # 已归档
+    CANCELLED = "cancelled"          # 已取消
 
 
 class Plan(BaseModel):
@@ -68,7 +77,7 @@ class Plan(BaseModel):
 
     # 计划阶段
     plan_stage = Column(
-        Enum(PlanStage),
+        Enum(PlanStage, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=PlanStage.DAILY,
         index=True
@@ -91,7 +100,7 @@ class Plan(BaseModel):
 
     # 优先级和主计划 (P0: 并行计划限制)
     priority = Column(
-        Enum(PlanPriority),
+        Enum(PlanPriority, values_callable=lambda obj: [e.value for e in obj]),
         default=PlanPriority.NORMAL,
         nullable=False,
         index=True

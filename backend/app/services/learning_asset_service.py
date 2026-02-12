@@ -9,31 +9,30 @@ Handles:
 - Inbox expiry and status transitions
 """
 import json
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_, func, text
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy import and_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
+from app.core.fingerprint import (
+    DEFAULT_MATCH_PROFILE,
+    NORM_VERSION,
+    generate_fingerprints,
+    normalize_with_hint,
+)
+from app.core.fuzzy_match import build_provenance_json, find_provenance
 from app.models.learning_assets import (
-    LearningAsset,
-    AssetSuggestionLog,
-    AssetStatus,
     AssetKind,
+    AssetStatus,
+    AssetSuggestionLog,
+    LearningAsset,
     SuggestionDecision,
     UserSuggestionResponse,
 )
-from app.core.fingerprint import (
-    generate_fingerprints,
-    normalize_with_hint,
-    NORM_VERSION,
-    DEFAULT_MATCH_PROFILE,
-)
-from app.core.fuzzy_match import find_provenance, build_provenance_json
-from app.core.cache import cache_service
-
 
 # === Configuration ===
 INBOX_EXPIRY_DAYS = 7
@@ -41,6 +40,10 @@ SUGGESTION_COOLDOWN_MINUTES = 30
 DISMISS_COOLDOWN_DAYS = 7
 REPEAT_LOOKUP_THRESHOLD = 2  # Suggest after N lookups in session
 SESSION_TTL_HOURS = 2
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LearningAssetService:
@@ -64,13 +67,13 @@ class LearningAssetService:
         db: AsyncSession,
         user_id: UUID,
         selected_text: str,
-        translation: Optional[str] = None,
-        definition: Optional[str] = None,
-        example: Optional[str] = None,
-        source_file_id: Optional[UUID] = None,
-        context_before: Optional[str] = None,
-        context_after: Optional[str] = None,
-        page_no: Optional[int] = None,
+        translation: str | None = None,
+        definition: str | None = None,
+        example: str | None = None,
+        source_file_id: UUID | None = None,
+        context_before: str | None = None,
+        context_after: str | None = None,
+        page_no: int | None = None,
         language_code: str = "en",
         asset_kind: AssetKind = AssetKind.WORD,
         initial_status: AssetStatus = AssetStatus.INBOX,
@@ -119,7 +122,7 @@ class LearningAssetService:
             "ambiguity_hint": norm_result.ambiguity_hint,
             "norm_version": NORM_VERSION,
             "match_profile": DEFAULT_MATCH_PROFILE,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": _utcnow().isoformat(),
         }
 
         # 3. Try to find provenance if source_file_id provided
@@ -144,7 +147,7 @@ class LearningAssetService:
         # 4. Set inbox expiry if starting in INBOX
         inbox_expires_at = None
         if initial_status == AssetStatus.INBOX:
-            inbox_expires_at = datetime.utcnow() + timedelta(days=INBOX_EXPIRY_DAYS)
+            inbox_expires_at = _utcnow() + timedelta(days=INBOX_EXPIRY_DAYS)
 
         # 5. Create asset
         asset = LearningAsset(
@@ -161,7 +164,7 @@ class LearningAssetService:
             snapshot_json=snapshot,
             snapshot_schema_version=1,
             provenance_json=provenance,
-            provenance_updated_at=datetime.utcnow() if provenance else None,
+            provenance_updated_at=_utcnow() if provenance else None,
             selection_fp=fp_result.selection_fp,
             anchor_fp=fp_result.anchor_fp,
             doc_fp=fp_result.doc_fp,
@@ -200,7 +203,7 @@ class LearningAssetService:
         db: AsyncSession,
         user_id: UUID,
         selection_fp: str,
-    ) -> Optional[LearningAsset]:
+    ) -> LearningAsset | None:
         """
         Check if user already has an asset with this fingerprint.
 
@@ -299,9 +302,9 @@ class LearningAssetService:
         user_id: UUID,
         session_id: str,
         selected_text: str,
-        translation: Optional[str] = None,
-        source_file_id: Optional[UUID] = None,
-    ) -> Dict[str, Any]:
+        translation: str | None = None,
+        source_file_id: UUID | None = None,
+    ) -> dict[str, Any]:
         """
         Record a translation lookup and evaluate suggestion.
 
@@ -328,7 +331,7 @@ class LearningAssetService:
         if existing:
             # Update lookup count
             existing.lookup_count += 1
-            existing.last_seen_at = datetime.utcnow()
+            existing.last_seen_at = _utcnow()
             await db.flush()
             return {
                 "suggest_asset": False,
@@ -390,7 +393,7 @@ class LearningAssetService:
         session_id: str,
         selection_fp: str,
         lookup_count: int,
-    ) -> Tuple[bool, SuggestionDecision, str]:
+    ) -> tuple[bool, SuggestionDecision, str]:
         """
         Evaluate whether to suggest asset creation.
 
@@ -433,7 +436,7 @@ class LearningAssetService:
         user_id: UUID,
         suggestion_log_id: UUID,
         response: UserSuggestionResponse,
-        asset_id: Optional[UUID] = None,
+        asset_id: UUID | None = None,
     ) -> None:
         """
         Record user feedback on a suggestion.
@@ -453,12 +456,12 @@ class LearningAssetService:
             raise ValueError("Suggestion log not found or access denied")
 
         log.user_response = response.value
-        log.response_at = datetime.utcnow()
+        log.response_at = _utcnow()
         log.asset_id = asset_id
 
         # Set cooldown if dismissed
         if response == UserSuggestionResponse.DISMISS:
-            cooldown_until = datetime.utcnow() + timedelta(days=DISMISS_COOLDOWN_DAYS)
+            cooldown_until = _utcnow() + timedelta(days=DISMISS_COOLDOWN_DAYS)
             log.cooldown_until = cooldown_until
 
             cooldown_key = self._user_cooldown_key(user_id, "suggest_repeat_lookup")
@@ -481,10 +484,10 @@ class LearningAssetService:
         self,
         db: AsyncSession,
         user_id: UUID,
-        status: Optional[AssetStatus] = None,
+        status: AssetStatus | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[LearningAsset]:
+    ) -> list[LearningAsset]:
         """
         Get user's learning assets with optional status filter.
 
@@ -519,7 +522,7 @@ class LearningAssetService:
         db: AsyncSession,
         asset_id: UUID,
         user_id: UUID,
-    ) -> Optional[LearningAsset]:
+    ) -> LearningAsset | None:
         """
         Get a specific asset by ID, ensuring user ownership.
 
@@ -552,7 +555,7 @@ class LearningAssetService:
         Returns:
             Number of assets archived
         """
-        now = datetime.utcnow()
+        now = _utcnow()
 
         # Find expired inbox items
         query = select(LearningAsset).where(
@@ -584,7 +587,7 @@ class LearningAssetService:
         aggregate_type: str,
         aggregate_id: UUID,
         event_type: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> None:
         """
         Write event to outbox for async processing.

@@ -94,20 +94,25 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Chip(
                     label: Text(
-                        '相关度: ${((cite['score'] as num) * 100).toStringAsFixed(0)}%',),
+                      '相关度: ${((cite['score'] as num) * 100).toStringAsFixed(0)}%',
+                    ),
                     backgroundColor: widget.agentColor.withValues(alpha: 0.1),
                     labelStyle:
                         TextStyle(color: widget.agentColor, fontSize: 12),
                   ),
                 ),
-              Text((cite['content'] as String?) ?? '',
-                  style: const TextStyle(fontSize: 14, height: 1.5),),
+              Text(
+                (cite['content'] as String?) ?? '',
+                style: const TextStyle(fontSize: 14, height: 1.5),
+              ),
             ],
           ),
         ),
         actions: [
           SparkleButton.ghost(
-              label: '关闭', onPressed: () => Navigator.pop(context),),
+            label: '关闭',
+            onPressed: () => Navigator.pop(context),
+          ),
         ],
       ),
     );
@@ -122,7 +127,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing12,
+            0,
+            DS.spacing12,
+            DS.spacing8,
+          ),
           child: Row(
             children: [
               Icon(Icons.library_books, size: 14, color: widget.agentColor),
@@ -156,8 +166,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   decoration: BoxDecoration(
                     color: DS.brandPrimaryConst,
                     borderRadius: BorderRadius.circular(8),
-                    border:
-                        Border.all(color: widget.agentColor.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: widget.agentColor.withValues(alpha: 0.2)),
                     boxShadow: [
                       BoxShadow(
                         color: DS.brandPrimary.withValues(alpha: 0.03),
@@ -186,7 +196,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 10, color: DS.brandPrimary.shade700,),
+                            fontSize: 10,
+                            color: DS.brandPrimary.shade700,
+                          ),
                         ),
                       ),
                     ],
@@ -285,7 +297,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
           // 响应内容（始终显示）
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            padding: const EdgeInsets.fromLTRB(
+              DS.spacing12,
+              0,
+              DS.spacing12,
+              DS.spacing12,
+            ),
             child: Text(
               widget.responseText,
               style: theme.textTheme.bodyMedium,
@@ -296,7 +313,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           SizeTransition(
             sizeFactor: _expandAnimation,
             child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              margin: const EdgeInsets.fromLTRB(
+                DS.spacing12,
+                0,
+                DS.spacing12,
+                DS.spacing12,
+              ),
               padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: widget.agentColor.withValues(alpha: 0.05),
@@ -384,12 +406,12 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             DS.brandPrimary.shade50,
-            Colors.purple.shade50,
+            DS.prismPurple.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.purple.shade200,
+          color: DS.prismPurple.withValues(alpha: 0.26),
           width: 1.5,
         ),
       ),
@@ -400,7 +422,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100.withValues(alpha: 0.5),
+              color: DS.prismPurple.withValues(alpha: 0.12),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -410,7 +432,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               children: [
                 Icon(
                   Icons.groups,
-                  color: Colors.purple.shade700,
+                  color: DS.prismPurple,
                   size: 24,
                 ),
                 const SizedBox(width: DS.sm),
@@ -418,16 +440,16 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   child: Text(
                     '多专家协作回答',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.purple.shade700,
+                      color: DS.prismPurple,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Chip(
                   label: Text('${contributions.length} 位专家'),
-                  backgroundColor: Colors.purple.shade100,
+                  backgroundColor: DS.prismPurple.withValues(alpha: 0.18),
                   labelStyle: TextStyle(
-                    color: Colors.purple.shade700,
+                    color: DS.prismPurple,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -459,7 +481,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 color: DS.brandPrimary.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.purple.shade200,
+                  color: DS.prismPurple.withValues(alpha: 0.26),
                 ),
               ),
               child: Column(
@@ -469,14 +491,14 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.summarize,
-                        color: Colors.purple.shade700,
+                        color: DS.prismPurple,
                         size: 18,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         '综合建议',
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: Colors.purple.shade700,
+                          color: DS.prismPurple,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

@@ -101,7 +101,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
 
   Color _getFlameColor() {
     if (widget.brightness >= 80) {
-      return const Color(0xFFFFD700); // 金色
+      return DS.rarityRare;
     } else if (widget.brightness >= 60) {
       return DS.accent; // 黄色
     } else if (widget.brightness >= 40) {
@@ -117,8 +117,8 @@ class _FlameIndicatorState extends State<FlameIndicator>
     }
 
     if (widget.brightness >= 80) {
-      return const LinearGradient(
-        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+      return LinearGradient(
+        colors: [DS.rarityRare, DS.warning],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );
@@ -339,7 +339,7 @@ class CompactFlameIndicator extends StatelessWidget {
 
   Color _getFlameColor() {
     if (brightness >= 80) {
-      return const Color(0xFFFFD700);
+      return DS.rarityRare;
     } else if (brightness >= 60) {
       return DS.accent;
     } else if (brightness >= 40) {

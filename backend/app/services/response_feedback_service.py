@@ -1,23 +1,22 @@
+import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-import time
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.metrics import RESPONSE_FEEDBACK_DEDUPE_TOTAL, RESPONSE_FEEDBACK_INGESTED
 from app.learning.prompt_bandit import PromptBandit
+from app.models.context_pack import ContextPackFeedback, ContextPackRun
 from app.models.response_feedback import ResponseFeedback
-from app.models.context_pack import ContextPackRun, ContextPackFeedback
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.content_quality_evaluator import ContentQualityEvaluator
-from app.config import settings
-
 
 MAX_REASONS = 3
 MAX_FREE_TEXT_LEN = 120
@@ -42,12 +41,16 @@ class FeedbackResult:
     response_id: str
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class ResponseFeedbackService:
     def __init__(self, db: AsyncSession, redis_client=None):
         self.db = db
         self.redis = redis_client
 
-    def _validate(self, feedback_type: int, reasons: List[str], free_text: Optional[str]) -> None:
+    def _validate(self, feedback_type: int, reasons: list[str], free_text: str | None) -> None:
         if feedback_type not in (ResponseFeedback.FEEDBACK_UP, ResponseFeedback.FEEDBACK_DOWN):
             raise ValueError("invalid feedback_type")
         if reasons and len(reasons) > MAX_REASONS:
@@ -62,11 +65,11 @@ class ResponseFeedbackService:
         response_id: str,
         trace_id: str,
         feedback_type: int,
-        reasons: Optional[List[str]] = None,
-        free_text: Optional[str] = None,
-        workflow_id: Optional[str] = None,
-        prompt_version: Optional[str] = None,
-        meta: Optional[Dict[str, Any]] = None,
+        reasons: list[str] | None = None,
+        free_text: str | None = None,
+        workflow_id: str | None = None,
+        prompt_version: str | None = None,
+        meta: dict[str, Any] | None = None,
     ) -> FeedbackResult:
         reasons = reasons or []
         self._validate(feedback_type, reasons, free_text)
@@ -102,7 +105,7 @@ class ResponseFeedbackService:
             )
 
         RESPONSE_FEEDBACK_INGESTED.labels(
-            type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
         ).inc()
 
         await self._record_feedback_ts(user_id, workflow_id, prompt_version)
@@ -140,8 +143,8 @@ class ResponseFeedbackService:
         self,
         user_id: uuid.UUID,
         feedback_type: int,
-        reasons: List[str],
-        meta: Dict[str, Any],
+        reasons: list[str],
+        meta: dict[str, Any],
     ) -> None:
         if not settings.ENABLE_BUDGET_TUNING:
             return
@@ -184,8 +187,8 @@ class ResponseFeedbackService:
     async def _resolve_pack_run(
         self,
         user_id: uuid.UUID,
-        meta: Dict[str, Any],
-    ) -> Optional[ContextPackRun]:
+        meta: dict[str, Any],
+    ) -> ContextPackRun | None:
         pack_id = meta.get("pack_id") or meta.get("context_pack_id")
         if pack_id:
             try:
@@ -204,7 +207,7 @@ class ResponseFeedbackService:
                 if pack_run is not None:
                     return pack_run
 
-        cutoff = datetime.utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
+        cutoff = _utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
         result = await self.db.execute(
             select(ContextPackRun)
             .where(
@@ -219,8 +222,8 @@ class ResponseFeedbackService:
 
     async def _update_bandit(
         self,
-        workflow_id: Optional[str],
-        prompt_version: Optional[str],
+        workflow_id: str | None,
+        prompt_version: str | None,
         feedback_type: int,
     ) -> None:
         if not workflow_id or not prompt_version:
@@ -232,8 +235,8 @@ class ResponseFeedbackService:
     async def _record_feedback_ts(
         self,
         user_id: str,
-        workflow_id: Optional[str],
-        prompt_version: Optional[str],
+        workflow_id: str | None,
+        prompt_version: str | None,
     ) -> None:
         if not self.redis:
             return
@@ -242,8 +245,8 @@ class ResponseFeedbackService:
         key = f"bandit:last_feedback_ts:{user_id}:{workflow_id}:{prompt_version}"
         await self.redis.setex(key, settings.FEEDBACK_EFFECT_TTL_SECONDS, int(time.time()))
 
-    async def get_summary(self, window: timedelta) -> Dict[str, Any]:
-        since = datetime.utcnow() - window
+    async def get_summary(self, window: timedelta) -> dict[str, Any]:
+        since = _utcnow() - window
         stmt = select(ResponseFeedback).where(
             ResponseFeedback.created_at >= since,
             ResponseFeedback.deleted_at.is_(None),
@@ -254,8 +257,8 @@ class ResponseFeedbackService:
         up_count = 0
         down_count = 0
         reasons_counter: Counter[str] = Counter()
-        by_prompt: Dict[str, Dict[str, int]] = {}
-        by_workflow: Dict[str, Dict[str, int]] = {}
+        by_prompt: dict[str, dict[str, int]] = {}
+        by_workflow: dict[str, dict[str, int]] = {}
 
         for row in rows:
             if row.feedback_type == ResponseFeedback.FEEDBACK_UP:
@@ -282,7 +285,7 @@ class ResponseFeedbackService:
         }
 
     @staticmethod
-    def _accumulate(target: Dict[str, Dict[str, int]], key: Optional[str], is_up: bool) -> None:
+    def _accumulate(target: dict[str, dict[str, int]], key: str | None, is_up: bool) -> None:
         bucket_key = key or "unknown"
         if bucket_key not in target:
             target[bucket_key] = {"up": 0, "down": 0}
@@ -292,8 +295,8 @@ class ResponseFeedbackService:
             target[bucket_key]["down"] += 1
 
     @staticmethod
-    def _finalize_groups(groups: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, float]]:
-        finalized: Dict[str, Dict[str, float]] = {}
+    def _finalize_groups(groups: dict[str, dict[str, int]]) -> dict[str, dict[str, float]]:
+        finalized: dict[str, dict[str, float]] = {}
         for key, counts in groups.items():
             up = counts.get("up", 0)
             down = counts.get("down", 0)
@@ -306,7 +309,7 @@ class ResponseFeedbackService:
         return finalized
 
     @staticmethod
-    def normalize_reasons(reasons: List[int]) -> List[str]:
+    def normalize_reasons(reasons: list[int]) -> list[str]:
         normalized = []
         for reason in reasons:
             normalized.append(FEEDBACK_REASON_MAP.get(int(reason), "unspecified"))

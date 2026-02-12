@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Regeneration type options
 enum RegenerationType {
@@ -50,7 +51,8 @@ class RegenerationRequestData {
         'regeneration_type': regenerationType.value,
         if (improvementHints.isNotEmpty) 'improvement_hints': improvementHints,
         if (focusAreas.isNotEmpty) 'focus_areas': focusAreas,
-        if (customInstructions != null) 'custom_instructions': customInstructions,
+        if (customInstructions != null)
+          'custom_instructions': customInstructions,
       };
 }
 
@@ -210,99 +212,106 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
   }
 
   Widget _buildHeader(ThemeData theme) => InkWell(
-      onTap: widget.status == RegenerationStatus.idle
-          ? () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            }
-          : null,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              _getStatusIcon(),
-              color: _getStatusColor(theme),
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getStatusTitle(),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (widget.status != RegenerationStatus.idle)
+        onTap: widget.status == RegenerationStatus.idle
+            ? () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              }
+            : null,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Row(
+            children: [
+              Icon(
+                _getStatusIcon(),
+                color: _getStatusColor(theme),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      _getStatusDescription(),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      _getStatusTitle(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
-              ),
-            ),
-            if (widget.status == RegenerationStatus.idle)
-              Icon(
-                _isExpanded ? Icons.expand_less : Icons.expand_more,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildProgressContent(ThemeData theme) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        children: [
-          // Animated progress indicator
-          AnimatedBuilder(
-            animation: _progressAnimation,
-            builder: (context, child) {
-              return LinearProgressIndicator(
-                value: null, // Indeterminate
-                backgroundColor:
-                    theme.colorScheme.primary.withValues(alpha: 0.2),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.primary,
+                    if (widget.status != RegenerationStatus.idle)
+                      Text(
+                        _getStatusDescription(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '正在重新生成内容...',
-                style: theme.textTheme.bodyMedium?.copyWith(
+              if (widget.status == RegenerationStatus.idle)
+                Icon(
+                  _isExpanded ? Icons.expand_less : Icons.expand_more,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
             ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
+
+  Widget _buildProgressContent(ThemeData theme) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing16,
+        ),
+        child: Column(
+          children: [
+            // Animated progress indicator
+            AnimatedBuilder(
+              animation: _progressAnimation,
+              builder: (context, child) => LinearProgressIndicator(
+                backgroundColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '正在重新生成内容...',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildResultContent(ThemeData theme) {
     final result = widget.result!;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing16,
+        0,
+        DS.spacing16,
+        DS.spacing16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -311,7 +320,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: result.success
-                  ? Colors.green.withValues(alpha: 0.1)
+                  ? DS.success.withValues(alpha: 0.1)
                   : theme.colorScheme.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -320,9 +329,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                 Icon(
                   result.success ? Icons.check_circle : Icons.error,
                   size: 16,
-                  color: result.success
-                      ? Colors.green
-                      : theme.colorScheme.error,
+                  color: result.success ? DS.success : theme.colorScheme.error,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -331,9 +338,8 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                         ? '重新生成成功'
                         : result.improvementSummary ?? '重新生成失败',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: result.success
-                          ? Colors.green
-                          : theme.colorScheme.error,
+                      color:
+                          result.success ? DS.success : theme.colorScheme.error,
                     ),
                   ),
                 ),
@@ -351,7 +357,8 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               ),
             ),
             const SizedBox(height: 4),
-            ...result.changesMade.map((change) => Padding(
+            ...result.changesMade.map(
+              (change) => Padding(
                 padding: const EdgeInsets.only(left: 8, top: 2),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,27 +374,32 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     ),
                   ],
                 ),
-              )),
+              ),
+            ),
           ],
 
           // Score improvement
           if (result.success && result.scoreImprovement > 0) ...[
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.spacing8),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: DS.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.trending_up, size: 16, color: Colors.green),
+                  Icon(
+                    Icons.trending_up,
+                    size: DS.iconSizeXs,
+                    color: DS.success,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '质量提升 +${(result.scoreImprovement * 100).toStringAsFixed(0)}%',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.green,
+                      color: DS.success,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -401,145 +413,156 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
   }
 
   Widget _buildFailedContent(ThemeData theme) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.error.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  color: theme.colorScheme.error,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '重新生成失败，请重试',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing16,
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: theme.colorScheme.error,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '重新生成失败，请重试',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => _submitRegeneration(),
-                  child: const Text('重试'),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-  Widget _buildOptionsContent(ThemeData theme) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Regeneration type selection
-          Text(
-            '选择改进类型',
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: RegenerationType.values.map((type) {
-              final isSelected = _selectedType == type;
-              return ChoiceChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(type.icon, size: 16),
-                    const SizedBox(width: 4),
-                    Text(type.label),
-                  ],
-                ),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedType = selected ? type : null;
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Improvement hints
-          Text(
-            '改进提示（可选）',
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _availableHints.map((hint) {
-              final isSelected = _selectedHints.contains(hint);
-              return FilterChip(
-                label: Text(hint),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedHints.add(hint);
-                    } else {
-                      _selectedHints.remove(hint);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-
-          // Custom instructions (only for custom type)
-          if (_selectedType == RegenerationType.custom) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _customInstructionsController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: '请输入您的具体要求...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  SparkleButton(
+                    label: '重试',
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: _submitRegeneration,
+                    variant: ButtonVariant.ghost,
+                    size: ButtonSize.small,
+                  ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 16),
+        ),
+      );
 
-          // Submit button
-          FilledButton.icon(
-            onPressed: _selectedType != null && !_isSubmitting
-                ? _submitRegeneration
-                : null,
-            icon: _isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.refresh, size: 18),
-            label: Text(_isSubmitting ? '处理中...' : '开始重新生成'),
-          ),
-        ],
-      ),
-    );
+  Widget _buildOptionsContent(ThemeData theme) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing16,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Regeneration type selection
+            Text(
+              '选择改进类型',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: RegenerationType.values.map((type) {
+                final isSelected = _selectedType == type;
+                return ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(type.icon, size: 16),
+                      const SizedBox(width: 4),
+                      Text(type.label),
+                    ],
+                  ),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedType = selected ? type : null;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Improvement hints
+            Text(
+              '改进提示（可选）',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _availableHints.map((hint) {
+                final isSelected = _selectedHints.contains(hint);
+                return FilterChip(
+                  label: Text(hint),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedHints.add(hint);
+                      } else {
+                        _selectedHints.remove(hint);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+
+            // Custom instructions (only for custom type)
+            if (_selectedType == RegenerationType.custom) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _customInstructionsController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: '请输入您的具体要求...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+
+            // Submit button
+            SparkleButton(
+              label: _isSubmitting ? '处理中...' : '开始重新生成',
+              onPressed: _selectedType != null && !_isSubmitting
+                  ? _submitRegeneration
+                  : null,
+              icon: _isSubmitting
+                  ? null
+                  : const Icon(Icons.refresh, size: DS.iconSizeXs),
+              variant: ButtonVariant.primary,
+              size: ButtonSize.medium,
+              loading: _isSubmitting,
+              disabled: _selectedType == null || _isSubmitting,
+              expand: true,
+            ),
+          ],
+        ),
+      );
 
   IconData _getStatusIcon() {
     switch (widget.status) {
@@ -566,7 +589,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
         return theme.colorScheme.secondary;
       case RegenerationStatus.completed:
         return widget.result?.success ?? false
-            ? Colors.green
+            ? DS.success
             : theme.colorScheme.error;
       case RegenerationStatus.failed:
         return theme.colorScheme.error;

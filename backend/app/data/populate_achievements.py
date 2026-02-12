@@ -4,13 +4,13 @@ Populate initial achievement data to database
 """
 import asyncio
 import json
-from datetime import datetime, timezone
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
 
+from sqlalchemy import select, text
+
+from app.data.achievement_seeds import INITIAL_ACHIEVEMENTS, INITIAL_GALAXY_SKINS
 from app.db.session import AsyncSessionLocal
 from app.models.achievement import Achievement
-from app.data.achievement_seeds import INITIAL_ACHIEVEMENTS, INITIAL_GALAXY_SKINS
 
 
 def escape_sql(s: str) -> str:
@@ -29,7 +29,7 @@ async def populate_achievements():
             print("Achievements already exist, skipping...")
             return
 
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         # Populate achievements using raw SQL
         for data in INITIAL_ACHIEVEMENTS:

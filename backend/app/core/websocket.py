@@ -8,16 +8,18 @@ Production-grade features:
 - Offline push notification hooks
 - Message deduplication via message IDs
 """
-from typing import Dict, List, Optional, Set
-from fastapi import WebSocket
-import json
 import asyncio
+import contextlib
+import json
 import time
 import uuid
-from loguru import logger
+
 import redis.asyncio as redis
+from fastapi import WebSocket
+from loguru import logger
+
 from app.config import settings
-from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
+from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
 
 # 延迟导入设备服务（避免循环依赖）
 _device_service = None
@@ -46,19 +48,19 @@ def set_websocket_redis(redis_client: redis.Redis):
 class ConnectionManager:
     def __init__(self):
         # Local group connections: group_id -> List[WebSocket]
-        self.active_connections: Dict[str, List[WebSocket]] = {}
-        
+        self.active_connections: dict[str, list[WebSocket]] = {}
+
         # Local individual user connections: user_id -> WebSocket
-        self.user_connections: Dict[str, WebSocket] = {}
-        
+        self.user_connections: dict[str, WebSocket] = {}
+
         # Map of friend_id -> Set of local user_ids who are friends with them
         # Used to optimize presence fan-out
-        self.friend_map: Dict[str, Set[str]] = {}
+        self.friend_map: dict[str, set[str]] = {}
 
         # Redis Pub/Sub
-        self.redis: Optional[redis.Redis] = None
-        self.pubsub: Optional[redis.client.PubSub] = None
-        self.listener_task: Optional[asyncio.Task] = None
+        self.redis: redis.Redis | None = None
+        self.pubsub: redis.client.PubSub | None = None
+        self.listener_task: asyncio.Task | None = None
 
     async def init_redis(self):
         """Initialize Redis connection for Pub/Sub"""
@@ -83,7 +85,7 @@ class ConnectionManager:
             await self.pubsub.psubscribe("group:*")
             await self.pubsub.psubscribe("user:*")
             await self.pubsub.psubscribe("visualize:*")
-            
+
             self.listener_task = asyncio.create_task(self._redis_listener())
             logger.info(
                 "WebSocket Redis Pub/Sub initialized: {}, Password={}, PasswordSource={}".format(
@@ -100,14 +102,12 @@ class ConnectionManager:
         """Close Redis connection"""
         if self.listener_task:
             self.listener_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.listener_task
-            except asyncio.CancelledError:
-                pass
-        
+
         if self.pubsub:
             await self.pubsub.close()
-        
+
         if self.redis:
             await self.redis.close()
 
@@ -133,10 +133,10 @@ class ConnectionManager:
         """Handle incoming Redis message from patterns"""
         channel = message['channel']
         raw_data = message['data']
-        
+
         try:
             data = json.loads(raw_data)
-            
+
             # 1. Presence Update
             if channel.startswith("presence:"):
                 user_id = channel.split(":")[1]
@@ -144,7 +144,7 @@ class ConnectionManager:
                     local_friends = self.friend_map[user_id]
                     for fid in list(local_friends):
                         await self._send_personal_local(data, fid)
-            
+
             # 2. Group Messages / Control
             elif channel.startswith("group:"):
                 group_id = channel.split(":")[1]
@@ -159,7 +159,7 @@ class ConnectionManager:
                         await self._broadcast_local(data, group_id)
                 else:
                     await self._broadcast_local(data, group_id)
-            
+
             # 3. Direct User Messages (Private Chat / System)
             elif channel.startswith("user:"):
                 user_id = channel.split(":")[1]
@@ -169,7 +169,7 @@ class ConnectionManager:
             elif channel.startswith("visualize:"):
                 session_id = channel.split(":")[1]
                 await self._broadcast_local(data, f"visualize:{session_id}")
-                
+
         except Exception as e:
             logger.error(f"Error handling Redis message on channel {channel}: {e}")
 
@@ -192,7 +192,7 @@ class ConnectionManager:
         self.active_connections[group_id].append(websocket)
         logger.info(f"Client connected to visualization for session {session_id}")
 
-    async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: List[str] = None):
+    async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: list[str] = None):
         """Connect to personal channel and register friend map for presence"""
         await websocket.accept()
         websocket.user_id = user_id
@@ -210,21 +210,19 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket, group_id: str, user_id: str):
         """Disconnect from group"""
-        if group_id in self.active_connections:
-            if websocket in self.active_connections[group_id]:
-                self.active_connections[group_id].remove(websocket)
-                if not self.active_connections[group_id]:
-                    del self.active_connections[group_id]
+        if group_id in self.active_connections and websocket in self.active_connections[group_id]:
+            self.active_connections[group_id].remove(websocket)
+            if not self.active_connections[group_id]:
+                del self.active_connections[group_id]
         logger.info(f"User {user_id} disconnected from group {group_id}")
 
     def disconnect_visualization(self, websocket: WebSocket, session_id: str):
         """Disconnect from visualization stream"""
         group_id = f"visualize:{session_id}"
-        if group_id in self.active_connections:
-            if websocket in self.active_connections[group_id]:
-                self.active_connections[group_id].remove(websocket)
-                if not self.active_connections[group_id]:
-                    del self.active_connections[group_id]
+        if group_id in self.active_connections and websocket in self.active_connections[group_id]:
+            self.active_connections[group_id].remove(websocket)
+            if not self.active_connections[group_id]:
+                del self.active_connections[group_id]
         logger.info(f"Client disconnected from visualization for session {session_id}")
 
     def disconnect_user(self, user_id: str):
@@ -291,9 +289,9 @@ class ConnectionManager:
             # If NO server has the connection, we should trigger Push.
             # Here we add a 'is_pushed' flag to avoid double push if we want.
             await self.redis.publish(f"user:{user_id}", json.dumps(message, default=str))
-            
+
             # Hook for Push Notification
-            # Note: In a production app, we would use a Redis Key to track 
+            # Note: In a production app, we would use a Redis Key to track
             # if the user is online ANYWHERE. If not, trigger Push.
             # await self._trigger_offline_push(user_id, message)
         else:
@@ -306,7 +304,7 @@ class ConnectionManager:
             except Exception as e:
                 logger.error(f"Local personal send error: {e}")
         else:
-            # User not on THIS instance. 
+            # User not on THIS instance.
             # In single-instance mode, this is where we trigger Push.
             await self._trigger_offline_push(user_id, message)
 
@@ -316,7 +314,7 @@ class ConnectionManager:
         """
         if message.get("type") == "ack" or message.get("type") == "status_update":
             return # Don't push technical messages
-            
+
         logger.info(f"Triggering offline push for user {user_id}")
         # TODO: Integration with app.services.notification_service
 
@@ -479,7 +477,7 @@ class ConnectionManager:
 
         logger.info(f"Queued push notification for user {user_id}, type={msg_type}")
 
-    async def _get_user_device_tokens(self, user_id: str) -> List[str]:
+    async def _get_user_device_tokens(self, user_id: str) -> list[str]:
         """
         Get user's device push tokens.
 
@@ -498,14 +496,15 @@ class ConnectionManager:
 
             # 如果缓存未命中，需要从数据库查询
             # 这里使用延迟导入避免循环依赖
-            from app.db.session import AsyncSessionLocal
             from sqlalchemy import select
+
+            from app.db.session import AsyncSessionLocal
             from app.models.user import UserDevice
 
             async with AsyncSessionLocal() as db:
                 query = select(UserDevice.push_token).where(
                     UserDevice.user_id == user_id,
-                    UserDevice.is_active == True,
+                    UserDevice.is_active,
                 )
                 result = await db.execute(query)
                 tokens = [row[0] for row in result.all()]
@@ -563,3 +562,19 @@ class ConnectionManager:
         return "您有一条新消息"
 
 manager = ConnectionManager()
+
+
+def get_ws_manager() -> ConnectionManager:
+    """
+    Get the global WebSocket ConnectionManager singleton instance.
+
+    This is a convenience function for accessing the connection manager
+    from services that need to send notifications via WebSocket.
+
+    Usage:
+        from app.core.websocket import get_ws_manager
+
+        ws_manager = get_ws_manager()
+        await ws_manager.send_personal_message(message, user_id)
+    """
+    return manager

@@ -1,23 +1,28 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.business_metrics import EVIDENCE_MISSING_TOTAL
 from app.models.error_book import ErrorRecord
 from app.models.event import TrackingEvent
 from app.models.galaxy import KnowledgeNode
+from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
+from app.models.nightly_review import NightlyReview
 from app.models.semantic_memory import StrategyNode
 from app.models.task import Task
-from app.models.nightly_review import NightlyReview
 from app.models.user_state import UserStateSnapshot
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory
-from app.core.business_metrics import EVIDENCE_MISSING_TOTAL
 from app.services.evidence_scoring import compute_score
-from loguru import logger
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class EvidenceHealthService:
@@ -26,10 +31,10 @@ class EvidenceHealthService:
 
     async def resolve_evidence_refs(
         self,
-        evidence_refs: Iterable[Dict[str, Any]],
+        evidence_refs: Iterable[dict[str, Any]],
         user_id: UUID,
-    ) -> List[Dict[str, Any]]:
-        results: List[Dict[str, Any]] = []
+    ) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         for ref in evidence_refs:
             ref_type = ref.get("type")
             ref_id = ref.get("id")
@@ -47,7 +52,7 @@ class EvidenceHealthService:
         self,
         item: Any,
         user_id: UUID,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         evidence_refs = item.evidence_refs or []
         if not evidence_refs:
             return {"missing": True, "snapshot": [], "resolved": []}
@@ -66,7 +71,7 @@ class EvidenceHealthService:
             "resolved": resolved,
         }
 
-    async def run_health_check(self, user_id: UUID, limit: int = 50) -> Dict[str, Dict[str, int]]:
+    async def run_health_check(self, user_id: UUID, limit: int = 50) -> dict[str, dict[str, int]]:
         counts = {"preferences": 0, "goals": 0, "episodic": 0}
         missing_counts = {"preferences": 0, "goals": 0, "episodic": 0}
 
@@ -74,7 +79,7 @@ class EvidenceHealthService:
         for item in prefs:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="preference").inc()
@@ -85,7 +90,7 @@ class EvidenceHealthService:
         for item in goals:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
                 EVIDENCE_MISSING_TOTAL.labels(type="goal").inc()
@@ -96,7 +101,7 @@ class EvidenceHealthService:
         for item in episodic:
             result = await self.check_memory_item(item, user_id)
             item.evidence_missing = result["missing"]
-            item.evidence_checked_at = datetime.utcnow()
+            item.evidence_checked_at = _utcnow()
             item.evidence_snapshot = result["snapshot"]
             item.evidence_score = compute_score(item.evidence_refs, evidence_missing=result["missing"])
             if result["missing"]:
@@ -120,8 +125,8 @@ class EvidenceHealthService:
         return list(result.scalars().all())
 
     @staticmethod
-    def build_snapshot(resolved: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        snapshot: List[Dict[str, Any]] = []
+    def build_snapshot(resolved: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        snapshot: list[dict[str, Any]] = []
         for entry in resolved:
             snapshot.append(
                 {
@@ -133,7 +138,7 @@ class EvidenceHealthService:
             )
         return snapshot
 
-    async def _resolve_event(self, event_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_event(self, event_id: str, user_id: UUID) -> dict[str, Any]:
         result = await self.db.execute(
             select(TrackingEvent).where(
                 TrackingEvent.event_id == event_id,
@@ -152,7 +157,7 @@ class EvidenceHealthService:
             "detail": {"event_type": event.event_type, "ts_ms": event.ts_ms},
         }
 
-    async def _resolve_user_state(self, snapshot_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_user_state(self, snapshot_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             snapshot_uuid = UUID(snapshot_id)
         except ValueError:
@@ -179,7 +184,7 @@ class EvidenceHealthService:
             },
         }
 
-    async def _resolve_error(self, error_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_error(self, error_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             error_uuid = UUID(error_id)
         except ValueError:
@@ -202,7 +207,7 @@ class EvidenceHealthService:
             "detail": {"subject_code": error.subject_code},
         }
 
-    async def _resolve_concept(self, node_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_concept(self, node_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             node_uuid = UUID(node_id)
         except ValueError:
@@ -220,7 +225,7 @@ class EvidenceHealthService:
             "detail": {"name": node.name},
         }
 
-    async def _resolve_strategy(self, strategy_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_strategy(self, strategy_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             strategy_uuid = UUID(strategy_id)
         except ValueError:
@@ -243,7 +248,7 @@ class EvidenceHealthService:
             "detail": {"title": strategy.title},
         }
 
-    async def _resolve_task(self, task_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_task(self, task_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             task_uuid = UUID(task_id)
         except ValueError:
@@ -266,7 +271,7 @@ class EvidenceHealthService:
             "detail": {"title": task.title, "status": task.status.value if task.status else None},
         }
 
-    async def _resolve_summary(self, summary_id: str, user_id: UUID) -> Dict[str, Any]:
+    async def _resolve_summary(self, summary_id: str, user_id: UUID) -> dict[str, Any]:
         try:
             summary_uuid = UUID(summary_id)
         except ValueError:

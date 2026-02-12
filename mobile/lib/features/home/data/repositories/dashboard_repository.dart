@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
@@ -15,6 +16,6 @@ class DashboardRepository {
       return DemoDataService().demoDashboard;
     }
     final response = await _apiClient.get<dynamic>(ApiEndpoints.dashboardStatus);
-    return response.data as Map<String, dynamic>;
+    return ApiResponseParser.unwrapMap(response.data, action: 'getDashboardStatus');
   }
 }

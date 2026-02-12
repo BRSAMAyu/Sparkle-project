@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
-import 'package:sparkle/features/achievement/presentation/widgets/achievement_card.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -72,21 +72,24 @@ class _AchievementDetailScreenState
     }
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // 自定义顶部
-          _buildHeader(context, achievement),
+      body: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
+            // 自定义顶部
+            _buildHeader(context, achievement),
 
-          // 内容区域
-          SliverToBoxAdapter(
-            child: _buildContent(achievement),
-          ),
-        ],
+            // 内容区域
+            SliverToBoxAdapter(
+              child: _buildContent(achievement),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, AchievementWithProgress achievement) {
+  Widget _buildHeader(
+      BuildContext context, AchievementWithProgress achievement) {
     final rarity = achievement.achievement.rarity;
     final rarityColor = RarityColorProvider.getColor(rarity);
 
@@ -113,9 +116,9 @@ class _AchievementDetailScreenState
                   AnimatedBuilder(
                     animation: _glowAnimation,
                     builder: (context, child) => Transform.scale(
-                        scale: _glowAnimation.value,
-                        child: _buildLargeIcon(achievement),
-                      ),
+                      scale: _glowAnimation.value,
+                      child: _buildLargeIcon(achievement),
+                    ),
                   ),
                   const SizedBox(height: DS.spacing16),
                   RarityBadge(rarity: rarity),
@@ -131,9 +134,11 @@ class _AchievementDetailScreenState
           color: DS.surfacePrimary.withValues(alpha: 0.9),
           shape: BoxShape.circle,
         ),
-        child: IconButton(
+        child: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
       ),
       actions: [
@@ -143,9 +148,11 @@ class _AchievementDetailScreenState
             color: DS.surfacePrimary.withValues(alpha: 0.9),
             shape: BoxShape.circle,
           ),
-          child: IconButton(
+          child: SparkleIconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () => _shareAchievement(achievement),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
         ),
       ],
@@ -153,23 +160,23 @@ class _AchievementDetailScreenState
   }
 
   Widget _buildHeaderBackground(Color rarityColor) => Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            rarityColor.withValues(alpha: 0.3),
-            rarityColor.withValues(alpha: 0.05),
-            DS.surfacePrimary,
-          ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              rarityColor.withValues(alpha: 0.3),
+              rarityColor.withValues(alpha: 0.05),
+              DS.surfacePrimary,
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildHeaderParticles(AchievementRarity rarity) => CustomPaint(
-      painter: _HeaderParticlePainter(rarity),
-      size: Size.infinite,
-    );
+        painter: _HeaderParticlePainter(rarity),
+        size: Size.infinite,
+      );
 
   Widget _buildLargeIcon(AchievementWithProgress achievement) {
     final rarity = achievement.achievement.rarity;
@@ -205,166 +212,169 @@ class _AchievementDetailScreenState
       ),
       child: Icon(
         _getIconForAchievement(achievement),
-        color: achievement.isUnlocked ? Colors.white : DS.neutral600,
+        color: achievement.isUnlocked ? DS.textOnPrimary : DS.neutral600,
         size: 50,
       ),
     );
   }
 
   Widget _buildContent(AchievementWithProgress achievement) => Container(
-      padding: const EdgeInsets.all(DS.spacing20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 名称和解锁状态
-          _buildTitleSection(achievement),
-          const SizedBox(height: DS.spacing24),
-
-          // 描述
-          if (achievement.achievement.description != null) ...[
-            _buildSectionTitle('描述'),
-            const SizedBox(height: DS.spacing8),
-            _buildDescription(achievement),
+        padding: const EdgeInsets.all(DS.spacing20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 名称和解锁状态
+            _buildTitleSection(achievement),
             const SizedBox(height: DS.spacing24),
+
+            // 描述
+            if (achievement.achievement.description != null) ...[
+              _buildSectionTitle('描述'),
+              const SizedBox(height: DS.spacing8),
+              _buildDescription(achievement),
+              const SizedBox(height: DS.spacing24),
+            ],
+
+            // 进度（未解锁时）
+            if (!achievement.isUnlocked) ...[
+              _buildSectionTitle('进度'),
+              const SizedBox(height: DS.spacing12),
+              _buildProgressCard(achievement),
+              const SizedBox(height: DS.spacing24),
+            ],
+
+            // 前置成就
+            if (achievement.achievement.prerequisites?.isNotEmpty ?? false) ...[
+              _buildSectionTitle('前置成就'),
+              const SizedBox(height: DS.spacing12),
+              _buildPrerequisites(achievement),
+              const SizedBox(height: DS.spacing24),
+            ],
+
+            // 奖励
+            if (achievement.achievement.rewardConfig?.isNotEmpty ?? false) ...[
+              _buildSectionTitle('奖励'),
+              const SizedBox(height: DS.spacing12),
+              _buildRewards(achievement),
+              const SizedBox(height: DS.spacing24),
+            ],
+
+            // 统计信息
+            _buildStats(achievement),
+
+            const SizedBox(height: DS.spacing40),
           ],
-
-          // 进度（未解锁时）
-          if (!achievement.isUnlocked) ...[
-            _buildSectionTitle('进度'),
-            const SizedBox(height: DS.spacing12),
-            _buildProgressCard(achievement),
-            const SizedBox(height: DS.spacing24),
-          ],
-
-          // 前置成就
-          if (achievement.achievement.prerequisites?.isNotEmpty ?? false) ...[
-            _buildSectionTitle('前置成就'),
-            const SizedBox(height: DS.spacing12),
-            _buildPrerequisites(achievement),
-            const SizedBox(height: DS.spacing24),
-          ],
-
-          // 奖励
-          if (achievement.achievement.rewardConfig?.isNotEmpty ?? false) ...[
-            _buildSectionTitle('奖励'),
-            const SizedBox(height: DS.spacing12),
-            _buildRewards(achievement),
-            const SizedBox(height: DS.spacing24),
-          ],
-
-          // 统计信息
-          _buildStats(achievement),
-
-          const SizedBox(height: DS.spacing40),
-        ],
-      ),
-    );
+        ),
+      );
 
   Widget _buildTitleSection(AchievementWithProgress achievement) => Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                achievement.achievement.name,
-                style: TextStyle(
-                  fontSize: DS.fontSize2xl,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.textPrimary,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  achievement.achievement.name,
+                  style: TextStyle(
+                    fontSize: DS.fontSize2xl,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Row(
-                children: [
-                  if (achievement.isUnlocked) ...[
-                    Icon(
-                      Icons.check_circle,
-                      size: DS.iconSizeSm,
-                      color: DS.semanticSuccess,
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Text(
-                      '已解锁',
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
+                const SizedBox(height: DS.spacing8),
+                Row(
+                  children: [
+                    if (achievement.isUnlocked) ...[
+                      Icon(
+                        Icons.check_circle,
+                        size: DS.iconSizeSm,
                         color: DS.semanticSuccess,
-                        fontWeight: DS.fontWeightMedium,
                       ),
-                    ),
-                  ] else ...[
-                    Icon(
-                      Icons.lock_outline,
-                      size: DS.iconSizeSm,
-                      color: DS.textTertiary,
-                    ),
-                    const SizedBox(width: DS.spacing6),
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        '已解锁',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.semanticSuccess,
+                          fontWeight: DS.fontWeightMedium,
+                        ),
+                      ),
+                    ] else ...[
+                      Icon(
+                        Icons.lock_outline,
+                        size: DS.iconSizeSm,
+                        color: DS.textTertiary,
+                      ),
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        '未解锁',
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textTertiary,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: DS.spacing12),
                     Text(
-                      '未解锁',
+                      _getTypeName(achievement.achievement.type),
                       style: TextStyle(
                         fontSize: DS.fontSizeSm,
-                        color: DS.textTertiary,
+                        color: DS.textSecondary,
                       ),
                     ),
                   ],
-                  const SizedBox(width: DS.spacing12),
-                  Text(
-                    _getTypeName(achievement.achievement.type),
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
-        // 置顶按钮
-        IconButton(
-          icon: Icon(
-            achievement.userProgress?.isPinned ?? false
-                ? Icons.push_pin
-                : Icons.push_pin_outlined,
-            color: (achievement.userProgress?.isPinned ?? false)
-                ? DS.semanticWarning
-                : DS.textSecondary,
+          // 置顶按钮
+          SparkleIconButton(
+            icon: Icon(
+              achievement.userProgress?.isPinned ?? false
+                  ? Icons.push_pin
+                  : Icons.push_pin_outlined,
+              color: (achievement.userProgress?.isPinned ?? false)
+                  ? DS.semanticWarning
+                  : DS.textSecondary,
+            ),
+            onPressed: () => _togglePin(achievement),
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
-          onPressed: () => _togglePin(achievement),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildSectionTitle(String title) => Text(
-      title,
-      style: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightBold,
-        color: DS.textPrimary,
-      ),
-    );
-
-  Widget _buildDescription(AchievementWithProgress achievement) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius16,
-        border: Border.all(color: DS.border),
-      ),
-      child: Text(
-        achievement.achievement.description ?? '暂无描述',
+        title,
         style: TextStyle(
           fontSize: DS.fontSizeBase,
+          fontWeight: DS.fontWeightBold,
           color: DS.textPrimary,
-          height: 1.5,
         ),
-      ),
-    );
+      );
+
+  Widget _buildDescription(AchievementWithProgress achievement) => Container(
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.border),
+        ),
+        child: Text(
+          achievement.achievement.description ?? '暂无描述',
+          style: TextStyle(
+            fontSize: DS.fontSizeBase,
+            color: DS.textPrimary,
+            height: 1.5,
+          ),
+        ),
+      );
 
   Widget _buildProgressCard(AchievementWithProgress achievement) {
     final userProgress = achievement.userProgress;
     final progress = achievement.progressPercentage / 100;
-    final rarityColor = RarityColorProvider.getColor(achievement.achievement.rarity);
+    final rarityColor =
+        RarityColorProvider.getColor(achievement.achievement.rarity);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -412,7 +422,10 @@ class _AchievementDetailScreenState
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [rarityColor, rarityColor.withValues(alpha: 0.7)],
+                        colors: [
+                          rarityColor,
+                          rarityColor.withValues(alpha: 0.7)
+                        ],
                       ),
                       borderRadius: DS.borderRadiusFull,
                     ),
@@ -551,10 +564,12 @@ class _AchievementDetailScreenState
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          ...rewards.map((reward) => Padding(
+          ...rewards.map(
+            (reward) => Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _buildRewardItem(reward),
-            ),),
+            ),
+          ),
         ],
       ),
     );
@@ -649,50 +664,51 @@ class _AchievementDetailScreenState
     );
   }
 
-  Widget _buildStatRow(String label, String value, {bool highlight = false}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: DS.spacing6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+  Widget _buildStatRow(String label, String value, {bool highlight = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              fontWeight: highlight ? DS.fontWeightBold : DS.fontWeightMedium,
-              color: highlight ? DS.semanticWarning : DS.textPrimary,
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                fontWeight: highlight ? DS.fontWeightBold : DS.fontWeightMedium,
+                color: highlight ? DS.semanticWarning : DS.textPrimary,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildNotFoundView() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: DS.semanticError,
-          ),
-          const SizedBox(height: DS.spacing16),
-          const Text(
-            '成就未找到',
-            style: TextStyle(
-              fontSize: DS.fontSizeLg,
-              fontWeight: DS.fontWeightSemibold,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: DS.semanticError,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing16),
+            const Text(
+              '成就未找到',
+              style: TextStyle(
+                fontSize: DS.fontSizeLg,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+            ),
+          ],
+        ),
+      );
 
   IconData _getIconForAchievement(AchievementWithProgress achievement) {
     switch (achievement.achievement.type) {
@@ -757,7 +773,8 @@ class _AchievementDetailScreenState
     }
   }
 
-  String _formatDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
+  String _formatDate(DateTime date) =>
+      '${date.year}年${date.month}月${date.day}日';
 
   void _togglePin(AchievementWithProgress achievement) {
     final isPinned = achievement.userProgress?.isPinned ?? false;
@@ -768,12 +785,7 @@ class _AchievementDetailScreenState
 
   void _shareAchievement(AchievementWithProgress achievement) {
     // TODO: 实现分享功能
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('分享功能开发中'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    AppFeedback.info(context, '分享功能开发中');
   }
 }
 

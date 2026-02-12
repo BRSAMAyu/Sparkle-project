@@ -1,0 +1,83 @@
+groups:
+  - name: sparkle_slo
+    interval: 30s
+    rules:
+      - alert: SparkleGatewayDown
+        expr: up{job="sparkle_gateway"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          tier: P1
+          service: gateway
+        annotations:
+          summary: "Gateway is down"
+          description: "sparkle_gateway has been unreachable for more than 2 minutes"
+          runbook: "monitoring/runbooks/incident_response.md#p1-gatewaydown"
+
+      - alert: SparkleBackendDown
+        expr: up{job="sparkle_backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          tier: P1
+          service: backend
+        annotations:
+          summary: "Backend is down"
+          description: "sparkle_backend has been unreachable for more than 2 minutes"
+          runbook: "monitoring/runbooks/incident_response.md#p1-backenddown"
+
+      - alert: SparkleBackendHigh5xxRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total[5m])), 1)
+          > 0.02
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Backend 5xx rate high"
+          description: "5xx ratio > 2% for 10m"
+          runbook: "monitoring/runbooks/incident_response.md#p2-backendhigh5xxrate"
+
+      - alert: SparkleBackendP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Backend P95 latency high"
+          description: "P95 latency exceeds 1.5s for 10m"
+          runbook: "monitoring/runbooks/incident_response.md#p2-backendp95latencyhigh"
+
+      - alert: SparkleEventStreamLagHigh
+        expr: sparkle_event_stream_lag_seconds > 120
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Event stream lag high"
+          description: "Event stream lag above 120s for 5m"
+          runbook: "monitoring/runbooks/incident_response.md#p2-eventstreamlaghigh"
+
+      - alert: SparkleContextPackOverBudgetSpike
+        expr: increase(sparkle_context_pack_over_budget_total[10m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+          tier: P3
+          service: backend
+        annotations:
+          summary: "Context pack over-budget spikes"
+          description: "More than 20 over-budget context-pack events in 10m"
+          runbook: "monitoring/runbooks/incident_response.md#p3-contextpackoverbudgetspike"

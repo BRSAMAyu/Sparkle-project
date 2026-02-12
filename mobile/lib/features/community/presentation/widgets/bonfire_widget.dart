@@ -34,11 +34,11 @@ class _BonfireWidgetState extends State<BonfireWidget>
   }
 
   Color _getFireColor() {
-    if (widget.level >= 5) return Colors.purpleAccent;
+    if (widget.level >= 5) return DS.prismPurple;
     if (widget.level >= 4) return DS.errorAccent;
-    if (widget.level >= 3) return Colors.deepOrangeAccent;
+    if (widget.level >= 3) return DS.error;
     if (widget.level >= 2) return DS.warningAccent;
-    return Colors.amber;
+    return DS.warning;
   }
 
   @override
@@ -63,8 +63,9 @@ class _BonfireWidgetState extends State<BonfireWidget>
                 gradient: RadialGradient(
                   colors: [
                     baseColor.withValues(
-                        alpha: 0.1 + (_controller.value * 0.1),),
-                    Colors.transparent,
+                      alpha: 0.1 + (_controller.value * 0.1),
+                    ),
+                    DS.surfacePrimary.withValues(alpha: 0),
                   ],
                   stops: const [0.4, 1.0],
                 ),
@@ -85,7 +86,7 @@ class _BonfireWidgetState extends State<BonfireWidget>
                   gradient: RadialGradient(
                     colors: [
                       baseColor.withValues(alpha: 0.2),
-                      Colors.transparent,
+                      DS.surfacePrimary.withValues(alpha: 0),
                     ],
                   ),
                 ),

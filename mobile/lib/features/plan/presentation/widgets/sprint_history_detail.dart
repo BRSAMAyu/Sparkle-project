@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Sprint history detail bottom sheet
 class SprintHistoryDetailSheet extends StatelessWidget {
@@ -16,7 +17,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
     final dateFormat = DateFormat('yyyy年MM月dd日');
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: ResponsiveSystem.height(context) * 0.7,
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
         borderRadius: const BorderRadius.only(
@@ -212,7 +213,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                 _buildTaskStat(
                   context,
                   label: '状态',
-                  value: item.statusText,
+                  value: _getStatusText(context),
                   icon: _getStatusIcon(item.status),
                   color: _getStatusColor(item.status),
                 ),
@@ -373,6 +374,18 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         return DS.semanticError;
       case SprintStatus.extended:
         return DS.semanticWarning;
+    }
+  }
+
+  String _getStatusText(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (item.status) {
+      case SprintStatus.completed:
+        return l10n.sprintCompleted;
+      case SprintStatus.abandoned:
+        return l10n.sprintAbandoned;
+      case SprintStatus.extended:
+        return l10n.sprintExtended(item.durationDays);
     }
   }
 }

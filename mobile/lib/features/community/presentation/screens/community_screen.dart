@@ -13,9 +13,13 @@ class CommunityScreen extends ConsumerWidget {
     final feedState = ref.watch(feedProvider);
 
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // Background handled by parent scaffold/stack
-      floatingActionButton: FloatingActionButton(
+      backgroundColor: DS.surfacePrimary.withValues(
+        alpha: 0,
+      ), // Background handled by parent scaffold/stack
+      floatingActionButton: SparkleIconButton(
+        variant: ButtonVariant.primary,
+        size: DS.touchTargetMinSize,
+        icon: const Icon(Icons.edit),
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -23,50 +27,51 @@ class CommunityScreen extends ConsumerWidget {
             ),
           );
         },
-        backgroundColor: DS.primaryBase,
-        child: const Icon(Icons.edit),
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => ref.read(feedProvider.notifier).refresh(),
-          color: DS.primaryBase,
-          child: feedState.when(
-            data: (posts) {
-              if (posts.isEmpty) {
-                return _buildEmptyState(context);
-              }
-              return ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 80), // Space for FAB
-                itemCount: posts.length + 1, // +1 for Header
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _buildHeader(context);
-                  }
-                  final post = posts[index - 1];
-                  return FeedPostCard(post: post);
-                },
-              );
-            },
-            error: (err, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: DS.error),
-                  const SizedBox(height: DS.lg),
-                  Text(
-                    'Failed to load feed',
-                    style: TextStyle(color: DS.brandPrimary300),
-                  ),
-                  SparkleButton.ghost(
+        child: ContentConstraint(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(feedProvider.notifier).refresh(),
+            color: DS.primaryBase,
+            child: feedState.when(
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return _buildEmptyState(context);
+                }
+                return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 80), // Space for FAB
+                  itemCount: posts.length + 1, // +1 for Header
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return _buildHeader(context);
+                    }
+                    final post = posts[index - 1];
+                    return FeedPostCard(post: post);
+                  },
+                );
+              },
+              error: (err, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: DS.error),
+                    const SizedBox(height: DS.lg),
+                    Text(
+                      'Failed to load feed',
+                      style: TextStyle(color: DS.brandPrimary300),
+                    ),
+                    SparkleButton.ghost(
                       label: 'Retry',
                       onPressed: () =>
-                          ref.read(feedProvider.notifier).refresh(),),
-                ],
+                          ref.read(feedProvider.notifier).refresh(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            loading: () => Center(
-              child: CircularProgressIndicator(color: DS.primaryBase),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: DS.primaryBase),
+              ),
             ),
           ),
         ),

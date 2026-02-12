@@ -9,6 +9,8 @@ import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+
 /// 分心事件类型
 enum InterruptionType {
   appSwitch, // 切换应用
@@ -92,11 +94,15 @@ class MindfulnessState {
 
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
-  MindfulnessNotifier(this._focusRepository, this._predictionService)
-      : super(const MindfulnessState());
+  MindfulnessNotifier(
+    this._focusRepository,
+    this._predictionService,
+    this._taskRepository,
+  ) : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
   final PredictionService _predictionService;
+  final TaskRepository _taskRepository;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -104,6 +110,16 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   /// 开始正念模式
   void start(TaskModel task, {bool enableDND = false}) {
     _timer?.cancel();
+
+    // Call backend to start task if it's pending
+    if (task.status == TaskStatus.pending) {
+      _taskRepository.startTask(task.id).then((_) {
+        debugPrint('✅ Task started in backend: ${task.id}');
+      }).catchError((e) {
+        debugPrint('❌ Failed to start task in backend: $e');
+        // We don't block the UI here, assuming optimistic success or retries
+      });
+    }
 
     state = MindfulnessState(
       isActive: true,
@@ -290,5 +306,6 @@ final mindfulnessProvider =
     StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
   final focusRepository = ref.watch(focusRepositoryProvider);
   final predictionService = ref.watch(predictionServiceProvider);
-  return MindfulnessNotifier(focusRepository, predictionService);
+  final taskRepository = ref.watch(taskRepositoryProvider);
+  return MindfulnessNotifier(focusRepository, predictionService, taskRepository);
 });

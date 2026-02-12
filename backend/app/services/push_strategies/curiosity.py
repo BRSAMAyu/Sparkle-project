@@ -1,12 +1,13 @@
 """
 Curiosity Push Strategy
 """
-from typing import Dict, Any
 import random
+from typing import Any
 
 from app.models.user import User
 from app.services.personalization import PushPolicyProfile
 from app.services.push_strategies.strategy import PushStrategy
+
 
 class CuriosityStrategy(PushStrategy):
     """
@@ -21,7 +22,7 @@ class CuriosityStrategy(PushStrategy):
 
         return random.random() < trigger_probability
 
-    async def get_context_data(self, user: User) -> Dict[str, Any]:
+    async def get_context_data(self, user: User) -> dict[str, Any]:
         """
         Return context data for content generation.
         """

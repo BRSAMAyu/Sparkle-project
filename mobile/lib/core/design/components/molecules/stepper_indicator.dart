@@ -84,7 +84,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
         animation: _pulseController,
         builder: (context, child) => Transform.scale(
             scale: 1.0 + (_pulseController.value * 0.15),
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -189,8 +189,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
   /// 当前步骤的进度条动画
   Widget _buildPulsingBar() => AnimatedBuilder(
       animation: _pulseController,
-      builder: (context, child) {
-        return Container(
+      builder: (context, child) => Container(
           height: 3,
           decoration: BoxDecoration(
             borderRadius: DS.borderRadius20,
@@ -206,8 +205,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
               ),
             ),
           ),
-        );
-      },
+        ),
     );
 
   /// 步骤结果详情（可展示如检索到的知识数量、生成的token数等）
@@ -219,8 +217,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: result.entries.map((e) {
-          return Padding(
+        children: result.entries.map((e) => Padding(
             padding: const EdgeInsets.only(bottom: 2),
             child: Row(
               children: [
@@ -242,8 +239,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
                 ),
               ],
             ),
-          );
-        }).toList(),
+          ),).toList(),
       ),
     );
 

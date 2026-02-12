@@ -1,16 +1,17 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 from uuid import UUID
 
-from app.api.deps import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user, get_db
 from app.models.user import User
-from app.schemas.notification import NotificationResponse, NotificationUpdate, NotificationCreate
+from app.schemas.notification import NotificationCreate, NotificationResponse
 from app.services.notification_service import NotificationService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("", response_model=list[NotificationResponse])
 async def read_notifications(
     skip: int = 0,
     limit: int = 50,
@@ -26,7 +27,7 @@ async def read_notifications(
     )
     return notifications
 
-@router.post("/", response_model=NotificationResponse)
+@router.post("", response_model=NotificationResponse)
 async def create_notification(
     notification_in: NotificationCreate,
     db: AsyncSession = Depends(get_db),

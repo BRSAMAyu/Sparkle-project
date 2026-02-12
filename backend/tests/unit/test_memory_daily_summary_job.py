@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -29,7 +33,7 @@ async def test_daily_summary_job_writes_snapshot(db_session, monkeypatch):
     result = await service.run_daily_summary_job()
     assert result["status"] == "ok"
 
-    today = datetime.utcnow().date()
+    today = _utcnow().date()
     result = await db_session.execute(
         select(LtmDailySnapshot).where(LtmDailySnapshot.snapshot_date == today)
     )

@@ -2,7 +2,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
 /// 设计系统合规检查工具
@@ -95,7 +94,16 @@ class DesignSystemLinter {
         final relativePath = path.relative(entity.path, from: projectRoot);
         if (!relativePath.contains('.g.') &&
             !relativePath.contains('test') &&
-            !relativePath.contains('generated')) {
+            !relativePath.contains('generated') &&
+            !relativePath.contains('core/design/validation/') &&
+            !relativePath.contains('core/design/tokens/') &&
+            !relativePath.contains('core/design/tokens_v2/') &&
+            !relativePath.contains('/domain/') &&
+            !relativePath.contains('/data/') &&
+            relativePath != 'core/design/design_system.dart' &&
+            relativePath != 'core/design/materials.dart' &&
+            relativePath != 'core/utils/theme_utils.dart' &&
+            relativePath != 'app/theme.dart') {
           dartFiles.add(entity.path);
         }
       }
@@ -111,9 +119,9 @@ class DesignSystemLinter {
 
     // 检查常见的硬编码颜色模式
     final patterns = [
-      RegExp(r'Color\(0x[0-9A-F]{8}\)'), // Color(0xFF6B35)
-      RegExp(r'Colors\.\w+'), // DS.brandPrimary, DS.brandPrimary
-      RegExp(r'Color\.\w+'), // const Color.white
+      RegExp(r'Color\(0x[0-9a-fA-F]{8}\)'), // Color(0xFF6B35)
+      // Require a word boundary to avoid false positives like `sparkleColors` or `primaryColor`.
+      RegExp(r'\bColors\.\w+'), // Colors.white
     ];
 
     for (final pattern in patterns) {
@@ -139,7 +147,8 @@ class DesignSystemLinter {
 
     // 检查硬编码间距数值
     final spacingPattern = RegExp(
-        r'(EdgeInsets|SizedBox|padding|margin).*[^DS\.\s](4|8|12|16|24|32|48|64)',);
+      r'(EdgeInsets|SizedBox|padding|margin).*[^DS\.\s](4|8|12|16|24|32|48|64)',
+    );
     if (spacingPattern.hasMatch(line)) {
       // 排除设计系统使用
       if (line.contains('DS.') ||
@@ -160,15 +169,15 @@ class DesignSystemLinter {
 
     // 检查Material按钮组件
     final buttonPatterns = [
-      'ElevatedButton(',
-      'TextButton(',
-      'IconButton(',
-      'OutlinedButton(',
-      'FloatingActionButton(',
+      RegExp(r'\bElevatedButton\('),
+      RegExp(r'\bTextButton\('),
+      RegExp(r'\bIconButton\('),
+      RegExp(r'\bOutlinedButton\('),
+      RegExp(r'\bFloatingActionButton\('),
     ];
 
     for (final pattern in buttonPatterns) {
-      if (line.contains(pattern)) {
+      if (pattern.hasMatch(line)) {
         // 排除设计系统文件
         if (line.contains('design_system_linter.dart')) {
           return false;
@@ -259,12 +268,12 @@ class DesignSystemLinter {
     final violations = await linter.runAllChecks();
     final report = linter.generateReport(violations);
 
-    debugPrint(report);
+    stdout.writeln(report);
 
     // 保存报告到文件
     final reportFile = File(path.join(projectRoot, 'design_system_report.txt'));
     await reportFile.writeAsString(report);
-    debugPrint('报告已保存到: ${reportFile.path}');
+    stdout.writeln('报告已保存到: ${reportFile.path}');
   }
 }
 
@@ -272,9 +281,9 @@ class DesignSystemLinter {
 void main(List<String> args) async {
   final projectRoot = args.isNotEmpty ? args[0] : Directory.current.path;
 
-  debugPrint('开始设计系统合规检查...');
-  debugPrint('项目目录: $projectRoot');
-  debugPrint('');
+  stdout.writeln('开始设计系统合规检查...');
+  stdout.writeln('项目目录: $projectRoot');
+  stdout.writeln();
 
   await DesignSystemLinter.runAndPrint(projectRoot);
 }

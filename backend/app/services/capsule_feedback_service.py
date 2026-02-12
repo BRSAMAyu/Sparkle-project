@@ -3,17 +3,15 @@ Capsule Feedback Service
 
 处理胶囊反馈，更新用户推断偏好，重新计算胶囊质量分
 """
-from typing import Optional, Dict, Any
+from typing import Any
 from uuid import UUID
-from loguru import logger
 
+from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
 
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.user import User
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -32,10 +30,10 @@ class CapsuleFeedbackService:
         user_id: UUID,
         capsule_id: UUID,
         db: AsyncSession,
-        rating: Optional[int] = None,
-        helpful: Optional[bool] = None,
-        category: Optional[str] = None,
-        comment: Optional[str] = None,
+        rating: int | None = None,
+        helpful: bool | None = None,
+        category: str | None = None,
+        comment: str | None = None,
     ) -> CapsuleFeedback:
         """
         提交胶囊反馈
@@ -116,8 +114,8 @@ class CapsuleFeedbackService:
     async def _update_inferred_preferences(
         self,
         user_id: UUID,
-        depth_delta: Optional[float],
-        curiosity_delta: Optional[float],
+        depth_delta: float | None,
+        curiosity_delta: float | None,
         db: AsyncSession,
     ):
         """
@@ -233,7 +231,7 @@ class CapsuleFeedbackService:
         self,
         user_id: UUID,
         db: AsyncSession,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取用户反馈统计
 

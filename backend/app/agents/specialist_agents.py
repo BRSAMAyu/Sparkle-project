@@ -5,11 +5,12 @@ Specialist Agents - 专业智能体
 """
 
 import re
-from typing import List
+
 from loguru import logger
 
-from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
 from app.services.llm_service import llm_service
+
+from .base_agent import AgentContext, AgentResponse, AgentRole, BaseAgent
 
 
 class MathAgent(BaseAgent):

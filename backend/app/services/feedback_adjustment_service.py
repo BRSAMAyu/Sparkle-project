@@ -21,20 +21,22 @@ AdjustmentAction[] (实际执行)
 """
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import Task, TaskStatus, TaskType
-from app.models.plan_state import PlanState
+from app.models.task import Task, TaskStatus
 from app.services.plan_state_service import PlanStateService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackType(str, Enum):
@@ -57,22 +59,22 @@ class FeedbackEvent:
     event_id: str
     user_id: UUID
     plan_id: UUID
-    task_id: Optional[UUID]
+    task_id: UUID | None
 
     feedback_type: FeedbackType
     timestamp: datetime
 
     # 反馈详情
-    rating: Optional[int] = None  # 1-5 星评分
-    actual_duration_minutes: Optional[int] = None
-    difficulty_perception: Optional[str] = None  # "easy", "medium", "hard"
-    comment: Optional[str] = None
+    rating: int | None = None  # 1-5 星评分
+    actual_duration_minutes: int | None = None
+    difficulty_perception: str | None = None  # "easy", "medium", "hard"
+    comment: str | None = None
 
     # 相关任务信息
-    task_type: Optional[str] = None
-    knowledge_nodes: List[str] = field(default_factory=list)
+    task_type: str | None = None
+    knowledge_nodes: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "event_id": self.event_id,
             "user_id": str(self.user_id),
@@ -93,12 +95,12 @@ class FeedbackEvent:
 class AdjustmentAction:
     """调整动作"""
     action_type: str  # "delete_task", "modify_task", "adjust_difficulty", "adjust_estimate"
-    target_task_ids: List[UUID]
-    parameters: Dict[str, Any]
+    target_task_ids: list[UUID]
+    parameters: dict[str, Any]
     reason: str
     confidence: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "action_type": self.action_type,
             "target_task_ids": [str(tid) for tid in self.target_task_ids],
@@ -112,7 +114,7 @@ class DifficultyCalibrator:
     """难度校准器"""
 
     def __init__(self):
-        self._history: Dict[str, List[Dict]] = {}  # task_type -> [{expected, perceived, time_ratio}]
+        self._history: dict[str, list[dict]] = {}  # task_type -> [{expected, perceived, time_ratio}]
 
     def record(
         self,
@@ -129,7 +131,7 @@ class DifficultyCalibrator:
             "expected": expected_difficulty,
             "perceived": perceived_difficulty,
             "time_ratio": completion_time_ratio,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": _utcnow().isoformat()
         })
 
         # 保留最近20条记录
@@ -182,7 +184,7 @@ class TimeEstimateCalibrator:
     """时间估计校准器"""
 
     def __init__(self):
-        self._history: Dict[str, List[tuple]] = {}  # task_type -> [(estimated, actual)]
+        self._history: dict[str, list[tuple]] = {}  # task_type -> [(estimated, actual)]
 
     def record(self, task_type: str, estimated: int, actual: int):
         """记录时间反馈"""
@@ -250,7 +252,7 @@ class FeedbackDrivenAdjustmentService:
     async def process_feedback(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """
         处理反馈事件并生成调整动作
 
@@ -292,7 +294,7 @@ class FeedbackDrivenAdjustmentService:
     async def _handle_task_completed(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """处理任务完成反馈"""
         actions = []
 
@@ -338,7 +340,7 @@ class FeedbackDrivenAdjustmentService:
         self,
         event: FeedbackEvent,
         difficulty: str
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """处理难度反馈"""
         actions = []
 
@@ -387,7 +389,7 @@ class FeedbackDrivenAdjustmentService:
     async def _handle_time_feedback(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """处理时间估计反馈"""
         actions = []
 
@@ -427,7 +429,7 @@ class FeedbackDrivenAdjustmentService:
     async def _handle_skip_similar(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """处理跳过相似任务请求"""
         if not event.task_id:
             return []
@@ -457,7 +459,7 @@ class FeedbackDrivenAdjustmentService:
     async def _handle_topic_mastered(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """处理主题已掌握反馈"""
         actions = []
 
@@ -489,7 +491,7 @@ class FeedbackDrivenAdjustmentService:
     async def _suggest_task_modifications(
         self,
         event: FeedbackEvent
-    ) -> List[AdjustmentAction]:
+    ) -> list[AdjustmentAction]:
         """基于低评分建议任务修改"""
         actions = []
 
@@ -515,7 +517,7 @@ class FeedbackDrivenAdjustmentService:
                     "difficulty_delta": -1,
                     "reason": f"Low rating ({event.rating}/5) on similar task"
                 },
-                reason=f"Reducing difficulty due to low user rating",
+                reason="Reducing difficulty due to low user rating",
                 confidence=0.7
             ))
 
@@ -536,7 +538,7 @@ class FeedbackDrivenAdjustmentService:
                         update(Task)
                         .where(Task.id == task_id, Task.user_id == user_id)
                         .values(
-                            deleted_at=datetime.utcnow(),
+                            deleted_at=_utcnow(),
                             status=TaskStatus.ABANDONED.value
                         )
                     )
@@ -598,7 +600,7 @@ class FeedbackDrivenAdjustmentService:
                     await self.db.execute(
                         update(Task)
                         .where(Task.id == task.id, Task.user_id == user_id)
-                        .values(deleted_at=datetime.utcnow(), status=TaskStatus.ABANDONED.value)
+                        .values(deleted_at=_utcnow(), status=TaskStatus.ABANDONED.value)
                     )
                 await self.db.commit()
 
@@ -613,10 +615,10 @@ class FeedbackDrivenAdjustmentService:
     async def _record_feedback_with_actions(
         self,
         event: FeedbackEvent,
-        actions: List[AdjustmentAction]
+        actions: list[AdjustmentAction]
     ) -> None:
         """记录反馈和动作到 PlanState"""
-        feedback_entry = {
+        {
             **event.to_dict(),
             "applied_actions": [action.to_dict() for action in actions]
         }
@@ -632,7 +634,7 @@ class FeedbackDrivenAdjustmentService:
 
     # ==================== Helper Methods ====================
 
-    async def _get_task(self, task_id: UUID, user_id: UUID) -> Optional[Task]:
+    async def _get_task(self, task_id: UUID, user_id: UUID) -> Task | None:
         """获取任务"""
         result = await self.db.execute(
             select(Task).where(
@@ -648,7 +650,7 @@ class FeedbackDrivenAdjustmentService:
         plan_id: UUID,
         reference_task: Task,
         user_id: UUID
-    ) -> List[Task]:
+    ) -> list[Task]:
         """查找相似的待完成任务"""
         # 相似条件: 同一计划、同一类型、待完成
         result = await self.db.execute(
@@ -666,9 +668,9 @@ class FeedbackDrivenAdjustmentService:
     async def _find_tasks_by_knowledge_nodes(
         self,
         plan_id: UUID,
-        knowledge_nodes: List[str],
+        knowledge_nodes: list[str],
         user_id: UUID
-    ) -> List[Task]:
+    ) -> list[Task]:
         """查找与知识节点相关的任务"""
         # 通过 tags 字段查找（假设知识节点存储在 tags 中）
         result = await self.db.execute(

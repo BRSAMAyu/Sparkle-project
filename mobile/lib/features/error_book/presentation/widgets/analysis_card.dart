@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// AI 分析结果卡片
@@ -25,9 +26,9 @@ class AnalysisCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(DS.spacing16),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -53,34 +54,33 @@ class AnalysisCard extends StatelessWidget {
                   label: analysis.errorTypeLabel,
                 ),
                 if (onReAnalyze != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
+                  const SizedBox(width: DS.spacing8),
+                  SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: DS.spacing32,
+                    icon: const Icon(Icons.refresh, size: DS.iconSizeSm),
                     onPressed: onReAnalyze,
-                    tooltip: '重新分析',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                   ),
                 ],
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
 
             // 错误原因
             _buildSection(
               context,
               icon: Icons.error_outline,
-              iconColor: Colors.red,
+              iconColor: DS.error,
               title: '错误原因',
               content: analysis.rootCause,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
 
             // 正确思路
             _buildSection(
               context,
               icon: Icons.lightbulb_outline,
-              iconColor: Colors.amber,
+              iconColor: DS.warning,
               title: '正确思路',
               content: analysis.correctApproach,
             ),
@@ -91,19 +91,19 @@ class AnalysisCard extends StatelessWidget {
               _buildListSection(
                 context,
                 icon: Icons.warning_amber_rounded,
-                iconColor: Colors.orange,
+                iconColor: DS.warningLight,
                 title: '类似易错点',
                 items: analysis.similarTraps,
               ),
             ],
 
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
 
             // 学习建议
             _buildSection(
               context,
               icon: Icons.school_outlined,
-              iconColor: Colors.blue,
+              iconColor: DS.info,
               title: '学习建议',
               content: analysis.studySuggestion,
             ),
@@ -112,7 +112,7 @@ class AnalysisCard extends StatelessWidget {
             if (knowledgeLinks.isNotEmpty) ...[
               const SizedBox(height: 20),
               const Divider(),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.spacing12),
               Row(
                 children: [
                   Icon(
@@ -120,7 +120,7 @@ class AnalysisCard extends StatelessWidget {
                     size: 16,
                     color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: DS.spacing6),
                   Text(
                     '关联知识点',
                     style: theme.textTheme.titleSmall?.copyWith(
@@ -129,10 +129,10 @@ class AnalysisCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.spacing12),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
                 children: knowledgeLinks
                     .map(
                       (link) => ActionChip(
@@ -174,7 +174,7 @@ class AnalysisCard extends StatelessWidget {
         Row(
           children: [
             Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: 6),
+            const SizedBox(width: DS.spacing6),
             Text(
               title,
               style: theme.textTheme.titleSmall?.copyWith(
@@ -184,10 +184,10 @@ class AnalysisCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.spacing8),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(DS.spacing12),
           decoration: BoxDecoration(
             color: iconColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
@@ -221,7 +221,7 @@ class AnalysisCard extends StatelessWidget {
         Row(
           children: [
             Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: 6),
+            const SizedBox(width: DS.spacing6),
             Text(
               title,
               style: theme.textTheme.titleSmall?.copyWith(
@@ -231,10 +231,10 @@ class AnalysisCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.spacing8),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(DS.spacing12),
           decoration: BoxDecoration(
             color: iconColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
@@ -247,7 +247,7 @@ class AnalysisCard extends StatelessWidget {
             children: items
                 .map(
                   (item) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing4),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -292,7 +292,10 @@ class _ErrorTypeChip extends StatelessWidget {
     final color = _getErrorTypeColor(errorType);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing4,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -312,23 +315,23 @@ class _ErrorTypeChip extends StatelessWidget {
   Color _getErrorTypeColor(String type) {
     switch (type) {
       case 'concept_confusion':
-        return Colors.purple;
+        return DS.brandSecondary;
       case 'calculation_error':
-        return Colors.orange;
+        return DS.warningLight;
       case 'reading_careless':
-        return Colors.amber;
+        return DS.warning;
       case 'knowledge_gap':
-        return Colors.red;
+        return DS.error;
       case 'method_wrong':
-        return Colors.blue;
+        return DS.info;
       case 'logic_error':
-        return Colors.indigo;
+        return DS.brandPrimary;
       case 'memory_lapse':
-        return Colors.teal;
+        return DS.success;
       case 'time_pressure':
-        return Colors.deepOrange;
+        return DS.warning;
       default:
-        return Colors.grey;
+        return DS.textSecondary;
     }
   }
 }
@@ -342,9 +345,9 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(DS.spacing16),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           children: [
             Row(
@@ -359,7 +362,7 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.spacing12),
                 Text(
                   'AI 正在分析中...',
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -368,7 +371,7 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.spacing16),
             Text(
               '正在分析错题原因、生成学习建议并关联知识点，预计需要 3-5 秒',
               style: theme.textTheme.bodySmall?.copyWith(

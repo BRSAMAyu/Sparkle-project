@@ -6,13 +6,14 @@ Session State Manager
 - 活跃计划管理（P0: 任务→计划自动切换）
 - 计划上下文跟踪
 """
-import json
 import asyncio
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
-from datetime import datetime, timedelta
-from loguru import logger
-from dataclasses import dataclass, asdict
+import json
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
+
+from loguru import logger
 
 if TYPE_CHECKING:
     from app.services.plan_matching_service import PlanMatchingService
@@ -32,11 +33,11 @@ class FSMState:
     session_id: str
     state: str
     details: str = ""
-    request_id: Optional[str] = None
-    user_id: Optional[str] = None
+    request_id: str | None = None
+    user_id: str | None = None
     timestamp: float = 0.0
     # 用于断点续传
-    last_processed_message: Optional[str] = None
+    last_processed_message: str | None = None
     accumulated_response: str = ""
     tool_calls_in_progress: list = None
 
@@ -54,12 +55,16 @@ class FSMState:
         return cls(**json.loads(data))
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class SessionStateManager:
     """
     会话状态管理器
     负责 FSM 状态的持久化、恢复和分布式锁管理
     """
-    
+
     def __init__(self, redis_client, ttl: int = 3600):
         """
         Args:
@@ -86,11 +91,11 @@ class SessionStateManager:
     async def save_state(self, session_id: str, state: FSMState) -> bool:
         """
         保存 FSM 状态到 Redis
-        
+
         Args:
             session_id: 会话 ID
             state: FSM 状态对象
-            
+
         Returns:
             bool: 是否成功
         """
@@ -103,24 +108,24 @@ class SessionStateManager:
             logger.error(f"Failed to save state for session {session_id}: {e}")
             return False
 
-    async def load_state(self, session_id: str) -> Optional[FSMState]:
+    async def load_state(self, session_id: str) -> FSMState | None:
         """
         从 Redis 恢复 FSM 状态
-        
+
         Args:
             session_id: 会话 ID
-            
+
         Returns:
             Optional[FSMState]: 恢复的状态，如果不存在则返回 None
         """
         try:
             key = self._get_state_key(session_id)
             data = await self.redis.get(key)
-            
+
             if not data:
                 logger.debug(f"No saved state found for session {session_id}")
                 return None
-            
+
             state = FSMState.from_json(data)
             logger.info(f"Restored state for session {session_id}: {state.state}")
             return state
@@ -129,17 +134,17 @@ class SessionStateManager:
             return None
 
     async def update_state(
-        self, 
-        session_id: str, 
-        state: str, 
+        self,
+        session_id: str,
+        state: str,
         details: str = "",
-        request_id: Optional[str] = None,
-        user_id: Optional[str] = None,
+        request_id: str | None = None,
+        user_id: str | None = None,
         **kwargs
     ) -> bool:
         """
         更新 FSM 状态（原子操作）
-        
+
         Args:
             session_id: 会话 ID
             state: 新状态
@@ -147,14 +152,14 @@ class SessionStateManager:
             request_id: 请求 ID
             user_id: 用户 ID
             **kwargs: 其他要更新的字段
-            
+
         Returns:
             bool: 是否成功
         """
         try:
             # 先加载现有状态
             existing = await self.load_state(session_id)
-            
+
             if existing:
                 # 更新现有状态
                 existing.state = state
@@ -164,12 +169,12 @@ class SessionStateManager:
                     existing.request_id = request_id
                 if user_id:
                     existing.user_id = user_id
-                
+
                 # 更新其他字段
                 for key, value in kwargs.items():
                     if hasattr(existing, key):
                         setattr(existing, key, value)
-                
+
                 new_state = existing
             else:
                 # 创建新状态
@@ -182,10 +187,10 @@ class SessionStateManager:
                     timestamp=datetime.now().timestamp(),
                     **kwargs
                 )
-            
+
             # 保存到 Redis
             return await self.save_state(session_id, new_state)
-            
+
         except Exception as e:
             logger.error(f"Failed to update state for session {session_id}: {e}")
             return False
@@ -193,11 +198,11 @@ class SessionStateManager:
     async def acquire_lock(self, session_id: str, request_id: str) -> bool:
         """
         获取分布式锁（防止并发请求冲突）
-        
+
         Args:
             session_id: 会话 ID
             request_id: 请求 ID
-            
+
         Returns:
             bool: 是否成功获取锁
         """
@@ -205,12 +210,12 @@ class SessionStateManager:
             lock_key = self._get_lock_key(session_id)
             # 使用 NX 选项：仅当 key 不存在时设置
             result = await self.redis.set(
-                lock_key, 
-                request_id, 
+                lock_key,
+                request_id,
                 nx=True,  # Only set if not exists
                 ex=self.lock_ttl
             )
-            
+
             if result:
                 logger.debug(f"Lock acquired for session {session_id} by request {request_id}")
                 return True
@@ -222,7 +227,7 @@ class SessionStateManager:
                     return True
                 logger.warning(f"Failed to acquire lock for session {session_id}, already locked")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Error acquiring lock for session {session_id}: {e}")
             return False
@@ -230,17 +235,17 @@ class SessionStateManager:
     async def release_lock(self, session_id: str, request_id: str) -> bool:
         """
         释放分布式锁（使用 Lua 脚本保证原子性）
-        
+
         Args:
             session_id: 会话 ID
             request_id: 请求 ID
-            
+
         Returns:
             bool: 是否成功释放
         """
         try:
             lock_key = self._get_lock_key(session_id)
-            
+
             # Lua 脚本：原子性地检查并删除
             lua_script = """
             if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -249,30 +254,143 @@ class SessionStateManager:
                 return 0
             end
             """
-            
+
             result = await self.redis.eval(lua_script, 1, lock_key, request_id)
-            
+
             if result:
                 logger.debug(f"Lock released for session {session_id} by request {request_id}")
                 return True
             else:
                 logger.warning(f"Failed to release lock for session {session_id}, not owner")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Error releasing lock for session {session_id}: {e}")
             return False
 
-    async def cache_response(self, session_id: str, request_id: str, response: Dict[str, Any], ttl: int = 300) -> bool:
+    async def renew_lock(self, session_id: str, request_id: str) -> bool:
+        """
+        续期锁（延长锁的 TTL）
+
+        用于长时间运行的任务，防止锁在处理完成前过期。
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+
+        Returns:
+            bool: 是否成功续期
+        """
+        try:
+            lock_key = self._get_lock_key(session_id)
+
+            # Lua script: 仅当 lock owner 匹配时才续期
+            lua_script = """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("expire", KEYS[1], ARGV[2])
+            else
+                return 0
+            end
+            """
+
+            result = await self.redis.eval(lua_script, 1, lock_key, request_id, self.lock_ttl)
+
+            if result:
+                logger.debug(f"Lock renewed for session {session_id}")
+                return True
+            else:
+                logger.warning(f"Failed to renew lock for session {session_id}, not owner or expired")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error renewing lock for session {session_id}: {e}")
+            return False
+
+    async def _lock_renewal_task(
+        self,
+        session_id: str,
+        request_id: str,
+        stop_event: asyncio.Event,
+        interval: float = 10.0
+    ):
+        """
+        后台锁续期任务
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+            stop_event: 停止事件
+            interval: 续期间隔（秒），默认 10 秒
+        """
+        try:
+            while not stop_event.is_set():
+                # 等待 interval 秒或直到收到停止信号
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=interval)
+                    break  # 收到停止信号，退出循环
+                except asyncio.TimeoutError:
+                    # 超时，执行续期
+                    pass
+
+                success = await self.renew_lock(session_id, request_id)
+                if not success:
+                    logger.warning(f"Lock renewal failed for session {session_id}, stopping renewal")
+                    break
+        except asyncio.CancelledError:
+            logger.debug(f"Lock renewal task cancelled for session {session_id}")
+        except Exception as e:
+            logger.error(f"Lock renewal task error for session {session_id}: {e}")
+
+    async def start_lock_renewal(
+        self,
+        session_id: str,
+        request_id: str,
+        interval: float = 10.0
+    ) -> tuple[asyncio.Task, asyncio.Event]:
+        """
+        启动锁续期后台任务
+
+        Args:
+            session_id: 会话 ID
+            request_id: 请求 ID
+            interval: 续期间隔（秒），默认 10 秒
+
+        Returns:
+            Tuple[asyncio.Task, asyncio.Event]: (续期任务, 停止事件)
+        """
+        stop_event = asyncio.Event()
+        task = asyncio.create_task(
+            self._lock_renewal_task(session_id, request_id, stop_event, interval)
+        )
+        logger.debug(f"Started lock renewal task for session {session_id}")
+        return task, stop_event
+
+    async def stop_lock_renewal(self, task: asyncio.Task, stop_event: asyncio.Event):
+        """
+        停止锁续期后台任务
+
+        Args:
+            task: 续期任务
+            stop_event: 停止事件
+        """
+        stop_event.set()
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=2.0)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
+        logger.debug(f"Stopped lock renewal task")
+
+    async def cache_response(self, session_id: str, request_id: str, response: dict[str, Any], ttl: int = 300) -> bool:
         """
         缓存完整响应（用于幂等性和断点续传）
-        
+
         Args:
             session_id: 会话 ID
             request_id: 请求 ID
             response: 响应数据
             ttl: 缓存过期时间（秒），默认 5 分钟
-            
+
         Returns:
             bool: 是否成功
         """
@@ -285,21 +403,21 @@ class SessionStateManager:
             logger.error(f"Failed to cache response: {e}")
             return False
 
-    async def get_cached_response(self, session_id: str, request_id: str) -> Optional[Dict[str, Any]]:
+    async def get_cached_response(self, session_id: str, request_id: str) -> dict[str, Any] | None:
         """
         获取缓存的响应（幂等性检查）
-        
+
         Args:
             session_id: 会话 ID
             request_id: 请求 ID
-            
+
         Returns:
             Optional[Dict]: 缓存的响应，如果不存在则返回 None
         """
         try:
             key = self._get_response_key(session_id, request_id)
             data = await self.redis.get(key)
-            
+
             if data:
                 logger.info(f"Hit cache for session {session_id}, request {request_id}")
                 return json.loads(data)
@@ -311,11 +429,11 @@ class SessionStateManager:
     async def is_duplicate_request(self, session_id: str, request_id: str) -> bool:
         """
         检查是否是重复请求
-        
+
         Args:
             session_id: 会话 ID
             request_id: 请求 ID
-            
+
         Returns:
             bool: 是否是重复请求
         """
@@ -325,33 +443,33 @@ class SessionStateManager:
     async def cleanup_session(self, session_id: str) -> bool:
         """
         清理会话数据（用于测试或手动清理）
-        
+
         Args:
             session_id: 会话 ID
-            
+
         Returns:
             bool: 是否成功
         """
         try:
             state_key = self._get_state_key(session_id)
             lock_key = self._get_lock_key(session_id)
-            
+
             # 删除状态和锁
             await self.redis.delete(state_key, lock_key)
-            
+
             # 删除所有缓存的响应（使用模式匹配）
             pattern = f"session:{session_id}:response:*"
             keys = await self.redis.keys(pattern)
             if keys:
                 await self.redis.delete(*keys)
-            
+
             logger.info(f"Cleaned up session {session_id}")
             return True
         except Exception as e:
             logger.error(f"Failed to cleanup session {session_id}: {e}")
             return False
 
-    async def get_session_stats(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_stats(self, session_id: str) -> dict[str, Any] | None:
         """
         获取会话统计信息
 
@@ -408,7 +526,7 @@ class SessionStateManager:
             data = {
                 "plan_id": str(plan_id),
                 "reason": reason,
-                "switched_at": datetime.utcnow().isoformat()
+                "switched_at": _utcnow().isoformat()
             }
             await self.redis.setex(key, self.ttl, json.dumps(data))
             logger.info(f"Active plan set to {plan_id} for session {session_id}, reason: {reason}")
@@ -417,7 +535,7 @@ class SessionStateManager:
             logger.error(f"Failed to set active plan for session {session_id}: {e}")
             return False
 
-    async def get_active_plan(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_active_plan(self, session_id: str) -> dict[str, Any] | None:
         """
         获取会话的活跃计划
 
@@ -437,7 +555,7 @@ class SessionStateManager:
             logger.error(f"Failed to get active plan for session {session_id}: {e}")
             return None
 
-    async def get_active_plan_id(self, session_id: str) -> Optional[UUID]:
+    async def get_active_plan_id(self, session_id: str) -> UUID | None:
         """
         获取会话的活跃计划 ID
 
@@ -456,10 +574,10 @@ class SessionStateManager:
         self,
         session_id: str,
         user_id: UUID,
-        task_context: Dict[str, Any],
+        task_context: dict[str, Any],
         db_session=None,
         plan_matching_service: Optional['PlanMatchingService'] = None
-    ) -> Optional[UUID]:
+    ) -> UUID | None:
         """
         根据任务上下文自动切换计划
 
@@ -537,7 +655,7 @@ class SessionStateManager:
         self,
         session_id: str,
         limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取计划切换历史
 
@@ -554,3 +672,7 @@ class SessionStateManager:
         if current:
             return [current]
         return []
+
+
+# Backwards-compatible alias for benchmarks/tests
+StateManager = SessionStateManager

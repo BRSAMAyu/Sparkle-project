@@ -1,23 +1,26 @@
 """
 Subtasks API Endpoints
 """
-from typing import List, Dict, Any
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Path
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
-from loguru import logger
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
+from app.core.exceptions import NotFoundError
+from app.db.session import get_db
+from app.models.task import SubTask, SubTaskStatus, Task
 from app.models.user import User
-from app.models.task import Task, SubTask, SubTaskStatus
-from app.schemas.task import SubTaskCreate, SubTaskUpdate, SubTaskDetail, SubTaskReorderRequest
-from app.core.exceptions import NotFoundError, AuthorizationError
-
+from app.schemas.task import SubTaskCreate, SubTaskDetail, SubTaskReorderRequest, SubTaskUpdate
 
 router = APIRouter()
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _verify_task_ownership(task_id: UUID, user_id: int, db: AsyncSession) -> Task:
@@ -36,7 +39,7 @@ async def _verify_task_ownership(task_id: UUID, user_id: int, db: AsyncSession) 
     return task
 
 
-@router.get("/tasks/{task_id}/subtasks", response_model=List[SubTaskDetail])
+@router.get("/tasks/{task_id}/subtasks", response_model=list[SubTaskDetail])
 async def get_subtasks(
     task_id: UUID = Path(..., description="Parent task ID"),
     current_user: User = Depends(get_current_user),
@@ -59,7 +62,7 @@ async def get_subtasks(
     return [SubTaskDetail.model_validate(st) for st in subtasks]
 
 
-@router.post("/tasks/{task_id}/subtasks", response_model=Dict[str, Any])
+@router.post("/tasks/{task_id}/subtasks", response_model=dict[str, Any])
 async def create_subtask(
     subtask_in: SubTaskCreate,
     task_id: UUID = Path(..., description="Parent task ID"),
@@ -106,7 +109,7 @@ async def create_subtask(
     }
 
 
-@router.put("/subtasks/{subtask_id}", response_model=Dict[str, Any])
+@router.put("/subtasks/{subtask_id}", response_model=dict[str, Any])
 async def update_subtask(
     subtask_in: SubTaskUpdate,
     subtask_id: UUID = Path(..., description="Subtask ID"),
@@ -134,7 +137,7 @@ async def update_subtask(
 
     # Set completed_at when status changes to COMPLETED
     if subtask_in.status == SubTaskStatus.COMPLETED and subtask.completed_at is None:
-        subtask.completed_at = datetime.utcnow()
+        subtask.completed_at = _utcnow()
     elif subtask_in.status and subtask_in.status != SubTaskStatus.COMPLETED:
         subtask.completed_at = None
 
@@ -191,7 +194,7 @@ async def delete_subtask(
     }
 
 
-@router.post("/subtasks/reorder", response_model=Dict[str, Any])
+@router.post("/subtasks/reorder", response_model=dict[str, Any])
 async def reorder_subtasks(
     request: SubTaskReorderRequest,
     current_user: User = Depends(get_current_user),

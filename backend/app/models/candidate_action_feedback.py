@@ -5,11 +5,12 @@ Tracks user feedback on predicted candidate actions for learning loop.
 Enables daily analysis to calibrate signal thresholds and improve predictions.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import Base, GUID
+from app.models.base import GUID, Base
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

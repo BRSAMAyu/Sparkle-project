@@ -2,12 +2,11 @@
 错题档案相关的 Pydantic Schema
 """
 
-from pydantic import BaseModel, Field, validator, root_validator
-from typing import Optional, List, Dict, Any
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ============================================
 # 枚举定义
@@ -62,49 +61,56 @@ COGNITIVE_DIMENSIONS = {
 
 class ErrorRecordCreate(BaseModel):
     """创建错题的请求体"""
-    question_text: Optional[str] = Field(None, max_length=5000, description="题目内容")
-    question_image_url: Optional[str] = Field(None, max_length=500, description="题目图片URL")
-    
-    user_answer: Optional[str] = Field(None, max_length=2000, description="你的错误答案")
-    correct_answer: Optional[str] = Field(None, max_length=2000, description="正确答案")
-    
-    subject: SubjectEnum = Field(..., description="科目")
-    chapter: Optional[str] = Field(None, max_length=100, description="章节（可选）")
-    
-    cognitive_tags: List[str] = Field(default_factory=list, description="认知维度标签")
-    ai_analysis_summary: Optional[str] = Field(None, description="AI 分析摘要")
+    question_text: str | None = Field(None, max_length=5000, description="题目内容")
+    question_image_url: str | None = Field(None, max_length=500, description="题目图片URL")
 
-    @validator("cognitive_tags", each_item=True)
-    def validate_cognitive_tags(cls, value: str) -> str:
-        if value not in COGNITIVE_DIMENSIONS:
-            raise ValueError("Invalid cognitive dimension tag")
+    user_answer: str | None = Field(None, max_length=2000, description="你的错误答案")
+    correct_answer: str | None = Field(None, max_length=2000, description="正确答案")
+
+    subject: SubjectEnum = Field(..., description="科目")
+    chapter: str | None = Field(None, max_length=100, description="章节（可选）")
+
+    cognitive_tags: list[str] = Field(default_factory=list, description="认知维度标签")
+    ai_analysis_summary: str | None = Field(None, description="AI 分析摘要")
+
+    @field_validator("cognitive_tags")
+    @classmethod
+    def validate_cognitive_tags(cls, value: list[str]) -> list[str]:
+        for tag in value:
+            if tag not in COGNITIVE_DIMENSIONS:
+                raise ValueError("Invalid cognitive dimension tag")
         return value
-    
-    @root_validator(pre=True)
-    def check_content_or_image(cls, values):
-        text = values.get('question_text')
-        image = values.get('question_image_url')
-        if not text and not image:
-            raise ValueError('题目内容和图片不能同时为空')
-        return values
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_content_or_image(cls, data):
+        if isinstance(data, dict):
+            text = data.get('question_text')
+            image = data.get('question_image_url')
+            if not text and not image:
+                raise ValueError('题目内容和图片不能同时为空')
+        return data
 
 
 class ErrorRecordUpdate(BaseModel):
     """更新错题的请求体"""
-    question_text: Optional[str] = Field(None, max_length=5000)
-    user_answer: Optional[str] = Field(None, max_length=2000)
-    correct_answer: Optional[str] = Field(None, max_length=2000)
-    subject: Optional[SubjectEnum] = None
-    chapter: Optional[str] = Field(None, max_length=100)
-    question_image_url: Optional[str] = Field(None, max_length=500)
-    
-    cognitive_tags: Optional[List[str]] = None
-    ai_analysis_summary: Optional[str] = None
+    question_text: str | None = Field(None, max_length=5000)
+    user_answer: str | None = Field(None, max_length=2000)
+    correct_answer: str | None = Field(None, max_length=2000)
+    subject: SubjectEnum | None = None
+    chapter: str | None = Field(None, max_length=100)
+    question_image_url: str | None = Field(None, max_length=500)
 
-    @validator("cognitive_tags", each_item=True)
-    def validate_cognitive_tags(cls, value: str) -> str:
-        if value not in COGNITIVE_DIMENSIONS:
-            raise ValueError("Invalid cognitive dimension tag")
+    cognitive_tags: list[str] | None = None
+    ai_analysis_summary: str | None = None
+
+    @field_validator("cognitive_tags")
+    @classmethod
+    def validate_cognitive_tags(cls, value: list[str] | None) -> list[str] | None:
+        if value:
+            for tag in value:
+                if tag not in COGNITIVE_DIMENSIONS:
+                    raise ValueError("Invalid cognitive dimension tag")
         return value
 
 
@@ -118,10 +124,10 @@ class ErrorAnalysisResult(BaseModel):
     error_type_label: str = Field(..., description="错因分类的中文标签")
     root_cause: str = Field(..., description="错误根因分析")
     correct_approach: str = Field(..., description="正确的解题思路")
-    similar_traps: List[str] = Field(default_factory=list, description="类似的易错点提醒")
-    recommended_knowledge: List[str] = Field(default_factory=list, description="推荐复习的知识点")
+    similar_traps: list[str] = Field(default_factory=list, description="类似的易错点提醒")
+    recommended_knowledge: list[str] = Field(default_factory=list, description="推荐复习的知识点")
     study_suggestion: str = Field(..., description="学习建议")
-    ocr_text: Optional[str] = Field(None, description="OCR识别的文本（如果是图片题）")
+    ocr_text: str | None = Field(None, description="OCR识别的文本（如果是图片题）")
 
 
 # ============================================
@@ -134,7 +140,7 @@ class KnowledgeLinkBrief(BaseModel):
     name: str
     relevance: float = 1.0 # Default fallback
     is_primary: bool = False
-    
+
     class Config:
         from_attributes = True
 
@@ -142,39 +148,39 @@ class KnowledgeLinkBrief(BaseModel):
 class ErrorRecordResponse(BaseModel):
     """错题详情响应"""
     id: UUID
-    question_text: Optional[str]
-    question_image_url: Optional[str]
-    user_answer: Optional[str]
-    correct_answer: Optional[str]
+    question_text: str | None
+    question_image_url: str | None
+    user_answer: str | None
+    correct_answer: str | None
     subject_code: str
-    chapter: Optional[str]
-    
+    chapter: str | None
+
     # 复习状态
     mastery_level: float
     review_count: int
-    next_review_at: Optional[datetime]
-    last_reviewed_at: Optional[datetime]
-    
+    next_review_at: datetime | None
+    last_reviewed_at: datetime | None
+
     # AI 分析 (从 JSONB 字段解析)
-    latest_analysis: Optional[ErrorAnalysisResult] = None
-    
-    cognitive_tags: List[str] = Field(default_factory=list)
-    ai_analysis_summary: Optional[str] = None
-    
+    latest_analysis: ErrorAnalysisResult | None = None
+
+    cognitive_tags: list[str] = Field(default_factory=list)
+    ai_analysis_summary: str | None = None
+
     # 关联信息 (Service 层需要手动填充)
-    knowledge_links: List[KnowledgeLinkBrief] = Field(default_factory=list)
-    suggested_concepts: List[str] = Field(default_factory=list)
-    
+    knowledge_links: list[KnowledgeLinkBrief] = Field(default_factory=list)
+    suggested_concepts: list[str] = Field(default_factory=list)
+
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class ErrorRecordListResponse(BaseModel):
     """错题列表响应"""
-    items: List[ErrorRecordResponse]
+    items: list[ErrorRecordResponse]
     total: int
     page: int
     page_size: int
@@ -188,7 +194,7 @@ class ErrorRecordListResponse(BaseModel):
 class ReviewAction(BaseModel):
     """提交复习记录 (Body)"""
     performance: ReviewPerformanceEnum
-    time_spent_seconds: Optional[int] = Field(None, ge=0, description="花费时间（秒）")
+    time_spent_seconds: int | None = Field(None, ge=0, description="花费时间（秒）")
 
 
 class ReviewStatsResponse(BaseModel):
@@ -197,7 +203,7 @@ class ReviewStatsResponse(BaseModel):
     mastered_count: int
     need_review_count: int
     review_streak_days: int
-    subject_distribution: Dict[str, int]
+    subject_distribution: dict[str, int]
 
 
 # ============================================
@@ -206,19 +212,20 @@ class ReviewStatsResponse(BaseModel):
 
 class ErrorQueryParams(BaseModel):
     """错题查询参数"""
-    subject: Optional[SubjectEnum] = None
-    chapter: Optional[str] = None
-    error_type: Optional[ErrorTypeEnum] = None
-    mastery_min: Optional[float] = Field(None, ge=0, le=1)
-    mastery_max: Optional[float] = Field(None, ge=0, le=1)
-    need_review: Optional[bool] = None
-    keyword: Optional[str] = None
-    cognitive_dimension: Optional[str] = None
+    subject: SubjectEnum | None = None
+    chapter: str | None = None
+    error_type: ErrorTypeEnum | None = None
+    mastery_min: float | None = Field(None, ge=0, le=1)
+    mastery_max: float | None = Field(None, ge=0, le=1)
+    need_review: bool | None = None
+    keyword: str | None = None
+    cognitive_dimension: str | None = None
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
 
-    @validator("cognitive_dimension")
-    def validate_cognitive_dimension(cls, value: Optional[str]) -> Optional[str]:
+    @field_validator("cognitive_dimension")
+    @classmethod
+    def validate_cognitive_dimension(cls, value: str | None) -> str | None:
         if value is None:
             return value
         if value not in COGNITIVE_DIMENSIONS:

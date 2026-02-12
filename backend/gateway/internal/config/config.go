@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"net"
 	neturl "net/url"
 	"os"
 	"path/filepath"
@@ -181,6 +182,21 @@ func normalizeLocalDockerHost(host string) string {
 	return host
 }
 
+func isInsecureSecret(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return true
+	}
+	insecure := map[string]struct{}{
+		"dev-secret-key":                  {},
+		"dev_secret_key_change_in_production": {},
+		"change-me":                       {},
+		"CHANGE_ME_IN_PRODUCTION":         {},
+	}
+	_, found := insecure[trimmed]
+	return found
+}
+
 func normalizeDatabaseURL(raw string) string {
 	if raw == "" {
 		return ""
@@ -219,7 +235,25 @@ func normalizeRedisAddr(raw string) string {
 	}
 	trimmed := strings.TrimSpace(raw)
 	if !strings.Contains(trimmed, "://") {
-		return trimmed
+		host := trimmed
+		port := ""
+		if strings.Contains(trimmed, ":") {
+			if parsedHost, parsedPort, err := net.SplitHostPort(trimmed); err == nil {
+				host = parsedHost
+				port = parsedPort
+			} else {
+				parts := strings.Split(trimmed, ":")
+				if len(parts) == 2 {
+					host = parts[0]
+					port = parts[1]
+				}
+			}
+		}
+		host = normalizeLocalDockerHost(host)
+		if port != "" {
+			return host + ":" + port
+		}
+		return host
 	}
 	parsed, err := neturl.Parse(trimmed)
 	if err != nil || parsed.Host == "" {
@@ -315,14 +349,14 @@ func Load() *Config {
 	viper.SetDefault("POSTGRES_HOST", "sparkle_db")
 	viper.SetDefault("POSTGRES_PORT", 5432)
 	viper.SetDefault("POSTGRES_USER", "postgres")
-	viper.SetDefault("POSTGRES_PASSWORD", "change-me")
+	viper.SetDefault("POSTGRES_PASSWORD", "")
 	viper.SetDefault("POSTGRES_DB", "sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("AGENT_TLS_ENABLED", false)
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
 	viper.SetDefault("AGENT_TLS_SERVER_NAME", "")
 	viper.SetDefault("AGENT_TLS_INSECURE", false)
-	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 5)
+	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 60)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("JWT_ISSUER", "")
 	viper.SetDefault("JWT_AUDIENCE", "")
@@ -336,7 +370,7 @@ func Load() *Config {
 	viper.SetDefault("REDIS_URL", "")
 	viper.SetDefault("REDIS_HOST", "sparkle_redis")
 	viper.SetDefault("REDIS_PORT", 6379)
-	viper.SetDefault("REDIS_PASSWORD", "change-me")
+	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)
@@ -394,10 +428,19 @@ func Load() *Config {
 	if !cfg.IsDevelopment() && cfg.JWTSecret == "" {
 		log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET environment variable or .env file.")
 	}
+	if !cfg.IsDevelopment() && isInsecureSecret(cfg.JWTSecret) {
+		log.Fatal("JWT_SECRET is using an insecure default. Set a high-entropy value via JWT_SECRET.")
+	}
 
 	// Validate ADMIN_SECRET is set in non-development environments
 	if !cfg.IsDevelopment() && cfg.AdminSecret == "" {
 		log.Fatal("ADMIN_SECRET must be set in non-development environments. Set via ADMIN_SECRET environment variable or .env file.")
+	}
+	if !cfg.IsDevelopment() && isInsecureSecret(cfg.AdminSecret) {
+		log.Fatal("ADMIN_SECRET is using an insecure default. Set a high-entropy value via ADMIN_SECRET.")
+	}
+	if !cfg.IsDevelopment() && cfg.AgentTLSInsecure {
+		log.Fatal("AGENT_TLS_INSECURE must be false in non-development environments.")
 	}
 
 	if cfg.DatabaseURL == "" {

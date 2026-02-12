@@ -412,8 +412,7 @@ PersistentProvider<T> makePersistentProvider<T>({
   required T? Function(String?) deserializer,
   Duration debounce = const Duration(milliseconds: 300),
   bool enabled = true,
-}) => StateNotifierProvider<PersistentNotifier<T>, T>((ref) {
-    return PersistentNotifier<T>(
+}) => StateNotifierProvider<PersistentNotifier<T>, T>((ref) => PersistentNotifier<T>(
       namespace: namespace,
       key: key,
       defaultValue: defaultValue,
@@ -421,8 +420,7 @@ PersistentProvider<T> makePersistentProvider<T>({
       deserializer: deserializer,
       debounce: debounce,
       enabled: enabled,
-    );
-  });
+    ),);
 
 // ==================== Specialized Notifiers ====================
 

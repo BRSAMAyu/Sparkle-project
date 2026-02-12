@@ -2,16 +2,14 @@
 API Dependencies
 FastAPI 依赖注入函数
 """
-from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-from app.core.security import decode_token
 from app.core.exceptions import AuthenticationError
-from app.models.user import User # Added import
-
+from app.core.security import decode_token
+from app.db.session import get_db
+from app.models.user import User  # Added import
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -31,7 +29,7 @@ async def get_current_user_id(
         if user_id is None:
             raise AuthenticationError("登录信息已过期，请重新登录~")
         return user_id
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="登录信息已过期，请重新登录~",
@@ -42,7 +40,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ) -> User:
-    from app.models.user import User # Import here to avoid circular dependency
+    from app.models.user import User  # Import here to avoid circular dependency
     user = await db.get(User, user_id)
     if not user:
         raise AuthenticationError("该用户不存在，请检查输入")

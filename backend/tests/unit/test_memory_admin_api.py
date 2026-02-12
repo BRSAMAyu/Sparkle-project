@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -58,7 +62,7 @@ async def test_memory_admin_stats_shape(db_session, monkeypatch):
         pref_value={"value": 0.5},
         version=1,
         evidence_missing=True,
-        evidence_checked_at=datetime.utcnow(),
+        evidence_checked_at=_utcnow(),
         evidence_refs=[{"type": "event", "id": "evt_1"}],
     )
     db_session.add(pref)

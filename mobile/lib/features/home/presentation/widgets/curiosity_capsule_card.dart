@@ -31,28 +31,30 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         glowColor: context.sparkleColors.brandPrimary.withValues(alpha: 0.15),
         // Border
         borderWidth: 1.5,
-        borderColor:
-            context.sparkleColors.brandPrimary.withValues(alpha: 0.5),
+        borderColor: context.sparkleColors.brandPrimary.withValues(alpha: 0.5),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing8,
+      ),
       child: MaterialStyler(
         material: material,
         borderRadius: DS.borderRadius16,
         child: Theme(
           // Ensure ExpansionTile doesn't draw its own dividers or backgrounds
           data: Theme.of(context).copyWith(
-            dividerColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
+            dividerColor: DS.surfacePrimary.withValues(alpha: 0),
+            splashColor: DS.surfacePrimary.withValues(alpha: 0),
+            highlightColor: DS.surfacePrimary.withValues(alpha: 0),
           ),
           child: ExpansionTile(
             initiallyExpanded: initiallyExpanded,
             tilePadding: const EdgeInsets.all(DS.lg),
-            backgroundColor: Colors.transparent,
-            collapsedBackgroundColor: Colors.transparent,
+            backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+            collapsedBackgroundColor: DS.surfacePrimary.withValues(alpha: 0),
 
             // Icon
             leading: Container(
@@ -62,9 +64,9 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                 shape: BoxShape.circle,
                 boxShadow: context.sparkleShadows.small,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.lightbulb_outline,
-                color: Colors.white,
+                color: DS.textOnPrimary,
                 size: 20,
               ),
             ),
@@ -124,8 +126,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                             .withValues(alpha: 0.5),
                         side: BorderSide.none,
                         padding: EdgeInsets.zero,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                   ],
                 ),

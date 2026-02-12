@@ -1,4 +1,5 @@
 import 'package:flutter/painting.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// Sector visual style configuration
@@ -83,56 +84,56 @@ class SectorConfig {
   static final Map<SectorEnum, SectorStyle> styles = {
     SectorEnum.cosmos: SectorStyle(
       name: '理性星域',
-      primaryColor: const Color(0xFF00BFFF), // 深天蓝
-      glowColor: const Color(0xFF87CEEB),
+      primaryColor: DS.info,
+      glowColor: DS.infoLight,
       baseAngle: 0.0,
       sweepAngle: _sectorSweep,
       keywords: const ['数学', '物理', '化学', '天文', '逻辑学'],
     ),
     SectorEnum.tech: SectorStyle(
       name: '造物星域',
-      primaryColor: const Color(0xFF7B68EE), // 中紫罗兰色（更有科技感）
-      glowColor: const Color(0xFFB0C4DE),
+      primaryColor: DS.rarityEpic,
+      glowColor: DS.rarityEpicBg,
       baseAngle: _sectorSweep,
       sweepAngle: _sectorSweep,
       keywords: const ['计算机', '工程', 'AI', '建筑', '制造'],
     ),
     SectorEnum.art: SectorStyle(
       name: '灵感星域',
-      primaryColor: const Color(0xFFFF69B4), // 热粉红
-      glowColor: const Color(0xFFFFB6C1),
+      primaryColor: DS.rarityLegendary,
+      glowColor: DS.rarityLegendaryBg,
       baseAngle: _sectorSweep * 2,
       sweepAngle: _sectorSweep,
       keywords: const ['设计', '音乐', '绘画', '文学', 'ACG'],
     ),
     SectorEnum.civilization: SectorStyle(
       name: '文明星域',
-      primaryColor: const Color(0xFFFFD700), // 金色
-      glowColor: const Color(0xFFFFF8DC),
+      primaryColor: DS.rarityRare,
+      glowColor: DS.warningLight,
       baseAngle: _sectorSweep * 3,
       sweepAngle: _sectorSweep,
       keywords: const ['历史', '经济', '政治', '社会学', '法律'],
     ),
     SectorEnum.life: SectorStyle(
       name: '生活星域',
-      primaryColor: const Color(0xFF32CD32), // 酸橙绿
-      glowColor: const Color(0xFF90EE90),
+      primaryColor: DS.success,
+      glowColor: DS.successLight,
       baseAngle: _sectorSweep * 4,
       sweepAngle: _sectorSweep,
       keywords: const ['健身', '烹饪', '医学', '心理', '理财'],
     ),
     SectorEnum.wisdom: SectorStyle(
       name: '智慧星域',
-      primaryColor: const Color(0xFF9575CD), // Deep Purple 300 - 更清晰的紫色
-      glowColor: const Color(0xFFD1C4E9),
+      primaryColor: DS.secondaryBase,
+      glowColor: DS.secondaryLight,
       baseAngle: _sectorSweep * 5,
       sweepAngle: _sectorSweep,
       keywords: const ['哲学', '宗教', '方法论', '元认知'],
     ),
     SectorEnum.voidSector: SectorStyle(
       name: '暗物质区',
-      primaryColor: const Color(0xFF546E7A), // Blue Grey 600 - 更深邃的灰蓝
-      glowColor: const Color(0xFF78909C),
+      primaryColor: DS.neutral600,
+      glowColor: DS.neutral400,
       baseAngle: _sectorSweep * 6,
       sweepAngle: _sectorSweep,
       keywords: const ['未归类', '跨领域', '新兴概念'],

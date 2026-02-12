@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
 
 /// Expanded toolbar section - Quick action tools
 class ExpandedToolbarSection extends ConsumerWidget {
@@ -10,11 +9,16 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Responsive column count: 3 for narrow mobile, 4 for standard, 5 for tablet/desktop
-    final crossAxisCount = switch (context.layoutType) {
-      LayoutType.mobile => MediaQuery.of(context).size.width < 400 ? 3 : 4,
-      LayoutType.tablet => 5,
-      LayoutType.desktop => 5,
+    final category = ResponsiveSystem.getCategory(context);
+
+    // Responsive column count: 3 for watch, 4 for mobile, 5 for tablet/desktop
+    final crossAxisCount = switch (category) {
+      DeviceCategory.tablet => 5,
+      DeviceCategory.desktop => 5,
+      DeviceCategory.tv => 5,
+      DeviceCategory.watch => 3,
+      DeviceCategory.phone => 4,
+      DeviceCategory.phablet => 4,
     };
 
     return Padding(
@@ -38,29 +42,52 @@ class ExpandedToolbarSection extends ConsumerWidget {
             crossAxisSpacing: DS.spacing12,
             children: const [
               _ToolButton(
+                key: ValueKey('tool_focus_mode'),
                 icon: Icons.center_focus_strong_rounded,
                 label: '专注模式',
                 route: '/focus',
               ),
               _ToolButton(
+                key: ValueKey('tool_pomodoro'),
                 icon: Icons.timer_rounded,
                 label: '番茄钟',
-                route: '/focus?mode=pomodoro',
+                route: '/focus',
               ),
               _ToolButton(
-                icon: Icons.note_add_rounded,
-                label: '快速笔记',
-                route: '/memory/new',
+                key: ValueKey('tool_quick_note'),
+                icon: Icons.edit_note_rounded,
+                label: '闪念笔记',
+                route: '/memory',
               ),
               _ToolButton(
-                icon: Icons.casino_rounded,
-                label: '随机任务',
-                route: '/tasks/random',
+                key: ValueKey('tool_error_book'),
+                icon: Icons.assignment_late_rounded,
+                label: '错题本',
+                route: '/errors',
               ),
               _ToolButton(
+                key: ValueKey('tool_cognitive'),
+                icon: Icons.psychology_rounded,
+                label: '认知模式',
+                route: '/cognitive/patterns',
+              ),
+              _ToolButton(
+                key: ValueKey('tool_curiosity'),
                 icon: Icons.lightbulb_rounded,
                 label: '好奇心胶囊',
-                route: '/cognitive',
+                route: '/curiosity-capsule',
+              ),
+              _ToolButton(
+                key: ValueKey('tool_review'),
+                icon: Icons.event_note_rounded,
+                label: '复习计划',
+                route: '/review',
+              ),
+              _ToolButton(
+                key: ValueKey('tool_forecast'),
+                icon: Icons.show_chart_rounded,
+                label: '学习预测',
+                route: '/learning/forecast',
               ),
             ],
           ),
@@ -72,9 +99,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
-    required this.icon,
-    required this.label,
-    required this.route,
+    required this.icon, required this.label, required this.route, super.key,
   });
 
   final IconData icon;
@@ -82,10 +107,13 @@ class _ToolButton extends StatelessWidget {
   final String route;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return InkWell(
       onTap: () => context.push(route),
       borderRadius: DS.borderRadius16,
       child: MaterialStyler(
+        key: ValueKey('tool_button_${label}_$brightness'),
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius16,
         padding: const EdgeInsets.all(DS.spacing12),
@@ -100,7 +128,7 @@ class _ToolButton extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 size: DS.iconSizeSm,
               ),
             ),
@@ -120,4 +148,5 @@ class _ToolButton extends StatelessWidget {
         ),
       ),
     );
+  }
 }

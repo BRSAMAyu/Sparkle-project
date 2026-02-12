@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -88,7 +88,7 @@ class _PlanSection extends ConsumerWidget {
               Icon(
                 Icons.folder_rounded,
                 size: 16,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               const SizedBox(width: DS.spacing8),
               Text(
@@ -113,7 +113,7 @@ class _PlanSection extends ConsumerWidget {
                 child: Text(
                   '${tasks.length}',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

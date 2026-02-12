@@ -20,26 +20,36 @@ class SprintScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: const Text('My Sprint'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.archive_outlined),
-            tooltip: '历史计划',
-            onPressed: () => context.push('/plans/history'),
+          Tooltip(
+            message: '历史计划',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
+              icon: const Icon(Icons.archive_outlined),
+              onPressed: () => context.push('/plans/history'),
+            ),
           ),
           if (activeSprint != null)
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.open_in_new),
               onPressed: () {
                 context.push('/plans/${activeSprint.id}');
               },
             ),
           if (activeSprint != null)
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: DS.touchTargetMinSize,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () {
                 context.push('/plans/${activeSprint.id}/edit');
@@ -47,15 +57,20 @@ class SprintScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(planListProvider.notifier).refresh(),
-        child: _buildBody(context, planState, activeSprint),
+      body: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(planListProvider.notifier).refresh(),
+          child: _buildBody(context, planState, activeSprint),
+        ),
       ),
     );
   }
 
   Widget _buildBody(
-      BuildContext context, PlanListState state, PlanModel? activeSprint,) {
+    BuildContext context,
+    PlanListState state,
+    PlanModel? activeSprint,
+  ) {
     if (state.isLoading && activeSprint == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -90,12 +105,12 @@ class _NoActiveSprintView extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: DS.xl),
-              ElevatedButton.icon(
+              SparkleButton(
                 onPressed: () {
                   context.push('/plans/new?type=sprint');
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Create Sprint Plan'),
+                label: 'Create Sprint Plan',
               ),
             ],
           ),
@@ -129,7 +144,8 @@ class _ActiveSprintView extends ConsumerWidget {
           ),
           if (fullPlan.tasks == null || fullPlan.tasks!.isEmpty)
             const SliverToBoxAdapter(
-                child: Center(child: Text('No tasks in this sprint.')),)
+              child: Center(child: Text('No tasks in this sprint.')),
+            )
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
@@ -137,8 +153,9 @@ class _ActiveSprintView extends ConsumerWidget {
                   final task = fullPlan.tasks![index];
                   // return TaskCard(task: task); // TODO: Uncomment when TaskCard is available and integrated
                   return ListTile(
-                      title: Text(task.title),
-                      subtitle: Text(task.status.name),);
+                    title: Text(task.title),
+                    subtitle: Text(task.status.name),
+                  );
                 },
                 childCount: fullPlan.tasks!.length,
               ),
@@ -168,19 +185,27 @@ class _SprintHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(plan.name,
-                  style: Theme.of(context).textTheme.headlineMedium,),
+              Text(
+                plan.name,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: DS.sm),
-              Text(plan.description ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium,),
+              Text(
+                plan.description ?? '',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: DS.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Progress',
-                      style: Theme.of(context).textTheme.bodyLarge,),
-                  Text('${(plan.progress * 100).toStringAsFixed(0)}%',
-                      style: Theme.of(context).textTheme.bodyLarge,),
+                  Text(
+                    'Progress',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  Text(
+                    '${(plan.progress * 100).toStringAsFixed(0)}%',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ],
               ),
               const SizedBox(height: DS.sm),
@@ -272,7 +297,8 @@ class _SprintAchievementsProgressState
           ),
         // Sprint Achievements Card
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+          padding:
+              const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
           child: Card(
             elevation: 2,
             child: Padding(
@@ -288,7 +314,7 @@ class _SprintAchievementsProgressState
                           Icon(
                             Icons.military_tech,
                             size: DS.iconSizeSm,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                           ),
                           const SizedBox(width: DS.sm),
                           Text(
@@ -297,15 +323,18 @@ class _SprintAchievementsProgressState
                           ),
                         ],
                       ),
-                      TextButton(
-                        onPressed: () => context.push('/achievements?type=sprint'),
-                        child: const Text('View All'),
+                      SparkleButton.ghost(
+                        onPressed: () =>
+                            context.push('/achievements?type=sprint'),
+                        label: 'View All',
                       ),
                     ],
                   ),
                   const SizedBox(height: DS.sm),
-                  ...sprintAchievements.take(3).map((achievement) =>
-                      _SprintAchievementTile(achievement: achievement),),
+                  ...sprintAchievements.take(3).map(
+                        (achievement) =>
+                            _SprintAchievementTile(achievement: achievement),
+                      ),
                 ],
               ),
             ),
@@ -379,7 +408,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
                   '即将解锁！',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                       ),
                 ),
                 Text(
@@ -431,11 +460,11 @@ class _CloseToUnlockBanner extends StatelessWidget {
       case AchievementRarity.common:
         return DS.neutral400;
       case AchievementRarity.rare:
-        return const Color(0xFFFFD700);
+        return DS.rarityRare;
       case AchievementRarity.epic:
-        return const Color(0xFF9B59B6);
+        return DS.rarityEpic;
       case AchievementRarity.legendary:
-        return const Color(0xFFFF6B6B);
+        return DS.rarityLegendary;
     }
   }
 }
@@ -496,7 +525,8 @@ class _SprintAchievementTile extends StatelessWidget {
                     value: progress,
                     minHeight: 4,
                     backgroundColor: DS.neutral100,
-                    valueColor: AlwaysStoppedAnimation<Color>(_getRarityColor(rarity)),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(_getRarityColor(rarity)),
                   ),
                 ),
               ],
@@ -504,7 +534,9 @@ class _SprintAchievementTile extends StatelessWidget {
           ),
           // Progress percentage
           Text(
-            achievement.isUnlocked ? '完成!' : '${achievement.progressPercentage}%',
+            achievement.isUnlocked
+                ? '完成!'
+                : '${achievement.progressPercentage}%',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: _getRarityColor(rarity),
                   fontWeight: DS.fontWeightMedium,
@@ -520,11 +552,11 @@ class _SprintAchievementTile extends StatelessWidget {
       case AchievementRarity.common:
         return DS.neutral400;
       case AchievementRarity.rare:
-        return const Color(0xFFFFD700);
+        return DS.rarityRare;
       case AchievementRarity.epic:
-        return const Color(0xFF9B59B6);
+        return DS.rarityEpic;
       case AchievementRarity.legendary:
-        return const Color(0xFFFF6B6B);
+        return DS.rarityLegendary;
     }
   }
 }

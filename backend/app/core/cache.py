@@ -5,24 +5,31 @@ Redis Caching Module
 import asyncio
 import hashlib
 import json
+import time
+from collections.abc import Callable
+from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from functools import wraps
-from typing import Any, Optional, Callable, Union
+from typing import Any
 from uuid import UUID
 
 import redis.asyncio as redis
 from loguru import logger
 from pydantic import BaseModel
-from app.config import settings
-from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
 
-from contextlib import asynccontextmanager
+from app.config import settings
+from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+
 
 class CacheService:
     def __init__(self):
-        self.redis: Optional[redis.Redis] = None
+        self.redis: redis.Redis | None = None
         self.default_ttl = 300  # 5 minutes default
+        self._local_cache: dict[str, tuple[Any, float | None]] = {}
+        self._local_cache_ops = 0
+        self._local_cache_cleanup_interval = 100
+        self._max_local_cache_entries = 5000
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
@@ -45,7 +52,7 @@ class CacheService:
         )
 
         self.redis = redis.from_url(
-            settings.REDIS_URL, 
+            settings.REDIS_URL,
             **kwargs
         )
         try:
@@ -69,7 +76,7 @@ class CacheService:
         key = f"lock:{lock_key}"
         # try to acquire
         locked = await self.redis.set(key, "1", ex=expire, nx=True)
-        
+
         if not locked:
             # Retry once after 1s? Or just fail? For simplicity, we fail or wait.
             # In MVP, let's wait a bit.
@@ -77,10 +84,10 @@ class CacheService:
                 await asyncio.sleep(0.5)
                 locked = await self.redis.set(key, "1", ex=expire, nx=True)
                 if locked: break
-        
+
         if not locked:
             raise Exception(f"Failed to acquire lock for {lock_key}")
-            
+
         try:
             yield
         finally:
@@ -89,10 +96,22 @@ class CacheService:
 
     async def close(self):
         if self.redis:
-            await self.redis.close()
+            if hasattr(self.redis, "aclose"):
+                await self.redis.aclose()
+            else:
+                await self.redis.close()
 
     async def get(self, key: str) -> Any:
-        if not self.redis: return None
+        if not self.redis:
+            self._maybe_cleanup_local_cache()
+            cached = self._local_cache.get(key)
+            if cached is None:
+                return None
+            value, expires_at = cached
+            if expires_at is not None and time.time() > expires_at:
+                self._local_cache.pop(key, None)
+                return None
+            return value
         data = await self.redis.get(key)
         if data is None:
             return None
@@ -102,7 +121,15 @@ class CacheService:
             return data
 
     async def set(self, key: str, value: Any, ttl: int = None):
-        if not self.redis: return
+        if not self.redis:
+            self._maybe_cleanup_local_cache()
+            expires_at = None
+            ttl_value = ttl or self.default_ttl
+            if ttl_value:
+                expires_at = time.time() + ttl_value
+            self._local_cache[key] = (value, expires_at)
+            self._maybe_cleanup_local_cache()
+            return
         dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
         await self.redis.set(key, dumped, ex=ttl or self.default_ttl)
 
@@ -117,15 +144,42 @@ class CacheService:
         return await self.redis.expire(key, ttl)
 
     async def delete(self, key: str):
-        if not self.redis: return
+        if not self.redis:
+            self._local_cache.pop(key, None)
+            return
         await self.redis.delete(key)
-    
+
     async def delete_pattern(self, pattern: str):
         """Delete all keys matching pattern"""
         if not self.redis: return
         # Scan and delete
         async for key in self.redis.scan_iter(pattern):
             await self.redis.delete(key)
+
+    def _maybe_cleanup_local_cache(self):
+        self._local_cache_ops += 1
+        needs_cleanup = (
+            self._local_cache_ops % self._local_cache_cleanup_interval == 0
+            or len(self._local_cache) > self._max_local_cache_entries
+        )
+        if not needs_cleanup:
+            return
+
+        now = time.time()
+        expired_keys = [
+            key for key, (_, expires_at) in self._local_cache.items()
+            if expires_at is not None and now > expires_at
+        ]
+        for key in expired_keys:
+            self._local_cache.pop(key, None)
+
+        overflow = len(self._local_cache) - self._max_local_cache_entries
+        if overflow <= 0:
+            return
+        # Remove oldest keys first (dict preserves insertion order on Python 3.7+).
+        keys_to_remove = list(self._local_cache.keys())[:overflow]
+        for key in keys_to_remove:
+            self._local_cache.pop(key, None)
 
 cache_service = CacheService()
 
@@ -143,13 +197,13 @@ def _json_default(value: Any) -> Any:
     return str(value)
 
 def cached(
-    ttl: int = 300, 
-    key_builder: Callable = None, 
+    ttl: int = 300,
+    key_builder: Callable = None,
     namespace: str = "view"
 ):
     """
     Cache Decorator for Async Functions
-    
+
     :param ttl: Time to live in seconds
     :param key_builder: Custom function to build cache key from args
     :param namespace: Key prefix
@@ -162,27 +216,27 @@ def cached(
                 key_part = key_builder(*args, **kwargs)
             else:
                 # Default: hash of args/kwargs
-                # Note: This is simplistic. For complex objects (like Pydantic models in args), 
+                # Note: This is simplistic. For complex objects (like Pydantic models in args),
                 # you might need a custom key_builder.
                 # Here we assume arguments are simple or we just use function name + basic args string
                 arg_str = str(args) + str(kwargs)
                 key_part = hashlib.md5(arg_str.encode()).hexdigest()
-            
+
             cache_key = f"{settings.APP_NAME}:{namespace}:{func.__name__}:{key_part}"
-            
+
             # 2. Check Cache
             cached_val = await cache_service.get(cache_key)
             if cached_val is not None:
                 return cached_val
-            
+
             # 3. Execute Function
             result = await func(*args, **kwargs)
-            
+
             # 4. Save to Cache
             # Only cache if result is not None (optional decision)
             if result is not None:
                 await cache_service.set(cache_key, result, ttl=ttl)
-                
+
             return result
         return wrapper
     return decorator

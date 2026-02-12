@@ -21,7 +21,7 @@
 ///
 /// // 3. 在UI中使用设计令牌
 /// Container(
-///   color: DS.brandPrimary,
+///   color: DS.brandPrimaryConst,
 ///   padding: SpacingSystem.edgeLg,
 ///   child: SparkleButton.primary(
 ///     label: '点击',
@@ -33,6 +33,8 @@ library;
 
 // 便捷导入
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/breakpoints.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
@@ -40,8 +42,10 @@ import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
+export 'breakpoints.dart';
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
+export 'responsive_widgets.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';
@@ -49,6 +53,7 @@ export 'tokens_v2/spacing_token.dart';
 export 'tokens_v2/theme_manager.dart';
 export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
+export 'widgets/app_feedback.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -63,28 +68,37 @@ class AppThemes {
   }
 
   static ThemeData _buildThemeData(
-          SparkleThemeData theme, Brightness brightness,) =>
-      ThemeData(
-        useMaterial3: true,
+    SparkleThemeData theme,
+    Brightness brightness,
+  ) {
+    // 🔧 根据亮度选择正确的 SparkleThemeExtension
+    final sparkleExtension = brightness == Brightness.light
+        ? SparkleThemeExtension.light()
+        : SparkleThemeExtension.dark();
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      primaryColor: theme.colors.brandPrimary,
+      scaffoldBackgroundColor: theme.colors.surfacePrimary,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: theme.colors.brandPrimary,
         brightness: brightness,
-        primaryColor: theme.colors.brandPrimary,
-        scaffoldBackgroundColor: theme.colors.surfacePrimary,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: theme.colors.brandPrimary,
-          brightness: brightness,
-          primary: theme.colors.brandPrimary,
-          secondary: theme.colors.brandSecondary,
-          surface: theme.colors.surfacePrimary,
-          error: theme.colors.semanticError,
-        ),
-        textTheme: _buildTextTheme(theme),
-        cardTheme: _buildCardTheme(theme),
-        buttonTheme: _buildButtonTheme(theme),
-        inputDecorationTheme: _buildInputTheme(theme),
-        extensions: [
-          _SparkleThemeExtension(theme),
-        ],
-      );
+        primary: theme.colors.brandPrimary,
+        secondary: theme.colors.brandSecondary,
+        surface: theme.colors.surfacePrimary,
+        error: theme.colors.semanticError,
+      ),
+      textTheme: _buildTextTheme(theme),
+      cardTheme: _buildCardTheme(theme),
+      buttonTheme: _buildButtonTheme(theme),
+      inputDecorationTheme: _buildInputTheme(theme),
+      extensions: [
+        _SparkleThemeExtension(theme),
+        sparkleExtension, // 🔧 修复：注册公开的 SparkleThemeExtension
+      ],
+    );
+  }
 
   static TextTheme _buildTextTheme(SparkleThemeData theme) => TextTheme(
         displayLarge: theme.typography.displayLarge,
@@ -148,7 +162,9 @@ class _SparkleThemeExtension extends ThemeExtension<_SparkleThemeExtension> {
 
   @override
   _SparkleThemeExtension lerp(
-      ThemeExtension<_SparkleThemeExtension>? other, double t,) {
+    ThemeExtension<_SparkleThemeExtension>? other,
+    double t,
+  ) {
     if (other is! _SparkleThemeExtension) return this;
     return _SparkleThemeExtension(sparkle);
   }
@@ -194,6 +210,13 @@ extension SparkleContext on BuildContext {
 
   /// 是否横屏
   bool get isLandscape => ResponsiveSystem.isLandscape(this);
+
+  /// Whether the OS requests reduced motion or simplified navigation effects.
+  bool get reduceMotion {
+    final mediaQuery = MediaQuery.maybeOf(this);
+    if (mediaQuery == null) return false;
+    return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+  }
 }
 
 /// Legacy color aliases used by older widgets.
@@ -213,15 +236,6 @@ class SparkleColorAliases {
       _theme.colors.getTaskGradient(taskType);
   Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
-}
-
-/// Responsive breakpoints for phone layouts.
-class Breakpoints {
-  const Breakpoints._();
-
-  static const double narrow = 360.0;
-  static const double standard = 390.0;
-  static const double wide = 428.0;
 }
 
 /// 设计令牌快捷访问
@@ -283,6 +297,7 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfaceAmbient => _theme.colors.surfaceAmbient;
   static Color get surfacePrimaryElevated => _blend(
         surfacePrimary,
         surfaceTertiary,
@@ -291,7 +306,8 @@ class DS {
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
-  static Color get surfaceBase => surfaceSecondary; // Alias for backward compatibility
+  static Color get surfaceBase =>
+      surfaceSecondary; // Alias for backward compatibility
 
   // Text colors
   static Color get textPrimary => _theme.colors.textPrimary;
@@ -368,12 +384,16 @@ class DS {
   static Color get successConst => success;
 
   // Special surfaces and accents
-  static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
-  static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
-  static Color get deepSpaceSurface =>
-      _blend(surfacePrimary, deepSpaceStart, 0.6);
+  // Deep space colors use surfaceAmbient and surfacePrimary for proper dark mode support
+  static Color get deepSpaceStart => _isDark
+      ? _theme.colors.surfaceAmbient
+      : _blend(neutral50, brandPrimary, 0.28);
+  static Color get deepSpaceEnd => _isDark
+      ? _theme.colors.surfacePrimary
+      : _blend(neutral100, brandSecondary, 0.24);
+  static Color get deepSpaceSurface => _isDark
+      ? _theme.colors.surfacePrimary
+      : _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
       surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
   static Color get glassBorder =>
@@ -442,8 +462,8 @@ class DS {
   static const double smConst = 8.0;
 
   // Layout and sizing
-  static const double breakpointTablet = 768.0;
-  static const double breakpointDesktop = 1024.0;
+  static const double breakpointTablet = LayoutBreakpoints.tablet;
+  static const double breakpointDesktop = LayoutBreakpoints.desktop;
   static const double breakpointNarrow = Breakpoints.narrow;
   static const double breakpointStandard = Breakpoints.standard;
   static const double breakpointWide = Breakpoints.wide;
@@ -586,33 +606,115 @@ class DS {
   static Color get galaxyShadow => _theme.colors.galaxyShadow;
 
   // ============================================
+  // 稀有度系统颜色 (Rarity System)
+  // ============================================
+
+  /// 普通稀有度 - 灰色系
+  static Color get rarityCommon => neutral400;
+  static Color get rarityCommonBg => neutral200;
+  static Color get rarityCommonText => neutral700;
+
+  /// 稀有 - 金色系
+  static const Color rarityRare = Color(0xFFFFD700);
+  static Color get rarityRareBg => _isDark
+      ? const Color(0xFF3D3000) // 深色模式下的暗金背景
+      : const Color(0xFFFFF8DC);
+  static const Color rarityRareText = Color(0xFFB8860B);
+
+  /// 史诗 - 紫色系
+  static const Color rarityEpic = Color(0xFF9B59B6);
+  static Color get rarityEpicBg => _isDark
+      ? const Color(0xFF2D1F3D) // 深色模式下的暗紫背景
+      : const Color(0xFFF3E5F5);
+  static const Color rarityEpicText = Color(0xFF7B1FA2);
+
+  /// 传说 - 彩虹/红色系
+  static const Color rarityLegendary = Color(0xFFFF6B6B);
+  static Color get rarityLegendaryBg => _isDark
+      ? const Color(0xFF3D1F1F) // 深色模式下的暗红背景
+      : const Color(0xFFFFEBEE);
+  static const Color rarityLegendaryText = Color(0xFFD32F2F);
+
+  /// 获取稀有度颜色
+  static Color getRarityColor(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'rare':
+        return rarityRare;
+      case 'epic':
+        return rarityEpic;
+      case 'legendary':
+        return rarityLegendary;
+      default:
+        return rarityCommon;
+    }
+  }
+
+  /// 获取稀有度背景色
+  static Color getRarityBackground(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'rare':
+        return rarityRareBg;
+      case 'epic':
+        return rarityEpicBg;
+      case 'legendary':
+        return rarityLegendaryBg;
+      default:
+        return rarityCommonBg;
+    }
+  }
+
+  // ============================================
+  // 连胜等级颜色 (Streak Tier System)
+  // ============================================
+
+  /// 入门级 (< 7天) - 使用 warning 色
+  static Color get streakBeginner => warning;
+
+  /// 进阶级 (7-13天) - 橙色
+  static const Color streakIntermediate = Color(0xFFFF9500);
+
+  /// 专家级 (14-29天) - 橙红色
+  static const Color streakExpert = Color(0xFFFF6B00);
+
+  /// 大师级 (30天+) - 金色
+  static const Color streakMaster = Color(0xFFFFD700);
+
+  /// 根据连胜天数获取火焰颜色
+  static Color getStreakColor(int streakDays) {
+    if (streakDays >= 30) return streakMaster;
+    if (streakDays >= 14) return streakExpert;
+    if (streakDays >= 7) return streakIntermediate;
+    return streakBeginner;
+  }
+
+  // ============================================
   // 向后兼容属性（用于统计模块）
   // ============================================
 
   /// 文本样式快捷方式
   static TextStyle get textStyle => TextStyle(
-    fontSize: fontSizeBase,
-    fontWeight: fontWeightRegular,
-    color: textPrimary,
-  );
+        fontSize: fontSizeBase,
+        fontWeight: fontWeightRegular,
+        color: textPrimary,
+      );
 
   static TextStyle get headlineStyle => TextStyle(
-    fontSize: fontSizeLg,
-    fontWeight: fontWeightSemibold,
-    color: textPrimary,
-  );
+        fontSize: fontSizeLg,
+        fontWeight: fontWeightSemibold,
+        color: textPrimary,
+      );
 
   static TextStyle get bodyStyle => TextStyle(
-    fontSize: fontSizeBase,
-    fontWeight: fontWeightRegular,
-    color: textSecondary,
-  );
+        fontSize: fontSizeBase,
+        fontWeight: fontWeightRegular,
+        color: textSecondary,
+      );
 
   static TextStyle get captionStyle => TextStyle(
-    fontSize: fontSizeSm,
-    fontWeight: fontWeightRegular,
-    color: textTertiary,
-  );
+        fontSize: fontSizeSm,
+        fontWeight: fontWeightRegular,
+        color: textTertiary,
+      );
 
   /// 颜色快捷方式
   static const Color white = Colors.white;

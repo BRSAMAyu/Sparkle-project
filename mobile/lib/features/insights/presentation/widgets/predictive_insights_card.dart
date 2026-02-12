@@ -261,7 +261,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                   '建议先学习 $missingCount 个前置知识',
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
-                    color: DS.warning,
+                    color: DS.textPrimary,
                   ),
                 ),
               ],

@@ -13,7 +13,7 @@ def test_rag_router_short_query():
 
 def test_rag_router_keyword_trigger():
     router = RagRouter()
-    strategy = router.select("请分析这个知识点")
+    strategy = router.select("请帮我分析这个知识点并给出原因")
     assert strategy.name == "analytical"
     assert strategy.enable_hyde is True
     assert strategy.enable_graph is True

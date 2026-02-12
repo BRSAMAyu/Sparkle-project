@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_metrics import STATE_ESTIMATOR_RUNS, STATE_ESTIMATOR_LATENCY
+from app.core.business_metrics import STATE_ESTIMATOR_LATENCY, STATE_ESTIMATOR_RUNS
 from app.models.event import TrackingEvent
 from app.models.user_state import UserStateSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass
@@ -24,8 +27,8 @@ class StateEstimatorService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def update_state(self, user_id: UUID, timezone_name: Optional[str]) -> UserStateSnapshot:
-        start_time = datetime.utcnow()
+    async def update_state(self, user_id: UUID, timezone_name: str | None) -> UserStateSnapshot:
+        start_time = _utcnow()
         window = self._default_window()
         events = await self._fetch_recent_events(user_id, window)
         snapshot = self._compute_state(user_id, events, window, timezone_name)
@@ -33,10 +36,10 @@ class StateEstimatorService:
         await self.db.commit()
         await self.db.refresh(snapshot)
         STATE_ESTIMATOR_RUNS.labels(result="success").inc()
-        STATE_ESTIMATOR_LATENCY.observe((datetime.utcnow() - start_time).total_seconds())
+        STATE_ESTIMATOR_LATENCY.observe((_utcnow() - start_time).total_seconds())
         return snapshot
 
-    async def get_latest_snapshot(self, user_id: UUID) -> Optional[UserStateSnapshot]:
+    async def get_latest_snapshot(self, user_id: UUID) -> UserStateSnapshot | None:
         result = await self.db.execute(
             select(UserStateSnapshot)
             .where(UserStateSnapshot.user_id == user_id)
@@ -45,7 +48,7 @@ class StateEstimatorService:
         )
         return result.scalar_one_or_none()
 
-    async def get_snapshot_by_id(self, user_id: UUID, snapshot_id: str) -> Optional[UserStateSnapshot]:
+    async def get_snapshot_by_id(self, user_id: UUID, snapshot_id: str) -> UserStateSnapshot | None:
         result = await self.db.execute(
             select(UserStateSnapshot)
             .where(UserStateSnapshot.user_id == user_id)
@@ -54,11 +57,11 @@ class StateEstimatorService:
         return result.scalar_one_or_none()
 
     def _default_window(self) -> StateWindow:
-        end = datetime.utcnow()
+        end = _utcnow()
         start = end - timedelta(hours=24)
         return StateWindow(start=start, end=end)
 
-    async def _fetch_recent_events(self, user_id: UUID, window: StateWindow) -> List[TrackingEvent]:
+    async def _fetch_recent_events(self, user_id: UUID, window: StateWindow) -> list[TrackingEvent]:
         result = await self.db.execute(
             select(TrackingEvent)
             .where(TrackingEvent.user_id == user_id)
@@ -71,14 +74,14 @@ class StateEstimatorService:
     def _compute_state(
         self,
         user_id: UUID,
-        events: List[TrackingEvent],
+        events: list[TrackingEvent],
         window: StateWindow,
-        timezone_name: Optional[str],
+        timezone_name: str | None,
     ) -> UserStateSnapshot:
         total_events = len(events)
         wrong_events = 0
-        focus_start_at: Optional[datetime] = None
-        focus_end_at: Optional[datetime] = None
+        focus_start_at: datetime | None = None
+        focus_end_at: datetime | None = None
         sprint_mode = False
 
         for event in events:
@@ -98,7 +101,7 @@ class StateEstimatorService:
 
         focus_mode = False
         if focus_start_at and (not focus_end_at or focus_end_at < focus_start_at):
-            if datetime.utcnow() - focus_start_at < timedelta(hours=2):
+            if _utcnow() - focus_start_at < timedelta(hours=2):
                 focus_mode = True
 
         wrong_ratio = wrong_events / max(1, total_events)
@@ -112,7 +115,7 @@ class StateEstimatorService:
                 tz = ZoneInfo(timezone_name)
             except Exception:
                 tz = None
-        now_local = datetime.utcnow().astimezone(tz) if tz else datetime.utcnow()
+        now_local = _utcnow().astimezone(tz) if tz else _utcnow()
         time_context = {
             "hour": now_local.hour,
             "weekday": now_local.weekday(),
@@ -122,7 +125,7 @@ class StateEstimatorService:
 
         return UserStateSnapshot(
             user_id=user_id,
-            snapshot_at=datetime.utcnow(),
+            snapshot_at=_utcnow(),
             window_start=window.start,
             window_end=window.end,
             cognitive_load=cognitive_load,

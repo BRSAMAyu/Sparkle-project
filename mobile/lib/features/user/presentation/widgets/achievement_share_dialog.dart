@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
   @override
   void initState() {
     super.initState();
-    _generateCard();
+    unawaited(_generateCard());
   }
 
   Future<void> _generateCard() async {
@@ -72,18 +73,18 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    AppFeedback.error(context, message);
   }
 
   Future<void> _shareToSocial() async {
     if (_imagePath == null) return;
 
     try {
-      await Share.shareXFiles(
-        [XFile(_imagePath!)],
-        text: '我在 Sparkle 取得了新成就！🎉',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(_imagePath!)],
+          text: '我在 Sparkle 取得了新成就！🎉',
+        ),
       );
     } catch (e) {
       _showError('分享失败: $e');
@@ -99,9 +100,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
       // await ImageGallerySaver.saveFile(_imagePath!);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已保存到相册')),
-        );
+        AppFeedback.success(context, '已保存到相册');
       }
     } catch (e) {
       _showError('保存失败: $e');
@@ -110,7 +109,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
 
   @override
   Widget build(BuildContext context) => Dialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: DS.surfaceTertiary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(DS.xl),
@@ -120,12 +119,12 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
               // Title
               Row(
                 children: [
-                  Icon(Icons.share, color: DS.brandPrimary, size: 28),
+                  Icon(Icons.share, color: DS.brandPrimaryConst, size: 28),
                   const SizedBox(width: DS.md),
                   Text(
                     '分享成就',
                     style: TextStyle(
-                      color: DS.brandPrimary,
+                      color: DS.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -146,7 +145,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                         const SizedBox(height: DS.lg),
                         Text(
                           '正在生成分享卡片...',
-                          style: TextStyle(color: DS.brandPrimary70),
+                          style: TextStyle(color: DS.textSecondary),
                         ),
                       ],
                     ),
@@ -195,12 +194,10 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
               const SizedBox(height: DS.md),
 
               // Close button
-              TextButton(
+              SparkleButton(
+                label: '关闭',
+                variant: ButtonVariant.ghost,
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  '关闭',
-                  style: TextStyle(color: DS.brandPrimary70),
-                ),
               ),
             ],
           ),
@@ -231,7 +228,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: DS.brandPrimaryConst,
+                    color: DS.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -250,11 +247,13 @@ void showAchievementShareDialog(
   required String achievementType,
   required Map<String, dynamic> data,
 }) {
-  showDialog<void>(
-    context: context,
-    builder: (context) => AchievementShareDialog(
-      achievementType: achievementType,
-      data: data,
+  unawaited(
+    showDialog<void>(
+      context: context,
+      builder: (context) => AchievementShareDialog(
+        achievementType: achievementType,
+        data: data,
+      ),
     ),
   );
 }

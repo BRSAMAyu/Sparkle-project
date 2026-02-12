@@ -139,7 +139,7 @@ class _SmallFlamePainter extends CustomPainter {
             DS.warningAccent,
             safeIntensity,
           )!,
-          Colors.transparent,
+          DS.surfacePrimary.withValues(alpha: 0),
         ],
         stops: const [0.2, 0.6, 1.0],
       ).createShader(

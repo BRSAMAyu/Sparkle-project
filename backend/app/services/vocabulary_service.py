@@ -10,17 +10,22 @@ Vocabulary & Dictionary Service
     - interval = base_interval * (2 ^ (consecutive_correct - 1))
     - 上限 180 天
 """
-import json
 import csv
 import io
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+import json
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, Float
 
-from app.models.vocabulary import WordBook, DictionaryEntry
+from sqlalchemy import Float, and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.vocabulary import DictionaryEntry, WordBook
 from app.services.llm_service import llm_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VocabularyService:
@@ -59,7 +64,7 @@ class VocabularyService:
             - 上限 180 天
         """
         if not remembered:
-            return datetime.utcnow() + timedelta(days=1)
+            return _utcnow() + timedelta(days=1)
 
         # 重要度 5 -> 基础 1 天（关键词汇）
         # 重要度 1 -> 基础 5 天（普通词汇）
@@ -72,7 +77,7 @@ class VocabularyService:
         # 上限 180 天
         days = min(days, 180)
 
-        return datetime.utcnow() + timedelta(days=int(days))
+        return _utcnow() + timedelta(days=int(days))
 
     @staticmethod
     async def import_dictionary(
@@ -118,7 +123,7 @@ class VocabularyService:
         return count
 
     @staticmethod
-    async def lookup(db: AsyncSession, word: str) -> Optional[DictionaryEntry]:
+    async def lookup(db: AsyncSession, word: str) -> DictionaryEntry | None:
         """Search for a word in the dictionary"""
         stmt = select(DictionaryEntry).where(DictionaryEntry.word == word.lower())
         result = await db.execute(stmt)
@@ -130,12 +135,12 @@ class VocabularyService:
         user_id: UUID,
         word: str,
         definition: str,
-        phonetic: Optional[str] = None,
-        context_sentence: Optional[str] = None,
-        task_id: Optional[UUID] = None,
+        phonetic: str | None = None,
+        context_sentence: str | None = None,
+        task_id: UUID | None = None,
         importance: int = 3,
-        part_of_speech: Optional[str] = None,
-        source_translation_id: Optional[str] = None
+        part_of_speech: str | None = None,
+        source_translation_id: str | None = None
     ) -> WordBook:
         """
         Add a word to the user's wordbook
@@ -164,7 +169,7 @@ class VocabularyService:
             existing.definition = definition
             existing.phonetic = phonetic or existing.phonetic
             existing.importance = importance
-            existing.next_review_at = datetime.utcnow()
+            existing.next_review_at = _utcnow()
             if context_sentence:
                 existing.context_sentence = context_sentence
             if part_of_speech:
@@ -183,7 +188,7 @@ class VocabularyService:
             importance=importance,
             part_of_speech=part_of_speech,
             source_translation_id=source_translation_id,
-            next_review_at=datetime.utcnow()
+            next_review_at=_utcnow()
         )
         db.add(word_book)
         await db.commit()
@@ -191,12 +196,12 @@ class VocabularyService:
         return word_book
 
     @staticmethod
-    async def get_review_list(db: AsyncSession, user_id: UUID) -> List[WordBook]:
+    async def get_review_list(db: AsyncSession, user_id: UUID) -> list[WordBook]:
         """Get words due for review"""
         stmt = select(WordBook).where(
             and_(
                 WordBook.user_id == user_id,
-                WordBook.next_review_at <= datetime.utcnow()
+                WordBook.next_review_at <= _utcnow()
             )
         ).order_by(WordBook.next_review_at)
 
@@ -206,7 +211,7 @@ class VocabularyService:
     @staticmethod
     async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
         """Get number of words added today (UTC)"""
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         stmt = select(func.count()).select_from(WordBook).where(
             and_(
@@ -222,7 +227,7 @@ class VocabularyService:
         db: AsyncSession,
         word_id: UUID,
         remembered: bool
-    ) -> Optional[WordBook]:
+    ) -> WordBook | None:
         """
         Record review result and schedule next review (使用统一算法)
 
@@ -239,7 +244,7 @@ class VocabularyService:
             return None
 
         word_book.review_count += 1
-        word_book.last_review_at = datetime.utcnow()
+        word_book.last_review_at = _utcnow()
 
         if remembered:
             word_book.correct_review_count += 1
@@ -263,7 +268,7 @@ class VocabularyService:
         db: AsyncSession,
         word_id: UUID,
         importance: int
-    ) -> Optional[WordBook]:
+    ) -> WordBook | None:
         """
         Update word importance rating
 
@@ -298,7 +303,7 @@ class VocabularyService:
     async def get_statistics(
         db: AsyncSession,
         user_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get vocabulary statistics for a user
 
@@ -320,7 +325,7 @@ class VocabularyService:
         due_stmt = select(func.count()).select_from(WordBook).where(
             and_(
                 WordBook.user_id == user_id,
-                WordBook.next_review_at <= datetime.utcnow()
+                WordBook.next_review_at <= _utcnow()
             )
         )
         due_result = await db.execute(due_stmt)
@@ -359,14 +364,14 @@ class VocabularyService:
     # ================= LLM Helpers =================
 
     @staticmethod
-    async def get_word_associations(word: str) -> List[str]:
+    async def get_word_associations(word: str) -> list[str]:
         """Get related words/synonyms/antonyms via LLM"""
         prompt = f"Provide 5-8 related words (synonyms, antonyms, or related concepts) for the word '{word}'. Format as a simple comma-separated list."
         response = await llm_service.chat([{"role": "user", "content": prompt}])
         return [w.strip() for w in response.split(',')]
 
     @staticmethod
-    async def generate_example_sentence(word: str, context: Optional[str] = None) -> str:
+    async def generate_example_sentence(word: str, context: str | None = None) -> str:
         """Generate a natural example sentence for the word"""
         prompt = f"Create a natural, helpful example sentence for the word '{word}'."
         if context:

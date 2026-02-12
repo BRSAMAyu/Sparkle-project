@@ -3,18 +3,20 @@ GalaxyFeedbackService - 知识星图反馈收集服务
 
 负责收集用户学习行为的隐式反馈，实时更新知识节点掌握度
 """
-from typing import Dict, Any, Optional, List
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
-from datetime import datetime
+
 from loguru import logger
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.galaxy import (
-    KnowledgeNode, UserNodeStatus, ExpansionFeedback,
-    StudyRecord
-)
-from app.core.event_bus import event_bus, NodeMasteryUpdatedEvent
+from app.core.event_bus import NodeMasteryUpdatedEvent, event_bus
+from app.models.galaxy import ExpansionFeedback, UserNodeStatus
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackType:
@@ -57,8 +59,8 @@ class GalaxyFeedbackService:
 
     async def collect_implicit_feedback(
         self,
-        event_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        event_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         收集隐式反馈并更新掌握度
 
@@ -111,8 +113,8 @@ class GalaxyFeedbackService:
         user_id: UUID,
         node_id: UUID,
         rating: int,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """
         收集显式反馈（用户主动评分）
 
@@ -153,7 +155,7 @@ class GalaxyFeedbackService:
 
         return result
 
-    async def _calculate_feedback_score(self, event_data: Dict[str, Any]) -> float:
+    async def _calculate_feedback_score(self, event_data: dict[str, Any]) -> float:
         """计算反馈分数"""
         event_type = event_data.get("type")
 
@@ -172,8 +174,8 @@ class GalaxyFeedbackService:
         feedback_type: str,
         implicit_score: float,
         source: str,
-        rating: Optional[int] = None,
-        metadata: Dict[str, Any] = None
+        rating: int | None = None,
+        metadata: dict[str, Any] = None
     ):
         """记录反馈到数据库"""
         try:
@@ -205,7 +207,7 @@ class GalaxyFeedbackService:
         node_id: UUID,
         score: float,
         reason: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """根据反馈更新掌握度"""
         try:
             # 获取当前状态
@@ -225,8 +227,8 @@ class GalaxyFeedbackService:
                     node_id=node_id,
                     mastery_score=max(self.MIN_MASTERY, min(self.MAX_MASTERY, int(score * 10))),
                     is_unlocked=True,
-                    first_unlock_at=datetime.utcnow(),
-                    last_study_at=datetime.utcnow()
+                    first_unlock_at=_utcnow(),
+                    last_study_at=_utcnow()
                 )
                 self.db.add(status)
                 await self.db.commit()
@@ -252,7 +254,7 @@ class GalaxyFeedbackService:
 
             if new_mastery != old_mastery:
                 status.mastery_score = new_mastery
-                status.last_study_at = datetime.utcnow()
+                status.last_study_at = _utcnow()
                 await self.db.commit()
 
                 # 发布掌握度更新事件
@@ -302,11 +304,11 @@ class GalaxyFeedbackService:
     async def batch_update_from_task(
         self,
         user_id: UUID,
-        node_ids: List[UUID],
+        node_ids: list[UUID],
         task_id: UUID,
         study_minutes: int,
         difficulty: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         批量更新多个节点的掌握度（任务完成时）
 
@@ -352,7 +354,7 @@ class GalaxyFeedbackService:
         self,
         user_id: UUID,
         node_id: UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取节点反馈摘要
 

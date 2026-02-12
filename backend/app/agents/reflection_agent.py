@@ -14,27 +14,28 @@ Reflection Agent - 自我反思与修正Agent
 创建时间: 2026-01-25
 """
 
-import json
 import uuid
-from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum
-from datetime import datetime
+from typing import Any
+
 from loguru import logger
 
 from app.agents.reviewer_agent import (
+    Issue,
+    ReviewDecision,
     ReviewerAgent,
     ReviewResult,
-    Issue,
-    ReviewMetric,
-    ReviewSeverity,
-    ReviewDecision,
 )
-
 
 # ============================================
 # 反思策略定义
 # ============================================
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class ReflectionStrategy(str, Enum):
     """反思修正策略"""
@@ -64,8 +65,8 @@ class ReflectionRound:
     strategy: ReflectionStrategy
     fixed_content: str
     new_score: float
-    issues_addressed: List[str]        # 本轮解决的问题
-    issues_remaining: List[str]        # 仍存在的问题
+    issues_addressed: list[str]        # 本轮解决的问题
+    issues_remaining: list[str]        # 仍存在的问题
     outcome: ReflectionOutcome
     reasoning: str                      # 反思推理过程
 
@@ -80,7 +81,7 @@ class ReflectionResult:
     initial_score: float
     final_score: float
     score_delta: float
-    rounds: List[ReflectionRound]
+    rounds: list[ReflectionRound]
     success: bool
     final_content: str
     reasoning: str                      # 总体推理说明
@@ -190,7 +191,7 @@ class ReflectionAgent:
     def __init__(
         self,
         generator_llm=None,
-        reviewer: Optional[ReviewerAgent] = None,
+        reviewer: ReviewerAgent | None = None,
         max_rounds: int = DEFAULT_MAX_ROUNDS,
         min_improvement: float = DEFAULT_MIN_IMPROVEMENT,
         target_score: float = DEFAULT_TARGET_SCORE
@@ -206,8 +207,8 @@ class ReflectionAgent:
             target_score: 目标分数（达到此值停止迭代）
         """
         if generator_llm is None:
-            from app.services.llm_service import get_llm_service_for_task
             from app.agents.reviewer_agent import TaskType
+            from app.services.llm_service import get_llm_service_for_task
             generator_llm = get_llm_service_for_task(TaskType.STANDARD_RESPONSE)
 
         self.generator = generator_llm
@@ -226,7 +227,7 @@ class ReflectionAgent:
         user_query: str,
         original_content: str,
         review_result: ReviewResult,
-        context: Optional[Dict[str, Any]] = None
+        context: dict[str, Any] | None = None
     ) -> ReflectionResult:
         """
         基于审查结果进行反思和修正
@@ -243,7 +244,7 @@ class ReflectionAgent:
         reflection_id = f"reflection_{uuid.uuid4().hex[:12]}"
         logger.info(f"[ReflectionAgent] Starting reflection {reflection_id}")
 
-        rounds_history: List[ReflectionRound] = []
+        rounds_history: list[ReflectionRound] = []
         current_content = original_content
         current_score = review_result.overall_score
 
@@ -275,7 +276,7 @@ class ReflectionAgent:
                 llm_response=fixed_content,
                 context={
                     **(context or {}),
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": _utcnow().isoformat()
                 }
             )
 
@@ -290,7 +291,7 @@ class ReflectionAgent:
             # 5. 记录本轮
             round_record = ReflectionRound(
                 round_number=round_num,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=_utcnow().isoformat(),
                 original_score=current_score,
                 original_content=current_content,
                 strategy=strategy,
@@ -310,17 +311,17 @@ class ReflectionAgent:
 
             # 6. 决定是否继续
             if new_review.passed or new_review.overall_score >= self.target_score:
-                logger.info(f"[ReflectionAgent] Target achieved, stopping")
+                logger.info("[ReflectionAgent] Target achieved, stopping")
                 current_content = fixed_content
                 current_score = new_review.overall_score
                 break
 
             if outcome == ReflectionOutcome.NO_CHANGE:
-                logger.warning(f"[ReflectionAgent] No improvement, stopping")
+                logger.warning("[ReflectionAgent] No improvement, stopping")
                 break
 
             if outcome == ReflectionOutcome.DEGRADED:
-                logger.warning(f"[ReflectionAgent] Content degraded, reverting")
+                logger.warning("[ReflectionAgent] Content degraded, reverting")
                 break
 
             # 继续下一轮
@@ -374,7 +375,7 @@ class ReflectionAgent:
             ReflectionStrategy: 选择的策略
         """
         critical_count = len(review_result.critical_issues)
-        warning_count = len(review_result.warning_issues)
+        len(review_result.warning_issues)
 
         # 严重问题多，直接重新生成
         if critical_count >= 2 or (critical_count >= 1 and current_score < 0.4):
@@ -391,7 +392,7 @@ class ReflectionAgent:
         # 默认直接修复
         return ReflectionStrategy.DIRECT_FIX
 
-    def _are_issues_localized(self, issues: List[Issue]) -> bool:
+    def _are_issues_localized(self, issues: list[Issue]) -> bool:
         """检查问题是否集中在特定部分"""
         if not issues:
             return False
@@ -415,8 +416,8 @@ class ReflectionAgent:
         current_content: str,
         review_result: ReviewResult,
         strategy: ReflectionStrategy,
-        context: Dict[str, Any]
-    ) -> Tuple[str, str]:
+        context: dict[str, Any]
+    ) -> tuple[str, str]:
         """
         执行修正
 
@@ -473,7 +474,7 @@ class ReflectionAgent:
             logger.error(f"[ReflectionAgent] Fix execution failed: {e}")
             return current_content, f"修正失败: {str(e)}"
 
-    def _format_issues(self, issues: List[Issue]) -> str:
+    def _format_issues(self, issues: list[Issue]) -> str:
         """格式化问题列表"""
         if not issues:
             return "无问题"
@@ -497,7 +498,7 @@ class ReflectionAgent:
 
     def _extract_targeted_sections(
         self,
-        issues: List[Issue],
+        issues: list[Issue],
         content: str
     ) -> str:
         """提取需要优化的内容部分"""
@@ -513,7 +514,7 @@ class ReflectionAgent:
         self,
         old_review: ReviewResult,
         new_review: ReviewResult
-    ) -> List[str]:
+    ) -> list[str]:
         """获取本轮已解决的问题"""
         old_descriptions = {i.description for i in old_review.issues}
         new_descriptions = {i.description for i in new_review.issues}
@@ -562,7 +563,7 @@ class ReflectionAgent:
 
         return ReflectionOutcome.NO_CHANGE
 
-    def _generate_summary_reasoning(self, rounds: List[ReflectionRound]) -> str:
+    def _generate_summary_reasoning(self, rounds: list[ReflectionRound]) -> str:
         """生成总体推理说明"""
         if not rounds:
             return "无反思记录"
@@ -588,7 +589,7 @@ class ReflectionAgent:
 # 全局单例
 # ============================================
 
-_reflection_agent_instance: Optional[ReflectionAgent] = None
+_reflection_agent_instance: ReflectionAgent | None = None
 
 
 def get_reflection_agent() -> ReflectionAgent:
@@ -604,7 +605,6 @@ def get_reflection_agent() -> ReflectionAgent:
 # ============================================
 
 if __name__ == "__main__":
-    import asyncio
 
     async def test_reflection():
         """测试反思功能"""

@@ -1,16 +1,44 @@
 """
 API 中间件
 """
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.concurrency import iterate_in_threadpool
 import hashlib
+from uuid import uuid4
+
+from fastapi import Request, Response
+from opentelemetry import trace
+from starlette.concurrency import iterate_in_threadpool
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.idempotency import IdempotencyStore
 
+
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Inject request/trace identifiers into request state and response headers."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or request.headers.get("x-request-id") or str(uuid4())
+        trace_id = request.headers.get("X-Trace-ID") or request.headers.get("x-trace-id")
+
+        if not trace_id:
+            span = trace.get_current_span()
+            span_context = span.get_span_context()
+            if span_context and span_context.is_valid:
+                trace_id = format(span_context.trace_id, "032x")
+            else:
+                trace_id = uuid4().hex
+
+        request.state.request_id = request_id
+        request.state.trace_id = trace_id
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Trace-ID"] = trace_id
+        return response
+
+
 class IdempotencyMiddleware(BaseHTTPMiddleware):
     """幂等性中间件 - 防止重复处理"""
-    
+
     # 需要幂等保护的路径前缀
     PROTECTED_PATHS = [
         "/api/v1/chat/stream",
@@ -18,7 +46,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         "/api/v1/plans",
         "/api/v1/events/ingest",
     ]
-    
+
     def __init__(self, app, store: IdempotencyStore):
         super().__init__(app)
         self.store = store
@@ -51,10 +79,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         collected = bytearray()
         try:
             async for chunk in body_iterator:
-                if isinstance(chunk, str):
-                    chunk_bytes = chunk.encode("utf-8")
-                else:
-                    chunk_bytes = chunk
+                chunk_bytes = chunk.encode("utf-8") if isinstance(chunk, str) else chunk
                 if len(collected) < self._max_sse_cache_bytes:
                     remaining = self._max_sse_cache_bytes - len(collected)
                     collected.extend(chunk_bytes[:remaining])
@@ -73,16 +98,16 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     ttl=3600,
                 )
             await self.store.unlock(cache_key)
-    
+
     async def dispatch(self, request: Request, call_next) -> Response:
         # 仅对 POST/PUT/PATCH 请求检查幂等性
         if request.method not in ["POST", "PUT", "PATCH"]:
             return await call_next(request)
-        
+
         # 检查是否是受保护的路径
         if not any(request.url.path.startswith(p) for p in self.PROTECTED_PATHS):
             return await call_next(request)
-        
+
         # 获取幂等键
         idempotency_key = request.headers.get("X-Idempotency-Key")
         if not idempotency_key:
@@ -91,7 +116,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         body_bytes = await request.body()
         request._body = body_bytes
         request_hash = hashlib.sha256(body_bytes).hexdigest() if body_bytes else None
-        
+
         user_id = self._extract_user_id(request)
         cache_key = f"{user_id}:{idempotency_key}" if user_id else idempotency_key
 
@@ -113,7 +138,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 headers={"X-Idempotency-Replayed": "true", "Content-Type": content_type},
                 media_type=content_type,
             )
-        
+
         # 标记为处理中（防止并发）
         # 注意: 这里的 lock 逻辑对于分布式环境需要更严谨 (如 Redis SETNX)
         if not await self.store.lock(cache_key):
@@ -122,19 +147,19 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 status_code=409,
                 media_type="application/json"
             )
-        
+
         unlock_in_finally = True
         try:
             # 执行实际请求
             response = await call_next(request)
-            
+
             # 缓存响应（仅成功响应，且是非流式的 JSON 响应）
             # 注意: 流式响应 (SSE) 很难缓存整个 body，除非我们收集它。
             # 对于 /chat/stream，通常我们不缓存流内容，或者我们需要特殊处理。
             # 文档中提到 /chat/stream 也在保护列表中。
             # 如果是流式响应，response.body_iterator 是一个 generator。
             # 我们需要 hook 它。
-            
+
             if 200 <= response.status_code < 300:
                 # 检查是否是流式响应
                 content_type = response.headers.get("content-type", "")
@@ -166,9 +191,9 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                             },
                             ttl=3600,
                         )
-            
+
             return response
-            
+
         finally:
             if unlock_in_finally:
                 await self.store.unlock(cache_key)

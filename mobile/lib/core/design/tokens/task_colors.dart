@@ -38,6 +38,8 @@ class TaskColors {
         return _isDark
             ? _RawTaskColors.planningDark
             : _RawTaskColors.planningLight;
+      case TaskType.ocr:
+        return _RawTaskColors.ocr;
     }
   }
 
@@ -67,4 +69,7 @@ class _RawTaskColors {
 
   static const Color planningLight = Color(0xFF009688);
   static const Color planningDark = Color(0xFF4DB6AC);
+
+  // OCR is gray.
+  static const Color ocr = Color(0xFF78909C);
 }

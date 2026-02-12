@@ -1,25 +1,26 @@
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 from loguru import logger
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User, PushPreference
 from app.models.notification import PushHistory
+from app.models.user import PushPreference, User
 from app.schemas.notification import NotificationCreate
-from app.services.notification_service import NotificationService
-from app.services.llm_service import llm_service
 from app.services.curiosity_capsule_service import curiosity_capsule_service
-from app.services.personalization import get_personalization_engine, PushPolicyProfile
+from app.services.llm_service import llm_service
+from app.services.notification_service import NotificationService
+from app.services.personalization import PushPolicyProfile, get_personalization_engine
 from app.services.push_strategies import (
-    SprintStrategy,
-    MemoryStrategy,
-    InactivityStrategy,
     CuriosityStrategy,
     EmptyCapsuleStrategy,
+    InactivityStrategy,
+    MemoryStrategy,
+    SprintStrategy,
 )
+
 
 class PushService:
     def __init__(self, db: AsyncSession, redis=None):
@@ -31,13 +32,13 @@ class PushService:
         Main entry point: Process push logic for all eligible users.
         """
         logger.info("Starting daily push processing...")
-        
+
         # 1. Get all active users with push preferences
         # Note: In a real large-scale system, we would paginate or use a job queue.
         query = (
             select(User)
             .join(PushPreference, User.id == PushPreference.user_id)
-            .where(User.is_active == True)
+            .where(User.is_active)
         )
         result = await self.db.execute(query)
         users = result.scalars().all()
@@ -110,14 +111,14 @@ class PushService:
                 trigger_type,
                 trigger_data
             )
-        
+
         if not content_dict:
             logger.warning("Failed to generate push content.")
             return False
 
         # 5. Send & Record
         await self._send_push(user, trigger_type, content_dict, trigger_data, policy)
-        
+
         return True
 
     async def _check_frequency_cap(self, user: User, policy: PushPolicyProfile) -> bool:
@@ -129,14 +130,14 @@ class PushService:
         if not prefs:
             return False
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Cooldown check (e.g., at least 2 hours between pushes)
         if prefs and prefs.last_push_time:
             last_time = prefs.last_push_time
             if last_time.tzinfo is None:
-                last_time = last_time.replace(tzinfo=timezone.utc)
-            
+                last_time = last_time.replace(tzinfo=UTC)
+
             min_interval = timedelta(minutes=policy.min_interval_minutes)
             if (now - last_time) < min_interval:
                 return True
@@ -149,10 +150,10 @@ class PushService:
         except Exception:
             tz = ZoneInfo("Asia/Shanghai")
             local_now = now.astimezone(tz)
-        
+
         # Start of local day in UTC
         local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        utc_start_of_day = local_start_of_day.astimezone(timezone.utc)
+        utc_start_of_day = local_start_of_day.astimezone(UTC)
 
         query = select(func.count()).select_from(PushHistory).where(
             and_(
@@ -162,7 +163,7 @@ class PushService:
         )
         result = await self.db.execute(query)
         daily_count = result.scalar() or 0
-        
+
         return daily_count >= policy.daily_cap
 
     def _is_active_time(self, policy: PushPolicyProfile) -> bool:
@@ -187,10 +188,10 @@ class PushService:
     async def _generate_push_content(
         self,
         user: User,
-        explicit_prefs: Dict[str, Any],
+        explicit_prefs: dict[str, Any],
         trigger_type: str,
-        data: Dict
-    ) -> Dict[str, str]:
+        data: dict
+    ) -> dict[str, str]:
         """
         Generate push content using LLM based on persona and trigger data.
         Returns dict with 'title' and 'body'.
@@ -199,7 +200,7 @@ class PushService:
         depth_preference = explicit_prefs.get("depth_preference", 0.5)
         curiosity_preference = explicit_prefs.get("curiosity_preference", 0.5)
         nickname = user.nickname or user.username or "同学"
-        
+
         return await llm_service.generate_push_content(
             user_nickname=nickname,
             persona=persona,
@@ -213,8 +214,8 @@ class PushService:
         self,
         user: User,
         trigger_type: str,
-        content: Dict[str, str],
-        data: Dict,
+        content: dict[str, str],
+        data: dict,
         policy: PushPolicyProfile
     ):
         """
@@ -231,12 +232,12 @@ class PushService:
             data=data
         )
         await NotificationService.create(self.db, user.id, notif_create)
-        
+
         # 2. Create PushHistory (Analytics)
         import hashlib
         # Hash body content
         content_hash = hashlib.md5(body.encode('utf-8')).hexdigest()
-        
+
         history = PushHistory(
             user_id=user.id,
             trigger_type=trigger_type,
@@ -244,10 +245,10 @@ class PushService:
             status="sent"
         )
         self.db.add(history)
-        
+
         # 3. Update User Preferences (Last push time)
-        user.push_preference.last_push_time = datetime.now(timezone.utc)
-        
+        user.push_preference.last_push_time = datetime.now(UTC)
+
         await self.db.commit()
         logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")
 

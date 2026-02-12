@@ -1,10 +1,10 @@
 """
 Capsule Favorite Model
 """
-from sqlalchemy import Column, Text, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class CapsuleFavorite(BaseModel):

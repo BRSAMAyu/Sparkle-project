@@ -11,9 +11,7 @@ def to_async_database_url(url: str) -> str:
     parsed = make_url(url)
     driver = parsed.drivername
 
-    if driver in ("postgres", "postgresql"):
-        driver = "postgresql+asyncpg"
-    elif driver.startswith("postgresql+") and not driver.endswith("asyncpg"):
+    if driver in ("postgres", "postgresql") or driver.startswith("postgresql+") and not driver.endswith("asyncpg"):
         driver = "postgresql+asyncpg"
     elif driver == "sqlite":
         driver = "sqlite+aiosqlite"
@@ -28,9 +26,7 @@ def to_sync_database_url(url: str) -> str:
     parsed = make_url(url)
     driver = parsed.drivername
 
-    if driver.startswith("postgresql"):
-        driver = "postgresql"
-    elif driver == "postgres":
+    if driver.startswith("postgresql") or driver == "postgres":
         driver = "postgresql"
     elif driver == "sqlite+aiosqlite":
         driver = "sqlite"

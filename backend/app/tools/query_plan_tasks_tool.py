@@ -4,12 +4,11 @@ Query Plan Tasks Tool - LLM查询任务卡工具
 允许 LLM 查询特定计划的任务卡，支持多种过滤条件。
 这是反馈闭环系统的关键组件，使 LLM 能够感知特定计划的任务状态。
 """
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
 from app.tools.base import BaseTool, ToolContext
@@ -85,9 +84,9 @@ class QueryPlanTasksTool(BaseTool):
 
     async def execute(
         self,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         context: ToolContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         执行查询
 

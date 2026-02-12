@@ -11,15 +11,15 @@ Match strength levels:
 """
 import difflib
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.fingerprint import normalize_core
 from app.models.document_chunks import DocumentChunk
 from app.models.learning_assets import MatchStrength
-from app.core.fingerprint import normalize_core
 
 # Match thresholds
 STRONG_THRESHOLD = 0.85
@@ -34,7 +34,7 @@ class MatchCandidate:
     """A potential match candidate"""
     chunk_id: UUID
     file_id: UUID
-    page_numbers: List[int]
+    page_numbers: list[int]
     score: float
     match_strength: MatchStrength
     matched_text: str  # Portion of chunk that matched
@@ -43,9 +43,9 @@ class MatchCandidate:
 @dataclass
 class ProvenanceMatch:
     """Result of provenance matching"""
-    best_match: Optional[MatchCandidate]
-    all_candidates: List[MatchCandidate]
-    search_params: Dict[str, Any] = field(default_factory=dict)
+    best_match: MatchCandidate | None
+    all_candidates: list[MatchCandidate]
+    search_params: dict[str, Any] = field(default_factory=dict)
 
 
 def char_ngrams(text: str, n: int = 3) -> set:
@@ -196,8 +196,8 @@ async def find_provenance(
     db: AsyncSession,
     selected_text: str,
     file_id: UUID,
-    page_no: Optional[int] = None,
-    user_id: Optional[UUID] = None,
+    page_no: int | None = None,
+    user_id: UUID | None = None,
     top_k: int = DEFAULT_TOP_K
 ) -> ProvenanceMatch:
     """
@@ -235,7 +235,7 @@ async def find_provenance(
     result = await db.execute(query)
     chunks = result.scalars().all()
 
-    candidates: List[MatchCandidate] = []
+    candidates: list[MatchCandidate] = []
     search_params = {
         "file_id": str(file_id),
         "page_no": page_no,
@@ -249,9 +249,8 @@ async def find_provenance(
 
         # Skip if page_no specified but chunk doesn't contain that page
         # (or chunk has no page info when page_no is specified)
-        if page_no is not None:
-            if not chunk_pages or page_no not in chunk_pages:
-                continue
+        if page_no is not None and (not chunk_pages or page_no not in chunk_pages):
+            continue
 
         # Calculate similarity
         score, matched_text = find_best_substring_match(selected_text, chunk.content)
@@ -286,7 +285,7 @@ async def find_provenance(
     )
 
 
-def build_provenance_json(match: ProvenanceMatch) -> Dict[str, Any]:
+def build_provenance_json(match: ProvenanceMatch) -> dict[str, Any]:
     """
     Build provenance JSON for storage in learning_asset.
 
