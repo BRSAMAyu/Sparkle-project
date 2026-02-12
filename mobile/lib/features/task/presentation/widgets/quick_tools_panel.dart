@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/features/tools/presentation/widgets/breathing_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/calculator_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/flash_capsule_tool.dart';
@@ -17,24 +18,22 @@ class QuickToolsPanel extends StatelessWidget {
   final String? taskId;
 
   void _showTool(BuildContext context, Widget tool) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: tool,
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: tool,
+        ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = SparkleContextExtension(context).colors;
-
-    return Wrap(
+  Widget build(BuildContext context) => Wrap(
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
@@ -48,7 +47,7 @@ class QuickToolsPanel extends StatelessWidget {
           _ToolButton(
             icon: Icons.translate_outlined,
             label: '翻译',
-            color: Colors.purple,
+            color: DS.prismPurple,
             onTap: () => _showTool(context, const TranslatorTool()),
           ),
           _ToolButton(
@@ -60,14 +59,14 @@ class QuickToolsPanel extends StatelessWidget {
           _ToolButton(
             icon: Icons.search_rounded,
             label: '查词',
-            color: Colors.cyan,
+            color: DS.info,
             onTap: () =>
                 _showTool(context, VocabularyLookupTool(taskId: taskId)),
           ),
           _ToolButton(
             icon: Icons.lightbulb_outlined,
             label: '闪念胶囊',
-            color: Colors.amber,
+            color: DS.warning,
             onTap: () => _showTool(context, FlashCapsuleTool(taskId: taskId)),
           ),
           _ToolButton(
@@ -79,18 +78,17 @@ class QuickToolsPanel extends StatelessWidget {
           _ToolButton(
             icon: Icons.air,
             label: '呼吸',
-            color: Colors.indigo,
+            color: DS.brandSecondary,
             onTap: () => _showTool(context, const BreathingTool()),
           ),
           _ToolButton(
             icon: Icons.bar_chart,
             label: '统计',
-            color: Colors.deepPurple,
+            color: DS.taskReflection,
             onTap: () => _showTool(context, const FocusStatsTool()),
           ),
         ],
       );
-  }
 }
 
 class _ToolButton extends StatelessWidget {
@@ -111,53 +109,55 @@ class _ToolButton extends StatelessWidget {
 
     // Use appropriate colors based on theme
     final bgColor = isDark
-        ? color.withValues(alpha: 0.15)  // Semi-transparent for dark mode
-        : color.withValues(alpha: 0.1);   // Lighter for light mode
+        ? color.withValues(alpha: 0.15) // Semi-transparent for dark mode
+        : color.withValues(alpha: 0.1); // Lighter for light mode
 
-    final surfaceColor = isDark
-        ? DS.neutral800
-        : DS.neutral100;
+    final surfaceColor = isDark ? DS.neutral800 : DS.neutral100;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: bgColor,
-            width: 1.5,
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: bgColor,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.sm),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(height: DS.xs),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isDark ? DS.neutral300 : DS.neutral700,
+              const SizedBox(height: DS.xs),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? DS.neutral300 : DS.neutral700,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

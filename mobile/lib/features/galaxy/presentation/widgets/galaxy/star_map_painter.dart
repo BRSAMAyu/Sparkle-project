@@ -84,7 +84,7 @@ class _RelationStyle {
             dashLength: 6,
             baseWidth: 1.0,);
       case EdgeRelationType.parentChild:
-        return _RelationStyle(color: DS.brandPrimary, baseWidth: 1.8);
+        return _RelationStyle(color: DS.brandPrimaryConst, baseWidth: 1.8);
     }
   }
 }
@@ -126,11 +126,16 @@ class StarMapPainter extends CustomPainter {
   final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
 
-  // LOD Thresholds
-  static const double _lod0Limit = 0.15;
-  static const double _lod1Limit = 0.3;
-  static const double _lod2Limit = 0.5;
-  static const double _lod3Limit = 0.7;
+  // LOD Thresholds - Clear scale boundaries
+  // L0: <0.2 - Sector view (centroids only)
+  // L1: 0.2-0.4 - Large nodes + key labels (imp>=4)
+  // L2: 0.4-0.6 - All nodes + parent-child edges + standard labels (imp>=3)
+  // L3: 0.6-0.8 - All edges + more labels (imp>=2) + glow
+  // L4: >=0.8 - Full detail + all labels (imp>=1)
+  static const double _lod0Limit = GalaxyLodThresholds.universeMax;
+  static const double _lod1Limit = GalaxyLodThresholds.galaxyMax;
+  static const double _lod2Limit = GalaxyLodThresholds.clusterMax;
+  static const double _lod3Limit = GalaxyLodThresholds.nebulaMax;
 
   static final SmartCache<int, List<ProcessedNode>> _nodeCache =
       SmartCache(maxSize: 10);
@@ -270,37 +275,28 @@ class StarMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // LOD 0 (<0.2): Centroid Halo + Starfield Labels (Hide all nodes/connections)
+    // L0 (<0.2): Sector view - centroids only, no nodes/edges
     if (scale < _lod0Limit) {
-      _drawSectorView(canvas); 
-      return; 
+      _drawSectorView(canvas);
+      return;
     }
 
-    // LOD 1 (0.2-0.4): Large Nodes + Key Labels
-    // LOD 2 (0.4-0.6): All Nodes + Parent-Child Connections (Standard Label Density)
-    // LOD 3 (0.6-0.8): Associative Connections + Glow (More Labels)
-    // LOD 4 (>0.8): Full Text + Dynamic Particles
-
-    // Draw Edges
-    // Edges start at L2 (0.4) for parent-child, L3 (0.6) for others
-    if (scale >= _lod1Limit) { 
-        // Logic check: L2 starts at 0.4.
-        if (scale >= _lod1Limit) { // Actually > 0.4 which is L2? No, _lod1Limit is 0.4.
-           // Prompt: "Edgers start at L2 (0.4)"
-           // My code: if (scale >= _lod1Limit) -> if (scale >= 0.4)
-           // If scale < 0.6 (L2), only parent-child.
-           _drawEdges(canvas, parentChildOnly: scale < _lod2Limit);
-        }
-    }
-
-    // Draw Nodes
-    // L1 (0.2-0.4): Large Nodes only. L2+ (>0.4): All nodes.
+    // L1+ (>=0.2): Draw nodes
+    // L1 (0.2-0.4): Large nodes only (imp>=4)
+    // L2+ (>=0.4): All nodes
     _drawNodes(canvas, onlyLarge: scale < _lod1Limit);
 
-    // Selection Highlight (Always visible if selected and node is visible)
+    // L2+ (>=0.4): Draw edges
+    // L2 (0.4-0.6): Parent-child edges only
+    // L3+ (>=0.6): All edges
+    if (scale >= _lod1Limit) {
+      _drawEdges(canvas, parentChildOnly: scale < _lod2Limit);
+    }
+
+    // Selection Highlight (always visible if selected)
     if (selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
-      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]!);
+      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash]!);
     }
 
     if (highlightedNodeIdHashes.isNotEmpty) {
@@ -388,8 +384,8 @@ class StarMapPainter extends CustomPainter {
         _drawSolidEdge(canvas, edge, style);
       }
 
-      // Arrows only on higher scale/tier
-      if (scale > _lod3Limit && (
+      // Arrows only on L4+ (>=0.8)
+      if (scale >= _lod3Limit && (
           edge.edge.relationType == EdgeRelationType.prerequisite ||
           edge.edge.relationType == EdgeRelationType.derived)) {
         _drawArrow(canvas, edge.start, edge.end, style.color, edge.strokeWidth);
@@ -475,11 +471,11 @@ class StarMapPainter extends CustomPainter {
 
   void _drawClusterLabel(
       Canvas canvas, String name, Offset pos, double r, Color c,) {
-    // Only draw if we are REALLY zoomed out
-    if (scale > _lod0Limit) return;
-    
+    // Only draw in L0 (<0.2)
+    if (scale >= _lod0Limit) return;
+
     _textRenderer.drawText(canvas, name, pos + Offset(0, r + 8),
-        TextStyle(color: DS.brandPrimary, fontSize: 12),);
+        TextStyle(color: DS.brandPrimaryConst, fontSize: 12),);
   }
 
   void _drawNodes(Canvas canvas, {required bool onlyLarge}) {
@@ -512,7 +508,7 @@ class StarMapPainter extends CustomPainter {
           : progress;
 
       if (p.node.isUnlocked) {
-        // Glow: L3+ (>= 0.6) AND (Ultra or High Tier)
+        // Glow: L3+ (>=0.6) AND (Ultra or High Tier)
         if (scale >= _lod2Limit &&
            (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high)) {
             final m = p.node.mastery / 100.0;
@@ -549,24 +545,25 @@ class StarMapPainter extends CustomPainter {
             Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * effectiveAlpha),);
       }
 
-      // Labels Logic
-      // L1 (0.2-0.4): Key Labels (Imp >= 4)
-      // L2 (0.4-0.6): Standard Labels (Imp >= 3)
-      // L3 (0.6-0.8): More Labels (Imp >= 2)
-      // L4 (>0.8): All Labels
-      
+      // Labels Logic - aligned with LOD levels
+      // L1 (0.2-0.4): Key labels (imp >= 4)
+      // L2 (0.4-0.6): Standard labels (imp >= 3)
+      // L3 (0.6-0.8): More labels (imp >= 2)
+      // L4 (>=0.8): All labels (imp >= 1)
+
       var showLabel = false;
       if (scale >= _lod3Limit) {
-          showLabel = true; // L4: All
+        // L4+: All labels
+        showLabel = true;
       } else if (scale >= _lod2Limit) {
-          // L3: Imp >= 2
-          if (p.node.importance >= 2) showLabel = true;
+        // L3: imp >= 2
+        if (p.node.importance >= 2) showLabel = true;
       } else if (scale >= _lod1Limit) {
-          // L2: Imp >= 3
-          if (p.node.importance >= 3) showLabel = true;
+        // L2: imp >= 3
+        if (p.node.importance >= 3) showLabel = true;
       } else if (scale >= _lod0Limit) {
-           // L1: Imp >= 4
-           if (p.node.importance >= 4) showLabel = true;
+        // L1: imp >= 4
+        if (p.node.importance >= 4) showLabel = true;
       }
       
       if (showLabel) {

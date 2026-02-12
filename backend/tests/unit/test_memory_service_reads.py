@@ -1,10 +1,14 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
 from app.models.user import User
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -33,7 +37,7 @@ async def test_memory_service_list_reads(db_session):
         evidence_refs=[{"type": "event", "id": "evt_2"}],
     )
 
-    now = datetime.utcnow()
+    now = _utcnow()
     await service.create_episodic_memory(
         user_id=user_id,
         summary="First memory",

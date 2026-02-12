@@ -20,8 +20,8 @@ Usage:
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -30,10 +30,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan_state import PlanState, PlanStateStatus
 
-
 # Cache configuration
 PLAN_STATE_CACHE_TTL = 3600  # 1 hour
 PLAN_STATE_CACHE_PREFIX = "state:plan:"
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanStateService:
@@ -64,7 +68,7 @@ class PlanStateService:
         user_id: UUID,
         plan_id: UUID,
         refresh: bool = False,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Get plan state with Redis caching.
 
@@ -121,7 +125,7 @@ class PlanStateService:
         self,
         user_id: UUID,
         limit: int = 10,
-    ) -> List[PlanState]:
+    ) -> list[PlanState]:
         """
         Get all active plan states for a user.
 
@@ -150,8 +154,8 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        initial_facts: Optional[Dict[str, Any]] = None,
-        initial_constraints: Optional[Dict[str, Any]] = None,
+        initial_facts: dict[str, Any] | None = None,
+        initial_constraints: dict[str, Any] | None = None,
         for_write: bool = True,
     ) -> PlanState:
         """
@@ -202,9 +206,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        patch: Dict[str, Any],
+        patch: dict[str, Any],
         bump_version: bool = True,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Update plan state with patch.
 
@@ -277,7 +281,7 @@ class PlanStateService:
         if bump_version:
             state.version = (state.version or 0) + 1
 
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -294,7 +298,7 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Archive a plan state.
 
@@ -314,8 +318,8 @@ class PlanStateService:
             return None
 
         state.status = PlanStateStatus.ARCHIVED.value
-        state.archived_at = datetime.utcnow()
-        state.updated_at = datetime.utcnow()
+        state.archived_at = _utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -332,9 +336,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        summary: Dict[str, Any],
+        summary: dict[str, Any],
         limit: int = 20,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Append a task summary to PlanState.task_summaries.
 
@@ -346,7 +350,7 @@ class PlanStateService:
         if len(summaries) > limit:
             summaries = summaries[:limit]
         state.task_summaries = summaries
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -365,8 +369,8 @@ class PlanStateService:
         plan_id: UUID,
         task_id: UUID,
         task_type: str,
-        actual_minutes: Optional[int] = None,
-    ) -> Tuple[Optional[PlanState], List[Dict[str, Any]]]:
+        actual_minutes: int | None = None,
+    ) -> tuple[PlanState | None, list[dict[str, Any]]]:
         """
         Handle task completion event.
 
@@ -434,12 +438,12 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        milestone: Dict[str, Any],
+        milestone: dict[str, Any],
         pending_task_count: int,
     ) -> None:
         """
         Handle milestone trigger event.
-        
+
         Args:
             user_id: User ID
             plan_id: Plan ID
@@ -455,7 +459,7 @@ class PlanStateService:
         user_id: UUID,
         plan_id: UUID,
         task_type: str,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Handle task creation event.
 
@@ -493,9 +497,9 @@ class PlanStateService:
         plan_id: UUID,
         feedback_type: str,
         content: str,
-        task_id: Optional[UUID] = None,
-        applied_adjustment: Optional[Dict[str, Any]] = None,
-    ) -> Optional[PlanState]:
+        task_id: UUID | None = None,
+        applied_adjustment: dict[str, Any] | None = None,
+    ) -> PlanState | None:
         """
         Append feedback to feedback_log.
 
@@ -514,7 +518,7 @@ class PlanStateService:
 
         feedback_entry = {
             "id": f"fb-{uuid.uuid4().hex[:8]}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
             "type": feedback_type,
             "content": content,
         }
@@ -534,9 +538,9 @@ class PlanStateService:
         self,
         user_id: UUID,
         plan_id: UUID,
-        feedback_log: List[Dict[str, Any]],
+        feedback_log: list[dict[str, Any]],
         bump_version: bool = True,
-    ) -> Optional[PlanState]:
+    ) -> PlanState | None:
         """
         Replace feedback_log entries for a plan state.
 
@@ -553,7 +557,7 @@ class PlanStateService:
         state.feedback_log = feedback_log
         if bump_version:
             state.version = (state.version or 0) + 1
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(state)
@@ -600,7 +604,7 @@ class PlanStateService:
         except Exception as e:
             logger.warning(f"Failed to set plan state cache: {e}")
 
-    def _deep_merge(self, base: Dict, overlay: Dict) -> None:
+    def _deep_merge(self, base: dict, overlay: dict) -> None:
         """Deep merge overlay into base dict."""
         for key, value in overlay.items():
             if key in base and isinstance(base[key], dict) and isinstance(value, dict):
@@ -610,15 +614,14 @@ class PlanStateService:
 
     def _check_milestone_triggers(
         self,
-        task_index: Dict[str, Any],
-        existing_milestones: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        task_index: dict[str, Any],
+        existing_milestones: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """
         Check if any milestone triggers should fire.
 
         Returns list of new milestones to add.
         """
-        import uuid
 
         new_milestones = []
         completed = task_index.get("completed", 0)
@@ -629,7 +632,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-first-10-tasks",
                 "title": "Completed first 10 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
@@ -638,7 +641,7 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-25-tasks",
                 "title": "Completed 25 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
@@ -647,18 +650,36 @@ class PlanStateService:
             new_milestones.append({
                 "id": "ms-50-tasks",
                 "title": "Completed 50 tasks",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
                 "tasks_completed": completed,
             })
 
-        # Milestone: 50% completion
+        # Milestone: 25% completion
         total = task_index.get("total", 0)
         rate = task_index.get("avg_completion_rate", 0)
+        if total >= 10 and rate >= 0.25 and "ms-25pct-completion" not in existing_ids:
+            new_milestones.append({
+                "id": "ms-25pct-completion",
+                "title": "Reached 25% completion rate",
+                "achieved_at": _utcnow().isoformat(),
+                "completion_rate": rate,
+            })
+
+        # Milestone: 50% completion
         if total >= 10 and rate >= 0.5 and "ms-50pct-completion" not in existing_ids:
             new_milestones.append({
                 "id": "ms-50pct-completion",
                 "title": "Reached 50% completion rate",
-                "achieved_at": datetime.utcnow().isoformat(),
+                "achieved_at": _utcnow().isoformat(),
+                "completion_rate": rate,
+            })
+
+        # Milestone: 75% completion
+        if total >= 10 and rate >= 0.75 and "ms-75pct-completion" not in existing_ids:
+            new_milestones.append({
+                "id": "ms-75pct-completion",
+                "title": "Reached 75% completion rate",
+                "achieved_at": _utcnow().isoformat(),
                 "completion_rate": rate,
             })
 

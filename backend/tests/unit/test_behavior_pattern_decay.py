@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -7,6 +7,10 @@ from app.config import settings
 from app.models.cognitive import BehaviorPattern
 from app.models.user import User
 from app.services.analytics.behavior_pattern_decay_service import BehaviorPatternDecayService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -32,7 +36,7 @@ async def test_behavior_pattern_decay_applies(db_session, monkeypatch):
         evidence_ids=["evt_1"],
         confidence_score=0.6,
         frequency=1,
-        last_observed_at=datetime.utcnow() - timedelta(days=40),
+        last_observed_at=_utcnow() - timedelta(days=40),
     )
     db_session.add(pattern)
     await db_session.commit()
@@ -76,8 +80,8 @@ async def test_behavior_pattern_decay_respects_recent_decay(db_session, monkeypa
         evidence_ids=["evt_1"],
         confidence_score=0.6,
         frequency=1,
-        last_observed_at=datetime.utcnow() - timedelta(days=40),
-        last_decay_at=datetime.utcnow() - timedelta(hours=1),
+        last_observed_at=_utcnow() - timedelta(days=40),
+        last_decay_at=_utcnow() - timedelta(hours=1),
     )
     db_session.add(pattern)
     await db_session.commit()

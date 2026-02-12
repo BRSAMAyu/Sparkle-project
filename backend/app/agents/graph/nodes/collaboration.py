@@ -6,10 +6,12 @@ Responsibilities:
 2. Coordinate multiple agents in sequential execution
 3. Aggregate tool_calls from each agent
 """
-from typing import List, Dict, Any, Optional
-from loguru import logger
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
+from typing import Any
 
+from langchain_core.messages import BaseMessage, HumanMessage
+from loguru import logger
+
+from app.agents.graph.expert_registry import resolve_node_name
 from app.agents.graph.state import SparkleState
 
 
@@ -27,18 +29,20 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
     """
     messages = state["messages"]
 
+    user_message = _get_latest_human_message(messages)
+
     # If a collaboration plan is already in progress, continue it.
     collaboration_mode = state.get("collaboration_mode")
     collaboration_order = state.get("collaboration_order")
     collaboration_agents = state.get("collaboration_agents")
     if collaboration_mode in {"sequential", "parallel"} and collaboration_order:
+        normalized_order = _normalize_order(collaboration_order, default_task=user_message)
         collaboration_plan = {
             "mode": collaboration_mode,
             "agents": collaboration_agents or [],
-            "order": collaboration_order,
+            "order": normalized_order,
         }
     else:
-        user_message = _get_latest_human_message(messages)
         # 1. Analyze if collaboration is needed
         collaboration_plan = _analyze_collaboration_needs(user_message)
 
@@ -84,7 +88,7 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
     return state
 
 
-def _get_latest_human_message(messages: List[BaseMessage]) -> str:
+def _get_latest_human_message(messages: list[BaseMessage]) -> str:
     """Return the most recent HumanMessage content (fallback to last message)."""
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
@@ -92,7 +96,7 @@ def _get_latest_human_message(messages: List[BaseMessage]) -> str:
     return messages[-1].content if messages else ""
 
 
-def _analyze_collaboration_needs(message: str) -> Dict[str, Any]:
+def _analyze_collaboration_needs(message: str) -> dict[str, Any]:
     """Analyze if message needs multi-agent collaboration
 
     Returns:
@@ -145,6 +149,30 @@ def _analyze_collaboration_needs(message: str) -> Dict[str, Any]:
         "agents": [],
         "order": []
     }
+
+
+def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]]:
+    normalized: list[dict[str, str]] = []
+    for item in order:
+        if isinstance(item, dict):
+            agent = item.get("agent")
+            if not agent:
+                continue
+            resolved = resolve_node_name(str(agent))
+            if not resolved:
+                continue
+            normalized.append(
+                {
+                    "agent": resolved,
+                    "task": str(item.get("task") or default_task),
+                }
+            )
+            continue
+        if isinstance(item, str):
+            resolved = resolve_node_name(item)
+            if resolved:
+                normalized.append({"agent": resolved, "task": default_task})
+    return normalized
 
 
 def _classify_primary_agent(message: str) -> str:

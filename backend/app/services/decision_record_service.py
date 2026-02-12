@@ -1,11 +1,12 @@
 """
 决策记录服务 - 记录系统决策及使用的偏好版本
 """
-from typing import List, Dict, Any
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.decision_record import DecisionRecord as DecisionRecordModel
 
@@ -13,7 +14,7 @@ from app.models.decision_record import DecisionRecord as DecisionRecordModel
 class DecisionRecordService:
     """决策记录服务"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession | None):
         self.db = db
 
     async def record_decision(
@@ -22,10 +23,13 @@ class DecisionRecordService:
         module: str,
         action: str,
         preference_version: int,
-        preferences_snapshot: Dict[str, Any],
+        preferences_snapshot: dict[str, Any],
         outcome: str,
     ) -> None:
         """记录一次决策"""
+        if self.db is None:
+            logger.warning("DecisionRecordService called without db session; skipping record")
+            return
         record = DecisionRecordModel(
             user_id=user_id,
             module=module,
@@ -41,7 +45,7 @@ class DecisionRecordService:
         self,
         user_id: UUID,
         limit: int = 10
-    ) -> List[DecisionRecordModel]:
+    ) -> list[DecisionRecordModel]:
         """获取最近的决策记录"""
         result = await self.db.execute(
             select(DecisionRecordModel)

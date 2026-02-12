@@ -1,12 +1,12 @@
-from typing import List
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user
-from app.services.audit_service import AuditService
-from app.schemas.user import UserProfile, AvatarStatus
+from app.api.deps import get_current_user, get_db
 from app.models.user import User
+from app.schemas.user import UserProfile
+from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
@@ -19,7 +19,7 @@ def admin_required(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
-@router.get("/avatars", response_model=List[UserProfile])
+@router.get("/avatars", response_model=list[UserProfile])
 async def get_pending_avatars(
     db: AsyncSession = Depends(get_db),
     _admin = Depends(admin_required)

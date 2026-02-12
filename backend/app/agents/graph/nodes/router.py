@@ -1,18 +1,16 @@
-from typing import Literal, Optional
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
 from loguru import logger
+from pydantic import BaseModel, Field
 
-from app.agents.graph.state import SparkleState
+from app.agents.graph.expert_registry import get_graph_routable_targets, resolve_node_name
 from app.agents.graph.llm_factory import LLMFactory
+from app.agents.graph.state import SparkleState
+
 
 # 1. 定义路由输出结构
 class RouteDecision(BaseModel):
     """路由决策结构"""
-    target_agent: Literal["galaxy_guide", "time_tutor", "study_buddy", "exam_oracle", "human_assist"] = Field(
-        ...,
-        description="The specialist agent best suited to handle the user query."
-    )
+    target_agent: str = Field(..., description="The specialist agent best suited to handle the user query.")
     reasoning: str = Field(..., description="Brief reason for this routing decision.")
     needs_clarification: bool = Field(False, description="True if user query is too vague.")
 
@@ -68,15 +66,14 @@ async def router_node(state: SparkleState):
     # 绑定结构化输出 (Function Calling / JSON Mode)
     structured_llm = llm.with_structured_output(RouteDecision)
 
+    routable_targets = get_graph_routable_targets()
+    target_list_text = "\n    - " + "\n    - ".join(routable_targets)
+
     # 提示词
     system_prompt = """You are the Dispatcher for Sparkle AI.
-    Analyze the user's query and route it to the best specialist:
-
-    - galaxy_guide: Knowledge graph, concepts, prerequisites, 'what is X', learning paths.
-    - time_tutor: Scheduling, tasks, planning, deadlines, tomato timer.
-    - study_buddy: General chat, emotional support, simple Q&A, study motivation.
-    - exam_oracle: Exam predictions, mock tests, past paper analysis.
-    - human_assist: User explicitly asks for human help or system cannot handle.
+    Analyze the user's query and route it to the best specialist.
+    Allowed targets are:
+    {target_list}
 
     If query is ambiguous, default to 'study_buddy'.
 
@@ -91,13 +88,21 @@ async def router_node(state: SparkleState):
     # 执行推理
     chain = prompt | structured_llm
     try:
-        decision: RouteDecision = await chain.ainvoke({"query": user_query})
+        decision: RouteDecision = await chain.ainvoke({"query": user_query, "target_list": target_list_text})
     except Exception as exc:
         logger.warning(f"Router LLM failed, falling back to study_buddy: {exc}")
         decision = RouteDecision(
             target_agent="study_buddy",
             reasoning="Fallback routing due to LLM parse failure.",
             needs_clarification=False,
+        )
+
+    resolved_target = resolve_node_name(decision.target_agent) or "study_buddy"
+    if resolved_target != decision.target_agent:
+        decision = RouteDecision(
+            target_agent=resolved_target,
+            reasoning=f"{decision.reasoning} | normalized:{resolved_target}",
+            needs_clarification=decision.needs_clarification,
         )
 
     # Build state updates

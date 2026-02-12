@@ -2,8 +2,12 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from uuid import uuid4
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from app.services.error_book_service import ErrorBookService
 from app.schemas.error_book import ErrorRecordCreate, ErrorQueryParams, SubjectEnum
@@ -33,8 +37,8 @@ async def test_create_error_with_cognitive_tags():
     # Mock behavior of refresh to set ID and other fields
     async def mock_refresh(obj):
         obj.id = uuid4()
-        obj.created_at = datetime.utcnow()
-        obj.updated_at = datetime.utcnow()
+        obj.created_at = _utcnow()
+        obj.updated_at = _utcnow()
     
     db_mock.refresh.side_effect = mock_refresh
     

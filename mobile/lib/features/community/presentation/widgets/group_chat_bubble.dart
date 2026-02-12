@@ -73,7 +73,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -97,12 +97,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 title: const Text('复制'),
                 onTap: () {
                   Clipboard.setData(
-                      ClipboardData(text: widget.message.content ?? ''),);
+                    ClipboardData(text: widget.message.content ?? ''),
+                  );
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('已复制到剪贴板'),
-                        duration: Duration(seconds: 1),),
+                      content: Text('已复制到剪贴板'),
+                      duration: Duration(seconds: 1),
+                    ),
                   );
                 },
               ),
@@ -359,9 +361,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           boxShadow: isMe
               ? [
                   BoxShadow(
-                      color: DS.primaryBase.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),),
+                    color: DS.primaryBase.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
                 ]
               : DS.shadowSm,
           border: isMe ? null : Border.all(color: DS.neutral100),
@@ -396,8 +399,11 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         color: isMe ? DS.brandPrimary.withValues(alpha: 0.15) : DS.neutral100,
         borderRadius: BorderRadius.circular(8),
         border: Border(
-            left: BorderSide(
-                color: isMe ? DS.brandPrimary70 : DS.primaryBase, width: 3,),),
+          left: BorderSide(
+            color: isMe ? DS.brandPrimary70 : DS.primaryBase,
+            width: 3,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +531,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       style: TextStyle(
                         color: isMe
                             ? DS.brandPrimary.withValues(alpha: 0.9)
-                            : Colors.brown.shade800,
+                            : DS.warning.shade900,
                         fontStyle: FontStyle.italic,
                         fontSize: 13,
                       ),
@@ -570,14 +576,17 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.task_alt,
-                color: isMe ? DS.brandPrimary : DS.brandPrimary,),
+            Icon(
+              Icons.task_alt,
+              color: isMe ? DS.brandPrimary : DS.brandPrimary,
+            ),
             const SizedBox(width: DS.sm),
             Flexible(
               child: Text(
                 widget.message.content ?? 'Shared a task',
                 style: TextStyle(
-                    color: isMe ? DS.brandPrimary : DS.brandPrimary.shade900,),
+                  color: isMe ? DS.brandPrimary : DS.brandPrimary.shade900,
+                ),
               ),
             ),
           ],

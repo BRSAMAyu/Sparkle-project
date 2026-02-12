@@ -139,9 +139,9 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               borderRadius: DS.borderRadius8,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.diamond_outlined,
-              color: Colors.white,
+              color: DS.textOnPrimary,
               size: DS.iconSizeSm,
             ),
           ),
@@ -197,9 +197,9 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               const SizedBox(width: DS.xs),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
+                padding: EdgeInsets.symmetric(
+                  horizontal: DS.spacing6,
+                  vertical: DS.spacing4 / 2,
                 ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
@@ -255,9 +255,9 @@ class PrismBehaviorCard extends StatelessWidget {
               ),
               if (confidenceScore != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.spacing6,
+                    vertical: DS.spacing4 / 2,
                   ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
@@ -275,7 +275,7 @@ class PrismBehaviorCard extends StatelessWidget {
             ],
           ),
           if (description != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: DS.spacing4),
             Text(
               description,
               style: TextStyle(
@@ -285,7 +285,7 @@ class PrismBehaviorCard extends StatelessWidget {
             ),
           ],
           if (solutionText != null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: DS.spacing6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -294,7 +294,7 @@ class PrismBehaviorCard extends StatelessWidget {
                   size: 14,
                   color: color.withValues(alpha: 0.8),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: DS.spacing4),
                 Expanded(
                   child: Text(
                     solutionText,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
 
 /// Sprint action type
@@ -12,14 +11,15 @@ Future<SprintActionType?> showSprintActionsDialog(
   BuildContext context, {
   required String planId,
   required String planName,
-}) => showModalBottomSheet<SprintActionType>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (context) => _SprintActionsSheet(
-      planId: planId,
-      planName: planName,
-    ),
-  );
+}) =>
+    showModalBottomSheet<SprintActionType>(
+      context: context,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      builder: (context) => _SprintActionsSheet(
+        planId: planId,
+        planName: planName,
+      ),
+    );
 
 /// Shows confirm complete dialog - returns true if confirmed
 Future<bool> showConfirmCompleteDialog(
@@ -37,10 +37,11 @@ Future<bool> showConfirmCompleteDialog(
 Future<int?> showExtendSprintDialog(
   BuildContext context, {
   required String planName,
-}) async => await showDialog<int>(
-    context: context,
-    builder: (context) => _ExtendSprintDialog(planName: planName),
-  );
+}) async =>
+    showDialog<int>(
+      context: context,
+      builder: (context) => _ExtendSprintDialog(planName: planName),
+    );
 
 /// Shows confirm abandon dialog - returns true if confirmed
 Future<bool> showConfirmAbandonDialog(
@@ -65,7 +66,8 @@ class _SprintActionsSheet extends ConsumerStatefulWidget {
   final String planName;
 
   @override
-  ConsumerState<_SprintActionsSheet> createState() => _SprintActionsSheetState();
+  ConsumerState<_SprintActionsSheet> createState() =>
+      _SprintActionsSheetState();
 }
 
 class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
@@ -76,12 +78,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
     // Show success/error messages
     if (actionsState.successMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(actionsState.successMessage!),
-            backgroundColor: DS.semanticSuccess,
-          ),
-        );
+        AppFeedback.success(context, actionsState.successMessage!);
         ref.read(sprintActionsProvider.notifier).clearMessages();
         Navigator.of(context).pop();
       });
@@ -89,12 +86,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
 
     if (actionsState.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(actionsState.error!),
-            backgroundColor: DS.semanticError,
-          ),
-        );
+        AppFeedback.error(context, actionsState.error!);
         ref.read(sprintActionsProvider.notifier).clearMessages();
       });
     }
@@ -128,7 +120,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                 children: [
                   Icon(
                     Icons.flash_on_rounded,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                   const SizedBox(width: DS.spacing12),
                   Expanded(
@@ -201,7 +193,9 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
     );
 
     if ((confirmed ?? false) && mounted) {
-      final success = await ref.read(sprintActionsProvider.notifier).completeSprint(widget.planId);
+      final success = await ref
+          .read(sprintActionsProvider.notifier)
+          .completeSprint(widget.planId);
       if (success && mounted) {
         Navigator.of(context).pop();
       }
@@ -258,29 +252,29 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(DS.spacing8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
+        leading: Container(
+          padding: const EdgeInsets.all(DS.spacing8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: DS.iconSizeSm),
         ),
-        child: Icon(icon, color: color, size: DS.iconSizeSm),
-      ),
-      title: Text(
-        title,
-        style: context.sparkleTypography.bodyLarge.copyWith(
-          fontWeight: FontWeight.w500,
+        title: Text(
+          title,
+          style: context.sparkleTypography.bodyLarge.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: context.sparkleTypography.labelSmall.copyWith(
-          color: DS.textSecondary,
+        subtitle: Text(
+          subtitle,
+          style: context.sparkleTypography.labelSmall.copyWith(
+            color: DS.textSecondary,
+          ),
         ),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
-    );
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      );
 }
 
 class _ConfirmCompleteDialog extends StatelessWidget {
@@ -290,44 +284,44 @@ class _ConfirmCompleteDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-      title: const Text('完成冲刺'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.check_circle_rounded,
-            color: DS.semanticSuccess,
-            size: 48,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '确认完成「$planName」冲刺吗？',
-            style: context.sparkleTypography.bodyMedium,
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            '完成后冲刺将被归档，无法再编辑。',
-            style: context.sparkleTypography.labelSmall.copyWith(
-              color: DS.textSecondary,
+        title: const Text('完成冲刺'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.check_circle_rounded,
+              color: DS.semanticSuccess,
+              size: 48,
             ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '确认完成「$planName」冲刺吗？',
+              style: context.sparkleTypography.bodyMedium,
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '完成后冲刺将被归档，无法再编辑。',
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SparkleButton.ghost(
+            onPressed: () => Navigator.of(context).pop(false),
+            label: '取消',
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: DS.semanticSuccess,
+            ),
+            child: const Text('完成'),
           ),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: FilledButton.styleFrom(
-            backgroundColor: DS.semanticSuccess,
-          ),
-          child: const Text('完成'),
-        ),
-      ],
-    );
+      );
 }
 
 class _ConfirmAbandonDialog extends StatelessWidget {
@@ -337,44 +331,44 @@ class _ConfirmAbandonDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-      title: const Text('放弃冲刺'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.warning_rounded,
-            color: DS.semanticError,
-            size: 48,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '确认放弃「$planName」冲刺吗？',
-            style: context.sparkleTypography.bodyMedium,
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            '放弃后冲刺将被归档，当前进度将被保留。',
-            style: context.sparkleTypography.labelSmall.copyWith(
-              color: DS.textSecondary,
+        title: const Text('放弃冲刺'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.warning_rounded,
+              color: DS.semanticError,
+              size: 48,
             ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '确认放弃「$planName」冲刺吗？',
+              style: context.sparkleTypography.bodyMedium,
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '放弃后冲刺将被归档，当前进度将被保留。',
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SparkleButton.ghost(
+            onPressed: () => Navigator.of(context).pop(false),
+            label: '取消',
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: DS.semanticError,
+            ),
+            child: const Text('放弃'),
           ),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: FilledButton.styleFrom(
-            backgroundColor: DS.semanticError,
-          ),
-          child: const Text('放弃'),
-        ),
-      ],
-    );
+      );
 }
 
 class _ExtendSprintDialog extends StatefulWidget {
@@ -392,73 +386,74 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-      title: const Text('延长冲刺'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.date_range_rounded,
-            color: DS.info,
-            size: 48,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '延长「${widget.planName}」冲刺',
-            style: context.sparkleTypography.bodyMedium,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '选择延长天数',
-            style: context.sparkleTypography.labelSmall.copyWith(
-              color: DS.textSecondary,
+        title: const Text('延长冲刺'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.date_range_rounded,
+              color: DS.info,
+              size: 48,
             ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '延长「${widget.planName}」冲刺',
+              style: context.sparkleTypography.bodyMedium,
+            ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '选择延长天数',
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: _dayOptions.map((days) {
+                final isSelected = _selectedDays == days;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedDays = days),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing16,
+                      vertical: DS.spacing8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? DS.info : DS.surfaceSecondary,
+                      borderRadius: DS.borderRadius8,
+                      border: Border.all(
+                        color: isSelected ? DS.info : DS.border,
+                      ),
+                    ),
+                    child: Text(
+                      '$days 天',
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        color: isSelected ? DS.white : DS.textPrimary,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          SparkleButton.ghost(
+            onPressed: () => Navigator.of(context).pop(),
+            label: '取消',
           ),
-          const SizedBox(height: DS.spacing8),
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: _dayOptions.map((days) {
-              final isSelected = _selectedDays == days;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedDays = days),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing16,
-                    vertical: DS.spacing8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? DS.info : DS.surfaceSecondary,
-                    borderRadius: DS.borderRadius8,
-                    border: Border.all(
-                      color: isSelected ? DS.info : DS.border,
-                    ),
-                  ),
-                  child: Text(
-                    '$days 天',
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      color: isSelected ? DS.white : DS.textPrimary,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_selectedDays),
+            style: FilledButton.styleFrom(
+              backgroundColor: DS.info,
+            ),
+            child: Text('延长 $_selectedDays 天'),
           ),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_selectedDays),
-          style: FilledButton.styleFrom(
-            backgroundColor: DS.info,
-          ),
-          child: Text('延长 $_selectedDays 天'),
-        ),
-      ],
-    );
+      );
 }

@@ -137,7 +137,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   Widget _buildAvatar(UserBrief user) => DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: DS.brandPrimary, width: 2),
+          border: Border.all(color: DS.brandPrimaryConst, width: 2),
           boxShadow: DS.shadowSm,
         ),
         child: CircleAvatar(

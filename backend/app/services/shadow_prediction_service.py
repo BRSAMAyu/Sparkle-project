@@ -7,19 +7,15 @@ Responsibilities:
 3. Calculate prediction accuracy
 4. No modification to user state or strategy
 """
-from typing import List, Dict, Any, Optional
-from loguru import logger
-from dataclasses import dataclass, field
-from datetime import datetime
-import uuid
 import json
 import math
 import os
 import re
+from typing import Any
 
-from app.orchestration.schemas import (
-    ShadowPrediction, ExecutablePlan, RouteDecision
-)
+from loguru import logger
+
+from app.orchestration.schemas import ExecutablePlan, RouteDecision, ShadowPrediction
 
 
 class ShadowPredictionService:
@@ -53,7 +49,7 @@ class ShadowPredictionService:
         user_id: str,
         session_id: str,
         actual_decision: RouteDecision,
-        actual_plan: Optional[ExecutablePlan] = None
+        actual_plan: ExecutablePlan | None = None
     ) -> ShadowPrediction:
         """Generate prediction and record
 
@@ -160,7 +156,7 @@ class ShadowPredictionService:
             return "langgraph", 0.75
         return "direct", 0.85
 
-    async def _predict_mode_naive_bayes(self, msg_lower: str) -> Optional[tuple[str, float]]:
+    async def _predict_mode_naive_bayes(self, msg_lower: str) -> tuple[str, float] | None:
         tokens = self._extract_tokens(msg_lower)
         if not tokens:
             return None
@@ -221,7 +217,7 @@ class ShadowPredictionService:
             await self.redis.sadd(self.NB_VOCAB_KEY, token)
         await self.redis.expire(self.NB_VOCAB_KEY, self.SHADOW_TTL)
 
-    def _extract_tokens(self, msg_lower: str) -> List[str]:
+    def _extract_tokens(self, msg_lower: str) -> list[str]:
         tokens = re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]", msg_lower)
         deduped = []
         seen = set()
@@ -315,9 +311,9 @@ class ShadowPredictionService:
 
     async def get_accuracy_stats(
         self,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         hours: int = 24
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get prediction accuracy statistics
 
         Args:
@@ -349,9 +345,9 @@ class ShadowPredictionService:
     async def predict_intent_only(
         self,
         user_message: str,
-        active_plan_id: Optional[str] = None,
-        user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        active_plan_id: str | None = None,
+        user_id: str | None = None
+    ) -> dict[str, Any]:
         """Lightweight intent prediction for typing suggestions
 
         This is a fast prediction method designed for real-time typing
@@ -434,9 +430,8 @@ class ShadowPredictionService:
         }
 
         for tool, keywords in tool_keywords_map.items():
-            if any(kw in msg_lower for kw in keywords):
-                if tool not in suggested_tools:
-                    suggested_tools.append(tool)
+            if any(kw in msg_lower for kw in keywords) and tool not in suggested_tools:
+                suggested_tools.append(tool)
 
         return {
             "intent_type": intent_type,

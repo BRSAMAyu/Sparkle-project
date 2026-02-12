@@ -23,8 +23,7 @@ class TaskFeedbackDialog extends ConsumerStatefulWidget {
   final VoidCallback onClose;
 
   @override
-  ConsumerState<TaskFeedbackDialog> createState() =>
-      _TaskFeedbackDialogState();
+  ConsumerState<TaskFeedbackDialog> createState() => _TaskFeedbackDialogState();
 }
 
 class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
@@ -57,7 +56,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     TaskFeedbackResponse? response;
     if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
-      response = await ref.read(taskListProvider.notifier).submitTaskFeedbackWithResponse(
+      response = await ref
+          .read(taskListProvider.notifier)
+          .submitTaskFeedbackWithResponse(
             widget.taskId,
             TaskFeedbackSubmission(
               completionQuality: _rating,
@@ -93,7 +94,8 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
             if (hasPreferenceUpdates) ...[
               const SizedBox(width: DS.spacing8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
                 decoration: BoxDecoration(
                   color: DS.semanticSuccess.withValues(alpha: 0.2),
                   borderRadius: DS.borderRadius4,
@@ -155,9 +157,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
           ],
         ),
         actions: [
-          TextButton(
+          SparkleButton.ghost(
+            label: '知道了',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
           ),
         ],
       ),
@@ -186,8 +188,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     widget.onClose();
     if (action.existingTaskId != null) {
       context.go('/tasks/${action.existingTaskId}/execute');
-    } else if (action.quickCreateParams != null &&
-        action.canQuickCreate) {
+    } else if (action.quickCreateParams != null && action.canQuickCreate) {
       final title = action.quickCreateParams!['title'] as String?;
       context.go(
         '/tasks/create',
@@ -220,15 +221,18 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                       gradient: DS.primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.auto_awesome,
-                        color: Colors.white, size: 24,),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: DS.textOnPrimary,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
                     '任务完成!',
                     style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: DS.fontWeightBold,
-                        ),
+                      fontWeight: DS.fontWeightBold,
+                    ),
                   ),
                 ],
               ),
@@ -249,12 +253,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                               data: widget.result.feedback!,
                               styleSheet: MarkdownStyleSheet(
                                 p: theme.textTheme.bodyMedium?.copyWith(
-                                      fontSize: DS.fontSizeBase,
-                                      height: 1.5,
-                                    ),
+                                  fontSize: DS.fontSizeBase,
+                                  height: 1.5,
+                                ),
                                 strong: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: DS.primaryDark,),
+                                  fontWeight: FontWeight.bold,
+                                  color: DS.primaryDark,
+                                ),
                               ),
                             ),
                           ),
@@ -287,8 +292,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                               if (widget.result.statsUpdate != null)
                                 _StatItem(
                                   icon: Icons.emoji_events,
-                                  color: Colors.amber,
-                                  value: "${widget.result.statsUpdate!['streak_days']}天",
+                                  color: DS.rarityRare,
+                                  value:
+                                      "${widget.result.statsUpdate!['streak_days']}天",
                                   label: '连胜',
                                 ),
                             ],
@@ -301,13 +307,14 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                       Text(
                         '满意度评分 (选填)',
                         style: theme.textTheme.labelMedium?.copyWith(
-                              color: DS.textSecondary,
-                            ),
+                          color: DS.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: DS.xs),
                       _StarRating(
                         rating: _rating,
-                        onRatingChanged: (rating) => setState(() => _rating = rating),
+                        onRatingChanged: (rating) =>
+                            setState(() => _rating = rating),
                       ),
 
                       const SizedBox(height: DS.spacing16),
@@ -316,8 +323,8 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                       Text(
                         '有什么想说的? (选填)',
                         style: theme.textTheme.labelMedium?.copyWith(
-                              color: DS.textSecondary,
-                            ),
+                          color: DS.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: DS.xs),
                       TextField(
@@ -327,8 +334,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                           hintText: '记录一些心得...',
                           border: OutlineInputBorder(
                             borderRadius: DS.borderRadius8,
-                            borderSide:
-                                BorderSide(color: DS.neutral300),
+                            borderSide: BorderSide(color: DS.neutral300),
                           ),
                           filled: true,
                           fillColor: DS.neutral50,
@@ -341,23 +347,29 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                         const SizedBox(height: DS.spacing20),
                         Row(
                           children: [
-                            Icon(Icons.arrow_forward,
-                                size: 18, color: DS.brandPrimaryConst,),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 18,
+                              color: DS.brandPrimaryConst,
+                            ),
                             const SizedBox(width: DS.xs),
                             Text(
                               '下一步建议',
                               style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
+                                fontWeight: DS.fontWeightBold,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: DS.sm),
-                        ...widget.result.nextActions.asMap().entries.map((entry) => _NextActionCard(
-                              action: entry.value,
-                              position: entry.key,
-                              onTap: () => _handleNextAction(entry.value, entry.key),
-                            ),),
+                        ...widget.result.nextActions.asMap().entries.map(
+                              (entry) => _NextActionCard(
+                                action: entry.value,
+                                position: entry.key,
+                                onTap: () =>
+                                    _handleNextAction(entry.value, entry.key),
+                              ),
+                            ),
                       ],
                     ],
                   ),
@@ -370,14 +382,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: SparkleButton.ghost(
+                      label: '跳过',
                       onPressed: widget.onClose,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: DS.textOnPrimary,
-                        side: BorderSide(color: DS.neutral400),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text('跳过'),
                     ),
                   ),
                   const SizedBox(width: DS.spacing12),
@@ -409,23 +416,24 @@ class _StarRating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (index) {
-        final starValue = index + 1;
-        return IconButton(
-          iconSize: 36,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          icon: Icon(
-            rating != null && starValue <= rating!
-                ? Icons.star
-                : Icons.star_border,
-            color: Colors.amber,
-          ),
-          onPressed: () => onRatingChanged(starValue),
-        );
-      }),
-    );
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(5, (index) {
+          final starValue = index + 1;
+          return GestureDetector(
+            onTap: () => onRatingChanged(starValue),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing4),
+              child: Icon(
+                rating != null && starValue <= rating!
+                    ? Icons.star
+                    : Icons.star_border,
+                color: DS.rarityRare,
+                size: 36,
+              ),
+            ),
+          );
+        }),
+      );
 }
 
 class _NextActionCard extends StatelessWidget {
@@ -499,7 +507,7 @@ class _NextActionCard extends StatelessWidget {
                 ),
                 child: Icon(
                   _getTypeIcon(action.type),
-                  color: Colors.white,
+                  color: DS.white,
                   size: 18,
                 ),
               ),
@@ -517,8 +525,8 @@ class _NextActionCard extends StatelessWidget {
                           child: Text(
                             action.title,
                             style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                ),
+                              fontWeight: DS.fontWeightBold,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -535,9 +543,9 @@ class _NextActionCard extends StatelessWidget {
                           child: Text(
                             '${action.estimatedMinutes}m',
                             style: theme.textTheme.labelSmall?.copyWith(
-                                  color: typeColor,
-                                  fontWeight: DS.fontWeightBold,
-                                ),
+                              color: typeColor,
+                              fontWeight: DS.fontWeightBold,
+                            ),
                           ),
                         ),
                       ],
@@ -547,8 +555,8 @@ class _NextActionCard extends StatelessWidget {
                       Text(
                         action.description,
                         style: theme.textTheme.bodySmall?.copyWith(
-                              color: DS.textSecondary,
-                            ),
+                          color: DS.textSecondary,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -558,9 +566,9 @@ class _NextActionCard extends StatelessWidget {
                       Text(
                         '理由: ${action.reason}',
                         style: theme.textTheme.labelSmall?.copyWith(
-                              color: DS.textTertiary,
-                              fontSize: 10,
-                            ),
+                          color: DS.textTertiary,
+                          fontSize: 10,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

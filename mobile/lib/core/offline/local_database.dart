@@ -137,7 +137,7 @@ class LocalDatabase {
         PendingUpdateSchema,
         LocalCRDTSnapshotSchema,
         OutboxItemSchema,
-        UserAnalyticsEventSchema, // Added for Edge AI
+        UserAnalyticsEventSchema,
         TranslationRecordSchema,
         TranslationWordLinkSchema,
         VocabWordSchema,

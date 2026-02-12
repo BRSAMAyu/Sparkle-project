@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/molecules/stepper_indicator.dart';
 import 'package:sparkle/core/design/components/organisms/expandable_section.dart';
@@ -263,7 +262,7 @@ class TransparencyPanel extends StatelessWidget {
                               ),
                             ],
                           ),
-                        ))
+                        ),)
                     .toList(),
               ),
             ),
@@ -351,30 +350,4 @@ class TransparencyPanel extends StatelessWidget {
     return '\$${usd.toStringAsFixed(4)}';
   }
 
-  String? _mapAgentType(String? type) {
-    switch (type) {
-      case 'ORCHESTRATOR':
-        return '编排器';
-      case 'KNOWLEDGE':
-        return '知识专家';
-      case 'MATH':
-        return '数学专家';
-      case 'CODE':
-        return '代码专家';
-      case 'DATA_ANALYSIS':
-        return '数据分析';
-      case 'TRANSLATION':
-        return '翻译专家';
-      case 'IMAGE':
-        return '图像专家';
-      case 'AUDIO':
-        return '音频专家';
-      case 'WRITING':
-        return '写作专家';
-      case 'REASONING':
-        return '推理专家';
-      default:
-        return null;
-    }
-  }
 }

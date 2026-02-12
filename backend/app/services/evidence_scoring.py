@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
-
+from collections.abc import Iterable
+from typing import Any
 
 PRIMARY_EVIDENCE_TYPES = {"event", "user_state", "error"}
 
@@ -12,10 +12,7 @@ def compute_score(evidence_refs: Iterable[Any], evidence_missing: bool = False) 
     has_primary = False
 
     for ref in evidence_refs or []:
-        if isinstance(ref, dict):
-            ref_type = ref.get("type")
-        else:
-            ref_type = getattr(ref, "type", None)
+        ref_type = ref.get("type") if isinstance(ref, dict) else getattr(ref, "type", None)
         if not ref_type:
             continue
         types.add(ref_type)

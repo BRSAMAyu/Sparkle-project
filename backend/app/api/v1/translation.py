@@ -4,18 +4,14 @@ Translation API - 使用统一翻译工具进行多语言翻译
 
 支持分片翻译、领域术语、缓存和信号评估
 """
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
-from app.tools.translation_tool import (
-    TranslateTextTool,
-    TranslateTextParams,
-    _normalize_language_code
-)
+from app.tools.translation_tool import TranslateTextParams, TranslateTextTool, _normalize_language_code
 
 router = APIRouter()
 
@@ -25,37 +21,37 @@ class TranslateRequest(BaseModel):
     """翻译请求 - 支持Flutter和通用客户端"""
     text: str = Field(..., description="需要翻译的文本", max_length=5000)
     # 支持两种参数命名风格
-    source_lang: Optional[str] = Field(default="auto", description="源语言代码 (如: en, zh, auto)")
-    source_language: Optional[str] = Field(default=None, description="源语言 (兼容字段)")
-    target_lang: Optional[str] = Field(default="zh-CN", description="目标语言代码 (如: en, zh-CN)")
-    target_language: Optional[str] = Field(default=None, description="目标语言 (兼容字段)")
+    source_lang: str | None = Field(default="auto", description="源语言代码 (如: en, zh, auto)")
+    source_language: str | None = Field(default=None, description="源语言 (兼容字段)")
+    target_lang: str | None = Field(default="zh-CN", description="目标语言代码 (如: en, zh-CN)")
+    target_language: str | None = Field(default=None, description="目标语言 (兼容字段)")
     # 高级参数
     domain: str = Field(default="general", description="领域: cs, math, business, general")
     style: str = Field(default="natural", description="风格: concise, literal, natural")
-    glossary_id: Optional[str] = Field(default=None, description="术语表ID")
+    glossary_id: str | None = Field(default=None, description="术语表ID")
     # 信号参数
-    fingerprint: Optional[str] = Field(default=None, description="内容指纹用于去重")
-    context_before: Optional[str] = Field(default=None, description="选择前的上下文")
-    context_after: Optional[str] = Field(default=None, description="选择后的上下文")
-    page_no: Optional[int] = Field(default=None, description="页码")
-    source_file_id: Optional[str] = Field(default=None, description="源文件ID")
+    fingerprint: str | None = Field(default=None, description="内容指纹用于去重")
+    context_before: str | None = Field(default=None, description="选择前的上下文")
+    context_after: str | None = Field(default=None, description="选择后的上下文")
+    page_no: int | None = Field(default=None, description="页码")
+    source_file_id: str | None = Field(default=None, description="源文件ID")
 
     class Config:
         # 允许两种参数风格互用
         extra = "allow"
 
-    def get_normalized_params(self) -> Dict[str, Any]:
+    def get_normalized_params(self) -> dict[str, Any]:
         """获取标准化后的参数"""
         # 如果 source_lang 是默认值 "auto" 且提供了 source_language，则使用 source_language
         source = self.source_lang
         if source == "auto" and self.source_language:
             source = self.source_language
-            
+
         # 如果 target_lang 是默认值 "zh-CN" 且提供了 target_language，则使用 target_language
         target = self.target_lang
         if target == "zh-CN" and self.target_language:
             target = self.target_language
-            
+
         return {
             "source_lang": source or "auto",
             "target_lang": target or "zh-CN",
@@ -66,23 +62,23 @@ class TranslationSegmentData(BaseModel):
     """翻译片段数据"""
     id: str
     translation: str
-    notes: List[str] = []
+    notes: list[str] = []
 
 
 class TranslationRecommendation(BaseModel):
     """翻译推荐数据"""
     should_create_card: bool = False
-    reason: Optional[str] = None
+    reason: str | None = None
     daily_quota_remaining: int = 0
 
 
 class TranslateResponse(BaseModel):
     """翻译响应 - 匹配Flutter期望格式"""
     success: bool
-    translation: Optional[str] = None
-    segments: List[TranslationSegmentData] = []
-    recommendation: Optional[TranslationRecommendation] = None
-    meta: Dict[str, Any] = {}
+    translation: str | None = None
+    segments: list[TranslationSegmentData] = []
+    recommendation: TranslationRecommendation | None = None
+    meta: dict[str, Any] = {}
 
 # ============ Endpoints ============
 

@@ -1,40 +1,37 @@
-from typing import Dict, Any, AsyncGenerator, Optional, List
-from loguru import logger
 import json
-import uuid
-import asyncio
 import re
 import time
+import uuid
+from typing import Any
 
-from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
-from app.services.llm_service import llm_service
-from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
-from app.services.knowledge_service import KnowledgeService
-from app.orchestration.prompts import build_system_prompt
-from app.orchestration.executor import ToolExecutor
-from app.gen.agent.v1 import agent_service_pb2
 from google.protobuf import struct_pb2
+from loguru import logger
+
 from app.agents.collaboration_workflows import (
-    TaskDecompositionWorkflow,
+    ErrorDiagnosisWorkflow,
     ProgressiveExplorationWorkflow,
-    ErrorDiagnosisWorkflow
+    TaskDecompositionWorkflow,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
-from app.core.pending_actions import pending_actions_store
-from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 
 # Phase 1: Review System
 from app.agents.graph.nodes.review_nodes import (
-    generation_review_node,
     execution_review_node,
+    generation_review_node,
     reflection_node,
-    route_after_generation_review,
-    route_after_reflection,
-    route_after_execution_review,
 )
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
+from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
+from app.core.pending_actions import pending_actions_store
+from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.prompts import build_system_prompt
+from app.orchestration.statechart_engine import StateGraph, WorkflowState
+from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+from app.services.knowledge_service import KnowledgeService
+from app.services.llm_service import llm_service
 
 # ==========================================
 # Nodes
@@ -174,15 +171,16 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     # P1 Improvement: Enhanced intent instructions with stronger constraints
     plan_metadata = state.context_data.get("plan_metadata", {})
     route_reason = plan_metadata.get("route_reason", "")
+    route_reason_lc = str(route_reason).lower()
     intent_instruction = None
 
-    if "Intent: translation" in route_reason:
+    if "intent: translation" in route_reason_lc or "unified:translation" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants TRANSLATION.
 You MUST use the 'translate' tool to translate the user's text.
 DO NOT provide translation yourself - always use the tool.
 """
-    elif "Intent: prism" in route_reason:
+    elif "intent: prism" in route_reason_lc or "unified:cognitive_prism" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants BEHAVIOR ANALYSIS (Cognitive Prism).
 You MUST use the 'get_user_behavior_patterns' tool to retrieve their behavior patterns.
@@ -193,7 +191,7 @@ The tool will return:
 - emotional patterns: emotional responses during study
 - execution patterns: task execution habits
 """
-    elif "Intent: sprint" in route_reason:
+    elif "intent: sprint" in route_reason_lc or "unified:sprint_plan" in route_reason_lc:
         intent_instruction = """
 IMPORTANT: User wants to enter FOCUS/SPRINT MODE.
 You MUST use the 'suggest_focus_session' tool to recommend a focus session.
@@ -216,13 +214,33 @@ Ask about their available time and current tasks if needed.
     document_context = state.context_data.get("document_context") or ""
     if document_context:
         system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
-    
+
     user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])
-    
+
+    # 检查是否使用思考模式，如果是则发送状态更新
+    # 这会让前端显示"思考中"提示
+    try:
+        current_llm = llm_service.__class__
+        # 创建临时实例来检查思考模式
+        temp_llm = current_llm(agent_role=state.context_data.get("agent_role", "generation"), enable_dynamic_routing=True)
+        is_thinking = temp_llm.is_thinking_mode()
+
+        if is_thinking and stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details="正在深度思考中，请稍候...",
+                    current_agent_name="Sparkle AI"
+                )
+            ))
+    except Exception as e:
+        logger.warning(f"Failed to check thinking mode: {e}")
+
     full_response = ""
     tool_calls = []
-    
+    first_chunk_sent = False  # Track first chunk for status transition
+
     # We assume llm_service is available globally
     async for chunk in llm_service.chat_stream_with_tools(
         system_prompt=system_prompt,
@@ -233,9 +251,21 @@ Ask about their available time and current tasks if needed.
         if chunk.type == "text":
             full_response += chunk.content
             if stream_callback:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=chunk.content
-                ))
+                # Send GENERATING status with first chunk to transition from THINKING
+                if not first_chunk_sent:
+                    first_chunk_sent = True
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=chunk.content,
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.GENERATING,
+                            details="正在生成回复...",
+                            current_agent_name="Sparkle AI"
+                        )
+                    ))
+                else:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=chunk.content
+                    ))
         elif chunk.type == "tool_call_end":
             tool_calls.append(chunk)
             if stream_callback:
@@ -262,7 +292,7 @@ Ask about their available time and current tasks if needed.
         state.next_step = "tool_execution"
     else:
         state.next_step = "__end__"
-        
+
     return state
 
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
@@ -291,7 +321,6 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # Use snapshot for validation if available
         validator = state.context_data.get("grounding_validator")
         if validator:
-            from app.orchestration.schemas import ValidationResult
             # Re-validate with snapshot (business rules check)
             validation_result = await validator.validate_plan(executable_plan, snapshot)
 
@@ -329,30 +358,110 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 state.next_step = "__end__"
                 return state
 
-        # Execute tool calls from the plan
+        # Execute plan with DAG-aware executor (parallel by layer).
         start_time = time.time()
-        total_tools = len(executable_plan.tool_calls)
 
-        for idx, tool_call_spec in enumerate(executable_plan.tool_calls):
-            tool_args = tool_call_spec.params
-            if isinstance(tool_args, str):
-                try:
-                    tool_args = json.loads(tool_args)
-                except Exception:
-                    tool_args = {}
-            await _execute_single_tool(
-                tool_name=tool_call_spec.name,
-                tool_args=tool_args,
-                tool_call_id=tool_call_spec.id,
-                stream_callback=stream_callback,
-                user_id=user_id,
-                db_session=db_session,
-                executor=executor,
-                state=state,
-                compensation_call=tool_call_spec.compensation_call,
-                tool_index=idx,
-                total_tools=total_tools,
-            )
+        def _to_camel_case_dag_event(event: dict[str, Any]) -> dict[str, Any]:
+            key_map = {
+                "layer_index": "layerIndex",
+                "layer_number": "layerNumber",
+                "total_layers": "totalLayers",
+                "step_id": "stepId",
+                "tool_name": "toolName",
+                "duration_ms": "durationMs",
+                "completed_steps": "completedSteps",
+                "step_ids": "stepIds",
+                "tool_names": "toolNames",
+                "plan_id": "planId",
+                "layers_completed": "layersCompleted",
+                "steps_total": "stepsTotal",
+                "abort_reason": "abortReason",
+            }
+            return {key_map.get(k, k): v for k, v in event.items()}
+
+        async def _execution_observer(event: dict[str, Any]) -> None:
+            if not stream_callback:
+                return
+
+            payload_event = _to_camel_case_dag_event(event)
+            event_type = event.get("event")
+            if event_type == "layer_start":
+                details = (
+                    f"正在执行 DAG 第 {event.get('layer_number', 0)}/{event.get('total_layers', 0)} 层，"
+                    f"{len(event.get('tool_names', []))} 个步骤并行"
+                )
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                        details=details,
+                        active_agent=agent_service_pb2.ORCHESTRATOR
+                    ),
+                    metadata={
+                        "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
+                    },
+                ))
+                return
+
+            await stream_callback(agent_service_pb2.ChatResponse(
+                metadata={
+                    "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
+                }
+            ))
+
+        plan_result = await executor.execute_plan(
+            plan=executable_plan,
+            user_id=user_id,
+            db_session=db_session,
+            progress_callback=None,
+            execution_observer=_execution_observer,
+        )
+        state.context_data["plan_execution_result"] = plan_result
+
+        for step_result in plan_result.step_results:
+            result = step_result.tool_result
+
+            if stream_callback:
+                status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.IDLE,
+                        details=status_msg,
+                        active_agent=agent_service_pb2.ORCHESTRATOR
+                    )
+                ))
+
+                data_struct = struct_pb2.Struct()
+                if isinstance(result.data, dict):
+                    data_struct.update(result.data)
+                widget_struct = struct_pb2.Struct()
+                if isinstance(result.widget_data, dict):
+                    widget_struct.update(result.widget_data)
+
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    tool_result=agent_service_pb2.ToolResultPayload(
+                        tool_name=result.tool_name,
+                        success=result.success,
+                        data=data_struct,
+                        error_message=result.error_message or "",
+                        suggestion=result.suggestion or "",
+                        widget_type=result.widget_type or "",
+                        widget_data=widget_struct,
+                        tool_call_id=step_result.step_id
+                    )
+                ))
+
+            result_json = json.dumps({
+                "success": result.success,
+                "result": result.data,
+                "error": result.error_message,
+                "fallback": result.data.get("fallback", False) if isinstance(result.data, dict) else False,
+            })
+            state.append_message("tool", result_json, name=step_result.tool_name)
+
+        if plan_result.aborted and stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta=f"\n\n⚠️ 计划执行中断: {plan_result.abort_reason or 'required step failed'}"
+            ))
 
         # Write feedback for LangGraph plan
         await _write_feedback(
@@ -361,7 +470,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             session_id=session_id,
             redis_client=redis_client,
             start_time=start_time,
-            tool_count=len(executable_plan.tool_calls),
+            tool_count=len(plan_result.step_results),
             plan_id=executable_plan.plan_id
         )
 
@@ -387,7 +496,6 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 return tc.full_arguments
             elif isinstance(tc.full_arguments, str):
                 try:
-                    import json
                     return {"_raw_json": tc.full_arguments}
                 except:
                     return {"_raw": tc.full_arguments}
@@ -492,7 +600,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 # Intent Classification & Tool Planning
 # ==========================================
 
-def detect_exam_urgency(text: str) -> Optional[int]:
+def detect_exam_urgency(text: str) -> int | None:
     """Return days until exam, or None if no exam urgency detected."""
     text_lower = text.lower()
     exam_keywords = ["考试", "考研", "期末", "测验", "quiz", "midterm", "final", "exam", "test", "考"]
@@ -521,7 +629,7 @@ def detect_exam_urgency(text: str) -> Optional[int]:
     return None
 
 
-def _classify_user_intent(message: str) -> Optional[str]:
+def _classify_user_intent(message: str) -> str | None:
     """Classify user intent from message for multi-step tool planning."""
     message_lower = message.lower()
 
@@ -546,7 +654,7 @@ def _classify_user_intent(message: str) -> Optional[str]:
     return None
 
 
-def _should_use_collaboration(message: str, intent: Optional[str]) -> bool:
+def _should_use_collaboration(message: str, intent: str | None) -> bool:
     """Determine if collaboration workflow should be triggered."""
     if not intent:
         return False
@@ -612,7 +720,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         if stream_callback:
             await stream_callback(agent_service_pb2.ChatResponse(
                 status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.MULTI_AGENT_COLLABORATION,
+                    state=agent_service_pb2.AgentStatus.THINKING,
                     details=f"Executing {intent} collaboration workflow...",
                     active_agent=agent_service_pb2.ORCHESTRATOR
                 )
@@ -630,6 +738,50 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
 
         # Store result for generation node
         state.context_data["collaboration_result"] = validated_result
+
+        # Emit collaboration timeline metadata for clients
+        if stream_callback and hasattr(validated_result, 'timeline'):
+            execution_time = 0.0
+            if hasattr(validated_result, 'metadata') and validated_result.metadata:
+                execution_time = validated_result.metadata.get("execution_time", 0.0)
+            steps = []
+            for event in validated_result.timeline:
+                agent_name = event.get("agent_name") or event.get("agent") or "Agent"
+                action = event.get("action") or ""
+                status = event.get("status") or "completed"
+                start_time_ms = event.get("start_time_ms")
+                if start_time_ms is None and event.get("timestamp") is not None:
+                    start_time_ms = int(float(event.get("timestamp")) * 1000)
+                duration_ms = event.get("duration_ms")
+                output_summary = event.get("output_summary")
+                agent_role = event.get("agent_role")
+                step = {
+                    "agent_name": agent_name,
+                    "action": action,
+                    "status": status,
+                    "start_time_ms": start_time_ms or 0,
+                }
+                if agent_role:
+                    step["agent_role"] = agent_role
+                if duration_ms is not None:
+                    step["duration_ms"] = duration_ms
+                if output_summary:
+                    step["output_summary"] = output_summary
+                if event.get("metadata"):
+                    step["metadata"] = event.get("metadata")
+                steps.append(step)
+            collaboration_timeline = {
+                "schema_version": "1.0",
+                "workflow_type": validated_result.workflow_type,
+                "execution_time_ms": int(execution_time * 1000),
+                "steps": steps,
+            }
+            await stream_callback(agent_service_pb2.ChatResponse(
+                delta="",
+                metadata={
+                    "collaboration_timeline": json.dumps(collaboration_timeline, ensure_ascii=False)
+                }
+            ))
 
         # Send collaboration result to client (optional: timeline visualization)
         if stream_callback and hasattr(validated_result, 'timeline'):
@@ -985,7 +1137,7 @@ async def _execute_single_tool(
     db_session,
     executor,
     state: WorkflowState,
-    compensation_call: Optional[Dict[str, Any]] = None,
+    compensation_call: dict[str, Any] | None = None,
     tool_index: int = 0,
     total_tools: int = 1,
 ) -> None:
@@ -1134,8 +1286,9 @@ async def _write_feedback(
     if not redis_client or not start_time:
         return
 
-    from app.orchestration.schemas import FeedbackPayload
     from dataclasses import asdict
+
+    from app.orchestration.schemas import FeedbackPayload
 
     duration_seconds = time.time() - start_time
 
@@ -1184,7 +1337,7 @@ async def _write_feedback(
     TASK_LOOP_COMPLETED.labels(source="standard_workflow").inc()
 
 
-def _serialize_tool_calls(tool_calls: List[Any]) -> List[Dict[str, Any]]:
+def _serialize_tool_calls(tool_calls: list[Any]) -> list[dict[str, Any]]:
     payload = []
     for tool_call in tool_calls:
         payload.append({
@@ -1201,9 +1354,9 @@ async def _queue_hitl_action(
     user_id: str,
     reason: str,
     description: str,
-    tool_calls: List[Any],
-    plan_id: Optional[str] = None,
-    snapshot_id: Optional[str] = None
+    tool_calls: list[Any],
+    plan_id: str | None = None,
+    snapshot_id: str | None = None
 ) -> str:
     action_id = await pending_actions_store.save(
         tool_name="__plan__",

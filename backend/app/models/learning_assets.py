@@ -3,18 +3,29 @@ Learning Assets Models (学习资产模型)
 Represents user's vocabulary, sentences, and concepts collected from translation lookups.
 """
 import enum
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import UTC, datetime
+
 from sqlalchemy import (
-    Column, String, Text, Integer, Float, Boolean,
-    ForeignKey, DateTime, Index, UniqueConstraint, JSON
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, HardDeleteBaseModel, GUID
+from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AssetStatus(str, enum.Enum):
@@ -116,13 +127,13 @@ class LearningAsset(BaseModel):
             return False
         if self.inbox_expires_at is None:
             return False
-        return datetime.utcnow() > self.inbox_expires_at
+        return _utcnow() > self.inbox_expires_at
 
     def activate(self) -> None:
         """Move from INBOX to ACTIVE status"""
         self.status = AssetStatus.ACTIVE.value
         self.inbox_expires_at = None
-        self.review_due_at = datetime.utcnow()  # Start review scheduling
+        self.review_due_at = _utcnow()  # Start review scheduling
 
     def archive(self) -> None:
         """Archive the asset"""

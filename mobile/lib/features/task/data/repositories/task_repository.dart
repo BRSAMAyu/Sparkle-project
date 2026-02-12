@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
+import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
-import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
@@ -19,8 +20,31 @@ class TaskRepository {
 
   // A generic error handler for Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ??
-        'An unknown error occurred in $functionName';
+    String errorMessage;
+
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      errorMessage = '网络超时，请检查网络连接';
+    } else if (e.type == DioExceptionType.connectionError) {
+      errorMessage = '网络连接失败，请检查网络设置';
+    } else if (e.response != null) {
+      // Try to extract error message from response
+      final data = e.response!.data;
+      if (data is Map) {
+        errorMessage = (data['detail'] as String?) ??
+            (data['message'] as String?) ??
+            (data['error'] as String?) ??
+            '服务器返回错误 (HTTP ${e.response!.statusCode})';
+      } else if (data is String) {
+        errorMessage = data;
+      } else {
+        errorMessage = '服务器返回错误 (HTTP ${e.response!.statusCode})';
+      }
+    } else {
+      errorMessage = '未知错误: ${e.message ?? "无法连接到服务器"}';
+    }
+
     throw Exception(errorMessage);
   }
 
@@ -52,13 +76,10 @@ class TaskRepository {
         ApiEndpoints.tasks,
         queryParameters: queryParams,
       );
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('getTasks response is empty');
-      }
-      return PaginatedResponse.fromJson(
-        payload,
+      return ApiResponseParser.parsePaginated(
+        response.data,
         (json) => TaskModel.fromJson(json as Map<String, dynamic>),
+        action: 'getTasks',
       );
     } on DioException catch (e) {
       return _handleDioError(e, 'getTasks');
@@ -74,7 +95,7 @@ class TaskRepository {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.task(id),
       );
-      final payload = _unwrapResponseMap(response.data, action: 'getTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getTask');
@@ -93,7 +114,7 @@ class TaskRepository {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.todayTasks,
       );
-      final data = _unwrapResponseList(response.data);
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getTodayTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -111,7 +132,7 @@ class TaskRepository {
         ApiEndpoints.recommendedTasks,
         queryParameters: {'limit': limit},
       );
-      final data = _unwrapResponseList(response.data);
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getRecommendedTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -145,15 +166,8 @@ class TaskRepository {
           'page': 1,
         },
       );
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('getTasksByDateRange response is empty');
-      }
-      final dataList = payload['data'] as List<dynamic>?;
-      if (dataList == null) {
-        return [];
-      }
-      return dataList
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getTasksByDateRange');
+      return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
@@ -189,8 +203,7 @@ class TaskRepository {
         data: task.toJson(),
         queryParameters: generateGuide ? {'generate_guide': 'true'} : null,
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'createTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTask');
@@ -225,9 +238,10 @@ class TaskRepository {
       if (payload == null) {
         throw Exception('createTaskWithNudges response is empty');
       }
-      final taskData = payload['data'] as Map<String, dynamic>?;
+      // Handle both wrapped and direct formats
+      final taskData = ApiResponseParser.unwrapMap(payload, action: 'createTaskWithNudges');
       final nudgesData = payload['nudges'] as List<dynamic>?;
-      final taskModel = TaskModel.fromJson(taskData ?? payload);
+      final taskModel = TaskModel.fromJson(taskData);
       final nudges = nudgesData
           ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
           .toList() ?? <TaskNudge>[];
@@ -260,8 +274,7 @@ class TaskRepository {
         ApiEndpoints.task(id),
         data: task.toJson(),
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'updateTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'updateTask');
@@ -296,8 +309,7 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.startTask(id),
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'startTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'startTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
@@ -353,8 +365,7 @@ class TaskRepository {
         ApiEndpoints.completeTask(id),
         data: taskComplete.toJson(),
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'completeTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'completeTask');
       return TaskCompletionResult.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'completeTask');
@@ -378,8 +389,7 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.abandonTask(id),
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'abandonTask');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'abandonTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'abandonTask');
@@ -406,37 +416,11 @@ class TaskRepository {
         ApiEndpoints.taskSuggestions,
         data: {'input_text': inputText},
       );
-      final payload =
-          _unwrapResponseMap(response.data, action: 'getSuggestions');
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getSuggestions');
       return TaskSuggestionResponse.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getSuggestions');
     }
-  }
-
-  Map<String, dynamic> _unwrapResponseMap(
-    Map<String, dynamic>? payload, {
-    required String action,
-  }) {
-    if (payload == null) {
-      throw Exception('$action response is empty');
-    }
-    final rawData = payload['data'];
-    if (rawData is Map<String, dynamic>) {
-      return rawData;
-    }
-    return payload;
-  }
-
-  List<dynamic> _unwrapResponseList(Map<String, dynamic>? payload) {
-    if (payload == null) {
-      return [];
-    }
-    final rawData = payload['data'];
-    if (rawData is List<dynamic>) {
-      return rawData;
-    }
-    return [];
   }
 
   Future<void> submitTaskFeedback(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 
 /// App Colors - now using Design Tokens
 /// @deprecated Use [DS] from `package:sparkle/core/design/design_system.dart` instead.
@@ -133,6 +134,7 @@ class AppThemes {
             elevatedShadow: DS.shadowLg,
           ),
           SparkleColors.light,
+          SparkleThemeExtension.light(), // 🔧 修复：注册 SparkleThemeExtension
         ],
 
         // Card theme with precise shadows
@@ -360,6 +362,7 @@ class AppThemes {
             elevatedShadow: DS.shadowLg,
           ),
           SparkleColors.dark,
+          SparkleThemeExtension.dark(), // 🔧 修复：注册 SparkleThemeExtension
         ],
 
         // Card theme

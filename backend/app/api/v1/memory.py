@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import List, Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,11 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.config import settings
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory
+from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _ensure_memory_panel_enabled() -> None:
@@ -104,14 +107,14 @@ async def preference_history(
 
 @router.get("/goals")
 async def list_goals(
-    status_filter: Optional[str] = Query(default=None, alias="status"),
+    status_filter: str | None = Query(default=None, alias="status"),
     include_expired: bool = Query(default=False),
     limit: int = Query(default=20, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     _ensure_memory_panel_enabled()
-    now = datetime.utcnow()
+    now = _utcnow()
     stmt = select(MemoryGoal).where(
         MemoryGoal.user_id == current_user.id,
         MemoryGoal.deleted_at.is_(None),
@@ -121,7 +124,7 @@ async def list_goals(
         stmt = stmt.where(MemoryGoal.status == status_filter)
     if not include_expired:
         stmt = stmt.where(
-            (MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
+            MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now)
         )
     stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
     result = await db.execute(stmt)
@@ -149,8 +152,8 @@ async def list_goals(
 
 @router.get("/episodic")
 async def list_episodic(
-    start: Optional[datetime] = Query(default=None),
-    end: Optional[datetime] = Query(default=None),
+    start: datetime | None = Query(default=None),
+    end: datetime | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

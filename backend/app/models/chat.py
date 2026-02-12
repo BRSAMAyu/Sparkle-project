@@ -5,11 +5,11 @@ ChatMessage Model - 用户与AI的对话记录
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean, Float
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
-from sqlalchemy import DateTime
+from app.models.base import GUID, BaseModel
 
 
 class MessageRole(str, enum.Enum):
@@ -63,7 +63,7 @@ class ChatMessage(BaseModel):
     actions = Column(JSON, nullable=True)  # AI执行的动作列表
     # 🆕 v2.1: 解析降级标记
     parse_degraded = Column(Boolean, default=False)
-    
+
     tokens_used = Column(Integer, nullable=True)
     model_name = Column(String(100), nullable=True)
 
@@ -73,6 +73,26 @@ class ChatMessage(BaseModel):
 
     def __repr__(self):
         return f"<ChatMessage(role={self.role}, session_id={self.session_id})>"
+
+
+class ChatSession(BaseModel):
+    """
+    Chat session metadata.
+
+    Used by E2E tests and session-level UX.
+    """
+
+    __tablename__ = "chat_sessions"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_message_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="chat_sessions")
+
+    def __repr__(self):
+        return f"<ChatSession(id={self.id}, user_id={self.user_id})>"
 
 
 class TokenUsage(BaseModel):
@@ -118,6 +138,9 @@ Index("idx_chat_session_id", ChatMessage.session_id)
 Index("idx_chat_task_id", ChatMessage.task_id)
 Index("idx_chat_created_at", ChatMessage.created_at)
 Index("idx_chat_role", ChatMessage.role)
+
+Index("idx_chat_session_user_id", ChatSession.user_id)
+Index("idx_chat_session_active", ChatSession.is_active)
 
 Index("idx_token_usage_user_id", TokenUsage.user_id)
 Index("idx_token_usage_session_id", TokenUsage.session_id)

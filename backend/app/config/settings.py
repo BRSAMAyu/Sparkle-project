@@ -3,10 +3,10 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List, Optional
-from urllib.parse import urlparse, urlunparse, quote
+from urllib.parse import quote, unquote, urlparse, urlunparse
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, model_validator, Field, AliasChoices
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,8 +33,9 @@ def _replace_url_host(raw_url: str, new_host: str) -> str:
     parsed = urlparse(raw_url)
     if not parsed.hostname:
         return raw_url
-    username = quote(parsed.username) if parsed.username else ""
-    password = quote(parsed.password) if parsed.password else ""
+    # urlparse may return percent-encoded userinfo; decode first to avoid double encoding.
+    username = quote(unquote(parsed.username)) if parsed.username else ""
+    password = quote(unquote(parsed.password)) if parsed.password else ""
     auth = ""
     if username:
         auth = username
@@ -105,24 +106,27 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool | None = None
-    
+    SERVICE_ROLE: str = "api"  # api | grpc
+
     # Security
-    # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
-    SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
+    # Prefer JWT_SECRET to keep Python-issued JWT fully compatible with Gateway verification.
+    SECRET_KEY: str = Field("", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
+    JWT_ISSUER: str = "sparkle-gateway"
+    JWT_AUDIENCE: str = "sparkle-app"
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
     POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
     POSTGRES_PORT: int = Field(5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
     POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
-    POSTGRES_PASSWORD: str = Field("change-me", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
+    POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
     REDIS_HOST: str = Field("sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
     REDIS_PORT: int = Field(6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
-    REDIS_PASSWORD: str = "change-me"
+    REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
 
     @property
@@ -153,7 +157,7 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False  # 是否打印SQL语句（生产环境应为False）
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = []
+    BACKEND_CORS_ORIGINS: list[str] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -170,18 +174,35 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: bool | None = None
 
+    # WeChat Configuration
+    WECHAT_APP_ID: str = ""
+    WECHAT_APP_SECRET: str = ""
+
     # LLM Service
     LLM_API_BASE_URL: str = ""
     LLM_API_KEY: str = ""
-    LLM_MODEL_NAME: str = "qwen-turbo"
+    LLM_MODEL_NAME: str = "qwen-plus"
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
+    LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
+    # LLM Tier Routing (comma-separated model keys from LLMRouter)
+    LLM_TIER_FREE_FAST: str = ""
+    LLM_TIER_FREE_REASONING: str = ""
+    LLM_TIER_FAST: str = ""
+    LLM_TIER_STANDARD: str = ""
+    LLM_TIER_REASONING: str = ""
+    LLM_TIER_SPECIALIST: str = ""
 
     # XiaoMi MIMO Configuration (快速响应)
     XIAOMI_MIMO_API_KEY: str = ""
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_TEMPERATURE: float = 0.3
+
+    # Prompt Snapshot (debug observability)
+    PROMPT_SNAPSHOT_ENABLED: bool = False
+    PROMPT_SNAPSHOT_SAMPLE_RATE: float = 0.0
+    PROMPT_SNAPSHOT_MAX_CHARS: int = 1200
 
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
@@ -194,7 +215,8 @@ class Settings(BaseSettings):
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_CHAT_MODEL: str = "glm-4.7"
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
-    ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型
+    ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型 (FlashX)
+    GLM_4_7_FLASH_MODEL: str = "glm-4.7-flash"  # GLM-4.7-Flash 模型（支持思考模式）
     ZHIPU_TEMPERATURE: float = 0.3
 
     # SiliconFlow API
@@ -210,11 +232,11 @@ class Settings(BaseSettings):
     HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"  # Translation-specific model
 
     # Embedding Service
-    EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
-    EMBEDDING_MODEL: str = "Qwen/Qwen3-Embedding-4B"  # 向量模型
+    EMBEDDING_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
-    RERANK_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
-    RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"  # 重排序模型
+    RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+    RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
 
     # DashScope (Aliyun)
     DASHSCOPE_API_KEY: str = ""
@@ -235,9 +257,10 @@ class Settings(BaseSettings):
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
 
     # XunFei (科大讯飞) STT Configuration
+    XUNFEI_APP_ID: str = ""
     XUNFEI_API_KEY: str = ""
     XUNFEI_API_SECRET: str = ""
-    XUNFEI_STT_DOMAIN: str = "iat"
+    XUNFEI_STT_DOMAIN: str = "slm"
     XUNFEI_STT_LANGUAGE: str = "zh-CN"
     XUNFEI_STT_SAMPLE_RATE: int = 16000
     XUNFEI_STT_MAX_AUDIO_DURATION: int = 60
@@ -306,8 +329,8 @@ class Settings(BaseSettings):
     ENABLE_MEMORY_DECAY: bool = True
     ENABLE_LTM_ROLLOUT: bool = True
     LTM_ROLLOUT_PERCENT: int = 100
-    LTM_ROLLOUT_USER_ALLOWLIST: List[str] = []
-    LTM_ROLLOUT_COHORT_TAGS: List[str] = []
+    LTM_ROLLOUT_USER_ALLOWLIST: list[str] = []
+    LTM_ROLLOUT_COHORT_TAGS: list[str] = []
     LTM_RELEASE_EVIDENCE_MISSING_THRESHOLD: float = 0.1
     LTM_RELEASE_EVAL_THRESHOLD: float = 0.6
     LTM_RELEASE_JOB_SUCCESS_THRESHOLD: float = 0.9
@@ -351,7 +374,7 @@ class Settings(BaseSettings):
     # MDX Dictionary Configuration
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
-    MDD_RESOURCES_PATH: Optional[str] = None
+    MDD_RESOURCES_PATH: str | None = None
 
     # Internal API
     INTERNAL_API_KEY: str = ""
@@ -365,6 +388,11 @@ class Settings(BaseSettings):
 
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
+    ENABLE_MODE_WORKFLOW_V2: bool = True
+    ENABLE_EXPERT_ENTRY: bool = True
+    ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
+    ENABLE_EXPERT_STRATEGY_V1: bool = True
+    ENABLE_SUMMARIZATION_WORKER: bool = True
 
     # Optional Graph Sync Worker
     ENABLE_GRAPH_SYNC_WORKER: bool = False
@@ -450,6 +478,13 @@ class Settings(BaseSettings):
             return ""
         return v
 
+    @field_validator("XUNFEI_APP_ID", mode="before")
+    @classmethod
+    def validate_xunfei_app_id(cls, v):
+        if not v:
+            return ""
+        return v
+
     @field_validator("XUNFEI_API_SECRET", mode="before")
     @classmethod
     def validate_xunfei_api_secret(cls, v):
@@ -468,11 +503,19 @@ class Settings(BaseSettings):
 
         if self.GRPC_REQUIRE_TLS is None:
             self.GRPC_REQUIRE_TLS = env in ("prod", "production")
+        service_role = (self.SERVICE_ROLE or "").strip().lower()
+        if service_role == "":
+            service_role = "api"
+        self.SERVICE_ROLE = service_role
 
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
 
-        if env in ("prod", "production") and not self.GRPC_REQUIRE_TLS:
+        if (
+            env in ("prod", "production")
+            and self.SERVICE_ROLE == "grpc"
+            and not self.GRPC_REQUIRE_TLS
+        ):
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
 
         if not self.DEBUG and not self.SECRET_KEY:
@@ -487,7 +530,11 @@ class Settings(BaseSettings):
         if self.WS_ALLOW_QUERY_TOKEN is None:
             self.WS_ALLOW_QUERY_TOKEN = env not in ("prod", "production")
 
-        if self.GRPC_REQUIRE_TLS and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH):
+        if (
+            self.SERVICE_ROLE == "grpc"
+            and self.GRPC_REQUIRE_TLS
+            and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH)
+        ):
             raise ValueError("GRPC TLS is required but cert/key are not configured")
 
         return self

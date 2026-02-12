@@ -71,7 +71,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      final response = await apiClient.post(
+      final response = await apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.translationTranslate,
         data: {
           'text': _inputController.text,
@@ -145,13 +145,12 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
   Future<void> _saveTranslation(String translatedText) async {
     try {
       // Check for similar existing translation
-      final similar = await ref
-          .read(translationHistoryProvider.notifier)
-          .findSimilar(
-            originalText: _inputController.text,
-            sourceLanguage: _sourceLanguage.code,
-            targetLanguage: _targetLanguage.code,
-          );
+      final similar =
+          await ref.read(translationHistoryProvider.notifier).findSimilar(
+                originalText: _inputController.text,
+                sourceLanguage: _sourceLanguage.code,
+                targetLanguage: _targetLanguage.code,
+              );
 
       if (similar != null) {
         if (mounted) {
@@ -162,16 +161,15 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           });
         }
       } else {
-        final id = await ref
-            .read(translationHistoryProvider.notifier)
-            .saveTranslation(
-              originalText: _inputController.text,
-              translatedText: translatedText,
-              sourceLanguage: _sourceLanguage.code,
-              targetLanguage: _targetLanguage.code,
-              rating: _currentRating,
-              isFavorited: _isFavorited,
-            );
+        final id =
+            await ref.read(translationHistoryProvider.notifier).saveTranslation(
+                  originalText: _inputController.text,
+                  translatedText: translatedText,
+                  sourceLanguage: _sourceLanguage.code,
+                  targetLanguage: _targetLanguage.code,
+                  rating: _currentRating,
+                  isFavorited: _isFavorited,
+                );
         if (mounted) {
           setState(() {
             _currentTranslationId = id;
@@ -189,30 +187,27 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
       _currentRating = rating;
     });
     if (_currentTranslationId != null) {
-      ref.read(translationHistoryProvider.notifier).updateRating(_currentTranslationId!, rating);
+      ref
+          .read(translationHistoryProvider.notifier)
+          .updateRating(_currentTranslationId!, rating);
     }
   }
 
   Future<void> _toggleFavorite() async {
-    final newValue = ! _isFavorited;
+    final newValue = !_isFavorited;
     setState(() {
       _isFavorited = newValue;
     });
     if (_currentTranslationId != null) {
-      await ref.read(translationHistoryProvider.notifier).toggleFavorite(_currentTranslationId!);
+      await ref
+          .read(translationHistoryProvider.notifier)
+          .toggleFavorite(_currentTranslationId!);
     }
   }
 
   void _copyToClipboard() {
     Clipboard.setData(ClipboardData(text: _output));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('已复制到剪贴板'),
-        backgroundColor: DS.success,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    AppFeedback.info(context, '已复制到剪贴板');
   }
 
   @override
@@ -246,12 +241,12 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: DS.prismPurple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(DS.spacing8),
                   ),
-                  child: const Icon(Icons.translate, color: Colors.purple),
+                  child: Icon(Icons.translate, color: DS.prismPurple),
                 ),
                 const SizedBox(width: DS.sm),
                 Text(
@@ -263,9 +258,11 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 ),
                 const Spacer(),
                 // 关闭按钮
-                IconButton(
+                SparkleIconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
+                  variant: ButtonVariant.ghost,
+                  size: DS.touchTargetMinSize,
                 ),
               ],
             ),
@@ -273,7 +270,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
 
             // 语言选择器
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: DS.md, vertical: DS.sm),
               decoration: BoxDecoration(
                 color: DS.neutral50,
                 borderRadius: BorderRadius.circular(12),
@@ -285,14 +283,17 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     child: _LanguageDropdown(
                       value: _sourceLanguage,
                       items: supportedLanguages,
-                      onChanged: (lang) => setState(() => _sourceLanguage = lang),
+                      onChanged: (lang) =>
+                          setState(() => _sourceLanguage = lang),
                     ),
                   ),
                   // 交换按钮
-                  IconButton(
+                  SparkleIconButton(
                     onPressed: _swapLanguages,
-                    icon: const Icon(Icons.swap_horiz, color: Colors.purple),
-                    tooltip: '交换语言',
+                    icon: const Icon(Icons.swap_horiz),
+                    semanticLabel: '交换语言',
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
                   ),
                   Expanded(
                     child: _LanguageDropdown(
@@ -300,7 +301,8 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                       items: supportedLanguages
                           .where((l) => l.code != 'auto')
                           .toList(),
-                      onChanged: (lang) => setState(() => _targetLanguage = lang),
+                      onChanged: (lang) =>
+                          setState(() => _targetLanguage = lang),
                     ),
                   ),
                 ],
@@ -316,9 +318,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                   color: DS.neutral50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _errorMessage != null
-                        ? DS.error
-                        : DS.neutral200,
+                    color: _errorMessage != null ? DS.error : DS.neutral200,
                   ),
                 ),
                 child: TextField(
@@ -337,23 +337,14 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             // 翻译按钮
             SizedBox(
               height: 48,
-              child: FilledButton.icon(
-                onPressed: _isLoading ? null : _translate,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.translate),
-                label: Text(_isLoading ? '翻译中...' : '翻译'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
-                ),
+              child: SparkleButton(
+                label: _isLoading ? '翻译中...' : '翻译',
+                onPressed: _translate,
+                icon: const Icon(Icons.translate),
+                variant: ButtonVariant.primary,
+                loading: _isLoading,
+                disabled: _isLoading,
+                expand: true,
               ),
             ),
             const SizedBox(height: DS.md),
@@ -377,11 +368,13 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                         style: TextStyle(color: DS.error, fontSize: 12),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => setState(() => _errorMessage = null),
-                      icon: const Icon(Icons.close, size: 16),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    InkWell(
+                      borderRadius: DS.borderRadiusFull,
+                      onTap: () => setState(() => _errorMessage = null),
+                      child: const Padding(
+                        padding: EdgeInsets.all(DS.spacing4),
+                        child: Icon(Icons.close, size: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -393,19 +386,21 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 padding: const EdgeInsets.all(DS.md),
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.05),
+                  color: DS.prismPurple.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.purple.withValues(alpha: 0.2)),
+                  border:
+                      Border.all(color: DS.prismPurple.withValues(alpha: 0.2)),
                 ),
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.purple),
+                    ? Center(
+                        child: CircularProgressIndicator(color: DS.prismPurple),
                       )
                     : SingleChildScrollView(
                         child: Text(
                           _output.isEmpty ? '翻译结果将显示在这里' : _output,
                           style: TextStyle(
-                            color: _output.isEmpty ? DS.neutral400 : DS.neutral900,
+                            color:
+                                _output.isEmpty ? DS.neutral400 : DS.neutral900,
                             fontSize: 14,
                           ),
                         ),
@@ -416,22 +411,18 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             if (_output.isNotEmpty && !_isLoading)
               Padding(
                 padding: const EdgeInsets.only(top: DS.sm),
-                child: TextButton.icon(
+                child: SparkleButton.ghost(
+                  label: '复制结果',
                   onPressed: _copyToClipboard,
                   icon: const Icon(Icons.copy, size: 16),
-                  label: const Text('复制结果', style: TextStyle(fontSize: 12)),
-                  style: ButtonStyle(
-                    foregroundColor: WidgetStatePropertyAll(
-                      Colors.purple.withValues(alpha: 0.7),
-                    ),
-                  ),
                 ),
               ),
 
             // Rating and Favorite buttons
             if (_output.isNotEmpty && !_isLoading)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: DS.md, vertical: DS.sm),
                 decoration: BoxDecoration(
                   color: DS.neutral50,
                   borderRadius: BorderRadius.circular(12),
@@ -459,7 +450,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                           Icons.star,
                           size: 24,
                           color: _currentRating >= starValue
-                              ? Colors.amber
+                              ? DS.warning
                               : DS.neutral300,
                         ),
                       );
@@ -468,36 +459,36 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     const Spacer(),
 
                     // Favorite button
-                    IconButton(
-                      iconSize: 20,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        _isFavorited ? Icons.star : Icons.star_border,
-                        color: _isFavorited ? Colors.amber : DS.neutral500,
+                    Tooltip(
+                      message: _isFavorited ? '取消收藏' : '收藏',
+                      child: InkWell(
+                        borderRadius: DS.borderRadiusFull,
+                        onTap: _toggleFavorite,
+                        child: Padding(
+                          padding: const EdgeInsets.all(DS.spacing4),
+                          child: Icon(
+                            _isFavorited ? Icons.star : Icons.star_border,
+                            color: _isFavorited ? DS.warning : DS.neutral500,
+                            size: 20,
+                          ),
+                        ),
                       ),
-                      onPressed: _toggleFavorite,
-                      tooltip: _isFavorited ? '取消收藏' : '收藏',
                     ),
 
                     const SizedBox(width: DS.sm),
 
                     // History button
-                    TextButton.icon(
+                    SparkleButton.ghost(
+                      label: '历史',
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => const TranslationHistoryScreen(),
+                            builder: (context) =>
+                                const TranslationHistoryScreen(),
                           ),
                         );
                       },
                       icon: const Icon(Icons.history, size: 16),
-                      label: const Text('历史', style: TextStyle(fontSize: 12)),
-                      style: ButtonStyle(
-                        foregroundColor: WidgetStatePropertyAll(
-                          Colors.purple.withValues(alpha: 0.7),
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -527,30 +518,30 @@ class _LanguageDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DropdownButtonHideUnderline(
-      child: DropdownButtonFormField<Language>(
-        initialValue: value,
-        items: items
-            .map(
-              (lang) => DropdownMenuItem(
-                value: lang,
-                child: Text(
-                  lang.toString(),
-                  style: const TextStyle(fontSize: 13),
+        child: DropdownButtonFormField<Language>(
+          initialValue: value,
+          items: items
+              .map(
+                (lang) => DropdownMenuItem(
+                  value: lang,
+                  child: Text(
+                    lang.toString(),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ),
-              ),
-            )
-            .toList(),
-        onChanged: (lang) {
-          if (lang != null) onChanged(lang);
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: DS.sm),
-          isDense: true,
+              )
+              .toList(),
+          onChanged: (lang) {
+            if (lang != null) onChanged(lang);
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: DS.sm),
+            isDense: true,
+          ),
+          icon: const Icon(Icons.arrow_drop_down, size: 20),
+          style: TextStyle(color: DS.neutral900, fontSize: 13),
+          borderRadius: BorderRadius.circular(8),
         ),
-        icon: const Icon(Icons.arrow_drop_down, size: 20),
-        style: TextStyle(color: DS.neutral900, fontSize: 13),
-        borderRadius: BorderRadius.circular(8),
-      ),
-    );
+      );
 }

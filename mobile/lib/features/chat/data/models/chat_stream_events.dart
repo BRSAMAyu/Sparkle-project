@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -114,11 +117,156 @@ class StatusUpdateEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
   });
   final String state;
   final String details;
   final String? currentAgentName;
   final String? activeAgentType;
+}
+
+/// DAG execution signal payload embedded in metadata['dag_execution_event'].
+class DagExecutionSignal {
+  DagExecutionSignal({
+    required this.event,
+    this.layerIndex,
+    this.layerNumber,
+    this.totalLayers,
+    this.stepId,
+    this.toolName,
+    this.success,
+    this.durationMs,
+    this.aborted,
+    this.reason,
+    this.completedSteps,
+    this.stepIds,
+    this.toolNames,
+    this.planId,
+    this.layersCompleted,
+    this.stepsTotal,
+    this.abortReason,
+  });
+
+  final String event;
+  final int? layerIndex;
+  final int? layerNumber;
+  final int? totalLayers;
+  final String? stepId;
+  final String? toolName;
+  final bool? success;
+  final int? durationMs;
+  final bool? aborted;
+  final String? reason;
+  final int? completedSteps;
+  final List<String>? stepIds;
+  final List<String>? toolNames;
+  final String? planId;
+  final int? layersCompleted;
+  final int? stepsTotal;
+  final String? abortReason;
+
+  static DagExecutionSignal? fromDynamic(dynamic raw) {
+    Map<String, dynamic>? data;
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = json.decode(raw);
+        if (decoded is Map<String, dynamic>) {
+          data = decoded;
+        }
+      } catch (_) {}
+    } else if (raw is Map<String, dynamic>) {
+      data = raw;
+    }
+
+    if (data == null) {
+      return null;
+    }
+
+    final event = data['event'] as String?;
+    if (event == null || event.isEmpty) {
+      return null;
+    }
+    final payload = data;
+    if (payload == null) {
+      return null;
+    }
+
+    int? asInt(String camel, String snake) =>
+        (payload[camel] ?? payload[snake]) as int?;
+    String? asString(String camel, String snake) =>
+        (payload[camel] ?? payload[snake]) as String?;
+    List<String>? asStringList(String camel, String snake) =>
+        ((payload[camel] ?? payload[snake]) as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList();
+
+    return DagExecutionSignal(
+      event: event,
+      layerIndex: asInt('layerIndex', 'layer_index'),
+      layerNumber: asInt('layerNumber', 'layer_number'),
+      totalLayers: asInt('totalLayers', 'total_layers'),
+      stepId: asString('stepId', 'step_id'),
+      toolName: asString('toolName', 'tool_name'),
+      success: data['success'] as bool?,
+      durationMs: asInt('durationMs', 'duration_ms'),
+      aborted: data['aborted'] as bool?,
+      reason: data['reason'] as String?,
+      completedSteps: asInt('completedSteps', 'completed_steps'),
+      stepIds: asStringList('stepIds', 'step_ids'),
+      toolNames: asStringList('toolNames', 'tool_names'),
+      planId: asString('planId', 'plan_id'),
+      layersCompleted: asInt('layersCompleted', 'layers_completed'),
+      stepsTotal: asInt('stepsTotal', 'steps_total'),
+      abortReason: asString('abortReason', 'abort_reason'),
+    );
+  }
+
+  String? get statusDetails {
+    switch (event) {
+      case 'layer_start':
+        final layer = layerNumber ?? 0;
+        final total = totalLayers ?? 0;
+        final count = toolNames?.length ?? stepIds?.length ?? 0;
+        return 'DAG 第$layer/$total层，$count个步骤并行执行';
+      case 'step_completed':
+        final name = toolName ?? 'step';
+        if (success == false) {
+          return '$name 执行失败';
+        }
+        if (durationMs != null) {
+          return '$name 执行完成 (${durationMs}ms)';
+        }
+        return '$name 执行完成';
+      case 'layer_end':
+        final layer = layerNumber ?? 0;
+        if (aborted == true) {
+          return '第$layer层已中断';
+        }
+        return '第$layer层执行完成';
+      case 'execution_aborted':
+        return reason ?? 'DAG 执行中断';
+      case 'execution_end':
+        if (aborted == true) {
+          return abortReason ?? 'DAG 执行结束（中断）';
+        }
+        return 'DAG 执行完成';
+      default:
+        return null;
+    }
+  }
+}
+
+class DagExecutionEvent extends ChatStreamEvent {
+  DagExecutionEvent({
+    required this.signal,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.metadata,
+  });
+
+  final DagExecutionSignal signal;
 }
 
 /// 完整文本事件
@@ -129,6 +277,7 @@ class FullTextEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
   });
   final String content;
 }
@@ -225,7 +374,8 @@ class PlanReviewStatusEvent extends ChatStreamEvent {
     super.promptVersion,
   });
   final String reviewId;
-  final String status; // 'approved', 'rejected', 'modify_requested', 'acknowledged'
+  final String
+      status; // 'approved', 'rejected', 'modify_requested', 'acknowledged'
   final String? message;
   final String? userDecision;
   final int? timestamp;
@@ -241,6 +391,125 @@ class PlanReviewWidgetEvent extends ChatStreamEvent {
     super.promptVersion,
   });
   final Map<String, dynamic> reviewData;
+}
+
+/// State Change Event - Major state change notifications
+/// Triggered when: plan archived/restored/deleted, settings updated, memory cleanup
+class StateChangeEvent extends ChatStreamEvent {
+  StateChangeEvent({
+    required this.changeData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> changeData;
+
+  /// Type of state change
+  String get changeType => changeData['change_type'] as String? ?? 'unknown';
+
+  /// Change ID (UUID)
+  String get changeId => changeData['change_id'] as String? ?? '';
+
+  /// ISO timestamp
+  String get timestamp => changeData['timestamp'] as String? ?? '';
+
+  /// Intervention level: toast, card, modal
+  String get interventionLevel =>
+      changeData['intervention_level'] as String? ?? 'toast';
+
+  /// Priority: low, medium, high
+  String get priority => changeData['priority'] as String? ?? 'low';
+
+  /// Pre-formatted user-friendly message
+  String get formattedMessage =>
+      changeData['formatted_message'] as String? ?? '';
+
+  /// Plan-specific fields (for plan_archived, plan_restored, plan_deleted)
+  String? get planName => changeData['plan_name'] as String?;
+  String? get planId => changeData['plan_id'] as String?;
+  int get taskCountFreed => changeData['task_count_freed'] as int? ?? 0;
+  int get memoryCountRemoved => changeData['memory_count_removed'] as int? ?? 0;
+  String? get newPrimaryPlan => changeData['new_primary_plan'] as String?;
+
+  /// Settings-specific fields (for user_settings_updated)
+  String? get settingField => changeData['setting_field'] as String?;
+  String? get fieldLabel => changeData['field_label'] as String?;
+  dynamic get oldValue => changeData['old_value'];
+  dynamic get newValue => changeData['new_value'];
+  String? get impactDescription => changeData['impact_description'] as String?;
+
+  /// Memory-specific fields (for memory_cleanup)
+  int get memoriesRemoved => changeData['memories_removed'] as int? ?? 0;
+  double get spaceFreedMb =>
+      (changeData['space_freed_mb'] as num?)?.toDouble() ?? 0.0;
+
+  /// Convert to InterventionPushMessage for display
+  InterventionPushMessage toInterventionMessage() => InterventionPushMessage(
+        interventionId: changeId,
+        level: _mapInterventionLevel(),
+        content: InterventionContent(
+          renderedMessage: formattedMessage,
+          intentType: changeType,
+          templateId: 'state_change_$changeType',
+          scaffoldingLevel: 0,
+          contextVariables: {
+            'change_type': changeType,
+            'change_id': changeId,
+            'timestamp': timestamp,
+            if (planId != null) 'plan_id': planId!,
+            if (planName != null) 'plan_name': planName!,
+          },
+        ),
+        actions: _getActions(),
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
+      );
+
+  InterventionLevel _mapInterventionLevel() {
+    switch (interventionLevel) {
+      case 'modal':
+        return InterventionLevel.modal;
+      case 'card':
+        return InterventionLevel.card;
+      case 'toast':
+      default:
+        return InterventionLevel.toast;
+    }
+  }
+
+  List<InterventionAction> _getActions() {
+    // For plan changes, offer to view the plan
+    if (planId != null && changeType.startsWith('plan_')) {
+      return [
+        const InterventionAction(
+          id: 'view_plan',
+          label: '查看计划',
+          type: 'navigation',
+        ),
+      ];
+    }
+
+    // For settings changes, offer to view settings
+    if (changeType == 'user_settings_updated') {
+      return [
+        const InterventionAction(
+          id: 'view_settings',
+          label: '查看设置',
+          type: 'navigation',
+        ),
+      ];
+    }
+
+    // Default: just acknowledge
+    return [
+      const InterventionAction(
+        id: 'acknowledge',
+        label: '知道了',
+        type: 'secondary',
+      ),
+    ];
+  }
 }
 
 /// Milestone Proposal Event
@@ -277,10 +546,12 @@ class ContentReviewWidgetEvent extends ChatStreamEvent {
   String get reviewId => reviewData['review_id'] as String? ?? '';
 
   /// 审查决策: passed/failed/needs_refinement
-  String get decision => reviewData['decision'] as String? ?? 'needs_refinement';
+  String get decision =>
+      reviewData['decision'] as String? ?? 'needs_refinement';
 
   /// 总体评分 0-1
-  double get overallScore => (reviewData['overall_score'] as num?)?.toDouble() ?? 0.0;
+  double get overallScore =>
+      (reviewData['overall_score'] as num?)?.toDouble() ?? 0.0;
 
   /// 是否通过审查
   bool get passed => decision == 'passed' && overallScore >= 0.7;
@@ -316,7 +587,8 @@ class ContentReviewWidgetEvent extends ChatStreamEvent {
   }
 
   /// 是否需要反思修正
-  bool get requiresReflection => reviewData['requires_reflection'] as bool? ?? false;
+  bool get requiresReflection =>
+      reviewData['requires_reflection'] as bool? ?? false;
 }
 
 /// Content Reflection Result Event - 反思修正完成事件
@@ -338,7 +610,8 @@ class ContentReflectionResultEvent extends ChatStreamEvent {
   String get outcome => reflectionData['outcome'] as String? ?? 'unknown';
 
   /// 分数变化
-  double get scoreDelta => (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
+  double get scoreDelta =>
+      (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
 
   /// 执行轮数
   int get rounds => reflectionData['rounds'] as int? ?? 0;
@@ -370,7 +643,8 @@ class ReviewOverrideEvent extends ChatStreamEvent {
   String get reviewId => overrideData['review_id'] as String? ?? '';
 
   /// 原决策
-  String get originalDecision => overrideData['original_decision'] as String? ?? '';
+  String get originalDecision =>
+      overrideData['original_decision'] as String? ?? '';
 
   /// 新决策
   String get newDecision => overrideData['new_decision'] as String? ?? '';
@@ -441,7 +715,8 @@ class AppealResultEvent extends ChatStreamEvent {
   String? get secondaryDecision => resultData['secondary_decision'] as String?;
 
   /// 二次审查分数
-  double? get secondaryScore => (resultData['secondary_score'] as num?)?.toDouble();
+  double? get secondaryScore =>
+      (resultData['secondary_score'] as num?)?.toDouble();
 
   /// 是否申诉通过
   bool get isApproved => status == 'resolved';
@@ -472,7 +747,8 @@ class AchievementUnlockEvent extends ChatStreamEvent {
   final Map<String, dynamic> achievementData;
 
   /// 成就ID
-  String get achievementId => achievementData['achievement_id'] as String? ?? '';
+  String get achievementId =>
+      achievementData['achievement_id'] as String? ?? '';
 
   /// 成就名称
   String get name => achievementData['name'] as String? ?? '';
@@ -552,6 +828,39 @@ class AchievementUnlockModel {
   final List<Map<String, dynamic>>? rewards;
 }
 
+/// ============================================
+/// Achievement Milestone Event
+/// ============================================
+
+/// 成就里程碑通知事件 - 当成就进度达到25%、50%、75%时触发
+class AchievementMilestoneEvent extends ChatStreamEvent {
+  AchievementMilestoneEvent({
+    required this.milestoneData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> milestoneData;
+
+  /// 成就ID
+  String get achievementId => milestoneData['achievement_id'] as String? ?? '';
+
+  /// 成就名称
+  String get achievementName =>
+      milestoneData['achievement_name'] as String? ?? '';
+
+  /// 里程碑百分比（25、50、75）
+  int get milestonePercent => milestoneData['milestone_percent'] as int? ?? 0;
+
+  /// 提示消息
+  String get message => milestoneData['message'] as String? ?? '';
+
+  /// 事件类型
+  String get type => milestoneData['type'] as String? ?? 'progress_milestone';
+}
+
 // ============================================
 // Transparency Events
 // ============================================
@@ -597,24 +906,24 @@ class TransparencyCompleteEvent extends ChatStreamEvent {
 
 /// 透明度数据模型
 class TransparencyData {
-
-  factory TransparencyData.fromJson(Map<String, dynamic> json) {
-    return TransparencyData(
-      steps: (json['steps'] as List<dynamic>?)
-              ?.map((e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      totalDurationMs: json['totalDurationMs'] as int? ?? 0,
-      requestId: json['requestId'] as String? ?? '',
-      totalTokens: json['totalTokens'] as int? ?? 0,
-    );
-  }
   const TransparencyData({
     required this.steps,
     required this.totalDurationMs,
     required this.requestId,
     this.totalTokens = 0,
   });
+
+  factory TransparencyData.fromJson(Map<String, dynamic> json) =>
+      TransparencyData(
+        steps: (json['steps'] as List<dynamic>?)
+                ?.map(
+                    (e) => TransparencyStep.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
+        totalDurationMs: json['totalDurationMs'] as int? ?? 0,
+        requestId: json['requestId'] as String? ?? '',
+        totalTokens: json['totalTokens'] as int? ?? 0,
+      );
 
   final List<TransparencyStep> steps;
   final int totalDurationMs;
@@ -632,20 +941,6 @@ class TransparencyData {
 
 /// 透明度步骤模型（数据定义）
 class TransparencyStep {
-
-  factory TransparencyStep.fromJson(Map<String, dynamic> json) {
-    return TransparencyStep(
-      stepId: json['stepId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
-      durationMs: json['durationMs'] as int?,
-      result: json['result'] as Map<String, dynamic>?,
-      error: json['error'] as String?,
-      agentType: json['agentType'] as String?,
-      stepType: json['type'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
-    );
-  }
   const TransparencyStep({
     required this.stepId,
     required this.name,
@@ -657,6 +952,19 @@ class TransparencyStep {
     this.stepType,
     this.metadata,
   });
+
+  factory TransparencyStep.fromJson(Map<String, dynamic> json) =>
+      TransparencyStep(
+        stepId: json['stepId'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        durationMs: json['durationMs'] as int?,
+        result: json['result'] as Map<String, dynamic>?,
+        error: json['error'] as String?,
+        agentType: json['agentType'] as String?,
+        stepType: json['type'] as String?,
+        metadata: json['metadata'] as Map<String, dynamic>?,
+      );
 
   final String stepId;
   final String name;
@@ -679,6 +987,177 @@ class TransparencyStep {
         return '已完成';
       case 'failed':
         return '失败';
+      default:
+        return status;
+    }
+  }
+
+  /// 格式化耗时
+  String? get formattedDuration {
+    if (durationMs == null) return null;
+    if (durationMs! < 1000) {
+      return '${durationMs}ms';
+    }
+    return '${(durationMs! / 1000).toStringAsFixed(1)}s';
+  }
+}
+
+/// ============================================
+/// Multi-Agent Collaboration Events
+/// ============================================
+
+/// Multi-Agent Collaboration Timeline Event
+/// Shows real-time collaboration between multiple AI agents
+class CollaborationTimelineEvent extends ChatStreamEvent {
+  CollaborationTimelineEvent({
+    required this.collaborationData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> collaborationData;
+
+  /// 工作流类型 (e.g., 'deep_analysis', 'study_plan', 'error_diagnosis')
+  String get workflowType =>
+      collaborationData['workflow_type'] as String? ?? 'unknown';
+
+  /// 总执行时间 (ms)
+  int get executionTimeMs =>
+      collaborationData['execution_time_ms'] as int? ?? 0;
+
+  /// 参与者数量
+  int get participantCount =>
+      collaborationData['participant_count'] as int? ?? 0;
+
+  /// 协作步骤列表
+  List<CollaborationStep> get steps {
+    final stepsList = collaborationData['steps'] as List<dynamic>?;
+    return stepsList
+            ?.map((e) => CollaborationStep.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
+  }
+
+  /// 格式化执行时间
+  String get formattedExecutionTime {
+    if (executionTimeMs < 1000) {
+      return '${executionTimeMs}ms';
+    }
+    return '${(executionTimeMs / 1000).toStringAsFixed(1)}s';
+  }
+
+  /// 转换为UI步骤列表
+  List<TimelineStep> toTimelineSteps() => steps
+      .map(
+        (step) => TimelineStep(
+          agentName: step.agentName,
+          agentRole: step.agentRole,
+          action: step.action,
+          status: step.status,
+          startTimeMs: step.startTimeMs,
+          durationMs: step.durationMs,
+          outputSummary: step.outputSummary,
+          metadata: step.metadata,
+        ),
+      )
+      .toList();
+}
+
+/// 协作步骤数据模型
+class CollaborationStep {
+  const CollaborationStep({
+    required this.agentName,
+    required this.agentRole,
+    required this.action,
+    required this.status,
+    required this.startTimeMs,
+    this.durationMs,
+    this.outputSummary,
+    this.metadata,
+  });
+
+  factory CollaborationStep.fromJson(Map<String, dynamic> json) =>
+      CollaborationStep(
+        agentName: json['agent_name'] as String? ?? 'Unknown',
+        agentRole: json['agent_role'] as String? ?? 'Agent',
+        action: json['action'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        startTimeMs: json['start_time_ms'] as int? ?? 0,
+        durationMs: json['duration_ms'] as int?,
+        outputSummary: json['output_summary'] as String?,
+        metadata: json['metadata'] as Map<String, dynamic>?,
+      );
+
+  final String agentName;
+  final String agentRole;
+  final String action;
+  final String status; // pending, in_progress, completed, failed
+  final int startTimeMs;
+  final int? durationMs;
+  final String? outputSummary;
+  final Map<String, dynamic>? metadata;
+
+  Map<String, dynamic> toJson() => {
+        'agent_name': agentName,
+        'agent_role': agentRole,
+        'action': action,
+        'status': status,
+        'start_time_ms': startTimeMs,
+        'duration_ms': durationMs,
+        'output_summary': outputSummary,
+        'metadata': metadata,
+      };
+}
+
+/// UI步骤模型 (用于渲染)
+class TimelineStep {
+  const TimelineStep({
+    required this.agentName,
+    required this.agentRole,
+    required this.action,
+    required this.status,
+    required this.startTimeMs,
+    this.durationMs,
+    this.outputSummary,
+    this.metadata,
+  });
+
+  final String agentName;
+  final String agentRole;
+  final String action;
+  final String status;
+  final int startTimeMs;
+  final int? durationMs;
+  final String? outputSummary;
+  final Map<String, dynamic>? metadata;
+
+  /// 获取状态颜色
+  String getStatusColor() {
+    switch (status) {
+      case 'completed':
+        return '#66BB6A';
+      case 'failed':
+        return '#EF5350';
+      case 'in_progress':
+        return '#42A5F5';
+      default:
+        return '#BDBDBD';
+    }
+  }
+
+  /// 获取本地化状态标签
+  String getStatusLabel() {
+    switch (status) {
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '失败';
+      case 'in_progress':
+        return '进行中';
+      case 'pending':
+        return '等待中';
       default:
         return status;
     }

@@ -11,20 +11,23 @@ Model Fallback Service - Phase 2d
 创建时间: 2026-01-25
 """
 
-import json
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
-from enum import Enum
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+from typing import Any
+
 from loguru import logger
 
-from app.core.agent_profiles import TaskType, ModelTier
-
+from app.core.agent_profiles import TaskType
 
 # ============================================
 # 数据模型
 # ============================================
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class FallbackReason(str, Enum):
     """降级原因"""
@@ -57,7 +60,7 @@ class ModelPerformanceRecord:
     issues_count: int
 
     # 用户反馈
-    user_satisfied: Optional[bool] = None
+    user_satisfied: bool | None = None
 
     # 执行信息
     response_time_ms: int = 0
@@ -68,7 +71,7 @@ class ModelPerformanceRecord:
 class FallbackDecision:
     """降级决策"""
     should_fallback: bool
-    reason: Optional[FallbackReason]
+    reason: FallbackReason | None
     current_model: str
     suggested_model: str
     confidence: float                  # 0-1，决策置信度
@@ -100,7 +103,7 @@ class ModelUsageStats:
     failed_requests: int = 0
     avg_review_score: float = 0.0
     avg_response_time_ms: float = 0.0
-    last_used: Optional[str] = None
+    last_used: str | None = None
 
 
 # ============================================
@@ -141,12 +144,12 @@ class ModelFallbackService:
         "medium": ["gpt-4o-mini", "claude-3-haiku"],
     }
 
-    def __init__(self, config: Optional[FallbackConfig] = None):
+    def __init__(self, config: FallbackConfig | None = None):
         self._config = config or FallbackConfig()
-        self._performance_history: List[ModelPerformanceRecord] = []
-        self._model_stats: Dict[str, ModelUsageStats] = {}
-        self._consecutive_failures: Dict[str, int] = defaultdict(int)
-        self._last_fallback_time: Optional[datetime] = None
+        self._performance_history: list[ModelPerformanceRecord] = []
+        self._model_stats: dict[str, ModelUsageStats] = {}
+        self._consecutive_failures: dict[str, int] = defaultdict(int)
+        self._last_fallback_time: datetime | None = None
 
     # ============================================
     # 性能记录
@@ -161,7 +164,7 @@ class ModelFallbackService:
         issues_count: int,
         response_time_ms: int = 0,
         token_count: int = 0,
-        user_satisfied: Optional[bool] = None,
+        user_satisfied: bool | None = None,
     ) -> None:
         """
         记录模型性能
@@ -179,7 +182,7 @@ class ModelFallbackService:
         record = ModelPerformanceRecord(
             model_name=model_name,
             task_type=task_type,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             review_passed=review_passed,
             review_score=review_score,
             issues_count=issues_count,
@@ -374,7 +377,7 @@ class ModelFallbackService:
     def get_model_for_task(
         self,
         task_type: TaskType,
-        current_model: Optional[str] = None,
+        current_model: str | None = None,
         retry_count: int = 0,
     ) -> str:
         """
@@ -428,13 +431,13 @@ class ModelFallbackService:
     # 性能分析
     # ============================================
 
-    def get_model_stats(self, model_name: Optional[str] = None) -> Dict[str, ModelUsageStats]:
+    def get_model_stats(self, model_name: str | None = None) -> dict[str, ModelUsageStats]:
         """获取模型使用统计"""
         if model_name:
             return {model_name: self._model_stats.get(model_name)}
         return dict(self._model_stats)
 
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """获取性能摘要"""
         if not self._performance_history:
             return {
@@ -445,7 +448,7 @@ class ModelFallbackService:
 
         total = len(self._performance_history)
         successful = sum(1 for r in self._performance_history if r.review_passed)
-        models_used = list(set(r.model_name for r in self._performance_history))
+        models_used = list({r.model_name for r in self._performance_history})
 
         return {
             "total_records": total,
@@ -460,9 +463,9 @@ class ModelFallbackService:
         self,
         model_name: str,
         window_seconds: int,
-    ) -> List[ModelPerformanceRecord]:
+    ) -> list[ModelPerformanceRecord]:
         """获取最近的记录"""
-        cutoff_time = datetime.utcnow() - timedelta(seconds=window_seconds)
+        cutoff_time = _utcnow() - timedelta(seconds=window_seconds)
         return [
             r for r in self._performance_history
             if r.model_name == model_name
@@ -484,7 +487,7 @@ class ModelFallbackService:
         """获取当前配置"""
         return self._config
 
-    def reset_consecutive_failures(self, model_name: Optional[str] = None) -> None:
+    def reset_consecutive_failures(self, model_name: str | None = None) -> None:
         """重置连续失败计数"""
         if model_name:
             self._consecutive_failures[model_name] = 0
@@ -497,10 +500,10 @@ class ModelFallbackService:
 # 全局实例
 # ============================================
 
-_fallback_service_instance: Optional[ModelFallbackService] = None
+_fallback_service_instance: ModelFallbackService | None = None
 
 
-def get_model_fallback_service(config: Optional[FallbackConfig] = None) -> ModelFallbackService:
+def get_model_fallback_service(config: FallbackConfig | None = None) -> ModelFallbackService:
     """获取ModelFallbackService单例"""
     global _fallback_service_instance
     if _fallback_service_instance is None:

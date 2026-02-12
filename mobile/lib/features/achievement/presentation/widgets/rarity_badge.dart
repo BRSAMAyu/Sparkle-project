@@ -101,39 +101,39 @@ class RarityBadge extends StatelessWidget {
     switch (rarity) {
       case AchievementRarity.common:
         return _RarityColors(
-          background: DS.neutral200,
-          border: DS.neutral400,
-          text: DS.neutral700,
+          background: DS.rarityCommonBg,
+          border: DS.rarityCommon,
+          text: DS.rarityCommonText,
         );
       case AchievementRarity.rare:
         return _RarityColors(
-          background: const Color(0xFFFFF8DC),
-          border: const Color(0xFFFFD700),
-          text: const Color(0xFFB8860B),
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+          background: DS.rarityRareBg,
+          border: DS.rarityRare,
+          text: DS.rarityRareText,
+          gradient: LinearGradient(
+            colors: [DS.rarityRare, DS.rarityRare.withValues(alpha: 0.7)],
           ),
         );
       case AchievementRarity.epic:
         return _RarityColors(
-          background: const Color(0xFFF3E5F5),
-          border: const Color(0xFF9B59B6),
-          text: const Color(0xFF7B1FA2),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF9B59B6), Color(0xFF8E44AD)],
+          background: DS.rarityEpicBg,
+          border: DS.rarityEpic,
+          text: DS.rarityEpicText,
+          gradient: LinearGradient(
+            colors: [DS.rarityEpic, DS.rarityEpic.withValues(alpha: 0.7)],
           ),
         );
       case AchievementRarity.legendary:
         return _RarityColors(
-          background: const Color(0xFFE8F5E3),
-          border: const Color(0xFFFF6B6B),
-          text: const Color(0xFFD32F2F),
-          gradient: const LinearGradient(
+          background: DS.rarityLegendaryBg,
+          border: DS.rarityLegendary,
+          text: DS.rarityLegendaryText,
+          gradient: LinearGradient(
             colors: [
-              Color(0xFFFF6B6B),
-              Color(0xFFFFD93D),
-              Color(0xFF6BCB77),
-              Color(0xFF4D96FF),
+              DS.error,
+              DS.warning,
+              DS.success,
+              DS.info,
             ],
             stops: [0.0, 0.33, 0.66, 1.0],
           ),
@@ -188,13 +188,13 @@ class RarityColorProvider {
   static Color getColor(AchievementRarity rarity) {
     switch (rarity) {
       case AchievementRarity.common:
-        return DS.neutral400;
+        return DS.rarityCommon;
       case AchievementRarity.rare:
-        return const Color(0xFFFFD700);
+        return DS.rarityRare;
       case AchievementRarity.epic:
-        return const Color(0xFF9B59B6);
+        return DS.rarityEpic;
       case AchievementRarity.legendary:
-        return const Color(0xFFFF6B6B);
+        return DS.rarityLegendary;
     }
   }
 
@@ -204,38 +204,37 @@ class RarityColorProvider {
       case AchievementRarity.common:
         return null;
       case AchievementRarity.rare:
-        return const LinearGradient(
-          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+        return LinearGradient(
+          colors: [DS.rarityRare, DS.rarityRare.withValues(alpha: 0.7)],
         );
       case AchievementRarity.epic:
-        return const LinearGradient(
-          colors: [Color(0xFF9B59B6), Color(0xFF8E44AD)],
+        return LinearGradient(
+          colors: [DS.rarityEpic, DS.rarityEpic.withValues(alpha: 0.7)],
         );
       case AchievementRarity.legendary:
-        return const LinearGradient(
+        return LinearGradient(
           colors: [
-            Color(0xFFFF6B6B),
-            Color(0xFFFFD93D),
-            Color(0xFF6BCB77),
-            Color(0xFF4D96FF),
+            DS.error,
+            DS.warning,
+            DS.success,
+            DS.info,
           ],
           stops: [0.0, 0.33, 0.66, 1.0],
         );
     }
   }
 
-  /// 获取稀有度对应的背景颜色（带透明度）
+  /// 获取稀有度对应的背景颜色
   static Color getBackgroundColor(AchievementRarity rarity) {
-    final color = getColor(rarity);
     switch (rarity) {
       case AchievementRarity.common:
-        return DS.neutral200;
+        return DS.rarityCommonBg;
       case AchievementRarity.rare:
-        return color.withValues(alpha: 0.15);
+        return DS.rarityRareBg;
       case AchievementRarity.epic:
-        return color.withValues(alpha: 0.15);
+        return DS.rarityEpicBg;
       case AchievementRarity.legendary:
-        return color.withValues(alpha: 0.1);
+        return DS.rarityLegendaryBg;
     }
   }
 }

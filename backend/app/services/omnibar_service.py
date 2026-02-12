@@ -1,22 +1,24 @@
 
 import json
+from typing import Any
 from uuid import UUID
-from typing import Dict, Any, Optional
+
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.task import TaskType
+from app.schemas.cognitive import CognitiveFragmentCreate
+from app.schemas.task import TaskCreate
+from app.services.cognitive_service import CognitiveService
 from app.services.llm_service import llm_service
 from app.services.task_service import TaskService
-from app.services.cognitive_service import CognitiveService
-from app.schemas.task import TaskCreate
-from app.schemas.cognitive import CognitiveFragmentCreate
-from app.models.task import TaskType
+
 
 class OmniBarService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def dispatch(self, user_id: UUID, text: str) -> Dict[str, Any]:
+    async def dispatch(self, user_id: UUID, text: str) -> dict[str, Any]:
         """
         Dispatch user input to appropriate service
         Returns:
@@ -28,7 +30,7 @@ class OmniBarService:
         # 1. LLM Classification
         classification = await self._classify_intent(text)
         action_type = classification.get("type", "CHAT")
-        
+
         logger.info(f"OmniBar dispatching: {text} -> {action_type}")
 
         if action_type == "TASK":
@@ -50,7 +52,7 @@ class OmniBarService:
                     difficulty=1, # Default
                     energy_cost=1 # Default
                 )
-                
+
                 # TaskService methods are static
                 task = await TaskService.create(db=self.db, obj_in=task_in, user_id=user_id)
                 return {"action_type": "TASK", "data": task}
@@ -68,7 +70,7 @@ class OmniBarService:
                 # Use CognitiveService instance as per its design
                 cognitive_service = CognitiveService(self.db)
                 fragment = await cognitive_service.create_fragment(
-                    user_id=user_id, 
+                    user_id=user_id,
                     data=fragment_in,
                     background_tasks=None # Force sync
                 )
@@ -80,7 +82,7 @@ class OmniBarService:
         else: # CHAT
             return {"action_type": "CHAT", "data": {"initial_message": text}}
 
-    async def _classify_intent(self, text: str) -> Dict[str, Any]:
+    async def _classify_intent(self, text: str) -> dict[str, Any]:
         system_prompt = """
         You are the Omni-Bar Intent Classifier for the Sparkle App.
         Analyze the user's input and classify into:
@@ -89,15 +91,15 @@ class OmniBarService:
         3. 'CHAT': Questions, conversation, requests for advice, or anything complex requiring multi-turn dialogue.
 
         If TASK, extract: title, type (learning/training/reflection/social), estimated_minutes (int, default 30), priority (1-3).
-        
+
         Return JSON ONLY: { "type": "...", "data": ... }
         """
-        
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text}
         ]
-        
+
         try:
             response = await llm_service.chat(messages, temperature=0.1)
             # Clean json

@@ -1,4 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from app.schemas.intervention import (
     EvidenceRef,
@@ -35,7 +39,7 @@ def test_validate_contract_requires_evidence_and_confidence():
 
 def test_validate_contract_rejects_expired():
     service = InterventionService(db=None)
-    expired = datetime.utcnow()
+    expired = _utcnow()
     payload = _build_payload(expires_at=expired)
     errors = service.validate_contract(payload)
     assert "expired_request" in errors

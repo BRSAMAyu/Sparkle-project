@@ -1,6 +1,6 @@
 import httpx
-from loguru import logger
 from google.protobuf import json_format
+from loguru import logger
 
 from app.config import settings
 from app.gen.sparkle.signals.v1 import signals_pb2

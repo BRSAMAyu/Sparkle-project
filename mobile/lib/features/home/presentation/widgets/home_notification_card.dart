@@ -16,7 +16,10 @@ class HomeNotificationCard extends ConsumerWidget {
     // Show community messages notification if there are unread messages
     if (unreadMessageCount > 0) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
+        ),
         child: _buildCommunityNotificationCard(context, unreadMessageCount),
       );
     }
@@ -30,20 +33,25 @@ class HomeNotificationCard extends ConsumerWidget {
         final latest = notifications.first;
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing8,
+          ),
           child: GestureDetector(
             onTap: () => context.push('/notifications'),
             child: MaterialStyler(
               material: AppMaterials.ceramic,
               borderRadius: BorderRadius.circular(16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing16,
+                vertical: DS.spacing12,
+              ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
-                      color:
-                          _getIconColor(latest.type).withValues(alpha: 0.2),
+                      color: _getIconColor(latest.type).withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -84,15 +92,17 @@ class HomeNotificationCard extends ConsumerWidget {
                   if (notifications.length > 1)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2,),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: DS.error,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '+${notifications.length - 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: DS.textOnPrimary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -142,13 +152,18 @@ class HomeNotificationCard extends ConsumerWidget {
   }
 
   Widget _buildCommunityNotificationCard(
-          BuildContext context, int unreadCount,) =>
+    BuildContext context,
+    int unreadCount,
+  ) =>
       GestureDetector(
         onTap: () => context.push('/community'),
         child: MaterialStyler(
           material: AppMaterials.ceramic,
           borderRadius: BorderRadius.circular(16),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing12,
+          ),
           child: Row(
             children: [
               Container(
@@ -189,16 +204,18 @@ class HomeNotificationCard extends ConsumerWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing8,
+                  vertical: DS.spacing4,
+                ),
                 decoration: BoxDecoration(
                   color: DS.error,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   unreadCount > 99 ? '99+' : '$unreadCount',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: DS.textOnPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),

@@ -15,12 +15,14 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: const Text('好奇心胶囊'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         elevation: 0,
       ),
       body: capsuleState.when(
@@ -29,19 +31,21 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             : RefreshIndicator(
                 onRefresh: () =>
                     ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: capsules.length,
-                  itemBuilder: (context, index) {
-                    final capsule = capsules[index];
-                    final isHighlight =
-                        highlightId != null && capsule.id == highlightId;
-                    return CuriosityCapsuleCard(
-                      capsule: capsule,
-                      highlighted: isHighlight,
-                      initiallyExpanded: isHighlight,
-                    );
-                  },
+                child: ContentConstraint(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+                    itemCount: capsules.length,
+                    itemBuilder: (context, index) {
+                      final capsule = capsules[index];
+                      final isHighlight =
+                          highlightId != null && capsule.id == highlightId;
+                      return CuriosityCapsuleCard(
+                        capsule: capsule,
+                        highlighted: isHighlight,
+                        initiallyExpanded: isHighlight,
+                      );
+                    },
+                  ),
                 ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -54,8 +58,11 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lightbulb_outline,
-                size: 64, color: DS.brandPrimary.withValues(alpha: 0.3),),
+            Icon(
+              Icons.lightbulb_outline,
+              size: 64,
+              color: DS.brandPrimary.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: DS.lg),
             Text(
               '今天还没有新的好奇心胶囊',

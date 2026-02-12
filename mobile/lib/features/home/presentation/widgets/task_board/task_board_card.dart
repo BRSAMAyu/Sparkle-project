@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/plan_view.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/priority_view.dart';
@@ -16,12 +15,13 @@ class TaskBoardCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final boardState = ref.watch(taskBoardProvider);
-    final layoutType = getLayoutType(context);
-    final isDualColumn = layoutType == LayoutType.tablet || layoutType == LayoutType.desktop;
+    final isDualColumn = context.isTablet || context.isDesktop;
+    final brightness = Theme.of(context).brightness;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: MaterialStyler(
+        key: ValueKey('task_board_card_$brightness'),
         material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
         padding: const EdgeInsets.all(DS.spacing16),
@@ -29,18 +29,53 @@ class TaskBoardCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with title and view switcher
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '任务看板',
-                  style: context.sparkleTypography.titleLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: DS.textPrimary,
-                  ),
-                ),
-                const TaskViewSwitcher(),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = ResponsiveSystem.isMobile(context);
+                final switcherMinWidth = isMobile ? 260.0 : 320.0;
+
+                if (isMobile) {
+                  // Mobile: Column layout for better space utilization
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '任务看板',
+                        style: context.sparkleTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      const TaskViewSwitcher(),
+                    ],
+                  );
+                }
+
+                // Tablet/Desktop: Row layout
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '任务看板',
+                        style: context.sparkleTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing16),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: switcherMinWidth,
+                        maxWidth: 400,
+                      ),
+                      child: const TaskViewSwitcher(),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: DS.spacing12),
             // Content based on current view with optional dual-column layout
@@ -104,7 +139,10 @@ class TaskBoardCard extends ConsumerWidget {
       ),
     );
 
-  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) => Container(
+  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) {
+    final brightness = Theme.of(context).brightness;
+    return Container(
+      key: ValueKey('side_panel_$brightness'),
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfacePrimary.withValues(alpha: 0.5),
@@ -125,6 +163,7 @@ class TaskBoardCard extends ConsumerWidget {
         ],
       ),
     );
+  }
 
   Widget _buildPanelContent(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Column(

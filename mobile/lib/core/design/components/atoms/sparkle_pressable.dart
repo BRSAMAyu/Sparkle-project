@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 /// Sparkle pressable surface that reads semantic tokens from ThemeExtension.
@@ -31,7 +32,7 @@ class SparklePressable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ?? context.radius.smRadius;
-    final background = backgroundColor ?? Colors.transparent;
+    final background = backgroundColor ?? DS.neutral0.withValues(alpha: 0);
     final side = border ?? BorderSide.none;
 
     return Semantics(
@@ -47,12 +48,14 @@ class SparklePressable extends StatelessWidget {
             onTap: enabled ? onTap : null,
             onLongPress: enabled ? onLongPress : null,
             borderRadius: radius,
-            splashColor: context.colors.brandPrimary.withValues(alpha: 0.12),
-            highlightColor: context.colors.brandPrimary.withValues(alpha: 0.06),
+            splashColor: DS.brandPrimary.withValues(alpha: 0.12),
+            highlightColor: DS.brandPrimary.withValues(alpha: 0.06),
             child: Padding(
               padding: padding ??
                   context.space.edge(
-                      horizontal: context.space.sm, vertical: context.space.xs,),
+                    horizontal: context.space.sm,
+                    vertical: context.space.xs,
+                  ),
               child: child,
             ),
           ),

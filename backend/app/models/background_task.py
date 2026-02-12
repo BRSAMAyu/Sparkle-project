@@ -3,11 +3,11 @@ Background Task Model
 For tracking async operations like AI generation, data sync, etc.
 """
 import enum
-from sqlalchemy import Column, String, Integer, Text, DateTime, Enum, JSON, Float
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Column, Enum, Float, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
@@ -84,5 +84,6 @@ class BackgroundTask(BaseModel):
 
 # Create indexes
 from sqlalchemy import Index
+
 Index("idx_background_tasks_user_status", BackgroundTask.user_id, BackgroundTask.status)
 Index("idx_background_tasks_type", BackgroundTask.task_type)

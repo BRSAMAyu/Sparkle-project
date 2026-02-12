@@ -3,15 +3,20 @@ Next Action Selection Service
 
 追踪用户对next_action的点击/跳过行为，学习用户偏好
 """
-from typing import Optional, Dict, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
-from loguru import logger
 
+from loguru import logger
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, case
 
 from app.models.next_action_selection import NextActionSelection
 from app.services.personalization.preference_service import PreferenceService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NextActionSelectionService:
@@ -46,9 +51,9 @@ class NextActionSelectionService:
         action_title: str,
         selected: bool = False,
         skipped: bool = False,
-        display_position: Optional[int] = None,
-        displayed_actions_count: Optional[int] = None,
-        context: Optional[Dict[str, Any]] = None,
+        display_position: int | None = None,
+        displayed_actions_count: int | None = None,
+        context: dict[str, Any] | None = None,
     ) -> NextActionSelection:
         """
         记录用户对next_action的选择行为
@@ -113,7 +118,7 @@ class NextActionSelectionService:
             return
 
         # 计算偏好更新量（全部使用扁平结构，便于查询和更新）
-        updates: Dict[str, float] = {}
+        updates: dict[str, float] = {}
 
         if selected:
             # 使用 ACTION_PREFERENCE_MAPPING 映射到对应的偏好字段
@@ -152,15 +157,13 @@ class NextActionSelectionService:
         Returns:
             选择率 (0.0 - 1.0)
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         # 统计该类型的显示次数和选择次数
         result = await self.db.execute(
             select(
                 func.count(NextActionSelection.id).label("total"),
-                func.sum(case((NextActionSelection.selected == True, 1), else_=0)).label("selected"),
+                func.sum(case((NextActionSelection.selected, 1), else_=0)).label("selected"),
             )
             .where(
                 and_(
@@ -182,7 +185,7 @@ class NextActionSelectionService:
         self,
         user_id: UUID,
         days: int = 30,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         获取用户对各类型action的选择率
 
@@ -193,16 +196,14 @@ class NextActionSelectionService:
         Returns:
             {action_type: selection_rate} 字典
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         # 统计各类型的显示次数和选择次数
         result = await self.db.execute(
             select(
                 NextActionSelection.action_type,
                 func.count(NextActionSelection.id).label("total"),
-                func.sum(case((NextActionSelection.selected == True, 1), else_=0)).label("selected"),
+                func.sum(case((NextActionSelection.selected, 1), else_=0)).label("selected"),
             )
             .where(
                 and_(
@@ -235,16 +236,14 @@ class NextActionSelectionService:
         Returns:
             跳过次数
         """
-        from datetime import datetime, timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = _utcnow() - timedelta(days=days)
 
         result = await self.db.execute(
             select(func.count(NextActionSelection.id))
             .where(
                 and_(
                     NextActionSelection.user_id == user_id,
-                    NextActionSelection.skipped == True,
+                    NextActionSelection.skipped,
                     NextActionSelection.created_at >= cutoff_date,
                 )
             )

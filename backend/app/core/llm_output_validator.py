@@ -12,9 +12,8 @@ LLM 输出验证与过滤模块
 创建时间: 2026-01-03
 """
 
-import re
 import logging
-from typing import Dict, Tuple, Optional, List
+import re
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class ValidationResult:
     """验证结果"""
     is_valid: bool
     sanitized_text: str
-    violations: List[str]
+    violations: list[str]
     action: str  # "allow", "block", "sanitize"
     risk_score: float = 0.0  # 0.0 - 1.0
 
@@ -128,7 +127,7 @@ class LLMOutputValidator:
 
         logger.info(f"LLMOutputValidator initialized (strict_mode={strict_mode})")
 
-    def validate(self, text: str, context: Optional[Dict] = None) -> ValidationResult:
+    def validate(self, text: str, context: dict | None = None) -> ValidationResult:
         """
         验证 LLM 输出
 
@@ -232,10 +231,7 @@ class LLMOutputValidator:
             if matches:
                 for match in matches:
                     # 部分遮蔽
-                    if isinstance(match, tuple):
-                        match_str = match[0] if isinstance(match, tuple) else match
-                    else:
-                        match_str = match
+                    match_str = (match[0] if isinstance(match, tuple) else match) if isinstance(match, tuple) else match
 
                     masked = self._mask_sensitive(match_str)
                     sanitized_text = sanitized_text.replace(match_str, masked)
@@ -258,10 +254,7 @@ class LLMOutputValidator:
             matches = pattern.findall(sanitized_text)
             if matches:
                 for match in matches:
-                    if isinstance(match, tuple):
-                        match_str = match[0]
-                    else:
-                        match_str = match
+                    match_str = match[0] if isinstance(match, tuple) else match
 
                     # 替换为警告
                     warning = f"[{description}_FILTERED]"
@@ -284,10 +277,7 @@ class LLMOutputValidator:
             matches = pattern.findall(sanitized_text)
             if matches:
                 for match in matches:
-                    if isinstance(match, tuple):
-                        match_str = match[0]
-                    else:
-                        match_str = match
+                    match_str = match[0] if isinstance(match, tuple) else match
 
                     # 替换为警告
                     warning = f"[{description}_FILTERED]"
@@ -328,7 +318,7 @@ class LLMOutputValidator:
         else:
             return text[:4] + "*" * (length - 8) + text[-4:]
 
-    def truncate_if_needed(self, text: str, max_length: Optional[int] = None) -> str:
+    def truncate_if_needed(self, text: str, max_length: int | None = None) -> str:
         """
         如果需要则截断文本
 
@@ -386,7 +376,7 @@ class LLMOutputValidator:
 class DetectionResult:
     """内部检测结果"""
     detected: bool
-    violations: List[str]
+    violations: list[str]
     sanitized_text: str
     high_risk: bool
 

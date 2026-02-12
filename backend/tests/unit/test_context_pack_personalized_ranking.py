@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 from sqlalchemy import text
@@ -32,14 +36,14 @@ async def test_context_pack_uses_personalized_weights(db_session, monkeypatch):
     memory_service = MemoryService(db_session)
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="stale_high_evidence",
-        pref_value={"value": "x" * 40},
+        pref_key="response_style",
+        pref_value={"value": "x"},
         evidence_refs=[{"type": "event", "id": "evt_1"}, {"type": "concept", "id": "c_1"}],
     )
     await memory_service.upsert_preference(
         user_id=user_id,
-        pref_key="fresh_lower_evidence",
-        pref_value={"value": "y" * 40},
+        pref_key="learning_style",
+        pref_value={"value": "y"},
         evidence_refs=[{"type": "event", "id": "evt_2"}],
     )
 
@@ -48,9 +52,9 @@ async def test_context_pack_uses_personalized_weights(db_session, monkeypatch):
             "UPDATE memory_preferences SET updated_at = :ts WHERE user_id = :uid AND pref_key = :key"
         ),
         {
-            "ts": datetime.utcnow() - timedelta(days=200),
+            "ts": _utcnow() - timedelta(days=200),
             "uid": str(user_id),
-            "key": "stale_high_evidence",
+            "key": "response_style",
         },
     )
     await db_session.commit()
@@ -63,10 +67,10 @@ async def test_context_pack_uses_personalized_weights(db_session, monkeypatch):
     )
 
     scheduler = ContextBudgetScheduler(
-        budgets={"chat": {"preferences": 5, "goals": 50, "episodic": 50}}
+        budgets={"chat": {"preferences": 10, "goals": 50, "episodic": 50}}
     )
     builder = ContextPackBuilder(db_session, scheduler=scheduler)
     pack = await builder.build(user_id, intent="chat")
 
-    assert "fresh_lower_evidence" in pack.preferences
-    assert "stale_high_evidence" not in pack.preferences
+    assert "learning_style" in pack.preferences
+    assert "response_style" not in pack.preferences

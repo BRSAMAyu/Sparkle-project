@@ -4,15 +4,21 @@ Memory Evolution Service
 
 Tracks and manages memory evolution history, predictions, and analysis.
 """
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
-from sqlalchemy.orm import selectinload
-from loguru import logger
+import inspect
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
 
-from app.models.memory_evolution import MemoryEvolution, EvolutionPrediction
-from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory
+from loguru import logger
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.memory import MemoryPreference
+from app.models.memory_evolution import EvolutionPrediction, MemoryEvolution
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryEvolutionService:
@@ -21,16 +27,26 @@ class MemoryEvolutionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    async def _extract_scalars(result: Any) -> list[Any]:
+        scalars_obj = result.scalars()
+        if inspect.isawaitable(scalars_obj):
+            scalars_obj = await scalars_obj
+        rows = scalars_obj.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
+        return list(rows)
+
     async def track_memory_change(
         self,
         memory_id: str,
         memory_type: str,
-        old_value: Dict[str, Any],
-        new_value: Dict[str, Any],
+        old_value: dict[str, Any],
+        new_value: dict[str, Any],
         change_reason: str,
-        trigger_event: Optional[str] = None,
-        trigger_source: Optional[str] = None,
-        workflow_id: Optional[str] = None,
+        trigger_event: str | None = None,
+        trigger_source: str | None = None,
+        workflow_id: str | None = None,
     ) -> MemoryEvolution:
         """
         记录记忆变化
@@ -59,7 +75,7 @@ class MemoryEvolutionService:
         # 3. Evidence count changes
         evidence_count_before = old_value.get('evidence_count', 0)
         evidence_count_after = new_value.get('evidence_count', 0)
-        new_evidence_ids = new_value.get('evidence_refs', [])
+        new_evidence_ids = self._extract_evidence_ids(new_value.get('evidence_refs', []))
 
         # 4. Analyze impact
         impact_score = await self._calculate_impact_score(
@@ -88,8 +104,8 @@ class MemoryEvolutionService:
             trigger_event=trigger_event,
             trigger_source=trigger_source or self._identify_trigger_source(workflow_id),
             workflow_id=workflow_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         self.db.add(evolution)
@@ -106,12 +122,31 @@ class MemoryEvolutionService:
 
         return evolution
 
+    @staticmethod
+    def _extract_evidence_ids(evidence_refs: Any) -> list:
+        """Extract UUIDs from evidence refs, skipping non-UUID values."""
+        refs = evidence_refs or []
+        ids = []
+        for ref in refs:
+            ref_id = None
+            if isinstance(ref, dict):
+                ref_id = ref.get("id")
+            else:
+                ref_id = getattr(ref, "id", None)
+            if not ref_id:
+                continue
+            try:
+                ids.append(UUID(str(ref_id)))
+            except (ValueError, TypeError):
+                continue
+        return ids
+
     async def get_evolution_history(
         self,
         memory_id: str,
         limit: int = 50,
         include_predictions: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取记忆演化历史
 
@@ -130,7 +165,7 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(limit)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         # 2. Build timeline
         timeline = []
@@ -173,7 +208,7 @@ class MemoryEvolutionService:
     async def compare_memory_versions(
         self,
         evolution_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         对比记忆版本
 
@@ -184,6 +219,11 @@ class MemoryEvolutionService:
             Dict: 版本对比结果
         """
         evolution = await self.db.get(MemoryEvolution, evolution_id)
+        if not isinstance(getattr(evolution, "old_value", None), dict):
+            result = await self.db.execute(
+                select(MemoryEvolution).where(MemoryEvolution.id == evolution_id)
+            )
+            evolution = result.scalar_one_or_none()
         if not evolution:
             raise ValueError(f"Evolution {evolution_id} not found")
 
@@ -225,7 +265,7 @@ class MemoryEvolutionService:
         self,
         memory_id: str,
         time_range_days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         演化可视化数据
 
@@ -236,7 +276,7 @@ class MemoryEvolutionService:
         Returns:
             Dict: 可视化数据
         """
-        start_date = datetime.utcnow() - timedelta(days=time_range_days)
+        start_date = _utcnow() - timedelta(days=time_range_days)
 
         # 1. Get evolutions in time range
         result = await self.db.execute(
@@ -249,7 +289,7 @@ class MemoryEvolutionService:
             )
             .order_by(MemoryEvolution.created_at.asc())
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             return {
@@ -302,7 +342,7 @@ class MemoryEvolutionService:
         self,
         memory_id: str,
         time_horizon_days: int = 7,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         预测记忆演化
 
@@ -325,14 +365,14 @@ class MemoryEvolutionService:
             .order_by(MemoryEvolution.created_at.desc())
             .limit(100)
         )
-        evolutions = result.scalars().all()
+        evolutions = await self._extract_scalars(result)
 
         if not evolutions:
             logger.warning(f"No evolution history for {memory_id}, skipping prediction")
             return []
 
         # 3. Analyze evolution patterns
-        patterns = self._analyze_evolution_patterns(evolutions)
+        self._analyze_evolution_patterns(evolutions)
 
         predictions = []
 
@@ -369,8 +409,8 @@ class MemoryEvolutionService:
                 predicted_confidence=pred.get('predicted_confidence'),
                 factors=pred.get('factors'),
                 similar_evolutions=pred.get('similar_evolutions', []),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(prediction_record)
 
@@ -380,7 +420,7 @@ class MemoryEvolutionService:
 
     # ============ Helper Methods ============
 
-    def _detect_change_type(self, old_value: Dict, new_value: Dict) -> str:
+    def _detect_change_type(self, old_value: dict, new_value: dict) -> str:
         """Detect the type of change"""
         if not old_value or old_value == {}:
             return 'create'
@@ -397,8 +437,8 @@ class MemoryEvolutionService:
     async def _calculate_impact_score(
         self,
         memory_id: str,
-        old_value: Dict,
-        new_value: Dict,
+        old_value: dict,
+        new_value: dict,
     ) -> float:
         """Calculate the impact score of a change"""
         # Simple heuristic based on confidence change and content change
@@ -420,19 +460,19 @@ class MemoryEvolutionService:
         impact = (confidence_delta * 0.6) + (content_change * 0.4)
         return min(1.0, max(0.0, impact))
 
-    async def _find_affected_decisions(self, memory_id: str) -> List[str]:
+    async def _find_affected_decisions(self, memory_id: str) -> list[str]:
         """Find decisions affected by this memory change"""
         # Placeholder: In a full implementation, query decision records
         # that reference this memory
         return []
 
-    async def _find_related_memories(self, memory_id: str) -> List[str]:
+    async def _find_related_memories(self, memory_id: str) -> list[str]:
         """Find memories related to this one"""
         # Placeholder: In a full implementation, use semantic similarity
         # or graph relationships to find related memories
         return []
 
-    def _identify_trigger_source(self, workflow_id: Optional[str]) -> str:
+    def _identify_trigger_source(self, workflow_id: str | None) -> str:
         """Identify the source of the trigger"""
         if workflow_id:
             if 'agent' in workflow_id.lower():
@@ -454,7 +494,7 @@ class MemoryEvolutionService:
         self,
         memory_id: str,
         limit: int = 10,
-    ) -> List[EvolutionPrediction]:
+    ) -> list[EvolutionPrediction]:
         """Get predictions for a memory"""
         result = await self.db.execute(
             select(EvolutionPrediction)
@@ -463,14 +503,18 @@ class MemoryEvolutionService:
             .order_by(EvolutionPrediction.created_at.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return await self._extract_scalars(result)
 
     def _compare_fields(
         self,
-        old_value: Dict,
-        new_value: Dict,
-    ) -> List[Dict[str, Any]]:
+        old_value: dict,
+        new_value: dict,
+    ) -> list[dict[str, Any]]:
         """Compare fields between old and new values"""
+        if not isinstance(old_value, dict):
+            old_value = {}
+        if not isinstance(new_value, dict):
+            new_value = {}
         changes = []
 
         all_keys = set(old_value.keys()) | set(new_value.keys())
@@ -489,9 +533,9 @@ class MemoryEvolutionService:
 
     async def _analyze_semantic_changes(
         self,
-        old_value: Dict,
-        new_value: Dict,
-    ) -> Dict[str, Any]:
+        old_value: dict,
+        new_value: dict,
+    ) -> dict[str, Any]:
         """Analyze semantic changes"""
         # Placeholder: In a full implementation, use NLP to analyze
         # the semantic difference between old and new values
@@ -515,8 +559,8 @@ class MemoryEvolutionService:
 
     def _calculate_impact_trend(
         self,
-        evolutions: List[MemoryEvolution],
-    ) -> Dict[str, Any]:
+        evolutions: list[MemoryEvolution],
+    ) -> dict[str, Any]:
         """Calculate impact trend over time"""
         if len(evolutions) < 2:
             return {'trend': 'insufficient_data'}
@@ -533,8 +577,8 @@ class MemoryEvolutionService:
 
     def _analyze_evolution_patterns(
         self,
-        evolutions: List[MemoryEvolution],
-    ) -> Dict[str, Any]:
+        evolutions: list[MemoryEvolution],
+    ) -> dict[str, Any]:
         """Analyze evolution patterns"""
         change_reasons = [evo.change_reason for evo in evolutions]
 
@@ -549,9 +593,9 @@ class MemoryEvolutionService:
     async def _predict_decay(
         self,
         memory,
-        evolutions: List[MemoryEvolution],
+        evolutions: list[MemoryEvolution],
         time_horizon: int,
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Predict memory decay"""
         # Simple heuristic based on age and access patterns
         # In a full implementation, use ML model trained on historical data
@@ -560,9 +604,9 @@ class MemoryEvolutionService:
     async def _predict_strengthening(
         self,
         memory,
-        evolutions: List[MemoryEvolution],
+        evolutions: list[MemoryEvolution],
         time_horizon: int,
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Predict memory strengthening"""
         # Check if memory has been consistently reinforced
         recent_evolutions = [evo for evo in evolutions if evo.confidence_delta > 0]
@@ -580,9 +624,9 @@ class MemoryEvolutionService:
     async def _predict_conflicts(
         self,
         memory,
-        evolutions: List[MemoryEvolution],
+        evolutions: list[MemoryEvolution],
         time_horizon: int,
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Predict memory conflicts"""
         # Check for contradictory changes
         has_corrections = any(

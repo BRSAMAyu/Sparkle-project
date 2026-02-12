@@ -30,11 +30,12 @@ class AchievementFilterOptions {
     String? category,
     AchievementRarity? rarity,
     AchievementStatus? status,
-  }) => AchievementFilterOptions(
-      category: category ?? this.category,
-      rarity: rarity ?? this.rarity,
-      status: status ?? this.status,
-    );
+  }) =>
+      AchievementFilterOptions(
+        category: category ?? this.category,
+        rarity: rarity ?? this.rarity,
+        status: status ?? this.status,
+      );
 
   bool get hasFilters => category != null || rarity != null || status != null;
 }
@@ -56,8 +57,7 @@ class AchievementListScreen extends ConsumerStatefulWidget {
       _AchievementListScreenState();
 }
 
-class _AchievementListScreenState
-    extends ConsumerState<AchievementListScreen> {
+class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   AchievementViewMode _viewMode = AchievementViewMode.grid;
   AchievementFilterOptions _filterOptions = const AchievementFilterOptions();
   final TextEditingController _searchController = TextEditingController();
@@ -74,199 +74,207 @@ class _AchievementListScreenState
     final state = ref.watch(achievementProvider);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // 顶部统计面板
-          SliverToBoxAdapter(
-            child: _buildHeader(context, state),
-          ),
+      body: ContentConstraint(
+        child: CustomScrollView(
+          slivers: [
+            // 顶部统计面板
+            SliverToBoxAdapter(
+              child: _buildHeader(context, state),
+            ),
 
-          // 筛选栏
-          SliverToBoxAdapter(
-            child: _buildFilterBar(context),
-          ),
+            // 筛选栏
+            SliverToBoxAdapter(
+              child: _buildFilterBar(context),
+            ),
 
-          // 分类标签
-          SliverToBoxAdapter(
-            child: _buildCategoryTabs(context, state),
-          ),
+            // 分类标签
+            SliverToBoxAdapter(
+              child: _buildCategoryTabs(context, state),
+            ),
 
-          // 内容区域
-          if (state.isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (state.error != null)
-            SliverFillRemaining(
-              child: _buildErrorView(context, state.error!),
-            )
-          else
-            _buildAchievementContent(state),
-        ],
+            // 内容区域
+            if (state.isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (state.error != null)
+              SliverFillRemaining(
+                child: _buildErrorView(context, state.error!),
+              )
+            else
+              _buildAchievementContent(state),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, AchievementState state) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            DS.surfacePrimary,
-            DS.surfaceSecondary,
-          ],
+  Widget _buildHeader(BuildContext context, AchievementState state) =>
+      Container(
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              DS.surfacePrimary,
+              DS.surfaceSecondary,
+            ],
+          ),
         ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // 标题和操作栏
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    '成就',
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXl,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.textPrimary,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // 标题和操作栏
+              Row(
+                children: [
+                  SparkleIconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => context.pop(),
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      '成就',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXl,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.textPrimary,
+                      ),
                     ),
                   ),
-                ),
-                _buildViewToggle(),
-              ],
-            ),
-            const SizedBox(height: DS.spacing16),
+                  _buildViewToggle(),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
 
-            // 连胜指示器
-            DashboardStreakIndicator(
-              onTap: () => _showStreakDetails(context),
-            ),
-            const SizedBox(height: DS.spacing16),
+              // 连胜指示器
+              DashboardStreakIndicator(
+                onTap: () => _showStreakDetails(context),
+              ),
+              const SizedBox(height: DS.spacing16),
 
-            // 统计面板
-            AchievementStatsPanel(stats: state.stats),
-          ],
+              // 统计面板
+              AchievementStatsPanel(stats: state.stats),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildViewToggle() => DecoratedBox(
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildViewModeButton(
-            icon: Icons.grid_view,
-            isActive: _viewMode == AchievementViewMode.grid,
-            onTap: () => setState(() => _viewMode = AchievementViewMode.grid),
-          ),
-          _buildViewModeButton(
-            icon: Icons.view_list,
-            isActive: _viewMode == AchievementViewMode.list,
-            onTap: () => setState(() => _viewMode = AchievementViewMode.list),
-          ),
-        ],
-      ),
-    );
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildViewModeButton(
+              icon: Icons.grid_view,
+              isActive: _viewMode == AchievementViewMode.grid,
+              onTap: () => setState(() => _viewMode = AchievementViewMode.grid),
+            ),
+            _buildViewModeButton(
+              icon: Icons.view_list,
+              isActive: _viewMode == AchievementViewMode.list,
+              onTap: () => setState(() => _viewMode = AchievementViewMode.list),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildViewModeButton({
     required IconData icon,
     required bool isActive,
     required VoidCallback onTap,
-  }) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing8),
-        decoration: BoxDecoration(
-          color: isActive ? DS.brandPrimary : Colors.transparent,
-          borderRadius: DS.borderRadius8,
+  }) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? DS.brandPrimary
+                : DS.surfacePrimary.withValues(alpha: 0),
+            borderRadius: DS.borderRadius8,
+          ),
+          child: Icon(
+            icon,
+            size: DS.iconSizeSm,
+            color: isActive ? DS.textOnPrimary : DS.textSecondary,
+          ),
         ),
-        child: Icon(
-          icon,
-          size: DS.iconSizeSm,
-          color: isActive ? Colors.white : DS.textSecondary,
-        ),
-      ),
-    );
+      );
 
   Widget _buildFilterBar(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing16,
-        vertical: DS.spacing12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                borderRadius: DS.borderRadius12,
-                border: Border.all(color: DS.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search,
-                    size: DS.iconSizeSm,
-                    color: DS.textSecondary,
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: '搜索成就',
-                        hintStyle: TextStyle(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.surfaceSecondary,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.border),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search,
+                      size: DS.iconSizeSm,
+                      color: DS.textSecondary,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: '搜索成就',
+                          hintStyle: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            color: DS.textSecondary,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
+                        style: TextStyle(
                           fontSize: DS.fontSizeSm,
+                          color: DS.textPrimary,
+                        ),
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                        child: Icon(
+                          Icons.clear,
+                          size: DS.iconSizeSm,
                           color: DS.textSecondary,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
                       ),
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        color: DS.textPrimary,
-                      ),
-                      onChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                    ),
-                  ),
-                  if (_searchQuery.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                      child: Icon(
-                        Icons.clear,
-                        size: DS.iconSizeSm,
-                        color: DS.textSecondary,
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: DS.spacing12),
-          _buildFilterButton(),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.spacing12),
+            _buildFilterButton(),
+          ],
+        ),
+      );
 
   Widget _buildFilterButton() {
     final hasFilters = _filterOptions.hasFilters;
@@ -276,7 +284,9 @@ class _AchievementListScreenState
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: hasFilters ? DS.brandPrimary.withValues(alpha: 0.1) : DS.surfaceSecondary,
+          color: hasFilters
+              ? DS.brandPrimary.withValues(alpha: 0.1)
+              : DS.surfaceSecondary,
           borderRadius: DS.borderRadius12,
           border: Border.all(
             color: hasFilters ? DS.brandPrimary : DS.border,
@@ -308,7 +318,8 @@ class _AchievementListScreenState
           final isSelected = category == selectedCategory;
 
           return Padding(
-            padding: EdgeInsets.only(right: index == categories.length - 1 ? 0 : DS.spacing12),
+            padding: EdgeInsets.only(
+                right: index == categories.length - 1 ? 0 : DS.spacing12),
             child: _buildCategoryChip(category, isSelected),
           );
         },
@@ -316,30 +327,32 @@ class _AchievementListScreenState
     );
   }
 
-  Widget _buildCategoryChip(String category, bool isSelected) => GestureDetector(
-      onTap: () => _selectCategory(category),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(
-            color: isSelected ? DS.brandPrimary : DS.border,
+  Widget _buildCategoryChip(String category, bool isSelected) =>
+      GestureDetector(
+        onTap: () => _selectCategory(category),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
+            borderRadius: DS.borderRadiusFull,
+            border: Border.all(
+              color: isSelected ? DS.brandPrimary : DS.border,
+            ),
+          ),
+          child: Text(
+            category,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight:
+                  isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+              color: isSelected ? DS.textOnPrimary : DS.textSecondary,
+            ),
           ),
         ),
-        child: Text(
-          category,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-            color: isSelected ? Colors.white : DS.textSecondary,
-          ),
-        ),
-      ),
-    );
+      );
 
   Widget _buildAchievementContent(AchievementState state) {
     final filteredAchievements = _filterAchievements(state.achievements);
@@ -354,8 +367,8 @@ class _AchievementListScreenState
       return SliverPadding(
         padding: const EdgeInsets.all(DS.spacing16),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: context.isMobile ? 2 : 3,
             mainAxisSpacing: DS.spacing12,
             crossAxisSpacing: DS.spacing12,
           ),
@@ -380,7 +393,10 @@ class _AchievementListScreenState
           (context, index) {
             final achievement = filteredAchievements[index];
             return Padding(
-              padding: EdgeInsets.only(bottom: index < filteredAchievements.length - 1 ? DS.spacing12 : 0),
+              padding: EdgeInsets.only(
+                  bottom: index < filteredAchievements.length - 1
+                      ? DS.spacing12
+                      : 0),
               child: AchievementListCard(
                 achievement: achievement,
                 onTap: () => _openAchievementDetail(achievement),
@@ -394,70 +410,70 @@ class _AchievementListScreenState
   }
 
   Widget _buildEmptyView(BuildContext context) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            size: 64,
-            color: DS.textTertiary,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '没有找到匹配的成就',
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              color: DS.textSecondary,
-            ),
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            '试试调整筛选条件',
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.emoji_events_outlined,
+              size: 64,
               color: DS.textTertiary,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '没有找到匹配的成就',
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                color: DS.textSecondary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '试试调整筛选条件',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textTertiary,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildErrorView(BuildContext context, String error) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: DS.semanticError,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '加载失败',
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              color: DS.textSecondary,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: DS.semanticError,
             ),
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            error,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textTertiary,
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '加载失败',
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                color: DS.textSecondary,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: DS.spacing16),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(achievementProvider.notifier).loadInitialData();
-            },
-            child: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing8),
+            Text(
+              error,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textTertiary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: DS.spacing16),
+            SparkleButton.outline(
+              label: '重试',
+              onPressed: () {
+                ref.read(achievementProvider.notifier).loadInitialData();
+              },
+            ),
+          ],
+        ),
+      );
 
   List<AchievementWithProgress> _filterAchievements(
     List<AchievementWithProgress> achievements,
@@ -467,9 +483,16 @@ class _AchievementListScreenState
     // 搜索过滤
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
-          .where((a) =>
-              a.achievement.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              (a.achievement.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false),)
+          .where(
+            (a) =>
+                a.achievement.name
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ||
+                (a.achievement.description
+                        ?.toLowerCase()
+                        .contains(_searchQuery.toLowerCase()) ??
+                    false),
+          )
           .toList();
     }
 
@@ -553,10 +576,10 @@ class _AchievementListScreenState
   }
 
   void _showFilterSheet(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => _AchievementFilterSheet(
         currentOptions: _filterOptions,
         onApply: (options) {
@@ -576,10 +599,10 @@ class _AchievementListScreenState
   }
 
   void _showStreakDetails(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => Container(
         padding: const EdgeInsets.all(DS.spacing24),
         decoration: BoxDecoration(
@@ -628,153 +651,152 @@ class _AchievementFilterSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing24),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: DS.spacing20),
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: DS.borderRadiusFull,
-              ),
-            ),
-          ),
-
-          // 标题
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '筛选成就',
-                style: TextStyle(
-                  fontSize: DS.fontSizeLg,
-                  fontWeight: DS.fontWeightBold,
+        padding: const EdgeInsets.all(DS.spacing24),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: DS.spacing20),
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: DS.borderRadiusFull,
                 ),
               ),
-              TextButton(
-                onPressed: onClear,
-                child: const Text('清除'),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing16),
-
-          // 稀有度筛选
-          _buildRarityFilter(),
-          const SizedBox(height: DS.spacing16),
-
-          // 状态筛选
-          _buildStatusFilter(),
-          const SizedBox(height: DS.spacing24),
-
-          // 应用按钮
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => onApply(currentOptions),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: DS.borderRadius12,
-                ),
-              ),
-              child: const Text('应用筛选'),
             ),
-          ),
-        ],
-      ),
-    );
+
+            // 标题
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '筛选成就',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeLg,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                SparkleButton.ghost(
+                  label: '清除',
+                  onPressed: onClear,
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+
+            // 稀有度筛选
+            _buildRarityFilter(),
+            const SizedBox(height: DS.spacing16),
+
+            // 状态筛选
+            _buildStatusFilter(),
+            const SizedBox(height: DS.spacing24),
+
+            // 应用按钮
+            SizedBox(
+              width: double.infinity,
+              child: SparkleButton.primary(
+                label: '应用筛选',
+                onPressed: () => onApply(currentOptions),
+                expand: true,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildRarityFilter() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '稀有度',
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '稀有度',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: AchievementRarity.values.map((rarity) {
-            final isSelected = currentOptions.rarity == rarity;
-            return _buildFilterChip(
-              _getRarityName(rarity),
-              isSelected,
-              onTap: () {
-                // Update rarity filter
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: AchievementRarity.values.map((rarity) {
+              final isSelected = currentOptions.rarity == rarity;
+              return _buildFilterChip(
+                _getRarityName(rarity),
+                isSelected,
+                onTap: () {
+                  // Update rarity filter
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
 
   Widget _buildStatusFilter() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '状态',
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight: DS.fontWeightSemibold,
-            color: DS.textSecondary,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '状态',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: AchievementStatus.values.map((status) {
-            final isSelected = currentOptions.status == status;
-            return _buildFilterChip(
-              _getStatusDisplayName(status),
-              isSelected,
-              onTap: () {
-                // Update status filter
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: AchievementStatus.values.map((status) {
+              final isSelected = currentOptions.status == status;
+              return _buildFilterChip(
+                _getStatusDisplayName(status),
+                isSelected,
+                onTap: () {
+                  // Update status filter
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
 
-  Widget _buildFilterChip(String label, bool isSelected, {VoidCallback? onTap}) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? DS.brandPrimary.withValues(alpha: 0.1) : DS.surfaceSecondary,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(
-            color: isSelected ? DS.brandPrimary : DS.border,
+  Widget _buildFilterChip(String label, bool isSelected,
+          {VoidCallback? onTap}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? DS.brandPrimary.withValues(alpha: 0.1)
+                : DS.surfaceSecondary,
+            borderRadius: DS.borderRadiusFull,
+            border: Border.all(
+              color: isSelected ? DS.brandPrimary : DS.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: isSelected ? DS.brandPrimary : DS.textSecondary,
+            ),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            color: isSelected ? DS.brandPrimary : DS.textSecondary,
-          ),
-        ),
-      ),
-    );
+      );
 
   String _getRarityName(AchievementRarity rarity) {
     switch (rarity) {

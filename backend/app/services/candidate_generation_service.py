@@ -5,14 +5,15 @@ Generates candidate actions from signals with 5 constraints
 This service converts signals into actionable candidate suggestions
 while enforcing guardrails to prevent over-intervention.
 """
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 import random
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
+
 from loguru import logger
 
-from app.services.signal_generation_service import Signals, Signal
 from app.core.cache import cache_service
+from app.services.signal_generation_service import Signal, Signals
 
 
 @dataclass
@@ -25,9 +26,9 @@ class CandidateAction:
     confidence: float
     timing_hint: str  # "now", "in_5min", "after_current_task"
     payload_seed: str  # For strong model expansion
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "id": self.id,
@@ -39,6 +40,10 @@ class CandidateAction:
             "payload_seed": self.payload_seed,
             "metadata": self.metadata,
         }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CandidateGenerationService:
@@ -74,7 +79,7 @@ class CandidateGenerationService:
         self,
         user_id: str,
         signals: Signals
-    ) -> List[CandidateAction]:
+    ) -> list[CandidateAction]:
         """
         Generate candidate actions from signals with constraints.
 
@@ -202,7 +207,7 @@ class CandidateGenerationService:
         template = templates.get(action_type, templates["review"])
 
         # Generate unique ID
-        candidate_id = f"ca_{int(datetime.utcnow().timestamp() * 1000)}"
+        candidate_id = f"ca_{int(_utcnow().timestamp() * 1000)}"
 
         return CandidateAction(
             id=candidate_id,
@@ -215,7 +220,7 @@ class CandidateGenerationService:
             metadata=signal.metadata,
         )
 
-    def _apply_diversity(self, candidates: List[CandidateAction]) -> List[CandidateAction]:
+    def _apply_diversity(self, candidates: list[CandidateAction]) -> list[CandidateAction]:
         """
         Constraint 4: Diversity control
 
@@ -301,7 +306,7 @@ class CandidateGenerationService:
         Returns:
             Number of interventions today
         """
-        today = datetime.utcnow().date().isoformat()
+        today = _utcnow().date().isoformat()
         key = f"daily_interventions:{user_id}:{today}"
         count = await cache_service.get(key)
         return int(count) if count else 0
@@ -314,7 +319,7 @@ class CandidateGenerationService:
             user_id: User identifier
             count: Number to increment by
         """
-        today = datetime.utcnow().date().isoformat()
+        today = _utcnow().date().isoformat()
         key = f"daily_interventions:{user_id}:{today}"
         current = await self._get_daily_intervention_count(user_id)
         new_count = current + count
@@ -330,8 +335,8 @@ class CandidateGenerationService:
     async def generate_from_dict(
         self,
         user_id: str,
-        signals_dict: Dict[str, Any]
-    ) -> List[CandidateAction]:
+        signals_dict: dict[str, Any]
+    ) -> list[CandidateAction]:
         """
         Generate candidates from signals dictionary.
 

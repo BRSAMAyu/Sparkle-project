@@ -3,14 +3,18 @@
 """
 import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_preferences import UserPreferencesCenter
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PreferenceService:
@@ -78,8 +82,8 @@ class PreferenceService:
             prefs.explicit = {}
         prefs.explicit.update(updates)
         prefs.version = (prefs.version or 0) + 1
-        prefs.last_explicit_update = datetime.utcnow()
-        prefs.updated_at = datetime.utcnow()
+        prefs.last_explicit_update = _utcnow()
+        prefs.updated_at = _utcnow()
 
         await self.db.commit()
         await self._invalidate_cache(user_id)
@@ -108,8 +112,8 @@ class PreferenceService:
                 prefs.inferred = {}
             prefs.inferred.update(updates)
             prefs.version = current_version + 1
-            prefs.last_inferred_update = datetime.utcnow()
-            prefs.updated_at = datetime.utcnow()
+            prefs.last_inferred_update = _utcnow()
+            prefs.updated_at = _utcnow()
 
             try:
                 await self.db.commit()

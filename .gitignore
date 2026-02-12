@@ -217,3 +217,8 @@ gha-creds-*.json
 postgres_data/
 redis_data/
 minio_data/
+# Quality generated artifacts
+quality/flutter_analyze_report.json
+quality/openapi_snapshot.generated.json
+# Keep dictionaries directory (MDX files for vocabulary lookup)
+# data/dictionaries/

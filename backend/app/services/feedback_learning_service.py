@@ -11,24 +11,27 @@ Feedback Learning Service - Phase 2c
 创建时间: 2026-01-25
 """
 
-import json
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
 from loguru import logger
 
 from app.services.review_history_service import (
-    ReviewHistoryService,
-    ReviewHistoryEntry,
     FeedbackEntry,
     FeedbackType,
+    ReviewHistoryEntry,
+    ReviewHistoryService,
 )
-
 
 # ============================================
 # 学习数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 @dataclass
 class ThresholdAdjustment:
@@ -67,13 +70,13 @@ class LearningReport:
     satisfaction_rate: float           # 满意率
 
     # 调整建议
-    threshold_adjustments: List[ThresholdAdjustment]
-    weight_adjustments: List[WeightAdjustment]
+    threshold_adjustments: list[ThresholdAdjustment]
+    weight_adjustments: list[WeightAdjustment]
 
     # 趋势
-    improving_metrics: List[str]
-    declining_metrics: List[str]
-    stable_metrics: List[str]
+    improving_metrics: list[str]
+    declining_metrics: list[str]
+    stable_metrics: list[str]
 
 
 @dataclass
@@ -82,7 +85,7 @@ class PatternInsight:
     pattern_type: str                  # 'false_positive', 'false_negative', 'inconsistency'
     description: str
     confidence: float
-    examples: List[Dict[str, Any]]
+    examples: list[dict[str, Any]]
     suggested_action: str
 
 
@@ -100,10 +103,10 @@ class ExecutionQualityReport:
 
     # 趋势
     score_trend: str                   # 'improving', 'declining', 'stable'
-    common_issues: List[str]
+    common_issues: list[str]
 
     # 工具表现
-    tool_success_rates: Dict[str, float]
+    tool_success_rates: dict[str, float]
 
 
 # ============================================
@@ -149,8 +152,8 @@ class FeedbackLearningService:
     ):
         self._history = history_service
         self._execution_record_service = execution_record_service
-        self._learning_reports: List[LearningReport] = []
-        self._execution_quality_reports: List[ExecutionQualityReport] = []
+        self._learning_reports: list[LearningReport] = []
+        self._execution_quality_reports: list[ExecutionQualityReport] = []
         self._current_thresholds = dict(self.DEFAULT_THRESHOLDS)
         self._current_weights = dict(self.DEFAULT_WEIGHTS)
 
@@ -178,7 +181,7 @@ class FeedbackLearningService:
         logger.info(f"[FeedbackLearning] Starting analysis for past {days} days")
 
         # 获取时间范围内的数据
-        end_date = datetime.utcnow()
+        end_date = _utcnow()
         start_date = end_date - timedelta(days=days)
 
         # 获取审查历史
@@ -220,7 +223,7 @@ class FeedbackLearningService:
         # 生成报告
         report = LearningReport(
             report_id=f"lr_{uuid.uuid4().hex[:12]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_reviews_analyzed=len(period_reviews),
             total_feedback_analyzed=len(period_feedbacks),
@@ -248,9 +251,9 @@ class FeedbackLearningService:
 
     async def _analyze_misclassifications(
         self,
-        reviews: List[ReviewHistoryEntry],
-        feedbacks: List[FeedbackEntry],
-    ) -> List[Dict[str, Any]]:
+        reviews: list[ReviewHistoryEntry],
+        feedbacks: list[FeedbackEntry],
+    ) -> list[dict[str, Any]]:
         """分析误判"""
         misclassified = []
 
@@ -289,9 +292,9 @@ class FeedbackLearningService:
 
     async def _analyze_thresholds(
         self,
-        reviews: List[ReviewHistoryEntry],
-        feedbacks: List[FeedbackEntry],
-    ) -> List[ThresholdAdjustment]:
+        reviews: list[ReviewHistoryEntry],
+        feedbacks: list[FeedbackEntry],
+    ) -> list[ThresholdAdjustment]:
         """分析阈值调整建议"""
         adjustments = []
 
@@ -346,9 +349,9 @@ class FeedbackLearningService:
 
     async def _analyze_weights(
         self,
-        reviews: List[ReviewHistoryEntry],
-        feedbacks: List[FeedbackEntry],
-    ) -> List[WeightAdjustment]:
+        reviews: list[ReviewHistoryEntry],
+        feedbacks: list[FeedbackEntry],
+    ) -> list[WeightAdjustment]:
         """分析权重调整建议"""
         adjustments = []
 
@@ -384,9 +387,9 @@ class FeedbackLearningService:
 
     async def _analyze_trends(
         self,
-        reviews: List[ReviewHistoryEntry],
+        reviews: list[ReviewHistoryEntry],
         days: int,
-    ) -> Tuple[List[str], List[str], List[str]]:
+    ) -> tuple[list[str], list[str], list[str]]:
         """分析指标趋势"""
         # 获取趋势数据
         improving, declining, stable = [], [], []
@@ -423,7 +426,7 @@ class FeedbackLearningService:
 
         return improving, declining, stable
 
-    def _calculate_satisfaction_rate(self, feedbacks: List[FeedbackEntry]) -> float:
+    def _calculate_satisfaction_rate(self, feedbacks: list[FeedbackEntry]) -> float:
         """计算满意度"""
         if not feedbacks:
             return 0.0
@@ -441,7 +444,7 @@ class FeedbackLearningService:
         import uuid
         return LearningReport(
             report_id=f"lr_empty_{uuid.uuid4().hex[:8]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_reviews_analyzed=reviews_count,
             total_feedback_analyzed=feedbacks_count,
@@ -479,7 +482,7 @@ class FeedbackLearningService:
     async def identify_patterns(
         self,
         days: int = 30,
-    ) -> List[PatternInsight]:
+    ) -> list[PatternInsight]:
         """
         识别审查模式
 
@@ -514,9 +517,9 @@ class FeedbackLearningService:
 
     async def _find_false_positive_pattern(
         self,
-        reviews: List[ReviewHistoryEntry],
-        feedbacks: List[FeedbackEntry],
-    ) -> Optional[PatternInsight]:
+        reviews: list[ReviewHistoryEntry],
+        feedbacks: list[FeedbackEntry],
+    ) -> PatternInsight | None:
         """查找假阳性模式"""
         feedback_by_review = {f.review_id: f for f in feedbacks}
 
@@ -546,9 +549,9 @@ class FeedbackLearningService:
 
     async def _find_false_negative_pattern(
         self,
-        reviews: List[ReviewHistoryEntry],
-        feedbacks: List[FeedbackEntry],
-    ) -> Optional[PatternInsight]:
+        reviews: list[ReviewHistoryEntry],
+        feedbacks: list[FeedbackEntry],
+    ) -> PatternInsight | None:
         """查找假阴性模式"""
         feedback_by_review = {f.review_id: f for f in feedbacks}
 
@@ -578,8 +581,8 @@ class FeedbackLearningService:
 
     async def _find_inconsistency_pattern(
         self,
-        reviews: List[ReviewHistoryEntry],
-    ) -> Optional[PatternInsight]:
+        reviews: list[ReviewHistoryEntry],
+    ) -> PatternInsight | None:
         """查找不一致模式"""
         # 简化实现：检查相似分数的不同决策
         decision_by_score = defaultdict(set)
@@ -604,7 +607,7 @@ class FeedbackLearningService:
 
         return None
 
-    def _find_common_metrics(self, metrics_list: List[List[Dict]]) -> List[str]:
+    def _find_common_metrics(self, metrics_list: list[list[dict]]) -> list[str]:
         """找出共同的未通过指标"""
         metric_failures = defaultdict(int)
         for metrics in metrics_list:
@@ -621,7 +624,7 @@ class FeedbackLearningService:
 
     async def record_execution_result(
         self,
-        validation_result: "Dict[str, Any]",
+        validation_result: "dict[str, Any]",
     ) -> None:
         """
         记录方案执行结果到学习系统
@@ -693,7 +696,7 @@ class FeedbackLearningService:
 
             report = ExecutionQualityReport(
                 report_id=f"eq_{uuid.uuid4().hex[:12]}",
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=_utcnow().isoformat(),
                 period_days=days,
                 total_executions=stats.get("total", 0),
                 avg_quality_score=stats.get("avg_score", 0.0),
@@ -720,8 +723,8 @@ class FeedbackLearningService:
 
     def _extract_common_issues(
         self,
-        trend_data: List[Dict[str, Any]],
-    ) -> List[str]:
+        trend_data: list[dict[str, Any]],
+    ) -> list[str]:
         """从趋势数据中提取常见问题"""
         issue_counts = defaultdict(int)
 
@@ -759,7 +762,7 @@ class FeedbackLearningService:
         import uuid
         return ExecutionQualityReport(
             report_id=f"eq_empty_{uuid.uuid4().hex[:8]}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=_utcnow().isoformat(),
             period_days=days,
             total_executions=0,
             avg_quality_score=0.0,
@@ -773,33 +776,33 @@ class FeedbackLearningService:
     # 配置获取
     # ============================================
 
-    def get_current_thresholds(self) -> Dict[str, float]:
+    def get_current_thresholds(self) -> dict[str, float]:
         """获取当前阈值配置"""
         return dict(self._current_thresholds)
 
-    def get_current_weights(self) -> Dict[str, float]:
+    def get_current_weights(self) -> dict[str, float]:
         """获取当前权重配置"""
         return dict(self._current_weights)
 
     def get_learning_reports(
         self,
         limit: int = 10,
-    ) -> List[LearningReport]:
+    ) -> list[LearningReport]:
         """获取学习报告"""
         return self._learning_reports[-limit:]
 
-    def get_latest_report(self) -> Optional[LearningReport]:
+    def get_latest_report(self) -> LearningReport | None:
         """获取最新的学习报告"""
         return self._learning_reports[-1] if self._learning_reports else None
 
     def get_execution_quality_reports(
         self,
         limit: int = 10,
-    ) -> List[ExecutionQualityReport]:
+    ) -> list[ExecutionQualityReport]:
         """获取执行质量报告"""
         return self._execution_quality_reports[-limit:]
 
-    def get_latest_execution_report(self) -> Optional[ExecutionQualityReport]:
+    def get_latest_execution_report(self) -> ExecutionQualityReport | None:
         """获取最新的执行质量报告"""
         return self._execution_quality_reports[-1] if self._execution_quality_reports else None
 
@@ -808,7 +811,7 @@ class FeedbackLearningService:
 # 全局实例管理
 # ============================================
 
-_learning_services: Dict[str, FeedbackLearningService] = {}
+_learning_services: dict[str, FeedbackLearningService] = {}
 
 
 def get_feedback_learning_service(

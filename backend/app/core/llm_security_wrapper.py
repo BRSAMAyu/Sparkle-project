@@ -13,13 +13,14 @@ LLM 安全包装器 - 为现有 LLM 服务提供无缝安全集成
 """
 
 import logging
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from typing import Any
 
-from app.core.llm_safety import LLMSafetyService, SafetyCheckResult
-from app.core.llm_quota import LLMCostGuard, QuotaCheckResult
-from app.core.llm_output_validator import LLMOutputValidator, ValidationResult
 from app.core.llm_monitoring import LLMMonitor
+from app.core.llm_output_validator import LLMOutputValidator
+from app.core.llm_quota import LLMCostGuard
+from app.core.llm_safety import LLMSafetyService, SafetyCheckResult
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class LLMSecurityWrapper:
         self,
         llm_service: Any,
         redis_client: Any,
-        config: Optional[SecurityConfig] = None
+        config: SecurityConfig | None = None
     ):
         """
         初始化安全包装器
@@ -86,8 +87,8 @@ class LLMSecurityWrapper:
     async def chat(
         self,
         user_id: str,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> str:
@@ -190,9 +191,9 @@ class LLMSecurityWrapper:
         user_id: str,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        conversation_history: Optional[List[Dict]] = None,
-        model: Optional[str] = None
+        tools: list[dict[str, Any]],
+        conversation_history: list[dict] | None = None,
+        model: str | None = None
     ) -> Any:
         """
         安全的带工具调用的聊天
@@ -291,18 +292,17 @@ class LLMSecurityWrapper:
                 response.content = validation_result.sanitized_text
 
         # 5. 记录使用量
-        if self.config.enable_quota_check and self.cost_guard:
-            if hasattr(response, 'content'):
-                actual_tokens = self.cost_guard.estimate_tokens(response.content)
-                await self.cost_guard.record_usage(user_id, actual_tokens, model or "unknown")
+        if self.config.enable_quota_check and self.cost_guard and hasattr(response, 'content'):
+            actual_tokens = self.cost_guard.estimate_tokens(response.content)
+            await self.cost_guard.record_usage(user_id, actual_tokens, model or "unknown")
 
         return response
 
     async def stream_chat(
         self,
         user_id: str,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> AsyncGenerator[str, None]:
@@ -385,9 +385,9 @@ class LLMSecurityWrapper:
     async def generate_embeddings(
         self,
         user_id: str,
-        texts: List[str],
-        model: Optional[str] = None
-    ) -> List[List[float]]:
+        texts: list[str],
+        model: str | None = None
+    ) -> list[list[float]]:
         """
         安全的 Embedding 生成
 
@@ -442,8 +442,8 @@ class LLMSecurityWrapper:
     async def _filter_messages(
         self,
         user_id: str,
-        messages: List[Dict[str, str]]
-    ) -> tuple[List[Dict[str, str]], SafetyCheckResult]:
+        messages: list[dict[str, str]]
+    ) -> tuple[list[dict[str, str]], SafetyCheckResult]:
         """过滤消息列表"""
         safe_messages = []
         total_violations = []
@@ -494,8 +494,8 @@ class LLMSecurityWrapper:
     async def _call_llm_with_monitoring(
         self,
         user_id: str,
-        messages: List[Dict[str, str]],
-        model: Optional[str],
+        messages: list[dict[str, str]],
+        model: str | None,
         temperature: float,
         **kwargs
     ) -> str:
@@ -526,7 +526,7 @@ class LLMSecurityWrapper:
 
             return response
 
-        except Exception as e:
+        except Exception:
             status = "error"
             raise
 
@@ -566,8 +566,7 @@ class QuotaExceededError(Exception):
 
 if __name__ == "__main__":
     import asyncio
-    import os
-    from unittest.mock import Mock, AsyncMock
+    from unittest.mock import AsyncMock, Mock
 
     # 模拟 LLM 服务
     class MockLLMService:

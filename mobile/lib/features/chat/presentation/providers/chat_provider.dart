@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,232 +13,25 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
-import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
-import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
-// 1. ChatState Class
-class ChatState {
-  // Timestamp for duration calculation
-
-  ChatState({
-    this.isLoading = false,
-    this.isSending = false,
-    this.isLoadingMore = false,
-    this.hasMoreMessages = true,
-    this.conversationId,
-    this.messages = const [],
-    this.error,
-    this.errorCode,
-    this.isErrorRetryable = false,
-    this.streamingContent = '',
-    this.aiStatus,
-    this.aiStatusDetails,
-    this.wsConnectionState = WsConnectionState.disconnected,
-    this.graphragTrace,
-    this.reasoningSteps = const [],
-    this.isReasoningActive = false,
-    this.reasoningStartTime,
-    this.lastActionStatus,
-    this.lastActionMessage,
-    this.attachedFiles = const [],
-    this.pendingAchievementUnlock,
-    this.pendingPlanReview,
-    this.pendingReviewActionId,
-    this.pendingContentReview,
-    this.lastPromptTokens,
-    this.lastCompletionTokens,
-    this.lastTotalTokens,
-    this.currentAgentName,
-    this.activeAgentType,
-    this.activeTools = const [],
-    this.dailyTokens,
-    this.dailyTokenLimit,
-    this.dailyCostMicroUsd,
-    // Transparency fields
-    this.transparencyData,
-    this.currentStepId,
-    this.currentStepIndex,
-  });
-  final bool isLoading;
-  final bool isSending;
-  final bool isLoadingMore; // 加载更多历史消息
-  final bool hasMoreMessages; // 是否还有更多消息
-  final String? conversationId;
-  final List<ChatMessageModel> messages;
-  final String? error;
-  final String? errorCode; // 错误代码
-  final bool isErrorRetryable; // 错误是否可重试
-  final String streamingContent;
-  final String? aiStatus; // THINKING, GENERATING, etc.
-  final String? aiStatusDetails;
-  final WsConnectionState wsConnectionState; // WebSocket 连接状态
-  final GraphRAGTrace? graphragTrace; // 🔥 必杀技 A: GraphRAG 追踪信息
-
-  // New: Chain of Thought Visualization
-  final List<ReasoningStep> reasoningSteps; // Real-time reasoning steps
-  final bool isReasoningActive; // Currently showing reasoning
-  final int? reasoningStartTime;
-
-  // New: Action status feedback for UI
-  final String? lastActionStatus;
-  final String? lastActionMessage;
-  final List<StoredFile> attachedFiles;
-
-  // Achievement Unlock state
-  final AchievementUnlockEvent? pendingAchievementUnlock;
-
-  // Plan Review state
-  final PlanReviewResult? pendingPlanReview;
-  final String? pendingReviewActionId;
-
-  // Content Review state (Phase 2b)
-  final ContentReviewResult? pendingContentReview;
-  final int? lastPromptTokens;
-  final int? lastCompletionTokens;
-  final int? lastTotalTokens;
-  final String? currentAgentName;
-  final String? activeAgentType;
-  final List<String> activeTools;
-  final int? dailyTokens;
-  final int? dailyTokenLimit;
-  final int? dailyCostMicroUsd;
-
-  // Transparency fields
-  final TransparencyData? transparencyData;
-  final int? currentStepId;
-  final int? currentStepIndex;
-
-  int get listItemCount =>
-      messages.length +
-      (isSending ? 1 : 0) +
-      (aiStatus != null ? 1 : 0) +
-      (isReasoningActive ? 1 : 0);
-
-  ChatState copyWith({
-    bool? isLoading,
-    bool? isSending,
-    bool? isLoadingMore,
-    bool? hasMoreMessages,
-    String? conversationId,
-    bool clearConversation = false,
-    List<ChatMessageModel>? messages,
-    String? error,
-    String? errorCode,
-    bool? isErrorRetryable,
-    bool clearError = false,
-    String? streamingContent,
-    String? aiStatus,
-    bool clearAiStatus = false,
-    String? aiStatusDetails,
-    WsConnectionState? wsConnectionState,
-    GraphRAGTrace? graphragTrace,
-    bool clearGraphragTrace = false,
-    List<ReasoningStep>? reasoningSteps,
-    bool? isReasoningActive,
-    int? reasoningStartTime,
-    bool clearReasoning = false,
-    String? lastActionStatus,
-    String? lastActionMessage,
-    bool clearActionFeedback = false,
-    List<StoredFile>? attachedFiles,
-    bool clearAttachments = false,
-    PlanReviewResult? pendingPlanReview,
-    bool clearPendingReview = false,
-    String? pendingReviewActionId,
-    ContentReviewResult? pendingContentReview,
-    bool clearPendingContentReview = false,
-    AchievementUnlockEvent? pendingAchievementUnlock,
-    int? lastPromptTokens,
-    int? lastCompletionTokens,
-    int? lastTotalTokens,
-    String? currentAgentName,
-    String? activeAgentType,
-    List<String>? activeTools,
-    int? dailyTokens,
-    int? dailyTokenLimit,
-    int? dailyCostMicroUsd,
-    // Transparency fields
-    TransparencyData? transparencyData,
-    int? currentStepId,
-    int? currentStepIndex,
-    bool clearTransparency = false,
-  }) =>
-      ChatState(
-        isLoading: isLoading ?? this.isLoading,
-        isSending: isSending ?? this.isSending,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-        hasMoreMessages: hasMoreMessages ?? this.hasMoreMessages,
-        conversationId:
-            clearConversation ? null : conversationId ?? this.conversationId,
-        messages: messages ?? this.messages,
-        error: clearError ? null : error ?? this.error,
-        errorCode: clearError ? null : errorCode ?? this.errorCode,
-        isErrorRetryable:
-            clearError ? false : isErrorRetryable ?? this.isErrorRetryable,
-        streamingContent: streamingContent ?? this.streamingContent,
-        aiStatus: clearAiStatus ? null : aiStatus ?? this.aiStatus,
-        aiStatusDetails:
-            clearAiStatus ? null : aiStatusDetails ?? this.aiStatusDetails,
-        wsConnectionState: wsConnectionState ?? this.wsConnectionState,
-        graphragTrace:
-            clearGraphragTrace ? null : graphragTrace ?? this.graphragTrace,
-        reasoningSteps:
-            clearReasoning ? [] : reasoningSteps ?? this.reasoningSteps,
-        isReasoningActive: clearReasoning
-            ? false
-            : isReasoningActive ?? this.isReasoningActive,
-        reasoningStartTime: clearReasoning
-            ? null
-            : reasoningStartTime ?? this.reasoningStartTime,
-        lastActionStatus: clearActionFeedback
-            ? null
-            : lastActionStatus ?? this.lastActionStatus,
-        lastActionMessage: clearActionFeedback
-            ? null
-            : lastActionMessage ?? this.lastActionMessage,
-        attachedFiles:
-            clearAttachments ? [] : attachedFiles ?? this.attachedFiles,
-        pendingPlanReview:
-            clearPendingReview ? null : pendingPlanReview ?? this.pendingPlanReview,
-        pendingReviewActionId:
-            clearPendingReview ? null : pendingReviewActionId ?? this.pendingReviewActionId,
-        pendingContentReview: clearPendingContentReview
-            ? null
-            : pendingContentReview ?? this.pendingContentReview,
-        pendingAchievementUnlock:
-            pendingAchievementUnlock ?? this.pendingAchievementUnlock,
-        lastPromptTokens: lastPromptTokens ?? this.lastPromptTokens,
-        lastCompletionTokens: lastCompletionTokens ?? this.lastCompletionTokens,
-        lastTotalTokens: lastTotalTokens ?? this.lastTotalTokens,
-        currentAgentName: currentAgentName ?? this.currentAgentName,
-        activeAgentType: activeAgentType ?? this.activeAgentType,
-        activeTools: activeTools ?? this.activeTools,
-        dailyTokens: dailyTokens ?? this.dailyTokens,
-        dailyTokenLimit: dailyTokenLimit ?? this.dailyTokenLimit,
-        dailyCostMicroUsd: dailyCostMicroUsd ?? this.dailyCostMicroUsd,
-        transparencyData: clearTransparency
-            ? null
-            : transparencyData ?? this.transparencyData,
-        currentStepId: clearTransparency
-            ? null
-            : currentStepId ?? this.currentStepId,
-        currentStepIndex: clearTransparency
-            ? null
-            : currentStepIndex ?? this.currentStepIndex,
-      );
-}
+part 'chat_notifier_reviews.dart';
+part 'chat_notifier_history.dart';
+part 'chat_notifier_actions.dart';
+part 'chat_provider_wiring.dart';
 
 // 2. ChatNotifier Class
 class ChatNotifier extends StateNotifier<ChatState> {
@@ -245,8 +39,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     if (DemoDataService.isDemoMode) {
       // Load demo history
       state = state.copyWith(
-          messages: DemoDataService().demoChatHistory,
-          conversationId: 'demo_conv_1',);
+        messages: DemoDataService().demoChatHistory,
+        conversationId: 'demo_conv_1',
+      );
     }
 
     // 监听 WebSocket 连接状态
@@ -273,114 +68,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
   // Review service (lazy initialized)
   ReviewGrpcService? _reviewService;
 
-  /// Submit plan review decision via gRPC
-  Future<bool> submitPlanReview({
-    required ReviewDecision decision,
-    String? userComment,
-    Map<String, String>? meta,
-  }) async {
-    final review = state.pendingPlanReview;
-    if (review == null) {
-      debugPrint('⚠️ No pending plan review to submit');
-      return false;
-    }
-
-    // Get current user
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
-      );
-      return false;
-    }
-
-    // Get access token
-    final authRepository = _ref.read(authRepositoryProvider);
-    final authToken = await authRepository.getAccessToken();
-
-    try {
-      _planReviewService ??= PlanReviewGrpcService();
-
-      // Map ReviewDecision to UserReviewDecision
-      final grpcDecision = _mapReviewDecision(decision);
-
-      final result = await _planReviewService!.submitReview(
-        userId: user.id,
-        planId: review.planId,
-        reviewId: review.reviewId,
-        decision: grpcDecision,
-        userComment: userComment,
-        authToken: authToken,
-        meta: meta,
-      );
-
-      if (result.success) {
-        // Update state with success message
-        state = state.copyWith(
-          lastActionStatus: 'submitted',
-          lastActionMessage: result.message ?? _getSuccessMessage(decision),
-          clearPendingReview: true,
-        );
-
-        // Clear feedback message after delay
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            state = state.copyWith(clearActionFeedback: true);
-          }
-        });
-
-        debugPrint('✅ Plan review submitted: ${decision.name}');
-        return true;
-      } else {
-        // Update state with error message
-        state = state.copyWith(
-          lastActionStatus: 'error',
-          lastActionMessage: result.message ?? 'submit_failed',
-        );
-        debugPrint('❌ Plan review failed: ${result.message}');
-        return false;
-      }
-    } catch (e) {
-      debugPrint('❌ Plan review error: $e');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: 'network_error_retry',
-      );
-      return false;
-    }
-  }
-
-  /// Map ReviewDecision from UI to UserReviewDecision for gRPC
-  UserReviewDecision _mapReviewDecision(ReviewDecision decision) {
-    switch (decision) {
-      case ReviewDecision.approved:
-        return UserReviewDecision.approve;
-      case ReviewDecision.rejected:
-        return UserReviewDecision.reject;
-      case ReviewDecision.needsModification:
-        return UserReviewDecision.modify;
-      case ReviewDecision.requiresConfirmation:
-        return UserReviewDecision.acknowledge;
-    }
-  }
-
-  /// Get user-friendly success message key (to be localized by UI)
-  String _getSuccessMessageKey(ReviewDecision decision) {
-    switch (decision) {
-      case ReviewDecision.approved:
-        return 'review_approved';
-      case ReviewDecision.rejected:
-        return 'review_rejected';
-      case ReviewDecision.needsModification:
-        return 'review_modification_requested';
-      case ReviewDecision.requiresConfirmation:
-        return 'review_confirmed';
-    }
-  }
-
   /// 手动触发重连
   Future<void> reconnect() async {
     await _chatRepository.reconnect();
@@ -405,131 +92,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return priority != 'low';
     }
     return true;
-  }
-
-  Future<void> _updateDailyUsage(UsageEvent event) async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = _dateKey(DateTime.now());
-    final storedDate = prefs.getString(_dailyUsageDateKey);
-
-    var totalTokens = prefs.getInt(_dailyUsageTokensKey) ?? 0;
-    var totalCost = prefs.getInt(_dailyUsageCostKey) ?? 0;
-
-    if (storedDate != today) {
-      totalTokens = 0;
-      totalCost = 0;
-      await prefs.setString(_dailyUsageDateKey, today);
-    }
-
-    totalTokens += event.totalTokens;
-    if (event.costMicroUsd != null) {
-      totalCost += event.costMicroUsd!;
-      await prefs.setInt(_dailyUsageCostKey, totalCost);
-    }
-    await prefs.setInt(_dailyUsageTokensKey, totalTokens);
-
-    state = state.copyWith(
-      dailyTokens: totalTokens,
-      dailyTokenLimit: _dailyTokenLimitDefault,
-      dailyCostMicroUsd: totalCost,
-    );
-  }
-
-  String _dateKey(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
-
-  /// 加载历史对话
-  Future<void> loadConversationHistory(String conversationId) async {
-    state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      final history =
-          await _chatRepository.getConversationHistory(conversationId);
-      state = state.copyWith(
-        isLoading: false,
-        messages: history,
-        conversationId: conversationId,
-      );
-    } catch (e) {
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        '加载历史失败: $e',
-      );
-
-      state = state.copyWith(
-        isLoading: false,
-        error: errorMessage,
-        errorCode: 'UNKNOWN',
-        isErrorRetryable: true,
-      );
-    }
-  }
-
-  void addAttachment(StoredFile file) {
-    if (state.attachedFiles.any((item) => item.id == file.id)) {
-      return;
-    }
-    state = state.copyWith(attachedFiles: [...state.attachedFiles, file]);
-  }
-
-  void removeAttachment(String fileId) {
-    state = state.copyWith(
-      attachedFiles:
-          state.attachedFiles.where((file) => file.id != fileId).toList(),
-    );
-  }
-
-  void clearAttachments() {
-    state = state.copyWith(clearAttachments: true);
-  }
-
-  /// 获取最近对话列表
-  Future<List<Map<String, dynamic>>> getRecentConversations() async =>
-      _chatRepository.getRecentConversations();
-
-  /// 加载更多历史消息（分页）
-  Future<void> loadMoreHistory() async {
-    // 如果没有对话 ID 或正在加载或没有更多消息，则不加载
-    if (state.conversationId == null ||
-        state.isLoadingMore ||
-        !state.hasMoreMessages) {
-      return;
-    }
-
-    state = state.copyWith(isLoadingMore: true);
-
-    try {
-      const pageSize = 20;
-      final currentCount = state.messages.length;
-
-      final moreMessages = await _chatRepository.getConversationHistory(
-        state.conversationId!,
-        limit: pageSize,
-        offset: currentCount,
-      );
-
-      // 如果返回的消息少于 pageSize，说明没有更多消息了
-      final hasMore = moreMessages.length >= pageSize;
-
-      state = state.copyWith(
-        isLoadingMore: false,
-        messages: [...state.messages, ...moreMessages],
-        hasMoreMessages: hasMore,
-      );
-    } catch (e) {
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        '加载更多消息失败: $e',
-      );
-
-      state = state.copyWith(
-        isLoadingMore: false,
-        error: errorMessage,
-        errorCode: 'UNKNOWN',
-        isErrorRetryable: true,
-      );
-    }
   }
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
@@ -568,16 +130,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
       isSending: true,
       streamingContent: '',
       activeTools: const [],
+      clearDagExecution: true,
       clearError: true,
     );
 
-      var accumulatedContent = '';
-      String? responseId;
-      String? traceId;
-      String? workflowId;
-      String? promptVersion;
+    var accumulatedContent = '';
+    String? responseId;
+    String? traceId;
+    String? workflowId;
+    String? promptVersion;
     String? lastAiStatus;
     final accumulatedWidgets = <WidgetPayload>[];
+    Map<String, dynamic>? accumulatedCollaboration;
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -622,6 +186,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
 
+    // 🔧 P1-1: 使用 finally 确保 isSending 总是被重置
+    var shouldResetSending = true;
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
@@ -629,9 +195,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
-      final extraContext = selectedPlanId != null
-          ? {'plan_id': selectedPlanId}
-          : null;
+      final extraContext =
+          selectedPlanId != null ? {'plan_id': selectedPlanId} : null;
 
       // Get selected chat mode
       final chatMode = _ref.read(chatModeProvider);
@@ -683,6 +248,48 @@ class ChatNotifier extends StateNotifier<ChatState> {
               planContextInjected = true;
             }
           }
+          if (metadata != null) {
+            final selectedExpertsRaw = metadata['selected_experts'];
+            final routingStrategy = metadata['routing_strategy'];
+            final fallbackReason = metadata['fallback_reason'];
+            final routeConfidence = metadata['route_confidence'];
+            final expertEntrySource = metadata['expert_entry_source'];
+            if (selectedExpertsRaw != null ||
+                routingStrategy != null ||
+                fallbackReason != null ||
+                routeConfidence != null ||
+                expertEntrySource != null) {
+              List<String> selectedExperts = const [];
+              if (selectedExpertsRaw is List) {
+                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
+              } else if (selectedExpertsRaw is String &&
+                  selectedExpertsRaw.isNotEmpty) {
+                if (selectedExpertsRaw.trim().startsWith('[')) {
+                  try {
+                    final decoded = jsonDecode(selectedExpertsRaw);
+                    if (decoded is List) {
+                      selectedExperts = decoded.map((e) => '$e').toList();
+                    }
+                  } catch (_) {}
+                }
+                if (selectedExperts.isEmpty) {
+                  selectedExperts = selectedExpertsRaw
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList();
+                }
+              }
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'selected_experts': selectedExperts,
+                'routing_strategy': routingStrategy,
+                'fallback_reason': fallbackReason,
+                'route_confidence': routeConfidence,
+                'expert_entry_source': expertEntrySource,
+              };
+            }
+          }
           // 流式文本片段（delta）
           accumulatedContent += event.content;
           pendingStreamingContent = accumulatedContent;
@@ -697,8 +304,60 @@ class ChatNotifier extends StateNotifier<ChatState> {
             activeAgentType: event.activeAgentType,
           );
           flushPending();
+        } else if (event is DagExecutionEvent) {
+          state = state.copyWith(dagExecutionSignal: event.signal);
+          final dagDetails = event.signal.statusDetails;
+          if (dagDetails != null && dagDetails.isNotEmpty) {
+            lastAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatusDetails = dagDetails;
+          }
+          flushPending();
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
+          final metadata = event.metadata;
+          if (metadata != null) {
+            final selectedExpertsRaw = metadata['selected_experts'];
+            final routingStrategy = metadata['routing_strategy'];
+            final fallbackReason = metadata['fallback_reason'];
+            final routeConfidence = metadata['route_confidence'];
+            final expertEntrySource = metadata['expert_entry_source'];
+            if (selectedExpertsRaw != null ||
+                routingStrategy != null ||
+                fallbackReason != null ||
+                routeConfidence != null ||
+                expertEntrySource != null) {
+              List<String> selectedExperts = const [];
+              if (selectedExpertsRaw is List) {
+                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
+              } else if (selectedExpertsRaw is String &&
+                  selectedExpertsRaw.isNotEmpty) {
+                if (selectedExpertsRaw.trim().startsWith('[')) {
+                  try {
+                    final decoded = jsonDecode(selectedExpertsRaw);
+                    if (decoded is List) {
+                      selectedExperts = decoded.map((e) => '$e').toList();
+                    }
+                  } catch (_) {}
+                }
+                if (selectedExperts.isEmpty) {
+                  selectedExperts = selectedExpertsRaw
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList();
+                }
+              }
+              accumulatedCollaboration = {
+                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                'selected_experts': selectedExperts,
+                'routing_strategy': routingStrategy,
+                'fallback_reason': fallbackReason,
+                'route_confidence': routeConfidence,
+                'expert_entry_source': expertEntrySource,
+              };
+            }
+          }
           accumulatedContent = event.content;
           pendingStreamingContent = accumulatedContent;
           flushPending(immediate: true);
@@ -717,9 +376,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
             isErrorRetryable: isRetryable,
             isSending: false,
             streamingContent: '',
+            clearDagExecution: true,
             clearAiStatus: true,
             clearReasoning: true,
           );
+          shouldResetSending = false; // 已经重置过了
           return; // 提前退出
         } else if (event is WidgetEvent) {
           if (event.widgetType == 'system_update' &&
@@ -794,6 +455,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Plan Review Widget Event
           _handlePlanReviewWidget(event);
           flushPending();
+        } else if (event is StateChangeEvent) {
+          // State Change Event (plan archived/restored/deleted, settings updated)
+          _handleStateChangeEvent(event);
+          flushPending();
         } else if (event is PlanReviewStatusEvent) {
           // Plan Review Status Event
           _handlePlanReviewStatus(event);
@@ -809,6 +474,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is AchievementUnlockEvent) {
           // Achievement Unlock Event
           _handleAchievementUnlock(event);
+          flushPending();
+        } else if (event is AchievementMilestoneEvent) {
+          // Achievement Milestone Event
+          _handleAchievementMilestone(event);
           flushPending();
         } else if (event is TransparencyStepEvent) {
           // Transparency Step Event
@@ -827,6 +496,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // Sprint Mode Switch Event
           _handleSprintModeSwitch(event);
           flushPending();
+        } else if (event is CollaborationTimelineEvent) {
+          accumulatedCollaboration = event.collaborationData;
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -834,12 +506,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
           if (state.activeTools.isNotEmpty) {
             state = state.copyWith(activeTools: []);
           }
+          // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
+          state = state.copyWith(
+            clearAiStatus: true,
+            clearDagExecution: true,
+            streamingContent: '',
+          );
+          // 🔧 修复：立即退出流循环，确保执行清理代码（设置 isSending: false）
+          break;
         }
       }
 
       _streamDebouncer.cancel();
       // 流结束后，将累积的内容转为正式消息
-      if (accumulatedContent.isNotEmpty || accumulatedWidgets.isNotEmpty) {
+      if (accumulatedContent.isNotEmpty ||
+          accumulatedWidgets.isNotEmpty ||
+          accumulatedCollaboration != null) {
         // Calculate total duration if reasoning steps exist
         String? reasoningSummary;
         if (accumulatedReasoningSteps.isNotEmpty &&
@@ -858,6 +540,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           content: accumulatedContent,
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
+          agentCollaboration: accumulatedCollaboration,
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
           reasoningSteps: accumulatedReasoningSteps.isNotEmpty
               ? accumulatedReasoningSteps
@@ -874,6 +557,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           isSending: false,
           messages: [...state.messages, aiMessage],
           streamingContent: '',
+          clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true, // Clear real-time reasoning state
         );
@@ -881,6 +565,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         state = state.copyWith(
           isSending: false,
           streamingContent: '',
+          clearDagExecution: true,
           clearAiStatus: true,
           clearReasoning: true,
         );
@@ -896,858 +581,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
         isSending: false,
         streamingContent: '',
+        clearDagExecution: true,
         error: errorMessage,
         errorCode: 'UNKNOWN',
         isErrorRetryable: true, // 未知错误默认可重试
       );
-    }
-  }
-
-  void startNewSession() {
-    state = state.copyWith(clearConversation: true, messages: []);
-    if (DemoDataService.isDemoMode) {
-      // Keep demo history? Or clear?
-      // Usually "Start New Session" means clear.
-    }
-  }
-
-  Future<void> switchPlanSession(String? planId) async {
-    if (planId == null) {
-      state = state.copyWith(clearConversation: true, messages: []);
-      return;
-    }
-
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    final userId = user?.id ?? await _ref.read(guestServiceProvider).getGuestId();
-    final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
-          AgentSessionScope.plan,
-          planId,
-          userId,
-        );
-
-    if (state.conversationId == sessionId) {
-      return;
-    }
-
-    state = state.copyWith(
-      conversationId: sessionId,
-      messages: [],
-      clearError: true,
-      streamingContent: '',
-      clearAiStatus: true,
-      clearReasoning: true,
-    );
-
-    await loadConversationHistory(sessionId);
-  }
-
-  /// 确认 ActionCard
-  void confirmAction(WidgetPayload action) {
-    if (action.type == 'nightly_review') {
-      final reviewId = action.data['review_id']?.toString() ?? '';
-      if (reviewId.isNotEmpty) {
-        _markNightlyReviewed(reviewId);
-        return;
+      shouldResetSending = false; // 已经重置过了
+    } finally {
+      // 🔧 P1-1: 确保 isSending 总是被重置（如果还没被重置）
+      if (shouldResetSending && mounted && state.isSending) {
+        state = state.copyWith(isSending: false);
       }
     }
-
-    final interventionId = action.data['intervention_id']?.toString() ??
-        action.data['request_id']?.toString() ??
-        '';
-    if (interventionId.isNotEmpty) {
-      _chatRepository.sendInterventionFeedback(
-        requestId: interventionId,
-        feedbackType: 'accept',
-        extraData: {'widget_type': action.type},
-      );
-      debugPrint('✅ Intervention accepted: $interventionId');
-      return;
-    }
-
-    // 从 WidgetPayload 中提取 tool_result_id
-    final toolResultId = action.data['id']?.toString() ??
-        action.data['tool_result_id']?.toString() ??
-        '';
-
-    if (toolResultId.isEmpty) {
-      debugPrint('⚠️ Warning: Cannot confirm action - missing tool_result_id');
-      return;
-    }
-
-    // 发送确认反馈到后端
-    _chatRepository.sendActionFeedback(
-      action: 'confirm',
-      toolResultId: toolResultId,
-      widgetType: action.type,
-    );
-
-    debugPrint(
-        '✅ Action confirmed: ${action.type} (tool_result_id: $toolResultId)',);
-
-    // TODO: 可以添加乐观更新 - 立即在 UI 中标记为已确认
-    // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: true));
-  }
-
-  /// 忽略 ActionCard
-  void dismissAction(WidgetPayload action) {
-    if (action.type == 'nightly_review') {
-      debugPrint('ℹ️ Nightly review dismissed');
-      return;
-    }
-
-    final interventionId = action.data['intervention_id']?.toString() ??
-        action.data['request_id']?.toString() ??
-        '';
-    if (interventionId.isNotEmpty) {
-      _chatRepository.sendInterventionFeedback(
-        requestId: interventionId,
-        feedbackType: 'reject',
-        extraData: {'widget_type': action.type},
-      );
-      debugPrint('❌ Intervention dismissed: $interventionId');
-      return;
-    }
-
-    final toolResultId = action.data['id']?.toString() ??
-        action.data['tool_result_id']?.toString() ??
-        '';
-
-    if (toolResultId.isEmpty) {
-      debugPrint('⚠️ Warning: Cannot dismiss action - missing tool_result_id');
-      return;
-    }
-
-    // 发送忽略反馈到后端
-    _chatRepository.sendActionFeedback(
-      action: 'dismiss',
-      toolResultId: toolResultId,
-      widgetType: action.type,
-    );
-
-    debugPrint(
-        '❌ Action dismissed: ${action.type} (tool_result_id: $toolResultId)',);
-
-    // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
-    // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
-  }
-
-  void sendResponseFeedback(ChatMessageModel message, String feedbackType) {
-    final responseId = message.responseId ?? '';
-    if (responseId.isEmpty) {
-      debugPrint('⚠️ Missing response_id for feedback');
-      return;
-    }
-
-    _chatRepository.sendResponseFeedback(
-      responseId: responseId,
-      feedbackType: feedbackType,
-      workflowId: message.workflowId,
-      promptVersion: message.promptVersion,
-      traceId: message.traceId,
-      meta: {'message_id': message.id},
-    );
-    debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
-  }
-
-  /// 发送计划审查反馈
-  void sendPlanReviewFeedback({
-    required String reviewId,
-    required String userDecision,
-    String? userComment,
-  }) {
-    _chatRepository.sendPlanReviewFeedback(
-      reviewId: reviewId,
-      userDecision: userDecision,
-      userComment: userComment,
-    );
-    debugPrint('📤 Plan review feedback sent: $userDecision for $reviewId');
-
-    // Clear the pending review after sending feedback
-    state = state.copyWith(clearPendingReview: true);
-  }
-
-  Future<void> _markNightlyReviewed(String reviewId) async {
-    try {
-      await _ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);
-      debugPrint('✅ Nightly review marked as reviewed: $reviewId');
-    } catch (e) {
-      debugPrint('❌ Nightly review feedback failed: $e');
-    }
-  }
-
-  /// 处理成就解锁事件
-  void _handleAchievementUnlock(AchievementUnlockEvent event) {
-    debugPrint('🏆 Achievement unlocked: ${event.name}');
-
-    state = state.copyWith(
-      pendingAchievementUnlock: event,
-      lastActionStatus: 'achievement_unlocked',
-      lastActionMessage: '${event.name} 解锁！',
-    );
-
-    // Clear after delay
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        state = state.copyWith(
-          clearActionFeedback: true,
-        );
-      }
-    });
-  }
-
-  void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
-    debugPrint('🔄 Sprint mode switch event received');
-
-    // Switch to Sprint View
-    _ref.read(taskBoardProvider.notifier).switchView(TaskViewMode.sprint);
-  }
-
-  /// 处理 ActionCard 状态更新
-  void _handleActionStatus(ActionStatusEvent event) {
-    debugPrint(
-        '📥 Action status received: ${event.status} for ${event.actionId}',);
-
-    // 显示用户友好的提示消息
-    final message = event.message ?? _getDefaultStatusMessage(event.status);
-
-    // 更新状态以触发 UI 反馈
-    state = state.copyWith(
-      lastActionStatus: event.status,
-      lastActionMessage: message,
-    );
-
-    // 延迟清除反馈状态
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        state = state.copyWith(clearActionFeedback: true);
-      }
-    });
-
-    debugPrint('💬 Status message: $message');
-
-    // TODO: 更新 UI 中对应 ActionCard 的状态
-    // 例如：标记为已确认、已忽略，或者从列表中移除
-    // state = state.copyWith(messages: _updateMessageActionStatus(event.actionId, event.status));
-  }
-
-  String _getDefaultStatusMessage(String status) {
-    switch (status) {
-      case 'confirmed':
-        return '✅ 已确认';
-      case 'dismissed':
-        return '❌ 已忽略';
-      case 'processing':
-        return '⏳ 处理中...';
-      case 'completed':
-        return '✅ 已完成';
-      case 'failed':
-        return '❌ 操作失败';
-      default:
-        return '📝 状态更新: $status';
-    }
-  }
-
-  /// 处理 Plan Review Widget Event
-  void _handlePlanReviewWidget(PlanReviewWidgetEvent event) {
-    debugPrint('📥 Plan review widget received');
-
-    // Parse review data
-    final reviewData = event.reviewData;
-    final review = PlanReviewResult.fromJson(reviewData);
-
-    // Update state with pending review
-    state = state.copyWith(
-      pendingPlanReview: review,
-      pendingReviewActionId: review.actionId,
-    );
-
-    debugPrint('📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})');
-  }
-
-  /// 处理 Plan Review Status Event
-  void _handlePlanReviewStatus(PlanReviewStatusEvent event) {
-    debugPrint(
-        '📥 Plan review status received: ${event.status} for ${event.reviewId}',);
-
-    // Show user-friendly message
-    final message = event.message ?? _getPlanReviewStatusMessage(event.status);
-
-    // Update state to trigger UI feedback
-    state = state.copyWith(
-      lastActionStatus: event.status,
-      lastActionMessage: message,
-    );
-
-    // Clear pending review if status indicates completion
-    if (event.status == 'approved' || event.status == 'rejected') {
-      state = state.copyWith(clearPendingReview: true);
-    }
-
-    // Delay clearing feedback state
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        state = state.copyWith(clearActionFeedback: true);
-      }
-    });
-
-    debugPrint('💬 Plan review status message: $message');
-  }
-
-  String _getPlanReviewStatusMessage(String status) {
-    switch (status) {
-      case 'approved':
-        return '✅ 计划已批准';
-      case 'rejected':
-        return '❌ 计划已取消';
-      case 'modify_requested':
-        return '📝 请提供修改要求...';
-      case 'acknowledged':
-        return '✅ 反馈已收到';
-      default:
-        return '📋 计划状态更新: $status';
-    }
-  }
-
-  // ============================================
-  // Phase 2b: Content Review Handlers
-  // ============================================
-
-  /// 处理 Content Review Widget Event
-  void _handleContentReviewWidget(ContentReviewWidgetEvent event) {
-    debugPrint('📥 Content review widget received');
-
-    // Parse review data
-    final reviewData = event.reviewData;
-    final review = ContentReviewResult.fromJson(reviewData);
-
-    // Update state with pending content review
-    state = state.copyWith(pendingContentReview: review);
-
-    debugPrint('📋 Content review ready: ${review.decision} (review_id: ${review.reviewId})');
-  }
-
-  /// 处理 Content Reflection Result Event
-  void _handleContentReflectionResult(ContentReflectionResultEvent event) {
-    debugPrint('📥 Content reflection result received');
-
-    final reflectionData = event.reflectionData;
-    final outcome = reflectionData['outcome'] as String? ?? 'unknown';
-    final scoreDelta = (reflectionData['score_delta'] as num?)?.toDouble() ?? 0.0;
-    final rounds = reflectionData['rounds'] as int? ?? 0;
-
-    // Show user-friendly message about reflection result
-    final message = _getReflectionResultMessage(outcome, scoreDelta, rounds);
-
-    state = state.copyWith(
-      lastActionStatus: outcome,
-      lastActionMessage: message,
-    );
-
-    // Update pending content review with reflection status
-    final currentReview = state.pendingContentReview;
-    if (currentReview != null) {
-      // Create updated review with reflection status
-      final updatedReview = ContentReviewResult(
-        reviewId: currentReview.reviewId,
-        decision: currentReview.decision,
-        overallScore: currentReview.overallScore + scoreDelta,
-        metrics: currentReview.metrics,
-        issues: currentReview.issues,
-        suggestions: currentReview.suggestions,
-        reviewedAt: currentReview.reviewedAt,
-        reflectionStatus: outcome == 'fixed' || outcome == 'improved' ? 'completed' : 'failed',
-        scoreLabel: _getScoreLabelForScore(currentReview.overallScore + scoreDelta),
-      );
-
-      state = state.copyWith(pendingContentReview: updatedReview);
-    }
-
-    // Delay clearing feedback state
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        state = state.copyWith(clearActionFeedback: true);
-      }
-    });
-
-    debugPrint('💬 Reflection result: $message');
-  }
-
-  /// Get user-friendly reflection result message
-  String _getReflectionResultMessage(String outcome, double scoreDelta, int rounds) {
-    final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
-    switch (outcome) {
-      case 'fixed':
-        return '✅ 内容已优化$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
-      case 'improved':
-        return '📈 内容有所改善$roundsInfo，分数提升 +${(scoreDelta * 100).toInt()}%';
-      case 'no_change':
-        return 'ℹ️ 优化尝试完成，内容无明显变化';
-      case 'degraded':
-        return '⚠️ 优化尝试未达预期，保留原内容';
-      case 'failed':
-        return '❌ 优化失败，请稍后重试';
-      default:
-        return '🔄 反思处理完成: $outcome';
-    }
-  }
-
-  /// Get score label for a given score
-  String _getScoreLabelForScore(double score) {
-    if (score >= 0.9) return '优秀';
-    if (score >= 0.7) return '良好';
-    if (score >= 0.5) return '及格';
-    return '需改进';
-  }
-
-  /// 用户接受审查后的内容（不采取行动）
-  void acceptContentReview() {
-    state = state.copyWith(clearPendingContentReview: true);
-    debugPrint('✅ Content review accepted');
-  }
-
-  /// 用户拒绝内容，请求重新生成
-  void rejectContentReview() {
-    final review = state.pendingContentReview;
-    if (review == null) return;
-
-    state = state.copyWith(
-      clearPendingContentReview: true,
-      lastActionStatus: 'rejected',
-      lastActionMessage: '已请求重新生成',
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        state = state.copyWith(clearActionFeedback: true);
-      }
-    });
-
-    requestRegeneration(
-      originalContentId: 'content_from_review_${review.reviewId}',
-      reviewId: review.reviewId,
-      regenerationType: 'fix_issues',
-    ).then((result) {
-      if (result == null || result['success'] != true) {
-        debugPrint('❌ Regeneration request failed for ${review.reviewId}');
-      }
-    });
-
-    debugPrint('❌ Content review rejected, requesting regeneration');
-  }
-
-  /// 用户请求人工审查
-  void requestHumanReview() {
-    state = state.copyWith(
-      lastActionStatus: 'human_review_requested',
-      lastActionMessage: '已提交人工审查请求',
-    );
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        state = state.copyWith(clearActionFeedback: true);
-      }
-    });
-
-    debugPrint('👤 Human review requested');
-  }
-
-  // ============================================
-  // Phase 2e: Review Override & Appeal
-  // ============================================
-
-  /// 用户覆盖审查决策
-  Future<bool> submitReviewOverride({
-    required String reviewId,
-    required String originalDecision,
-    required String newDecision,
-    required String reason,
-  }) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
-      );
-      return false;
-    }
-
-    try {
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.submitReviewOverride(
-        userId: user.id,
-        reviewId: reviewId,
-        originalDecision: originalDecision,
-        newDecision: newDecision,
-        reason: reason,
-        authToken: authToken,
-      );
-
-      if (result.success) {
-        state = state.copyWith(
-          lastActionStatus: 'override_submitted',
-          lastActionMessage: result.message ??
-              (newDecision == 'passed'
-                  ? '已接受内容（尽管未通过审查）'
-                  : '已拒绝内容（尽管审查通过）'),
-          clearPendingContentReview: true,
-        );
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            state = state.copyWith(clearActionFeedback: true);
-          }
-        });
-
-        debugPrint('✅ Review override submitted: $originalDecision -> $newDecision');
-        return true;
-      } else {
-        state = state.copyWith(
-          lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败，请重试',
-        );
-        return false;
-      }
-    } catch (e) {
-      debugPrint('❌ Review override error: $e');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: '提交失败，请重试',
-      );
-      return false;
-    }
-  }
-
-  /// 用户提交审查申诉
-  Future<bool> submitReviewAppeal({
-    required String reviewId,
-    required String reason,
-    required List<String> issues,
-  }) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: '请先登录',
-      );
-      return false;
-    }
-
-    try {
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.submitReviewAppeal(
-        userId: user.id,
-        reviewId: reviewId,
-        appealReason: reason,
-        issuesWithReview: issues,
-        authToken: authToken,
-      );
-
-      if (result.success) {
-        state = state.copyWith(
-          lastActionStatus: 'appeal_submitted',
-          lastActionMessage: result.message ?? '申诉已提交，正在处理...',
-        );
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            state = state.copyWith(clearActionFeedback: true);
-          }
-        });
-
-        debugPrint('✅ Review appeal submitted for review $reviewId');
-        return true;
-      } else {
-        state = state.copyWith(
-          lastActionStatus: 'error',
-          lastActionMessage: result.message ?? '提交失败，请重试',
-        );
-        return false;
-      }
-    } catch (e) {
-      debugPrint('❌ Review appeal error: $e');
-      state = state.copyWith(
-        lastActionStatus: 'error',
-        lastActionMessage: '提交失败，请重试',
-      );
-      return false;
-    }
-  }
-
-  /// 获取申诉状态
-  Future<Map<String, dynamic>?> getAppealStatus(String appealId) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      return null;
-    }
-
-    try {
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.getAppealStatus(
-        userId: user.id,
-        appealId: appealId,
-        authToken: authToken,
-      );
-
-      if (result != null) {
-        return {
-          'appeal_id': result.appealId,
-          'review_id': result.reviewId,
-          'status': result.status,
-          'submitted_at': result.submittedAt,
-          'appeal_reason': result.appealReason,
-          'resolution': result.resolution,
-          'resolved_by': result.resolvedBy,
-          'resolved_at': result.resolvedAt,
-          'secondary_decision': result.secondaryDecision,
-          'secondary_score': result.secondaryScore,
-        };
-      }
-      return null;
-    } catch (e) {
-      debugPrint('❌ Get appeal status error: $e');
-      return null;
-    }
-  }
-
-  // ============================================
-  // Phase 2f: Feedback Complete Integration
-  // ============================================
-
-  /// 提交审查反馈（评分）
-  ///
-  /// 允许用户对审查结果进行评分和反馈
-  Future<bool> submitReviewFeedback({
-    required String reviewId,
-    int? rating,
-    bool? wasHelpful,
-    bool? wasAccurate,
-    List<String>? inaccuratePoints,
-    String? specificityLevel,
-    String? comments,
-    List<String>? tags,
-  }) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      return false;
-    }
-
-    try {
-      debugPrint('[ChatProvider] Submitting review feedback for $reviewId');
-
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.submitReviewFeedback(
-        userId: user.id,
-        reviewId: reviewId,
-        rating: rating,
-        wasHelpful: wasHelpful,
-        wasAccurate: wasAccurate,
-        inaccuratePoints: inaccuratePoints,
-        specificityLevel: specificityLevel,
-        comments: comments,
-        tags: tags,
-        authToken: authToken,
-      );
-
-      debugPrint('[ChatProvider] Feedback ${result.success ? "submitted" : "failed"}');
-      return result.success;
-    } catch (e) {
-      debugPrint('[ChatProvider] Failed to submit feedback: $e');
-      return false;
-    }
-  }
-
-  /// 为审查评分（简化接口）
-  Future<bool> rateReview({
-    required String reviewId,
-    required int rating,
-    String? comments,
-  }) async => submitReviewFeedback(
-      reviewId: reviewId,
-      rating: rating,
-      wasHelpful: rating >= 4,
-      comments: comments,
-    );
-
-  /// 请求内容重新生成
-  ///
-  /// 基于用户反馈请求AI重新生成内容
-  Future<Map<String, dynamic>?> requestRegeneration({
-    required String originalContentId,
-    required String reviewId,
-    required String regenerationType,
-    List<String>? improvementHints,
-    List<String>? focusAreas,
-    String? customInstructions,
-  }) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      return null;
-    }
-
-    try {
-      debugPrint(
-        '[ChatProvider] Requesting regeneration for content $originalContentId',
-      );
-
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.requestRegeneration(
-        userId: user.id,
-        originalContentId: originalContentId,
-        reviewId: reviewId,
-        regenerationType: regenerationType,
-        improvementHints: improvementHints,
-        focusAreas: focusAreas,
-        customInstructions: customInstructions,
-        authToken: authToken,
-      );
-
-      if (result.success) {
-        final resultMap = {
-          'request_id': result.requestId,
-          'success': true,
-          'new_content': result.newContent,
-          'new_content_id': result.newContentId,
-          'improvement_summary': result.improvementSummary,
-          'changes_made': result.changesMade,
-          'score_improvement': result.scoreImprovement,
-          'generation_time_ms': result.generationTimeMs,
-        };
-        debugPrint('[ChatProvider] Regeneration completed: $resultMap');
-        return resultMap;
-      } else {
-        debugPrint('[ChatProvider] Regeneration failed: ${result.message}');
-        return {
-          'success': false,
-          'message': result.message,
-        };
-      }
-    } catch (e) {
-      debugPrint('[ChatProvider] Failed to request regeneration: $e');
-      return null;
-    }
-  }
-
-  /// 获取用户反馈模式
-  ///
-  /// 返回用户的历史反馈模式，用于个性化审查
-  Future<Map<String, dynamic>?> getUserFeedbackPattern() async {
-    try {
-      // TODO: Implement gRPC call to GetUserFeedbackPattern
-      // For now, return null (no pattern yet)
-      return null;
-    } catch (e) {
-      debugPrint('[ChatProvider] Failed to get feedback pattern: $e');
-      return null;
-    }
-  }
-
-  /// 获取反馈统计
-  ///
-  /// 返回用户反馈的整体统计数据
-  Future<Map<String, dynamic>?> getFeedbackStatistics({
-    int days = 30,
-  }) async {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user == null) {
-      debugPrint('⚠️ User not authenticated');
-      return null;
-    }
-
-    try {
-      // Get access token
-      final authRepository = _ref.read(authRepositoryProvider);
-      final authToken = await authRepository.getAccessToken();
-
-      _reviewService ??= ReviewGrpcService();
-
-      final result = await _reviewService!.getFeedbackStatistics(
-        userId: user.id,
-        periodDays: days,
-        authToken: authToken,
-      );
-
-      if (result.success) {
-        return {
-          'total_feedbacks': result.totalFeedbacks,
-          'avg_rating': result.avgRating,
-          'helpful_rate': result.helpfulRate,
-          'accuracy_rate': result.accuracyRate,
-          'regeneration_requests': result.regenerationRequests,
-          'successful_regenerations': result.successfulRegenerations,
-          'period_days': result.periodDays,
-        };
-      }
-      return null;
-    } catch (e) {
-      debugPrint('[ChatProvider] Failed to get feedback statistics: $e');
-      return null;
-    }
-  }
-}
-
-// 3. Provider
-final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return ChatRepository(apiClient.dio);
-});
-
-final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>(
-    (ref) => ChatNotifier(ref.watch(chatRepositoryProvider), ref),);
-
-class _Debouncer {
-  _Debouncer(this.delay);
-  final Duration delay;
-  Timer? _timer;
-
-  void run(void Function() action) {
-    _timer?.cancel();
-    _timer = Timer(delay, action);
-  }
-
-  void flush(void Function() action) {
-    _timer?.cancel();
-    action();
-  }
-
-  void cancel() {
-    _timer?.cancel();
-    _timer = null;
   }
 }

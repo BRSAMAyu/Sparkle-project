@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.business_metrics import LTM_EVAL_TOTAL, LTM_EVAL_CASE_TOTAL, LTM_EVAL_AVG_SCORE
+from app.core.business_metrics import LTM_EVAL_AVG_SCORE, LTM_EVAL_CASE_TOTAL, LTM_EVAL_TOTAL
 from app.core.context_pack import ContextPackBuilder
 from app.services.memory_service import MemoryService
 
@@ -20,17 +20,28 @@ class EvalCase:
     case_id: str
     user_id: UUID
     intent: str
-    expected_pref_keys: List[str]
-    expected_goal_titles: List[str]
-    expected_episodic_contains: List[str]
-    forbidden_contains: List[str]
-    max_episodic_age_days: Optional[int] = None
-    notes: Optional[str] = None
+    expected_pref_keys: list[str]
+    expected_goal_titles: list[str]
+    expected_episodic_contains: list[str]
+    forbidden_contains: list[str]
+    max_episodic_age_days: int | None = None
+    notes: str | None = None
 
 
-def load_dataset(path: str | Path) -> List[EvalCase]:
-    cases: List[EvalCase] = []
-    with Path(path).open("r", encoding="utf-8") as handle:
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def load_dataset(path: str | Path) -> list[EvalCase]:
+    cases: list[EvalCase] = []
+    dataset_path = Path(path)
+    if not dataset_path.exists():
+        path_text = str(dataset_path)
+        if path_text.startswith("backend/"):
+            alt = Path(path_text.removeprefix("backend/"))
+            if alt.exists():
+                dataset_path = alt
+    with dataset_path.open("r", encoding="utf-8") as handle:
         for line in handle:
             raw = line.strip()
             if not raw:
@@ -52,19 +63,19 @@ def load_dataset(path: str | Path) -> List[EvalCase]:
     return cases
 
 
-def _safe_lower(value: Optional[str]) -> str:
+def _safe_lower(value: str | None) -> str:
     if not value:
         return ""
     return value.lower()
 
 
-def _hit_rate(expected: List[str], matched: int) -> float:
+def _hit_rate(expected: list[str], matched: int) -> float:
     if not expected:
         return 1.0
     return matched / len(expected)
 
 
-def _case_score(metrics: Dict[str, float]) -> float:
+def _case_score(metrics: dict[str, float]) -> float:
     return (
         metrics["pref_hit_rate"]
         + metrics["goal_hit_rate"]
@@ -81,7 +92,7 @@ class MemoryEvalService:
         self.memory_service = MemoryService(db)
         self.context_builder = ContextPackBuilder(db)
 
-    async def run_case(self, case: EvalCase) -> Dict[str, Any]:
+    async def run_case(self, case: EvalCase) -> dict[str, Any]:
         context_pack = await self.context_builder.build(case.user_id, intent=case.intent)
 
         preference_records = await self.memory_service.list_preference_records(case.user_id)
@@ -125,7 +136,7 @@ class MemoryEvalService:
         total_returned = len(pref_keys) + len(goal_titles) + len(episodic_summaries)
         over_inclusion_rate = (forbidden_hits / total_returned) if total_returned else 0.0
 
-        evidence_scores: List[float] = []
+        evidence_scores: list[float] = []
         for key in pref_keys:
             record = pref_map.get(key)
             if record is not None:
@@ -143,7 +154,7 @@ class MemoryEvalService:
 
         staleness_rate = 0.0
         if case.max_episodic_age_days:
-            cutoff = datetime.utcnow() - timedelta(days=case.max_episodic_age_days)
+            cutoff = _utcnow() - timedelta(days=case.max_episodic_age_days)
             stale_count = 0
             for item in context_pack.episodic_memories:
                 record = episodic_map.get(item.get("id", ""))
@@ -172,12 +183,12 @@ class MemoryEvalService:
     async def run_dataset(
         self,
         path: str | Path,
-        intent: Optional[str] = None,
-        user_id: Optional[UUID] = None,
-        threshold: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        intent: str | None = None,
+        user_id: UUID | None = None,
+        threshold: float | None = None,
+    ) -> dict[str, Any]:
         cases = load_dataset(path)
-        filtered: List[EvalCase] = []
+        filtered: list[EvalCase] = []
         for case in cases:
             if intent and case.intent != intent:
                 continue
@@ -187,7 +198,7 @@ class MemoryEvalService:
 
         threshold = threshold if threshold is not None else settings.LTM_EVAL_FAIL_THRESHOLD
         case_results = []
-        scores: List[float] = []
+        scores: list[float] = []
         for case in filtered:
             metrics = await self.run_case(case)
             scores.append(metrics["score"])

@@ -12,6 +12,14 @@ from app.core.plan_context import PlanContextBuilder, merge_plan_context
 from app.models.plan_state import PlanState, PlanStateStatus
 
 
+def _mock_db_without_plan():
+    db = AsyncMock()
+    plan_result = MagicMock()
+    plan_result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=plan_result)
+    return db
+
+
 @pytest.fixture
 def user_id():
     return uuid4()
@@ -61,7 +69,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_returns_empty_when_no_plan_id(self, user_id):
         """Should return empty dict when plan_id is None"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
         builder = PlanContextBuilder(mock_db)
 
         result = await builder.build(user_id, plan_id=None)
@@ -71,7 +79,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_returns_empty_when_state_not_found(self, user_id, plan_id):
         """Should return empty dict when PlanState not found"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"
@@ -87,7 +95,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_builds_context_with_facts(self, user_id, plan_id, mock_plan_state):
         """Should include facts in context"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"
@@ -105,7 +113,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_builds_context_with_task_summary(self, user_id, plan_id, mock_plan_state):
         """Should include task_summary in context"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"
@@ -124,7 +132,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_builds_context_with_milestones(self, user_id, plan_id, mock_plan_state):
         """Should include truncated milestones"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"
@@ -142,7 +150,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_excludes_feedback_by_default(self, user_id, plan_id, mock_plan_state):
         """Should not include feedback_log by default"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"
@@ -158,7 +166,7 @@ class TestPlanContextBuilder:
     @pytest.mark.asyncio
     async def test_includes_feedback_when_requested(self, user_id, plan_id, mock_plan_state):
         """Should include feedback_log when requested"""
-        mock_db = AsyncMock()
+        mock_db = _mock_db_without_plan()
 
         with patch(
             "app.core.plan_context.PlanStateService"

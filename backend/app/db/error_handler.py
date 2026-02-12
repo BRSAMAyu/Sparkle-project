@@ -2,28 +2,32 @@
 Database Error Handler
 将 SQLAlchemy 异常转换为应用自定义异常
 """
-import logging
 import functools
-from typing import Callable, TypeVar, ParamSpec
+import logging
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
+
 from sqlalchemy.exc import (
-    IntegrityError,
-    OperationalError,
-    TimeoutError as SQLAlchemyTimeoutError,
-    DisconnectionError,
-    InterfaceError,
     DataError,
-    ProgrammingError,
+    DisconnectionError,
+    IntegrityError,
+    InterfaceError,
     InvalidRequestError,
+    OperationalError,
+    ProgrammingError,
+)
+from sqlalchemy.exc import (
+    TimeoutError as SQLAlchemyTimeoutError,
 )
 
 from app.core.exceptions import (
-    DatabaseError,
     DatabaseConnectionError,
+    DatabaseError,
     DatabaseTimeoutError,
-    DuplicateKeyError,
-    ForeignKeyViolationError,
     DataIntegrityError,
     DeadlockError,
+    DuplicateKeyError,
+    ForeignKeyViolationError,
 )
 
 logger = logging.getLogger(__name__)

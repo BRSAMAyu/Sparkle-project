@@ -17,16 +17,23 @@ Community Models - 好友系统、群组、消息、任务、加密、风控
 """
 import enum
 from datetime import datetime
-from typing import Optional, List
 
 from sqlalchemy import (
-    Column, String, Text, DateTime, Boolean, Integer, Float,
-    ForeignKey, Enum, UniqueConstraint, Index, JSON
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
-
+from app.models.base import GUID, BaseModel
 
 # ============ 枚举类型定义 ============
 
@@ -459,8 +466,8 @@ class SharedResource(BaseModel):
     # 关系
     group = relationship("Group")
     sharer = relationship("User", foreign_keys=[shared_by])
-    
-    # 资源关系 (Lazy load to avoid circular import issues at module level if carefully handled, 
+
+    # 资源关系 (Lazy load to avoid circular import issues at module level if carefully handled,
     # but strictly Plan/Task should be imported. For now we assume they are available in registry)
     plan = relationship("Plan", foreign_keys=[plan_id])
     task = relationship("Task", foreign_keys=[task_id])
@@ -702,7 +709,7 @@ class Post(BaseModel):
     content = Column(Text, nullable=True)
     image_urls = Column(JSON, nullable=True)  # List[str]
     topic = Column(String(100), nullable=True)
-    
+
     # 可见性控制
     visibility = Column(String(20), default="public", nullable=False) # public, friends, private
 

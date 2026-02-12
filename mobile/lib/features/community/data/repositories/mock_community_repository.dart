@@ -327,7 +327,7 @@ class MockCommunityRepository implements CommunityRepository {
         avatarUrl:
             'https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed ?? name}',
         flameLevel: level,
-        flameBrightness: 0.5 + (level / 20.0),
+        flameBrightness: (0.5 + (level / 40.0)).clamp(0.0, 1.0),  // 🔧 修复：确保不超过1.0
         status: status,
       );
 
@@ -784,6 +784,36 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> likePost(String postId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
+    // Mock implementation - return empty list
+    return [];
+  }
+
+  @override
+  Future<void> kickMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> promoteMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> demoteMember(String groupId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
+  Future<void> transferOwnership(String groupId, String userId) async {
     // Mock implementation - do nothing
     return;
   }

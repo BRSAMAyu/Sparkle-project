@@ -12,30 +12,34 @@ Arbitration Service - Phase 2g
 """
 
 import uuid
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
+
 from loguru import logger
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.review_history_service import (
-    get_review_history_service,
-    AppealStatus,
-    AppealEntry,
-)
-from app.services.review_appeal_service import AppealDecision
 from app.models.review_system import (
     ArbitrationCase as ArbitrationCaseModel,
+)
+from app.models.review_system import (
     ArbitrationDecision as ArbitrationDecisionModel,
 )
-
+from app.services.review_appeal_service import AppealDecision
+from app.services.review_history_service import (
+    AppealStatus,
+    get_review_history_service,
+)
 
 # ============================================
 # 数据模型
 # ============================================
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 class ArbitratorRole(str, Enum):
     """仲裁员角色"""
@@ -77,27 +81,27 @@ class ArbitrationCase:
 
     # 案件状态
     status: str = "pending"  # pending, assigned, in_review, resolved
-    assigned_to: Optional[str] = None
-    assigned_at: Optional[str] = None
+    assigned_to: str | None = None
+    assigned_at: str | None = None
 
     # 审查信息
     original_review_score: float = 0.0
-    secondary_review_score: Optional[float] = None
+    secondary_review_score: float | None = None
     score_discrepancy: float = 0.0
 
     # 仲裁结果
-    resolution: Optional[str] = None
-    final_decision: Optional[str] = None
-    resolved_at: Optional[str] = None
-    resolved_by: Optional[str] = None
+    resolution: str | None = None
+    final_decision: str | None = None
+    resolved_at: str | None = None
+    resolved_by: str | None = None
 
     # 元数据
-    notes: List[str] = field(default_factory=list)
-    evidence: Dict[str, Any] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
+    evidence: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -109,12 +113,12 @@ class ArbitrationDecision:
     arbitrator_id: str
     arbitrator_role: ArbitratorRole
     confidence: float = 1.0
-    feedback_for_model: Optional[str] = None
+    feedback_for_model: str | None = None
     created_at: str = ""
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.utcnow().isoformat()
+            self.created_at = _utcnow().isoformat()
 
 
 @dataclass
@@ -125,8 +129,8 @@ class ArbitrationQueueStats:
     total_in_review: int = 0
     total_resolved_today: int = 0
     avg_resolution_time_hours: float = 0.0
-    by_priority: Dict[str, int] = field(default_factory=dict)
-    by_reason: Dict[str, int] = field(default_factory=dict)
+    by_priority: dict[str, int] = field(default_factory=dict)
+    by_reason: dict[str, int] = field(default_factory=dict)
 
 
 # ============================================
@@ -149,11 +153,11 @@ class EscalationRulesEngine:
     def should_escalate(
         cls,
         original_score: float,
-        secondary_score: Optional[float],
+        secondary_score: float | None,
         confidence: float,
         appeal_count: int = 1,
         is_sensitive: bool = False,
-    ) -> tuple[bool, Optional[EscalationReason]]:
+    ) -> tuple[bool, EscalationReason | None]:
         """
         判断是否需要升级到人工仲裁
 
@@ -255,7 +259,7 @@ class ArbitrationService:
         self._history_service = get_review_history_service(db_session)
 
     @staticmethod
-    def _parse_uuid(value: Optional[str]) -> Optional[uuid.UUID]:
+    def _parse_uuid(value: str | None) -> uuid.UUID | None:
         if not value:
             return None
         try:
@@ -303,7 +307,7 @@ class ArbitrationService:
         appeal_id: str,
         escalation_reason: EscalationReason,
         original_score: float,
-        secondary_score: Optional[float] = None,
+        secondary_score: float | None = None,
         user_tier: str = "free",
     ) -> ArbitrationCase:
         """
@@ -413,7 +417,7 @@ class ArbitrationService:
 
         case.status = "assigned"
         case.assigned_to = arbitrator_id
-        case.assigned_at = datetime.utcnow().isoformat()
+        case.assigned_at = _utcnow().isoformat()
 
         result = await self._db.execute(
             select(ArbitrationCaseModel).where(ArbitrationCaseModel.case_id == case_id)
@@ -422,7 +426,7 @@ class ArbitrationService:
         if model:
             model.status = "assigned"
             model.assigned_to = arbitrator_id
-            model.assigned_at = datetime.utcnow()
+            model.assigned_at = _utcnow()
             await self._db.flush()
 
         logger.info(
@@ -438,7 +442,7 @@ class ArbitrationService:
         explanation: str,
         arbitrator_id: str,
         arbitrator_role: ArbitratorRole,
-        feedback_for_model: Optional[str] = None,
+        feedback_for_model: str | None = None,
     ) -> ArbitrationDecision:
         """
         提交仲裁决策
@@ -485,7 +489,7 @@ class ArbitrationService:
             arbitrator_role=arbitrator_role.value,
             confidence=arb_decision.confidence,
             feedback_for_model=feedback_for_model,
-            decided_at=datetime.utcnow(),
+            decided_at=_utcnow(),
         )
         self._db.add(decision_model)
         await self._db.flush()
@@ -494,7 +498,7 @@ class ArbitrationService:
         case.status = "resolved"
         case.resolution = explanation
         case.final_decision = decision.value
-        case.resolved_at = datetime.utcnow().isoformat()
+        case.resolved_at = _utcnow().isoformat()
         case.resolved_by = arbitrator_id
 
         result = await self._db.execute(
@@ -505,7 +509,7 @@ class ArbitrationService:
             model.status = "resolved"
             model.resolution = explanation
             model.final_decision = decision.value
-            model.resolved_at = datetime.utcnow()
+            model.resolved_at = _utcnow()
             model.resolved_by = arbitrator_id
             await self._db.flush()
 
@@ -552,7 +556,7 @@ class ArbitrationService:
         )
         # TODO: 集成到 FeedbackDrivenGenerationService 或其他学习服务
 
-    async def get_case(self, case_id: str) -> Optional[ArbitrationCase]:
+    async def get_case(self, case_id: str) -> ArbitrationCase | None:
         """获取案件详情"""
         result = await self._db.execute(
             select(ArbitrationCaseModel).where(ArbitrationCaseModel.case_id == case_id)
@@ -565,8 +569,8 @@ class ArbitrationService:
     async def get_pending_queue(
         self,
         limit: int = 50,
-        priority: Optional[ArbitrationPriority] = None,
-    ) -> List[ArbitrationCase]:
+        priority: ArbitrationPriority | None = None,
+    ) -> list[ArbitrationCase]:
         """
         获取待处理队列
 
@@ -597,7 +601,7 @@ class ArbitrationService:
     async def get_assigned_cases(
         self,
         arbitrator_id: str,
-    ) -> List[ArbitrationCase]:
+    ) -> list[ArbitrationCase]:
         """获取分配给特定仲裁员的案件"""
         result = await self._db.execute(
             select(ArbitrationCaseModel).where(
@@ -609,7 +613,7 @@ class ArbitrationService:
 
     async def get_queue_stats(self) -> ArbitrationQueueStats:
         """获取队列统计"""
-        now = datetime.utcnow()
+        now = _utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         result = await self._db.execute(select(ArbitrationCaseModel))
@@ -682,7 +686,7 @@ class ArbitrationService:
         if not model:
             raise ValueError(f"Case {case_id} not found")
 
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = _utcnow().isoformat()
         formatted_note = f"[{timestamp}] {author_id}: {note}"
         existing_notes = model.notes or []
         existing_notes.append(formatted_note)
@@ -693,7 +697,7 @@ class ArbitrationService:
 
     async def bulk_assign(
         self,
-        case_ids: List[str],
+        case_ids: list[str],
         arbitrator_id: str,
         arbitrator_role: ArbitratorRole = ArbitratorRole.REVIEWER,
     ) -> int:
@@ -722,7 +726,7 @@ class ArbitrationService:
 # 全局实例管理
 # ============================================
 
-_arbitration_services: Dict[int, ArbitrationService] = {}
+_arbitration_services: dict[int, ArbitrationService] = {}
 
 
 def get_arbitration_service(db_session: AsyncSession) -> ArbitrationService:

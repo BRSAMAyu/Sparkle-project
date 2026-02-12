@@ -2,25 +2,35 @@
 MDX/MDD 词典查询服务
 MDX/MDD Dictionary Query Service
 
-依赖: pip install readmdict python-lzo beautifulsoup4 lxml
+默认关闭。仅当 ENABLE_MDX_DICTIONARY=true 时才尝试加载 MDX 依赖。
 """
-from pathlib import Path
-from typing import Optional, Dict, Any, List
 import html
 import logging
+import os
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-try:
-    from readmdict import MDX, MDD
-    from bs4 import BeautifulSoup
-    MDX_AVAILABLE = True
-except ImportError:
+ENABLE_MDX_DICTIONARY = os.getenv("ENABLE_MDX_DICTIONARY", "false").lower() in {"1", "true", "yes", "on"}
+
+if ENABLE_MDX_DICTIONARY:
+    try:
+        from bs4 import BeautifulSoup
+        from readmdict import MDD, MDX
+        MDX_AVAILABLE = True
+    except BaseException as e:
+        MDX_AVAILABLE = False
+        MDX = None
+        MDD = None
+        BeautifulSoup = None
+        logger.warning("MDX dictionary dependencies unavailable, feature disabled: %s", e)
+else:
     MDX_AVAILABLE = False
     MDX = None
     MDD = None
     BeautifulSoup = None
-    logger.warning("readmdict or beautifulsoup4 not available. MDX dictionary service disabled.")
+    logger.info("MDX dictionary disabled by config (ENABLE_MDX_DICTIONARY=false)")
 
 
 class MDXDictionaryService:
@@ -31,7 +41,7 @@ class MDXDictionaryService:
     使用 readmdict 库读取词典数据。
     """
 
-    def __init__(self, mdx_path: str, mdd_path: Optional[str] = None):
+    def __init__(self, mdx_path: str, mdd_path: str | None = None):
         """
         初始化 MDX 词典服务
 
@@ -63,7 +73,7 @@ class MDXDictionaryService:
             self._items_cache = {k.lower(): v for k, v in self.mdx.items()}
         return self._items_cache
 
-    def lookup(self, word: str) -> Optional[Dict[str, Any]]:
+    def lookup(self, word: str) -> dict[str, Any] | None:
         """
         查询单词
 
@@ -92,7 +102,7 @@ class MDXDictionaryService:
             logger.error(f"MDX lookup error for '{word}': {e}")
             return None
 
-    def _parse_result(self, raw: Any, word: str) -> Dict[str, Any]:
+    def _parse_result(self, raw: Any, word: str) -> dict[str, Any]:
         """
         解析 MDX 原始结果
 
@@ -104,10 +114,7 @@ class MDXDictionaryService:
             解析后的字典数据
         """
         # raw 可能是 bytes 或 list
-        if isinstance(raw, list):
-            content_bytes = raw[0]
-        else:
-            content_bytes = raw
+        content_bytes = raw[0] if isinstance(raw, list) else raw
 
         if isinstance(content_bytes, bytes):
             html_content = content_bytes.decode('utf-8', errors='ignore')
@@ -136,7 +143,7 @@ class MDXDictionaryService:
             "source": self._dictionary_name
         }
 
-    def _extract_phonetic(self, soup) -> Optional[str]:
+    def _extract_phonetic(self, soup) -> str | None:
         """提取音标"""
         if not soup:
             return None
@@ -168,7 +175,7 @@ class MDXDictionaryService:
 
         return None
 
-    def _extract_pos(self, soup) -> Optional[str]:
+    def _extract_pos(self, soup) -> str | None:
         """提取词性"""
         if not soup:
             return None
@@ -192,7 +199,7 @@ class MDXDictionaryService:
 
         return None
 
-    def _extract_definitions(self, soup) -> List[str]:
+    def _extract_definitions(self, soup) -> list[str]:
         """提取释义"""
         if not soup:
             return []
@@ -231,7 +238,7 @@ class MDXDictionaryService:
 
         return definitions[:5] if definitions else ["No definition found"]
 
-    def _extract_examples(self, soup) -> List[str]:
+    def _extract_examples(self, soup) -> list[str]:
         """提取例句"""
         if not soup:
             return []
@@ -260,9 +267,9 @@ class MDXDictionaryService:
 
 
 def create_mdx_service(
-    mdx_path: Optional[str] = None,
-    mdd_path: Optional[str] = None
-) -> Optional[MDXDictionaryService]:
+    mdx_path: str | None = None,
+    mdd_path: str | None = None
+) -> MDXDictionaryService | None:
     """
     创建 MDX 词典服务实例
 

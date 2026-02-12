@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskReminderConfig;
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 /// Key for storing 'Enter to Send' preference in SharedPreferences
 const String kEnterToSendKey = 'settings_enter_to_send';
@@ -9,6 +12,261 @@ const String kTransparentModeKey = 'settings_transparent_mode';
 const String kTransparencyLevelKey = 'settings_transparency_level';
 const String kOnboardingCompletedKey = 'settings_onboarding_completed';
 const String kSystemUpdateLevelKey = 'settings_system_update_level';
+
+/// Learning preferences model
+class LearningPreferences {
+  const LearningPreferences({
+    required this.depth,
+    required this.curiosity,
+  });
+
+  final double depth;
+  final double curiosity;
+
+  LearningPreferences copyWith({double? depth, double? curiosity}) => LearningPreferences(
+      depth: depth ?? this.depth,
+      curiosity: curiosity ?? this.curiosity,
+    );
+}
+
+/// Provider for learning preferences (depth and curiosity)
+final learningPreferencesProvider =
+    StateNotifierProvider<LearningPreferencesNotifier, LearningPreferences>(
+  LearningPreferencesNotifier.new,
+);
+
+/// Provider for push notification preferences
+final pushPreferencesProvider =
+    StateNotifierProvider<PushPreferencesNotifier, PushPreferences>(
+  PushPreferencesNotifier.new,
+);
+
+/// Provider for task reminder configuration
+final taskReminderConfigProvider =
+    StateNotifierProvider<TaskReminderConfigNotifier, TaskReminderConfig>(
+  TaskReminderConfigNotifier.new,
+);
+
+/// Provider for weekly agenda data
+final weeklyAgendaProvider =
+    StateNotifierProvider<WeeklyAgendaNotifier, Map<String, dynamic>>(
+  WeeklyAgendaNotifier.new,
+);
+
+class WeeklyAgendaNotifier extends StateNotifier<Map<String, dynamic>> {
+  WeeklyAgendaNotifier(this._ref) : super({}) {
+    _loadFromSettings();
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadFromSettings() async {
+    final user = _ref.read(authProvider).user;
+    if (user?.schedulePreferences != null) {
+      state = user!.schedulePreferences!;
+    } else {
+      state = {'grid': List.filled(168, 'relax')};
+    }
+  }
+
+  Future<void> updateAgenda(Map<String, dynamic> data) async {
+    final prevState = state;
+    // Optimistic update
+    state = data;
+
+    // Save to backend via dedicated schedule preferences endpoint
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      final updatedUser = await repo.updateSchedulePreferences(data);
+      // Update auth state with new user data
+      final authNotifier = _ref.read(authProvider.notifier);
+      final currentAuthState = _ref.read(authProvider);
+      authNotifier.state = currentAuthState.copyWith(user: updatedUser);
+    } catch (e) {
+      // Revert on error
+      state = prevState;
+      rethrow;
+    }
+  }
+}
+
+class TaskReminderConfigNotifier extends StateNotifier<TaskReminderConfig> {
+  TaskReminderConfigNotifier(this._ref)
+      : super(const TaskReminderConfig()) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromSettings();
+      }
+    });
+    _loadFromSettings();
+  }
+
+  final Ref _ref;
+
+  Future<void> _loadFromSettings() async {
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      final settings = await repo.fetchUserSettings();
+      final enabled = settings['task_reminders_enabled'] as bool? ?? true;
+      final times = settings['task_reminder_times'] as List<dynamic>? ?? [1440, 60, 15];
+
+      state = TaskReminderConfig(
+        enabled: enabled,
+        reminders: times.cast<int>(),
+      );
+    } catch (e) {
+      // Keep default state on error
+    }
+  }
+
+  Future<void> updateConfig({
+    bool? enabled,
+    List<int>? reminders,
+  }) async {
+    final prevState = state;
+    final newState = TaskReminderConfig(
+      enabled: enabled ?? prevState.enabled,
+      reminders: reminders ?? prevState.reminders,
+    );
+
+    // Optimistic update
+    state = newState;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      await repo.updateUserSettings({
+        'task_reminders_enabled': newState.enabled,
+        'task_reminder_times': newState.reminders,
+      });
+    } catch (e) {
+      // Revert on error
+      state = prevState;
+      rethrow;
+    }
+  }
+}
+
+class PushPreferencesNotifier extends StateNotifier<PushPreferences> {
+  PushPreferencesNotifier(this._ref)
+      : super(PushPreferences(
+          
+        ),) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromUser(next.user);
+      }
+    });
+    _loadFromUser(_ref.read(authProvider).user);
+  }
+
+  final Ref _ref;
+
+  void _loadFromUser(UserModel? user) {
+    if (user?.pushPreferences != null) {
+      state = user!.pushPreferences!;
+    }
+  }
+
+  Future<void> updatePreferences({
+    bool? enableCuriosity,
+    String? personaType,
+    int? dailyCap,
+    List<Map<String, String>>? activeSlots,
+  }) async {
+    final currentState = state;
+    final updatedPrefs = PushPreferences(
+      enableCuriosity: enableCuriosity ?? currentState.enableCuriosity,
+      personaType: personaType ?? currentState.personaType,
+      dailyCap: dailyCap ?? currentState.dailyCap,
+      activeSlots: activeSlots ?? currentState.activeSlots,
+      timezone: currentState.timezone,
+    );
+
+    // Optimistic update
+    state = updatedPrefs;
+
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      await apiClient.put<Map<String, dynamic>>(
+        '/users/me/push-preference',
+        data: updatedPrefs.toJson(),
+      );
+
+      // Refresh user to get updated data
+      await _ref.read(authProvider.notifier).refreshUser();
+    } catch (e) {
+      // Revert on error
+      state = currentState;
+      rethrow;
+    }
+  }
+
+  Future<void> toggleEnableCuriosity() async {
+    await updatePreferences(
+      enableCuriosity: !state.enableCuriosity,
+    );
+  }
+}
+
+class LearningPreferencesNotifier extends StateNotifier<LearningPreferences> {
+  LearningPreferencesNotifier(this._ref)
+      : super(const LearningPreferences(depth: 0.5, curiosity: 0.5)) {
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.user != null && prev?.user?.id != next.user?.id) {
+        _loadFromUser(next.user);
+      }
+    });
+    _loadFromUser(_ref.read(authProvider).user);
+  }
+
+  final Ref _ref;
+
+  void _loadFromUser(UserModel? user) {
+    if (user != null) {
+      state = LearningPreferences(
+        depth: user.depthPreference,
+        curiosity: user.curiosityPreference,
+      );
+    }
+  }
+
+  Future<void> updatePreferences({
+    double? depth,
+    double? curiosity,
+  }) async {
+    final prevState = state;
+    final user = _ref.read(authProvider).user;
+    if (user == null) return;
+
+    final newState = state.copyWith(depth: depth, curiosity: curiosity);
+    // Optimistic update
+    state = newState;
+
+    try {
+      final repo = _ref.read(userRepositoryProvider);
+      final updatedUser = await repo.updateUserPreferences(
+        UserPreferences(
+          depthPreference: newState.depth,
+          curiosityPreference: newState.curiosity,
+        ),
+      );
+      // Update auth state with new user data
+      final authNotifier = _ref.read(authProvider.notifier);
+      final currentAuthState = _ref.read(authProvider);
+      authNotifier.state = currentAuthState.copyWith(user: updatedUser);
+    } catch (e) {
+      // Revert to previous state on error
+      state = prevState;
+      rethrow;
+    }
+  }
+}
 
 /// Provider to manage the 'Enter to Send' preference
 final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>(

@@ -22,7 +22,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(chatModeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (currentMode.apiValue == 'standard') {
       return AnimatedSwitcher(
@@ -31,7 +30,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
         switchOutCurve: AnimationSystem.smooth,
         child: _UnselectedPill(
           key: const ValueKey('mode-pill-unselected'),
-          isDark: isDark,
           onTap: () => _showModeSelector(context, ref),
         ),
       );
@@ -44,7 +42,6 @@ class ChatModeSelectorPill extends ConsumerWidget {
       child: _SelectedPill(
         key: ValueKey('mode-pill-${currentMode.apiValue}'),
         mode: currentMode,
-        isDark: isDark,
         onTap: () => _showModeSelector(context, ref),
       ),
     );
@@ -55,7 +52,7 @@ class ChatModeSelectorPill extends ConsumerWidget {
     unawaited(
       showModalBottomSheet<ChatMode>(
         context: context,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
         builder: (context) => const ChatModeSelectorSheet(),
       ).then((selectedMode) {
@@ -73,113 +70,115 @@ class ChatModeSelectorPill extends ConsumerWidget {
 
 class _UnselectedPill extends StatelessWidget {
   const _UnselectedPill({
-    required this.isDark, required this.onTap, super.key,
+    required this.onTap,
+    super.key,
   });
 
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
-            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                size: DS.iconSizeSm,
-                color: DS.neutral500,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                '选择模式',
-                style: TextStyle(
-                  color: DS.neutral600,
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightMedium,
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              // Use surfaceTertiary for consistent theming with Dashboard
+              backgroundColor: DS.surfaceTertiary,
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
                 ),
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: DS.neutral500,
-              ),
-            ],
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  '选择模式',
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _SelectedPill extends StatelessWidget {
   const _SelectedPill({
-    required this.mode, required this.isDark, required this.onTap, super.key,
+    required this.mode,
+    required this.onTap,
+    super.key,
   });
 
   final ChatMode mode;
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.neoGlass.copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                mode.color.withValues(alpha: 0.18),
-                mode.color.withValues(alpha: 0.08),
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.neoGlass.copyWith(
+              backgroundGradient: LinearGradient(
+                colors: [
+                  mode.color.withValues(alpha: 0.18),
+                  mode.color.withValues(alpha: 0.08),
+                ],
+              ),
+              borderColor: mode.color.withValues(alpha: 0.35),
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  mode.icon,
+                  size: DS.iconSizeSm,
+                  color: mode.color,
+                ),
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  mode.label,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
               ],
             ),
-            borderColor: mode.color.withValues(alpha: 0.35),
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                mode.icon,
-                size: DS.iconSizeSm,
-                color: mode.color,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                mode.label,
-                style: TextStyle(
-                  color: isDark ? DS.neutral100 : DS.neutral900,
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightMedium,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: DS.neutral500,
-              ),
-            ],
           ),
         ),
-      ),
-    );
+      );
 }

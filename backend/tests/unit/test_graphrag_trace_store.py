@@ -1,4 +1,8 @@
-from datetime import datetime
+from datetime import UTC, datetime
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 from app.config import settings
 from app.orchestration.graph_rag import RetrievalTrace
@@ -11,7 +15,7 @@ def test_trace_store_redacts_query_when_pii_disabled(monkeypatch):
     trace = RetrievalTrace(
         trace_id="trace-1",
         query="Contact me at test@example.com or +1 555-123-4567",
-        timestamp=datetime.utcnow(),
+        timestamp=_utcnow(),
         nodes_retrieved=[],
         node_sources={},
         relationships=[],

@@ -5,13 +5,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_panel.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -34,8 +35,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    ref.listenManual(
-        chatProvider.select((state) => state.messages), (previous, next) {
+    ref.listenManual(chatProvider.select((state) => state.messages),
+        (previous, next) {
       if (next.length > (previous?.length ?? 0)) {
         _scrollToBottom();
       }
@@ -47,38 +48,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    // 🔧 错误修复：监听错误状态，10秒后自动清除（避免长时间阻塞UI）
+    ref.listenManual(chatProvider.select((state) => state.error),
+        (previous, next) {
+      if (next != null && next != previous) {
+        Future.delayed(const Duration(seconds: 10), () {
+          if (mounted) {
+            final currentError = ref.read(chatProvider).error;
+            if (currentError == next) {
+              // 错误仍然相同，自动清除
+              // 🔧 修复：正确使用StateNotifier更新状态
+              final notifier = ref.read(chatProvider.notifier);
+              notifier.state = notifier.state.copyWith(clearError: true);
+            }
+          }
+        });
+      }
+    });
+
+    // 🔧 修复：将ref.listen移到initState，避免在build中监听
+    ref.listenManual(
+      chatProvider.select((state) => state.lastActionStatus),
+      (previous, next) {
+        if (next != null && next != previous) {
+          final message = ref.read(chatProvider).lastActionMessage;
+          if (message != null && mounted) {
+            if (next == 'failed' || next == 'error') {
+              AppFeedback.error(context, message);
+            } else {
+              AppFeedback.success(context, message);
+            }
+          }
+        }
+      },
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activePlanId = ref.read(activePlanProvider);
-      unawaited(ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
+      unawaited(
+          ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen for action status updates to show SnackBar
-    ref.listen(chatProvider.select((state) => state.lastActionStatus),
-        (previous, next) {
-      if (next != null && next != previous) {
-        final message = ref.read(chatProvider).lastActionMessage;
-        if (message != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: next == 'failed' || next == 'error'
-                  ? DS.error
-                  : DS.primaryBase,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
-
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final transparentMode = ref.watch(transparentModeProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -90,25 +106,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
+                    (isDark ? DS.surfaceAmbient : DS.surfacePrimary)
                         .withValues(alpha: 0.9),
-                    (isDark ? DS.deepSpaceEnd : DS.neutral50)
+                    (isDark ? DS.surfacePrimary : DS.neutral50)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 border: Border(
-                    bottom: BorderSide(
-                        color: isDark
-                            ? DS.brandPrimary.withValues(alpha: 0.1)
-                            : DS.brandPrimary.withValues(alpha: 0.05),
-                        width: 0.5,),),
+                  bottom: BorderSide(
+                    color: isDark
+                        ? DS.brandPrimary.withValues(alpha: 0.1)
+                        : DS.brandPrimary.withValues(alpha: 0.05),
+                    width: 0.5,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         elevation: 0,
         title: Row(
           children: [
@@ -118,8 +136,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 gradient: DS.secondaryGradient,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.auto_awesome,
-                  color: DS.brandPrimaryConst, size: 20,),
+              child: Icon(
+                Icons.auto_awesome,
+                color: DS.brandPrimaryConst,
+                size: 20,
+              ),
             ),
             const SizedBox(width: DS.md),
             Column(
@@ -129,7 +150,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   'AI学习助手',
                   style: TextStyle(
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
+                    color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                     fontSize: DS.fontSizeBase,
                   ),
@@ -137,7 +158,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   '随时为你解答',
                   style: TextStyle(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                    color: DS.textSecondary,
                     fontSize: DS.fontSizeXs,
                   ),
                 ),
@@ -146,25 +167,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.history,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
+          SparkleIconButton(
+            icon: Icon(Icons.history, color: DS.textSecondary),
             onPressed: () => _showHistoryBottomSheet(context),
+            semanticLabel: '历史对话',
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
-          IconButton(
-            icon: Icon(Icons.add_comment_outlined,
-                color: isDark ? DS.brandPrimary70 : DS.neutral700,),
-            tooltip: 'New Chat',
+          SparkleIconButton(
+            icon: Icon(Icons.add_comment_outlined, color: DS.textSecondary),
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
+            semanticLabel: '新建对话',
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
         ],
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
+          // Use three-layer gradient matching Dashboard WeatherHeader style
           gradient: isDark
-              ? DS.deepSpaceGradient
+              ? LinearGradient(
+                  colors: [
+                    DS.surfaceAmbient,
+                    DS.surfacePrimary,
+                    DS.surfaceSecondary
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
               : LinearGradient(
-                  colors: [DS.neutral50, DS.neutral100],
+                  colors: [DS.neutral50, DS.neutral100, DS.neutral200],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -172,220 +205,240 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Stack(
           children: [
             SafeArea(
-              child: Column(
-                children: [
-                  if (chatState.isLoading)
-                    LinearProgressIndicator(
-                      backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
-                      minHeight: 2,
-                    ),
-                  Expanded(
-                    child: messages.isEmpty &&
-                            chatState.streamingContent.isEmpty &&
-                            chatState.aiStatus == null &&
-                            !chatState.isReasoningActive
-                        ? _buildQuickActions(context)
-                        : ListView.builder(
-                            controller: _scrollController,
-                            reverse: true,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 20.0,),
-                            cacheExtent: 600,
-                            // 🆕 显示状态指示器、推理气泡、流式内容或消息
-                            itemCount: chatState.listItemCount,
-                            itemBuilder: (context, index) {
-                              final isStatusShowing =
-                                  chatState.aiStatus != null;
-                              final isReasoningShowing =
-                                  chatState.isReasoningActive;
-                              final isSendingShowing = chatState.isSending;
-
-                              // 1. 如果有 AI 状态更新，在最底部显示（reversed 模式下 index 为 0）
-                              if (isStatusShowing && index == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: AiStatusIndicator(
-                                    status: chatState.aiStatus,
-                                    details: chatState.aiStatusDetails,
-                                  ),
-                                );
-                              }
-
-                              // 2. 🆕 如果正在显示推理过程，显示 Chain of Thought Bubble
-                              final reasoningIndex = isStatusShowing ? 1 : 0;
-                              if (isReasoningShowing &&
-                                  index == reasoningIndex) {
-                                final durationMs =
-                                    chatState.reasoningStartTime != null
-                                        ? DateTime.now()
-                                                .millisecondsSinceEpoch -
-                                            chatState.reasoningStartTime!
-                                        : null;
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: AgentReasoningBubble(
-                                    steps: chatState.reasoningSteps,
-                                    isThinking: true,
-                                    totalDurationMs: durationMs,
-                                  ),
-                                );
-                              }
-
-                              // 3. 如果正在发送/接收，显示流式内容或打字指示器
-                              var streamIndex = 0;
-                              if (isStatusShowing) streamIndex++;
-                              if (isReasoningShowing) streamIndex++;
-
-                              if (isSendingShowing && index == streamIndex) {
-                                // 如果有流式内容，显示它
-                                if (chatState.streamingContent.isNotEmpty) {
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 12.0),
-                                    child: _StreamingBubble(
-                                        content: chatState.streamingContent,),
-                                  );
-                                }
-
-                                // 如果没有流式内容且也没有显示状态指示器，则显示通用打字指示器
-                                if (!isStatusShowing && !isReasoningShowing) {
-                                  return const Padding(
-                                    padding: EdgeInsets.only(bottom: 12.0),
-                                    child: _TypingIndicator(),
-                                  );
-                                }
-
-                                return const SizedBox.shrink();
-                              }
-
-                              // 4. 计算正式消息的索引
-                              var msgIndex = index;
-                              if (isStatusShowing) msgIndex--;
-                              if (isReasoningShowing) msgIndex--;
-                              if (isSendingShowing) msgIndex--;
-
-                              if (msgIndex < 0) return const SizedBox.shrink();
-
-                              final messageCount = messages.length;
-                              final adjustedIndex = messageCount - 1 - msgIndex;
-
-                              if (adjustedIndex < 0 ||
-                                  adjustedIndex >= messageCount) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final message = messages[adjustedIndex];
-                              return ChatBubble(
-                                message: message,
-                                onActionConfirm: (action) {
-                                  ref
-                                      .read(chatProvider.notifier)
-                                      .confirmAction(action);
-                                },
-                                onActionDismiss: (action) {
-                                  ref
-                                      .read(chatProvider.notifier)
-                                      .dismissAction(action);
-                                },
-                                onResponseFeedback: (msg, feedbackType) {
-                                  ref
-                                      .read(chatProvider.notifier)
-                                      .sendResponseFeedback(msg, feedbackType);
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                  if (chatState.error != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(DS.sm),
-                      color: DS.error.withValues(alpha: 0.1),
-                      child: Text(
-                        'Error: ${chatState.error}',
-                        style: TextStyle(color: DS.error),
-                        textAlign: TextAlign.center,
+              child: ContentConstraint(
+                child: Column(
+                  children: [
+                    if (chatState.isLoading)
+                      LinearProgressIndicator(
+                        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(DS.primaryBase),
+                        minHeight: 2,
                       ),
-                    ),
-                  if (chatState.attachedFiles.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: DS.lg, vertical: DS.sm,),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 80),
-                        child: SingleChildScrollView(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: chatState.attachedFiles
-                                .map(
-                                  (file) => InputChip(
-                                    label: Text(
-                                      file.fileName,
-                                      overflow: TextOverflow.ellipsis,
+                    Expanded(
+                      child: messages.isEmpty &&
+                              chatState.streamingContent.isEmpty &&
+                              chatState.aiStatus == null &&
+                              !chatState.isReasoningActive
+                          ? _buildQuickActions(context)
+                          : ListView.builder(
+                              controller: _scrollController,
+                              reverse: true,
+                              padding: EdgeInsets.only(
+                                left: DS.spacing16,
+                                right: DS.spacing16,
+                                top: DS.spacing20,
+                                bottom:
+                                    _calculateBottomPadding(context, chatState),
+                              ),
+                              cacheExtent: 600,
+                              itemCount: chatState.listItemCount,
+                              itemBuilder: (context, index) {
+                                final isStatusShowing =
+                                    chatState.aiStatus != null;
+                                final isReasoningShowing =
+                                    chatState.isReasoningActive;
+                                final isSendingShowing = chatState.isSending;
+
+                                if (isStatusShowing && index == 0) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: DS.spacing12),
+                                    child: AiStatusIndicator(
+                                      status: chatState.aiStatus,
+                                      details: chatState.aiStatusDetails,
                                     ),
-                                    onDeleted: () => ref
+                                  );
+                                }
+
+                                final reasoningIndex = isStatusShowing ? 1 : 0;
+                                if (isReasoningShowing &&
+                                    index == reasoningIndex) {
+                                  final durationMs =
+                                      chatState.reasoningStartTime != null
+                                          ? DateTime.now()
+                                                  .millisecondsSinceEpoch -
+                                              chatState.reasoningStartTime!
+                                          : null;
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: DS.spacing12),
+                                    child: AgentReasoningBubble(
+                                      steps: chatState.reasoningSteps,
+                                      isThinking: true,
+                                      totalDurationMs: durationMs,
+                                    ),
+                                  );
+                                }
+
+                                var streamIndex = 0;
+                                if (isStatusShowing) streamIndex++;
+                                if (isReasoningShowing) streamIndex++;
+
+                                if (isSendingShowing && index == streamIndex) {
+                                  if (chatState.streamingContent.isNotEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: DS.spacing12),
+                                      child: _StreamingBubble(
+                                        content: chatState.streamingContent,
+                                      ),
+                                    );
+                                  }
+
+                                  if (!isStatusShowing && !isReasoningShowing) {
+                                    return const Padding(
+                                      padding:
+                                          EdgeInsets.only(bottom: DS.spacing12),
+                                      child: _TypingIndicator(),
+                                    );
+                                  }
+
+                                  return const SizedBox.shrink();
+                                }
+
+                                var msgIndex = index;
+                                if (isStatusShowing) msgIndex--;
+                                if (isReasoningShowing) msgIndex--;
+                                if (isSendingShowing) msgIndex--;
+
+                                if (msgIndex < 0) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final messageCount = messages.length;
+                                final adjustedIndex =
+                                    messageCount - 1 - msgIndex;
+
+                                if (adjustedIndex < 0 ||
+                                    adjustedIndex >= messageCount) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final message = messages[adjustedIndex];
+                                return ChatBubble(
+                                  message: message,
+                                  onActionConfirm: (action) {
+                                    ref
                                         .read(chatProvider.notifier)
-                                        .removeAttachment(file.id),
+                                        .confirmAction(action);
+                                  },
+                                  onActionDismiss: (action) {
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .dismissAction(action);
+                                  },
+                                  onResponseFeedback: (msg, feedbackType) {
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .sendResponseFeedback(
+                                          msg,
+                                          feedbackType,
+                                        );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                    if (chatState.error != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(DS.sm),
+                        color: DS.error.withValues(alpha: 0.1),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chatState.error!,
+                                style: TextStyle(
+                                  color: DS.error,
+                                  fontSize: DS.fontSizeSm,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Material(
+                              color: DS.surfacePrimary.withValues(alpha: 0),
+                              borderRadius: DS.borderRadiusFull,
+                              child: InkWell(
+                                borderRadius: DS.borderRadiusFull,
+                                onTap: () {
+                                  // Clear error
+                                  // 🔧 修复：正确使用StateNotifier更新状态
+                                  final notifier =
+                                      ref.read(chatProvider.notifier);
+                                  notifier.state =
+                                      notifier.state.copyWith(clearError: true);
+                                },
+                                child: Padding(
+                                  padding: EdgeInsets.all(DS.spacing4),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: DS.iconSizeXs,
+                                    color: DS.error,
                                   ),
-                                )
-                                .toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (chatState.pendingPlanReview != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.lg,
+                          vertical: DS.sm,
+                        ),
+                        child: PlanReviewCard(
+                          review: chatState.pendingPlanReview!,
+                          onDecision: (decision, {userComment, meta}) =>
+                              ref.read(chatProvider.notifier).submitPlanReview(
+                                    decision: decision,
+                                    userComment: userComment,
+                                    meta: meta,
+                                  ),
+                        ),
+                      ),
+                    if (chatState.attachedFiles.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.lg,
+                          vertical: DS.sm,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 80),
+                          child: SingleChildScrollView(
+                            child: Wrap(
+                              spacing: DS.spacing8,
+                              runSpacing: DS.spacing8,
+                              children: chatState.attachedFiles
+                                  .map(
+                                    (file) => InputChip(
+                                      label: Text(
+                                        file.fileName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onDeleted: () => ref
+                                          .read(chatProvider.notifier)
+                                          .removeAttachment(file.id),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
                           ),
                         ),
                       ),
+                    // Bottom input area - wrapped to prevent overflow
+                    LayoutBuilder(
+                      builder: (context, constraints) => _buildBottomInputArea(
+                          context, chatState, constraints),
                     ),
-                  // Plan Selector Pill - allows selecting plan for chat context
-                  if (transparentMode)
-                    TransparencyPanel(
-                      status: chatState.aiStatus,
-                      details: chatState.aiStatusDetails,
-                      promptTokens: chatState.lastPromptTokens,
-                      completionTokens: chatState.lastCompletionTokens,
-                      totalTokens: chatState.lastTotalTokens,
-                      currentAgentName: chatState.currentAgentName,
-                      activeAgentType: chatState.activeAgentType,
-                      activeTools: chatState.activeTools,
-                      dailyTokens: chatState.dailyTokens,
-                      dailyTokenLimit: chatState.dailyTokenLimit,
-                      dailyCostMicroUsd: chatState.dailyCostMicroUsd,
-                      // Transparency data
-                      transparencyData: chatState.transparencyData,
-                      currentStepIndex: chatState.currentStepIndex,
-                    ),
-                  if (transparentMode) const SizedBox(height: DS.spacing12),
-                  const PlanSelectorPill(),
-                  // Chat Mode Selector Pill - allows selecting AI collaboration mode
-                  const ChatModeSelectorPill(),
-                  // Intent prediction bar
-                  const IntentPredictionBar(showIdle: false),
-                  ChatInput(
-                    enabled: !chatState.isSending,
-                    onTextChanged: (text) {
-                      ref.read(intentPredictionProvider.notifier).onInputChanged(text);
-                    },
-                    onFileUploaded: (StoredFile file) {
-                      if (file.status != 'processed') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('文件处理中，完成后可用于对话')),
-                        );
-                        return;
-                      }
-                      ref.read(chatProvider.notifier).addAttachment(file);
-                    },
-                    onSend: (text, {replyToId}) => unawaited(
-                      ref.read(chatProvider.notifier).sendMessage(text),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            // 🔥 必杀技 A: GraphRAG 实时可视化
-            if (chatState.graphragTrace != null)
-              GraphRAGVisualizer(
-                trace: chatState.graphragTrace,
-              ),
           ],
         ),
       ),
@@ -398,7 +451,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     unawaited(
       showModalBottomSheet<void>(
         context: context,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
         builder: (context) {
           final mediaQuery = MediaQuery.of(context);
@@ -416,21 +469,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             maxChildSize: maxChildSize,
             builder: (context, scrollController) => DecoratedBox(
               decoration: BoxDecoration(
-                color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
+                // Use surfaceSecondary to match Dashboard ceramic cards
+                color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(DS.spacing24)),
               ),
               child: SafeArea(
                 top: false,
                 child: Column(
                   children: [
                     Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: DS.spacing40,
+                      height: DS.spacing4,
+                      margin:
+                          const EdgeInsets.symmetric(vertical: DS.spacing12),
                       decoration: BoxDecoration(
-                        color: isDark ? DS.neutral700 : DS.neutral300,
-                        borderRadius: BorderRadius.circular(2),
+                        color: DS.surfaceTertiary,
+                        borderRadius: BorderRadius.circular(DS.spacing4 / 2),
                       ),
                     ),
                     Padding(
@@ -442,9 +497,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           Text(
                             '历史对话',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: DS.fontSizeLg,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? DS.brandPrimary : DS.neutral900,
+                              color: DS.textPrimary,
                             ),
                           ),
                         ],
@@ -512,24 +567,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   decoration: BoxDecoration(
                                     color: isCurrent
                                         ? DS.primaryBase.withValues(alpha: 0.1)
-                                        : (isDark
-                                            ? DS.neutral800
-                                            : DS.neutral100),
+                                        : DS.surfaceTertiary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     Icons.chat_bubble_outline_rounded,
-                                    size: 18,
+                                    size: DS.iconSizeXs,
                                     color: isCurrent
                                         ? DS.primaryBase
-                                        : DS.neutral500,
+                                        : DS.textSecondary,
                                   ),
                                 ),
                                 title: Text(
                                   (session['title'] as String?) ?? '未命名会话',
                                   style: TextStyle(
-                                    color:
-                                        isDark ? DS.brandPrimary : DS.neutral900,
+                                    color: DS.textPrimary,
                                     fontWeight: isCurrent
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -541,12 +593,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   (session['updated_at'] as String?)
                                           ?.split('T')[0] ??
                                       '',
-                                  style:
-                                      TextStyle(fontSize: 12, color: DS.neutral500),
+                                  style: TextStyle(
+                                    fontSize: DS.fontSizeXs,
+                                    color: DS.neutral500,
+                                  ),
                                 ),
                                 trailing: isCurrent
-                                    ? Icon(Icons.check_circle,
-                                        color: DS.primaryBase, size: 18,)
+                                    ? Icon(
+                                        Icons.check_circle,
+                                        color: DS.primaryBase,
+                                        size: DS.iconSizeXs,
+                                      )
                                     : null,
                                 onTap: () {
                                   Navigator.pop(context);
@@ -554,7 +611,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     ref
                                         .read(chatProvider.notifier)
                                         .loadConversationHistory(
-                                            session['id'] as String,),
+                                          session['id'] as String,
+                                        ),
                                   );
                                 },
                               );
@@ -573,88 +631,92 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: DS.primaryBase.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
-            ),
-            const SizedBox(height: DS.xl),
-            Text(
-              '你好，我是你的 AI 导师',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? DS.brandPrimary : DS.neutral900,
+  Widget _buildQuickActions(BuildContext context) => Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.xxl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing20),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              '今天想做点什么？',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: DS.iconSize3xl,
+                    color: DS.primaryBase,
                   ),
+                ),
+                const SizedBox(height: DS.xl),
+                Text(
+                  '你好，我是你的 AI 导师',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: DS.textPrimary,
+                      ),
+                ),
+                const SizedBox(height: DS.sm),
+                Text(
+                  '今天想做点什么？',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing40),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
+                    return Wrap(
+                      spacing: DS.spacing12,
+                      runSpacing: DS.spacing12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _QuickActionChip(
+                          icon: Icons.add_task_rounded,
+                          label: '新建微任务',
+                          color: DS.brandPrimaryConst,
+                          isNarrow: isNarrow,
+                          onTap: () => unawaited(
+                            ref
+                                .read(chatProvider.notifier)
+                                .sendMessage('帮我创建一个新的微任务'),
+                          ),
+                        ),
+                        _QuickActionChip(
+                          icon: Icons.calendar_month_rounded,
+                          label: '生成长期计划',
+                          color: DS.capsuleAccent,
+                          isNarrow: isNarrow,
+                          onTap: () => unawaited(
+                            ref
+                                .read(chatProvider.notifier)
+                                .sendMessage('帮我生成一个长期学习计划'),
+                          ),
+                        ),
+                        _QuickActionChip(
+                          icon: Icons.bug_report_rounded,
+                          label: '错误归因',
+                          color: DS.brandPrimaryConst,
+                          isNarrow: isNarrow,
+                          onTap: () => unawaited(
+                            ref
+                                .read(chatProvider.notifier)
+                                .sendMessage('我想分析一下最近的错误原因'),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 40),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _QuickActionChip(
-                      icon: Icons.add_task_rounded,
-                      label: '新建微任务',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我创建一个新的微任务'),
-                      ),
-                    ),
-                    _QuickActionChip(
-                      icon: Icons.calendar_month_rounded,
-                      label: '生成长期计划',
-                      color: DS.capsuleAccent,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('帮我生成一个长期学习计划'),
-                      ),
-                    ),
-                    _QuickActionChip(
-                      icon: Icons.bug_report_rounded,
-                      label: '错误归因',
-                      color: DS.brandPrimaryConst,
-                      isNarrow: isNarrow,
-                      onTap: () => unawaited(
-                        ref
-                            .read(chatProvider.notifier)
-                            .sendMessage('我想分析一下最近的错误原因'),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
@@ -663,6 +725,128 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  /// Calculate bottom padding for ListView to prevent messages being hidden
+  /// behind fixed components at the bottom.
+  double _calculateBottomPadding(BuildContext context, ChatState chatState) {
+    // Use a more generous calculation based on actual screen height
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+
+    // Base padding
+    var padding = isSmallScreen ? DS.spacing40 : DS.spacing64 - DS.spacing4;
+
+    // PlanSelectorPill height (can vary with content)
+    padding += isSmallScreen
+        ? DS.touchTargetMinSize - DS.spacing4
+        : DS.touchTargetMinSize + DS.spacing4;
+
+    // ChatModeSelectorPill height
+    padding += isSmallScreen
+        ? DS.spacing32 + DS.spacing4
+        : DS.touchTargetMinSize - DS.spacing4;
+
+    // IntentPredictionBar height (when visible)
+    if (chatState.aiStatus != null) {
+      padding += isSmallScreen
+          ? DS.touchTargetMinSize
+          : DS.touchTargetMinSize + DS.spacing8;
+    }
+
+    // ChatInput base height + expansion buffer
+    padding += isSmallScreen ? 80.0 : 100.0;
+
+    // TransparencyPanel (conditional)
+    if (ref.watch(transparentModeProvider)) {
+      padding += isSmallScreen
+          ? DS.spacing64 + DS.spacing64 + DS.spacing12
+          : DS.spacing64 + DS.spacing64 + DS.spacing32;
+    }
+
+    // GraphRAG visualizer
+    if (chatState.graphragTrace != null) {
+      padding += DS.spacing64 + DS.spacing16;
+    }
+
+    // SafeArea bottom padding - use actual value with more buffer
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    padding += bottomPadding.clamp(0.0, 50.0);
+
+    // Add extra buffer for safety
+    padding += isSmallScreen ? DS.spacing40 : DS.spacing20;
+
+    return padding;
+  }
+
+  /// Build the bottom input area with proper overflow handling.
+  /// Uses SingleChildScrollView to prevent overflow when components expand.
+  Widget _buildBottomInputArea(
+    BuildContext context,
+    ChatState chatState,
+    BoxConstraints constraints,
+  ) {
+    final transparentMode = ref.watch(transparentModeProvider);
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (transparentMode)
+            Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              child: TransparencyPanel(
+                status: chatState.aiStatus,
+                details: chatState.aiStatusDetails,
+                promptTokens: chatState.lastPromptTokens,
+                completionTokens: chatState.lastCompletionTokens,
+                totalTokens: chatState.lastTotalTokens,
+                currentAgentName: chatState.currentAgentName,
+                activeAgentType: chatState.activeAgentType,
+                activeTools: chatState.activeTools,
+                dailyTokens: chatState.dailyTokens,
+                dailyTokenLimit: chatState.dailyTokenLimit,
+                dailyCostMicroUsd: chatState.dailyCostMicroUsd,
+                transparencyData: chatState.transparencyData,
+                currentStepIndex: chatState.currentStepIndex,
+              ),
+            ),
+          const PlanSelectorPill(),
+          const ChatModeSelectorPill(),
+          const IntentPredictionBar(showIdle: false),
+          ChatInput(
+            enabled: !chatState.isSending,
+            onTextChanged: (text) {
+              if (mounted) {
+                ref
+                    .read(intentPredictionProvider.notifier)
+                    .onInputChanged(text);
+              }
+            },
+            onFileUploaded: (StoredFile file) {
+              if (file.status != 'processed') {
+                AppFeedback.info(context, '文件处理中，完成后可用于对话');
+                return;
+              }
+              ref.read(chatProvider.notifier).addAttachment(file);
+            },
+            onSend: (text, {replyToId}) => unawaited(
+              ref.read(chatProvider.notifier).sendMessage(text),
+            ),
+          ),
+          if (chatState.graphragTrace != null)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing8),
+              child: GraphRAGVisualizer(
+                trace: chatState.graphragTrace,
+              ),
+            ),
+          // Bottom safe area padding
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }
@@ -691,13 +875,11 @@ class _QuickActionChipState extends State<_QuickActionChip> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Fix: Use neutral background for light mode instead of brandPrimary (orange)
-    final backgroundColor = isDark ? DS.neutral800 : DS.neutral100;
-    // Use contrast-safe text color
-    final labelColor = isDark ? DS.textPrimary : DS.neutral900;
-    final horizontalPadding = widget.isNarrow ? 12.0 : DS.spacing16;
+    // Use surfaceTertiary background for consistent theming
+    final backgroundColor = DS.surfaceTertiary;
+    // Use textPrimary for proper contrast in both modes
+    final labelColor = DS.textPrimary;
+    final horizontalPadding = widget.isNarrow ? DS.spacing12 : DS.spacing16;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -771,25 +953,26 @@ class _StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use a lighter color for better contrast in dark mode
     final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final textColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    );
+    final textColor = isDark ? DS.textPrimary : DS.onBrandPrimary;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
+          maxWidth: _bubbleMaxWidth(context),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
+        ),
         decoration: BoxDecoration(
           color: bubbleColor,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-            bottomLeft: Radius.circular(4),
+            topLeft: Radius.circular(DS.spacing20),
+            topRight: Radius.circular(DS.spacing20),
+            bottomRight: Radius.circular(DS.spacing20),
+            bottomLeft: Radius.circular(DS.spacing4),
           ),
           boxShadow: DS.shadowSm,
           border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
@@ -814,6 +997,13 @@ class _StreamingBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  double _bubbleMaxWidth(BuildContext context) {
+    final screenWidth = ResponsiveSystem.width(context);
+    final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
+    final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
+    return min(screenWidth * 0.8, baseMax * 0.9);
   }
 }
 
@@ -851,8 +1041,8 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   Widget build(BuildContext context) => FadeTransition(
         opacity: _animation,
         child: Container(
-          width: 2,
-          height: 16,
+          width: DS.spacing4 / 2,
+          height: DS.spacing16,
           color: DS.primaryBase,
         ),
       );
@@ -881,20 +1071,23 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use a lighter color for better contrast in dark mode
     final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final dotColor = ThemeUtils.getContrastSafeText(
-      bubbleColor,
-      darkText: DS.neutral900,
-    ).withValues(alpha: 0.7);
+    final dotColor = isDark
+        ? DS.textPrimary.withValues(alpha: 0.7)
+        : DS.onBrandPrimary.withValues(alpha: 0.7);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing12,
+      ),
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-          bottomLeft: Radius.circular(4),
+          topLeft: Radius.circular(DS.spacing20),
+          topRight: Radius.circular(DS.spacing20),
+          bottomRight: Radius.circular(DS.spacing20),
+          bottomLeft: Radius.circular(DS.spacing4),
         ),
         boxShadow: DS.shadowSm,
         border: Border.all(color: isDark ? DS.neutral700 : DS.neutral200),
@@ -914,9 +1107,11 @@ class _TypingIndicatorState extends State<_TypingIndicator>
               return Transform.translate(
                 offset: Offset(0, -offset),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: 8,
-                  height: 8,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing4 / 2,
+                  ),
+                  width: DS.spacing8,
+                  height: DS.spacing8,
                   decoration: BoxDecoration(
                     color: dotColor,
                     shape: BoxShape.circle,

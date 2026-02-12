@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -39,6 +40,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleSocialLogin(
+    Future<SocialAuthResult?> Function() loginMethod,
+  ) async {
+    try {
+      final result = await loginMethod();
+      if (result != null) {
+        if (!mounted) return;
+        unawaited(
+          ref.read(authProvider.notifier).socialLogin(
+                provider: result.provider,
+                token: result.token,
+                openid: result.openid,
+                email: result.email,
+                nickname: result.nickname,
+                avatarUrl: result.avatarUrl,
+              ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(context, 'Login Failed: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -53,16 +78,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ErrorMessages.getLocalizedMessage(
-                l10n,
-                'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-                next.error,
-              ),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
+        AppFeedback.error(
+          context,
+          ErrorMessages.getLocalizedMessage(
+            l10n,
+            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
+            next.error,
           ),
         );
       }
@@ -71,180 +92,175 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.xl),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 60),
-                // Logo and Welcome
-                Icon(
-                  Icons.whatshot_outlined,
-                  size: 60,
-                  color: DS.brandPrimaryConst,
-                ),
-                const SizedBox(height: DS.lg),
-                Text(
-                  l10n.appTitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.secondary,
+        child: ContentConstraint(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(DS.xl),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 60),
+                  // Logo and Welcome
+                  Icon(
+                    Icons.whatshot_outlined,
+                    size: 60,
+                    color: DS.brandPrimaryConst,
+                  ),
+                  const SizedBox(height: DS.lg),
+                  Text(
+                    l10n.appTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    l10n.welcomeSubtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: DS.xxxl),
+
+                  // Username field
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: l10n.username,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? l10n.pleaseEnterUsername : null,
+                  ),
+                  const SizedBox(height: DS.lg),
+
+                  // Password field
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: l10n.password,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: SparkleIconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
                       ),
-                ),
-                const SizedBox(height: DS.sm),
-                Text(
-                  l10n.welcomeSubtitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: DS.xxxl),
-
-                // Username field
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.username,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? l10n.pleaseEnterPassword : null,
                   ),
-                  validator: (value) => value!.isEmpty
-                      ? l10n.pleaseEnterUsername
-                      : null,
-                ),
-                const SizedBox(height: DS.lg),
+                  const SizedBox(height: DS.xl),
 
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: l10n.password,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                  // Login Button
+                  SparkleButton(
+                    label: l10n.login,
+                    onPressed: authState.isLoading ? null : _submit,
+                    variant: ButtonVariant.primary,
+                    expand: true,
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                  ),
+
+                  const SizedBox(height: DS.xl),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing16),
+                        child: Text(
+                          l10n.orText,
+                          style: TextStyle(color: DS.brandPrimary),
+                        ),
                       ),
-                      onPressed: () => setState(
-                          () => _isPasswordVisible = !_isPasswordVisible,),
-                    ),
+                      const Expanded(child: Divider()),
+                    ],
                   ),
-                  validator: (value) =>
-                      value!.isEmpty ? l10n.pleaseEnterPassword : null,
-                ),
-                const SizedBox(height: DS.xl),
+                  const SizedBox(height: DS.xl),
 
-                // Login Button
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: DS.brandPrimary,
-                    foregroundColor: DS.brandPrimary,
+                  // Social Login Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _SocialLoginButton(
+                        icon: Icons.g_mobiledata_rounded,
+                        label: l10n.google,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithGoogle,
+                        ),
+                      ),
+                      _SocialLoginButton(
+                        icon: Icons.apple_rounded,
+                        label: l10n.apple,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithApple,
+                        ),
+                      ),
+                      _SocialLoginButton(
+                        icon: Icons.wechat_rounded,
+                        label: l10n.wechat,
+                        onTap: () => _handleSocialLogin(
+                          SocialAuthService().signInWithWeChat,
+                        ),
+                      ),
+                    ],
                   ),
-                  onPressed: authState.isLoading ? null : _submit,
-                  child: authState.isLoading
-                      ? SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: DS.brandPrimary,),
-                        )
-                      : Text(l10n.login),
-                ),
 
-                const SizedBox(height: DS.xl),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child:
-                          Text(l10n.orText, style: TextStyle(color: DS.brandPrimary)),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: DS.xl),
+                  const SizedBox(height: DS.lg),
 
-                // Social Login Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _SocialLoginButton(
-                      icon: Icons
-                          .g_mobiledata_rounded, // Use a generic icon or custom asset
-                      label: l10n.google,
-                      onTap: () {
-                        // Mock Google Login
-                        unawaited(
-                          ref.read(authProvider.notifier).socialLogin(
-                                provider: 'google',
-                                token: 'mock-google-token-123',
-                                nickname: 'Google User',
-                              ),
-                        );
-                      },
-                    ),
-                    _SocialLoginButton(
-                      icon: Icons.apple_rounded,
-                      label: l10n.apple,
-                      onTap: () {
-                        // Mock Apple Login
-                        unawaited(
-                          ref.read(authProvider.notifier).socialLogin(
-                                provider: 'apple',
-                                token: 'mock-apple-token-123',
-                                nickname: 'Apple User',
-                              ),
-                        );
-                      },
-                    ),
-                    _SocialLoginButton(
-                      icon: Icons
-                          .wechat_rounded, // Assuming Material Icons has WeChat or similar
-                      label: l10n.wechat,
-                      onTap: () {
-                        // Mock WeChat Login
-                        unawaited(
-                          ref.read(authProvider.notifier).socialLogin(
-                                provider: 'wechat',
-                                token: 'mock-wechat-token-123',
-                                nickname: 'WeChat User',
-                              ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: DS.lg),
-
-                // Register Link
-                TextButton(
-                  onPressed: () => context.go('/register'),
-                  child: Text(l10n.noAccount),
-                ),
-
-                const SizedBox(height: DS.sm),
-
-                // Guest Mode
-                TextButton(
-                  onPressed: () {
-                    ref.read(authProvider.notifier).loginAsGuest();
-                  },
-                  child: Text(
-                    l10n.continueAsGuest,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
+                  // Register Link
+                  SparkleButton.ghost(
+                    label: l10n.noAccount,
+                    onPressed: () => context.go('/register'),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: DS.sm),
+
+                  // Guest Mode
+                  SparkleButton(
+                    label: l10n.continueAsGuest,
+                    onPressed: authState.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .loginAsGuest();
+                          },
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                    variant: ButtonVariant.ghost,
+                    expand: true,
+                  ),
+
+                  // Demo Account Mode
+                  SparkleButton(
+                    label: '演示账号登录',
+                    onPressed: authState.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .loginAsDemoAccount();
+                          },
+                    loading: authState.isLoading,
+                    disabled: authState.isLoading,
+                    variant: ButtonVariant.ghost,
+                    expand: true,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

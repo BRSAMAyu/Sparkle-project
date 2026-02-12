@@ -4,20 +4,25 @@ Signals Feedback API
 Endpoints for collecting user feedback on candidate actions.
 Enables learning loop for signal threshold calibration.
 """
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, Dict, Any
-from datetime import datetime
-import uuid
 
+from app.api.dependencies import get_current_user
 from app.database import get_db
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.user import User
-from app.api.dependencies import get_current_user
-from loguru import logger
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackRequest(BaseModel):
@@ -26,11 +31,11 @@ class FeedbackRequest(BaseModel):
     action_type: str = Field(..., description="Action type: break, review, clarify, plan_split")
     feedback_type: str = Field(..., description="Feedback type: accept, ignore, dismiss")
     executed: bool = Field(default=False, description="Was the action executed")
-    completion_result: Optional[Dict[str, Any]] = Field(
+    completion_result: dict[str, Any] | None = Field(
         default=None,
         description="Result of executed action (if any)"
     )
-    context_snapshot: Optional[Dict[str, Any]] = Field(
+    context_snapshot: dict[str, Any] | None = Field(
         default=None,
         description="ContextEnvelope at time of feedback"
     )
@@ -97,8 +102,8 @@ async def record_feedback(
             executed=request.executed,
             completion_result=request.completion_result,
             context_snapshot=request.context_snapshot or {},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         db.add(feedback)
@@ -140,7 +145,7 @@ async def get_feedback_stats(
 
     This endpoint is useful for user-facing stats dashboards.
     """
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
 
     try:
         # Total count
@@ -193,7 +198,7 @@ async def get_feedback_stats(
             select(func.count(CandidateActionFeedback.id))
             .where(CandidateActionFeedback.user_id == current_user.id)
             .where(CandidateActionFeedback.feedback_type == 'accept')
-            .where(CandidateActionFeedback.executed == True)
+            .where(CandidateActionFeedback.executed)
             .where(CandidateActionFeedback.deleted_at.is_(None))
         )
         executed_count = executed_result.scalar() or 0

@@ -1,12 +1,15 @@
 import math
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.irt import IRTItemParameter, UserIRTAbility
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class IRTService:
@@ -27,20 +30,20 @@ class IRTService:
         user_id: UUID,
         question_id: UUID,
         correct: bool,
-        subject_id: Optional[str] = None
-    ) -> Optional[UserIRTAbility]:
+        subject_id: str | None = None
+    ) -> UserIRTAbility | None:
         item = await self._get_item_params(question_id, subject_id)
         ability = await self._get_or_create_ability(user_id, subject_id)
 
         p = self._prob(ability.theta, item.a, item.b, item.c)
         gradient = (1.0 if correct else 0.0) - p
         ability.theta += self.lr * gradient
-        ability.last_updated_at = datetime.utcnow()
+        ability.last_updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(ability)
         return ability
 
-    async def _get_item_params(self, question_id: UUID, subject_id: Optional[str]) -> IRTItemParameter:
+    async def _get_item_params(self, question_id: UUID, subject_id: str | None) -> IRTItemParameter:
         stmt = select(IRTItemParameter).where(IRTItemParameter.question_id == question_id)
         result = await self.db.execute(stmt)
         item = result.scalar_one_or_none()
@@ -59,7 +62,7 @@ class IRTService:
         await self.db.refresh(item)
         return item
 
-    async def _get_or_create_ability(self, user_id: UUID, subject_id: Optional[str]) -> UserIRTAbility:
+    async def _get_or_create_ability(self, user_id: UUID, subject_id: str | None) -> UserIRTAbility:
         stmt = select(UserIRTAbility).where(
             UserIRTAbility.user_id == user_id,
             UserIRTAbility.subject_id == subject_id

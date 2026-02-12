@@ -11,31 +11,52 @@ Advanced Community Service - 加密、风控、搜索、离线队列等
 - ForwardService: 消息转发
 - BroadcastService: 跨群广播
 """
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
-from uuid import UUID
-import re
 import base64
 import binascii
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc, text
-from sqlalchemy.orm import selectinload
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.community import (
-    Group, GroupRole, GroupMember, GroupMessage, PrivateMessage,
-    MessageType, UserEncryptionKey, MessageReport, MessageFavorite,
-    BroadcastMessage, OfflineMessageQueue,
-    ReportReason, ReportStatus, ModerationAction, OfflineMessageStatus
+    BroadcastMessage,
+    Group,
+    GroupMember,
+    GroupMessage,
+    GroupRole,
+    MessageFavorite,
+    MessageReport,
+    MessageType,
+    OfflineMessageQueue,
+    OfflineMessageStatus,
+    PrivateMessage,
+    ReportStatus,
+    UserEncryptionKey,
 )
 from app.schemas.community import (
-    EncryptionKeyCreate, MessageReportCreate, MessageReportReview,
-    MessageFavoriteCreate, MessageForwardRequest, BroadcastMessageCreate,
-    MessageSearchRequest, GroupAnnouncementUpdate, GroupModerationSettings,
-    MemberMuteRequest, MemberWarnRequest, OfflineMessageRetryRequest
+    BroadcastMessageCreate,
+    EncryptionKeyCreate,
+    GroupAnnouncementUpdate,
+    GroupModerationSettings,
+    MemberMuteRequest,
+    MemberWarnRequest,
+    MessageFavoriteCreate,
+    MessageForwardRequest,
+    MessageReportCreate,
+    MessageReportReview,
+    MessageSearchRequest,
+    OfflineMessageRetryRequest,
 )
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class EncryptionService:
@@ -65,7 +86,7 @@ class EncryptionService:
             key_type=data.key_type,
             device_id=data.device_id,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=365)  # 1年有效期
+            expires_at=_utcnow() + timedelta(days=365)  # 1年有效期
         )
         db.add(key)
         await db.flush()
@@ -76,15 +97,15 @@ class EncryptionService:
     async def get_user_public_keys(
         db: AsyncSession,
         user_id: UUID
-    ) -> List[UserEncryptionKey]:
+    ) -> list[UserEncryptionKey]:
         """获取用户的活跃公钥列表"""
         result = await db.execute(
             select(UserEncryptionKey).where(
                 UserEncryptionKey.user_id == user_id,
-                UserEncryptionKey.is_active == True,
+                UserEncryptionKey.is_active,
                 or_(
-                    UserEncryptionKey.expires_at == None,
-                    UserEncryptionKey.expires_at > datetime.utcnow()
+                    UserEncryptionKey.expires_at is None,
+                    UserEncryptionKey.expires_at > _utcnow()
                 )
             )
         )
@@ -160,7 +181,7 @@ class ModerationService:
             raise ValueError("群组不存在")
 
         group.announcement = data.announcement
-        group.announcement_updated_at = datetime.utcnow()
+        group.announcement_updated_at = _utcnow()
         await db.flush()
         return group
 
@@ -222,7 +243,7 @@ class ModerationService:
             raise ValueError("只有群主可以禁言管理员")
 
         target.is_muted = True
-        target.mute_until = datetime.utcnow() + timedelta(minutes=data.duration_minutes)
+        target.mute_until = _utcnow() + timedelta(minutes=data.duration_minutes)
         await db.flush()
         return target
 
@@ -286,7 +307,7 @@ class ModerationService:
         db: AsyncSession,
         group_id: UUID,
         content: str
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """检查敏感词"""
         group = await Group.get_by_id(db, group_id)
         if not group or not group.keyword_filters:
@@ -304,7 +325,7 @@ class ModerationService:
         db: AsyncSession,
         group_id: UUID,
         user_id: UUID
-    ) -> Optional[GroupMember]:
+    ) -> GroupMember | None:
         """获取管理员成员"""
         result = await db.execute(
             select(GroupMember).where(
@@ -358,16 +379,16 @@ class ReportService:
         report.status = data.status
         report.action_taken = data.action_taken
         report.reviewed_by = reviewer_id
-        report.reviewed_at = datetime.utcnow()
+        report.reviewed_at = _utcnow()
         await db.flush()
         return report
 
     @staticmethod
     async def get_pending_reports(
         db: AsyncSession,
-        group_id: Optional[UUID] = None,
+        group_id: UUID | None = None,
         limit: int = 50
-    ) -> List[MessageReport]:
+    ) -> list[MessageReport]:
         """获取待处理的举报"""
         query = select(MessageReport).where(
             MessageReport.status == ReportStatus.PENDING,
@@ -448,10 +469,10 @@ class FavoriteService:
     async def get_favorites(
         db: AsyncSession,
         user_id: UUID,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         limit: int = 50,
         offset: int = 0
-    ) -> List[MessageFavorite]:
+    ) -> list[MessageFavorite]:
         """获取收藏列表"""
         query = select(MessageFavorite).where(
             MessageFavorite.user_id == user_id,
@@ -594,7 +615,7 @@ class MessageSearchService:
         group_id: UUID,
         user_id: UUID,
         data: MessageSearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """搜索群消息"""
         # 验证是否是群成员
         member_result = await db.execute(
@@ -611,7 +632,7 @@ class MessageSearchService:
         query = select(GroupMessage).where(
             GroupMessage.group_id == group_id,
             GroupMessage.not_deleted_filter(),
-            GroupMessage.is_revoked == False
+            not GroupMessage.is_revoked
         )
 
         # 应用过滤条件
@@ -665,7 +686,7 @@ class MessageSearchService:
     async def get_topics(
         db: AsyncSession,
         group_id: UUID
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取群组话题列表"""
         result = await db.execute(
             select(
@@ -673,7 +694,7 @@ class MessageSearchService:
                 func.count(GroupMessage.id).label("message_count")
             ).where(
                 GroupMessage.group_id == group_id,
-                GroupMessage.topic != None,
+                GroupMessage.topic is not None,
                 GroupMessage.not_deleted_filter()
             ).group_by(GroupMessage.topic).order_by(desc("message_count")).limit(50)
         )
@@ -691,7 +712,7 @@ class OfflineQueueService:
         client_nonce: str,
         message_type: str,
         target_id: UUID,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         expires_in_hours: int = 24
     ) -> OfflineMessageQueue:
         """将消息加入离线队列"""
@@ -712,7 +733,7 @@ class OfflineQueueService:
             target_id=target_id,
             payload=payload,
             status=OfflineMessageStatus.PENDING,
-            expires_at=datetime.utcnow() + timedelta(hours=expires_in_hours)
+            expires_at=_utcnow() + timedelta(hours=expires_in_hours)
         )
         db.add(message)
         await db.flush()
@@ -724,15 +745,15 @@ class OfflineQueueService:
         db: AsyncSession,
         user_id: UUID,
         limit: int = 50
-    ) -> List[OfflineMessageQueue]:
+    ) -> list[OfflineMessageQueue]:
         """获取待发送的离线消息"""
         result = await db.execute(
             select(OfflineMessageQueue).where(
                 OfflineMessageQueue.user_id == user_id,
                 OfflineMessageQueue.status == OfflineMessageStatus.PENDING,
                 or_(
-                    OfflineMessageQueue.expires_at == None,
-                    OfflineMessageQueue.expires_at > datetime.utcnow()
+                    OfflineMessageQueue.expires_at is None,
+                    OfflineMessageQueue.expires_at > _utcnow()
                 )
             ).order_by(OfflineMessageQueue.created_at.asc()).limit(limit)
         )
@@ -772,7 +793,7 @@ class OfflineQueueService:
         message.status = OfflineMessageStatus.FAILED
         message.error_message = error
         message.retry_count += 1
-        message.last_retry_at = datetime.utcnow()
+        message.last_retry_at = _utcnow()
         await db.flush()
         return True
 
@@ -781,7 +802,7 @@ class OfflineQueueService:
         db: AsyncSession,
         user_id: UUID,
         data: OfflineMessageRetryRequest
-    ) -> List[OfflineMessageQueue]:
+    ) -> list[OfflineMessageQueue]:
         """重试失败的消息"""
         result = await db.execute(
             select(OfflineMessageQueue).where(
@@ -809,7 +830,7 @@ class OfflineQueueService:
         result = await db.execute(
             update(OfflineMessageQueue).where(
                 OfflineMessageQueue.status == OfflineMessageStatus.PENDING,
-                OfflineMessageQueue.expires_at < datetime.utcnow()
+                OfflineMessageQueue.expires_at < _utcnow()
             ).values(status=OfflineMessageStatus.EXPIRED)
         )
         return result.rowcount
@@ -819,7 +840,7 @@ class OfflineQueueService:
         db: AsyncSession,
         user_id: UUID,
         limit: int = 50
-    ) -> List[OfflineMessageQueue]:
+    ) -> list[OfflineMessageQueue]:
         """获取失败的消息列表（用于批量重试UI）"""
         result = await db.execute(
             select(OfflineMessageQueue).where(

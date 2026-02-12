@@ -16,7 +16,7 @@ class TiledSectorBackground extends StatelessWidget {
 
   final double width;
   final double height;
-  
+
   static const double _maxTileSize = 2048.0;
 
   @override
@@ -31,33 +31,36 @@ class TiledSectorBackground extends StatelessWidget {
         ),
       );
     }
-    
+
     final cols = (width / _maxTileSize).ceil();
     final rows = (height / _maxTileSize).ceil();
-    
+
     final tileWidth = width / cols;
     final tileHeight = height / rows;
 
     return Column(
-      children: List.generate(rows, (r) => Row(
+      children: List.generate(
+        rows,
+        (r) => Row(
           children: List.generate(cols, (c) {
-             final x = c * tileWidth;
-             final y = r * tileHeight;
-             return _buildTile(x, y, tileWidth, tileHeight);
+            final x = c * tileWidth;
+            final y = r * tileHeight;
+            return _buildTile(x, y, tileWidth, tileHeight);
           }),
-        ),),
+        ),
+      ),
     );
   }
 
   Widget _buildTile(double x, double y, double w, double h) => RepaintBoundary(
-      child: CustomPaint(
-        size: Size(w, h),
-        painter: SectorBackgroundPainter(
-          totalSize: Size(width, height),
-          offset: Offset(x, y),
+        child: CustomPaint(
+          size: Size(w, h),
+          painter: SectorBackgroundPainter(
+            totalSize: Size(width, height),
+            offset: Offset(x, y),
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// Painter for the sector nebula backgrounds
@@ -67,7 +70,8 @@ class SectorBackgroundPainter extends CustomPainter {
     this.offset = Offset.zero,
     // Legacy support
     double? canvasSize,
-  }) : actualTotalSize = canvasSize != null ? Size(canvasSize, canvasSize) : totalSize;
+  }) : actualTotalSize =
+            canvasSize != null ? Size(canvasSize, canvasSize) : totalSize;
 
   final Size totalSize;
   final Size actualTotalSize;
@@ -82,7 +86,8 @@ class SectorBackgroundPainter extends CustomPainter {
     // corresponds to (x,y) of the virtual full canvas.
     canvas.translate(-offset.dx, -offset.dy);
 
-    final center = Offset(actualTotalSize.width / 2, actualTotalSize.height / 2);
+    final center =
+        Offset(actualTotalSize.width / 2, actualTotalSize.height / 2);
 
     // Draw each sector's nebula
     for (final entry in SectorConfig.styles.entries) {
@@ -93,7 +98,7 @@ class SectorBackgroundPainter extends CustomPainter {
     for (final entry in SectorConfig.styles.entries) {
       _drawSectorLabel(canvas, center, entry.value);
     }
-    
+
     canvas.restore();
   }
 
@@ -113,7 +118,8 @@ class SectorBackgroundPainter extends CustomPainter {
 
     // Create a pie slice shape
     const innerRadius = 100.0; // Start from center area (leave room for flame)
-    final outerRadius = actualTotalSize.width / 2 - 200; // Leave margin at edges
+    final outerRadius =
+        actualTotalSize.width / 2 - 200; // Leave margin at edges
 
     // Move to inner arc start point
     final innerStart = Offset(
@@ -162,7 +168,7 @@ class SectorBackgroundPainter extends CustomPainter {
         style.primaryColor.withValues(alpha: 0.08),
         style.primaryColor.withValues(alpha: 0.04),
         style.primaryColor.withValues(alpha: 0.01),
-        Colors.transparent,
+        DS.surfacePrimary.withValues(alpha: 0),
       ],
       [0.0, 0.3, 0.6, 1.0],
     );
@@ -222,8 +228,10 @@ class SectorBackgroundPainter extends CustomPainter {
     // Draw text horizontally (no rotation)
     textPainter.paint(
       canvas,
-      Offset(labelPos.dx - textPainter.width / 2,
-          labelPos.dy - textPainter.height / 2,),
+      Offset(
+        labelPos.dx - textPainter.width / 2,
+        labelPos.dy - textPainter.height / 2,
+      ),
     );
   }
 

@@ -6,10 +6,11 @@
 
 import asyncio
 import json
-from typing import Dict, Any, Optional
+from typing import Any
+
 from loguru import logger
 
-from app.core.age_client import get_age_client, init_age
+from app.core.age_client import get_age_client
 from app.core.cache import cache_service
 from app.models.graph_models import KnowledgeVertex
 
@@ -78,7 +79,7 @@ class GraphSyncWorker:
                 if not messages:
                     continue
 
-                for stream, msg_list in messages:
+                for _stream, msg_list in messages:
                     for msg_id, msg_data in msg_list:
                         try:
                             # 处理消息
@@ -94,7 +95,7 @@ class GraphSyncWorker:
                 logger.error(f"消费循环错误: {e}")
                 await asyncio.sleep(1)  # 避免快速重试
 
-    async def _process_message(self, msg_id: bytes, msg_data: Dict[bytes, bytes]):
+    async def _process_message(self, msg_id: bytes, msg_data: dict[bytes, bytes]):
         """处理单条消息"""
         # 解析消息
         msg_type = msg_data[b"type"].decode('utf-8')
@@ -124,7 +125,7 @@ class GraphSyncWorker:
             # 不确认消息，稍后重试
             raise
 
-    async def _handle_node_created(self, data: Dict[str, Any]):
+    async def _handle_node_created(self, data: dict[str, Any]):
         """处理节点创建"""
         vertex = KnowledgeVertex(
             id=data['id'],
@@ -139,7 +140,7 @@ class GraphSyncWorker:
         await self.age_client.add_vertex("KnowledgeNode", vertex.to_dict())
         logger.debug(f"节点已同步到 AGE: {vertex.name}")
 
-    async def _handle_relation_created(self, data: Dict[str, Any]):
+    async def _handle_relation_created(self, data: dict[str, Any]):
         """处理关系创建"""
         await self.age_client.add_edge(
             from_label="KnowledgeNode",
@@ -154,7 +155,7 @@ class GraphSyncWorker:
         )
         logger.debug(f"关系已同步到 AGE: {data['source']} → {data['target']}")
 
-    async def _handle_user_status_updated(self, data: Dict[str, Any]):
+    async def _handle_user_status_updated(self, data: dict[str, Any]):
         """处理用户状态更新"""
         user_id = data['user_id']
         node_id = data['node_id']
@@ -205,7 +206,7 @@ class GraphSyncWorker:
 
 
 # Worker 实例
-_worker_instance: Optional[GraphSyncWorker] = None
+_worker_instance: GraphSyncWorker | None = None
 
 
 def get_graph_sync_worker() -> GraphSyncWorker:

@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/statistics/config/statistics_config.dart';
-import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Empty state widget for when no statistics data is available
 class StatisticsEmptyState extends StatelessWidget {
-
   const StatisticsEmptyState({
     super.key,
     this.message,
@@ -15,6 +12,7 @@ class StatisticsEmptyState extends StatelessWidget {
     this.onAction,
     this.isLoading = false,
   });
+
   /// Message to display
   final String? message;
 
@@ -35,42 +33,42 @@ class StatisticsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (isLoading) _buildLoading() else _buildContent(),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.all(DS.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading) _buildLoading() else _buildContent(),
+          ],
+        ),
+      );
 
   Widget _buildContent() => TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: StatisticsAnimationConfig.medium,
-      curve: StatisticsAnimationConfig.easeOut,
-      builder: (context, value, child) => Opacity(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: StatisticsAnimationConfig.medium,
+        curve: StatisticsAnimationConfig.easeOut,
+        builder: (context, value, child) => Opacity(
           opacity: value,
           child: Transform.scale(
             scale: 0.8 + (0.2 * value),
             child: child,
           ),
         ),
-      child: Column(
-        children: [
-          _buildIcon(),
-          const SizedBox(height: DS.lg),
-          _buildMessage(),
-          if (subtitle != null) ...[
-            const SizedBox(height: DS.sm),
-            _buildSubtitle(),
+        child: Column(
+          children: [
+            _buildIcon(),
+            const SizedBox(height: DS.lg),
+            _buildMessage(),
+            if (subtitle != null) ...[
+              const SizedBox(height: DS.sm),
+              _buildSubtitle(),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: DS.xl),
+              _buildActionButton(),
+            ],
           ],
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: DS.xl),
-            _buildActionButton(),
-          ],
-        ],
-      ),
-    );
+        ),
+      );
 
   Widget _buildIcon() {
     final iconData = icon ?? Icons.bar_chart_outlined;
@@ -103,49 +101,35 @@ class StatisticsEmptyState extends StatelessWidget {
   }
 
   Widget _buildSubtitle() => Text(
-      subtitle!,
-      style: DS.bodyStyle.copyWith(
-        color: DS.neutral400,
-      ),
-      textAlign: TextAlign.center,
-    );
-
-  Widget _buildActionButton() => ElevatedButton(
-      onPressed: onAction,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: DS.brandPrimary,
-        foregroundColor: DS.white,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.xl,
-          vertical: DS.md,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-        ),
-      ),
-      child: Text(
-        actionLabel!,
+        subtitle!,
         style: DS.bodyStyle.copyWith(
-          fontWeight: DS.fontWeightMedium,
+          color: DS.neutral400,
         ),
-      ),
-    );
+        textAlign: TextAlign.center,
+      );
+
+  Widget _buildActionButton() => SparkleButton(
+        label: actionLabel!,
+        onPressed: onAction,
+        icon: const Icon(Icons.file_download_outlined),
+        size: ButtonSize.large,
+      );
 
   Widget _buildLoading() => SizedBox(
-      width: 40,
-      height: 40,
-      child: CircularProgressIndicator(
-        strokeWidth: 3,
-        valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
-      ),
-    );
+        width: 40,
+        height: 40,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+        ),
+      );
 }
 
 /// Empty state for specific statistics types
 class StatisticsEmptyStateForType extends StatelessWidget {
-
   const StatisticsEmptyStateForType({
-    required this.type, super.key,
+    required this.type,
+    super.key,
     this.actionLabel,
     this.onAction,
     this.isLoading = false,
@@ -157,13 +141,13 @@ class StatisticsEmptyStateForType extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StatisticsEmptyState(
-      message: _getMessage(),
-      subtitle: _getSubtitle(),
-      icon: _getIcon(),
-      actionLabel: actionLabel,
-      onAction: onAction,
-      isLoading: isLoading,
-    );
+        message: _getMessage(),
+        subtitle: _getSubtitle(),
+        icon: _getIcon(),
+        actionLabel: actionLabel,
+        onAction: onAction,
+        isLoading: isLoading,
+      );
 
   String _getMessage() {
     switch (type) {
@@ -207,7 +191,6 @@ class StatisticsEmptyStateForType extends StatelessWidget {
 
 /// Error state widget for when statistics loading fails
 class StatisticsErrorState extends StatelessWidget {
-
   const StatisticsErrorState({
     super.key,
     this.message,
@@ -218,62 +201,50 @@ class StatisticsErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: StatisticsAnimationConfig.medium,
-        curve: StatisticsAnimationConfig.easeOut,
-        builder: (context, value, child) => Opacity(
+        padding: const EdgeInsets.all(DS.xl),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: StatisticsAnimationConfig.medium,
+          curve: StatisticsAnimationConfig.easeOut,
+          builder: (context, value, child) => Opacity(
             opacity: value,
             child: child,
           ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: DS.error.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.error_outline,
-                size: 40,
-                color: DS.error,
-              ),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              message ?? '加载失败',
-              style: DS.headlineStyle.copyWith(
-                color: DS.neutral600,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: DS.xl),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('重试'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: DS.brandPrimary,
-                  side: BorderSide(color: DS.brandPrimary),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.xl,
-                    vertical: DS.md,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-                  ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: DS.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  size: 40,
+                  color: DS.error,
                 ),
               ),
+              const SizedBox(height: DS.lg),
+              Text(
+                message ?? '加载失败',
+                style: DS.headlineStyle.copyWith(
+                  color: DS.neutral600,
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: DS.xl),
+                SparkleButton.outline(
+                  label: '重试',
+                  onPressed: onRetry!,
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -17,10 +18,7 @@ class UserRepository {
         '/users/me/preferences',
         data: preferences.toJson(),
       );
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('Failed to update preferences');
-      }
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateUserPreferences');
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -38,10 +36,7 @@ class UserRepository {
         '/users/me/push-preference',
         data: prefs.toJson(),
       );
-      final payload = response.data;
-      if (payload == null) {
-        throw Exception('Failed to update push preferences');
-      }
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePushPreferences');
       return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
@@ -52,8 +47,8 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return {
         'layer_1': {
-          'preferences': [],
-          'goals': [],
+          'preferences': <String>[],
+          'goals': <String>[],
         },
         'layer_2': {
           'persona': {
@@ -63,18 +58,14 @@ class UserRepository {
           'editable': false,
         },
         'layer_3': {
-          'patterns': [],
-          'fragments': [],
+          'patterns': <Map<String, dynamic>>[],
+          'fragments': <Map<String, dynamic>>[],
         },
       };
     }
     final response =
         await _apiClient.get<Map<String, dynamic>>('/profile/transparent');
-    final payload = response.data;
-    if (payload == null) {
-      throw Exception('Failed to load transparent profile');
-    }
-    return payload;
+    return ApiResponseParser.unwrapMap(response.data, action: 'fetchTransparentProfile');
   }
 
   Future<void> submitOnboarding(Map<String, dynamic> payload) async {
@@ -112,11 +103,17 @@ class UserRepository {
       },
     );
     final payload = response.data;
-    if (payload == null || payload['items'] == null) {
+    if (payload == null) {
       return [];
     }
-    final items = payload['items'] as List<dynamic>;
-    return items.cast<Map<String, dynamic>>();
+    // Handle both {items: [...]} and direct [...] formats
+    if (payload.containsKey('items')) {
+      final items = payload['items'] as List<dynamic>;
+      return items.cast<Map<String, dynamic>>();
+    }
+    // Direct list format
+    final data = ApiResponseParser.unwrapList(response.data, action: 'fetchSystemUpdates');
+    return data.cast<Map<String, dynamic>>();
   }
 
   Future<void> updateTransparentPreference({
@@ -170,24 +167,40 @@ class UserRepository {
       return {
         'transparency_level': 0,
         'system_update_level': 1,
+        'task_reminders_enabled': true,
+        'task_reminder_times': [1440, 60, 15],
       };
     }
     final response = await _apiClient.get<Map<String, dynamic>>('/user/settings');
-    final payload = response.data;
-    if (payload == null) {
-      throw Exception('Failed to load user settings');
-    }
-    return payload;
+    return ApiResponseParser.unwrapMap(response.data, action: 'fetchUserSettings');
   }
 
   Future<void> updateUserSettings(Map<String, dynamic> payload) async {
     if (DemoDataService.isDemoMode) {
       return;
     }
-    await _apiClient.post<Map<String, dynamic>>(
+    // Use PUT for idempotent update operation
+    await _apiClient.put<Map<String, dynamic>>(
       '/user/settings',
       data: payload,
     );
+  }
+
+  /// Update weekly schedule preferences (time slots grid)
+  Future<UserModel> updateSchedulePreferences(Map<String, dynamic> scheduleData) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoUser; // Mock update
+    }
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/users/me/schedule-preferences',
+        data: scheduleData,
+      );
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateSchedulePreferences');
+      return UserModel.fromJson(payload);
+    } catch (e) {
+      rethrow;
+    }
   }
 }
 

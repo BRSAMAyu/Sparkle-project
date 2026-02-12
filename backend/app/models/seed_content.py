@@ -2,19 +2,22 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-import uuid
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional, List, Any, Dict
-from datetime import datetime
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, ForeignKey, JSON, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
+
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LibraryCategory(str, Enum):
@@ -286,7 +289,7 @@ class UserLibrarySubscription(BaseModel):
     subscribed_at = Column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.utcnow(),
+        default=lambda: _utcnow(),
         doc="订阅时间"
     )
     last_used_at = Column(
@@ -303,5 +306,5 @@ class UserLibrarySubscription(BaseModel):
 
     def mark_used(self) -> None:
         """标记为已使用"""
-        from datetime import datetime
-        self.last_used_at = datetime.utcnow()
+        from datetime import UTC, datetime
+        self.last_used_at = _utcnow()

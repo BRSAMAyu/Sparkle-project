@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -31,16 +32,22 @@ type wsTicketPayload struct {
 
 func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Debug logging for real device testing
+		log.Printf("[WsAuth] Request to %s from %s, Origin: %s, Upgrade: %s",
+			c.Request.URL.Path, c.ClientIP(), c.GetHeader("Origin"), c.GetHeader("Upgrade"))
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 				userID, isAdmin, err := validateJWT(cfg, tokenString)
 				if err != nil {
+					log.Printf("[WsAuth] JWT header validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
 					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 					return
 				}
+				log.Printf("[WsAuth] JWT header validation success for user: %s", userID)
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", tokenString)
@@ -53,12 +60,15 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
 		if cfg.AllowWsQueryToken {
 			if queryToken := c.Query("token"); queryToken != "" {
+				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v", cfg.AllowWsQueryToken)
 				userID, isAdmin, err := validateJWT(cfg, queryToken)
 				if err != nil {
+					log.Printf("[WsAuth] JWT query validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
 					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 					return
 				}
+				log.Printf("[WsAuth] JWT query validation success for user: %s", userID)
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", queryToken)

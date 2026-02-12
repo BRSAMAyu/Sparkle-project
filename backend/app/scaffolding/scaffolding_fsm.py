@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.intervention_adaptive import ScaffoldingState
 from app.scaffolding.capability_tracker import CapabilityTracker
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ScaffoldingFSM:
@@ -43,7 +47,7 @@ class ScaffoldingFSM:
         user_id: UUID,
         intervention_id: UUID,
         intent_type: str,
-        template_variant_id: Optional[str],
+        template_variant_id: str | None,
     ) -> ScaffoldingState:
         state = await self.get_state(user_id)
         history = list(state.history or [])
@@ -52,12 +56,12 @@ class ScaffoldingFSM:
                 "intervention_id": str(intervention_id),
                 "intent_type": intent_type,
                 "template_variant_id": template_variant_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             }
         )
         state.history = history[-10:]
         state.template_variant_id = template_variant_id
-        state.last_intervention_timestamp = datetime.utcnow()
+        state.last_intervention_timestamp = _utcnow()
         await self.db.flush()
         return state
 
@@ -65,7 +69,7 @@ class ScaffoldingFSM:
         self,
         user_id: UUID,
         success: bool,
-        feedback: Optional[str] = None,
+        feedback: str | None = None,
         weight: float = 1.0,
     ) -> ScaffoldingState:
         state = await self.get_state(user_id)
@@ -87,11 +91,11 @@ class ScaffoldingFSM:
             state.support_level = min(4, state.support_level + 1)
             state.consecutive_failures = 0
 
-        state.updated_at = datetime.utcnow()
+        state.updated_at = _utcnow()
         await self.db.flush()
         return state
 
-    def snapshot(self, state: ScaffoldingState) -> Dict[str, Any]:
+    def snapshot(self, state: ScaffoldingState) -> dict[str, Any]:
         return {
             "capability_level": state.capability_level,
             "support_level": state.support_level,

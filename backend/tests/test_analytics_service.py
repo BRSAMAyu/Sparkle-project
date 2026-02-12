@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -15,6 +15,10 @@ from app.services.analytics_service import AnalyticsService
 
 # Use in-memory SQLite for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 @pytest_asyncio.fixture(name="engine")
 async def engine_fixture():
@@ -42,6 +46,7 @@ async def db_fixture(engine):
 async def test_analytics_service(db: AsyncSession):
     # 1. Setup Data
     user_id = uuid.uuid4()
+    base_time = _utcnow().replace(hour=12, minute=0, second=0, microsecond=0)
     user = User(
         id=user_id,
         username="test_analytics",
@@ -60,7 +65,7 @@ async def test_analytics_service(db: AsyncSession):
         estimated_minutes=30,
         actual_minutes=30,
         status=TaskStatus.COMPLETED,
-        completed_at=datetime.utcnow()
+        completed_at=base_time
     )
     db.add(task1)
     
@@ -72,7 +77,7 @@ async def test_analytics_service(db: AsyncSession):
         estimated_minutes=20,
         actual_minutes=20,
         status=TaskStatus.COMPLETED,
-        completed_at=datetime.utcnow()
+        completed_at=base_time + timedelta(minutes=5)
     )
     db.add(task2)
     
@@ -105,7 +110,7 @@ async def test_analytics_service(db: AsyncSession):
     
     # 2. Run Analysis
     service = AnalyticsService(db)
-    target_date = date.today()
+    target_date = base_time.date()
     metric = await service.calculate_daily_metrics(user_id, target_date)
     
     # 3. Verify
@@ -128,3 +133,4 @@ async def test_analytics_service(db: AsyncSession):
     metric_2 = await service.calculate_daily_metrics(user_id, target_date)
     assert metric_2.id == metric.id
     assert metric_2.total_focus_minutes == 50
+    base_time = _utcnow().replace(hour=12, minute=0, second=0, microsecond=0)

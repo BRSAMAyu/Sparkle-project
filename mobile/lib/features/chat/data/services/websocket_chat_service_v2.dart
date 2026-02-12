@@ -3,8 +3,12 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -22,6 +26,27 @@ bool _isTrue(dynamic value) {
     return value != 0;
   }
   return false;
+}
+
+Map<String, dynamic>? _extractDagExecutionMetadata(
+  Map<String, dynamic>? metadata,
+) {
+  if (metadata == null) {
+    return null;
+  }
+  final raw = metadata['dag_execution_event'];
+  if (raw is Map<String, dynamic>) {
+    return raw;
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+  }
+  return null;
 }
 
 /// Parse JSON event in isolate to avoid blocking main thread
@@ -47,13 +72,28 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     switch (type) {
       case 'delta':
         final metadata = data['metadata'] as Map<String, dynamic>?;
+        final dagData = _extractDagExecutionMetadata(metadata);
+        final dagSignal = DagExecutionSignal.fromDynamic(dagData);
+        final deltaContent = data['delta'] as String? ?? '';
+
+        if (dagSignal != null && deltaContent.isEmpty) {
+          return DagExecutionEvent(
+            signal: dagSignal,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
+          );
+        }
 
         // Check for transparency events (透明化与信任构建链路)
         if (metadata != null && metadata['event_type'] == 'transparency') {
           final eventPayload = metadata['event_payload'] as String?;
           if (eventPayload != null && eventPayload.isNotEmpty) {
             try {
-              final eventData = json.decode(eventPayload) as Map<String, dynamic>;
+              final eventData =
+                  json.decode(eventPayload) as Map<String, dynamic>;
               final eventType = eventData['type'] as String?;
 
               if (eventType == 'transparency_step') {
@@ -84,6 +124,19 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           }
         }
 
+        // Check for state change events (计划归档/恢复/删除等重大状态变更)
+        if (metadata != null && metadata['state_change_event'] != null) {
+          final stateChangeData =
+              metadata['state_change_event'] as Map<String, dynamic>;
+          return StateChangeEvent(
+            changeData: stateChangeData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         // Check for sprint mode switch
         if (metadata != null && _isTrue(metadata['switch_to_sprint'])) {
           return SprintModeSwitchEvent(
@@ -104,6 +157,46 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             workflowId: workflowId,
             promptVersion: promptVersion,
           );
+        }
+
+        // Check if this delta contains collaboration timeline data
+        if (metadata != null) {
+          final collaborationData =
+              metadata['collaboration_timeline'] as Map<String, dynamic>?;
+
+          if (collaborationData != null) {
+            return CollaborationTimelineEvent(
+              collaborationData: collaborationData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+
+          final visualization =
+              metadata['visualization'] as Map<String, dynamic>?;
+          final timeline = visualization?['timeline'] as List<dynamic>?;
+          if (timeline != null && timeline.isNotEmpty) {
+            final workflowType = (metadata['workflow'] as String?) ??
+                (visualization?['workflow_type'] as String?) ??
+                'unknown';
+            final executionTime = metadata['execution_time'];
+            final executionTimeMs =
+                executionTime is num ? (executionTime * 1000).round() : 0;
+
+            return CollaborationTimelineEvent(
+              collaborationData: {
+                'workflow_type': workflowType,
+                'execution_time_ms': executionTimeMs,
+                'steps': timeline,
+              },
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
         }
 
         // Check if this delta contains plan review data
@@ -130,7 +223,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
 
         return TextEvent(
-          content: data['delta'] as String? ?? '',
+          content: deltaContent,
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
@@ -140,16 +233,31 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
       case 'status_update':
         final status = data['status'] as Map<String, dynamic>?;
+        final metadata = data['metadata'] as Map<String, dynamic>?;
+        final dagData = _extractDagExecutionMetadata(metadata);
+        final dagSignal = DagExecutionSignal.fromDynamic(dagData);
         if (status != null) {
+          final dagDetails = dagSignal?.statusDetails;
           return StatusUpdateEvent(
             state: status['state'] as String? ?? 'UNKNOWN',
-            details: status['details'] as String? ?? '',
+            details: dagDetails ?? status['details'] as String? ?? '',
             currentAgentName: status['current_agent_name'] as String?,
             activeAgentType: status['active_agent'] as String?,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
             promptVersion: promptVersion,
+            metadata: metadata,
+          );
+        }
+        if (dagSignal != null) {
+          return DagExecutionEvent(
+            signal: dagSignal,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
           );
         }
         return UnknownEvent(
@@ -212,9 +320,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         final content = intervention['content'] as Map<String, dynamic>? ?? {};
         final widgetType =
             content['widget_type'] as String? ?? 'intervention_card';
-        final widgetData =
-            (content['widget_data'] as Map<String, dynamic>?) ??
-                Map<String, dynamic>.from(content);
+        final widgetData = (content['widget_data'] as Map<String, dynamic>?) ??
+            Map<String, dynamic>.from(content);
 
         widgetData['intervention_id'] ??= intervention['id'];
         widgetData['intervention_topic'] ??= intervention['topic'];
@@ -251,19 +358,22 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'full_text':
+        final metadata = data['metadata'] as Map<String, dynamic>?;
         return FullTextEvent(
           content: data['full_text'] as String? ?? '',
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          metadata: metadata,
         );
 
       case 'error':
         final error = data['error'] as Map<String, dynamic>?;
         if (error != null) {
+          final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
-            code: error['code'] as String? ?? 'UNKNOWN',
+            code: code,
             message: error['message'] as String? ?? 'Unknown error',
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
@@ -325,6 +435,17 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
       case 'pong':
         // 心跳响应，静默处理
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'meta':
+      case 'metadata':
+        // Gateway telemetry (latency_ms, is_cache_hit, etc.) — no UI action needed
         return UnknownEvent(
           data: data,
           responseId: responseId,
@@ -443,6 +564,30 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'response_feedback_ack':
+        final responseId = data['response_id'] as String?;
+        final status = data['status'] as String?;
+        if (responseId != null && status != null) {
+          return ActionStatusEvent(
+            actionId: responseId,
+            status: status,
+            message: data['message'] as String?,
+            widgetType: 'response_feedback',
+            timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'milestone_proposal':
         final proposalData = data['proposal'] as Map<String, dynamic>?;
         if (proposalData != null) {
@@ -463,10 +608,30 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'achievement_unlock':
-        final achievementData = data['achievement_data'] as Map<String, dynamic>?;
+        final achievementData =
+            data['achievement_data'] as Map<String, dynamic>?;
         if (achievementData != null) {
           return AchievementUnlockEvent(
             achievementData: achievementData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'achievement_milestone':
+        final milestoneData = data['data'] as Map<String, dynamic>?;
+        if (milestoneData != null) {
+          return AchievementMilestoneEvent(
+            milestoneData: milestoneData,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
@@ -559,17 +724,21 @@ enum WsConnectionState {
 }
 
 /// Factory for creating WebSocket channels (facilitates testing)
-typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri,
-    {Map<String, dynamic>? headers,});
+typedef WebSocketChannelFactory = WebSocketChannel Function(
+  Uri uri, {
+  Map<String, dynamic>? headers,
+});
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 {
   WebSocketChatServiceV2({
+    required ProviderContainer container,
     String? baseUrl,
     WebSocketChannelFactory? channelFactory,
     bool enableReconnect = true,
     bool autoConnect = true,
-  })  : baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
+  })  : _container = container,
+        baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
         _autoConnect = autoConnect;
@@ -578,6 +747,7 @@ class WebSocketChatServiceV2 {
   final WebSocketChannelFactory? _channelFactory;
   final bool _enableReconnect;
   final bool _autoConnect;
+  final ProviderContainer _container;
 
   // WebSocket 连接
   WebSocketChannel? _channel;
@@ -614,6 +784,11 @@ class WebSocketChatServiceV2 {
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
 
+  // 401错误处理和Token刷新
+  bool _isRefreshingToken = false;
+  int _401ErrorCount = 0;
+  static const int _max401Retries = 1;
+
   /// Exposed for testing
   @visibleForTesting
   List<Map<String, dynamic>> get pendingMessages => _pendingMessages;
@@ -637,6 +812,7 @@ class WebSocketChatServiceV2 {
     required String message,
     required String userId,
     String? sessionId,
+    String? requestId,
     String? nickname,
     Map<String, dynamic>? extraContext,
     String? token,
@@ -659,6 +835,7 @@ class WebSocketChatServiceV2 {
     final messagePayload = {
       'message': message,
       'session_id': _currentSessionId,
+      'request_id': requestId ?? _generateRequestId(),
       if (nickname != null) 'nickname': nickname,
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
@@ -749,6 +926,7 @@ class WebSocketChatServiceV2 {
   void sendPlanReviewFeedback({
     required String reviewId,
     required String userDecision,
+    String? planId,
     String? userComment,
     Map<String, dynamic>? modifications,
   }) {
@@ -756,6 +934,7 @@ class WebSocketChatServiceV2 {
       'type': 'plan_review_feedback',
       'review_id': reviewId,
       'user_decision': userDecision, // 'approve', 'reject', 'modify'
+      if (planId != null && planId.isNotEmpty) 'plan_id': planId,
       if (userComment != null && userComment.isNotEmpty)
         'user_comment': userComment,
       if (modifications != null && modifications.isNotEmpty)
@@ -837,21 +1016,28 @@ class WebSocketChatServiceV2 {
 
       // Force secure WebSocket in production
       const isProduction = kReleaseMode;
+      _log('📍 Original baseUrl: $baseUrl');
       final effectiveBaseUrl = _applyWebSocketSchemeForEnvironment(
         baseUrl,
         isProduction: isProduction,
       );
+      _log('📍 Effective WebSocket URL: $effectiveBaseUrl');
 
-      // Token in headers only - never in URL query
-      final query = 'user_id=$userId';
+      // Add token to query parameter for WebSocket authentication
+      // (Authorization header may not be preserved during WebSocket upgrade)
+      final query = effectiveToken != null
+          ? 'user_id=$userId&token=$effectiveToken'
+          : 'user_id=$userId';
 
       final wsUrl = '$effectiveBaseUrl/ws/chat?$query';
       _log('🔌 Connecting to: $wsUrl');
 
+      // Note: We still send Authorization header for reference, but WS uses query param
       final headers = <String, dynamic>{};
       if (effectiveToken != null && effectiveToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $effectiveToken';
       }
+      // Headers are included but query param token is used as fallback
 
       if (_channelFactory != null) {
         _channel = _channelFactory!(
@@ -921,11 +1107,192 @@ class WebSocketChatServiceV2 {
 
       if (_messageStreamController != null) {
         _safeAdd(_messageStreamController!, event);
+
+        // 🔧 修复：检查原始消息中的 finish_reason，如果存在则额外发送 DoneEvent
+        // 这是因为某些消息类型（如delta）在解析时会忽略 finish_reason
+        try {
+          final jsonData = json.decode(data) as Map<String, dynamic>;
+          final finishReason = jsonData['finish_reason'] as String?;
+          if (finishReason != null &&
+              finishReason != 'NULL' &&
+              finishReason.isNotEmpty) {
+            _log(
+                '📌 Detected finish_reason in raw message: $finishReason, sending DoneEvent');
+            _safeAdd(
+              _messageStreamController!,
+              DoneEvent(
+                finishReason: finishReason,
+                responseId: jsonData['response_id'] as String?,
+                traceId: jsonData['trace_id'] as String?,
+                workflowId: jsonData['workflow_id'] as String?,
+                promptVersion: jsonData['prompt_version'] as String?,
+              ),
+            );
+          }
+        } catch (e) {
+          // 忽略解析错误，因为这是额外的检查
+          _log('⚠️ Failed to check finish_reason: $e');
+        }
       }
     } catch (e) {
       _log('❌ Parse error: $e');
     }
   }
+
+  /// 检测错误是否为401认证失败
+  bool _is401Error(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    return errorStr.contains('401') ||
+        errorStr.contains('unauthorized') ||
+        errorStr.contains('jwt') ||
+        errorStr.contains('token') ||
+        errorStr.contains('authentication');
+  }
+
+  /// 处理401错误：自动刷新Token并重连
+  Future<void> _handle401Error() async {
+    if (_disposed) return;
+
+    // 防止并发刷新
+    if (_isRefreshingToken) {
+      _log('⏳ Token refresh already in progress, skipping...');
+      return;
+    }
+
+    // 检查是否超过最大重试次数
+    if (_401ErrorCount >= _max401Retries) {
+      _log('❌ Max 401 retry attempts exceeded, logging out...');
+
+      // 发送友好错误提示
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'AUTH_FAILED',
+            message: '登录已过期，请重新登录',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 执行登出
+      try {
+        await _container.read(authRepositoryProvider).logout(
+              keepDemoMode: DemoDataService.isDemoMode,
+            );
+      } catch (e) {
+        _log('❌ Logout failed: $e');
+      }
+
+      // 更新连接状态，禁用重连
+      _updateConnectionState(WsConnectionState.failed);
+      _enableReconnectLocal = false;
+
+      // 🔧 P0-2: 通知用户有消息未发送
+      if (_pendingMessages.isNotEmpty) {
+        _log(
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to auth failure');
+        if (_messageStreamController != null) {
+          _safeAdd(
+            _messageStreamController!,
+            ErrorEvent(
+              code: 'MESSAGES_LOST',
+              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              retryable: false,
+            ),
+          );
+        }
+      }
+      _pendingMessages.clear();
+      return;
+    }
+
+    _isRefreshingToken = true;
+    _401ErrorCount++;
+
+    _log(
+        '🔑 Detected 401 error, refreshing token... ($_401ErrorCount/$_max401Retries)');
+
+    try {
+      // 发送刷新中的提示
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'TOKEN_REFRESHING',
+            message: '正在刷新登录状态...',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 刷新Token
+      final authRepo = _container.read(authRepositoryProvider);
+      final newTokenResponse = await authRepo.refreshToken();
+
+      _log('✅ Token refreshed successfully');
+
+      // 更新当前Token
+      _currentToken = newTokenResponse.accessToken;
+      _reconnectAttempts = 0; // 重置普通重连计数器
+
+      // 用新Token重连
+      if (_currentUserId != null) {
+        _closeConnection();
+        _updateConnectionState(WsConnectionState.disconnected);
+        _establishConnection(_currentUserId!, _currentToken);
+      }
+    } catch (e) {
+      _log('❌ Token refresh failed: $e');
+
+      // Token刷新失败，发送友好错误并登出
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
+          ErrorEvent(
+            code: 'AUTH_FAILED',
+            message: '登录已过期，请重新登录',
+            retryable: false,
+          ),
+        );
+      }
+
+      // 执行登出
+      try {
+        await _container.read(authRepositoryProvider).logout(
+              keepDemoMode: DemoDataService.isDemoMode,
+            );
+      } catch (logoutErr) {
+        _log('❌ Logout failed: $logoutErr');
+      }
+
+      // 禁用重连
+      _updateConnectionState(WsConnectionState.failed);
+      _enableReconnectLocal = false;
+
+      // 🔧 P0-2: 通知用户有消息未发送
+      if (_pendingMessages.isNotEmpty) {
+        _log(
+            '⚠️ Discarding ${_pendingMessages.length} pending messages due to token refresh failure');
+        if (_messageStreamController != null) {
+          _safeAdd(
+            _messageStreamController!,
+            ErrorEvent(
+              code: 'MESSAGES_LOST',
+              message: '${_pendingMessages.length} 条消息发送失败，请重新登录后重试',
+              retryable: false,
+            ),
+          );
+        }
+      }
+      _pendingMessages.clear();
+    } finally {
+      _isRefreshingToken = false;
+    }
+  }
+
+  /// 本地重连开关（用于401后禁用）
+  bool _enableReconnectLocal = true;
 
   /// 处理连接错误
   void _handleConnectionError(dynamic error) {
@@ -933,7 +1300,15 @@ class WebSocketChatServiceV2 {
 
     _log('❌ Connection error: $error');
 
-    // 发送错误事件给消息流
+    // 检测是否为401认证错误
+    if (_is401Error(error)) {
+      _log('🔐 401 Authentication error detected');
+      // 异步处理401，避免阻塞错误处理流程
+      Future.microtask(_handle401Error);
+      return;
+    }
+
+    // 普通连接错误，发送错误事件给消息流
     if (_messageStreamController != null) {
       _safeAdd(
         _messageStreamController!,
@@ -962,7 +1337,7 @@ class WebSocketChatServiceV2 {
   /// 触发重连（指数退避）(TODO-A7)
   void _triggerReconnect() {
     if (_disposed) return; // TODO-A7: Check disposed
-    if (!_enableReconnect) {
+    if (!_enableReconnect || !_enableReconnectLocal) {
       _log('⛔ Reconnect disabled');
       _updateConnectionState(WsConnectionState.failed);
       return;
@@ -1040,6 +1415,8 @@ class WebSocketChatServiceV2 {
 
   /// 发送消息 (TODO-A7)
   void _sendMessage(Map<String, dynamic> payload) {
+    _log(
+        '📤 Attempting to send message, isConnected: $isConnected, channel: ${_channel != null}');
     if (!isConnected) {
       _log('⚠️  Cannot send: not connected');
       // TODO-A7: Pending Limit
@@ -1056,6 +1433,8 @@ class WebSocketChatServiceV2 {
       if (payload['type'] is String) {
         span.setAttribute('ws.type', payload['type'] as String);
       }
+      // 🔧 诊断：记录完整 payload 以验证 chat_mode 是否被发送
+      _log('📤 Full payload: ${json.encode(payload)}');
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');
       span.end();
@@ -1085,19 +1464,39 @@ class WebSocketChatServiceV2 {
     required bool isProduction,
   }) {
     final uri = Uri.parse(rawBaseUrl);
-    if (isProduction) {
-      if (uri.scheme != 'wss') {
-        debugPrint(
-            '⚠️ WARNING: Forcing WSS for release WebSocket connections.',);
-      }
-      return uri.replace(scheme: 'wss').toString();
+
+    // 确保总是使用WebSocket协议（ws:// 或 wss://）
+    final currentScheme = uri.scheme;
+    String finalScheme;
+
+    if (currentScheme == 'https' || currentScheme == 'wss') {
+      finalScheme = 'wss';
+    } else if (currentScheme == 'http' || currentScheme == 'ws') {
+      finalScheme = 'ws';
+    } else {
+      // 未知协议，根据环境决定
+      finalScheme = isProduction ? 'wss' : 'ws';
     }
+
+    // 如果需要转换协议
+    if (currentScheme != finalScheme) {
+      _log('🔄 Converting URL scheme: $currentScheme → $finalScheme');
+      return uri.replace(scheme: finalScheme).toString();
+    }
+
     return rawBaseUrl;
   }
 
   /// 生成 session ID
   String _generateSessionId() =>
       'session_${DateTime.now().millisecondsSinceEpoch}';
+
+  /// 生成 request ID（用于端到端幂等）
+  String _generateRequestId() {
+    final now = DateTime.now().microsecondsSinceEpoch;
+    final rand = math.Random().nextInt(1 << 20);
+    return 'req_${now}_$rand';
+  }
 
   /// 手动重连
   Future<void> manualReconnect() async {

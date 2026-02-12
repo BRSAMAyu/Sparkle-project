@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class SmartPushSettingsScreen extends ConsumerStatefulWidget {
@@ -58,21 +59,23 @@ class _SmartPushSettingsScreenState
 
       await ref.read(userRepositoryProvider).updatePushPreferences(prefs);
 
-      // Force refresh user profile to update state
-      // Assuming authProvider has a refresh method or we just rely on the updated user return
-      // Ideally ref.read(authProvider.notifier).updateUser(updatedUser);
-      // For now just show success
+      // Refresh auth state to update all screens
+      await ref.read(authProvider.notifier).refreshUser();
+
+      // Also update push preferences provider
+      ref.read(pushPreferencesProvider.notifier).updatePreferences(
+            personaType: _persona,
+            dailyCap: _dailyCap,
+            activeSlots: _activeSlots,
+          );
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('设置已保存')),
-        );
+        AppFeedback.success(context, '设置已保存');
       }
     } catch (e) {
       _logger.e('Failed to save push settings: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        AppFeedback.error(context, '保存失败: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -119,73 +122,78 @@ class _SmartPushSettingsScreenState
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('智能推送设置'),
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('智能推送设置'),
           actions: [
             if (_isLoading)
               const Center(
                 child: Padding(
-                  padding: EdgeInsets.only(right: 16.0),
+                  padding: EdgeInsets.only(right: DS.spacing16),
                   child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               )
             else
-              IconButton(
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
                 icon: const Icon(Icons.save),
                 onPressed: _savePreferences,
               ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(DS.lg),
-          children: [
-            _buildSectionTitle('角色设定 (Persona)'),
-            const SizedBox(height: DS.sm),
-            _buildPersonaSelector(),
-            const SizedBox(height: DS.xl),
-            _buildSectionTitle('频控设置 (每日上限)'),
-            _buildFrequencySlider(),
-            const SizedBox(height: DS.xl),
-            _buildSectionTitle('活跃时间段 (Active Slots)'),
-            Text(
-              '仅在这些时间段内发送推送，避开休息时间。',
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
-            ),
-            const SizedBox(height: DS.sm),
-            _buildActiveSlotsList(),
-            const SizedBox(height: DS.sm),
-            ElevatedButton.icon(
-              onPressed: _addSlot,
-              icon: const Icon(Icons.add),
-              label: const Text('添加时间段'),
-            ),
-            const SizedBox(height: 40),
-            const Divider(),
-            Center(
-              child: TextButton.icon(
-                onPressed: () {
-                  ref.read(notificationServiceProvider).showSmartPush(
-                    title: '⚡ 调试：记忆临界点',
-                    body: '你的 [线性代数] 正在遗忘，点击立即复习！',
-                    payload: {'taskId': 'debug_123'},
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
-                  );
-                },
-                icon: Icon(Icons.bug_report, color: DS.brandPrimary),
-                label: Text('发送测试通知 (Dev)',
-                    style: TextStyle(color: DS.brandPrimaryConst),),
+        body: ContentConstraint(
+          child: ListView(
+            padding: const EdgeInsets.all(DS.lg),
+            children: [
+              _buildSectionTitle('角色设定 (Persona)'),
+              const SizedBox(height: DS.sm),
+              _buildPersonaSelector(),
+              const SizedBox(height: DS.xl),
+              _buildSectionTitle('频控设置 (每日上限)'),
+              _buildFrequencySlider(),
+              const SizedBox(height: DS.xl),
+              _buildSectionTitle('活跃时间段 (Active Slots)'),
+              Text(
+                '仅在这些时间段内发送推送，避开休息时间。',
+                style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: DS.sm),
+              _buildActiveSlotsList(),
+              const SizedBox(height: DS.sm),
+              SparkleButton(
+                onPressed: _addSlot,
+                icon: const Icon(Icons.add),
+                label: '添加时间段',
+                expand: true,
+              ),
+              const SizedBox(height: DS.spacing40),
+              const Divider(),
+              Center(
+                child: SparkleButton.ghost(
+                  onPressed: () {
+                    ref.read(notificationServiceProvider).showSmartPush(
+                      title: '⚡ 调试：记忆临界点',
+                      body: '你的 [线性代数] 正在遗忘，点击立即复习！',
+                      payload: {'taskId': 'debug_123'},
+                    );
+                    AppFeedback.info(context, '测试通知已发送 (需退回桌面查看)');
+                  },
+                  icon: const Icon(Icons.bug_report),
+                  label: '发送测试通知 (Dev)',
+                ),
+              ),
+              const SizedBox(height: DS.spacing20),
+            ],
+          ),
         ),
       );
 
@@ -244,10 +252,12 @@ class _SmartPushSettingsScreenState
         ),
         child: Column(
           children: [
-            Icon(icon,
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,),
+            Icon(
+              icon,
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: DS.sm),
             Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: DS.xs),
@@ -269,9 +279,13 @@ class _SmartPushSettingsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('3条/天'),
-              Text('$_dailyCap条',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18,),),
+              Text(
+                '$_dailyCap条',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
               const Text('10条/天'),
             ],
           ),
@@ -289,7 +303,7 @@ class _SmartPushSettingsScreenState
   Widget _buildActiveSlotsList() {
     if (_activeSlots.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16.0),
+        padding: EdgeInsets.symmetric(vertical: DS.spacing16),
         child: Center(child: Text('暂无设置，建议添加活跃时间')),
       );
     }
@@ -298,7 +312,7 @@ class _SmartPushSettingsScreenState
       children: List.generate(_activeSlots.length, (index) {
         final slot = _activeSlots[index];
         return Card(
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: const EdgeInsets.only(bottom: DS.spacing8),
           child: Padding(
             padding: const EdgeInsets.all(DS.sm),
             child: Row(
@@ -310,14 +324,16 @@ class _SmartPushSettingsScreenState
                     children: [
                       _buildTimeButton(slot['start'] ?? '00:00', index, true),
                       const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        padding: EdgeInsets.symmetric(horizontal: DS.spacing8),
                         child: Text('-'),
                       ),
                       _buildTimeButton(slot['end'] ?? '00:00', index, false),
                     ],
                   ),
                 ),
-                IconButton(
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.spacing32,
                   icon: Icon(Icons.delete, color: DS.errorAccent),
                   onPressed: () => _removeSlot(index),
                 ),
@@ -333,7 +349,10 @@ class _SmartPushSettingsScreenState
         onTap: () => _selectTime(index, isStart),
         borderRadius: BorderRadius.circular(4),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing6,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: DS.brandPrimary.shade400),
             borderRadius: BorderRadius.circular(4),

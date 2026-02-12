@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart'
+    hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -24,7 +25,8 @@ class TaskDetailScreen extends ConsumerWidget {
     return MaterialStyler(
       material: AppMaterials.neoGlass,
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Allow glass effect to show
+        backgroundColor: DS.surfacePrimary
+            .withValues(alpha: 0), // Allow glass effect to show
         body: taskAsync.when(
           data: (task) => _TaskDetailView(task: task),
           loading: () => Center(
@@ -34,6 +36,7 @@ class TaskDetailScreen extends ConsumerWidget {
             ),
           ),
           error: (err, stack) => CustomErrorWidget.page(
+            context: context,
             message: '任务加载失败：$err',
             onRetry: () => ref.refresh(taskDetailProvider(taskId)),
           ),
@@ -55,24 +58,29 @@ class _TaskDetailView extends ConsumerWidget {
               slivers: [
                 _buildSliverAppBar(context),
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoSection(context),
-                        const SizedBox(height: DS.spacing24),
-                        Text(
-                          '执行指南',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                  ),
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        _buildGuideSection(context),
-                        const SizedBox(height: 100), // Space for bottom bar
-                      ],
+                  child: ContentConstraint(
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoSection(context),
+                          const SizedBox(height: DS.spacing24),
+                          Text(
+                            '执行指南',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          _buildGuideSection(context),
+                          const SizedBox(
+                              height: DS.spacing64), // Space for bottom bar
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -87,39 +95,57 @@ class _TaskDetailView extends ConsumerWidget {
     switch (type) {
       case TaskType.learning:
         return LinearGradient(
-            colors: [DS.brandPrimary.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.training:
         return LinearGradient(
-            colors: [DS.brandPrimary.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.brandPrimary.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.errorFix:
         return LinearGradient(
-            colors: [DS.error.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.error.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.reflection:
         return LinearGradient(
-            colors: [Colors.purple.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.rarityEpicBg, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.social:
         return LinearGradient(
-            colors: [DS.success.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.success.shade50, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case TaskType.planning:
         return LinearGradient(
-            colors: [Colors.teal.shade50, DS.brandPrimary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,);
+          colors: [DS.infoLight, DS.brandPrimary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case TaskType.ocr:
+        return LinearGradient(
+          colors: [DS.neutral50, DS.neutral400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
     }
   }
 
   Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
-        expandedHeight: 200.0,
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
         flexibleSpace: FlexibleSpaceBar(
           background: Hero(
@@ -150,25 +176,34 @@ class _TaskDetailView extends ConsumerWidget {
                         const SizedBox(height: DS.spacing8),
                         Wrap(
                           spacing: DS.spacing8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Chip(
                               label: Text(
-                                  toBeginningOfSentenceCase(task.type.name) ??
-                                      task.type.name,),
+                                toBeginningOfSentenceCase(task.type.name) ??
+                                    task.type.name,
+                                style: const TextStyle(fontSize: DS.fontSizeSm),
+                              ),
                               backgroundColor:
                                   DS.brandPrimary.withValues(alpha: 0.8),
-                              avatar: Icon(Icons.category,
-                                  size: 16, color: DS.primaryBase,),
+                              avatar: Icon(
+                                Icons.category,
+                                size: DS.iconSizeXs,
+                                color: DS.primaryBase,
+                              ),
                             ),
                             Chip(
                               label: Text(
-                                  toBeginningOfSentenceCase(task.status.name) ??
-                                      task.status.name,),
+                                toBeginningOfSentenceCase(task.status.name) ??
+                                    task.status.name,
+                                style: const TextStyle(fontSize: DS.fontSizeSm),
+                              ),
                               backgroundColor: _getStatusColor(task.status)
                                   .withValues(alpha: 0.2),
                               labelStyle: TextStyle(
-                                  color: _getStatusColor(task.status),
-                                  fontWeight: FontWeight.bold,),
+                                color: _getStatusColor(task.status),
+                                fontWeight: DS.fontWeightBold,
+                              ),
                             ),
                           ],
                         ),
@@ -183,6 +218,7 @@ class _TaskDetailView extends ConsumerWidget {
       );
 
   Widget _buildInfoSection(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _InfoTileCard(
             icon: Icons.timer_outlined,
@@ -227,7 +263,7 @@ class _TaskDetailView extends ConsumerWidget {
   Widget _buildGuideSection(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.neutral200),
           boxShadow: DS.shadowSm,
@@ -355,7 +391,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(DS.spacing10),
                   decoration: BoxDecoration(
                     gradient: widget.gradient,
                     borderRadius: DS.borderRadius8,
@@ -363,12 +399,13 @@ class _InfoTileCardState extends State<_InfoTileCard>
                       BoxShadow(
                         color:
                             widget.gradient.colors.first.withValues(alpha: 0.3),
-                        blurRadius: 8,
+                        blurRadius: DS.spacing8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Icon(widget.icon, color: DS.brandPrimary, size: 22),
+                  child: Icon(widget.icon,
+                      color: DS.brandPrimaryConst, size: DS.iconSizeSm),
                 ),
                 const SizedBox(width: DS.spacing16),
                 Expanded(
@@ -383,7 +420,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
                               letterSpacing: 0.5,
                             ),
                       ),
-                      const SizedBox(height: DS.xs),
+                      const SizedBox(height: DS.spacing4),
                       Text(
                         widget.content,
                         style:
@@ -407,99 +444,114 @@ class _BottomActionBar extends ConsumerWidget {
   final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing16),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary,
-            boxShadow: DS.shadowMd,
-            border: Border(
-              top: BorderSide(
-                color: DS.neutral200,
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Max width for bottom action bar on larger screens
+    final maxBarWidth =
+        context.isMobile ? double.infinity : DS.contentMaxWidthDesktop;
+
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxBarWidth),
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: DS.brandPrimaryConst,
+              boxShadow: DS.shadowMd,
+              border: Border(
+                top: BorderSide(
+                  color: DS.neutral200,
+                ),
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: CustomButton.secondary(
-                  text: '编辑',
-                  icon: Icons.edit_outlined,
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    // TODO: 需要创建任务编辑页面，暂时导航到创建页面
-                    context.push('/tasks/new');
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                flex: 2,
-                child: CustomButton.primary(
-                  text: '开始任务',
-                  icon: Icons.play_arrow_rounded,
-                  onPressed: () {
-                    HapticFeedback.heavyImpact();
-                    ref.read(activeTaskProvider.notifier).state = task;
-                    // P0-1: Auto-switch plan context when starting task
-                    ref.read(activePlanProvider.notifier).selectFromTaskPlanId(task.planId);
-                    context.push('/tasks/${task.id}/execute');
-                  },
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: DS.error.withValues(alpha: 0.3),
-                    width: 1.5,
+            child: Row(
+              children: [
+                Expanded(
+                  child: CustomButton.secondary(
+                    text: '编辑',
+                    icon: Icons.edit_outlined,
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      // TODO: 需要创建任务编辑页面，暂时导航到创建页面
+                      context.push('/tasks/new');
+                    },
                   ),
-                  borderRadius: DS.borderRadius12,
                 ),
-                child: IconButton(
-                  icon: Icon(Icons.delete_outline, color: DS.error),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: DS.borderRadius20,
-                        ),
-                        title: const Text(
-                          '删除任务',
-                          style: TextStyle(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
-                        content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
-                        actions: [
-                          CustomButton.text(
-                            text: '取消',
-                            onPressed: () => Navigator.of(ctx).pop(),
-                          ),
-                          CustomButton.primary(
-                            text: '删除',
-                            icon: Icons.delete_rounded,
-                            onPressed: () {
-                              HapticFeedback.heavyImpact();
-                              Navigator.of(ctx).pop();
-                              ref
-                                  .read(taskListProvider.notifier)
-                                  .deleteTask(task.id);
-                              context.pop();
-                            },
-                            customGradient: DS.errorGradient,
-                            size: CustomButtonSize.small,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  flex: 2,
+                  child: CustomButton.primary(
+                    text: '开始任务',
+                    icon: Icons.play_arrow_rounded,
+                    onPressed: () {
+                      HapticFeedback.heavyImpact();
+                      ref.read(activeTaskProvider.notifier).state = task;
+                      // P0-1: Auto-switch plan context when starting task
+                      ref
+                          .read(activePlanProvider.notifier)
+                          .selectFromTaskPlanId(task.planId);
+                      context.push('/tasks/${task.id}/execute');
+                    },
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.spacing12),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: DS.error.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 40,
+                    icon: Icon(Icons.delete_outline, color: DS.error),
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      showDialog<void>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: DS.borderRadius20,
+                          ),
+                          title: const Text(
+                            '删除任务',
+                            style: TextStyle(
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                          content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
+                          actions: [
+                            CustomButton.text(
+                              text: '取消',
+                              onPressed: () => Navigator.of(ctx).pop(),
+                            ),
+                            CustomButton.primary(
+                              text: '删除',
+                              icon: Icons.delete_rounded,
+                              onPressed: () {
+                                HapticFeedback.heavyImpact();
+                                Navigator.of(ctx).pop();
+                                ref
+                                    .read(taskListProvider.notifier)
+                                    .deleteTask(task.id);
+                                context.pop();
+                              },
+                              customGradient: DS.errorGradient,
+                              size: CustomButtonSize.small,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

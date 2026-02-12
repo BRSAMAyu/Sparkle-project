@@ -13,14 +13,14 @@ Reviewer Agent - AI内容质量审查系统
 
 import json
 import uuid
-from typing import Dict, Any, List, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any
+
 from loguru import logger
 
-from app.core.agent_profiles import AgentRole, TaskType
+from app.core.agent_profiles import TaskType
 from app.services.llm_service import get_llm_service_for_task
-
 
 # ============================================
 # 审查指标定义
@@ -78,7 +78,7 @@ class QuantifiedMetric:
     def weighted_score(self) -> float:
         return self.score * self.weight
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "metric": self.metric.value,
             "score": self.score,
@@ -100,7 +100,7 @@ class Issue:
     suggested_fix: str     # 修复建议
     confidence: float      # 建议置信度 0-1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "category": self.category,
             "severity": self.severity,
@@ -120,9 +120,9 @@ class ReviewResult:
     target_id: str                      # 被审查对象ID
     decision: str                       # 审查决策: passed/failed/needs_refinement
     overall_score: float                # 总体评分 0-1
-    metrics: List[QuantifiedMetric]     # 分项指标
-    issues: List[Issue]                 # 发现的问题
-    improvement_suggestions: List[str]  # 改进建议
+    metrics: list[QuantifiedMetric]     # 分项指标
+    issues: list[Issue]                 # 发现的问题
+    improvement_suggestions: list[str]  # 改进建议
     requires_reflection: bool           # 是否需要自我反思修正
     reviewer_model: str                 # 审查使用的模型
     review_timestamp: str               # 审查时间戳
@@ -137,12 +137,12 @@ class ReviewResult:
         )
 
     @property
-    def critical_issues(self) -> List[Issue]:
+    def critical_issues(self) -> list[Issue]:
         """获取严重问题"""
         return [i for i in self.issues if i.severity == ReviewSeverity.CRITICAL.value]
 
     @property
-    def warning_issues(self) -> List[Issue]:
+    def warning_issues(self) -> list[Issue]:
         """获取警告问题"""
         return [i for i in self.issues if i.severity == ReviewSeverity.WARNING.value]
 
@@ -153,7 +153,7 @@ class ReviewResult:
         if self.overall_score >= 0.5: return "及格"
         return "需改进"
 
-    def to_user_facing_dict(self) -> Dict[str, Any]:
+    def to_user_facing_dict(self) -> dict[str, Any]:
         """转换为面向用户的字典"""
         return {
             "review_id": self.review_id,
@@ -168,7 +168,7 @@ class ReviewResult:
             "requires_reflection": self.requires_reflection
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """完整字典表示"""
         return {
             "review_id": self.review_id,
@@ -185,7 +185,7 @@ class ReviewResult:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ReviewResult":
+    def from_dict(cls, data: dict[str, Any]) -> "ReviewResult":
         """从字典恢复"""
         metrics = [
             QuantifiedMetric(
@@ -352,7 +352,7 @@ class ReviewerAgent:
         self,
         user_query: str,
         llm_response: str,
-        context: Optional[Dict[str, Any]] = None
+        context: dict[str, Any] | None = None
     ) -> ReviewResult:
         """
         审查LLM生成的响应
@@ -383,8 +383,10 @@ class ReviewerAgent:
         try:
             # 调用LLM进行审查
             response = await self.llm.chat_json(
-                system_prompt=REVIEWER_SYSTEM_PROMPT,
-                user_message=prompt,
+                messages=[
+                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.2
             )
 
@@ -425,9 +427,9 @@ class ReviewerAgent:
 
     async def review_plan(
         self,
-        plan: Dict[str, Any],
+        plan: dict[str, Any],
         user_query: str,
-        context: Optional[Dict[str, Any]] = None
+        context: dict[str, Any] | None = None
     ) -> ReviewResult:
         """
         审查执行计划
@@ -466,8 +468,10 @@ class ReviewerAgent:
 
         try:
             response = await self.llm.chat_json(
-                system_prompt=REVIEWER_SYSTEM_PROMPT,
-                user_message=prompt,
+                messages=[
+                    {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.2
             )
 
@@ -500,7 +504,7 @@ class ReviewerAgent:
         self,
         tool_name: str,
         tool_result: Any,
-        context: Optional[Dict[str, Any]] = None
+        context: dict[str, Any] | None = None
     ) -> ReviewResult:
         """
         审查工具执行结果
@@ -522,18 +526,17 @@ class ReviewerAgent:
         is_valid = True
         issues = []
 
-        if isinstance(tool_result, dict):
-            if not tool_result.get("success", True):
-                is_valid = False
-                issues.append(Issue(
-                    category="execution",
-                    severity="warning",
-                    location=f"tool:{tool_name}",
-                    description="工具执行未成功",
-                    affected_content=str(tool_result.get("error_message", "")),
-                    suggested_fix="检查工具参数或重试",
-                    confidence=0.8
-                ))
+        if isinstance(tool_result, dict) and not tool_result.get("success", True):
+            is_valid = False
+            issues.append(Issue(
+                category="execution",
+                severity="warning",
+                location=f"tool:{tool_name}",
+                description="工具执行未成功",
+                affected_content=str(tool_result.get("error_message", "")),
+                suggested_fix="检查工具参数或重试",
+                confidence=0.8
+            ))
 
         return ReviewResult(
             review_id=review_id,
@@ -554,7 +557,7 @@ class ReviewerAgent:
 
     def _parse_review_result(
         self,
-        response: Dict[str, Any],
+        response: dict[str, Any],
         target_type: str,
         target_id: str
     ) -> ReviewResult:
@@ -650,7 +653,7 @@ class ReviewerAgent:
 # 全局单例
 # ============================================
 
-_reviewer_agent_instance: Optional[ReviewerAgent] = None
+_reviewer_agent_instance: ReviewerAgent | None = None
 
 
 def get_reviewer_agent() -> ReviewerAgent:
@@ -666,7 +669,6 @@ def get_reviewer_agent() -> ReviewerAgent:
 # ============================================
 
 if __name__ == "__main__":
-    import asyncio
 
     async def test_review():
         """测试审查功能"""

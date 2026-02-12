@@ -14,7 +14,9 @@ class FocusStatsPeriodToggle extends StatelessWidget {
   final ValueChanged<StatsViewPeriod> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final animationDuration = context.reduceMotion ? Duration.zero : DS.normal;
+    return Container(
       padding: const EdgeInsets.all(DS.xs),
       decoration: BoxDecoration(
         color: DS.neutral100,
@@ -24,24 +26,40 @@ class FocusStatsPeriodToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: StatsViewPeriod.values.map((p) {
           final isSelected = period == p;
-          return GestureDetector(
-            onTap: () => onChanged(p),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.md,
-                vertical: DS.xs,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected ? DS.brandPrimary : Colors.transparent,
+          return Semantics(
+            button: true,
+            selected: isSelected,
+            label: p.label,
+            child: Material(
+              color: DS.surfacePrimary.withValues(alpha: 0),
+              borderRadius: BorderRadius.circular(DS.sm),
+              child: InkWell(
+                onTap: () => onChanged(p),
                 borderRadius: BorderRadius.circular(DS.sm),
-              ),
-              child: Text(
-                p.label,
-                style: TextStyle(
-                  color: isSelected ? DS.neutral0 : DS.neutral600,
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                child: AnimatedContainer(
+                  duration: animationDuration,
+                  constraints:
+                      const BoxConstraints(minHeight: DS.touchTargetMinSize),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.md,
+                    vertical: DS.xs,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? DS.brandPrimary
+                        : DS.surfacePrimary.withValues(alpha: 0),
+                    borderRadius: BorderRadius.circular(DS.sm),
+                  ),
+                  child: Text(
+                    p.label,
+                    style: TextStyle(
+                      color: isSelected ? DS.textOnPrimary : DS.neutral600,
+                      fontSize: 13,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -49,4 +67,5 @@ class FocusStatsPeriodToggle extends StatelessWidget {
         }).toList(),
       ),
     );
+  }
 }

@@ -15,20 +15,24 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
-from datetime import datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import select, desc
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.plan_state_service import PlanStateService
 from app.models.plan import Plan
-
+from app.services.plan_state_service import PlanStateService
 
 # Default budget for plan_context section (tokens)
 PLAN_CONTEXT_DEFAULT_BUDGET = 500
+
+
+def _utcnow() -> datetime:
+    """Return a naive UTC datetime for compatibility with current DB column types."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanContextBuilder:
@@ -53,14 +57,14 @@ class PlanContextBuilder:
     async def build(
         self,
         user_id: UUID,
-        plan_id: Optional[UUID],
+        plan_id: UUID | None,
         include_task_index: bool = True,
         include_recent_tasks: bool = True,
         include_feedback_log: bool = False,
         max_milestones: int = 5,
         max_feedback_entries: int = 10,
         max_recent_tasks: int = 5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build plan context from PlanState.
 
@@ -89,7 +93,7 @@ class PlanContextBuilder:
             return {}
 
         # Build lightweight context
-        context: Dict[str, Any] = {
+        context: dict[str, Any] = {
             "plan_id": str(plan_id),
             "version": state.version,
             "status": state.status,
@@ -185,7 +189,7 @@ class PlanContextBuilder:
     async def build_for_prompt(
         self,
         user_id: UUID,
-        plan_id: Optional[UUID],
+        plan_id: UUID | None,
     ) -> str:
         """
         Build plan context as formatted string for prompt injection.
@@ -243,11 +247,11 @@ class PlanContextBuilder:
     async def build_enriched(
         self,
         user_id: UUID,
-        plan_id: Optional[UUID],
+        plan_id: UUID | None,
         include_cognitive_profile: bool = True,
         include_behavior_patterns: bool = True,
         max_behavior_patterns: int = 5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build plan context enriched with UserScope cognitive insights.
 
@@ -272,7 +276,7 @@ class PlanContextBuilder:
             return base_context
 
         enriched = dict(base_context)
-        user_profile: Dict[str, Any] = {}
+        user_profile: dict[str, Any] = {}
 
         # Fetch cognitive state snapshot
         if include_cognitive_profile:
@@ -280,7 +284,7 @@ class PlanContextBuilder:
                 from app.models.user_state import UserStateSnapshot
 
                 # Get the most recent snapshot from the last 24 hours
-                cutoff = datetime.utcnow() - timedelta(hours=24)
+                cutoff = _utcnow() - timedelta(hours=24)
                 result = await self.db.execute(
                     select(UserStateSnapshot)
                     .where(UserStateSnapshot.user_id == user_id)
@@ -316,7 +320,7 @@ class PlanContextBuilder:
                 result = await self.db.execute(
                     select(BehaviorPattern)
                     .where(BehaviorPattern.user_id == user_id)
-                    .where(BehaviorPattern.is_archived == False)
+                    .where(not BehaviorPattern.is_archived)
                     .order_by(
                         desc(BehaviorPattern.confidence_score),
                         desc(BehaviorPattern.frequency)
@@ -379,7 +383,7 @@ class PlanContextBuilder:
 
         return enriched
 
-    def _derive_insights_from_patterns(self, patterns: List) -> Dict[str, Any]:
+    def _derive_insights_from_patterns(self, patterns: list) -> dict[str, Any]:
         """
         Derive learning insights from behavior patterns.
 
@@ -389,7 +393,7 @@ class PlanContextBuilder:
         Returns:
             Derived insights dict
         """
-        insights: Dict[str, Any] = {}
+        insights: dict[str, Any] = {}
 
         pattern_types = [p.pattern_type for p in patterns]
         pattern_names = [p.pattern_name.lower() for p in patterns]
@@ -420,9 +424,9 @@ class PlanContextBuilder:
 
 
 def merge_plan_context(
-    user_context: Dict[str, Any],
-    plan_context: Dict[str, Any],
-) -> Dict[str, Any]:
+    user_context: dict[str, Any],
+    plan_context: dict[str, Any],
+) -> dict[str, Any]:
     """
     Merge plan context into user context following priority rules.
 

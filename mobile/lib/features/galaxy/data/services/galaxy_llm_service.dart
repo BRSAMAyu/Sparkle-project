@@ -347,7 +347,6 @@ class GalaxyLLMService {
       case RelativeDistance.veryFar:
         return 320.0;
     }
-    return null;
   }
 
   /// 转换关系类型

@@ -4,15 +4,17 @@ Multi-Agent API - 多智能体协作API
 提供多专家智能体协作服务
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
 from loguru import logger
+from pydantic import BaseModel
 
-from app.api.deps import get_current_user
-from app.models.user import User
 from app.agents.orchestrator_agent import create_multi_agent_workflow
-
+from app.api.deps import get_current_user
+from app.config import settings
+from app.core.agent_profiles import get_public_agent_catalog, get_public_mode_catalog
+from app.models.user import User
 
 router = APIRouter(prefix="/multi-agent", tags=["multi-agent"])
 
@@ -31,12 +33,12 @@ class MultiAgentResponse(BaseModel):
     agent_name: str
 
     # 可选字段
-    reasoning: Optional[str] = None
-    confidence: Optional[float] = None
-    metadata: Optional[Dict[str, Any]] = None
+    reasoning: str | None = None
+    confidence: float | None = None
+    metadata: dict[str, Any] | None = None
 
     # 追踪信息
-    trace: Optional[Dict[str, Any]] = None
+    trace: dict[str, Any] | None = None
 
 
 @router.post("/chat", response_model=MultiAgentResponse)
@@ -168,3 +170,21 @@ async def preview_routing(
     except Exception as e:
         logger.error(f"Routing preview error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/catalog")
+async def get_multi_agent_catalog(current_user: User = Depends(get_current_user)):
+    """Unified catalog for public multi-agent modes and experts."""
+    _ = current_user
+    if not settings.ENABLE_EXPERT_ENTRY:
+        return {
+            "modes": [],
+            "experts": [],
+            "total_experts": 0,
+        }
+    experts = get_public_agent_catalog()
+    return {
+        "modes": get_public_mode_catalog(),
+        "experts": experts,
+        "total_experts": len(experts),
+    }

@@ -3,14 +3,18 @@ GalaxyStreamingService - 知识星图实时推送服务
 
 通过WebSocket向用户推送知识星图的实时更新
 """
-import asyncio
-from typing import Dict, Any, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
-from datetime import datetime
+
 from loguru import logger
 
+from app.core.event_bus import EventBus
 from app.core.websocket import ConnectionManager
-from app.core.event_bus import EventBus, NodeMasteryUpdatedEvent
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyStreamingService:
@@ -55,7 +59,7 @@ class GalaxyStreamingService:
             await self.event_bus.subscribe(
                 stream="sparkle_events",
                 group_name="galaxy_streamers",
-                consumer_name=f"galaxy_streamer-{datetime.utcnow().timestamp()}",
+                consumer_name=f"galaxy_streamer-{_utcnow().timestamp()}",
                 callback=self._on_event
             )
 
@@ -121,7 +125,7 @@ class GalaxyStreamingService:
         except Exception as e:
             logger.error(f"Error in _on_mastery_updated: {e}")
 
-    async def _get_node_name(self, node_id: UUID) -> Optional[str]:
+    async def _get_node_name(self, node_id: UUID) -> str | None:
         """获取节点名称（用于推送通知）"""
         try:
             from app.db.session import AsyncSessionLocal
@@ -152,7 +156,7 @@ class GalaxyStreamingService:
                 "new_mastery": new_mastery,
                 "delta": new_mastery - old_mastery,
                 "reason": reason,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -163,7 +167,7 @@ class GalaxyStreamingService:
         self,
         user_id: UUID,
         trigger_node_id: UUID,
-        new_nodes: List[Dict[str, Any]]
+        new_nodes: list[dict[str, Any]]
     ):
         """推送知识拓展结果"""
         message = {
@@ -172,7 +176,7 @@ class GalaxyStreamingService:
                 "trigger_node_id": str(trigger_node_id),
                 "new_nodes": new_nodes,
                 "count": len(new_nodes),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -191,7 +195,7 @@ class GalaxyStreamingService:
             "data": {
                 "node_id": str(node_id),
                 "node_name": node_name,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -212,7 +216,7 @@ class GalaxyStreamingService:
                 "node_id": str(node_id),
                 "old_level": old_level,
                 "new_level": new_level,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -222,7 +226,7 @@ class GalaxyStreamingService:
     async def broadcast_batch_update(
         self,
         user_id: UUID,
-        updates: List[Dict[str, Any]]
+        updates: list[dict[str, Any]]
     ):
         """批量推送多个节点更新"""
         message = {
@@ -230,7 +234,7 @@ class GalaxyStreamingService:
             "data": {
                 "updates": updates,
                 "count": len(updates),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": _utcnow().isoformat()
             }
         }
 
@@ -253,10 +257,10 @@ class GalaxyStreamingService:
 
 
 # 全局单例（延迟初始化）
-_galaxy_streaming_service: Optional[GalaxyStreamingService] = None
+_galaxy_streaming_service: GalaxyStreamingService | None = None
 
 
-def get_galaxy_streaming_service() -> Optional[GalaxyStreamingService]:
+def get_galaxy_streaming_service() -> GalaxyStreamingService | None:
     """获取 GalaxyStreamingService 单例"""
     return _galaxy_streaming_service
 

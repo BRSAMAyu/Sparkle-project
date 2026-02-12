@@ -9,10 +9,11 @@
 5. ✅ 配置分组 (核心、性能、安全)
 """
 
-from typing import Optional, List, Dict, Any
-from pydantic import BaseSettings, Field, validator, PostgresDsn, RedisDsn
+from typing import Any
+
 from loguru import logger
-import os
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic_settings import BaseSettings
 
 
 class ProductionSettings(BaseSettings):
@@ -36,7 +37,7 @@ class ProductionSettings(BaseSettings):
     GATEWAY_PORT: int = Field(default=8080, env="GATEWAY_PORT")
     GATEWAY_URL: str = Field(default="http://localhost:8080", env="GATEWAY_URL")
 
-    BACKEND_CORS_ORIGINS: List[str] = Field(
+    BACKEND_CORS_ORIGINS: list[str] = Field(
         default=["*"],
         env="BACKEND_CORS_ORIGINS"
     )
@@ -111,8 +112,13 @@ class ProductionSettings(BaseSettings):
     # ==================== 日志配置 ====================
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     LOG_FORMAT: str = Field(default="json", env="LOG_FORMAT")  # json or text
-    LOG_FILE: Optional[str] = Field(default=None, env="LOG_FILE")
+    LOG_FILE: str | None = Field(default=None, env="LOG_FILE")
     LOG_RETENTION_DAYS: int = Field(default=7, env="LOG_RETENTION_DAYS")
+
+    # Prompt Snapshot (debug observability)
+    PROMPT_SNAPSHOT_ENABLED: bool = Field(default=False, env="PROMPT_SNAPSHOT_ENABLED")
+    PROMPT_SNAPSHOT_SAMPLE_RATE: float = Field(default=0.0, env="PROMPT_SNAPSHOT_SAMPLE_RATE")
+    PROMPT_SNAPSHOT_MAX_CHARS: int = Field(default=1200, env="PROMPT_SNAPSHOT_MAX_CHARS")
 
     # ==================== 监控配置 ====================
     ENABLE_METRICS: bool = Field(default=True, env="ENABLE_METRICS")
@@ -128,31 +134,36 @@ class ProductionSettings(BaseSettings):
     CACHE_TTL_LONG: int = Field(default=86400, env="CACHE_TTL_LONG")
 
     # ==================== 验证器 ====================
-    @validator("APP_NAME")
+    @field_validator("APP_NAME")
+    @classmethod
     def validate_app_name(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError("APP_NAME cannot be empty")
         return v
 
-    @validator("SECRET_KEY")
+    @field_validator("SECRET_KEY")
+    @classmethod
     def validate_secret_key(cls, v):
         if len(v) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters")
         return v
 
-    @validator("DATABASE_URL")
+    @field_validator("DATABASE_URL")
+    @classmethod
     def validate_database_url(cls, v):
-        if not v.startswith("postgresql"):
+        if not str(v).startswith("postgresql"):
             raise ValueError("DATABASE_URL must be a PostgreSQL URL")
         return v
 
-    @validator("LLM_API_KEY")
+    @field_validator("LLM_API_KEY")
+    @classmethod
     def validate_llm_key(cls, v):
         if len(v) < 10:
             raise ValueError("LLM_API_KEY appears to be invalid")
         return v
 
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL")
+    @classmethod
     def validate_log_level(cls, v):
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v not in valid_levels:
@@ -160,7 +171,7 @@ class ProductionSettings(BaseSettings):
         return v
 
     # ==================== 配置验证 ====================
-    def validate_all(self) -> Dict[str, Any]:
+    def validate_all(self) -> dict[str, Any]:
         """
         验证所有配置并返回报告
 
@@ -171,9 +182,8 @@ class ProductionSettings(BaseSettings):
         warnings = []
 
         # 检查生产环境关键配置
-        if not self.DEBUG:
-            if self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
-                errors.append("SECRET_KEY must be changed in production")
+        if not self.DEBUG and self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
+            errors.append("SECRET_KEY must be changed in production")
 
         # 检查性能配置合理性
         if self.MAX_CONCURRENT_SESSIONS > 1000:
@@ -205,7 +215,7 @@ class ProductionSettings(BaseSettings):
 
         return result
 
-    def get_safe_config(self) -> Dict[str, Any]:
+    def get_safe_config(self) -> dict[str, Any]:
         """
         获取脱敏后的配置（用于日志输出）
 
@@ -243,7 +253,7 @@ class ProductionSettings(BaseSettings):
 
 
 # 单例实例
-_settings: Optional[ProductionSettings] = None
+_settings: ProductionSettings | None = None
 
 
 def get_settings() -> ProductionSettings:

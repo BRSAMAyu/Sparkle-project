@@ -19,7 +19,7 @@ class LearningPathDialog extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.all(DS.xl),
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: ResponsiveSystem.height(context) * 0.6,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -36,9 +36,11 @@ class LearningPathDialog extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              IconButton(
+              SparkleIconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
+                variant: ButtonVariant.ghost,
+                size: DS.touchTargetMinSize,
               ),
             ],
           ),
@@ -48,8 +50,10 @@ class LearningPathDialog extends ConsumerWidget {
               data: (path) {
                 if (path.isEmpty) {
                   return const Center(
-                      child: Text(
-                          'No prerequisites found. You can start learning!',),);
+                    child: Text(
+                      'No prerequisites found. You can start learning!',
+                    ),
+                  );
                 }
                 return ListView.builder(
                   itemCount: path.length,
@@ -70,7 +74,10 @@ class LearningPathDialog extends ConsumerWidget {
   }
 
   Widget _buildTimelineItem(
-      BuildContext context, LearningPathNode node, bool isLast,) {
+    BuildContext context,
+    LearningPathNode node,
+    bool isLast,
+  ) {
     Color statusColor;
     IconData statusIcon;
 
@@ -106,7 +113,7 @@ class LearningPathDialog extends ConsumerWidget {
                   child: Container(
                     width: 2,
                     color: DS.brandPrimary.withValues(alpha: 0.3),
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(vertical: DS.spacing4),
                   ),
                 ),
             ],
@@ -114,7 +121,7 @@ class LearningPathDialog extends ConsumerWidget {
           const SizedBox(width: DS.lg),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
+              padding: const EdgeInsets.only(bottom: DS.spacing24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

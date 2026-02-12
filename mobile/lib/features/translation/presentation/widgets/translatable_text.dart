@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/translation/translation.dart';
 
 /// A widget that makes text translatable via long-press selection
@@ -37,7 +38,8 @@ class TranslatableText extends ConsumerStatefulWidget {
   final String targetLang;
   final String domain;
   final TextStyle? style;
-  final Function(String selectedText, String translation)? onSaveToKnowledge;
+  final void Function(String selectedText, String translation)?
+      onSaveToKnowledge;
 
   @override
   ConsumerState<TranslatableText> createState() => _TranslatableTextState();
@@ -96,7 +98,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   void _showTranslationSheet(String selectedText) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
@@ -105,7 +107,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
         maxChildSize: 0.9,
         expand: false,
         builder: (context, scrollController) => Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.spacing16),
           child: SingleChildScrollView(
             controller: scrollController,
             child: InlineTranslationBlock(
@@ -134,62 +136,68 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
 
   @override
   Widget build(BuildContext context) => SelectableText(
-      widget.text,
-      style: widget.style,
-      onSelectionChanged: (selection, cause) {
-        if (cause == SelectionChangedCause.longPress) {
-          _handleTextSelection(selection);
-        }
-      },
-      contextMenuBuilder: (context, editableTextState) {
-        // Custom context menu with translation option
-        final selection = editableTextState.textEditingValue.selection;
-        if (selection.isCollapsed) {
-          return const SizedBox.shrink();
-        }
+        widget.text,
+        style: widget.style,
+        onSelectionChanged: (selection, cause) {
+          if (cause == SelectionChangedCause.longPress) {
+            _handleTextSelection(selection);
+          }
+        },
+        contextMenuBuilder: (context, editableTextState) {
+          // Custom context menu with translation option
+          final selection = editableTextState.textEditingValue.selection;
+          if (selection.isCollapsed) {
+            return const SizedBox.shrink();
+          }
 
-        final selectedText = widget.text.substring(
-          selection.start,
-          selection.end,
-        );
+          final selectedText = widget.text.substring(
+            selection.start,
+            selection.end,
+          );
 
-        return AdaptiveTextSelectionToolbar(
-          anchors: editableTextState.contextMenuAnchors,
-          children: [
-            TextSelectionToolbarTextButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () {
-                _handleTextSelection(selection);
-                editableTextState.hideToolbar();
-              },
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.translate, size: 16),
-                  SizedBox(width: 4),
-                  Text('翻译'),
-                ],
+          return AdaptiveTextSelectionToolbar(
+            anchors: editableTextState.contextMenuAnchors,
+            children: [
+              TextSelectionToolbarTextButton(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                onPressed: () {
+                  _handleTextSelection(selection);
+                  editableTextState.hideToolbar();
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.translate, size: 16),
+                    SizedBox(width: 4),
+                    Text('翻译'),
+                  ],
+                ),
               ),
-            ),
-            TextSelectionToolbarTextButton(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: selectedText));
-                editableTextState.hideToolbar();
-              },
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.copy, size: 16),
-                  SizedBox(width: 4),
-                  Text('复制'),
-                ],
+              TextSelectionToolbarTextButton(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: selectedText));
+                  editableTextState.hideToolbar();
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.copy, size: 16),
+                    SizedBox(width: 4),
+                    Text('复制'),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
 }
 
 /// Helper class for text selection management
@@ -217,42 +225,42 @@ class TranslationDemoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(
-        title: const Text('Translation Demo'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Long-press any text below to translate:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
+        appBar: AppBar(
+          title: const Text('Translation Demo'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Long-press any text below to translate:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: DS.neutral500,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TranslatableText(
-              text: '''
+              const SizedBox(height: DS.spacing16),
+              TranslatableText(
+                text: '''
 In computer science, caching is a technique used to store frequently accessed data in a temporary storage area, called a cache. When an application needs to retrieve data, it first checks the cache. If the data is found in the cache (a cache hit), it can be retrieved much faster than if it had to be fetched from the original source, such as a database or API.
 
 Caching improves performance by reducing the number of expensive operations, such as database queries or network requests. However, cache invalidation can be challenging, as stale data may persist in the cache even after the original data has been updated.
 ''',
-              domain: 'cs', // Computer science domain for terminology
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.6,
+                domain: 'cs', // Computer science domain for terminology
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.6,
+                ),
+                onSaveToKnowledge: (selectedText, translation) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已保存到生词卡')),
+                  );
+                },
               ),
-              onSaveToKnowledge: (selectedText, translation) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已保存到生词卡')),
-                );
-              },
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

@@ -1,7 +1,6 @@
 import json
 import random
 import time
-from typing import Dict, List, Optional
 
 from loguru import logger
 
@@ -13,7 +12,7 @@ class PromptBandit:
         self,
         redis_client=None,
         ttl_seconds: int = 60 * 60 * 24 * 30,
-        rng: Optional[random.Random] = None,
+        rng: random.Random | None = None,
     ) -> None:
         self.redis = redis_client
         self.ttl_seconds = ttl_seconds
@@ -22,14 +21,14 @@ class PromptBandit:
     def _key(self, workflow_id: str) -> str:
         return f"bandit:prompt:{workflow_id}"
 
-    def _default_state(self, arms: List[str]) -> Dict:
+    def _default_state(self, arms: list[str]) -> dict:
         return {
             "version": 1,
             "updated_at": int(time.time()),
             "arms": {arm: {"alpha": 1.0, "beta": 1.0} for arm in arms},
         }
 
-    async def _load_state(self, workflow_id: str, arms: List[str]) -> Dict:
+    async def _load_state(self, workflow_id: str, arms: list[str]) -> dict:
         if not self.redis:
             PROMPT_BANDIT_STATE_MISSING_TOTAL.labels(workflow_id=workflow_id).inc()
             return self._default_state(arms)
@@ -61,13 +60,13 @@ class PromptBandit:
             await self._save_state(key, state)
         return state
 
-    async def _save_state(self, key: str, state: Dict) -> None:
+    async def _save_state(self, key: str, state: dict) -> None:
         if not self.redis:
             return
         state["updated_at"] = int(time.time())
         await self.redis.set(key, json.dumps(state), ex=self.ttl_seconds)
 
-    async def select(self, workflow_id: str, arms: List[str]) -> str:
+    async def select(self, workflow_id: str, arms: list[str]) -> str:
         state = await self._load_state(workflow_id, arms)
         best_arm = arms[0]
         best_sample = -1.0
@@ -94,7 +93,7 @@ class PromptBandit:
         PROMPT_BANDIT_UPDATES_TOTAL.labels(workflow_id=workflow_id).inc()
 
     @staticmethod
-    def summarize_state(state: Dict) -> Dict[str, Dict[str, float]]:
+    def summarize_state(state: dict) -> dict[str, dict[str, float]]:
         summary = {}
         for arm, params in state.get("arms", {}).items():
             alpha = float(params.get("alpha", 1.0))
@@ -103,11 +102,11 @@ class PromptBandit:
             summary[arm] = {"alpha": alpha, "beta": beta, "mean": mean}
         return summary
 
-    async def get_debug_state(self, workflow_id: str, arms: List[str], samples: int = 200) -> Dict:
+    async def get_debug_state(self, workflow_id: str, arms: list[str], samples: int = 200) -> dict:
         state = await self._load_state(workflow_id, arms)
         summary = self.summarize_state(state)
 
-        counts = {arm: 0 for arm in arms}
+        counts = dict.fromkeys(arms, 0)
         for _ in range(samples):
             choice = await self.select(workflow_id, arms)
             counts[choice] += 1

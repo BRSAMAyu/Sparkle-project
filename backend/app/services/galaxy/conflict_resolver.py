@@ -1,6 +1,8 @@
-import y_py as Y
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Any
+
+import y_py as Y
+
 
 class ResolutionType(Enum):
     LWW = "last_write_wins"
@@ -17,7 +19,7 @@ class EnhancedConflictResolver:
         # In Yjs, LWW is the default for Map properties
         pass
 
-    async def resolve(self, local_doc: Y.YDoc, remote_update: bytes, user_id: str) -> Dict[str, Any]:
+    async def resolve(self, local_doc: Y.YDoc, remote_update: bytes, user_id: str) -> dict[str, Any]:
         """
         多策略冲突解决
         Multi-strategy conflict resolution
@@ -28,12 +30,12 @@ class EnhancedConflictResolver:
 
         # 检查冲突类型 (Simplification for MVP)
         # In reality, Yjs handles structural conflicts automatically.
-        # Semantic conflicts (e.g., two people editing the same field) 
+        # Semantic conflicts (e.g., two people editing the same field)
         # are handled by Yjs using LWW or by application logic.
-        
+
         # Here we just apply it to local_doc which is the standard Yjs way
         Y.apply_update(local_doc, remote_update)
-        
+
         return {
             "status": "resolved",
             "strategy": ResolutionType.LWW.value

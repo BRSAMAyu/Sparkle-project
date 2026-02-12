@@ -1,18 +1,21 @@
-from typing import Any, Optional, List
-from uuid import UUID
 import json
+from typing import Any
+from uuid import UUID
+
 from loguru import logger
+
+from app.models.plan import PlanStage as ModelPlanStage
+from app.models.plan import PlanType as ModelPlanType
+from app.models.task import TaskType as ModelTaskType
+from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
+from app.services.knowledge_service import KnowledgeService
+from app.services.llm_service import llm_service
+from app.services.plan_service import PlanService
+from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import CreatePlanParams, GenerateTasksForPlanParams
-from app.services.plan_service import PlanService
-from app.services.task_service import TaskService
-from app.services.llm_service import llm_service
-from app.services.knowledge_service import KnowledgeService
-from app.schemas.plan import PlanCreate
-from app.schemas.task import TaskCreate
-from app.models.plan import PlanType as ModelPlanType, PlanStage as ModelPlanStage
-from app.models.task import TaskType as ModelTaskType
 
 
 class CreatePlanTool(BaseTool):
@@ -28,7 +31,7 @@ class CreatePlanTool(BaseTool):
         params: CreatePlanParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -88,11 +91,11 @@ class GenerateTasksForPlanTool(BaseTool):
     requires_confirmation = True  # 需要用户确认才能创建
 
     async def execute(
-        self, 
-        params: GenerateTasksForPlanParams, 
+        self,
+        params: GenerateTasksForPlanParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -115,11 +118,11 @@ class GenerateTasksForPlanTool(BaseTool):
                 logger.info(f"Querying Knowledge Graph for context: {params.topic} ({params.difficulty})")
                 knowledge_service = KnowledgeService(db_session)
                 retriever = GraphRAGRetriever(knowledge_service)
-                
+
                 # 构造查询：结合主题和难度，查询相关知识点和前置依赖
                 query = f"{params.topic} {params.difficulty} learning path prerequisites"
                 rag_result = await retriever.retrieve(query, str(user_uuid), depth=2)
-                
+
                 if rag_result and rag_result.fused_context:
                     knowledge_context = rag_result.fused_context
                     logger.info("Retrieved GraphRAG context successfully")
@@ -228,16 +231,16 @@ class GenerateTasksForPlanTool(BaseTool):
     async def _generate_tasks_with_llm(
         self,
         plan_title: str,
-        plan_description: Optional[str],
+        plan_description: str | None,
         topic: str,
         difficulty: str,
         task_count: int,
         knowledge_context: str = ""
-    ) -> Optional[List[dict]]:
+    ) -> list[dict] | None:
         """
         使用 LLM 生成结构化的任务建议 (支持 GraphRAG 上下文)
         """
-        
+
         context_prompt = ""
         if knowledge_context:
             context_prompt = f"""
@@ -297,10 +300,7 @@ class GenerateTasksForPlanTool(BaseTool):
                 return None
 
             # 解析 JSON 响应
-            if isinstance(response, str):
-                tasks = json.loads(response)
-            else:
-                tasks = response
+            tasks = json.loads(response) if isinstance(response, str) else response
 
             # 验证和清理任务数据
             validated_tasks = []

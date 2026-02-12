@@ -1,5 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 import pytest
 
@@ -49,7 +53,7 @@ async def test_context_pack_budget_trimming(db_session):
         evidence_refs=[{"type": "event", "id": "evt_4"}],
     )
 
-    now = datetime.utcnow()
+    now = _utcnow()
     await memory_service.create_episodic_memory(
         user_id=user_id,
         summary="Memory A " + ("z" * 120),

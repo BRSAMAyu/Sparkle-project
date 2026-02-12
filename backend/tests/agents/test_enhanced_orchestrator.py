@@ -4,6 +4,7 @@ Enhanced Orchestrator Agent - Unit Tests
 测试增强版协调器的核心功能
 """
 
+import os
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
@@ -192,11 +193,20 @@ class TestCollaborationResponse:
         assert response.metadata["workflow"] == "task_decomposition"
         assert response.metadata["participants"] == ["StudyPlanner", "MathExpert", "CodeExpert"]
 
-        # 验证可视化数据
-        assert "visualization" in response.metadata
-        viz_data = response.metadata["visualization"]
-        assert viz_data["workflow_type"] == "task_decomposition"
-        assert len(viz_data["timeline"]) == 2
+        # 验证协作时间线数据 (Schema v1.0)
+        assert "collaboration_timeline" in response.metadata
+        import json
+        timeline_data = json.loads(response.metadata["collaboration_timeline"])
+        assert timeline_data["schema_version"] == "1.0"
+        assert timeline_data["workflow_type"] == "task_decomposition"
+        assert len(timeline_data["steps"]) == 2
+
+        # 验证每个 step 的必需字段
+        for step in timeline_data["steps"]:
+            assert "agent_name" in step
+            assert "action" in step
+            assert "status" in step
+            assert "start_time_ms" in step
 
 
 class TestErrorHandling:
@@ -244,6 +254,10 @@ class TestErrorHandling:
 class TestPerformance:
     """性能测试"""
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for performance timing.",
+    )
     @pytest.mark.asyncio
     async def test_response_time_under_threshold(self, orchestrator, sample_context):
         """测试响应时间在阈值内"""
@@ -265,6 +279,10 @@ class TestPerformance:
 class TestIntegration:
     """集成测试"""
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for end-to-end orchestration.",
+    )
     @pytest.mark.asyncio
     async def test_end_to_end_task_decomposition(self, orchestrator):
         """端到端测试：任务分解工作流"""
@@ -287,6 +305,10 @@ class TestIntegration:
             assert response.metadata["workflow"] == "task_decomposition"
             assert len(response.metadata["participants"]) >= 2
 
+    @pytest.mark.skipif(
+        os.getenv("FULL_LLM_TESTS") != "1",
+        reason="Requires live LLM/agent stack for end-to-end orchestration.",
+    )
     @pytest.mark.asyncio
     async def test_end_to_end_error_diagnosis(self, orchestrator):
         """端到端测试：错题诊断工作流"""

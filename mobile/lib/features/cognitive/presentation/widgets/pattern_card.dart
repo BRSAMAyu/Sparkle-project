@@ -22,7 +22,7 @@ class PatternCard extends StatelessWidget {
         icon = Icons.psychology;
         gradient = DS.infoGradient;
       case 'emotional':
-        iconColor = Colors.purple.shade700;
+        iconColor = DS.prismPurple.shade700;
         icon = Icons.sentiment_very_dissatisfied;
         gradient = DS.warningGradient;
       case 'execution':

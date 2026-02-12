@@ -60,8 +60,11 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       gradient: DS.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.auto_awesome,
-                        color: DS.brandPrimaryConst, size: 18,),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: DS.brandPrimaryConst,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
@@ -72,8 +75,10 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(_isExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: DS.neutral500,),
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: DS.neutral500,
+                  ),
                 ],
               ),
             ),
@@ -135,7 +140,9 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       ),
                     )
                   else
-                    IconButton(
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 36,
                       icon: Icon(Icons.send, color: DS.primaryBase),
                       onPressed: _sendMessage,
                     ),

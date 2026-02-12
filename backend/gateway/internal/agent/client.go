@@ -134,3 +134,17 @@ func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.Respon
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 	return c.api.SubmitResponseFeedback(outCtx, req)
 }
+
+func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRequest) (*agentv1.PlanReviewResponse, error) {
+	md := metadata.New(map[string]string{
+		"user-id":            req.UserId,
+		"x-internal-api-key": c.config.InternalAPIKey,
+	})
+	if traceID := traceIDFromContext(ctx); traceID != "" {
+		md.Set("x-trace-id", traceID)
+	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		md.Set("x-trace-id", span.SpanContext().TraceID().String())
+	}
+	outCtx := metadata.NewOutgoingContext(ctx, md)
+	return c.api.SubmitPlanReview(outCtx, req)
+}

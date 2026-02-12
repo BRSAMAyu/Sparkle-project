@@ -2,11 +2,16 @@
 待确认操作管理
 用于存储需要用户二次确认的高风险操作
 """
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
 import asyncio
 import json
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PendingActionsStore:
@@ -25,9 +30,9 @@ class PendingActionsStore:
         Args:
             expire_minutes: 操作过期时间（分钟），默认 5 分钟
         """
-        self._store: Dict[str, Dict[str, Any]] = {}
+        self._store: dict[str, dict[str, Any]] = {}
         self._expire_minutes = expire_minutes
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self.redis = redis_client
 
     def set_redis(self, redis_client) -> None:
@@ -37,10 +42,10 @@ class PendingActionsStore:
     async def save(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         user_id: str,
         description: str = "",
-        preview_data: Optional[Dict[str, Any]] = None
+        preview_data: dict[str, Any] | None = None
     ) -> str:
         """
         保存待确认的操作
@@ -64,8 +69,8 @@ class PendingActionsStore:
             "user_id": user_id,
             "description": description,
             "preview_data": preview_data or {},
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(minutes=self._expire_minutes),
+            "created_at": _utcnow(),
+            "expires_at": _utcnow() + timedelta(minutes=self._expire_minutes),
         }
 
         if self.redis:
@@ -83,7 +88,7 @@ class PendingActionsStore:
 
         return action_id
 
-    async def get(self, action_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get(self, action_id: str, user_id: str) -> dict[str, Any] | None:
         """
         获取待确认的操作
 
@@ -110,7 +115,7 @@ class PendingActionsStore:
                 return None
 
             # 检查是否过期
-            if action["expires_at"] < datetime.utcnow():
+            if action["expires_at"] < _utcnow():
                 del self._store[action_id]
                 return None
 
@@ -165,7 +170,7 @@ class PendingActionsStore:
             try:
                 await asyncio.sleep(60)  # 每分钟清理一次
 
-                now = datetime.utcnow()
+                now = _utcnow()
                 expired_keys = [
                     key
                     for key, value in self._store.items()
@@ -181,7 +186,7 @@ class PendingActionsStore:
                 # 记录错误但不中断清理任务
                 print(f"清理过期操作时出错: {e}")
 
-    async def get_all_by_user(self, user_id: str) -> list[Dict[str, Any]]:
+    async def get_all_by_user(self, user_id: str) -> list[dict[str, Any]]:
         """
         获取用户的所有待确认操作（用于测试和调试）
 
@@ -196,17 +201,17 @@ class PendingActionsStore:
         return [
             action
             for action in self._store.values()
-            if action["user_id"] == user_id and action["expires_at"] > datetime.utcnow()
+            if action["user_id"] == user_id and action["expires_at"] > _utcnow()
         ]
 
-    async def _get_all_by_user_redis(self, user_id: str) -> list[Dict[str, Any]]:
+    async def _get_all_by_user_redis(self, user_id: str) -> list[dict[str, Any]]:
         user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
         action_ids = await self.redis.smembers(user_index_key) if self.redis else []
         if not action_ids:
             return []
 
         actions = []
-        now = datetime.utcnow()
+        now = _utcnow()
         for action_id in action_ids:
             key = f"{self.ACTION_KEY_PREFIX}{action_id}"
             raw = await self.redis.get(key)
@@ -242,7 +247,7 @@ class PendingActionsStore:
             await self.redis.delete(key)
 
 
-def _serialize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+def _serialize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         **payload,
         "created_at": payload["created_at"].isoformat(),
@@ -256,7 +261,7 @@ def _parse_datetime(value: Any) -> datetime:
     try:
         return datetime.fromisoformat(value)
     except Exception:
-        return datetime.utcnow()
+        return _utcnow()
 
 
 # 全局单例

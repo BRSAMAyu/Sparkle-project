@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -7,20 +7,20 @@ from pydantic import BaseModel, ConfigDict
 
 class NightlyReviewItem(BaseModel):
     type: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
 
 
 class NightlyReviewResponse(BaseModel):
     id: UUID
     user_id: UUID
     review_date: date
-    summary_text: Optional[str] = None
-    todo_items: Optional[List[NightlyReviewItem]] = None
-    evidence_refs: Optional[List[Dict[str, Any]]] = None
-    widget_payload: Optional[Dict[str, Any]] = None
-    model_version: Optional[str] = None
+    summary_text: str | None = None
+    todo_items: list[NightlyReviewItem] | None = None
+    evidence_refs: list[dict[str, Any]] | None = None
+    widget_payload: dict[str, Any] | None = None
+    model_version: str | None = None
     status: str
-    reviewed_at: Optional[datetime] = None
+    reviewed_at: datetime | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -28,4 +28,4 @@ class NightlyReviewResponse(BaseModel):
 
 class NightlyReviewFeedbackRequest(BaseModel):
     action: str
-    source: Optional[str] = None
+    source: str | None = None

@@ -11,12 +11,10 @@ ContextPruner - 上下文修剪器
 
 import json
 import time
-import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-from loguru import logger
+from typing import Any
 
 import redis.asyncio as redis
+from loguru import logger
 
 
 class ContextPruner:
@@ -61,7 +59,7 @@ class ContextPruner:
         session_id: str,
         user_id: str,
         force_summary: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取修剪后的聊天历史
 
@@ -157,9 +155,9 @@ class ContextPruner:
     async def _get_summarized_history(
         self,
         session_id: str,
-        history: List[Dict],
+        history: list[dict],
         user_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取带总结的历史
 
@@ -191,7 +189,7 @@ class ContextPruner:
     async def _trigger_summary(
         self,
         session_id: str,
-        history: List[Dict],
+        history: list[dict],
         user_id: str
     ):
         """
@@ -220,7 +218,7 @@ class ContextPruner:
             f"history size: {len(history_to_summarize)}"
         )
 
-    async def _load_chat_history(self, session_id: str) -> List[Dict]:
+    async def _load_chat_history(self, session_id: str) -> list[dict]:
         """
         从 Redis 加载聊天历史
 
@@ -255,7 +253,7 @@ class ContextPruner:
             logger.error(f"Failed to load chat history for session {session_id}: {e}")
             return []
 
-    async def get_summary_status(self, session_id: str) -> Dict[str, Any]:
+    async def get_summary_status(self, session_id: str) -> dict[str, Any]:
         """
         获取总结状态（用于监控和调试）
         """
@@ -292,7 +290,7 @@ context_pruner_instance = None
 
 
 def get_context_pruner(
-    redis_client: Optional[redis.Redis] = None,
+    redis_client: redis.Redis | None = None,
     **kwargs
 ) -> ContextPruner:
     """

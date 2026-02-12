@@ -1,21 +1,24 @@
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
-from datetime import datetime
+
+from sqlalchemy import and_, asc, desc, select
+
+from app.models.task import Task
+from app.models.task import TaskStatus as ModelTaskStatus
+from app.models.task import TaskType as ModelTaskType
+from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
+from app.services.focus_service import focus_service
+from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import (
-    CreateTaskParams,
-    UpdateTaskStatusParams,
     BatchCreateTasksParams,
-    SuggestQuickTaskParams,
     BreakdownTaskParams,
+    CreateTaskParams,
+    SuggestQuickTaskParams,
+    UpdateTaskStatusParams,
 )
-from app.services.task_service import TaskService
-from app.schemas.task import TaskCreate, TaskUpdate, TaskCompleteRequest, TaskStatus
-from app.models.task import TaskType as ModelTaskType
-from app.services.focus_service import focus_service
-from sqlalchemy import select, and_, asc, desc
-from app.models.task import Task, TaskStatus as ModelTaskStatus
+
 
 class CreateTaskTool(BaseTool):
     """创建单个学习任务"""
@@ -29,18 +32,18 @@ class CreateTaskTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = CreateTaskParams
     requires_confirmation = False
-    
+
     async def execute(
-        self, 
-        params: CreateTaskParams, 
+        self,
+        params: CreateTaskParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             # Convert string user_id to UUID
             user_uuid = UUID(user_id)
-            
+
             # Map params to TaskCreate schema
             # Note: subject_id is not directly supported in Task model yet, ignoring for now
             task_create = TaskCreate(
@@ -53,13 +56,13 @@ class CreateTaskTool(BaseTool):
                 tags=[], # tags not provided in params, defaulting to empty
                 tool_result_id=tool_call_id
             )
-            
+
             task = await TaskService.create(
                 db=db_session,
                 obj_in=task_create,
                 user_id=user_uuid
             )
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -68,12 +71,17 @@ class CreateTaskTool(BaseTool):
                 widget_data={
                     "id": str(task.id),
                     "title": task.title,
-                    "description": task.guide_content,
+                    "guide_content": task.guide_content,  # 🔧 修复：字段名改为guide_content以匹配前端
                     "type": task.type.value,
                     "status": task.status.value,
                     "estimated_minutes": task.estimated_minutes,
                     "priority": task.priority,
-                    "created_at": task.created_at.isoformat()
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 }
             )
         except Exception as e:
@@ -96,24 +104,24 @@ class UpdateTaskStatusTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = UpdateTaskStatusParams
     requires_confirmation = False
-    
+
     async def execute(
-        self, 
-        params: UpdateTaskStatusParams, 
+        self,
+        params: UpdateTaskStatusParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
             task_uuid = UUID(params.task_id)
-            
+
             task = await TaskService.get_by_id(db_session, task_uuid, user_uuid)
             if not task:
                 raise ValueError("Task not found")
-                
+
             new_status = params.status
-            
+
             if new_status == "in_progress":
                 task = await TaskService.start(db_session, task)
             elif new_status == "completed":
@@ -125,7 +133,7 @@ class UpdateTaskStatusTool(BaseTool):
                 # Reset to pending? TaskService doesn't have reset, so manual update
                 task_update = TaskUpdate(status=TaskStatus.PENDING)
                 task = await TaskService.update(db_session, task, task_update)
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -134,8 +142,18 @@ class UpdateTaskStatusTool(BaseTool):
                 widget_data={
                     "id": str(task.id),
                     "title": task.title,
+                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
+                    "type": task.type.value,
                     "status": task.status.value,
-                    "actual_minutes": task.actual_minutes
+                    "estimated_minutes": task.estimated_minutes,
+                    "priority": task.priority,
+                    "actual_minutes": task.actual_minutes,
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 }
             )
         except Exception as e:
@@ -157,18 +175,18 @@ class BatchCreateTasksTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = BatchCreateTasksParams
     requires_confirmation = True  # 批量操作需要确认
-    
+
     async def execute(
-        self, 
-        params: BatchCreateTasksParams, 
+        self,
+        params: BatchCreateTasksParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
             created_tasks = []
-            
+
             # Reuse logic from CreateTaskTool implicitly or just call service loop
             for task_params in params.tasks:
                 task_create = TaskCreate(
@@ -181,26 +199,38 @@ class BatchCreateTasksTool(BaseTool):
                     tags=[],
                     tool_result_id=tool_call_id
                 )
-                
+
                 task = await TaskService.create(
                     db=db_session,
                     obj_in=task_create,
                     user_id=user_uuid
                 )
-                
+
                 created_tasks.append({
                     "id": str(task.id),
                     "title": task.title,
+                    "guide_content": task.guide_content,  # 🔧 修复：添加guide_content字段
                     "type": task.type.value,
-                    "status": task.status.value
+                    "status": task.status.value,
+                    "estimated_minutes": task.estimated_minutes,
+                    "priority": task.priority,
+                    "created_at": task.created_at.isoformat(),
+                    # 🔧 补充前端需要的其他字段
+                    "user_id": str(user_uuid),
+                    "tags": [],
+                    "difficulty": 1,
+                    "energy_cost": 1,
                 })
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",  # 任务列表组件
-                widget_data={"tasks": created_tasks}
+                widget_data={
+                    "tasks": created_tasks,
+                    "tool_result_id": tool_call_id
+                }
             )
         except Exception as e:
             return ToolResult(
@@ -228,7 +258,7 @@ class SuggestQuickTaskTool(BaseTool):
         params: SuggestQuickTaskParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -314,7 +344,7 @@ class BreakdownTaskTool(BaseTool):
         params: BreakdownTaskParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -366,7 +396,10 @@ class BreakdownTaskTool(BaseTool):
                 tool_name=self.name,
                 data={"task_count": len(created_tasks)},
                 widget_type="task_list",
-                widget_data={"tasks": created_tasks}
+                widget_data={
+                    "tasks": created_tasks,
+                    "tool_result_id": tool_call_id
+                }
             )
         except Exception as e:
             return ToolResult(

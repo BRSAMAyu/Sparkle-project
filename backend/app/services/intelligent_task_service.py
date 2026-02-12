@@ -4,13 +4,13 @@ Handles LLM-driven task assistance, intent recognition, and suggestions.
 """
 import json
 from uuid import UUID
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.schemas.task import SuggestedNode, TaskSuggestionResponse
 from app.services.galaxy_service import GalaxyService
-from app.schemas.task import TaskSuggestionResponse, SuggestedNode
 
 
 class IntelligentTaskService:
@@ -19,7 +19,7 @@ class IntelligentTaskService:
         self.galaxy_service = GalaxyService(db)
 
     async def get_task_nudges(self, db: AsyncSession, user_id: UUID,
-                              task_data: dict) -> List[dict]:
+                              task_data: dict) -> list[dict]:
         """
         获取任务创建时的 Nudge 建议
 
@@ -66,8 +66,8 @@ class IntelligentTaskService:
         return nudges
 
     async def get_suggestions(
-        self, 
-        user_id: UUID, 
+        self,
+        user_id: UUID,
         input_text: str
     ) -> TaskSuggestionResponse:
         """
@@ -75,10 +75,10 @@ class IntelligentTaskService:
         """
         # 1. Use LLM to recognize intent and extract keywords/nodes
         intent_data = await self._recognize_intent(input_text)
-        
+
         # 2. Match extracted nodes with existing knowledge graph
         suggested_nodes = []
-        
+
         # Search for existing nodes using semantic search for each extracted term
         for term in intent_data.get("keywords", []):
             search_results = await self.galaxy_service.semantic_search(
@@ -87,7 +87,7 @@ class IntelligentTaskService:
                 limit=2,
                 threshold=0.4
             )
-            
+
             for res in search_results:
                 # Avoid duplicates
                 if not any(n.id == res.node.id for n in suggested_nodes):
@@ -161,11 +161,29 @@ class IntelligentTaskService:
 
             if "choices" in data and len(data["choices"]) > 0:
                 content = data["choices"][0]["message"]["content"]
-                return json.loads(content)
+                result = json.loads(content)
+                
+                # Sanitize values
+                if "estimated_minutes" in result:
+                    try:
+                        minutes = int(result["estimated_minutes"])
+                        # Ensure reasonable bounds (5-180 minutes)
+                        result["estimated_minutes"] = max(5, min(180, minutes))
+                    except (ValueError, TypeError):
+                        result["estimated_minutes"] = 25
+                
+                if "difficulty" in result:
+                    try:
+                        diff = int(result["difficulty"])
+                        result["difficulty"] = max(1, min(5, diff))
+                    except (ValueError, TypeError):
+                        result["difficulty"] = 1
+                        
+                return result
             else:
                 raise ValueError(f"Unexpected response format: {data}")
 
-        except Exception as e:
+        except Exception:
             # Fallback to default values
             return {
                 "intent": "日常学习",

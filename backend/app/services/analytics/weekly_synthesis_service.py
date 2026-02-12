@@ -1,7 +1,7 @@
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
 import json
 import os
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 try:
     from jinja2 import Environment, FileSystemLoader
@@ -26,9 +26,15 @@ except ImportError:
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.analytics.weekly_stats_service import WeeklyStatsService
+
 from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
+from app.services.analytics.weekly_stats_service import WeeklyStatsService
 from app.services.llm_service import LLMService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class WeeklySynthesisService:
     """
@@ -41,7 +47,7 @@ class WeeklySynthesisService:
         self.llm_service = llm_service
         self.stats_service = WeeklyStatsService(db)
         self.blindspot_analyzer = BlindspotAnalyzer(db)
-        
+
         # Setup Jinja2 for PDF generation (optional)
         if HAS_JINJA2:
             template_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
@@ -49,22 +55,22 @@ class WeeklySynthesisService:
         else:
             self.jinja_env = None
 
-    async def generate_report(self, user_id: str, end_date: Optional[datetime] = None) -> Dict[str, Any]:
+    async def generate_report(self, user_id: str, end_date: datetime | None = None) -> dict[str, Any]:
         """
         Generate full weekly report data and PDF.
         """
         if not end_date:
-            end_date = datetime.utcnow()
+            end_date = _utcnow()
         start_date = end_date - timedelta(days=7)
 
         # 1. Gather Data
         stats = await self.stats_service.get_weekly_summary(user_id, start_date, end_date)
         daily_trend = await self.stats_service.get_daily_activity_trend(user_id, start_date, end_date)
         blindspots = await self.blindspot_analyzer.analyze_blindspots(user_id, limit=3)
-        
+
         # 2. LLM Synthesis
         synthesis = await self._generate_llm_insights(stats, blindspots)
-        
+
         report_data = {
             "user_id": user_id,
             "week_of": start_date.strftime("%Y-%m-%d"),
@@ -73,7 +79,7 @@ class WeeklySynthesisService:
             "blindspots": blindspots,
             "ai_insight": synthesis.get("insight", "No insight generated."),
             "ai_suggestion": synthesis.get("suggestion", "Keep learning!"),
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": _utcnow().isoformat()
         }
 
         # 3. Generate PDF (Optional: can be triggered separately or here)
@@ -82,7 +88,7 @@ class WeeklySynthesisService:
 
         return report_data
 
-    async def generate_pdf(self, report_data: Dict[str, Any], output_path: str) -> str:
+    async def generate_pdf(self, report_data: dict[str, Any], output_path: str) -> str:
         """
         Render report data to PDF.
         """
@@ -98,44 +104,44 @@ class WeeklySynthesisService:
             )
         template = self.jinja_env.get_template('weekly_report.html')
         html_content = template.render(data=report_data)
-        
+
         # Ensure directory exists
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        
+
         weasyprint.HTML(string=html_content).write_pdf(output_path)
         return output_path
 
-    async def _generate_llm_insights(self, stats: Dict[str, Any], blindspots: List[Dict[str, Any]]) -> Dict[str, str]:
+    async def _generate_llm_insights(self, stats: dict[str, Any], blindspots: list[dict[str, Any]]) -> dict[str, str]:
         """
         Use LLM to generate qualitative insights.
         """
-        prompt = f"""
+        f"""
         Analyze this weekly learning data and provide a brief insight and a constructive suggestion.
-        
+
         Stats:
         - Study Time: {stats.get('total_study_minutes')} mins
         - Focus Sessions: {stats.get('focus_sessions_count')}
         - Mastery Gained: {stats.get('mastery_gain')}
         - Tasks Completed: {stats.get('tasks_completed')}
-        
+
         Identified Blindspots (Knowledge Gaps):
         {json.dumps(blindspots, indent=2)}
-        
+
         Output format (JSON):
         {{
             "insight": "One sentence summary of performance.",
             "suggestion": "One actionable tip to address blindspots or improve consistency."
         }}
         """
-        
+
         try:
             # Mocking LLM call for now as per instructions "Basic LLM generation logic (mocked or connected...)"
             # If real connection is needed, use self.llm_service.complete(prompt)
             # For MVP stability, let's use a mock or simple call if configured.
-            
+
             # response = await self.llm_service.chat_completion(messages=[{"role": "user", "content": prompt}])
             # return json.loads(response)
-            
+
             # Return Mock for speed/reliability in this MVP step
             return {
                 "insight": f"You spent {stats.get('total_study_minutes')} minutes learning this week, with good focus consistency.",

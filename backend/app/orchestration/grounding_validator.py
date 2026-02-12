@@ -10,12 +10,12 @@ Phase 2 enhancements:
 - Schema v2.0 support
 - Snapshot-aware validation
 """
-from typing import List, Optional, Set, Dict, Any
-from loguru import logger
-from dataclasses import dataclass
+from typing import Any
 
-from app.orchestration.schemas import ExecutablePlan, ValidationResult, StateSnapshot
+from loguru import logger
+
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.schemas import ExecutablePlan, StateSnapshot, ValidationResult
 
 
 class GroundingValidator:
@@ -49,13 +49,13 @@ class GroundingValidator:
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
-        self._allowlist: Optional[Set[str]] = None
+        self._allowlist: set[str] | None = None
         self._allowlist_dirty = True  # 标记是否需要刷新
 
     async def validate_plan(
         self,
         plan: ExecutablePlan,
-        snapshot: Optional[StateSnapshot] = None
+        snapshot: StateSnapshot | None = None
     ) -> ValidationResult:
         """验证执行计划 (Phase 1 & Phase 2)
 
@@ -149,7 +149,7 @@ class GroundingValidator:
             requires_hitl=requires_hitl
         )
 
-    async def _get_allowlist(self) -> Set[str]:
+    async def _get_allowlist(self) -> set[str]:
         """获取工具 allowlist（混合模式：缓存）"""
         if self._allowlist is not None and not self._allowlist_dirty:
             return self._allowlist
@@ -170,7 +170,7 @@ class GroundingValidator:
         self._allowlist_dirty = True
         logger.info("GroundingValidator allowlist marked for refresh")
 
-    def get_allowlist(self) -> Set[str]:
+    def get_allowlist(self) -> set[str]:
         """获取当前缓存的 allowlist（同步方法，用于调试）"""
         if self._allowlist is None:
             self._allowlist = set()
@@ -188,7 +188,7 @@ class GroundingValidator:
         allowlist = await self._get_allowlist()
         return tool_name in allowlist
 
-    async def get_tool_info(self, tool_name: str) -> Optional[dict]:
+    async def get_tool_info(self, tool_name: str) -> dict | None:
         """获取工具的额外信息（用于决策）"""
         allowlist = await self._get_allowlist()
 
@@ -212,7 +212,7 @@ class GroundingValidator:
         self,
         plan: ExecutablePlan,
         snapshot: StateSnapshot
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """业务规则校验 (Phase 2)
 
         Args:
@@ -227,13 +227,12 @@ class GroundingValidator:
         """
         for tool_call in plan.tool_calls:
             # 1. 创建任务配额检查
-            if tool_call.name in self.QUOTA_CHECK_TOOLS:
-                if snapshot.user_quota_remaining <= 0:
-                    return {
-                        "is_valid": False,
-                        "reason": "Daily quota exceeded. Please try again tomorrow.",
-                        "suggestion": "Complete existing tasks or wait for quota reset."
-                    }
+            if tool_call.name in self.QUOTA_CHECK_TOOLS and snapshot.user_quota_remaining <= 0:
+                return {
+                    "is_valid": False,
+                    "reason": "Daily quota exceeded. Please try again tomorrow.",
+                    "suggestion": "Complete existing tasks or wait for quota reset."
+                }
 
             # 2. 任务数量限制检查
             if tool_call.name in self.TASK_LIMIT_CHECK_TOOLS:
@@ -277,7 +276,7 @@ class GroundingValidator:
         self,
         plan: ExecutablePlan,
         user_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Preflight 检查 (Phase 2)
 
         检查外部服务的可用性:
@@ -320,7 +319,6 @@ class GroundingValidator:
             if tool_call.name == "query_knowledge":
                 # Check vector service
                 try:
-                    from app.services.knowledge_service import KnowledgeService
                     # Phase 2: Simplified check
                     logger.debug("Vector service check")
                 except Exception as e:

@@ -1,7 +1,9 @@
-from prometheus_client import Counter, Histogram, Gauge, REGISTRY
-from functools import wraps
 import time
-from typing import List, Dict, Optional, Any
+from functools import wraps
+from typing import Any
+
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram
+
 
 def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwargs):
     """Safely get or create a prometheus metric."""
@@ -312,91 +314,91 @@ def track_routing_decision(method: str):
             # Try to extract source/target from args or kwargs if possible
             # This is a best-effort extraction depending on signature
             source = kwargs.get('current', 'unknown')
-            
+
             try:
                 result = await func(*args, **kwargs)
                 latency = time.time() - start_time
-                
+
                 target = result if isinstance(result, str) else 'unknown'
-                
+
                 # Confidence tracking if available in kwargs
                 confidence = kwargs.get('confidence', 0.5)
-                
+
                 if result:
                     ROUTING_SUCCESS.labels(source=source, target=target).inc()
                     ROUTING_CONFIDENCE.labels(method=method).observe(confidence)
-                
+
                 ROUTING_LATENCY.labels(method=method).observe(latency)
                 ROUTING_DECISIONS.labels(source=source, target=target, method=method).inc()
-                
+
                 return result
-                
+
             except Exception as e:
                 ROUTING_FAILURE.labels(source=source, target='error', reason=str(e)).inc()
                 raise
-        
+
         return wrapper
     return decorator
 
-def track_collaboration(workflow_type: str, agents: List[str]):
+def track_collaboration(workflow_type: str, agents: list[str]):
     """Collaboration process tracking"""
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             start_time = time.time()
-            
+
             try:
                 result = await func(*args, **kwargs)
                 latency = time.time() - start_time
-                
+
                 agents_used = ",".join(sorted(agents))
                 outcome = "success" if result else "failure"
-                
+
                 COLLABORATION_SUCCESS.labels(
                     workflow_type=workflow_type,
                     agents_used=agents_used,
                     outcome=outcome
                 ).inc()
-                
+
                 COLLABORATION_LATENCY.labels(workflow_type=workflow_type).observe(latency)
-                
+
                 return result
-                
-            except Exception as e:
+
+            except Exception:
                 COLLABORATION_SUCCESS.labels(
                     workflow_type=workflow_type,
                     agents_used=",".join(sorted(agents)),
                     outcome="error"
                 ).inc()
                 raise
-        
+
         return wrapper
     return decorator
 
 # ========== Metrics Collector ==========
 class BusinessMetricsCollector:
     """Business metrics collector"""
-    
+
     def __init__(self):
         self._cache = {}
-    
+
     def update_route_probability(self, source: str, target: str, probability: float):
         """Update route probability"""
         PROBABILITY_DISTRIBUTION.labels(source=source, target=target).set(probability)
-    
+
     def update_learner_state_size(self, user_id: str, size: int):
         """Update learner state size"""
         LEARNER_STATE_SIZE.labels(user_id=user_id).set(size)
-    
+
     def record_cache_hit(self, cache_type: str, hit: bool):
         """Record cache hit"""
         result = "hit" if hit else "miss"
         CACHE_EFFECTIVENESS.labels(cache_type=cache_type, result=result).inc()
-    
+
     def update_graph_complexity(self, graph_name: str, nodes: int, edges: int):
         """Update graph complexity"""
         GRAPH_COMPLEXITY.labels(graph_name=graph_name).set(nodes + edges)
-    
+
     def record_agent_interaction(self, from_agent: str, to_agent: str, interaction_type: str):
         """Record agent interaction"""
         AGENT_INTERACTION_COUNT.labels(
@@ -404,7 +406,7 @@ class BusinessMetricsCollector:
             to_agent=to_agent,
             type=interaction_type
         ).inc()
-    
+
     def update_state_size(self, session_id: str, state: Any):
         """Update state size"""
         import sys

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
+const String expertChatModePrefix = 'expert::';
+
 /// Chat Mode Class
 ///
 /// Defines the different AI collaboration modes available in the app.
 /// Each mode has a unique API value, display label, icon, and associated color.
 abstract class ChatMode {
-
   ChatMode({
     required this.apiValue,
     required this.label,
     required this.icon,
     required this.color,
   });
+
   /// API value sent to the backend
   final String apiValue;
 
@@ -26,10 +28,24 @@ abstract class ChatMode {
   final Color color;
 
   /// Get ChatMode from API value
-  static ChatMode fromApiValue(String value) => chatModeValues.firstWhere(
+  static ChatMode fromApiValue(String value) {
+    if (value.startsWith(expertChatModePrefix)) {
+      final expertId = value.substring(expertChatModePrefix.length);
+      final expertName = expertId
+          .split('_')
+          .where((part) => part.isNotEmpty)
+          .map((part) => part[0].toUpperCase() + part.substring(1))
+          .join(' ');
+      return ChatModeExpert(
+        expertId: expertId,
+        expertName: expertName.isEmpty ? expertId : expertName,
+      );
+    }
+    return chatModeValues.firstWhere(
       (mode) => mode.apiValue == value,
-      orElse: () => ChatModeStandard(),
+      orElse: ChatModeStandard.new,
     );
+  }
 
   /// Check if this is a multi-agent mode (not standard)
   bool get isMultiAgent => apiValue != 'standard';
@@ -45,7 +61,12 @@ abstract class ChatMode {
         return '任务分解与学习计划协作';
       case 'error_diagnosis':
         return '错题诊断与分析循环';
+      case 'expert_auto':
+        return '自动选择最合适专家并协作';
       default:
+        if (apiValue.startsWith(expertChatModePrefix)) {
+          return '专家直达模式';
+        }
         return '';
     }
   }
@@ -64,19 +85,22 @@ abstract class ChatMode {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ChatMode && runtimeType == other.runtimeType && apiValue == other.apiValue;
+      other is ChatMode &&
+          runtimeType == other.runtimeType &&
+          apiValue == other.apiValue;
 
   @override
   int get hashCode => apiValue.hashCode;
 }
 
 class ChatModeStandard extends ChatMode {
-  ChatModeStandard() : super(
-        apiValue: 'standard',
-        label: '标准对话',
-        icon: Icons.chat_bubble_outline,
-        color: DS.brandPrimary,
-      );
+  ChatModeStandard()
+      : super(
+          apiValue: 'standard',
+          label: '标准对话',
+          icon: Icons.chat_bubble_outline,
+          color: DS.brandPrimaryConst,
+        );
 }
 
 class ChatModeDeepAnalysis extends ChatMode {
@@ -96,7 +120,7 @@ class ChatModeStudyPlan extends ChatMode {
           label: '学习计划',
           icon: Icons.calendar_month,
           color: DS.successAccent,
-      );
+        );
 }
 
 class ChatModeErrorDiagnosis extends ChatMode {
@@ -106,7 +130,32 @@ class ChatModeErrorDiagnosis extends ChatMode {
           label: '错题分析',
           icon: Icons.quiz,
           color: DS.errorAccent,
-      );
+        );
+}
+
+class ChatModeExpertAuto extends ChatMode {
+  ChatModeExpertAuto()
+      : super(
+          apiValue: 'expert_auto',
+          label: '专家自动',
+          icon: Icons.auto_awesome_mosaic,
+          color: const Color(0xFF00897B),
+        );
+}
+
+class ChatModeExpert extends ChatMode {
+  ChatModeExpert({
+    required this.expertId,
+    required this.expertName,
+  }) : super(
+          apiValue: '$expertChatModePrefix$expertId',
+          label: expertName,
+          icon: Icons.person_search,
+          color: const Color(0xFF1565C0),
+        );
+
+  final String expertId;
+  final String expertName;
 }
 
 /// All available chat modes
@@ -115,6 +164,7 @@ final List<ChatMode> chatModeValues = [
   ChatModeDeepAnalysis(),
   ChatModeStudyPlan(),
   ChatModeErrorDiagnosis(),
+  ChatModeExpertAuto(),
 ];
 
 /// Convenience accessors for common modes (for backward compatibility)
@@ -122,3 +172,4 @@ final ChatMode standard = ChatModeStandard();
 final ChatMode deepAnalysis = ChatModeDeepAnalysis();
 final ChatMode studyPlan = ChatModeStudyPlan();
 final ChatMode errorDiagnosis = ChatModeErrorDiagnosis();
+final ChatMode expertAuto = ChatModeExpertAuto();

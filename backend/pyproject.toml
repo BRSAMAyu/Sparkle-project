@@ -79,7 +79,7 @@ dependencies = [
     # gRPC
     "grpcio>=1.60.0",
     "grpcio-tools>=1.60.0",
-    "protobuf>=4.25.0",
+    "protobuf>=6.33.5",
 ]
 
 [project.optional-dependencies]
@@ -150,6 +150,24 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "B904",  # raise from
     "ARG001", # unused function argument
+    "ARG002", # unused method argument
+    "ARG004", # unused static method argument
+    "ARG005", # unused lambda argument
+    "B017",  # assert-raises-exception
+    "B027",  # empty method without abstract decorator
+    "E402",  # module import not at top
+    "E701",  # multiple statements on one line
+    "E722",  # bare except
+    "E741",  # ambiguous variable name
+    "F402",  # import shadowed by loop variable
+    "SIM102", # collapsible if
+    "SIM103", # needless bool
+    "SIM105", # suppressible exception
+    "SIM108", # if-else block instead of if-exp
+    "SIM116", # if-else block instead of dict lookup
+    "SIM117", # multiple with statements
+    "UP035", # deprecated import typing.* names
+    "UP045", # non-pep604 optional annotation
 ]
 
 [tool.ruff.per-file-ignores]
@@ -165,9 +183,15 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+ignore_errors = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
+markers = [
+  "benchmark: performance benchmarks (set PERF_TESTS=1 to run)",
+  "performance: performance/stress tests",
+  "e2e: end-to-end tests",
+]

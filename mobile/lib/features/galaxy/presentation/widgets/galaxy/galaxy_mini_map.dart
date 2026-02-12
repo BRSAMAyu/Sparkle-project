@@ -24,15 +24,15 @@ class GalaxyMiniMap extends StatelessWidget {
       height: minimapSize,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.black.withValues(alpha: 0.7)
-            : Colors.white.withValues(alpha: 0.8),
+            ? DS.surfaceHigh.withValues(alpha: 0.7)
+            : DS.surfacePrimary.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? DS.neutral700 : DS.neutral300,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: DS.overlay30.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -108,12 +108,24 @@ class _MiniMapPainter extends CustomPainter {
       final fallbackWidth = size.width * 2;
       final fallbackHeight = size.height * 2;
       _drawViewportWithSize(
-          canvas, size, minimapScale, matrix, fallbackWidth, fallbackHeight,);
+        canvas,
+        size,
+        minimapScale,
+        matrix,
+        fallbackWidth,
+        fallbackHeight,
+      );
       return;
     }
 
     _drawViewportWithSize(
-        canvas, size, minimapScale, matrix, screenWidth, screenHeight,);
+      canvas,
+      size,
+      minimapScale,
+      matrix,
+      screenWidth,
+      screenHeight,
+    );
   }
 
   void _drawViewportWithSize(
@@ -132,28 +144,39 @@ class _MiniMapPainter extends CustomPainter {
     final bottomLeft =
         MatrixUtils.transformPoint(inverseMatrix, Offset(0, screenHeight));
     final bottomRight = MatrixUtils.transformPoint(
-        inverseMatrix, Offset(screenWidth, screenHeight),);
+      inverseMatrix,
+      Offset(screenWidth, screenHeight),
+    );
 
     // Compute bounding box
-    final minX = math.min(math.min(topLeft.dx, topRight.dx),
-        math.min(bottomLeft.dx, bottomRight.dx),);
-    final maxX = math.max(math.max(topLeft.dx, topRight.dx),
-        math.max(bottomLeft.dx, bottomRight.dx),);
-    final minY = math.min(math.min(topLeft.dy, topRight.dy),
-        math.min(bottomLeft.dy, bottomRight.dy),);
-    final maxY = math.max(math.max(topLeft.dy, topRight.dy),
-        math.max(bottomLeft.dy, bottomRight.dy),);
+    final minX = math.min(
+      math.min(topLeft.dx, topRight.dx),
+      math.min(bottomLeft.dx, bottomRight.dx),
+    );
+    final maxX = math.max(
+      math.max(topLeft.dx, topRight.dx),
+      math.max(bottomLeft.dx, bottomRight.dx),
+    );
+    final minY = math.min(
+      math.min(topLeft.dy, topRight.dy),
+      math.min(bottomLeft.dy, bottomRight.dy),
+    );
+    final maxY = math.max(
+      math.max(topLeft.dy, topRight.dy),
+      math.max(bottomLeft.dy, bottomRight.dy),
+    );
 
     // Create rectangle in canvas coordinates
     final rect = Rect.fromLTRB(minX, minY, maxX, maxY);
 
     // Scale to minimap coordinates
-    final miniRect = Rect.fromLTRB(
+    var miniRect = Rect.fromLTRB(
       rect.left * minimapScale,
       rect.top * minimapScale,
       rect.right * minimapScale,
       rect.bottom * minimapScale,
     );
+    miniRect = miniRect.inflate(-2);
 
     // Draw viewport rectangle
     final viewportPaint = Paint()

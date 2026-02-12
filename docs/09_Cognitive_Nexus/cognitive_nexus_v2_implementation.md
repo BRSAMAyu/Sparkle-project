@@ -152,7 +152,7 @@ graph TD
     *   **改动**: 在处理 Chat 请求前，集成 `ContextManager`。将获取的 Context 格式化并添加到 System Prompt 中。
 
 ### 4.3 协议层
-*   **`proto/agent_service_v2.proto`**
+*   **`proto/agent_service.proto`**
     *   **改动**: 确认 `ChatRequest` 或 `UserProfile` 中预留了 `extra_context` 字段，确保 Gateway 可以透传必要的上下文标识（如果需要）。
 
 ---

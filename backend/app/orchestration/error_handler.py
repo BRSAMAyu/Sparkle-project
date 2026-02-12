@@ -2,8 +2,9 @@
 Agent 错误处理器
 实现自我修正和人机协作
 """
-from typing import Dict, Any, Optional, List
 import json
+from typing import Any
+
 from app.tools.base import ToolResult
 from app.tools.registry import tool_registry
 
@@ -20,7 +21,7 @@ class AgentErrorHandler:
         self,
         llm_service: Any,
         tool_result: ToolResult,
-        original_request: Dict[str, Any],
+        original_request: dict[str, Any],
         retry_count: int = 0,
         user_id: str = None,
         db_session: Any = None
@@ -94,7 +95,7 @@ class AgentErrorHandler:
     def _build_correction_prompt(
         self,
         tool_result: ToolResult,
-        original_request: Dict[str, Any]
+        original_request: dict[str, Any]
     ) -> str:
         """
         构建错误修正提示
@@ -163,7 +164,7 @@ class AgentErrorHandler:
         self,
         llm_service: Any,
         tool_results: list[ToolResult],
-        original_requests: list[Dict[str, Any]],
+        original_requests: list[dict[str, Any]],
         user_id: str = None,
         db_session: Any = None
     ) -> list[ToolResult]:

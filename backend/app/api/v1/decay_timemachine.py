@@ -4,18 +4,18 @@
 预测未来的知识遗忘状态，模拟复习干预效果
 """
 
-from fastapi import APIRouter, Depends, Query
-from typing import Dict, Any, List
+from typing import Any
 from uuid import UUID
-from pydantic import BaseModel
+
+from fastapi import APIRouter, Depends, Query
 from loguru import logger
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.services.decay_service import DecayService
-from sqlalchemy.ext.asyncio import AsyncSession
-
 
 router = APIRouter(prefix="/decay", tags=["decay"])
 
@@ -24,15 +24,15 @@ class DecayProjectionResponse(BaseModel):
     """时光机预测响应"""
     days_ahead: int
     total_nodes: int
-    projections: Dict[str, Dict[str, Any]]
+    projections: dict[str, dict[str, Any]]
 
     # 统计汇总
-    summary: Dict[str, int]  # healthy_count, dimming_count, critical_count
+    summary: dict[str, int]  # healthy_count, dimming_count, critical_count
 
 
 class InterventionSimulationRequest(BaseModel):
     """干预模拟请求"""
-    node_ids: List[str]  # 要复习的节点ID
+    node_ids: list[str]  # 要复习的节点ID
     days_ahead: int = 30
     review_boost: float = 30.0  # 复习提升的掌握度
 
@@ -178,7 +178,7 @@ async def compare_scenarios(
     )
 
     # 场景2：全部复习（获取所有节点ID）
-    all_node_ids = [UUID(nid) for nid in no_review.keys()]
+    all_node_ids = [UUID(nid) for nid in no_review]
 
     with_review = await decay_service.simulate_intervention(
         user_id=current_user.id,

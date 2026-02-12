@@ -8,10 +8,11 @@ Unified Intent Router - 统一意图路由系统
 
 替代原 IntentRouter (17行简单版本)，提供智能路由能力。
 """
-from typing import Dict, Any, List, Optional, Tuple
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
 
 from app.services.llm_service import LLMService
@@ -42,18 +43,20 @@ class UnifiedIntentType(str, Enum):
 class IntentRoutingResult:
     """统一路由结果"""
     primary_intent: UnifiedIntentType
-    sub_intents: List[Dict[str, Any]] = field(default_factory=list)
+    sub_intents: list[dict[str, Any]] = field(default_factory=list)
     confidence: float = 0.5
     routing_layer: str = "unknown"  # "explicit", "rule", "llm"
     execution_mode: str = "direct"  # "direct", "langgraph", "hybrid"
-    context_signals: Dict[str, Any] = field(default_factory=dict)
+    risk_level: str = "low"
+    context_version: str | None = None
+    context_signals: dict[str, Any] = field(default_factory=dict)
 
     # 上下文感知
-    conversation_context: Optional[str] = None
-    active_plan_id: Optional[UUID] = None
-    recent_intents: List[str] = field(default_factory=list)
+    conversation_context: str | None = None
+    active_plan_id: UUID | None = None
+    recent_intents: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "primary_intent": self.primary_intent.value,
@@ -61,6 +64,8 @@ class IntentRoutingResult:
             "confidence": self.confidence,
             "routing_layer": self.routing_layer,
             "execution_mode": self.execution_mode,
+            "risk_level": self.risk_level,
+            "context_version": self.context_version,
             "context_signals": self.context_signals,
             "active_plan_id": str(self.active_plan_id) if self.active_plan_id else None,
             "recent_intents": self.recent_intents
@@ -74,7 +79,7 @@ class IntentPattern:
         self,
         keywords: set,
         weight: float = 0.7,
-        context_hints: Optional[set] = None
+        context_hints: set | None = None
     ):
         self.keywords = keywords
         self.weight = weight
@@ -175,7 +180,7 @@ class UnifiedIntentRouter:
     def __init__(
         self,
         redis_client=None,
-        llm_service: Optional[LLMService] = None,
+        llm_service: LLMService | None = None,
         context_window_size: int = 5
     ):
         """
@@ -194,8 +199,8 @@ class UnifiedIntentRouter:
         message: str,
         user_id: str,
         session_id: str,
-        payload: Optional[Dict[str, Any]] = None,
-        conversation_history: Optional[List[Dict]] = None
+        payload: dict[str, Any] | None = None,
+        conversation_history: list[dict] | None = None
     ) -> IntentRoutingResult:
         """
         主路由方法 - 三层级联
@@ -215,12 +220,32 @@ class UnifiedIntentRouter:
         # Layer 1: 检查显式声明
         explicit_result = self._check_explicit_intent(payload)
         if explicit_result and explicit_result.confidence >= 0.95:
+            explicit_result.execution_mode = self._determine_execution_mode(
+                message=message,
+                intent=explicit_result.primary_intent,
+                confidence=explicit_result.confidence,
+            )
+            explicit_result.risk_level = self._assess_risk_level(
+                message=message,
+                intent=explicit_result.primary_intent,
+            )
+            explicit_result.context_version = self._extract_context_version(payload)
             logger.info(f"Layer 1 (explicit): {explicit_result.primary_intent}")
             return explicit_result
 
         # Layer 2: 规则匹配
         rule_result = await self._rule_based_match(message, user_id)
         if rule_result.confidence >= 0.75:
+            rule_result.execution_mode = self._determine_execution_mode(
+                message=message,
+                intent=rule_result.primary_intent,
+                confidence=rule_result.confidence,
+            )
+            rule_result.risk_level = self._assess_risk_level(
+                message=message,
+                intent=rule_result.primary_intent,
+            )
+            rule_result.context_version = self._extract_context_version(payload)
             logger.info(
                 f"Layer 2 (rule): {rule_result.primary_intent} "
                 f"confidence={rule_result.confidence:.2f}"
@@ -238,11 +263,20 @@ class UnifiedIntentRouter:
         # 检测多意图
         if llm_result.sub_intents:
             llm_result.primary_intent = UnifiedIntentType.MULTI_INTENT
-            llm_result.execution_mode = "langgraph"
+        llm_result.execution_mode = self._determine_execution_mode(
+            message=message,
+            intent=llm_result.primary_intent,
+            confidence=llm_result.confidence,
+        )
+        llm_result.risk_level = self._assess_risk_level(
+            message=message,
+            intent=llm_result.primary_intent,
+        )
+        llm_result.context_version = self._extract_context_version(payload)
 
         return llm_result
 
-    def _check_explicit_intent(self, payload: Dict[str, Any]) -> Optional[IntentRoutingResult]:
+    def _check_explicit_intent(self, payload: dict[str, Any]) -> IntentRoutingResult | None:
         """
         Layer 1: 检查显式声明的意图
 
@@ -295,7 +329,7 @@ class UnifiedIntentRouter:
         使用 IntentPattern 进行加权匹配
         """
         scores = {}
-        msg_lower = message.lower()
+        message.lower()
 
         # 使用意图模式进行匹配
         for intent_type, pattern in self.INTENT_PATTERNS.items():
@@ -339,7 +373,7 @@ class UnifiedIntentRouter:
     async def _llm_classify(
         self,
         message: str,
-        conversation_history: List[Dict],
+        conversation_history: list[dict],
         rule_hints: IntentRoutingResult
     ) -> IntentRoutingResult:
         """
@@ -451,7 +485,7 @@ class UnifiedIntentRouter:
             rule_hints.routing_layer = "llm_fallback"
             return rule_hints
 
-    def _build_context_string(self, conversation_history: List[Dict]) -> str:
+    def _build_context_string(self, conversation_history: list[dict]) -> str:
         """构建上下文字符串"""
         if not conversation_history:
             return ""
@@ -517,3 +551,58 @@ class UnifiedIntentRouter:
             return UnifiedIntentType.MULTI_INTENT
 
         return UnifiedIntentType.CHAT
+
+    def _extract_context_version(self, payload: dict[str, Any]) -> str | None:
+        versions = payload.get("realtime_versions")
+        if isinstance(versions, dict):
+            tasks_version = versions.get("tasks")
+            if isinstance(tasks_version, str):
+                return tasks_version
+        context_version = payload.get("context_version")
+        if isinstance(context_version, str):
+            return context_version
+        return None
+
+    def _determine_execution_mode(
+        self,
+        *,
+        message: str,
+        intent: UnifiedIntentType,
+        confidence: float,
+    ) -> str:
+        risk_level = self._assess_risk_level(message=message, intent=intent)
+        if risk_level == "high":
+            return "direct"
+
+        if intent in {UnifiedIntentType.TRANSLATION, UnifiedIntentType.COGNITIVE_PRISM}:
+            return "direct"
+
+        if intent == UnifiedIntentType.MULTI_INTENT:
+            return "langgraph"
+
+        if intent in {UnifiedIntentType.PLAN, UnifiedIntentType.SPRINT_PLAN} and self._is_complex_intent(message):
+            return "langgraph"
+
+        if intent in {UnifiedIntentType.PLAN, UnifiedIntentType.ERROR_DIAGNOSIS} and confidence >= 0.8:
+            return "langgraph"
+
+        return "direct"
+
+    def _assess_risk_level(
+        self,
+        *,
+        message: str,
+        intent: UnifiedIntentType,
+    ) -> str:
+        msg_lower = message.lower()
+        if intent in {UnifiedIntentType.DELETE}:  # backward-compatible enum value
+            return "high"
+
+        high_risk_keywords = {"全部", "all", "所有", "清空", "clear", "delete", "remove"}
+        if any(keyword in msg_lower for keyword in high_risk_keywords):
+            return "high"
+
+        if intent in {UnifiedIntentType.CREATE, UnifiedIntentType.UPDATE, UnifiedIntentType.PLAN, UnifiedIntentType.TASK}:
+            return "medium"
+
+        return "low"

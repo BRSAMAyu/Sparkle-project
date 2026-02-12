@@ -1,6 +1,8 @@
-import y_py as Y
-from typing import Dict, Any, List, Optional
 import uuid
+from typing import Any
+
+import y_py as Y
+
 
 class CollaborativeGalaxyService:
     """
@@ -13,13 +15,13 @@ class CollaborativeGalaxyService:
         self.ydoc = Y.YDoc()
         self.galaxy_map = self.ydoc.get_map("galaxy")
 
-    def add_node(self, user_id: str, node_data: Dict[str, Any]):
+    def add_node(self, user_id: str, node_data: dict[str, Any]):
         """
         添加节点 (CRDT 自动合并)
         Add node (CRDT auto-merge)
         """
         node_id = str(node_data.get("id", uuid.uuid4()))
-        
+
         with self.ydoc.begin_transaction() as txn:
             node_map = Y.YMap({
                 "id": node_id,
@@ -36,16 +38,16 @@ class CollaborativeGalaxyService:
         Update node mastery
         """
         node_id_str = str(node_id)
-        
+
         # get might not need txn
         node_data = self.galaxy_map.get(node_id_str)
-        
+
         if node_data and isinstance(node_data, Y.YMap):
             with self.ydoc.begin_transaction() as txn:
                 mastery_scores = node_data.get("mastery_scores")
                 if not isinstance(mastery_scores, dict):
                     mastery_scores = {}
-                
+
                 new_scores = dict(mastery_scores)
                 new_scores[user_id] = score
                 node_data.set(txn, "mastery_scores", new_scores)

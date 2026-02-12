@@ -3,12 +3,11 @@ Milestone interaction tools for LLM.
 
 Allows the LLM to confirm or dismiss milestone task proposals.
 """
-from typing import Any, Optional
-from uuid import UUID
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.tools.base import BaseTool, ToolCategory, ToolResult
-
 
 # ============ Parameter Schemas ============
 
@@ -37,7 +36,7 @@ class ConfirmMilestoneProposalTool(BaseTool):
         params: ConfirmMilestoneProposalParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         """
         Confirm a milestone proposal and create the recommended tasks.
@@ -103,7 +102,7 @@ class DismissMilestoneProposalTool(BaseTool):
         params: DismissMilestoneProposalParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         """
         Dismiss a milestone proposal without creating tasks.

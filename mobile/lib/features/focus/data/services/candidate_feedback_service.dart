@@ -24,7 +24,7 @@ class CandidateFeedbackService {
     try {
       debugPrint('📤 Sending feedback: $candidateId ($feedbackType)');
 
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/signals/feedback',
         data: {
           'candidate_id': candidateId,
@@ -36,8 +36,8 @@ class CandidateFeedbackService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['ok'] == true) {
-        debugPrint('✅ Feedback recorded: ${response.data['feedback_id']}');
+      if (response.statusCode == 200 && response.data?['ok'] == true) {
+        debugPrint('✅ Feedback recorded: ${response.data?['feedback_id']}');
       } else {
         debugPrint('⚠️ Feedback recording failed: ${response.data}');
       }
@@ -50,15 +50,15 @@ class CandidateFeedbackService {
   /// Get feedback statistics for current user
   Future<Map<String, dynamic>?> getFeedbackStats() async {
     try {
-      final response = await _dio.get('/signals/feedback/stats');
+      final response = await _dio.get<Map<String, dynamic>>('/signals/feedback/stats');
 
-      if (response.statusCode == 200 && response.data['ok'] == true) {
+      if (response.statusCode == 200 && response.data?['ok'] == true) {
         return {
-          'total_count': response.data['total_count'],
-          'ctr_percent': response.data['ctr_percent'],
-          'completion_rate_percent': response.data['completion_rate_percent'],
-          'feedback_type_breakdown': response.data['feedback_type_breakdown'],
-          'action_type_breakdown': response.data['action_type_breakdown'],
+          'total_count': response.data?['total_count'],
+          'ctr_percent': response.data?['ctr_percent'],
+          'completion_rate_percent': response.data?['completion_rate_percent'],
+          'feedback_type_breakdown': response.data?['feedback_type_breakdown'],
+          'action_type_breakdown': response.data?['action_type_breakdown'],
         };
       }
       return null;

@@ -167,6 +167,7 @@ class TestTaskEventListener:
         """Mock event bus"""
         event_bus = AsyncMock()
         event_bus.connect = AsyncMock()
+        event_bus.close = AsyncMock()
         event_bus.subscribe = Mock(side_effect=lambda *args, **kwargs: asyncio.sleep(0))
         return event_bus
 
@@ -250,6 +251,14 @@ class TestTaskEventListener:
         event_listener._running = True
         event_listener.stop()
         assert event_listener._running is False
+
+    @pytest.mark.asyncio
+    async def test_shutdown_closes_event_bus(self, event_listener, mock_event_bus):
+        """Test shutdown releases event bus resources."""
+        event_listener._running = True
+        await event_listener.shutdown()
+        assert event_listener._running is False
+        mock_event_bus.close.assert_awaited_once()
 
 
 # ==================== GalaxyStreamingService Tests ====================

@@ -4,11 +4,12 @@ PostgreSQL Connection Pool Configuration - 连接池优化
 优化数据库连接池配置以提升性能
 """
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
-from sqlalchemy.pool import QueuePool
-from loguru import logger
 import ssl
+
+from loguru import logger
 from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.pool import QueuePool
 
 from app.config import settings
 from app.db.url import to_async_database_url

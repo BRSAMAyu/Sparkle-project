@@ -66,121 +66,135 @@ class _PrismCardState extends ConsumerState<PrismCard>
           child: Stack(
             clipBehavior: Clip.antiAlias,
             children: [
-            // Prism refraction effect (animated)
-            Positioned(
-              right: -10,
-              bottom: -10,
-              child: AnimatedBuilder(
-                animation: _breathingAnimation,
-                builder: (context, child) => Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        DS.prismPurple.withValues(
-                            alpha: _breathingAnimation.value * 0.5,),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.diamond_outlined,
-                        color: DS.prismPurple, size: 18,),
-                    const SizedBox(width: DS.sm),
-                    Text(
-                      '认知棱镜',
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: DS.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (cognitive.hasNewInsight)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: DS.prismPurple,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-                const Spacer(),
-                if (weeklyPattern != null) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildTag(context, '#$weeklyPattern'),
-                      if (dashboardState.weather.type == 'rainy')
-                        _buildTag(context, '#焦虑波峰'),
-                    ],
-                  ),
-                  const SizedBox(height: DS.xs),
-                  Text(
-                    '行为定式分析已更新',
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => context.push('/errors?dimension=analysis'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: DS.prismPurple.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: DS.prismPurple.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error_outline, size: 12, color: DS.prismPurple),
-                          const SizedBox(width: 4),
-                          Text(
-                            '复习弱项: 分析',
-                            style: context.sparkleTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                              color: DS.textPrimary,
-                            ),
+              // Prism refraction effect (animated)
+              Positioned(
+                right: -10,
+                bottom: -10,
+                child: AnimatedBuilder(
+                  animation: _breathingAnimation,
+                  builder: (context, child) => Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          DS.prismPurple.withValues(
+                            alpha: _breathingAnimation.value * 0.5,
                           ),
+                          DS.surfacePrimary.withValues(alpha: 0),
                         ],
                       ),
                     ),
                   ),
-                ] else ...[
-                  Text(
-                    '点击同步闪念，发现你的行为定式',
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontSize: 12,
-                      color: DS.textSecondary,
-                    ),
+                ),
+              ),
+
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.diamond_outlined,
+                        color: DS.prismPurple,
+                        size: 18,
+                      ),
+                      const SizedBox(width: DS.sm),
+                      Text(
+                        '认知棱镜',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (cognitive.hasNewInsight)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: DS.prismPurple,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
+                  const Spacer(),
+                  if (weeklyPattern != null) ...[
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: [
+                        _buildTag(context, '#$weeklyPattern'),
+                        if (dashboardState.weather.type == 'rainy')
+                          _buildTag(context, '#焦虑波峰'),
+                      ],
+                    ),
+                    const SizedBox(height: DS.xs),
+                    Text(
+                      '行为定式分析已更新',
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    GestureDetector(
+                      onTap: () => context.push('/errors?dimension=analysis'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing8,
+                          vertical: DS.spacing4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DS.prismPurple.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: DS.prismPurple.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline,
+                                size: 12, color: DS.prismPurple),
+                            const SizedBox(width: DS.spacing4),
+                            Text(
+                              '复习弱项: 分析',
+                              style:
+                                  context.sparkleTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                color: DS.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      '点击同步闪念，发现你的行为定式',
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        fontSize: 12,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),);
+    );
   }
 
   Widget _buildTag(BuildContext context, String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
         decoration: BoxDecoration(
           color: DS.prismPurple.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),

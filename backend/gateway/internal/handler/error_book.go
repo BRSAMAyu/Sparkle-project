@@ -1,12 +1,14 @@
 package handler
 
 import (
+    "encoding/json"
     "net/http"
     "strconv"
 
     "github.com/gin-gonic/gin"
     errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
     "github.com/sparkle/gateway/internal/error_book"
+    "google.golang.org/grpc/metadata"
 )
 
 type ErrorBookHandler struct {
@@ -17,8 +19,17 @@ func NewErrorBookHandler(client *error_book.Client) *ErrorBookHandler {
     return &ErrorBookHandler{client: client}
 }
 
-func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup) {
-    errors := r.Group("/errors")
+func injectAuthContext(c *gin.Context) {
+    token := c.GetString("auth_token")
+    if token == "" {
+        return
+    }
+    ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs("authorization", "Bearer "+token))
+    c.Request = c.Request.WithContext(ctx)
+}
+
+func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
+    errors := r.Group("/errors", authMiddleware)
     {
         errors.POST("", h.CreateError)
         errors.GET("", h.ListErrors)
@@ -33,14 +44,33 @@ func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 func (h *ErrorBookHandler) CreateError(c *gin.Context) {
+    injectAuthContext(c)
+    var raw map[string]interface{}
+    if err := c.ShouldBindJSON(&raw); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    if _, ok := raw["subject_code"]; !ok {
+        if subject, ok := raw["subject"]; ok {
+            raw["subject_code"] = subject
+        }
+    }
+    delete(raw, "subject")
+
+    payload, err := json.Marshal(raw)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
     var req errorbookv1.CreateErrorRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
+    if err := json.Unmarshal(payload, &req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
     
     // Inject User ID from context
-    userID := c.GetString("userID")
+    userID := c.GetString("user_id")
     req.UserId = userID
     
     resp, err := h.client.CreateError(c.Request.Context(), &req)
@@ -53,14 +83,20 @@ func (h *ErrorBookHandler) CreateError(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     
     page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
     pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
     
+    subjectCode := c.Query("subject_code")
+    if subjectCode == "" {
+        subjectCode = c.Query("subject")
+    }
+
     req := &errorbookv1.ListErrorsRequest{
         UserId:      userID,
-        SubjectCode: c.Query("subject_code"),
+        SubjectCode: subjectCode,
         Chapter:     c.Query("chapter"),
         ErrorType:   c.Query("error_type"),
         Keyword:     c.Query("keyword"),
@@ -91,7 +127,8 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) GetError(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     errorID := c.Param("id")
     
     req := &errorbookv1.GetErrorRequest{
@@ -109,7 +146,8 @@ func (h *ErrorBookHandler) GetError(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) UpdateError(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     errorID := c.Param("id")
     
     var req errorbookv1.UpdateErrorRequest
@@ -131,7 +169,8 @@ func (h *ErrorBookHandler) UpdateError(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) DeleteError(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     errorID := c.Param("id")
     
     req := &errorbookv1.DeleteErrorRequest{
@@ -149,7 +188,8 @@ func (h *ErrorBookHandler) DeleteError(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) AnalyzeError(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     errorID := c.Param("id")
     
     req := &errorbookv1.AnalyzeErrorRequest{
@@ -167,7 +207,8 @@ func (h *ErrorBookHandler) AnalyzeError(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) SubmitReview(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     errorID := c.Param("id")
     
     var req errorbookv1.SubmitReviewRequest
@@ -189,7 +230,8 @@ func (h *ErrorBookHandler) SubmitReview(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) GetStats(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     
     req := &errorbookv1.GetReviewStatsRequest{
         UserId: userID,
@@ -205,7 +247,8 @@ func (h *ErrorBookHandler) GetStats(c *gin.Context) {
 }
 
 func (h *ErrorBookHandler) GetTodayReviews(c *gin.Context) {
-    userID := c.GetString("userID")
+    injectAuthContext(c)
+    userID := c.GetString("user_id")
     
     page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
     pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))

@@ -2,17 +2,17 @@
 Cognitive Prism API
 认知棱镜相关 API
 """
-from typing import List, Any
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, Depends
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
 
 from app.api.deps import get_current_user, get_db
 from app.db.session import AsyncSessionLocal
-from app.models.user import User
 from app.models.cognitive import BehaviorPattern
-from app.schemas.cognitive import CognitiveFragmentCreate, CognitiveFragmentResponse, BehaviorPatternResponse
+from app.models.user import User
+from app.schemas.cognitive import BehaviorPatternResponse, CognitiveFragmentCreate, CognitiveFragmentResponse
 from app.services.cognitive_service import CognitiveService
 
 router = APIRouter()
@@ -37,7 +37,7 @@ async def create_fragment(
     创建一个新的认知碎片 (闪念/拦截)
     """
     service = CognitiveService(db)
-    
+
     fragment = await service.create_fragment(
         user_id=current_user.id,
         content=fragment_in.content,
@@ -51,18 +51,18 @@ async def create_fragment(
         source_event_id=fragment_in.source_event_id,
         persona_version=fragment_in.persona_version
     )
-    
+
     # Trigger AI Analysis via Background Task
     background_tasks.add_task(
-        _analyze_fragment_task, 
-        current_user.id, 
-        fragment.id, 
+        _analyze_fragment_task,
+        current_user.id,
+        fragment.id,
         AsyncSessionLocal
     )
-        
+
     return fragment
 
-@router.get("/fragments", response_model=List[CognitiveFragmentResponse])
+@router.get("/fragments", response_model=list[CognitiveFragmentResponse])
 async def get_fragments(
     *,
     db: AsyncSession = Depends(get_db),
@@ -81,7 +81,7 @@ async def get_fragments(
     )
     return fragments
 
-@router.get("/patterns", response_model=List[BehaviorPatternResponse])
+@router.get("/patterns", response_model=list[BehaviorPatternResponse])
 async def get_patterns(
     *,
     db: AsyncSession = Depends(get_db),

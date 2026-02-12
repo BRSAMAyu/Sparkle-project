@@ -1,23 +1,22 @@
 import json
-from typing import List, Dict, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_active_superuser
+from app.api.deps import get_current_active_superuser, get_db
 from app.core.cache import cache_service
 from app.schemas.dlq import DlqEntry, DlqReplayRequest
 from app.services.analytics.cognitive_stream_worker import CognitiveStreamWorker
 
-
 router = APIRouter(prefix="/dlq", tags=["DLQ"])
 
 
-@router.get("/", response_model=List[DlqEntry])
+@router.get("/", response_model=list[DlqEntry])
 async def list_dlq_events(
     limit: int = 50,
     _admin=Depends(get_current_active_superuser),
-) -> List[DlqEntry]:
+) -> list[DlqEntry]:
     if not cache_service.redis:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis unavailable")
 
@@ -25,7 +24,7 @@ async def list_dlq_events(
         CognitiveStreamWorker.DLQ_STREAM,
         count=limit
     )
-    results: List[DlqEntry] = []
+    results: list[DlqEntry] = []
     for message_id, data in entries:
         payload_raw = data.get("data")
         try:
@@ -36,12 +35,12 @@ async def list_dlq_events(
     return results
 
 
-@router.post("/replay", response_model=Dict[str, Any])
+@router.post("/replay", response_model=dict[str, Any])
 async def replay_dlq_events(
     request: DlqReplayRequest,
     db: AsyncSession = Depends(get_db),
     admin=Depends(get_current_active_superuser),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if request.approver_id == str(admin.id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Approver must differ from admin")
 

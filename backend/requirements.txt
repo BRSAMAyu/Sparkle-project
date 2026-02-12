@@ -36,10 +36,14 @@ aiofiles>=23.2.1
 # Development & Testing
 pytest>=7.4.4
 pytest-asyncio>=0.23.3
+pytest-cov>=4.1.0
 psutil>=5.9.0
 black>=24.1.1
 flake8>=7.0.0
 mypy>=1.8.0
+locust>=2.18.0
+prometheus-api-client>=0.1.1
+websockets>=12.0
 
 # LLM & AI
 openai>=1.10.0
@@ -79,15 +83,20 @@ networkx>=3.2.1
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
 grpcio-reflection>=1.60.0
-protobuf>=4.25.0
+protobuf>=6.33.5
 
-# PDF Parsing
+# Document Processing (Office formats & OCR)
+python-docx>=1.0.0      # DOCX document processing
+python-pptx>=1.0.0      # PPTX presentation processing
+Pillow>=10.0.0          # Image processing for OCR/thumbnails
+pytesseract>=0.3.10     # Tesseract OCR wrapper
+
 # PDF Generation & Reporting
+weasyprint>=60.0
+jinja2>=3.1.0
 celery>=5.3.6
 y-py>=0.6.0
 
-# Dictionary (MDX/MDD)
-# python-lzo>=1.15  # Commented out: fails to build in Docker, unused in codebase
-readmdict>=0.1.1
+# Dictionary/HTML parsing (MDX feature is disabled by default)
 beautifulsoup4>=4.12.0
 lxml>=5.0.0

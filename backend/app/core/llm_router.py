@@ -13,16 +13,14 @@ LLM Router - 统一的LLM客户端获取入口
 - 可降级：主模型失败时自动降级
 """
 
-from typing import Optional, Dict, Any, Literal, Union, List
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
+
 from loguru import logger
 
 from app.config import settings
-from app.core.agent_profiles import (
-    AgentProfile, AgentRole, TaskType, ModelTier,
-    agent_profile_registry, TASK_TO_AGENT_PROFILE
-)
+from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 
 
 class ModelProvider(str, Enum):
@@ -31,6 +29,7 @@ class ModelProvider(str, Enum):
     DEEPSEEK = "deepseek"  # DeepSeek (核心模型)
     ZHIPU = "zhipu"        # Zhipu GLM (编程/工具)
     DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
+    SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
 
 
 @dataclass
@@ -41,9 +40,9 @@ class ModelConfig:
     base_url: str
     api_key: str
     temperature: float = 0.7
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
     # GLM 特有参数
-    clear_thinking: Optional[bool] = None  # False=保留式思考(适合Coding/Agent), True=None=默认
+    clear_thinking: bool | None = None  # False=保留式思考(适合Coding/Agent), True=None=默认
     # 成本/性能指标
     tier: ModelTier = ModelTier.STANDARD
     cost_per_1k_tokens: float = 0.001
@@ -55,7 +54,7 @@ class LLMSelection:
     """LLM选择结果（可观测）"""
     config: ModelConfig
     agent_role: AgentRole
-    task_type: Optional[TaskType]
+    task_type: TaskType | None
     reason: str  # 选择此模型的原因
     is_fallback: bool = False
 
@@ -69,11 +68,11 @@ class LLMRouter:
     """
 
     def __init__(self):
-        self._available_models: Dict[str, ModelConfig] = {}
-        self._tier_mapping: Dict[ModelTier, List[str]] = {}
+        self._available_models: dict[str, ModelConfig] = {}
+        self._tier_mapping: dict[ModelTier, list[str]] = {}
         self._load_model_configs()
 
-    def register_model_configs(self, configs: Dict[str, ModelConfig], tier_mapping: Optional[Dict[ModelTier, List[str]]] = None):
+    def register_model_configs(self, configs: dict[str, ModelConfig], tier_mapping: dict[ModelTier, list[str]] | None = None):
         """
         运行时注册/更新模型配置。
 
@@ -138,6 +137,7 @@ class LLMRouter:
                 avg_latency_ms=400,
             ),
             # GLM-4.7 思考模式 - 用于 REASONING 任务（深度推理）
+            # NOTE: clear_thinking=False 启用深度思考模式，实际延迟 10-30 秒
             "zhipu_reason": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
@@ -147,7 +147,7 @@ class LLMRouter:
                 clear_thinking=False,  # 开启保留式思考，保持推理连续性
                 tier=ModelTier.REASONING,
                 cost_per_1k_tokens=0.002,
-                avg_latency_ms=1500,
+                avg_latency_ms=20000,  # 实际 10-30s，设置为 20s 作为预期
             ),
             # GLM-4.7-FlashX 快速响应模型（非思考模式）
             "zhipu_flash": ModelConfig(
@@ -161,12 +161,37 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=150,
             ),
+            # GLM-4.7-Flash 非思考模式 - 快速响应（免费）
+            "glm_4_7_flash_no_thinking": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.GLM_4_7_FLASH_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=True,  # 关闭思考模式，快速响应
+                tier=ModelTier.FREE_FAST,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=200,
+            ),
+            # GLM-4.7-Flash 思考模式 - 深度推理（免费）
+            # NOTE: clear_thinking=False 启用深度思考模式，实际延迟 10-20 秒
+            "glm_4_7_flash_thinking": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.GLM_4_7_FLASH_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,  # 开启保留式思考，深度推理
+                tier=ModelTier.FREE_REASONING,
+                cost_per_1k_tokens=0.0005,
+                avg_latency_ms=15000,  # 实际 10-20s，设置为 15s 作为预期
+            ),
 
             # ===== Aliyun DashScope (通义千问) =====
             "dashscope_chat": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_CHAT_MODEL,
-                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=settings.DASHSCOPE_TEMPERATURE,
                 tier=ModelTier.STANDARD,
@@ -176,12 +201,36 @@ class LLMRouter:
             "dashscope_reason": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_REASON_MODEL,
-                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=0.2,
                 tier=ModelTier.REASONING,
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=2000,
+            ),
+
+            # ===== SiliconFlow (专家模型：OCR、翻译等) =====
+            # DeepSeek OCR - 文档识别与清洗
+            "siliconflow_ocr": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.SILICONFLOW_OCR_MODEL,
+                base_url=settings.SILICONFLOW_BASE_URL,
+                api_key=settings.SILICONFLOW_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.001,
+                avg_latency_ms=2000,
+            ),
+            # Hunyuan MT - 机器翻译
+            "siliconflow_translate": ModelConfig(
+                provider=ModelProvider.SILICONFLOW,
+                model_name=settings.HUNYUAN_TRANSLATE_MODEL,
+                base_url=settings.HUNYUAN_BASE_URL,
+                api_key=settings.HUNYUAN_API_KEY or settings.SILICONFLOW_API_KEY,
+                temperature=0.2,
+                tier=ModelTier.SPECIALIST,
+                cost_per_1k_tokens=0.0005,
+                avg_latency_ms=1000,
             ),
 
             # ===== 通用备用 =====
@@ -198,19 +247,48 @@ class LLMRouter:
         self._available_models = configs
 
         # 按tier分组（优先级从高到低）
-        # - STANDARD: 使用非思考模式 GLM-4.7，快速响应
-        # - REASONING: 使用思考模式 GLM-4.7，深度推理
-        # - FAST: 使用非思考模式 GLM-4.7-FlashX，极速响应
+        # - FREE_FAST: 免费快速响应模型（glm-4.7-flash 非思考模式）
+        # - FREE_REASONING: 免费深度推理模型（glm-4.7-flash 思考模式）
+        # - FAST: 付费快速响应模型（xunfei暂不可用，使用zhipu_flash）
+        # - STANDARD: 付费标准模型
+        # - REASONING: 付费推理模型
+        # - SPECIALIST: 专家模型（OCR、翻译等专用功能）
         self._tier_mapping = {
+            ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
+            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
             ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
             ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
             ModelTier.REASONING: ["zhipu_reason", "deepseek_reason", "dashscope_reason"],
+            ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
         }
+        self._override_tier_mapping_from_env()
 
         # 注册到agent_profile_registry
         agent_profile_registry.register_model_configs(configs)
 
         logger.info(f"LLMRouter initialized with {len(configs)} model configs")
+
+    def _override_tier_mapping_from_env(self):
+        """允许通过 .env 覆盖 tier 映射（逗号分隔模型key）"""
+        overrides = {
+            ModelTier.FREE_FAST: settings.LLM_TIER_FREE_FAST,
+            ModelTier.FREE_REASONING: settings.LLM_TIER_FREE_REASONING,
+            ModelTier.FAST: settings.LLM_TIER_FAST,
+            ModelTier.STANDARD: settings.LLM_TIER_STANDARD,
+            ModelTier.REASONING: settings.LLM_TIER_REASONING,
+            ModelTier.SPECIALIST: settings.LLM_TIER_SPECIALIST,
+        }
+
+        for tier, raw_value in overrides.items():
+            if not raw_value:
+                continue
+            candidates = [item.strip() for item in raw_value.split(",") if item.strip()]
+            valid_candidates = [item for item in candidates if item in self._available_models]
+            if not valid_candidates:
+                logger.warning(f"LLM tier override ignored for {tier.value}: no valid model keys in {candidates}")
+                continue
+            self._tier_mapping[tier] = valid_candidates
+            logger.info(f"LLM tier override applied for {tier.value}: {valid_candidates}")
 
     # ============================================
     # 核心选择逻辑
@@ -218,9 +296,9 @@ class LLMRouter:
 
     def select_model(
         self,
-        agent_role: Union[AgentRole, str, Any],
-        task_type: Optional[Union[TaskType, str, Any]] = None,
-        force_tier: Optional[ModelTier] = None,
+        agent_role: AgentRole | str | Any,
+        task_type: TaskType | str | Any | None = None,
+        force_tier: ModelTier | None = None,
     ) -> LLMSelection:
         """
         选择最合适的模型
@@ -277,8 +355,8 @@ class LLMRouter:
     def select_specific_model(
         self,
         model_key: str,
-        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
-        task_type: Optional[Union[TaskType, str, Any]] = None,
+        agent_role: AgentRole | str | Any = AgentRole.GENERATION,
+        task_type: TaskType | str | Any | None = None,
     ) -> LLMSelection:
         """
         直接按已注册模型key选择（用于调试或手动指定）。
@@ -293,7 +371,7 @@ class LLMRouter:
         self,
         config: ModelConfig,
         agent_role: AgentRole,
-        task_type: Optional[TaskType],
+        task_type: TaskType | None,
         reason: str,
     ) -> LLMSelection:
         """创建LLMSelection对象"""
@@ -305,7 +383,7 @@ class LLMRouter:
         )
 
     @staticmethod
-    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+    def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
         if isinstance(agent_role, AgentRole):
             return agent_role
         if isinstance(agent_role, str):
@@ -342,7 +420,7 @@ class LLMRouter:
         return AgentRole.GENERATION
 
     @staticmethod
-    def _normalize_task_type(task_type: Optional[Union[TaskType, str, Any]]) -> Optional[TaskType]:
+    def _normalize_task_type(task_type: TaskType | str | Any | None) -> TaskType | None:
         if task_type is None:
             return None
         if isinstance(task_type, TaskType):
@@ -418,7 +496,7 @@ class LLMRouter:
     # 兼容接口
     # ============================================
 
-    def get_openai_client_kwargs(self, selection: LLMSelection) -> Dict[str, Any]:
+    def get_openai_client_kwargs(self, selection: LLMSelection) -> dict[str, Any]:
         """
         获取用于创建 OpenAI 兼容客户端的参数
 
@@ -443,7 +521,7 @@ class LLMRouter:
 
         return kwargs
 
-    def get_langchain_client_kwargs(self, selection: LLMSelection) -> Dict[str, Any]:
+    def get_langchain_client_kwargs(self, selection: LLMSelection) -> dict[str, Any]:
         """获取用于创建 LangChain ChatOpenAI 的参数"""
         return self.get_openai_client_kwargs(selection)
 
@@ -460,8 +538,8 @@ llm_router = LLMRouter()
 # ============================================
 
 def select_model_for_agent(
-    agent_role: Union[AgentRole, str],
-    task_type: Optional[TaskType] = None,
+    agent_role: AgentRole | str,
+    task_type: TaskType | None = None,
 ) -> LLMSelection:
     """为Agent选择模型的便捷函数"""
     return llm_router.select_model(agent_role, task_type)

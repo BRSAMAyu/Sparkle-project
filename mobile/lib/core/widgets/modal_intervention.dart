@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class ModalIntervention extends StatelessWidget {
-
   const ModalIntervention({
-    required this.intervention, required this.onAction, required this.onDismiss, super.key,
+    required this.intervention,
+    required this.onAction,
+    required this.onDismiss,
+    super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;
@@ -24,7 +27,7 @@ class ModalIntervention extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -33,22 +36,22 @@ class ModalIntervention extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.lg),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: SparkleButton.primary(
+                  label: actions.first.label,
                   onPressed: () => onAction(actions.first.id),
-                  child: Text(actions.first.label),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.spacing12),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
+                child: SparkleButton.outline(
+                  label: actions.length > 1 ? actions[1].label : '稍后',
                   onPressed: actions.length > 1
                       ? () => onAction(actions[1].id)
                       : onDismiss,
-                  child: Text(actions.length > 1 ? actions[1].label : '稍后'),
                 ),
               ),
             ],

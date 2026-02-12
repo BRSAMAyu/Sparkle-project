@@ -1,26 +1,25 @@
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
-from app.models.user import User
 from app.models.intervention import InterventionRequest
+from app.models.user import User
 from app.schemas.intervention import (
-    InterventionRequestCreate,
-    InterventionRequestResponse,
-    InterventionSettingsUpdate,
-    InterventionSettingsResponse,
+    BehavioralOutcomeRequest,
     InterventionFeedbackRequest,
     InterventionFeedbackResponse,
+    InterventionRequestCreate,
+    InterventionRequestResponse,
+    InterventionSettingsResponse,
+    InterventionSettingsUpdate,
     InterventionTriggerRequest,
     PassiveSignalRequest,
-    BehavioralOutcomeRequest,
 )
+from app.services.behavioral_outcome_tracker import BehavioralOutcomeTracker
 from app.services.intervention_service import InterventionService
 from app.services.passive_signal_tracker import PassiveSignalTracker
-from app.services.behavioral_outcome_tracker import BehavioralOutcomeTracker
 
 router = APIRouter(prefix="/interventions", tags=["interventions"])
 
@@ -83,7 +82,7 @@ async def request_intervention(
     return request
 
 
-@router.get("/requests/recent", response_model=List[InterventionRequestResponse])
+@router.get("/requests/recent", response_model=list[InterventionRequestResponse])
 async def list_recent(
     limit: int = 20,
     db: AsyncSession = Depends(get_db),

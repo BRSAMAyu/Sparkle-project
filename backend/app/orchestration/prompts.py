@@ -17,10 +17,18 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
-from typing import Dict, Optional, Any
+from typing import Any
+import random
+
+from loguru import logger
+
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.plan_context import merge_plan_context
+from app.config import settings
 
+class _SafeFormatDict(dict):
+    def __missing__(self, key: str) -> str:
+        return ""
 
 # ============================================
 # 通用 Agent Prompt 模板
@@ -34,15 +42,24 @@ TASK_AWARENESS_SECTION = """
 - "换个计划" / "别的计划" → query_all_tasks
 - "太难了" / "太简单" → query_plan_tasks + modify_plan_task
 - "完成了" / "做完了" → 检查是否达成里程碑
+- "生成任务" / "新任务" / "下一步" → 先调用 get_plan_state 获取最新计划状态
 
 可用任务工具：
 1. query_plan_tasks - 查询当前计划的任务
 2. query_all_tasks - 查询所有计划的任务（跨计划感知）
-3. modify_plan_task - 修改任务属性（难度、时间、优先级）
-4. create_task - 创建新任务
-5. update_task_status - 更新任务状态
-6. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
-7. dismiss_milestone_proposal - 忽略里程碑提案
+3. get_plan_state - 获取计划状态（进度、里程碑、任务统计、自适应调整参数）
+4. get_task_summary - 获取任务摘要列表（最近N个任务）
+5. get_task_detail - 获取单个任务详情
+6. modify_plan_task - 修改任务属性（难度、时间、优先级）
+7. create_task - 创建新任务
+8. update_task_status - 更新任务状态
+9. confirm_milestone_proposal - 确认里程碑提案，创建推荐任务
+10. dismiss_milestone_proposal - 忽略里程碑提案
+
+**重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
+- 当前进度和已达成里程碑
+- 任务完成统计
+- 自适应调整参数（difficulty_shift, time_multiplier）
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
@@ -84,18 +101,234 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 ## 核心原则
 
 1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
 
-2. 根据 verbosity 目标调整回答长度
+4. 根据 verbosity 目标调整回答长度
 
-3. 根据 exploration_level 决定是否扩展话题
+5. 根据 exploration_level 决定是否扩展话题
 
-4. 保持角色一致性
+6. 保持角色一致性
 
-5. 提供准确、有帮助的回答
+7. 提供准确、有帮助的回答
 
-6. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 
 """
+
+MODE_SYSTEM_PROMPTS = {
+    "standard": AGENT_SYSTEM_PROMPT,
+    "deep_analysis": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 深度解析模式指令
+
+目标：帮助用户获得深层、可验证、可执行的理解与方案。
+原则：
+1. 先澄清问题边界与假设，必要时列出需补充的信息
+2. 结构化拆解问题（因果、约束、权衡、关键变量）
+3. 多视角验证（反例、风险、替代路径）
+4. 输出可执行建议，并说明验证方式
+
+输出要求（Markdown）：
+- 问题复述与边界
+- 关键因素/约束
+- 分析过程（可用要点或小节）
+- 结论与可执行方案
+- 风险与验证步骤（含可观测指标/验收标准）
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
+
+4. 根据 verbosity 目标调整回答长度
+
+5. 根据 exploration_level 决定是否扩展话题
+
+6. 保持角色一致性
+
+7. 提供准确、有帮助的回答
+
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+    "study_plan": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 学习计划模式指令
+
+目标：把学习目标转化为可执行、可跟踪、可调整的计划。
+原则：
+1. 明确学习目标与评估标准（能做什么/达到什么水平）
+2. 自顶向下拆解为阶段与任务，并标注先后依赖
+3. 给出时间估算与每周节奏（可调整）
+4. 加入复盘与纠错机制，避免只学不练
+
+输出要求（Markdown）：
+- 目标与评估标准
+- 阶段拆解（阶段目标/任务/产出）
+- 时间安排（每周节奏与里程碑）
+- 学习建议（资源类型、练习方式、复盘机制）
+- 风险与应对（可能掉队的点与补救方式）
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
+
+4. 根据 verbosity 目标调整回答长度
+
+5. 根据 exploration_level 决定是否扩展话题
+
+6. 保持角色一致性
+
+7. 提供准确、有帮助的回答
+
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+    "error_diagnosis": """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
+
+
+
+## 当前用户上下文
+
+{user_context}
+
+
+
+{intent_section}
+
+
+
+{preference_instructions}
+
+
+
+{plan_context_section}
+
+
+
+## 对话历史
+
+{conversation_history_section}
+
+
+
+{task_awareness_section}
+
+
+
+{cognitive_prism_section}
+
+
+
+## 错题分析模式指令
+
+目标：定位错误根因并形成可执行的改进闭环。
+原则：
+1. 先复述题意与用户思路，确保对齐
+2. 明确错误类型与触发点（概念/计算/方法/审题/步骤遗漏）
+3. 给出可操作的修正步骤与通用化方法
+4. 提供防错清单与练习策略
+
+输出要求（Markdown）：
+- 题意与思路对齐
+- 错误类型与触发点
+- 根因分析
+- 修正步骤（含正确解法/关键步骤）
+- 防错清单与训练建议
+
+
+
+## 核心原则
+
+1. 始终遵循用户的偏好设置，这是最重要的
+2. 如果用户明确表达与画像不一致的偏好或信息，以当前声明为准；若涉及核心偏好（深度/探索）且历史证据分数≥0.7，则进行一次温和确认
+3. 当用户明确确认或纠正偏好时，调用 update_user_preference 工具记录
+
+4. 根据 verbosity 目标调整回答长度
+
+5. 根据 exploration_level 决定是否扩展话题
+
+6. 保持角色一致性
+
+7. 提供准确、有帮助的回答
+
+8. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
+""",
+}
 
 
 
@@ -122,6 +355,10 @@ def build_system_prompt(
     plan_context: dict = None,
 
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
+
+    context_level: str = "full",  # full | light
+
+    chat_mode: str = "standard",
 
 ) -> str:
 
@@ -179,21 +416,20 @@ def build_system_prompt(
 
     profile = agent_profile_registry.get_profile(agent_role)
 
-    base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
+    if profile.system_prompt_template:
+        base_prompt = profile.system_prompt_template
+    else:
+        base_prompt = MODE_SYSTEM_PROMPTS.get(chat_mode, AGENT_SYSTEM_PROMPT)
 
 
 
     # 2. 格式化上下文
 
-    formatted_user_context = format_user_context(user_context)
+    formatted_user_context = format_user_context(user_context, context_level=context_level)
 
 
 
-    llm_profile = user_context.get("llm_profile")
-
-    if llm_profile is None:
-
-        llm_profile = {}
+    llm_profile = _extract_llm_profile(user_context)
 
     preference_instructions = llm_profile.get(
 
@@ -213,7 +449,7 @@ def build_system_prompt(
 
     plan_context_section = _format_plan_context(plan_context)
 
-    
+
 
     # 2.6 格式化意图指令 (Vision Item 4b)
 
@@ -231,23 +467,16 @@ def build_system_prompt(
     # 3. 如果是通用模板，进行完整渲染
 
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
-
-        prompt = base_prompt.format(
-
-            user_context=formatted_user_context,
-
-            conversation_history_section=conversation_history_section,
-
-            preference_instructions=preference_instructions,
-
-            plan_context_section=plan_context_section,
-
-            intent_section=intent_section,
-
-            task_awareness_section=TASK_AWARENESS_SECTION,
-
-            cognitive_prism_section=cognitive_prism_section,
-
+        prompt = base_prompt.format_map(
+            _SafeFormatDict(
+                user_context=formatted_user_context,
+                conversation_history_section=conversation_history_section,
+                preference_instructions=preference_instructions,
+                plan_context_section=plan_context_section,
+                intent_section=intent_section,
+                task_awareness_section=TASK_AWARENESS_SECTION,
+                cognitive_prism_section=cognitive_prism_section,
+            )
         )
 
     else:
@@ -256,12 +485,11 @@ def build_system_prompt(
 
         # Note: specialized prompts might not support intent_section yet, so we append it if present
 
-        prompt = base_prompt.format(
-
-            user_context=formatted_user_context,
-
-            query=user_context.get("current_query", ""),
-
+        prompt = base_prompt.format_map(
+            _SafeFormatDict(
+                user_context=formatted_user_context,
+                query=user_context.get("current_query", ""),
+            )
         )
 
         if intent_instruction:
@@ -276,7 +504,13 @@ def build_system_prompt(
 
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
 
-
+    _maybe_log_prompt_snapshot(
+        prompt,
+        user_context=user_context,
+        chat_mode=chat_mode,
+        context_level=context_level,
+        prompt_version=prompt_version,
+    )
 
     return prompt
 
@@ -286,6 +520,8 @@ def get_system_prompt_for_role(
     user_context: dict,
     query: str = "",
     conversation_history: dict = None,
+    context_level: str = "full",
+    chat_mode: str = "standard",
 ) -> str:
     """
     获取指定角色的系统 Prompt
@@ -316,10 +552,12 @@ def get_system_prompt_for_role(
             user_context=user_context,
             conversation_history=conversation_history,
             agent_role=agent_role,
+            chat_mode=chat_mode,
+            context_level=context_level,
         )
 
     # 格式化上下文
-    formatted_user_context = format_user_context(user_context)
+    formatted_user_context = format_user_context(user_context, context_level=context_level)
 
     # 渲染角色专用模板
     try:
@@ -340,6 +578,8 @@ def get_system_prompt(
     user_context: dict,
     conversation_history: dict = None,
     prompt_version: str = "v1",
+    context_level: str = "full",
+    chat_mode: str = "standard",
 ) -> str:
     """
     向后兼容的函数名
@@ -351,6 +591,8 @@ def get_system_prompt(
         conversation_history=conversation_history,
         prompt_version=prompt_version,
         agent_role=AgentRole.GENERATION,
+        context_level=context_level,
+        chat_mode=chat_mode,
     )
 
 
@@ -412,7 +654,7 @@ def _format_conversation_history(conversation_history: dict = None) -> str:
 
 def _get_default_preference_instructions(user_context: dict) -> str:
     """默认的偏好指令（兜底）"""
-    prefs = user_context.get("preferences", {})
+    prefs = _extract_preferences(user_context)
     depth = prefs.get("depth_preference", 0.5)
     curiosity = prefs.get("curiosity_preference", 0.5)
 
@@ -540,82 +782,169 @@ def _format_plan_context(plan_context: dict = None) -> str:
     return "\n".join(lines)
 
 
-def format_user_context(context: dict) -> str:
+def format_user_context(context: dict, context_level: str = "full") -> str:
     """格式化用户上下文"""
     lines = []
 
+    normalized = _normalize_user_context(context)
+
     # 用户基本信息
-    if context.get("user_context"):
-        user_ctx = context["user_context"]
-        if hasattr(user_ctx, "model_dump"):
-            user_ctx = user_ctx.model_dump()
-        lines.append(f"用户昵称: {user_ctx.get('nickname', '未知')}")
-        lines.append(f"时区: {user_ctx.get('timezone', 'Asia/Shanghai')}")
-        lines.append(f"Pro状态: {'是' if user_ctx.get('is_pro') else '否'}")
+    identity = normalized.get("identity")
+    if identity:
+        lines.append("【身份信息】")
+        lines.append(f"- 昵称: {identity.get('nickname', '未知')}")
+        lines.append(f"- 时区: {identity.get('timezone', 'Asia/Shanghai')}")
+        lines.append(f"- Pro状态: {'是' if identity.get('is_pro') else '否'}")
 
     # 分析摘要
-    if context.get("analytics_summary"):
-        analytics = context["analytics_summary"]
-        # Handle both dict and string formats for analytics_summary
+    if normalized.get("analytics_summary"):
+        analytics = normalized["analytics_summary"]
         if isinstance(analytics, dict):
-            lines.append("-" * 20)
+            lines.append("【分析摘要】")
             if analytics.get("is_active"):
                 lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
                 lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
             else:
                 lines.append("状态: 不活跃")
         elif isinstance(analytics, str) and analytics:
-            # If it's a string summary, just append it
-            lines.append("-" * 20)
+            lines.append("【分析摘要】")
             lines.append(f"分析摘要: {analytics}")
 
     # 火花等级
-    if context.get("user_context") and context["user_context"].get("preferences"):
-        prefs = context["user_context"]["preferences"]
-        if "flame_level" in prefs:
-            lines.append(f"火花等级: {prefs['flame_level']}")
+    if identity and identity.get("flame_level") is not None:
+        lines.append(f"火花等级: {identity['flame_level']}")
 
     # 学习偏好
-    if context.get("preferences"):
-        prefs = context["preferences"]
-        lines.append("-" * 20)
-        lines.append(f"学习偏好 - 深度: {prefs.get('depth_preference', 0.5):.1f}, 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+    if normalized.get("preferences"):
+        prefs = normalized["preferences"]
+        lines.append("【学习偏好】")
+        lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
+        lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
     # 碎片时间推荐线索：待办任务
-    if context.get("next_actions"):
-        lines.append("-" * 20)
-        lines.append("待办任务(Top 3):")
-        for task in context["next_actions"][:3]:
+    next_actions = normalized.get("next_actions") or []
+    if next_actions:
+        lines.append("【待办任务】")
+        limit = 1 if context_level == "light" else 3
+        lines.append(f"Top {limit}:")
+        for task in next_actions[:limit]:
             lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
 
     # 专注统计
-    if context.get("focus_stats"):
-        stats = context["focus_stats"]
-        lines.append("-" * 20)
-        lines.append(f"今日专注: {stats.get('total_minutes', 0)} 分钟, 番茄钟次数: {stats.get('pomodoro_count', 0)}")
+    if normalized.get("focus_stats"):
+        stats = normalized["focus_stats"]
+        lines.append("【专注统计】")
+        lines.append(f"- 今日专注: {stats.get('total_minutes', 0)} 分钟")
+        lines.append(f"- 番茄钟次数: {stats.get('pomodoro_count', 0)}")
 
     # 活跃计划
-    if context.get("active_plans"):
-        lines.append("-" * 20)
-        lines.append("活跃计划:")
-        for plan in context["active_plans"][:3]:
+    active_plans = normalized.get("active_plans") or []
+    if active_plans:
+        lines.append("【活跃计划】")
+        limit = 1 if context_level == "light" else 3
+        for plan in active_plans[:limit]:
             lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
 
     # 工具偏好 (P4)
-    if context.get("preferred_tools"):
-        lines.append("-" * 20)
-        lines.append(f"工具偏好 (用户历史常用): {', '.join(context['preferred_tools'])}")
+    if normalized.get("preferred_tools"):
+        lines.append("【工具偏好】")
+        lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
 
     # 考试紧迫度
-    if isinstance(context.get("exam_urgency"), dict):
-        urgency = context["exam_urgency"]
+    if isinstance(normalized.get("exam_urgency"), dict):
+        urgency = normalized["exam_urgency"]
         days_left = urgency.get("days_left")
         if days_left is not None:
-            lines.append("-" * 20)
+            lines.append("【考试紧迫度】")
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
+    if context_level == "full":
+        context_pack = normalized.get("context_pack") or {}
+        metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
+        evidence = metadata.get("evidence_summary") if isinstance(metadata, dict) else None
+        if isinstance(evidence, dict):
+            lines.append("【画像证据摘要】")
+            prefs = evidence.get("preferences") or []
+            if prefs:
+                lines.append("偏好证据(Top 3):")
+                for item in prefs[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    updated = item.get("updated_at")
+                    lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
+            goals = evidence.get("goals") or []
+            if goals:
+                lines.append("目标证据(Top 3):")
+                for item in goals[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    updated = item.get("updated_at")
+                    lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
+            episodic = evidence.get("episodic") or []
+            if episodic:
+                lines.append("事件证据(Top 3):")
+                for item in episodic[:3]:
+                    score = item.get("score", 0) or 0
+                    if score < 0.3:
+                        continue
+                    occurred = item.get("occurred_at")
+                    lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
+
     return "\n".join(lines) if lines else "暂无上下文信息"
+
+
+def _normalize_user_context(context: dict) -> dict:
+    """统一用户画像结构，避免字段重复与冲突"""
+    normalized: dict[str, Any] = {}
+
+    user_ctx = context.get("user_context")
+    if user_ctx:
+        if hasattr(user_ctx, "model_dump"):
+            user_ctx = user_ctx.model_dump()
+        normalized["identity"] = {
+            "nickname": user_ctx.get("nickname", "未知"),
+            "timezone": user_ctx.get("timezone", "Asia/Shanghai"),
+            "is_pro": user_ctx.get("is_pro", False),
+            "flame_level": (user_ctx.get("preferences") or {}).get("flame_level"),
+        }
+
+    profile = context.get("profile")
+    if isinstance(profile, dict):
+        identity = profile.get("identity")
+        if isinstance(identity, dict):
+            normalized["identity"] = identity
+        prefs = profile.get("preferences")
+        if isinstance(prefs, dict):
+            normalized["preferences"] = prefs
+
+    if context.get("preferences") and "preferences" not in normalized:
+        normalized["preferences"] = context["preferences"]
+
+    if context.get("analytics_summary"):
+        normalized["analytics_summary"] = context["analytics_summary"]
+
+    if context.get("next_actions"):
+        normalized["next_actions"] = context["next_actions"]
+
+    if context.get("focus_stats"):
+        normalized["focus_stats"] = context["focus_stats"]
+
+    if context.get("active_plans"):
+        normalized["active_plans"] = context["active_plans"]
+
+    if context.get("preferred_tools"):
+        normalized["preferred_tools"] = context["preferred_tools"]
+
+    if context.get("exam_urgency"):
+        normalized["exam_urgency"] = context["exam_urgency"]
+
+    if context.get("context_pack"):
+        normalized["context_pack"] = context["context_pack"]
+
+    return normalized
 
 
 def _format_cognitive_prism_section(user_context: dict) -> str:
@@ -659,3 +988,64 @@ def _format_cognitive_prism_section(user_context: dict) -> str:
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 
     return "\n".join(lines)
+
+
+def _extract_profile(user_context: dict) -> dict:
+    profile = user_context.get("profile")
+    return profile if isinstance(profile, dict) else {}
+
+
+def _extract_preferences(user_context: dict) -> dict:
+    profile = _extract_profile(user_context)
+    prefs = profile.get("preferences")
+    if isinstance(prefs, dict):
+        return prefs
+    prefs = user_context.get("preferences")
+    return prefs if isinstance(prefs, dict) else {}
+
+
+def _extract_llm_profile(user_context: dict) -> dict:
+    profile = _extract_profile(user_context)
+    llm_profile = profile.get("llm_profile")
+    if isinstance(llm_profile, dict):
+        return llm_profile
+    llm_profile = user_context.get("llm_profile")
+    return llm_profile if isinstance(llm_profile, dict) else {}
+
+
+def _maybe_log_prompt_snapshot(
+    prompt: str,
+    *,
+    user_context: dict,
+    chat_mode: str,
+    context_level: str,
+    prompt_version: str,
+) -> None:
+    if not settings.PROMPT_SNAPSHOT_ENABLED:
+        return
+    sample_rate = settings.PROMPT_SNAPSHOT_SAMPLE_RATE or 0.0
+    if sample_rate > 0.0 and random.random() > sample_rate:
+        return
+
+    max_chars = max(200, int(settings.PROMPT_SNAPSHOT_MAX_CHARS or 1200))
+    if len(prompt) <= max_chars:
+        snapshot = prompt
+    else:
+        head = prompt[: max_chars // 2]
+        tail = prompt[-(max_chars // 2):]
+        snapshot = f"{head}\n...<truncated>...\n{tail}"
+
+    user_id = None
+    base_ctx = user_context.get("user_context")
+    if isinstance(base_ctx, dict):
+        user_id = base_ctx.get("user_id")
+
+    logger.info(
+        "[PromptSnapshot] user_id={user_id} chat_mode={chat_mode} context_level={context_level} prompt_version={prompt_version} size={size}\n{snapshot}",
+        user_id=user_id or "unknown",
+        chat_mode=chat_mode,
+        context_level=context_level,
+        prompt_version=prompt_version,
+        size=len(prompt),
+        snapshot=snapshot,
+    )

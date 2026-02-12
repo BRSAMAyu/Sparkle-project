@@ -10,21 +10,24 @@ Capsule Generation Service
 """
 import asyncio
 import random
-import uuid
-from datetime import datetime
-from typing import List, Optional, Dict, Any
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
+
 from loguru import logger
-
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
 
-from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
-from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus, GenerationType
-from app.models.user import User
-from app.models.task import Task
-from app.services.llm_service import llm_service, get_llm_service_for_task
 from app.core.agent_profiles import TaskType
+from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus
+from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
+from app.models.task import Task
+from app.models.user import User
+from app.services.llm_service import get_llm_service_for_task, llm_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ModelSelectionStrategy:
@@ -54,7 +57,7 @@ class ModelSelectionStrategy:
             return DepthLevel.MEDIUM
 
     @classmethod
-    def get_model_fallback_chain(cls, depth_level: DepthLevel) -> List[str]:
+    def get_model_fallback_chain(cls, depth_level: DepthLevel) -> list[str]:
         """获取模型降级链"""
         return cls.DEPTH_MODEL_MAP.get(depth_level, ["zhipu_chat"])
 
@@ -80,7 +83,7 @@ class RetryConfig:
     }
 
     @classmethod
-    def get_config(cls, error_type: str) -> Dict:
+    def get_config(cls, error_type: str) -> dict:
         return cls.CONFIG.get(error_type, {"base_delay": 10, "max_retries": 3})
 
 
@@ -106,7 +109,7 @@ class CapsuleGenerationService:
         depth_preference: float = 0.5,
         curiosity_preference: float = 0.5,
         generation_type: str = "daily",
-        requested_count: Optional[int] = None,
+        requested_count: int | None = None,
     ) -> CapsuleGenerationJob:
         """
         批量生成胶囊
@@ -186,9 +189,9 @@ class CapsuleGenerationService:
         user_id: UUID,
         db: AsyncSession,
         depth_level: DepthLevel,
-        user_context: Dict[str, Any],
+        user_context: dict[str, Any],
         index: int = 0,
-    ) -> Optional[CuriosityCapsule]:
+    ) -> CuriosityCapsule | None:
         """
         生成单个胶囊，支持模型降级
 
@@ -240,7 +243,7 @@ class CapsuleGenerationService:
                     source_context={
                         "depth_level": depth_level.value,
                         "subjects_studied": [s.get("title") for s in user_context.get("recent_tasks", [])],
-                        "generated_at": datetime.utcnow().isoformat(),
+                        "generated_at": _utcnow().isoformat(),
                     },
                     quality_score=content_data.get("quality_score", 0.5),
                 )
@@ -276,9 +279,9 @@ class CapsuleGenerationService:
         llm,
         model_name: str,
         depth_level: DepthLevel,
-        user_context: Dict[str, Any],
+        user_context: dict[str, Any],
         index: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         使用LLM生成胶囊内容
 
@@ -366,7 +369,7 @@ class CapsuleGenerationService:
                 "quality_score": 0.3,
             }
 
-    async def _gather_user_context(self, user_id: UUID, db: AsyncSession) -> Dict[str, Any]:
+    async def _gather_user_context(self, user_id: UUID, db: AsyncSession) -> dict[str, Any]:
         """
         收集用户上下文用于生成个性化内容
 
@@ -399,7 +402,7 @@ class CapsuleGenerationService:
                 {"id": t.id, "title": t.title, "subject": t.subject, "type": t.type}
                 for t in recent_tasks
             ],
-            "subjects": list(set([t.subject for t in recent_tasks if t.subject])),
+            "subjects": list({t.subject for t in recent_tasks if t.subject}),
         }
 
     @staticmethod
@@ -421,7 +424,7 @@ class CapsuleGenerationService:
         user_id: UUID,
         db: AsyncSession,
         limit: int = 20,
-    ) -> List[CapsuleGenerationJob]:
+    ) -> list[CapsuleGenerationJob]:
         """获取用户的生成任务列表"""
         result = await db.execute(
             select(CapsuleGenerationJob)
@@ -435,7 +438,7 @@ class CapsuleGenerationService:
         self,
         job_id: UUID,
         db: AsyncSession,
-    ) -> Optional[CapsuleGenerationJob]:
+    ) -> CapsuleGenerationJob | None:
         """获取任务状态"""
         return await db.get(CapsuleGenerationJob, job_id)
 

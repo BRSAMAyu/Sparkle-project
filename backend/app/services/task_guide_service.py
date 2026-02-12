@@ -2,8 +2,8 @@
 Task Guide Service
 Generates AI guides for tasks using GLM model.
 """
+
 import httpx
-from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -21,7 +21,7 @@ class TaskGuideService:
         task: Task,
         user: User,
         db: AsyncSession,
-        user_context: Optional[dict] = None
+        user_context: dict | None = None
     ) -> str:
         """
         使用 GLM 生成任务执行指南，失败时降级到 DeepSeek
@@ -43,7 +43,7 @@ class TaskGuideService:
                 result = await self._call_glm(prompt)
                 if result:
                     return result
-            except Exception as e:
+            except Exception:
                 # GLM 失败，尝试 DeepSeek
                 pass
 
@@ -53,13 +53,13 @@ class TaskGuideService:
                 result = await self._call_deepseek(prompt)
                 if result:
                     return result
-            except Exception as e:
+            except Exception:
                 pass
 
         # 最终降级：固定模板
         return self._static_guide(task)
 
-    def _build_prompt(self, task: Task, user: User, user_context: Optional[dict]) -> str:
+    def _build_prompt(self, task: Task, user: User, user_context: dict | None) -> str:
         """构建生成指南的提示词"""
 
         # 任务类型映射
@@ -122,7 +122,7 @@ class TaskGuideService:
 
         return prompt
 
-    async def _call_glm(self, prompt: str) -> Optional[str]:
+    async def _call_glm(self, prompt: str) -> str | None:
         """调用 GLM API 生成指南"""
         headers = {
             "Authorization": f"Bearer {settings.ZHIPU_API_KEY}",
@@ -158,7 +158,7 @@ class TaskGuideService:
             return content
         return None
 
-    async def _call_deepseek(self, prompt: str) -> Optional[str]:
+    async def _call_deepseek(self, prompt: str) -> str | None:
         """调用 DeepSeek API 作为降级方案"""
         headers = {
             "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",

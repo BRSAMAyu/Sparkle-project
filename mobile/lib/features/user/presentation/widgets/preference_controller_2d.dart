@@ -106,8 +106,10 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              DS.info.withValues(alpha: 0.25), // Deep - blue tint
-                              DS.warning.withValues(alpha: 0.15), // Shallow - warm tint
+                              DS.info
+                                  .withValues(alpha: 0.25), // Deep - blue tint
+                              DS.warning.withValues(
+                                  alpha: 0.15), // Shallow - warm tint
                             ],
                           ),
                         ),
@@ -118,8 +120,10 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           borderRadius: DS.borderRadius16,
                           gradient: LinearGradient(
                             colors: [
-                              DS.brandSecondary.withValues(alpha: 0.15), // Focus - purple tint
-                              DS.semanticSuccess.withValues(alpha: 0.2), // Curious - green tint
+                              DS.brandSecondary.withValues(
+                                  alpha: 0.15), // Focus - purple tint
+                              DS.semanticSuccess.withValues(
+                                  alpha: 0.2), // Curious - green tint
                             ],
                           ),
                         ),
@@ -142,33 +146,41 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           width: handleSize,
                           height: handleSize,
                           decoration: BoxDecoration(
-                            gradient: Theme.of(context).brightness == Brightness.dark
-                                ? null
-                                : DS.primaryGradient,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : null,
+                            gradient:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? null
+                                    : DS.primaryGradient,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? DS.neutral0
+                                    : null,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white.withValues(alpha: 0.3)
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? DS.neutral0.withValues(alpha: 0.3)
                                     : DS.primaryBase.withValues(alpha: 0.5),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
                             ],
                             border: Border.all(
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white.withValues(alpha: 0.5)
-                                    : DS.brandPrimaryConst,
-                                width: 2,),
-                          ),
-                          child: Icon(Icons.local_fire_department,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black87
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? DS.neutral0.withValues(alpha: 0.5)
                                   : DS.brandPrimaryConst,
-                              size: 24,),
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.local_fire_department,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? DS.neutral900
+                                    : DS.brandPrimaryConst,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ],
@@ -242,19 +254,40 @@ class _GridAxisPainter extends CustomPainter {
 
     // Center Cross
     canvas.drawLine(
-        Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint,);
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      paint,
+    );
     canvas.drawLine(
-        Offset(size.width / 2, 0), Offset(size.width / 2, size.height), paint,);
+      Offset(size.width / 2, 0),
+      Offset(size.width / 2, size.height),
+      paint,
+    );
 
     // Axis Arrows
-    _drawArrow(canvas, Offset(size.width / 2, 0), paint,
-        isVertical: true, isStart: true,); // Top
-    _drawArrow(canvas, Offset(size.width, size.height / 2), paint,
-        isVertical: false, isStart: false,); // Right
+    _drawArrow(
+      canvas,
+      Offset(size.width / 2, 0),
+      paint,
+      isVertical: true,
+      isStart: true,
+    ); // Top
+    _drawArrow(
+      canvas,
+      Offset(size.width, size.height / 2),
+      paint,
+      isVertical: false,
+      isStart: false,
+    ); // Right
   }
 
-  void _drawArrow(Canvas canvas, Offset tip, Paint paint,
-      {required bool isVertical, required bool isStart,}) {
+  void _drawArrow(
+    Canvas canvas,
+    Offset tip,
+    Paint paint, {
+    required bool isVertical,
+    required bool isStart,
+  }) {
     const arrowSize = 6.0;
     final path = Path();
     if (isVertical) {

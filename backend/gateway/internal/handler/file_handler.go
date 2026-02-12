@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"mime"
 	"net/http"
 	"path"
@@ -15,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sparkle/gateway/internal/service"
 	"golang.org/x/time/rate"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 )
 
 var allowedMimeTypesByExt = map[string]map[string]bool{
@@ -43,7 +46,7 @@ type FileHandler struct {
 	storage    FileStorageProvider
 	metadata   FileMetadataProvider
 	processor  FileProcessingProvider
-	limiters   map[string]*rate.Limiter
+	limiters   *expirable.LRU[string, *rate.Limiter]
 	limitersMu sync.Mutex
 }
 
@@ -52,11 +55,12 @@ func NewFileHandler(
 	metadata FileMetadataProvider,
 	processor FileProcessingProvider,
 ) *FileHandler {
+	// 使用LRU缓存，最多保存1000个用户的限流器，每个条目5分钟后过期
 	return &FileHandler{
 		storage:   storage,
 		metadata:  metadata,
 		processor: processor,
-		limiters:  make(map[string]*rate.Limiter),
+		limiters:  expirable.NewLRU[string, *rate.Limiter](1000, nil, 5*time.Minute),
 	}
 }
 
@@ -516,11 +520,67 @@ func (h *FileHandler) getLimiter(userID string) *rate.Limiter {
 	h.limitersMu.Lock()
 	defer h.limitersMu.Unlock()
 
-	limiter, exists := h.limiters[userID]
+	// 使用LRU缓存的Get或Add模式
+	limiter, exists := h.limiters.Get(userID)
 	if !exists {
 		// 10 requests per minute (approx 1 every 6 seconds), burst of 3
 		limiter = rate.NewLimiter(rate.Every(time.Minute/10), 3)
-		h.limiters[userID] = limiter
+		h.limiters.Add(userID, limiter)
 	}
 	return limiter
+}
+
+// validateFileByMagicBytes 通过魔数验证文件内容
+// 返回: (是否有效, 错误信息)
+func validateFileByMagicBytes(file io.Reader, ext string) (bool, string) {
+	// 读取前512字节用于魔数检测
+	header := make([]byte, 512)
+	n, err := io.ReadFull(file, header)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		return false, "Failed to read file header"
+	}
+	header = header[:n]
+
+	// 根据扩展名验证魔数
+	switch strings.ToLower(ext) {
+	case ".pdf":
+		// PDF文件以 %PDF- 开头
+		if !bytes.HasPrefix(header, []byte("%PDF-")) {
+			return false, "Invalid PDF file: missing PDF magic bytes"
+		}
+	case ".docx":
+		// DOCX/XLSX/PPTX都是ZIP格式，以PK\x03\x04开头
+		fallthrough
+	case ".xlsx":
+		fallthrough
+	case ".pptx":
+		if !bytes.HasPrefix(header, []byte{0x50, 0x4B, 0x03, 0x04}) {
+			return false, "Invalid Office document: missing ZIP magic bytes"
+		}
+	case ".png":
+		// PNG以 \x89PNG\r\n\x1a\n 开头
+		if !bytes.HasPrefix(header, []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}) {
+			return false, "Invalid PNG file: missing PNG magic bytes"
+		}
+	case ".jpg", ".jpeg":
+		// JPEG以 \xFF\xD8\xFF 开头
+		if !bytes.HasPrefix(header, []byte{0xFF, 0xD8, 0xFF}) {
+			return false, "Invalid JPEG file: missing JPEG magic bytes"
+		}
+	case ".gif":
+		// GIF以 GIF87a 或 GIF89a 开头
+		if !(bytes.HasPrefix(header, []byte("GIF87a")) || bytes.HasPrefix(header, []byte("GIF89a"))) {
+			return false, "Invalid GIF file: missing GIF magic bytes"
+		}
+	case ".webp":
+		// WebP以 RIFF....WEBP 开头
+		if len(header) < 12 || !bytes.HasPrefix(header, []byte("RIFF")) {
+			return false, "Invalid WebP file: missing RIFF header"
+		}
+		if !bytes.Equal(header[8:12], []byte("WEBP")) {
+			return false, "Invalid WebP file: missing WEBP marker"
+		}
+	}
+
+	return true, ""
 }

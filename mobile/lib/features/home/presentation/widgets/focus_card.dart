@@ -51,150 +51,143 @@ class _FocusCardState extends ConsumerState<FocusCard>
       onTap: widget.onTap,
       child: MaterialStyler(
         material: AppMaterials.neoGlass.copyWith(
-           rimLightColor: DS.brandPrimary.withValues(alpha: 0.3),
+          rimLightColor: DS.brandPrimary.withValues(alpha: 0.3),
         ),
         borderRadius: DS.borderRadius20,
-        padding: const EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
+            // Header with metrics row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '专注核心',
-                  style: context.sparkleTypography.labelSmall.copyWith(
-                    color: headerColor.withValues(alpha: 0.85),
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    '专注核心',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: headerColor.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.spacing6,
+                    vertical: DS.spacing4 / 2,
                   ),
                   decoration: BoxDecoration(
                     color: DS.flameCore.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Lv.$flameLevel',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 11,
+                      fontSize: 10,
                       color: secondaryColor,
                     ),
                   ),
                 ),
               ],
             ),
-
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Flame Animation
-                  AnimatedBuilder(
-                    animation: _flameAnimation,
-                    builder: (context, child) => Transform.scale(
-                      scale: _flameAnimation.value,
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            colors: [
-                              DS.flameCore,
-                              DS.flameCore.withValues(alpha: 0.4),
-                              Colors.transparent,
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.local_fire_department_rounded,
-                          color: DS.warning,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: DS.md),
-                  // Nudge Message
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.brandPrimary.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        nudgeMessage,
-                        textAlign: TextAlign.center,
-                        style: context.sparkleTypography.bodyMedium.copyWith(
-                          fontSize: 10,
-                          height: 1.3,
-                          color: secondaryColor.withValues(alpha: 0.9),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: DS.sm),
 
-            // Metrics Row
+            // Content Row: Flame + Nudge + Metrics
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetric(
-                  context,
-                  _formatFocusTime(todayMinutes),
-                  '今日专注',
+                // Flame Animation + Nudge Message
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Flame and Nudge in same row
+                      Row(
+                        children: [
+                          // Flame Animation
+                          AnimatedBuilder(
+                            animation: _flameAnimation,
+                            builder: (context, child) => Transform.scale(
+                              scale: _flameAnimation.value,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      DS.flameCore,
+                                      DS.flameCore.withValues(alpha: 0.4),
+                                      DS.surfacePrimary.withValues(alpha: 0),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.local_fire_department_rounded,
+                                  color: DS.warning,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: DS.sm),
+                          // Nudge Message
+                          Expanded(
+                            child: Text(
+                              nudgeMessage,
+                              style:
+                                  context.sparkleTypography.bodyMedium.copyWith(
+                                fontSize: 9,
+                                height: 1.2,
+                                color: secondaryColor.withValues(alpha: 0.9),
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.xs),
+                      // Metrics Row (compact)
+                      Row(
+                        children: [
+                          Text(
+                            _formatFocusTime(todayMinutes),
+                            style:
+                                context.sparkleTypography.titleLarge.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: secondaryColor,
+                            ),
+                          ),
+                          Text(
+                            ' · ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: DS.brandPrimary.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          Text(
+                            '$tasksCompleted完成',
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
+                              fontSize: 10,
+                              color: secondaryColor.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                Container(height: 20, width: 1, color: DS.brandPrimary12),
-                _buildMetric(context, '$tasksCompleted', '今日完成'),
               ],
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMetric(BuildContext context, String value, String label) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryColor = isDark ? DS.textPrimary : DS.textSecondary;
-    return Column(
-      children: [
-        Text(
-          value,
-          style: context.sparkleTypography.titleLarge.copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: secondaryColor,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontSize: 10,
-            color: secondaryColor.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
     );
   }
 

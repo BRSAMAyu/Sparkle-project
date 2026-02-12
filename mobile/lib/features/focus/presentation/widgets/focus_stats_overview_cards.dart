@@ -18,38 +18,38 @@ class FocusStatsOverviewCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.today,
-            iconColor: Colors.deepPurple,
-            label: '今日专注',
-            value: _formatDuration(todayMinutes),
+        children: [
+          Expanded(
+            child: _StatCard(
+              icon: Icons.today,
+              iconColor: DS.prismPurple,
+              label: '今日专注',
+              value: _formatDuration(todayMinutes),
+            ),
           ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.calendar_view_week,
-            iconColor: DS.brandPrimary,
-            label: '本周累计',
-            value: _formatDuration(weekTotalMinutes),
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _StatCard(
+              icon: Icons.calendar_view_week,
+              iconColor: DS.brandPrimary,
+              label: '本周累计',
+              value: _formatDuration(weekTotalMinutes),
+            ),
           ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.local_fire_department,
-            iconColor: Colors.orange,
-            label: '连续天数',
-            value: '$streakDays天',
-            subtitle: longestStreak != null && longestStreak! > 0
-                ? '最长$longestStreak天'
-                : null,
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _StatCard(
+              icon: Icons.local_fire_department,
+              iconColor: DS.warning,
+              label: '连续天数',
+              value: '$streakDays天',
+              subtitle: longestStreak != null && longestStreak! > 0
+                  ? '最长$longestStreak天'
+                  : null,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   String _formatDuration(int minutes) {
     final hours = minutes ~/ 60;
@@ -78,49 +78,49 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(DS.md),
-        border: Border.all(color: iconColor.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: iconColor, size: 16),
-              const SizedBox(width: DS.xs),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: iconColor.withValues(alpha: 0.8),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(DS.md),
+          border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: iconColor, size: 16),
+                const SizedBox(width: DS.xs),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: iconColor.withValues(alpha: 0.8),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            value,
-            style: TextStyle(
-              color: iconColor,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              ],
             ),
-          ),
-          if (subtitle != null)
+            const SizedBox(height: DS.sm),
             Text(
-              subtitle!,
+              value,
               style: TextStyle(
-                color: iconColor.withValues(alpha: 0.6),
-                fontSize: 10,
+                color: iconColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-        ],
-      ),
-    );
+            if (subtitle != null)
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  color: iconColor.withValues(alpha: 0.6),
+                  fontSize: 10,
+                ),
+              ),
+          ],
+        ),
+      );
 }

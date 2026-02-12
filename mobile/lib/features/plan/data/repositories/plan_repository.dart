@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -36,7 +37,7 @@ class PlanRepository {
         ApiEndpoints.plans,
         queryParameters: query,
       );
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getPlans');
       return data
           .map((json) => PlanModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -52,7 +53,8 @@ class PlanRepository {
     }
     try {
       final response = await _apiClient.get<dynamic>(ApiEndpoints.plan(id));
-      return PlanModel.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getPlan');
+      return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getPlan');
     }
@@ -84,7 +86,8 @@ class PlanRepository {
         ApiEndpoints.plans,
         data: plan.toJson(),
       );
-      return PlanModel.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'createPlan');
+      return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createPlan');
     }
@@ -105,7 +108,8 @@ class PlanRepository {
         ApiEndpoints.plan(id),
         data: plan.toJson(),
       );
-      return PlanModel.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: 'updatePlan');
+      return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'updatePlan');
     }
@@ -138,7 +142,8 @@ class PlanRepository {
         ApiEndpoints.plan(id),
         data: planUpdate.toJson(),
       );
-      return PlanModel.fromJson(response.data as Map<String, dynamic>);
+      final payload = ApiResponseParser.unwrapMap(response.data, action: activate ? 'activatePlan' : 'deactivatePlan');
+      return PlanModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, activate ? 'activatePlan' : 'deactivatePlan');
     }
@@ -175,7 +180,7 @@ class PlanRepository {
         ApiEndpoints.generateTasks(planId),
         data: {'count': count},
       );
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'generateTasks');
       return data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();

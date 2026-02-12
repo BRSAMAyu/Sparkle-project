@@ -17,7 +17,7 @@ class DashboardState {
 
   DashboardState.loading()
       : weather = WeatherData(type: 'sunny', condition: ''),
-        flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
+        flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
         growth = null,
         nextActions = const [],
@@ -27,7 +27,7 @@ class DashboardState {
 
   DashboardState.error(String errorMessage)
       : weather = WeatherData(type: 'sunny', condition: ''),
-        flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
+        flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
         growth = null,
         nextActions = const [],
@@ -80,7 +80,7 @@ class FlameData {
     this.nudgeMessage = '保持专注，继续前行',
   });
   final int level;
-  final int brightness;
+  final double brightness; // 🔧 修复：改为double以匹配后端返回的0.0-1.0范围值
   final int todayFocusMinutes;
   final int tasksCompleted;
   final String nudgeMessage;
@@ -175,7 +175,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final flameMap = dashboardData['flame'] as Map<String, dynamic>;
       final flame = FlameData(
         level: flameMap['level'] as int,
-        brightness: flameMap['brightness'] as int,
+        brightness: (flameMap['brightness'] as num).toDouble(), // 🔧 修复：支持int和double类型
         todayFocusMinutes: flameMap['today_focus_minutes'] as int,
         tasksCompleted: flameMap['tasks_completed'] as int? ?? 0,
         nudgeMessage: flameMap['nudge_message'] as String? ?? '保持专注，继续前行',
@@ -209,12 +209,27 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       final nextActionsList = dashboardData['next_actions'] as List<dynamic>;
       final nextActions = nextActionsList.map((item) {
         final map = item as Map<String, dynamic>;
+
+        // 🔧 修复：type字段可能是List，需要安全转换
+        String typeValue;
+        final typeRaw = map['type'];
+        if (typeRaw is List) {
+          // 如果是List，取第一个元素或使用默认值
+          typeValue = (typeRaw.isNotEmpty && typeRaw.first is String)
+              ? typeRaw.first as String
+              : 'learning';
+        } else if (typeRaw is String) {
+          typeValue = typeRaw;
+        } else {
+          typeValue = 'learning'; // 默认值
+        }
+
         return TaskData(
           id: map['id'] as String,
           title: map['title'] as String,
           estimatedMinutes: map['estimated_minutes'] as int,
           priority: map['priority'] as int,
-          type: map['type'] as String,
+          type: typeValue,
         );
       }).toList();
 

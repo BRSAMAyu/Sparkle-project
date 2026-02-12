@@ -2,15 +2,18 @@
 向量嵌入服务 (Embedding Service)
 用于将文本转换为向量表示，支持语义搜索
 """
-from typing import List
 import asyncio
 from http import HTTPStatus
 
-import dashscope
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+
+try:
+    import dashscope
+except ImportError:  # pragma: no cover - optional dependency in some test/dev envs
+    dashscope = None
 
 
 class EmbeddingService:
@@ -35,7 +38,7 @@ class EmbeddingService:
         self.siliconflow_model = settings.SILICONFLOW_EMBEDDING_MODEL or settings.EMBEDDING_MODEL
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def get_embedding(self, text: str, text_type: str = "document") -> List[float]:
+    async def get_embedding(self, text: str, text_type: str = "document") -> list[float]:
         """
         获取文本的向量表示
 
@@ -50,7 +53,7 @@ class EmbeddingService:
         return embeddings[0]
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def batch_embeddings(self, texts: List[str], text_type: str = "document") -> List[List[float]]:
+    async def batch_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
         """
         批量获取文本向量
 
@@ -65,13 +68,24 @@ class EmbeddingService:
             return []
 
         if self.provider == "dashscope":
+            if not self.dashscope_api_key:
+                if settings.DEMO_MODE:
+                    return [[0.0] * self.embedding_dim for _ in texts]
+                raise ValueError("DASHSCOPE_API_KEY not set for dashscope embedding provider")
             return await self._dashscope_embeddings(texts, text_type=text_type)
         if self.provider == "siliconflow":
+            if not self.siliconflow_api_key:
+                if settings.DEMO_MODE:
+                    return [[0.0] * self.embedding_dim for _ in texts]
+                raise ValueError("SILICONFLOW_API_KEY not set for siliconflow embedding provider")
             return await self._siliconflow_embeddings(texts)
 
         raise ValueError(f"Unsupported embedding provider: {self.provider}")
 
-    async def _dashscope_embeddings(self, texts: List[str], text_type: str = "document") -> List[List[float]]:
+    async def _dashscope_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
+        if dashscope is None:
+            raise RuntimeError("dashscope package is required for dashscope embedding provider")
+
         def _call():
             dashscope.api_key = self.dashscope_api_key
             if self.dashscope_base_url:
@@ -92,7 +106,7 @@ class EmbeddingService:
         embeddings = resp.output.get("embeddings", [])
         return [item["embedding"] for item in embeddings]
 
-    async def _siliconflow_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def _siliconflow_embeddings(self, texts: list[str]) -> list[list[float]]:
         base_url = self.siliconflow_base_url.rstrip("/")
         url = base_url if base_url.endswith("/embeddings") else f"{base_url}/embeddings"
         payload = {

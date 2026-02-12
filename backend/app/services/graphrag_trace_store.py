@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
 from app.config import settings
 from app.core.cache import cache_service
+
 if TYPE_CHECKING:
     from app.orchestration.graph_rag import RetrievalTrace
 
@@ -25,12 +26,12 @@ def _latest_key(user_id: str) -> str:
     return f"{LATEST_KEY_PREFIX}{user_id}"
 
 
-def _serialize_trace(trace: "RetrievalTrace") -> Dict[str, Any]:
+def _serialize_trace(trace: RetrievalTrace) -> dict[str, Any]:
     query = trace.query or ""
     truncated_query = query[: settings.GRAPHRAG_TRACE_QUERY_MAX_CHARS]
     redacted_query = _redact_query(truncated_query)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "trace_id": trace.trace_id,
         "timestamp": trace.timestamp.isoformat(),
         "query_hash": _hash_query(query),
@@ -69,7 +70,7 @@ def _redact_query(query: str) -> str:
     return redacted
 
 
-async def cache_trace(trace: RetrievalTrace, user_id: Optional[str]) -> None:
+async def cache_trace(trace: RetrievalTrace, user_id: str | None) -> None:
     if not cache_service.redis:
         return
     if not settings.ENABLE_GRAPHRAG_MONITOR_API:
@@ -92,7 +93,7 @@ async def cache_trace(trace: RetrievalTrace, user_id: Optional[str]) -> None:
         )
 
 
-async def get_trace(trace_id: str) -> Optional[Dict[str, Any]]:
+async def get_trace(trace_id: str) -> dict[str, Any] | None:
     if not cache_service.redis:
         return None
     raw = await cache_service.redis.get(_trace_key(trace_id))
@@ -104,7 +105,7 @@ async def get_trace(trace_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def get_latest_trace(user_id: str) -> Optional[Dict[str, Any]]:
+async def get_latest_trace(user_id: str) -> dict[str, Any] | None:
     if not cache_service.redis:
         return None
     trace_id = await cache_service.redis.get(_latest_key(user_id))

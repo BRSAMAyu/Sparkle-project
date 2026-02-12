@@ -1,6 +1,6 @@
-from typing import List, Dict, Any, Optional
 import json
 import re
+
 from loguru import logger
 
 
@@ -33,7 +33,7 @@ class SuggestionService:
             "b": ["Behavior Report", "Back to Home"]
         }
 
-    async def predict_intent(self, query: str, user_id: str) -> List[Dict[str, str]]:
+    async def predict_intent(self, query: str, user_id: str) -> list[dict[str, str]]:
         """
         Predict user intent based on partial input.
 
@@ -101,7 +101,7 @@ class SuggestionService:
 
     async def _get_personalized_suggestions(
         self, user_id: str, query: str
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """
         Get personalized suggestions based on user history.
 

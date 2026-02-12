@@ -65,14 +65,19 @@ dependencies:
   path: ^1.9.0
   freezed_annotation: ^2.4.1
   path_provider: ^2.1.2
-  share_plus: ^9.0.0
+  share_plus: ^12.0.1
   flutter_animate: ^4.5.0
   timeago: ^3.6.1
   http: ^1.2.0
   connectivity_plus: ^7.0.0
 
+  # Social Login
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
+  # fluwx: ^4.1.0  # 🔧 暂时禁用，编译 Demo 版本时有兼容性问题
+
   # Protobuf
-  protobuf: ^3.1.0
+  protobuf: ^6.0.0
   fixnum: ^1.1.0
 
   # Performance Monitoring
@@ -84,15 +89,16 @@ dependencies:
   record: ^6.0.0
   permission_handler: ^12.0.1
   crypto: ^3.0.7
-  grpc: ^4.0.1
+  grpc: ^5.1.0
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # Code Generation
   build_runner: ^2.4.7
   riverpod_generator: ^2.3.9
-  retrofit_generator: ^8.0.4
   json_serializable: ^6.7.1
   hive_generator: ^2.0.1
   freezed: ^2.5.2
@@ -101,6 +107,9 @@ dev_dependencies:
   # Linting
   flutter_lints: ^3.0.1
   mockito: ^5.4.4
+
+  # Golden Testing
+  golden_toolkit: ^0.15.0
 
   # Sentry Plugin for Source Maps
   sentry_dart_plugin: ^2.0.0

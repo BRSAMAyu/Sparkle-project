@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 快捷回复选项数据类
 class QuickReply {
@@ -40,35 +41,30 @@ class QuickReplyChips extends StatelessWidget {
       label: '今天该做什么',
       message: '根据我的任务和计划，今天应该做什么？',
       icon: Icons.today,
-      color: Color(0xFF2196F3),
     ),
     QuickReply(
       id: 'review_plan',
       label: '帮我安排复习',
       message: '帮我安排今天的复习计划，重点复习哪些知识点？',
       icon: Icons.schedule,
-      color: Color(0xFF4CAF50),
     ),
     QuickReply(
       id: 'start_focus',
       label: '开始专注',
       message: '我想开始一个 25 分钟的专注学习',
       icon: Icons.timer,
-      color: Color(0xFFFF9800),
     ),
     QuickReply(
       id: 'analyze_errors',
       label: '分析错题',
       message: '帮我分析最近的错题，找出薄弱环节',
       icon: Icons.analytics,
-      color: Color(0xFFF44336),
     ),
     QuickReply(
       id: 'learning_progress',
       label: '学习进度',
       message: '查看我这周的学习进度和完成情况',
       icon: Icons.trending_up,
-      color: Color(0xFF9C27B0),
     ),
   ];
 
@@ -164,7 +160,7 @@ class _QuickReplyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = reply.color ?? theme.colorScheme.primary;
+    final color = reply.color ?? _resolveReplyColor(reply, theme);
 
     return Material(
       color: color.withValues(alpha: 0.1),
@@ -173,7 +169,10 @@ class _QuickReplyChip extends StatelessWidget {
         onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8 + DS.spacing6,
+            vertical: DS.spacing8,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
@@ -204,6 +203,23 @@ class _QuickReplyChip extends StatelessWidget {
       ),
     );
   }
+
+  Color _resolveReplyColor(QuickReply reply, ThemeData theme) {
+    switch (reply.id) {
+      case 'today_plan':
+        return DS.info;
+      case 'review_plan':
+        return DS.success;
+      case 'start_focus':
+        return DS.warning;
+      case 'analyze_errors':
+        return DS.error;
+      case 'learning_progress':
+        return DS.prismPurple;
+      default:
+        return theme.colorScheme.primary;
+    }
+  }
 }
 
 /// 快捷回复网格视图（备选方案）
@@ -224,7 +240,7 @@ class QuickReplyGrid extends StatelessWidget {
   Widget build(BuildContext context) => GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
           childAspectRatio: 2.5,
@@ -260,7 +276,7 @@ class _QuickReplyCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(DS.spacing12),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [

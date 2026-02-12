@@ -14,17 +14,21 @@ class SprintHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyState = ref.watch(sprintHistoryProvider);
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.sprintHistory),
         actions: [
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(sprintHistoryProvider.notifier).refresh(),
           ),
@@ -37,7 +41,8 @@ class SprintHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, SprintHistoryState state, AppLocalizations l10n) {
+  Widget _buildBody(
+      BuildContext context, SprintHistoryState state, AppLocalizations l10n) {
     if (state.isLoading && state.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -50,64 +55,70 @@ class SprintHistoryScreen extends ConsumerWidget {
       return _buildEmptyState(context, l10n);
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(DS.spacing16),
-      itemCount: state.items.length,
-      separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
-      itemBuilder: (context, index) {
-        final item = state.items[index];
-        return _SprintHistoryCard(item: item);
-      },
+    return ContentConstraint(
+      child: ListView.separated(
+        padding: const EdgeInsets.all(DS.spacing16),
+        itemCount: state.items.length,
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: DS.spacing12),
+        itemBuilder: (context, index) {
+          final item = state.items[index];
+          return _SprintHistoryCard(item: item);
+        },
+      ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history,
-            size: 48,
-            color: DS.textSecondary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: DS.spacing12),
-          Text(
-            l10n.noSprintHistory,
-            style: context.sparkleTypography.bodyMedium.copyWith(
-              color: DS.textSecondary,
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) =>
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 48,
+              color: DS.textSecondary.withValues(alpha: 0.5),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing12),
+            Text(
+              l10n.noSprintHistory,
+              style: context.sparkleTypography.bodyMedium.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
 
-  Widget _buildErrorState(BuildContext context, String error, AppLocalizations l10n) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: DS.semanticError,
-          ),
-          const SizedBox(height: DS.spacing12),
-          Text(
-            l10n.loadingFailed,
-            style: context.sparkleTypography.bodyMedium.copyWith(
-              color: DS.textSecondary,
-            ),
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            error,
-            style: context.sparkleTypography.labelSmall.copyWith(
+  Widget _buildErrorState(
+          BuildContext context, String error, AppLocalizations l10n) =>
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
               color: DS.semanticError,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing12),
+            Text(
+              l10n.loadingFailed,
+              style: context.sparkleTypography.bodyMedium.copyWith(
+                color: DS.textSecondary,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              error,
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.semanticError,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
 }
 
 class _SprintHistoryCard extends StatelessWidget {
@@ -122,13 +133,14 @@ class _SprintHistoryCard extends StatelessWidget {
       case SprintStatus.abandoned:
         return l10n.sprintAbandoned;
       case SprintStatus.extended:
-        return l10n.sprintExtended;
+        // For extended sprints, use durationDays as the extended days
+        return l10n.sprintExtended(item.durationDays);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return GestureDetector(
@@ -256,7 +268,7 @@ class _SprintHistoryCard extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => SprintHistoryDetailSheet(item: item),
     );
   }

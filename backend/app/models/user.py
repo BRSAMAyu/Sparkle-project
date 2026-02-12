@@ -2,12 +2,13 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
-from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON, ForeignKey, DateTime, Enum
-from sqlalchemy.orm import relationship
 import enum
+from datetime import datetime
 
-from app.models.base import BaseModel, GUID
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
 
 
 class UserStatus(str, enum.Enum):
@@ -33,7 +34,7 @@ class User(BaseModel):
     full_name = Column(String(100), nullable=True)
     nickname = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
-    
+
     # 头像审核系统
     avatar_status = Column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
     pending_avatar_url = Column(String(500), nullable=True)
@@ -45,7 +46,7 @@ class User(BaseModel):
     # 用户偏好
     depth_preference = Column(Float, default=0.5, nullable=False)
     curiosity_preference = Column(Float, default=0.5, nullable=False)
-    
+
     # 🆕 碎片时间/日程偏好 {"commute_time": ["08:00", "09:00"], "lunch_break": ...}
     schedule_preferences = Column(JSON, nullable=True)  # Deprecated: Use PushPreference instead
 
@@ -61,7 +62,7 @@ class User(BaseModel):
     google_id = Column(String(255), unique=True, nullable=True, index=True)
     apple_id = Column(String(255), unique=True, nullable=True, index=True)
     wechat_unionid = Column(String(255), unique=True, nullable=True, index=True)
-    
+
     # 🆕 注册来源 (analytics)
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
     last_login_at = Column(DateTime, nullable=True)
@@ -71,6 +72,14 @@ class User(BaseModel):
     age_verified = Column(Boolean, default=False, nullable=False)
     age_verification_source = Column(String(50), nullable=True)  # registration, parent_consent, device_mode
     age_verified_at = Column(DateTime, nullable=True)
+
+    # 🆕 光子积分系统 (V3.2)
+    photon_balance = Column(Integer, default=0, nullable=False)  # 光子积分余额
+    photon_updated_at = Column(DateTime, nullable=True)  # 光子积分最后更新时间
+
+    # 🆕 商城装备系统 (V3.2)
+    equipped_skin = Column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（对应shop_items.id）
+    equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（对应shop_items.id）
 
     # 关系定义
     push_preference = relationship(
@@ -110,6 +119,13 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    chat_sessions = relationship(
+        "ChatSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     intervention_requests = relationship(
         "InterventionRequest",
         back_populates="user",
@@ -137,7 +153,7 @@ class User(BaseModel):
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
-    
+
     curiosity_capsules = relationship(
         "CuriosityCapsule",
         back_populates="user",
@@ -215,6 +231,29 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    # 🛒 商城系统关系 (v3.2)
+    shop_purchases = relationship(
+        "ShopPurchase",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    consumables = relationship(
+        "UserConsumable",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    photon_transactions = relationship(
+        "PhotonTransactionHistory",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+        order_by="desc(PhotonTransactionHistory.created_at)"
+    )
+
     def __repr__(self):
         return f"<User(username={self.username}, email={self.email})>"
 
@@ -226,17 +265,17 @@ class PushPreference(BaseModel):
     __tablename__ = "push_preferences"
 
     user_id = Column(GUID(), ForeignKey("users.id"), unique=True, nullable=False, index=True)
-    
+
     # 活跃时间段 [{"start": "08:00", "end": "09:00"}]
     active_slots = Column(JSON, nullable=True)
-    
+
     # 时区
     timezone = Column(String(50), default="Asia/Shanghai", nullable=False)
-    
+
     # 开关和配置
     enable_curiosity = Column(Boolean, default=True, nullable=False)
     persona_type = Column(String(50), default="coach", nullable=False) # coach, anime
-    
+
     # 频控
     daily_cap = Column(Integer, default=5, nullable=False)
     last_push_time = Column(DateTime, nullable=True)

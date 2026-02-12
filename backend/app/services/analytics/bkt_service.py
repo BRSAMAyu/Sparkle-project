@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,12 +16,16 @@ class BKTParams:
     p_guess: float = 0.2
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class BKTService:
     """
     Bayesian Knowledge Tracing updater.
     """
 
-    def __init__(self, db: AsyncSession, params: Optional[BKTParams] = None):
+    def __init__(self, db: AsyncSession, params: BKTParams | None = None):
         self.db = db
         self.params = params or BKTParams()
 
@@ -40,7 +43,7 @@ class BKTService:
         p_l_given_obs = numerator / denominator if denominator > 0 else p_l
         return p_l_given_obs + (1 - p_l_given_obs) * self.params.p_transit
 
-    async def update_mastery(self, user_id: UUID, node_id: UUID, correct: bool) -> Optional[UserNodeStatus]:
+    async def update_mastery(self, user_id: UUID, node_id: UUID, correct: bool) -> UserNodeStatus | None:
         stmt = select(UserNodeStatus).where(
             UserNodeStatus.user_id == user_id,
             UserNodeStatus.node_id == node_id
@@ -52,7 +55,7 @@ class BKTService:
 
         current = status.bkt_mastery_prob or self.params.p_init
         status.bkt_mastery_prob = self._update_prob(current, correct)
-        status.bkt_last_updated_at = datetime.utcnow()
+        status.bkt_last_updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(status)
         return status

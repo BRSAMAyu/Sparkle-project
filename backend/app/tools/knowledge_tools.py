@@ -1,8 +1,17 @@
-from typing import Any, Optional
+import contextlib
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
+
+from app.services.galaxy_service import GalaxyService
+
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import CreateKnowledgeNodeParams, LinkNodesParams, QueryKnowledgeParams
-from app.services.galaxy_service import GalaxyService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class CreateKnowledgeNodeTool(BaseTool):
     """创建知识节点（生成学习卡片的基础）"""
@@ -16,24 +25,24 @@ class CreateKnowledgeNodeTool(BaseTool):
     category = ToolCategory.KNOWLEDGE
     parameters_schema = CreateKnowledgeNodeParams
     requires_confirmation = False
-    
+
     async def execute(
-        self, 
-        params: CreateKnowledgeNodeParams, 
+        self,
+        params: CreateKnowledgeNodeParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)
-            
+
             # 1. [止血方案] 语义查重：避免创建重复的知识点
             existing_nodes = await galaxy_service.semantic_search_nodes(
                 query=params.title,
                 limit=1,
                 threshold=0.15 # 严格阈值，Cosine Distance < 0.15 表示高度相似
             )
-            
+
             if existing_nodes:
                 node = existing_nodes[0]
                 return ToolResult(
@@ -61,13 +70,11 @@ class CreateKnowledgeNodeTool(BaseTool):
                     # If subject_id is a name, we might ignore it or try to find it.
                     # For now, ignore if not int
                     pass
-            
+
             parent_node_uuid = None
             if params.parent_node_id:
-                try:
+                with contextlib.suppress(ValueError):
                     parent_node_uuid = UUID(params.parent_node_id)
-                except ValueError:
-                    pass
 
             node = await galaxy_service.create_node(
                 user_id=UUID(user_id),
@@ -77,7 +84,7 @@ class CreateKnowledgeNodeTool(BaseTool):
                 tags=params.tags,
                 parent_node_id=parent_node_uuid
             )
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -89,7 +96,7 @@ class CreateKnowledgeNodeTool(BaseTool):
                     "summary": node.description,
                     "tags": node.keywords,
                     "mastery_level": 0, # Initial mastery
-                    "created_at": datetime.utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat()
+                    "created_at": _utcnow().isoformat() if not hasattr(node, 'created_at') else node.created_at.isoformat()
                 }
             )
         except Exception as e:
@@ -100,7 +107,8 @@ class CreateKnowledgeNodeTool(BaseTool):
                 suggestion="创建知识节点失败，请检查参数"
             )
 
-from datetime import datetime
+from datetime import UTC, datetime
+
 
 class QueryKnowledgeTool(BaseTool):
     """查询知识图谱（LLM 先看再动）"""
@@ -112,23 +120,21 @@ class QueryKnowledgeTool(BaseTool):
     category = ToolCategory.QUERY
     parameters_schema = QueryKnowledgeParams
     requires_confirmation = False
-    
+
     async def execute(
-        self, 
-        params: QueryKnowledgeParams, 
+        self,
+        params: QueryKnowledgeParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)
-            
+
             subject_id_int = None
             if params.subject_id:
-                try:
+                with contextlib.suppress(ValueError):
                     subject_id_int = int(params.subject_id)
-                except ValueError:
-                    pass
 
             if params.use_vector_search:
                 nodes = await galaxy_service.semantic_search(
@@ -164,7 +170,7 @@ class QueryKnowledgeTool(BaseTool):
                     }
                     for n in nodes
                 ]
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,
@@ -193,13 +199,13 @@ class LinkNodesTool(BaseTool):
     category = ToolCategory.KNOWLEDGE
     parameters_schema = LinkNodesParams
     requires_confirmation = False
-    
+
     async def execute(
-        self, 
-        params: LinkNodesParams, 
+        self,
+        params: LinkNodesParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: Optional[str] = None
+        tool_call_id: str | None = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)
@@ -209,7 +215,7 @@ class LinkNodesTool(BaseTool):
                 target_id=UUID(params.target_node_id),
                 relation_type=params.relation_type
             )
-            
+
             return ToolResult(
                 success=True,
                 tool_name=self.name,

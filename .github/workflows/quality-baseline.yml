@@ -1,0 +1,33 @@
+name: Quality Baseline Snapshot
+
+on:
+  schedule:
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Collect Quality Baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install runtime deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Collect baseline metrics
+        run: python3 scripts/collect_quality_baseline.py --output quality/baseline_snapshot_ci.json
+
+      - name: Upload baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-baseline
+          path: quality/baseline_snapshot_ci.json

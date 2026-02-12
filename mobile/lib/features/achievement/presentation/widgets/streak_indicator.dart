@@ -73,7 +73,7 @@ class _StreakIndicatorCompact extends StatelessWidget {
   final StreakStats streakStats;
   final VoidCallback? onTap;
 
-  Color get _flameColor => _getFlameColor(streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -111,13 +111,6 @@ class _StreakIndicatorCompact extends StatelessWidget {
         ),
       ),
     );
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700); // 金色 - 大师级
-    if (streak >= 14) return const Color(0xFFFF6B00); // 橙红色 - 专家级
-    if (streak >= 7) return const Color(0xFFFF9500); // 橙色 - 进阶级
-    return DS.warning; // 黄色 - 入门级
-  }
 }
 
 /// 标准型连胜指示器
@@ -130,7 +123,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
   final StreakStats streakStats;
   final VoidCallback? onTap;
 
-  Color get _flameColor => _getFlameColor(streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -224,17 +217,10 @@ class _StreakIndicatorStandard extends StatelessWidget {
       ),
       child: const Icon(
         Icons.whatshot_rounded,
-        color: Colors.white,
+        color: DS.textOnPrimary,
         size: DS.iconSizeLg,
       ),
     );
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
-  }
 }
 
 /// 完整型连胜指示器
@@ -280,7 +266,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
     super.dispose();
   }
 
-  Color get _flameColor => _getFlameColor(widget.streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(widget.streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -394,7 +380,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
       ),
       child: const Icon(
         Icons.whatshot_rounded,
-        color: Colors.white,
+        color: DS.textOnPrimary,
         size: DS.iconSize3xl,
       ),
     );
@@ -457,11 +443,11 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
             margin: const EdgeInsets.only(left: 2),
             decoration: BoxDecoration(
               color: isActive
-                  ? Colors.cyan.withValues(alpha: 0.8)
+                  ? DS.info.withValues(alpha: 0.8)
                   : DS.neutral300,
               borderRadius: DS.borderRadius4,
               border: Border.all(
-                color: isActive ? Colors.cyan : DS.neutral400,
+                color: isActive ? DS.info : DS.neutral400,
               ),
             ),
           );
@@ -470,17 +456,10 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         Icon(
           Icons.ac_unit,
           size: DS.iconSizeSm,
-          color: Colors.cyan.withValues(alpha: 0.8),
+          color: DS.info.withValues(alpha: 0.8),
         ),
       ],
     );
-  }
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
   }
 }
 
@@ -500,7 +479,7 @@ class _StreakIndicatorCircular extends StatefulWidget {
 }
 
 class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
   late AnimationController _pulseController;
@@ -541,7 +520,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
     super.dispose();
   }
 
-  Color get _flameColor => _getFlameColor(widget.streakStats.currentStreak);
+  Color get _flameColor => DS.getStreakColor(widget.streakStats.currentStreak);
 
   @override
   Widget build(BuildContext context) {
@@ -554,81 +533,77 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         HapticFeedback.selectionClick();
         widget.onTap?.call();
       },
-      child: SizedBox(
-        width: 120,
-        height: 120,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // 背景光晕
-            if (!isZeroStreak)
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) => Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: displayColor.withValues(alpha: 0.3),
-                        blurRadius: 20 * _pulseAnimation.value,
-                        spreadRadius: 4 * _pulseAnimation.value,
+      child: Align(
+        child: SizedBox(
+          width: 100,
+          height: 100,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // 背景光晕
+              if (!isZeroStreak)
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) => Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: displayColor.withValues(alpha: 0.3),
+                            blurRadius: 20 * _pulseAnimation.value,
+                            spreadRadius: 4 * _pulseAnimation.value,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            // 进度圆环
-            AnimatedBuilder(
-              animation: _progressAnimation,
-              builder: (context, child) => CustomPaint(
-                size: const Size(120, 120),
-                painter: _CircularProgressPainter(
-                  progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
-                  color: displayColor,
-                  isBackground: isZeroStreak,
-                ),
-              ),
-            ),
-            // 中心内容
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.whatshot_rounded,
-                  color: displayColor,
-                  size: DS.iconSizeLg,
-                ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
-                  style: TextStyle(
-                    fontSize: isZeroStreak ? DS.fontSizeLg : DS.fontSize2xl,
-                    fontWeight: DS.fontWeightBold,
+              // 进度圆环
+              AnimatedBuilder(
+                animation: _progressAnimation,
+                builder: (context, child) => CustomPaint(
+                  size: const Size(100, 100),
+                  painter: _CircularProgressPainter(
+                    progress: isZeroStreak ? 1.0 : progress * _progressAnimation.value,
                     color: displayColor,
+                    isBackground: isZeroStreak,
                   ),
                 ),
-                Text(
-                  isZeroStreak ? '挑战' : '天',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.textSecondary,
+              ),
+              // 中心内容
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.whatshot_rounded,
+                    color: displayColor,
+                    size: 20,
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(height: 2),
+                  Text(
+                    isZeroStreak ? '开始' : '${widget.streakStats.currentStreak}',
+                    style: TextStyle(
+                      fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
+                      fontWeight: DS.fontWeightBold,
+                      color: displayColor,
+                    ),
+                  ),
+                  Text(
+                    isZeroStreak ? '挑战' : '天',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: DS.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Color _getFlameColor(int streak) {
-    if (streak >= 30) return const Color(0xFFFFD700);
-    if (streak >= 14) return const Color(0xFFFF6B00);
-    if (streak >= 7) return const Color(0xFFFF9500);
-    return DS.warning;
   }
 }
 
@@ -695,7 +670,7 @@ class _CircularProgressPainter extends CustomPainter {
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
     
-    final startAngle = -math.pi / 2;
+    const startAngle = -math.pi / 2;
     var currentAngle = startAngle;
     
     while (currentAngle < startAngle + 2 * math.pi) {

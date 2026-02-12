@@ -3,16 +3,19 @@ Base Model Classes
 所有数据库模型的基类
 """
 import uuid
-from datetime import datetime
-from typing import Optional, TypeVar, Type
+from datetime import UTC, datetime
+from typing import TypeVar
 
-from sqlalchemy import Column, DateTime, String, select, and_
+from sqlalchemy import Column, DateTime, select
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import declared_attr
+from sqlalchemy.types import CHAR, TypeDecorator
 
 from app.db.session import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GUID(TypeDecorator):
@@ -32,9 +35,7 @@ class GUID(TypeDecorator):
             return dialect.type_descriptor(CHAR(36))
 
     def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == "postgresql":
+        if value is None or dialect.name == "postgresql":
             return value
         else:
             if not isinstance(value, uuid.UUID):
@@ -70,7 +71,7 @@ class SoftDeleteMixin:
 
     def soft_delete(self) -> None:
         """标记记录为已删除"""
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = _utcnow()
 
     def restore(self) -> None:
         """恢复已删除的记录"""
@@ -115,11 +116,11 @@ class BaseModel(SoftDeleteMixin, Base):
 
     @classmethod
     async def get_by_id(
-        cls: Type[T],
+        cls: type[T],
         db: AsyncSession,
         id: uuid.UUID,
         include_deleted: bool = False,
-    ) -> Optional[T]:
+    ) -> T | None:
         """
         根据 ID 获取记录
 
@@ -139,11 +140,11 @@ class BaseModel(SoftDeleteMixin, Base):
 
     @classmethod
     async def get_all(
-        cls: Type[T],
+        cls: type[T],
         db: AsyncSession,
         include_deleted: bool = False,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> list[T]:
         """
         获取所有记录
@@ -217,10 +218,10 @@ class HardDeleteBaseModel(Base):
 
     @classmethod
     async def get_by_id(
-        cls: Type[T],
+        cls: type[T],
         db: AsyncSession,
         id: uuid.UUID,
-    ) -> Optional[T]:
+    ) -> T | None:
         """根据 ID 获取记录"""
         query = select(cls).where(cls.id == id)
         result = await db.execute(query)

@@ -1,9 +1,10 @@
 import asyncio
-from typing import Set, Coroutine, Optional, Any, Dict
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 import logging
 import time
+from collections.abc import Coroutine
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +16,11 @@ class TaskStats:
     task_name: str
     status: str  # running, completed, failed, cancelled
     created_at: datetime
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    duration_ms: Optional[float] = None
-    error_message: Optional[str] = None
-    exception_type: Optional[str] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    duration_ms: float | None = None
+    error_message: str | None = None
+    exception_type: str | None = None
 
 
 class BackgroundTaskManager:
@@ -35,9 +36,9 @@ class BackgroundTaskManager:
     """
 
     def __init__(self, max_concurrent_tasks: int = 100):
-        self._tasks: Dict[str, asyncio.Task] = {}  # 改为字典,便于追踪
+        self._tasks: dict[str, asyncio.Task] = {}  # 改为字典,便于追踪
         self._semaphore = asyncio.Semaphore(max_concurrent_tasks)
-        self._stats: Dict[str, TaskStats] = {}  # 任务统计
+        self._stats: dict[str, TaskStats] = {}  # 任务统计
         self._logger = logger
         self._total_spawned = 0
         self._total_completed = 0
@@ -45,14 +46,14 @@ class BackgroundTaskManager:
         self._start_time = datetime.now()
         self._queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._queue_seq = 0
-        self._queue_worker_task: Optional[asyncio.Task] = None
+        self._queue_worker_task: asyncio.Task | None = None
         self._shutdown = False
 
     async def spawn(
         self,
         coro: Coroutine[Any, Any, Any],
         task_name: str = "unnamed_task",
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         priority: int = 0
     ) -> asyncio.Task:
         """
@@ -141,7 +142,7 @@ class BackgroundTaskManager:
         *,
         task_id: str,
         task_name: str,
-        user_id: Optional[str],
+        user_id: str | None,
         coro: Coroutine[Any, Any, Any],
         stats: TaskStats
     ) -> asyncio.Task:
@@ -226,7 +227,7 @@ class BackgroundTaskManager:
                 try:
                     await coro_factory()
                     return
-                except Exception as e:
+                except Exception:
                     if attempt == max_retries:
                         raise
                     self._logger.warning(
@@ -237,11 +238,11 @@ class BackgroundTaskManager:
 
         return await self.spawn(_wrapped_with_retry(), task_name, **kwargs)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取任务管理器统计信息"""
         running = len([s for s in self._stats.values() if s.status == "running"])
         completed_tasks = [s for s in self._stats.values() if s.status == "completed"]
-        failed_tasks = [s for s in self._stats.values() if s.status == "failed"]
+        [s for s in self._stats.values() if s.status == "failed"]
 
         avg_duration = 0
         if completed_tasks:
@@ -260,7 +261,7 @@ class BackgroundTaskManager:
             "concurrency_limit": self._semaphore._value if hasattr(self._semaphore, '_value') else "N/A"
         }
 
-    def get_task_details(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_task_details(self, task_id: str) -> dict[str, Any] | None:
         """获取特定任务的详细信息"""
         stats = self._stats.get(task_id)
         if not stats:
@@ -278,7 +279,7 @@ class BackgroundTaskManager:
             "exception_type": stats.exception_type
         }
 
-    def get_active_tasks(self) -> Dict[str, str]:
+    def get_active_tasks(self) -> dict[str, str]:
         """获取当前活跃的任务"""
         return {
             task_id: task.get_name()
@@ -287,7 +288,7 @@ class BackgroundTaskManager:
             and self._stats.get(task_id, TaskStats("", "", "", datetime.now())).status == "running"
         }
 
-    async def wait_for_task(self, task_id: str, timeout: Optional[float] = None) -> bool:
+    async def wait_for_task(self, task_id: str, timeout: float | None = None) -> bool:
         """
         等待特定任务完成
 
@@ -301,7 +302,7 @@ class BackgroundTaskManager:
         try:
             await asyncio.wait_for(task, timeout=timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
     async def graceful_shutdown(self, timeout: int = 30):
@@ -333,7 +334,7 @@ class BackgroundTaskManager:
                 timeout=timeout
             )
             self._logger.info("✅ All background tasks completed gracefully")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._logger.warning(f"⏰ Shutdown timeout, cancelling {len(self._tasks)} remaining tasks")
             # 取消剩余任务
             for task in self._tasks.values():
@@ -353,7 +354,7 @@ class BackgroundTaskManager:
         if len(self._stats) > 1000:
             self._stats = dict(list(self._stats.items())[-1000:])
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """
         健康检查
 
@@ -375,7 +376,7 @@ class BackgroundTaskManager:
             "timestamp": datetime.now().isoformat()
         }
 
-    async def _report_to_monitoring(self, task_id: str, stats: TaskStats, user_id: Optional[str]):
+    async def _report_to_monitoring(self, task_id: str, stats: TaskStats, user_id: str | None):
         """
         报告任务失败到监控系统
 

@@ -1,16 +1,15 @@
 """
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime
 from uuid import UUID
-from typing import Dict, List, Optional
+
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user_preferences import UserPreferencesCenter
 from app.core.metrics import PREFERENCE_DECAY_APPLIED_TOTAL
-
+from app.models.user_preferences import UserPreferencesCenter
 
 # 衰减配置
 DECAY_WEEKLY_FACTOR = 0.90      # 每周衰减系数
@@ -18,6 +17,10 @@ DECAY_MIN_CONFIDENCE = 0.25     # 最小置信度阈值
 DECAY_RESET_THRESHOLD = 0.30    # 低于此值则重置
 DECAY_CHECK_INTERVAL_DAYS = 7   # 检查间隔（天）
 MAX_AGE_DAYS = 90               # 最大保留天数
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class InferredPreferenceDecayService:
@@ -32,7 +35,7 @@ class InferredPreferenceDecayService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def apply_decay_to_user(self, user_id: UUID) -> Dict[str, any]:
+    async def apply_decay_to_user(self, user_id: UUID) -> dict[str, any]:
         """
         对单个用户的推断偏好应用衰减
 
@@ -53,7 +56,7 @@ class InferredPreferenceDecayService:
         reset_keys = []
         decayed_values = {}
 
-        now = datetime.utcnow()
+        now = _utcnow()
         inferred = prefs.inferred.copy()
 
         # 检查最后更新时间
@@ -134,7 +137,7 @@ class InferredPreferenceDecayService:
             "cleaned": cleaned
         }
 
-    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> Dict[str, any]:
+    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> dict[str, any]:
         """
         批量应用衰减到所有有推断偏好的活跃用户
 
@@ -185,7 +188,7 @@ class InferredPreferenceDecayService:
             "errors": errors
         }
 
-    def _cleanup_stale_data(self, inferred: Dict, now: datetime) -> int:
+    def _cleanup_stale_data(self, inferred: dict, now: datetime) -> int:
         """清理过期的推断数据"""
         cleaned = 0
         keys_to_remove = []

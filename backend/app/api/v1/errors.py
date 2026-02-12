@@ -1,16 +1,16 @@
 """
 Error Records API Endpoints
 """
-from typing import Dict, Any # Moved to top
+from typing import Any  # Moved to top
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.db.session import get_db
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.db.session import get_db
 from app.models.error_record import ErrorRecord
 from app.models.subject import Subject
+from app.models.user import User
 from app.schemas.error import ErrorRecordCreate, ErrorRecordResponse
 
 router = APIRouter()
@@ -31,7 +31,7 @@ async def create_error_record(
             status_code=400,
             detail=f"未找到ID为 {record_in.subject_id} 的学科"
         )
-    
+
     # 创建记录
     db_record = ErrorRecord(
         user_id=current_user.id,
@@ -43,11 +43,11 @@ async def create_error_record(
         ai_analysis=record_in.ai_analysis,
         image_urls=record_in.image_urls
     )
-    
+
     db.add(db_record)
     await db.commit()
     await db.refresh(db_record)
-    
+
     return {
         "success": True,
         "data": ErrorRecordResponse.model_validate(db_record)

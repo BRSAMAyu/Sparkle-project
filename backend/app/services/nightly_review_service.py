@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date
-from typing import List, Optional
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.error_book import ErrorRecord
 from app.models.nightly_review import NightlyReview
 from app.models.user_state import UserStateSnapshot
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NightlyReviewService:
@@ -20,8 +23,8 @@ class NightlyReviewService:
     async def generate_for_user(
         self,
         user_id: UUID,
-        timezone_name: Optional[str],
-        review_date: Optional[date] = None,
+        timezone_name: str | None,
+        review_date: date | None = None,
     ) -> NightlyReview:
         target_date, window_start, window_end = self._review_window(timezone_name, review_date)
 
@@ -47,7 +50,7 @@ class NightlyReviewService:
         await self.db.refresh(review)
         return review
 
-    async def get_latest(self, user_id: UUID) -> Optional[NightlyReview]:
+    async def get_latest(self, user_id: UUID) -> NightlyReview | None:
         result = await self.db.execute(
             select(NightlyReview)
             .where(NightlyReview.user_id == user_id)
@@ -56,7 +59,7 @@ class NightlyReviewService:
         )
         return result.scalar_one_or_none()
 
-    async def mark_reviewed(self, review_id: UUID, user_id: UUID) -> Optional[NightlyReview]:
+    async def mark_reviewed(self, review_id: UUID, user_id: UUID) -> NightlyReview | None:
         result = await self.db.execute(
             select(NightlyReview).where(
                 NightlyReview.id == review_id,
@@ -68,7 +71,7 @@ class NightlyReviewService:
             return None
 
         review.status = "reviewed"
-        review.reviewed_at = datetime.utcnow()
+        review.reviewed_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(review)
         return review
@@ -97,8 +100,8 @@ class NightlyReviewService:
 
     def _review_window(
         self,
-        timezone_name: Optional[str],
-        review_date: Optional[date],
+        timezone_name: str | None,
+        review_date: date | None,
     ):
         tz = None
         if timezone_name:
@@ -106,7 +109,7 @@ class NightlyReviewService:
                 tz = ZoneInfo(timezone_name)
             except Exception:
                 tz = None
-        now_local = datetime.utcnow().astimezone(tz) if tz else datetime.utcnow()
+        now_local = _utcnow().astimezone(tz) if tz else _utcnow()
         target_date = review_date or (now_local.date() - timedelta(days=1))
         start_local = datetime.combine(target_date, datetime.min.time())
         end_local = datetime.combine(target_date, datetime.max.time())
@@ -123,12 +126,12 @@ class NightlyReviewService:
         user_id: UUID,
         start: datetime,
         end: datetime,
-    ) -> List[ErrorRecord]:
+    ) -> list[ErrorRecord]:
         result = await self.db.execute(
             select(ErrorRecord).where(
                 and_(
                     ErrorRecord.user_id == user_id,
-                    ErrorRecord.is_deleted == False,
+                    not ErrorRecord.is_deleted,
                     ErrorRecord.created_at >= start,
                     ErrorRecord.created_at <= end,
                 )
@@ -136,7 +139,7 @@ class NightlyReviewService:
         )
         return list(result.scalars().all())
 
-    def _build_summary(self, errors: List[ErrorRecord], target_date: date) -> str:
+    def _build_summary(self, errors: list[ErrorRecord], target_date: date) -> str:
         if not errors:
             return f"{target_date.isoformat()} 没有新错题，保持节奏。"
 
@@ -146,7 +149,7 @@ class NightlyReviewService:
             f"主要集中在 {', '.join(subjects)}。"
         )
 
-    def _build_todos(self, errors: List[ErrorRecord]):
+    def _build_todos(self, errors: list[ErrorRecord]):
         if not errors:
             return []
         items = []
@@ -163,13 +166,13 @@ class NightlyReviewService:
             )
         return items
 
-    def _build_evidence_refs(self, errors: List[ErrorRecord]):
+    def _build_evidence_refs(self, errors: list[ErrorRecord]):
         refs = []
         for error in errors:
             refs.append({"type": "error", "id": str(error.id), "schema_version": "error.v1"})
         return refs
 
-    async def _latest_state(self, user_id: UUID) -> Optional[UserStateSnapshot]:
+    async def _latest_state(self, user_id: UUID) -> UserStateSnapshot | None:
         result = await self.db.execute(
             select(UserStateSnapshot)
             .where(UserStateSnapshot.user_id == user_id)

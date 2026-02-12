@@ -31,60 +31,72 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: const Text('生成任务'),
         actions: [
-          IconButton(
+          SparkleIconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.read(generationJobsProvider.notifier).fetchJobs();
             },
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
           ),
         ],
       ),
-      body: jobsState.when(
-        data: (jobs) => jobs.isEmpty
-            ? _buildEmptyState()
-            : RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(generationJobsProvider.notifier).fetchJobs(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  itemCount: jobs.length,
-                  itemBuilder: (context, index) {
-                    final job = jobs[index];
-                    return _JobCard(job: job);
-                  },
+      body: ContentConstraint(
+        child: jobsState.when(
+          data: (jobs) => jobs.isEmpty
+              ? _buildEmptyState()
+              : RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(generationJobsProvider.notifier).fetchJobs(),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: jobs.length,
+                    itemBuilder: (context, index) {
+                      final job = jobs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing16),
+                        child: _JobCard(job: job),
+                      );
+                    },
+                  ),
                 ),
-              ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('加载失败: $err')),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('加载失败: $err')),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.task_alt_outlined,
-              size: 64, color: DS.brandPrimary.withValues(alpha: 0.3),),
-          const SizedBox(height: DS.lg),
-          Text(
-            '还没有生成任务',
-            style: TextStyle(color: DS.textPrimary, fontSize: 16),
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            '在设置页面调整偏好并生成胶囊',
-            style: TextStyle(color: DS.textSecondary, fontSize: 14),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.task_alt_outlined,
+              size: 64,
+              color: DS.brandPrimary.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: DS.lg),
+            Text(
+              '还没有生成任务',
+              style: TextStyle(color: DS.textPrimary, fontSize: 16),
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              '在设置页面调整偏好并生成胶囊',
+              style: TextStyle(color: DS.textSecondary, fontSize: 14),
+            ),
+          ],
+        ),
+      );
 }
 
 class _JobCard extends StatelessWidget {
@@ -144,9 +156,7 @@ class _JobCard extends StatelessWidget {
                   vertical: DS.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? DS.neutral700
-                      : DS.neutral200,
+                  color: isDark ? DS.neutral700 : DS.neutral200,
                   borderRadius: DS.borderRadius8,
                 ),
                 child: Text(
@@ -246,19 +256,25 @@ class _JobCard extends StatelessWidget {
           ],
 
           // 完成后的胶囊链接
-          if (job.isCompleted && job.capsuleIds != null && job.capsuleIds!.isNotEmpty) ...[
+          if (job.isCompleted &&
+              job.capsuleIds != null &&
+              job.capsuleIds!.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Wrap(
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
-              children: job.capsuleIds!.map((id) => RawChip(
-                  label: Text('胶囊 $id'),
-                  avatar: const Icon(Icons.check_circle_outline, size: 16),
-                  backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
-                  onPressed: () {
-                    // TODO: 导航到胶囊详情
-                  },
-                ),).toList(),
+              children: job.capsuleIds!
+                  .map(
+                    (id) => RawChip(
+                      label: Text('胶囊 $id'),
+                      avatar: const Icon(Icons.check_circle_outline, size: 16),
+                      backgroundColor: isDark ? DS.neutral700 : DS.neutral200,
+                      onPressed: () {
+                        // TODO: 导航到胶囊详情
+                      },
+                    ),
+                  )
+                  .toList(),
             ),
           ],
 
@@ -268,30 +284,25 @@ class _JobCard extends StatelessWidget {
             children: [
               if (job.isFailed)
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: SparkleButton.outline(
+                    label: '重试',
                     onPressed: () {
                       // TODO: 重试
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: DS.primaryBase,
-                    ),
                   ),
                 ),
               if (job.isFailed) const SizedBox(width: DS.spacing8),
-              if (job.isCompleted && job.capsuleIds != null && job.capsuleIds!.isNotEmpty)
+              if (job.isCompleted &&
+                  job.capsuleIds != null &&
+                  job.capsuleIds!.isNotEmpty)
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: SparkleButton.primary(
+                    label: '查看胶囊',
                     onPressed: () {
                       // TODO: 查看生成的胶囊
                     },
                     icon: const Icon(Icons.visibility),
-                    label: const Text('查看胶囊'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: DS.primaryBase,
-                      foregroundColor: Colors.white,
-                    ),
                   ),
                 ),
             ],

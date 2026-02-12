@@ -23,7 +23,8 @@ class PlanSelectorPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPlanId = ref.watch(activePlanProvider);
-    final activePlans = ref.watch(planListProvider.select((s) => s.activePlans));
+    final activePlans =
+        ref.watch(planListProvider.select((s) => s.activePlans));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (selectedPlanId == null) {
@@ -40,7 +41,8 @@ class PlanSelectorPill extends ConsumerWidget {
     }
 
     // Find the selected plan details
-    final selectedPlan = activePlans.where((p) => p.id == selectedPlanId).firstOrNull;
+    final selectedPlan =
+        activePlans.where((p) => p.id == selectedPlanId).firstOrNull;
 
     if (selectedPlan == null) {
       // Plan not found in active plans - show unselected state
@@ -78,7 +80,7 @@ class PlanSelectorPill extends ConsumerWidget {
     unawaited(
       showModalBottomSheet<void>(
         context: context,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
         builder: (context) => _PlanSelectorSheet(activePlans: activePlans),
       ),
@@ -88,7 +90,9 @@ class PlanSelectorPill extends ConsumerWidget {
 
 class _UnselectedPill extends StatelessWidget {
   const _UnselectedPill({
-    required this.isDark, required this.onTap, super.key,
+    required this.isDark,
+    required this.onTap,
+    super.key,
   });
 
   final bool isDark;
@@ -96,45 +100,49 @@ class _UnselectedPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.ceramic.copyWith(
-            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.add_circle_outline,
-                size: DS.iconSizeSm,
-                color: DS.neutral500,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                '选择计划',
-                style: TextStyle(
-                  color: DS.neutral600,
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightMedium,
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              // Use surfaceTertiary to match Dashboard ceramic cards
+              backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.add_circle_outline,
+                  size: DS.iconSizeSm,
+                  color: DS.neutral500,
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  '选择计划',
+                  style: TextStyle(
+                    color: DS.neutral600,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _SelectedPill extends StatelessWidget {
   const _SelectedPill({
-    required this.plan, required this.isDark, required this.onTap, super.key,
+    required this.plan,
+    required this.isDark,
+    required this.onTap,
+    super.key,
   });
 
   final PlanModel plan;
@@ -179,7 +187,7 @@ class _SelectedPill extends StatelessWidget {
                 child: Text(
                   plan.name,
                   style: TextStyle(
-                    color: isDark ? DS.neutral100 : DS.neutral900,
+                    color: isDark ? DS.textPrimary : DS.neutral900,
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightMedium,
                   ),
@@ -191,11 +199,11 @@ class _SelectedPill extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing6,
-                  vertical: 2,
+                  vertical: DS.spacing4 / 2,
                 ),
                 decoration: BoxDecoration(
                   color: planColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(DS.spacing8),
                 ),
                 child: Text(
                   progressLabel,
@@ -223,7 +231,8 @@ class _SelectedPill extends StatelessWidget {
     final tasks = plan.tasks;
     if (tasks != null && tasks.isNotEmpty) {
       final total = tasks.length;
-      final completed = tasks.where((task) => task.status == TaskStatus.completed).length;
+      final completed =
+          tasks.where((task) => task.status == TaskStatus.completed).length;
       if (total > 0) {
         return '$completed/$total';
       }
@@ -234,9 +243,9 @@ class _SelectedPill extends StatelessWidget {
   Color _getPlanColor() {
     switch (plan.type) {
       case PlanType.sprint:
-        return isDark ? const Color(0xFFFF5252) : const Color(0xFFE53935);
+        return DS.error;
       case PlanType.growth:
-        return isDark ? const Color(0xFF66BB6A) : const Color(0xFF43A047);
+        return DS.success;
     }
   }
 
@@ -261,9 +270,9 @@ class _PlanSelectorSheet extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
+        color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(24),
+          top: Radius.circular(DS.spacing24),
         ),
       ),
       child: SafeArea(
@@ -272,12 +281,12 @@ class _PlanSelectorSheet extends StatelessWidget {
           children: [
             // Handle bar
             Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: DS.spacing40,
+              height: DS.spacing4,
+              margin: const EdgeInsets.symmetric(vertical: DS.spacing12),
               decoration: BoxDecoration(
                 color: isDark ? DS.neutral700 : DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(DS.spacing4 / 2),
               ),
             ),
             // Header
@@ -295,29 +304,32 @@ class _PlanSelectorSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
+                  SparkleIconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
+                    variant: ButtonVariant.ghost,
+                    size: DS.touchTargetMinSize,
                   ),
                 ],
               ),
             ),
             const Divider(height: 1),
             // Clear selection option
-            if (activePlans.isNotEmpty)
-              _ClearOptionTile(isDark: isDark),
+            if (activePlans.isNotEmpty) _ClearOptionTile(isDark: isDark),
             // Plans list
             if (activePlans.isEmpty)
               _EmptyState(isDark: isDark)
             else
-              ...activePlans.map((plan) => _PlanListTile(
-                    plan: plan,
-                    isDark: isDark,
-                  ),),
+              ...activePlans.map(
+                (plan) => _PlanListTile(
+                  plan: plan,
+                  isDark: isDark,
+                ),
+              ),
             const SizedBox(height: DS.spacing16),
           ],
         ),
@@ -350,7 +362,7 @@ class _ClearOptionTile extends ConsumerWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? DS.primaryBase.withValues(alpha: 0.1)
-              : Colors.transparent,
+              : DS.surfacePrimary.withValues(alpha: 0),
         ),
         child: Row(
           children: [
@@ -363,8 +375,9 @@ class _ClearOptionTile extends ConsumerWidget {
               '不使用计划上下文',
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
-                fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-                color: isDark ? DS.neutral100 : DS.neutral900,
+                fontWeight:
+                    isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+                color: isDark ? DS.textPrimary : DS.neutral900,
               ),
             ),
             const Spacer(),
@@ -410,10 +423,12 @@ class _PlanListTile extends ConsumerWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? planColor.withValues(alpha: 0.1)
-              : Colors.transparent,
+              : DS.surfacePrimary.withValues(alpha: 0),
           border: Border(
             left: BorderSide(
-              color: isSelected ? planColor : Colors.transparent,
+              color: isSelected
+                  ? planColor
+                  : DS.surfacePrimary.withValues(alpha: 0),
               width: 4,
             ),
           ),
@@ -441,14 +456,15 @@ class _PlanListTile extends ConsumerWidget {
                     plan.name,
                     style: TextStyle(
                       fontSize: DS.fontSizeBase,
-                      fontWeight:
-                          isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                      color: isDark ? DS.neutral100 : DS.neutral900,
+                      fontWeight: isSelected
+                          ? DS.fontWeightSemibold
+                          : DS.fontWeightMedium,
+                      color: isDark ? DS.textPrimary : DS.neutral900,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: DS.spacing4 / 2),
                   Row(
                     children: [
                       Text(
@@ -461,7 +477,7 @@ class _PlanListTile extends ConsumerWidget {
                       const SizedBox(width: DS.spacing8),
                       Icon(
                         Icons.circle,
-                        size: 4,
+                        size: DS.spacing4,
                         color: DS.neutral500,
                       ),
                       const SizedBox(width: DS.spacing8),
@@ -492,9 +508,9 @@ class _PlanListTile extends ConsumerWidget {
   Color _getPlanColor() {
     switch (plan.type) {
       case PlanType.sprint:
-        return isDark ? const Color(0xFFFF5252) : const Color(0xFFE53935);
+        return DS.error;
       case PlanType.growth:
-        return isDark ? const Color(0xFF66BB6A) : const Color(0xFF43A047);
+        return DS.success;
     }
   }
 
@@ -524,31 +540,31 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(DS.xl),
-      child: Column(
-        children: [
-          Icon(
-            Icons.event_busy_rounded,
-            size: 48,
-            color: DS.neutral400,
-          ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '暂无活跃计划',
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              color: DS.neutral600,
+        padding: const EdgeInsets.all(DS.xl),
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_busy_rounded,
+              size: DS.iconSize3xl,
+              color: DS.neutral400,
             ),
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            '创建一个计划后即可在此选择',
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.neutral500,
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '暂无活跃计划',
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                color: DS.neutral600,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '创建一个计划后即可在此选择',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.neutral500,
+              ),
+            ),
+          ],
+        ),
+      );
 }

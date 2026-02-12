@@ -45,10 +45,10 @@ class SubtaskListWidget extends ConsumerStatefulWidget {
   });
 
   final String parentTaskId;
-  final Function(SubTaskModel) onSubtaskToggle;
-  final Function(String) onSubtaskDelete;
-  final Function(String, String)? onSubtaskAdd;
-  final Function(List<SubTaskModel>)? onReorder;
+  final void Function(SubTaskModel) onSubtaskToggle;
+  final void Function(String) onSubtaskDelete;
+  final void Function(String, String)? onSubtaskAdd;
+  final void Function(List<SubTaskModel>)? onReorder;
   final bool readOnly;
 
   @override
@@ -86,85 +86,90 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
   }
 
   Widget _buildProgressIndicator() => Consumer(
-      builder: (context, ref, child) {
-        // Get subtasks from parent state (will be passed through parameters)
-        // For now, this is a placeholder - in real use, we'd get state from a provider
-        return const SizedBox.shrink();
-      },
-    );
+        builder: (context, ref, child) {
+          // Get subtasks from parent state (will be passed through parameters)
+          // For now, this is a placeholder - in real use, we'd get state from a provider
+          return const SizedBox.shrink();
+        },
+      );
 
   Widget _buildQuickAddInput() => Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _titleController,
-            style: TextStyle(color: DS.brandPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: '添加子任务...',
-              hintStyle: TextStyle(color: DS.brandPrimary38, fontSize: 14),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: DS.brandPrimary10,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: DS.md,
-                vertical: DS.sm,
-              ),
-              isDense: true,
-            ),
-            onSubmitted: (value) {
-              if (value.trim().isNotEmpty) {
-                widget.onSubtaskAdd?.call(widget.parentTaskId, value.trim());
-                _titleController.clear();
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: DS.sm),
-        IconButton(
-          onPressed: () {
-            if (_titleController.text.trim().isNotEmpty) {
-              widget.onSubtaskAdd?.call(
-                widget.parentTaskId,
-                _titleController.text.trim(),
-              );
-              _titleController.clear();
-            }
-          },
-          icon: Icon(Icons.add_circle, color: DS.primaryBase),
-          tooltip: '添加子任务',
-        ),
-      ],
-    );
-
-  Widget _buildSubtaskList() => Consumer(
-      builder: (context, ref, child) {
-        // This will be populated by parent state
-        // For now, show empty state
-        return _buildEmptyState();
-      },
-    );
-
-  Widget _buildEmptyState() => Container(
-      padding: const EdgeInsets.all(DS.lg),
-      alignment: Alignment.center,
-      child: Column(
         children: [
-          Icon(
-            Icons.checklist,
-            size: 48,
-            color: DS.brandPrimary38,
+          Expanded(
+            child: TextField(
+              controller: _titleController,
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: '添加子任务...',
+                hintStyle:
+                    TextStyle(color: DS.brandPrimary38Const, fontSize: 14),
+                border: InputBorder.none,
+                filled: true,
+                fillColor: DS.brandPrimary10,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: DS.md,
+                  vertical: DS.sm,
+                ),
+                isDense: true,
+              ),
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  widget.onSubtaskAdd?.call(widget.parentTaskId, value.trim());
+                  _titleController.clear();
+                }
+              },
+            ),
           ),
-          const SizedBox(height: DS.sm),
-          Text(
-            '暂无子任务',
-            style: TextStyle(
-              color: DS.brandPrimary54,
-              fontSize: 14,
+          const SizedBox(width: DS.sm),
+          Tooltip(
+            message: '添加子任务',
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              size: 36,
+              onPressed: () {
+                if (_titleController.text.trim().isNotEmpty) {
+                  widget.onSubtaskAdd?.call(
+                    widget.parentTaskId,
+                    _titleController.text.trim(),
+                  );
+                  _titleController.clear();
+                }
+              },
+              icon: Icon(Icons.add_circle, color: DS.primaryBase),
             ),
           ),
         ],
-      ),
-    );
+      );
+
+  Widget _buildSubtaskList() => Consumer(
+        builder: (context, ref, child) {
+          // This will be populated by parent state
+          // For now, show empty state
+          return _buildEmptyState();
+        },
+      );
+
+  Widget _buildEmptyState() => Container(
+        padding: const EdgeInsets.all(DS.lg),
+        alignment: Alignment.center,
+        child: Column(
+          children: [
+            Icon(
+              Icons.checklist,
+              size: 48,
+              color: DS.brandPrimary38Const,
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              '暂无子任务',
+              style: TextStyle(
+                color: DS.brandPrimary54,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 /// Single subtask item widget
@@ -179,77 +184,75 @@ class SubtaskItemWidget extends StatelessWidget {
   });
 
   final SubTaskModel subtask;
-  final Function() onToggle;
-  final Function() onDelete;
-  final Function(String)? onEdit;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+  final void Function(String)? onEdit;
   final bool isDragging;
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: const EdgeInsets.only(bottom: DS.xs),
-      decoration: BoxDecoration(
-        color: isDragging ? DS.brandPrimary10 : DS.surfaceBase,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: subtask.isCompleted
-              ? DS.semanticSuccess.withValues(alpha: 0.3)
-              : DS.brandPrimary10,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: DS.md,
-          vertical: DS.xs,
-        ),
-        leading: Checkbox(
-          value: subtask.isCompleted,
-          onChanged: (_) => onToggle(),
-          activeColor: DS.semanticSuccess,
-          checkColor: DS.brandPrimary,
-        ),
-        title: Text(
-          subtask.title,
-          style: TextStyle(
+        margin: const EdgeInsets.only(bottom: DS.xs),
+        decoration: BoxDecoration(
+          color: isDragging ? DS.brandPrimary10 : DS.surfaceBase,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
             color: subtask.isCompleted
-                ? DS.brandPrimary38
-                : DS.brandPrimary,
-            fontSize: 14,
-            decoration: subtask.isCompleted
-                ? TextDecoration.lineThrough
-                : null,
+                ? DS.semanticSuccess.withValues(alpha: 0.3)
+                : DS.brandPrimary10,
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
-        subtitle: subtask.description != null && subtask.description!.isNotEmpty
-            ? Text(
-                subtask.description!,
-                style: TextStyle(
-                  color: DS.brandPrimary54,
-                  fontSize: 12,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.drag_handle, color: DS.brandPrimary38, size: 20),
-            IconButton(
-              icon: Icon(Icons.close, color: DS.brandPrimary38, size: 18),
-              onPressed: onDelete,
-              tooltip: '删除',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: DS.md,
+            vertical: DS.xs,
+          ),
+          leading: Checkbox(
+            value: subtask.isCompleted,
+            onChanged: (_) => onToggle(),
+            activeColor: DS.semanticSuccess,
+            checkColor: DS.brandPrimary,
+          ),
+          title: Text(
+            subtask.title,
+            style: TextStyle(
+              color: subtask.isCompleted ? DS.brandPrimary38 : DS.brandPrimary,
+              fontSize: 14,
+              decoration:
+                  subtask.isCompleted ? TextDecoration.lineThrough : null,
             ),
-          ],
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle:
+              subtask.description != null && subtask.description!.isNotEmpty
+                  ? Text(
+                      subtask.description!,
+                      style: TextStyle(
+                        color: DS.brandPrimary54,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.drag_handle, color: DS.brandPrimary38Const, size: 20),
+              Tooltip(
+                message: '删除',
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 32,
+                  icon: Icon(Icons.close,
+                      color: DS.brandPrimary38Const, size: 18),
+                  onPressed: onDelete,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// Subtask progress indicator widget
@@ -281,7 +284,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary10,
+                  color: DS.brandPrimary10Const,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -290,9 +293,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
                 child: Container(
                   height: 4,
                   decoration: BoxDecoration(
-                    color: progress >= 1
-                        ? DS.semanticSuccess
-                        : DS.primaryBase,
+                    color: progress >= 1 ? DS.semanticSuccess : DS.primaryBase,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -305,7 +306,7 @@ class SubtaskProgressIndicator extends StatelessWidget {
           Text(
             '$completed/$total',
             style: TextStyle(
-              color: DS.brandPrimary70,
+              color: DS.brandPrimary70Const,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),

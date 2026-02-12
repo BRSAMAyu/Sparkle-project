@@ -15,9 +15,11 @@ class NotificationListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          variant: ButtonVariant.ghost,
+          size: DS.touchTargetMinSize,
         ),
         title: const Text('Notifications'),
       ),
@@ -26,12 +28,14 @@ class NotificationListScreen extends ConsumerWidget {
           if (notifications.isEmpty) {
             return const Center(child: Text('No new notifications'));
           }
-          return ListView.builder(
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return NotificationItem(notification: notification);
-            },
+          return ContentConstraint(
+            child: ListView.builder(
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                return NotificationItem(notification: notification);
+              },
+            ),
           );
         },
         loading: () => Center(child: LoadingIndicator.circular()),
@@ -47,8 +51,10 @@ class NotificationItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => ListTile(
-        title: Text(notification.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),),
+        title: Text(
+          notification.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(notification.content),
         trailing: !notification.isRead
             ? Icon(Icons.circle, size: 12, color: DS.brandPrimary)

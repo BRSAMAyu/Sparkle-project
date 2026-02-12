@@ -30,8 +30,33 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
   void initState() {
     super.initState();
     _gridState = List.filled(168, AgendaType.relax);
-    // TODO: Parse initialData if provided
+    _parseInitialData();
   }
+
+  void _parseInitialData() {
+    if (widget.initialData == null) return;
+
+    final data = widget.initialData!;
+    final grid = data['grid'] as List<dynamic>?;
+    if (grid != null && grid.length == 168) {
+      _gridState = grid.map((e) {
+        final typeStr = e as String?;
+        switch (typeStr) {
+          case 'busy':
+            return AgendaType.busy;
+          case 'fragmented':
+            return AgendaType.fragmented;
+          case 'relax':
+          default:
+            return AgendaType.relax;
+        }
+      }).toList();
+    }
+  }
+
+  Map<String, dynamic> _exportData() => {
+        'grid': _gridState.map((e) => e.name).toList(),
+      };
 
   void _updateCell(int index) {
     if (index >= 0 && index < 168) {
@@ -40,7 +65,8 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
         setState(() {
           _gridState[index] = _selectedType;
         });
-        // TODO: Call onChanged with structured data
+        // Call onChanged with structured data
+        widget.onChanged(_exportData());
       }
     }
   }
@@ -84,8 +110,10 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
               onTap: () => setState(() => _selectedType = type),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing8,
+                ),
                 decoration: BoxDecoration(
                   color:
                       _getColor(type).withValues(alpha: isSelected ? 1.0 : 0.5),
@@ -93,15 +121,16 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                   border: Border.all(
                     color: isSelected
                         ? (isDark ? DS.brandPrimary : DS.brandPrimary54)
-                        : Colors.transparent,
+                        : DS.surfacePrimary.withValues(alpha: 0),
                     width: 2,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                              color: _getColor(type).withValues(alpha: 0.4),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),),
+                            color: _getColor(type).withValues(alpha: 0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
                         ]
                       : null,
                 ),
@@ -117,7 +146,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.spacing16),
 
         // Content Area with LayoutBuilder
         LayoutBuilder(
@@ -151,7 +180,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.spacing8),
 
                 // Main Layout: Row [TimeLabels, Grid]
                 Row(
@@ -166,7 +195,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                           (hour) => Container(
                             height: cellHeight,
                             alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.only(right: DS.spacing6),
                             child: Text(
                               hour.toString().padLeft(2, '0'),
                               style: TextStyle(
@@ -185,14 +214,23 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     // The Grid Area
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(DS.spacing4),
                         child: GestureDetector(
                           onPanStart: (details) => _handleInput(
-                              details.localPosition, cellWidth, cellHeight,),
+                            details.localPosition,
+                            cellWidth,
+                            cellHeight,
+                          ),
                           onPanUpdate: (details) => _handleInput(
-                              details.localPosition, cellWidth, cellHeight,),
+                            details.localPosition,
+                            cellWidth,
+                            cellHeight,
+                          ),
                           onTapDown: (details) => _handleInput(
-                              details.localPosition, cellWidth, cellHeight,),
+                            details.localPosition,
+                            cellWidth,
+                            cellHeight,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: List.generate(
@@ -207,15 +245,17 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                                         color: _getColor(_gridState[index]),
                                         border: Border(
                                           right: BorderSide(
-                                              color: isDark
-                                                  ? DS.brandPrimary10
-                                                  : DS.brandPrimary.shade200,
-                                              width: 0.5,),
+                                            color: isDark
+                                                ? DS.brandPrimary10
+                                                : DS.brandPrimary.shade200,
+                                            width: 0.5,
+                                          ),
                                           bottom: BorderSide(
-                                              color: isDark
-                                                  ? DS.brandPrimary10
-                                                  : DS.brandPrimary.shade200,
-                                              width: 0.5,),
+                                            color: isDark
+                                                ? DS.brandPrimary10
+                                                : DS.brandPrimary.shade200,
+                                            width: 0.5,
+                                          ),
                                         ),
                                       ),
                                     ),

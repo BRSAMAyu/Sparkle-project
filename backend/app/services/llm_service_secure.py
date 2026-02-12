@@ -8,36 +8,35 @@
 创建时间: 2026-01-03
 """
 
-import json
-from typing import List, Dict, AsyncGenerator, Optional, Any
 import asyncio
-from loguru import logger
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from opentelemetry import trace
+from typing import Any
+
+from loguru import logger
 
 from app.config import settings
-from app.services.llm.base import LLMProvider
-from app.services.llm.providers import OpenAICompatibleProvider
-
-# 导入安全模块
-from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
-from app.core.llm_safety import LLMSafetyService
-from app.core.llm_quota import LLMCostGuard
-from app.core.llm_output_validator import LLMOutputValidator
-from app.core.llm_monitoring import LLMMonitor
 
 # Redis 客户端 (需要在应用启动时初始化)
 from app.core.cache import redis_client
+from app.core.llm_monitoring import LLMMonitor
+from app.core.llm_output_validator import LLMOutputValidator
+from app.core.llm_safety import LLMSafetyService
+
+# 导入安全模块
+from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
+from app.services.llm.base import LLMProvider
+from app.services.llm.providers import OpenAICompatibleProvider
 
 
 @dataclass
 class SecureLLMResponse:
     """安全增强的响应"""
     content: str
-    tool_calls: Optional[List[Dict]] = None
+    tool_calls: list[dict] | None = None
     finish_reason: str = "stop"
-    security_check: Optional[Dict] = None  # 安全检查结果
-    quota_usage: Optional[Dict] = None     # 配额使用情况
+    security_check: dict | None = None  # 安全检查结果
+    quota_usage: dict | None = None     # 配额使用情况
 
 
 class SecureLLMService:
@@ -76,7 +75,7 @@ class SecureLLMService:
         # 安全包装器
         security_config = SecurityConfig(
             enable_input_filter=True,
-            enable_quota_check=True,
+            enable_quota_check=settings.LLM_QUOTA_ENABLED,
             enable_output_validation=True,
             enable_monitoring=True,
             strict_mode=True,
@@ -102,8 +101,8 @@ class SecureLLMService:
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> str:
@@ -129,9 +128,9 @@ class SecureLLMService:
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        conversation_history: Optional[List[Dict]] = None,
-        model: Optional[str] = None
+        tools: list[dict[str, Any]],
+        conversation_history: list[dict] | None = None,
+        model: str | None = None
     ) -> SecureLLMResponse:
         """原始带工具调用方法"""
         model = model or self.default_model
@@ -166,8 +165,8 @@ class SecureLLMService:
 
     async def stream_chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> AsyncGenerator[str, None]:
@@ -195,9 +194,9 @@ class SecureLLMService:
 
     async def generate_embeddings(
         self,
-        texts: List[str],
-        model: Optional[str] = None
-    ) -> List[List[float]]:
+        texts: list[str],
+        model: str | None = None
+    ) -> list[list[float]]:
         """原始 Embedding 生成方法"""
         if model is None:
             model = settings.EMBEDDING_MODEL
@@ -212,8 +211,8 @@ class SecureLLMService:
     async def chat_secure(
         self,
         user_id: str,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> str:
@@ -250,9 +249,9 @@ class SecureLLMService:
         user_id: str,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]],
-        conversation_history: Optional[List[Dict]] = None,
-        model: Optional[str] = None
+        tools: list[dict[str, Any]],
+        conversation_history: list[dict] | None = None,
+        model: str | None = None
     ) -> SecureLLMResponse:
         """
         安全的带工具调用聊天
@@ -296,8 +295,8 @@ class SecureLLMService:
     async def stream_chat_secure(
         self,
         user_id: str,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         **kwargs
     ) -> AsyncGenerator[str, None]:
@@ -329,9 +328,9 @@ class SecureLLMService:
     async def generate_embeddings_secure(
         self,
         user_id: str,
-        texts: List[str],
-        model: Optional[str] = None
-    ) -> List[List[float]]:
+        texts: list[str],
+        model: str | None = None
+    ) -> list[list[float]]:
         """
         安全的 Embedding 生成
 
@@ -361,7 +360,7 @@ class SecureLLMService:
         self,
         user_id: str,
         text: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         快速安全检查 (不调用 LLM)
 
@@ -388,7 +387,7 @@ class SecureLLMService:
     async def get_user_quota(
         self,
         user_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取用户配额信息
 
@@ -426,7 +425,7 @@ class SecureLLMService:
     # 监控和健康检查
     # =============================================================================
 
-    def get_security_stats(self) -> Dict[str, Any]:
+    def get_security_stats(self) -> dict[str, Any]:
         """获取安全模块统计"""
         return {
             "safety_service": self.safety_service.get_security_stats(),
@@ -438,7 +437,7 @@ class SecureLLMService:
             }
         }
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """健康检查"""
         return {
             "service": "SecureLLMService",
@@ -454,7 +453,7 @@ class SecureLLMService:
     # Demo 模式支持
     # =============================================================================
 
-    def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
+    def _check_demo_match(self, messages: list[dict[str, str]]) -> str | None:
         """检查是否匹配演示关键词"""
         if not self.demo_mode:
             return None

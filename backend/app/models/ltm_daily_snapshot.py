@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Date, Index
+from sqlalchemy import JSON, Column, Date, Index
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import JSON
 
 from app.models.base import BaseModel
 

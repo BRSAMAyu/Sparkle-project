@@ -2,15 +2,27 @@
 Knowledge Galaxy Models
 知识星图相关模型
 """
-import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON, LargeBinary, BigInteger
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
@@ -25,10 +37,10 @@ class CollaborativeGalaxy(BaseModel):
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    
+
     # 可见性: private, shared, public
     visibility = Column(String(20), default="private", nullable=False)
-    
+
     # 关联学科 (可选)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
 
@@ -46,10 +58,10 @@ class GalaxyUserPermission(Base):
 
     galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
     user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
-    
+
     # 权限等级: owner, editor, viewer, contrib
     permission_level = Column(String(20), nullable=False)
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -68,7 +80,7 @@ class CRDTSnapshot(Base):
     galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
     state_data = Column(LargeBinary, nullable=False)  # Yjs 二进制更新
     operation_count = Column(Integer, default=0)
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -83,11 +95,11 @@ class CRDTOperationLog(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), nullable=False, index=True)
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    
+
     # 操作类型: add_node, update_mastery, delete_node, etc.
     operation_type = Column(String(50))
     operation_data = Column(JSONBCompat)
-    
+
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
@@ -100,20 +112,20 @@ class KnowledgeNode(BaseModel):
 
     # 关联学科 (Subject) - 注意: Subject 使用 Integer ID
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True, index=True)
-    
+
     # 父节点 (Parent Node) - 自关联
     parent_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True, index=True)
 
     # 节点名称
     name = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=True) # 英文名
-    
+
     # 描述
     description = Column(Text, nullable=True)
-    
+
     # 关键词 (使用 JSONB 优化搜索)
     keywords = Column(JSONBCompat, default=list, nullable=True)
-    
+
     # 重要性等级 (1-5), 决定星星大小
     importance_level = Column(Integer, default=1, nullable=False)
 
@@ -121,7 +133,7 @@ class KnowledgeNode(BaseModel):
     is_seed = Column(Boolean, default=False)
     source_type = Column(String(20), default='seed') # seed | user_created | llm_expanded | document_import
     source_task_id = Column(GUID(), nullable=True) # 来源任务ID
-    
+
     # Phase 5B: Document Engine Traceability
     source_file_id = Column(GUID(), ForeignKey("stored_files.id"), nullable=True)
     chunk_refs = Column(JSONBCompat, nullable=True) # List of chunk IDs or {chunk_id: score}
@@ -130,7 +142,7 @@ class KnowledgeNode(BaseModel):
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
     embedding = Column(VectorCompat, nullable=True)
-    
+
     # Layout Coordinates (for Viewport Query)
     position_x = Column(Float, nullable=True, index=True)
     position_y = Column(Float, nullable=True, index=True)
@@ -158,7 +170,7 @@ class NodeRelation(BaseModel):
 
     # 关系类型: prerequisite, related, application, composition, evolution
     relation_type = Column(String(30), nullable=False)
-    
+
     # 关系强度 (0-1)
     strength = Column(Float, default=0.5)
 
@@ -185,27 +197,27 @@ class UserNodeStatus(Base):
     # BKT 掌握概率 (0-1)
     bkt_mastery_prob = Column(Float, default=0.0, nullable=False)
     bkt_last_updated_at = Column(DateTime, nullable=True)
-    
+
     # 投入时间 (分钟)
     total_minutes = Column(Integer, default=0, nullable=False)
     total_study_minutes = Column(Integer, default=0, nullable=False) # 别名/冗余? Doc 用 total_study_minutes
-    
+
     study_count = Column(Integer, default=0) # 学习次数
-    
+
     # 状态标记
     is_unlocked = Column(Boolean, default=False, nullable=False)
     is_collapsed = Column(Boolean, default=False)
     is_favorite = Column(Boolean, default=False)
-    
+
     # 遗忘曲线相关
     last_study_at = Column(DateTime, nullable=True) # Doc uses last_study_at
     last_interacted_at = Column(DateTime, default=datetime.utcnow, nullable=False) # Keep for compatibility or remove?
     decay_paused = Column(Boolean, default=False)
     next_review_at = Column(DateTime, nullable=True, index=True)
-    
+
     # Logical clock for conflict resolution
     revision = Column(Integer, default=0, nullable=False)
-    
+
     # 元数据
     first_unlock_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -237,7 +249,7 @@ class StudyRecord(BaseModel):
     study_minutes = Column(Integer, nullable=False)
     mastery_delta = Column(Float, nullable=False)
     initial_mastery = Column(Float, nullable=True) # 学习前的掌握度
-    
+
     # record_type: task_complete, review, exploration
     record_type = Column(String(20), default='task_complete')
 
@@ -258,15 +270,15 @@ class NodeExpansionQueue(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     expansion_context = Column(Text, nullable=False)
-    
+
     # status: pending, processing, completed, failed
     status = Column(String(20), default='pending', index=True)
-    
+
     expanded_nodes = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
     prompt_version = Column(String(50), nullable=True)
     model_name = Column(String(50), nullable=True)
-    
+
     processed_at = Column(DateTime, nullable=True)
 
     # 关系

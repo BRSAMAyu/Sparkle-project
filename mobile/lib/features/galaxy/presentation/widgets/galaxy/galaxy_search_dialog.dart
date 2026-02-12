@@ -67,13 +67,13 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
 
   @override
   Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         insetPadding: const EdgeInsets.all(DS.xl),
         child: Container(
           width: double.infinity,
           height: 400,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E).withValues(alpha: 0.95),
+            color: DS.surfaceHigh.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: DS.brandPrimary24),
             boxShadow: [
@@ -94,7 +94,8 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
                   decoration: InputDecoration(
                     hintText: '搜索星系...',
                     hintStyle: TextStyle(
-                        color: DS.brandPrimary.withValues(alpha: 0.5),),
+                      color: DS.brandPrimary.withValues(alpha: 0.5),
+                    ),
                     prefixIcon: Icon(Icons.search, color: DS.brandPrimary70),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -103,7 +104,9 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
                     filled: true,
                     fillColor: DS.brandPrimary.withValues(alpha: 0.1),
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12,),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   onChanged: _onSearchChanged,
                   autofocus: true,
@@ -137,8 +140,8 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
                             ? Text(
                                 item.node.description!,
                                 style: TextStyle(
-                                    color:
-                                        DS.brandPrimary.withValues(alpha: 0.6),),
+                                  color: DS.brandPrimary.withValues(alpha: 0.6),
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               )

@@ -61,12 +61,9 @@ class _InteractiveOnboardingScreenState
               if (_currentPage < _totalPages - 1)
                 Align(
                   alignment: Alignment.topRight,
-                  child: TextButton(
+                  child: SparkleButton.ghost(
+                    label: '跳过',
                     onPressed: _skipAll,
-                    child: Text(
-                      '跳过',
-                      style: TextStyle(color: DS.brandPrimary70),
-                    ),
                   ),
                 ),
 
@@ -114,26 +111,9 @@ class _InteractiveOnboardingScreenState
                     ),
 
                     // Next/Done button
-                    ElevatedButton(
+                    SparkleButton.primary(
+                      label: _currentPage == _totalPages - 1 ? '开始使用' : '下一步',
                       onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: DS.brandPrimary.shade600,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _currentPage == _totalPages - 1 ? '开始使用' : '下一步',
-                        style: TextStyle(
-                          color: DS.brandPrimaryConst,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -164,7 +144,7 @@ class _InteractiveOnboardingScreenState
                     gradient: LinearGradient(
                       colors: [
                         DS.brandPrimary.shade400,
-                        Colors.purple.shade400,
+                        DS.prismPurple,
                       ],
                     ),
                     boxShadow: [
@@ -230,7 +210,10 @@ class _InteractiveOnboardingScreenState
       );
 
   Widget _buildFeaturePreview(
-          IconData icon, String title, String description,) =>
+    IconData icon,
+    String title,
+    String description,
+  ) =>
       Container(
         padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
@@ -308,7 +291,7 @@ class _InteractiveOnboardingScreenState
   // Page 3: Galaxy Feature
   Widget _buildGalaxyFeaturePage() => _buildFeaturePage(
         icon: Icons.auto_graph,
-        iconGradient: [DS.brandPrimary.shade400, Colors.cyan.shade400],
+        iconGradient: [DS.brandPrimary.shade400, DS.info],
         title: '知识星图',
         description: '将你的知识可视化为一张星图',
         features: [
@@ -323,7 +306,7 @@ class _InteractiveOnboardingScreenState
   // Page 4: Chat Feature
   Widget _buildChatFeaturePage() => _buildFeaturePage(
         icon: Icons.psychology,
-        iconGradient: [Colors.purple.shade400, Colors.pink.shade400],
+        iconGradient: [DS.prismPurple, DS.error],
         title: 'AI 对话',
         description: '你的智能学习伙伴',
         features: [
@@ -414,74 +397,76 @@ class _InteractiveOnboardingScreenState
     required List<String> features,
     required Widget demoWidget,
   }) =>
-      SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.xxl),
-        child: Column(
-          children: [
-            // Icon
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: iconGradient),
-                borderRadius: BorderRadius.circular(16),
+      ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: iconGradient),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, size: 48, color: DS.brandPrimary),
               ),
-              child: Icon(icon, size: 48, color: DS.brandPrimary),
-            ),
-            const SizedBox(height: DS.xl),
+              const SizedBox(height: DS.xl),
 
-            // Title
-            Text(
-              title,
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: DS.md),
-
-            // Description
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: DS.brandPrimary.withValues(alpha: 0.8),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: DS.xxl),
-
-            // Demo widget
-            demoWidget,
-            const SizedBox(height: DS.xxl),
-
-            // Features list
-            ...features.map(
-              (feature) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: iconGradient[0],
-                      size: 24,
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: Text(
-                        feature,
-                        style: TextStyle(
-                          color: DS.brandPrimaryConst,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
+              // Title
+              Text(
+                title,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: DS.md),
+
+              // Description
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: DS.brandPrimary.withValues(alpha: 0.8),
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: DS.xxl),
+
+              // Demo widget
+              demoWidget,
+              const SizedBox(height: DS.xxl),
+
+              // Features list
+              ...features.map(
+                (feature) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: iconGradient[0],
+                        size: 24,
+                      ),
+                      const SizedBox(width: DS.md),
+                      Expanded(
+                        child: Text(
+                          feature,
+                          style: TextStyle(
+                            color: DS.brandPrimaryConst,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
 
@@ -540,7 +525,7 @@ class _InteractiveOnboardingScreenState
           gradient: RadialGradient(
             colors: [
               DS.brandPrimary.withValues(alpha: 0.3),
-              Colors.transparent,
+              DS.surfacePrimary.withValues(alpha: 0),
             ],
           ),
           borderRadius: BorderRadius.circular(12),
@@ -579,7 +564,7 @@ class _InteractiveOnboardingScreenState
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
             color: isAI
-                ? Colors.purple.withValues(alpha: 0.2)
+                ? DS.prismPurple.withValues(alpha: 0.2)
                 : DS.brandPrimary.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -603,7 +588,7 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.sm),
             _buildTaskItem('训练任务', '完成10道练习题', DS.success),
             const SizedBox(height: DS.sm),
-            _buildTaskItem('反思任务', '总结本周学习收获', Colors.purple),
+            _buildTaskItem('反思任务', '总结本周学习收获', DS.prismPurple),
           ],
         ),
       );

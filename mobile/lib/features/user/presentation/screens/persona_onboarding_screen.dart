@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -39,34 +41,36 @@ class _PersonaOnboardingScreenState
       appBar: AppBar(
         title: const Text('画像引导'),
       ),
-      body: Stepper(
-        currentStep: _currentStep,
-        onStepContinue: _submitting ? null : () => _handleContinue(steps.length),
-        onStepCancel: _submitting ? null : _handleBack,
-        controlsBuilder: (context, details) {
-          final isLast = _currentStep == steps.length - 1;
-          return Row(
-            children: [
-              ElevatedButton(
-                onPressed: details.onStepContinue,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(isLast ? '完成' : '下一步'),
-              ),
-              const SizedBox(width: DS.spacing12),
-              if (_currentStep > 0)
-                TextButton(
-                  onPressed: details.onStepCancel,
-                  child: const Text('上一步'),
+      body: ContentConstraint(
+        child: Stepper(
+          currentStep: _currentStep,
+          onStepContinue: _submitting
+              ? null
+              : () {
+                  unawaited(_handleContinue(steps.length));
+                },
+          onStepCancel: _submitting ? null : _handleBack,
+          controlsBuilder: (context, details) {
+            final isLast = _currentStep == steps.length - 1;
+            return Row(
+              children: [
+                SparkleButton(
+                  label: isLast ? '完成' : '下一步',
+                  onPressed: details.onStepContinue,
+                  loading: _submitting,
                 ),
-            ],
-          );
-        },
-        steps: steps,
+                const SizedBox(width: DS.spacing12),
+                if (_currentStep > 0)
+                  SparkleButton(
+                    label: '上一步',
+                    variant: ButtonVariant.ghost,
+                    onPressed: details.onStepCancel,
+                  ),
+              ],
+            );
+          },
+          steps: steps,
+        ),
       ),
     );
   }

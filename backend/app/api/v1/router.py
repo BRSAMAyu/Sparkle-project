@@ -3,62 +3,66 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 from fastapi import APIRouter
-from app.config import settings
 
 from app.api.v1 import (
-    assets,
-    auth,
-    users,
-    galaxy,
-    chat,
-    tasks,
-    plans,
-    subjects,
-    statistics,
-    notifications,
-    capsules,
-    community,
-    cognitive,
-    omnibar,
-    dashboard,
-    analytics,
-    stt,
-    focus,
-    vocabulary,
-    translation,
-    audit,
-    dlq_admin,
-    health_production,
-   # graph_monitor,
-   # graphrag_trace,
-    decay_timemachine,
-    multi_agent,
-    learning_paths,
-    error_book,
-    ingestion,
-    files,
-    interventions,
-    events,
-    nightly_reviews,
-    feedback_admin,
-    memory,
-    memory_settings,
-    memory_admin,
-    preferences,
-    seed_libraries,
-    experiments,
     achievements,
-    multi_intent,
-    prediction,
-    recommendations,
+    analytics,
+    audit,
+    auth,
+    capsules,
+    chat,
+    cognitive,
+    community,
+    dashboard,
+    # graph_monitor,
+    # graphrag_trace,
+    decay_timemachine,
+    dlq_admin,
+    error_book,
+    events,
+    experiments,
+    feedback_admin,
+    files,
+    focus,
+    galaxy,
+    graph_monitor,
+    graphrag_trace,
+    health_production,
+    ingestion,
+    interventions,
+    inventory,
     leaderboards,
+    learning_paths,
+    memory,
+    memory_admin,
+    memory_settings,
     monitoring,
-    suggestions, # Vision Item 3
+    multi_agent,
+    multi_intent,
+    nightly_reviews,
+    notification_center,
+    notifications,
+    omnibar,
+    photons,
+    plans,
+    prediction,
+    preferences,
     profile_transparency,
-    user_settings,
+    recommendations,
+    seed_libraries,
+    shop,
+    statistics,
+    stt,
+    subjects,
+    suggestions,  # Vision Item 3
+    tasks,
+    translation,
     user_persona_batch,
+    user_settings,
+    users,
+    vocabulary,
 )
-from app.api.v1 import graph_monitor, graphrag_trace
+from app.config import settings
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -106,6 +110,11 @@ api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["le
 api_router.include_router(profile_transparency.router)
 api_router.include_router(user_settings.router)
 api_router.include_router(user_persona_batch.router)
+api_router.include_router(notification_center.router)
+# Shop & Photon system
+api_router.include_router(shop.router, prefix="/shop", tags=["shop"])
+api_router.include_router(photons.router, prefix="/photons", tags=["photons"])
+api_router.include_router(inventory.router, prefix="/inventory", tags=["inventory"])
 # WebSocket monitoring endpoints
 api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:
@@ -139,6 +148,9 @@ async def api_root():
             "/prediction",
             "/recommendations",
             "/leaderboards",
+            "/shop",
+            "/photons",
+            "/inventory",
             "/ws",
         ],
     }

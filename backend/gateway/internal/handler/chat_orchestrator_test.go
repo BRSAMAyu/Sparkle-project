@@ -3,10 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestChatInputUnmarshalWithFiles(t *testing.T) {
@@ -24,6 +26,20 @@ func TestChatInputUnmarshalWithFiles(t *testing.T) {
 	assert.Equal(t, "s1", input.SessionID)
 	assert.Equal(t, []string{"f1", "f2"}, input.FileIds)
 	assert.True(t, input.IncludeReferences)
+}
+
+func TestNormalizeChatMode(t *testing.T) {
+	assert.Equal(t, "standard", normalizeChatMode(""))
+	assert.Equal(t, "standard", normalizeChatMode("unknown"))
+	assert.Equal(t, "expert_auto", normalizeChatMode("expert_auto"))
+	assert.Equal(t, "expert::math_agent", normalizeChatMode("expert::math_agent"))
+}
+
+func TestWorkflowIDForChatMode(t *testing.T) {
+	assert.Equal(t, "standard_chat", workflowIDForChatMode("standard"))
+	assert.Equal(t, "deep_analysis_workflow", workflowIDForChatMode("deep_analysis"))
+	assert.Equal(t, "expert_auto_workflow", workflowIDForChatMode("expert_auto"))
+	assert.Equal(t, "expert_code_agent_workflow", workflowIDForChatMode("expert::code_agent"))
 }
 
 func TestConvertResponseToJSONCitations(t *testing.T) {
@@ -49,7 +65,7 @@ func TestConvertResponseToJSONCitations(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(resp, "")
 	citationsAny, ok := result["citations"].([]map[string]interface{})
 	assert.True(t, ok)
 	assert.Len(t, citationsAny, 1)
@@ -98,7 +114,7 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(resp, "")
 	assert.Equal(t, "intervention", result["type"])
 	intervention, ok := result["intervention"].(map[string]interface{})
 	assert.True(t, ok)
@@ -122,8 +138,92 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(resp, "")
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
+}
+
+func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-expert-meta",
+		RequestId:  "req-expert-meta",
+		Metadata: map[string]string{
+			"selected_experts":    `["deep_analyst","code_agent"]`,
+			"routing_strategy":    "auto_multi_expert",
+			"fallback_reason":     "",
+			"route_confidence":    "0.82",
+			"expert_entry_source": "auto",
+		},
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "done",
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	selected, ok := meta["selected_experts"].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, selected, 2)
+	assert.Equal(t, "auto_multi_expert", meta["routing_strategy"])
+	assert.Equal(t, "0.82", meta["route_confidence"])
+}
+
+func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-4",
+		RequestId:  "req-4",
+		EventTime:  timestamppb.New(now),
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "hello",
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	assert.Equal(t, now.UnixMilli(), result["event_time"])
+}
+
+func TestConvertResponseToJSONErrorIncludesEnumOnly(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-5",
+		RequestId:  "req-5",
+		Content: &agentv1.ChatResponse_Error{
+			Error: &agentv1.Error{
+				Message:   "Quota exhausted",
+				Retryable: false,
+				ErrorCode: agentv1.ErrorCode_ERROR_CODE_RATE_LIMITED,
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	errObj, ok := result["error"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "rate_limited", errObj["error_code"])
+}
+
+func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-6",
+		RequestId:  "req-6",
+		EventTime:  timestamppb.New(now),
+		Content: &agentv1.ChatResponse_Error{
+			Error: &agentv1.Error{
+				Message:   "Quota exhausted",
+				Retryable: false,
+				ErrorCode: agentv1.ErrorCode_ERROR_CODE_RATE_LIMITED,
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	errObj, ok := result["error"].(map[string]interface{})
+	assert.True(t, ok)
+	if _, ok := errObj["code"]; ok {
+		t.Fatal("did not expect legacy error.code in v2-only mode")
+	}
+	assert.Equal(t, "rate_limited", errObj["error_code"])
 }

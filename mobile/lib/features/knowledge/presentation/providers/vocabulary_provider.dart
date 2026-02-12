@@ -87,13 +87,13 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _repository.addToWordbook({
-        'word': word,
-        'definition': definition,
-        if (phonetic != null) 'phonetic': phonetic,
-        if (contextSentence != null) 'context_sentence': contextSentence,
-        if (taskId != null) 'task_id': taskId,
-      });
+      await _repository.addToWordbook(
+        word: word,
+        definition: definition,
+        phonetic: phonetic,
+        contextSentence: contextSentence,
+        taskId: taskId,
+      );
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {

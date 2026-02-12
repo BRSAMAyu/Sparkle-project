@@ -104,6 +104,15 @@ class ApiEndpoints {
   static String group(String id) => '/community/groups/$id';
   static String groupJoin(String id) => '/community/groups/$id/join';
   static String groupLeave(String id) => '/community/groups/$id/leave';
+  static String groupMembers(String id) => '/community/groups/$id/members';
+  static String groupMemberKick(String groupId, String userId) =>
+      '/community/groups/$groupId/members/$userId/kick';
+  static String groupMemberPromote(String groupId, String userId) =>
+      '/community/groups/$groupId/members/$userId/promote';
+  static String groupMemberDemote(String groupId, String userId) =>
+      '/community/groups/$groupId/members/$userId/demote';
+  static String groupTransferOwnership(String groupId, String userId) =>
+      '/community/groups/$groupId/members/$userId/transfer-ownership';
   static String groupMessages(String id) => '/community/groups/$id/messages';
   static String groupMessageRevoke(String groupId, String messageId) =>
       '/community/groups/$groupId/messages/$messageId/revoke';
@@ -209,6 +218,10 @@ class ApiEndpoints {
   static String interventionFeedback(String id) =>
       '/interventions/requests/$id/feedback';
 
+  // Intent Prediction
+  static const String intentPredict = '/prediction/intent/predict';
+  static const String intentTypes = '/prediction/intent/types';
+
   // Achievements
   static const String achievements = '/achievements';
   static const String achievementsStats = '/achievements/stats';
@@ -271,4 +284,20 @@ class ApiEndpoints {
   static String seedLibraryCrossQuery = '/seed-libraries/query';
   static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
   static String seedLibraryReplyTemplate = '/seed-libraries/query/reply-template';
+
+  // Shop System
+  static const String shopItems = '/shop/items';
+  static const String shopPurchase = '/shop/purchase';
+  static const String shopPurchases = '/shop/purchases';
+
+  // Photon System
+  static const String photonBalance = '/photons/balance';
+  static const String photonTransactions = '/photons/transactions';
+  static const String photonTransfer = '/photons/transfer';
+
+  // Inventory System
+  static const String inventory = '/inventory';
+  static const String inventoryEquip = '/inventory/equip';
+  static String inventoryConsumablesUse(String consumableId) =>
+      '/inventory/consumables/$consumableId/use';
 }

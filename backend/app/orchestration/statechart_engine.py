@@ -1,10 +1,12 @@
 import asyncio
 import inspect
 import uuid
-from typing import Dict, Any, Callable, List, Optional, Union, Coroutine, Set
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from loguru import logger
 from enum import Enum
+from typing import Any, Union
+
+from loguru import logger
 
 # ==========================================
 # 1. Core Data Structures
@@ -16,23 +18,23 @@ class WorkflowState:
     Workflow State Blackboard.
     Shared state passed between nodes.
     """
-    messages: List[Dict[str, str]] = field(default_factory=list)
-    context_data: Dict[str, Any] = field(default_factory=dict)
-    next_step: Optional[str] = None
-    errors: List[str] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
+    context_data: dict[str, Any] = field(default_factory=dict)
+    next_step: str | None = None
+    errors: list[str] = field(default_factory=list)
     is_finished: bool = False
-    
+
     # Trace ID for the current execution flow
     trace_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    
-    # For nested states: Stack of active graphs
-    # stack: List[str] = field(default_factory=list) 
 
-    def update(self, new_data: Dict[str, Any]):
+    # For nested states: Stack of active graphs
+    # stack: List[str] = field(default_factory=list)
+
+    def update(self, new_data: dict[str, Any]):
         """Update context data."""
         self.context_data.update(new_data)
 
-    def append_message(self, role: str, content: str, name: Optional[str] = None):
+    def append_message(self, role: str, content: str, name: str | None = None):
         """Append a message to history."""
         msg = {"role": role, "content": content}
         if name:
@@ -65,7 +67,7 @@ class GraphEvent:
     type: GraphEventType
     node_id: str
     state: WorkflowState
-    details: Optional[str] = None
+    details: str | None = None
     timestamp: float = field(default_factory=lambda: asyncio.get_event_loop().time())
 
 
@@ -85,19 +87,19 @@ class StateGraph:
     """
     def __init__(self, name: str = "RootGraph"):
         self.name = name
-        self.nodes: Dict[str, Union[Callable, 'StateGraph', List[Callable]]] = {}
-        self.edges: Dict[str, Union[str, Callable]] = {}
-        self.entry_point: Optional[str] = None
-        self.end_points: Set[str] = {"__end__"}
+        self.nodes: dict[str, Callable | StateGraph | list[Callable]] = {}
+        self.edges: dict[str, str | Callable] = {}
+        self.entry_point: str | None = None
+        self.end_points: set[str] = {"__end__"}
         self._compiled = False
-        
+
         # Hooks for monitoring
-        self.on_event: Optional[Callable[[GraphEvent], Coroutine[Any, Any, None]]] = None
+        self.on_event: Callable[[GraphEvent], Coroutine[Any, Any, None]] | None = None
         self.checkpointer: Any = None # Optional checkpointer interface
 
     def add_node(self, name: str, action: Union[Callable, 'StateGraph']):
         """
-        Register a node. 
+        Register a node.
         'action' can be a function or another StateGraph (Nested State).
         """
         self.nodes[name] = action
@@ -146,10 +148,10 @@ class StateGraph:
         assert self.entry_point is not None
         current_node_name: str = self.entry_point
         state = initial_state
-        
+
         # Load from checkpoint if available (TODO: Implement resume logic)
         # For now, we always start fresh or from provided state
-        
+
         steps = 0
 
         logger.info(f"🚀 [{self.name}] Starting execution from '{current_node_name}'")
@@ -159,14 +161,14 @@ class StateGraph:
             steps += 1
             logger.info(f"📍 [{self.name}] Executing node: {current_node_name}")
             await self._emit_event(GraphEventType.NODE_START, current_node_name, state)
-            
+
             # Save Checkpoint (Before execution)
             if self.checkpointer:
                 await self.checkpointer.save(state, current_node_name)
-            
+
             # 1. Execute Node
             node_action = self.nodes[current_node_name]
-            
+
             try:
                 # Check if it's a Nested Graph
                 if isinstance(node_action, StateGraph):
@@ -177,7 +179,7 @@ class StateGraph:
                     # Sync back state? Usually yes.
                     if new_state:
                         state = self._merge_state(state, new_state)
-                
+
                 # Check if it's a Parallel State (List of callables/graphs)
                 elif isinstance(node_action, list):
                     logger.info(f"🔀 Executing parallel nodes: {len(node_action)}")
@@ -191,7 +193,7 @@ class StateGraph:
                         new_state = await node_action(state)
                     else:
                         new_state = node_action(state)
-                    
+
                     if new_state:
                         state = self._merge_state(state, new_state)
 
@@ -206,7 +208,7 @@ class StateGraph:
             # 2. Transition (Next Hop)
             if current_node_name in self.edges:
                 edge = self.edges[current_node_name]
-                
+
                 if isinstance(edge, str):
                     next_node = edge
                 elif callable(edge):
@@ -215,7 +217,7 @@ class StateGraph:
                 else:
                     logger.warning(f"Unknown edge type for {current_node_name}")
                     next_node = "__end__"
-                
+
                 await self._emit_event(GraphEventType.EDGE_TRAVERSAL, f"{current_node_name}->{next_node}", state)
             else:
                 next_node = "__end__"
@@ -258,7 +260,7 @@ class StateGraph:
             return current_state
         return current_state
 
-    async def _execute_parallel(self, branches: List[Callable], state: WorkflowState) -> WorkflowState:
+    async def _execute_parallel(self, branches: list[Callable], state: WorkflowState) -> WorkflowState:
         """
         Execute multiple branches in parallel.
         Merges results back into the main state.
@@ -281,7 +283,7 @@ class StateGraph:
                 tasks.append(wrapper(branch, branch_state))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Merge logic: Combine messages and context
         # This is a naive merge strategy. Conflict resolution might be needed.
         for i, res in enumerate(results):
@@ -290,19 +292,19 @@ class StateGraph:
                 state.errors.append(f"Parallel branch {i} failed: {str(res)}")
             elif isinstance(res, WorkflowState):
                 # Append new messages
-                new_msgs = res.messages[len(state.messages):] # Only take new ones if strictly append-only? 
+                res.messages[len(state.messages):] # Only take new ones if strictly append-only?
                 # Actually, simpler to just append everything generated in the branch
                 # But since we cloned, 'state.messages' length is the baseline.
                 # Let's just blindly extend for now, assuming parallel branches don't chat over each other much.
                 # Better: Filter for messages added during branch execution.
-                
-                # We can't easily diff messages without IDs. 
+
+                # We can't easily diff messages without IDs.
                 # Let's assume branches add unique messages.
                 # A safer way is to return the delta.
-                
+
                 # Merge Context
                 state.context_data.update(res.context_data)
-                
+
                 # Merge messages (Naively append diff)
                 # Ideally, each branch should produce a distinct set of outputs.
                 # We'll just take the messages that are NOT in the original state.

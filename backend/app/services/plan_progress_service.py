@@ -4,8 +4,8 @@ PlanProgressService - Plan health evaluation and progress diagnostics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -24,10 +24,14 @@ class PlanHealthReport:
     user_id: UUID
     status: str
     severity: str
-    reasons: List[str] = field(default_factory=list)
-    metrics: Dict[str, Any] = field(default_factory=dict)
+    reasons: list[str] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
     requires_adjustment: bool = False
     recommended_action: str = "none"
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanProgressService:
@@ -97,7 +101,7 @@ class PlanProgressService:
         plan = await self._get_plan(user_id, plan_id)
         time_progress = self._compute_time_progress(plan)
 
-        reasons: List[str] = []
+        reasons: list[str] = []
         if overrun_count >= self.OVERRUN_COUNT_WARN:
             reasons.append("time_overrun")
         if feedback_stats.get("too_difficult", 0) >= self.FEEDBACK_COUNT_THRESHOLD:
@@ -158,7 +162,7 @@ class PlanProgressService:
             recommended_action=recommended_action,
         )
 
-    def _compute_completion_ratios(self, summaries: List[Dict[str, Any]]) -> List[float]:
+    def _compute_completion_ratios(self, summaries: list[dict[str, Any]]) -> list[float]:
         ratios = []
         for summary in summaries:
             estimated = summary.get("estimated_minutes")
@@ -170,7 +174,7 @@ class PlanProgressService:
                     continue
         return ratios
 
-    async def _get_feedback_stats(self, user_id: UUID, plan_id: UUID) -> Dict[str, int]:
+    async def _get_feedback_stats(self, user_id: UUID, plan_id: UUID) -> dict[str, int]:
         result = await self.db.execute(
             select(TaskFeedback)
             .join(Task, Task.id == TaskFeedback.task_id)
@@ -199,7 +203,7 @@ class PlanProgressService:
                 stats["too_short"] += 1
         return stats
 
-    async def _get_plan(self, user_id: UUID, plan_id: UUID) -> Optional[Plan]:
+    async def _get_plan(self, user_id: UUID, plan_id: UUID) -> Plan | None:
         result = await self.db.execute(
             select(Plan).where(
                 Plan.id == plan_id,
@@ -208,11 +212,11 @@ class PlanProgressService:
         )
         return result.scalar_one_or_none()
 
-    def _compute_time_progress(self, plan: Optional[Plan]) -> Optional[float]:
+    def _compute_time_progress(self, plan: Plan | None) -> float | None:
         if not plan or not plan.target_date or not plan.created_at:
             return None
         total_days = (plan.target_date - plan.created_at.date()).days
         if total_days <= 0:
             return None
-        elapsed_days = (datetime.utcnow().date() - plan.created_at.date()).days
+        elapsed_days = (_utcnow().date() - plan.created_at.date()).days
         return min(1.0, max(0.0, elapsed_days / total_days))

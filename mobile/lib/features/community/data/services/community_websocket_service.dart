@@ -139,7 +139,7 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.baseUrl}/api/v1/community/groups/$groupId/ws?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/groups/$groupId/ws?token=$token';
 
     debugPrint('[WS] Connecting to group: $groupId');
 
@@ -162,7 +162,7 @@ class CommunityWebSocketService {
       );
 
       // Give connection a moment to establish
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       if (_groupChannel != null) {
         _setGroupState(WsConnectionState.connected);
@@ -190,7 +190,7 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.baseUrl}/api/v1/community/ws/connect?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/ws/connect?token=$token';
 
     debugPrint('[WS] Connecting to personal channel');
 
@@ -213,7 +213,7 @@ class CommunityWebSocketService {
       );
 
       // Give connection a moment to establish
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       if (_personalChannel != null) {
         _setPersonalState(WsConnectionState.connected);
@@ -405,7 +405,7 @@ class CommunityWebSocketService {
     });
   }
 
-  void _handleGroupError(error) {
+  void _handleGroupError(Object error) {
     debugPrint('[WS] Group stream error: $error');
     _setGroupState(WsConnectionState.error);
   }
@@ -420,7 +420,7 @@ class CommunityWebSocketService {
     }
   }
 
-  void _handlePersonalError(error) {
+  void _handlePersonalError(Object error) {
     debugPrint('[WS] Personal stream error: $error');
     _setPersonalState(WsConnectionState.error);
   }
@@ -478,7 +478,7 @@ class CommunityWebSocketService {
   }
 
   /// Register a callback for message ACK (for client-side deduplication)
-  void registerAckCallback(String nonce, Function(String) callback) {
+  void registerAckCallback(String nonce, void Function(String) callback) {
     _pendingAcks[nonce] = callback;
   }
 }

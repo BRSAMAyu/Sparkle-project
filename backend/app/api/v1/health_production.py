@@ -10,22 +10,22 @@
 """
 
 import time
-from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
 from app.api.deps import get_current_active_superuser
-from app.models.user import User
-from app.core.cache import cache_service
 from app.config import settings
+from app.core.cache import cache_service
+from app.db.session import get_db
+from app.models.user import User
 
 # Prometheus metrics
 try:
-    from prometheus_client import Counter, Gauge, generate_latest
+    from prometheus_client import generate_latest
     from starlette.responses import Response
     PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -37,13 +37,13 @@ router = APIRouter(prefix="/health", tags=["Health"])
 START_TIME = time.time()
 
 
-@router.get("", response_model=Dict[str, Any])
-@router.get("/", response_model=Dict[str, Any])
+@router.get("", response_model=dict[str, Any])
+@router.get("/", response_model=dict[str, Any])
 async def health_check(
     db: AsyncSession = Depends(get_db),
     detailed: bool = False,
     current_user: User = Depends(get_current_active_superuser)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     基础健康检查
 
@@ -84,7 +84,7 @@ async def health_check(
         "version": settings.APP_VERSION,
         "environment": "production" if not settings.DEBUG else "development",
         "uptime_seconds": round(time.time() - START_TIME, 2),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }
 
     # 4. 基础响应
@@ -113,12 +113,12 @@ async def health_check(
     return response
 
 
-@router.get("/detailed", response_model=Dict[str, Any])
+@router.get("/detailed", response_model=dict[str, Any])
 async def health_detailed(
     db: AsyncSession = Depends(get_db),
-    orchestrator: Optional[Any] = None,
+    orchestrator: Any | None = None,
     current_user: User = Depends(get_current_active_superuser)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     详细健康检查（包含业务指标）
 
@@ -153,7 +153,7 @@ async def health_detailed(
 
 
 @router.get("/ready")
-async def readiness_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """
     就绪检查 - 用于 Kubernetes
 
@@ -179,7 +179,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
 
 
 @router.get("/live")
-async def liveness_check() -> Dict[str, Any]:
+async def liveness_check() -> dict[str, Any]:
     """
     存活检查 - 用于 Kubernetes
 
@@ -187,7 +187,7 @@ async def liveness_check() -> Dict[str, Any]:
     """
     return {
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }
 
 
@@ -216,7 +216,7 @@ async def prometheus_metrics(
 @router.get("/queue/status")
 async def queue_status(
     current_user: User = Depends(get_current_active_superuser)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     队列状态检查
 
@@ -264,7 +264,7 @@ async def queue_status(
 @router.get("/prometheus/alerts")
 async def prometheus_alerts(
     current_user: User = Depends(get_current_active_superuser)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     简单的告警规则（用于 Prometheus AlertManager）
 
@@ -307,5 +307,5 @@ async def prometheus_alerts(
     return {
         "alerts": alerts,
         "firing": len(alerts) > 0,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": _utcnow().isoformat()
     }

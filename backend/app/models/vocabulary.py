@@ -1,15 +1,13 @@
 """
 生词本与词典模型 (Vocabulary & Dictionary Models)
 """
-import enum
-from datetime import datetime, timedelta
-from sqlalchemy import (
-    Column, String, Text, Integer, Float, Boolean,
-    ForeignKey, DateTime, Index, JSON, UniqueConstraint
-)
+from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
+
 
 class WordBook(BaseModel):
     """

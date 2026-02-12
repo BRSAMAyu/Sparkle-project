@@ -12,18 +12,12 @@ LLM 监控与告警模块
 创建时间: 2026-01-03
 """
 
-import time
 import logging
-from typing import Optional, Dict, Any
+import time
 from functools import wraps
+from typing import Any
 
-from prometheus_client import (
-    Counter,
-    Histogram,
-    Gauge,
-    Info,
-    start_http_server
-)
+from prometheus_client import Counter, Gauge, Histogram, Info, start_http_server
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +150,7 @@ class LLMMonitor:
                     error_type = type(e).__name__
                     if "timeout" in str(e).lower():
                         status = "timeout"
-                    elif "quota" in str(e).lower():
-                        status = "blocked"
-                    elif "rate" in str(e).lower():
+                    elif "quota" in str(e).lower() or "rate" in str(e).lower():
                         status = "blocked"
 
                     # 记录任务失败
@@ -188,7 +180,7 @@ class LLMMonitor:
                     ACTIVE_TASKS.inc()
                     # 减少活跃任务 (延迟1ms后)
                     import asyncio
-                    asyncio.create_task(self._decrement_active_tasks())
+                    asyncio.create_task(LLMMonitor._decrement_active_tasks())
 
             return wrapper
         return decorator
@@ -247,7 +239,7 @@ class LLMMonitor:
     def record_security_event(
         event_type: str,
         severity: str,
-        details: Optional[Dict[str, Any]] = None
+        details: dict[str, Any] | None = None
     ):
         """
         记录安全事件
@@ -276,7 +268,7 @@ class LLMMonitor:
         user_id: str,
         pattern: str,
         risk_score: float,
-        details: Optional[str] = None
+        details: str | None = None
     ):
         """记录提示注入攻击尝试"""
         LLMMonitor.record_security_event(
@@ -364,7 +356,7 @@ class LLMMonitor:
     def record_performance_metric(
         metric_name: str,
         value: float,
-        labels: Optional[Dict[str, str]] = None
+        labels: dict[str, str] | None = None
     ):
         """
         记录自定义性能指标
@@ -430,7 +422,7 @@ class LLMMonitor:
     # =============================================================================
 
     @staticmethod
-    def get_health_status() -> Dict[str, Any]:
+    def get_health_status() -> dict[str, Any]:
         """
         获取当前健康状态
 

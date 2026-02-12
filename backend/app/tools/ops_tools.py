@@ -1,7 +1,9 @@
-from typing import Any, Dict, List, Optional
-import httpx
 from datetime import datetime, timedelta
+from typing import Any
+
+import httpx
 from pydantic import BaseModel, Field
+
 from .base import BaseTool, ToolCategory, ToolResult
 
 # ============ Schemas ============
@@ -33,7 +35,7 @@ class CheckSystemStatusTool(BaseTool):
     parameters_schema = CheckSystemStatusParams
     requires_confirmation = False
 
-    async def execute(self, params: CheckSystemStatusParams, user_id: str, db_session: Any, tool_call_id: Optional[str] = None) -> ToolResult:
+    async def execute(self, params: CheckSystemStatusParams, user_id: str, db_session: Any, tool_call_id: str | None = None) -> ToolResult:
         metrics = {}
         prometheus_url = "http://sparkle_prometheus:9090"
 
@@ -106,12 +108,12 @@ class QueryErrorLogsTool(BaseTool):
     parameters_schema = QueryErrorLogsParams
     requires_confirmation = False
 
-    async def execute(self, params: QueryErrorLogsParams, user_id: str, db_session: Any, tool_call_id: Optional[str] = None) -> ToolResult:
+    async def execute(self, params: QueryErrorLogsParams, user_id: str, db_session: Any, tool_call_id: str | None = None) -> ToolResult:
         loki_url = "http://sparkle_loki:3100"
         # Query: {container=~"sparkle.+"} |= "error"
         # Adjust based on Promtail config labels
         query = '{container=~"sparkle_backend|sparkle_gateway"} |= "error"'
-        
+
         start_time = int((datetime.now() - timedelta(minutes=params.minutes)).timestamp() * 1e9)
 
         try:
@@ -121,7 +123,7 @@ class QueryErrorLogsTool(BaseTool):
                     "start": start_time,
                     "limit": params.limit
                 })
-                
+
                 if resp.status_code != 200:
                     return ToolResult(
                         success=False,

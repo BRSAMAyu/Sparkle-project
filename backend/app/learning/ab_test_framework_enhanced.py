@@ -8,22 +8,25 @@ This module extends the existing Redis-based framework with:
 - Experiment lifecycle management
 - Statistical analysis integration
 """
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
 import hashlib
+from datetime import UTC, datetime
+
 from loguru import logger
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
 
 from app.models.experiment import (
     ABExperiment,
-    ABExperimentVariant,
-    ABExperimentMetric,
     ABExperimentAssignment,
+    ABExperimentMetric,
+    ABExperimentVariant,
     ExperimentStatus,
-    MetricType,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ABTestFrameworkEnhanced:
@@ -44,13 +47,13 @@ class ABTestFrameworkEnhanced:
         name: str,
         description: str,
         hypothesis: str,
-        variants: List[Dict],
-        metrics: List[str],
+        variants: list[dict],
+        metrics: list[str],
         created_by: str,
-        sample_size_target: Optional[int] = None,
+        sample_size_target: int | None = None,
         significance_level: float = 0.05,
         power: float = 0.8,
-        minimum_detectable_effect: Optional[float] = None,
+        minimum_detectable_effect: float | None = None,
     ) -> ABExperiment:
         """
         Create a new A/B test experiment with database persistence.
@@ -85,8 +88,8 @@ class ABTestFrameworkEnhanced:
             significance_level=significance_level,
             power=power,
             minimum_detectable_effect=minimum_detectable_effect,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
 
         self.db.add(experiment)
@@ -108,8 +111,8 @@ class ABTestFrameworkEnhanced:
                 configuration=variant_config.get("configuration"),
                 allocation_weight=weight,
                 traffic_allocation_percentage=traffic_percentage,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(variant)
 
@@ -128,8 +131,8 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Experiment {experiment_id} not found")
 
         experiment.status = ExperimentStatus.RUNNING
-        experiment.start_date = datetime.utcnow()
-        experiment.updated_at = datetime.utcnow()
+        experiment.start_date = _utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Started experiment {experiment_id}")
@@ -146,7 +149,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot pause experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.PAUSED
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Paused experiment {experiment_id}")
@@ -163,7 +166,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot resume experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.RUNNING
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Resumed experiment {experiment_id}")
@@ -174,7 +177,7 @@ class ABTestFrameworkEnhanced:
         self,
         experiment_id: str,
         conclusion: str,
-        winning_variant_id: Optional[str] = None,
+        winning_variant_id: str | None = None,
     ) -> ABExperiment:
         """
         Complete an experiment with results.
@@ -195,10 +198,10 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"Cannot complete experiment in status {experiment.status}")
 
         experiment.status = ExperimentStatus.COMPLETED
-        experiment.end_date = datetime.utcnow()
+        experiment.end_date = _utcnow()
         experiment.conclusion = conclusion
         experiment.winning_variant_id = winning_variant_id
-        experiment.updated_at = datetime.utcnow()
+        experiment.updated_at = _utcnow()
 
         await self.db.commit()
         logger.info(f"Completed experiment {experiment_id}")
@@ -209,7 +212,7 @@ class ABTestFrameworkEnhanced:
         self,
         experiment_id: str,
         user_id: str,
-    ) -> Tuple[ABExperimentVariant, bool]:
+    ) -> tuple[ABExperimentVariant, bool]:
         """
         Assign user to a variant (deterministic).
 
@@ -226,7 +229,7 @@ class ABTestFrameworkEnhanced:
                 and_(
                     ABExperimentAssignment.experiment_id == experiment_id,
                     ABExperimentAssignment.user_id == user_id,
-                    ABExperimentAssignment.is_excluded == False,
+                    not ABExperimentAssignment.is_excluded,
                 )
             )
         )
@@ -249,7 +252,7 @@ class ABTestFrameworkEnhanced:
             raise ValueError(f"No variants found for experiment {experiment_id}")
 
         # Deterministic assignment based on hash
-        digest = hashlib.sha256(f"{user_id}:{experiment_id}".encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(f"{user_id}:{experiment_id}".encode()).hexdigest()
         hash_val = int(digest, 16) % 10000
         cumulative = 0
 
@@ -268,9 +271,9 @@ class ABTestFrameworkEnhanced:
             experiment_id=experiment_id,
             user_id=user_id,
             variant_id=assigned_variant.id,
-            assignment_date=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            assignment_date=_utcnow(),
+            created_at=_utcnow(),
+            updated_at=_utcnow(),
         )
         self.db.add(assignment)
         await self.db.commit()
@@ -285,8 +288,8 @@ class ABTestFrameworkEnhanced:
         metric_name: str,
         metric_value: float,
         metric_type: str,
-        user_id: Optional[str] = None,
-        context_data: Optional[Dict] = None,
+        user_id: str | None = None,
+        context_data: dict | None = None,
     ):
         """
         Record a metric for an experiment variant.
@@ -308,8 +311,8 @@ class ABTestFrameworkEnhanced:
             metric_value=metric_value,
             metric_type=metric_type,
             context_data=context_data,
-            timestamp=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            timestamp=_utcnow(),
+            created_at=_utcnow(),
         )
         self.db.add(metric)
         await self.db.commit()
@@ -318,7 +321,7 @@ class ABTestFrameworkEnhanced:
             f"Recorded metric {metric_name}={metric_value} for variant {variant_id}"
         )
 
-    async def get_experiment_stats(self, experiment_id: str) -> Dict:
+    async def get_experiment_stats(self, experiment_id: str) -> dict:
         """
         Get aggregate statistics for an experiment.
 
@@ -399,11 +402,11 @@ class ABTestFrameworkEnhanced:
 
     async def list_experiments(
         self,
-        status: Optional[ExperimentStatus] = None,
-        created_by: Optional[str] = None,
+        status: ExperimentStatus | None = None,
+        created_by: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[ABExperiment]:
+    ) -> list[ABExperiment]:
         """
         List experiments with optional filtering.
 
@@ -429,7 +432,7 @@ class ABTestFrameworkEnhanced:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def _cache_experiment_config(self, experiment: ABExperiment, variants: List[Dict]):
+    async def _cache_experiment_config(self, experiment: ABExperiment, variants: list[dict]):
         """Cache experiment config in Redis for fast access."""
         import json
 

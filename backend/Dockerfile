@@ -7,8 +7,8 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install uv for fast dependency resolution
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Install uv for fast dependency resolution without external image dependency
+RUN pip install --no-cache-dir uv
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,7 +38,9 @@ RUN uv pip install --system --no-cache \
     langchain-community langchain-core langchain-text-splitters \
     langchain-huggingface dashscope \
     cryptography pydantic-settings tiktoken \
-    openpyxl python-multipart
+    openpyxl python-multipart \
+    # HTML parsing utils (keep lightweight optional parsers)
+    beautifulsoup4 lxml
 # Final stage
 FROM python:3.11-slim
 

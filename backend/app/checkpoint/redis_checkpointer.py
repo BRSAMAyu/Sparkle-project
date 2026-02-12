@@ -1,7 +1,10 @@
 import json
-from typing import Optional, Any, Dict
+from typing import Any
+
 from loguru import logger
+
 from app.orchestration.statechart_engine import WorkflowState
+
 
 class RedisCheckpointer:
     """
@@ -21,7 +24,7 @@ class RedisCheckpointer:
             return
 
         key = f"checkpoint:{session_id}"
-        
+
         # Serialize state
         # Filter out non-serializable objects from context
         safe_context = {}
@@ -43,14 +46,14 @@ class RedisCheckpointer:
             "is_finished": state.is_finished,
             "trace_id": state.trace_id
         }
-        
+
         try:
             await self.redis.set(key, json.dumps(data), ex=self.ttl)
             logger.debug(f"Saved checkpoint for session {session_id} at node {node_id}")
         except Exception as e:
             logger.error(f"Failed to save checkpoint: {e}")
 
-    async def load(self, session_id: str) -> Optional[WorkflowState]:
+    async def load(self, session_id: str) -> WorkflowState | None:
         """Load state from checkpoint."""
         if not self.redis:
             return None
@@ -60,9 +63,9 @@ class RedisCheckpointer:
             data_str = await self.redis.get(key)
             if not data_str:
                 return None
-            
+
             data = json.loads(data_str)
-            
+
             state = WorkflowState(
                 messages=data.get("messages", []),
                 context_data=data.get("context_data", {}),

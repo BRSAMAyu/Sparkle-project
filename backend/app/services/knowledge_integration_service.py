@@ -7,18 +7,20 @@ Creates draft knowledge nodes that users can review and publish.
 Author: Claude Code (Opus 4.5)
 Created: 2026-01-15
 """
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
-from uuid import UUID
 import uuid
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.models.user import User
 from app.services.embedding_service import embedding_service
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class KnowledgeIntegrationService:
@@ -40,11 +42,11 @@ class KnowledgeIntegrationService:
         source_text: str,
         translation: str,
         context: str,
-        source_url: Optional[str] = None,
-        source_document_id: Optional[UUID] = None,
+        source_url: str | None = None,
+        source_document_id: UUID | None = None,
         language: str = "en",
-        domain: Optional[str] = None,
-        subject_id: Optional[int] = None,
+        domain: str | None = None,
+        subject_id: int | None = None,
     ) -> KnowledgeNode:
         """
         Create or update a vocabulary knowledge node from a translation.
@@ -82,7 +84,7 @@ class KnowledgeIntegrationService:
             description = self._format_vocabulary_description(
                 source_text, translation, context, language, source_url
             )
-            
+
             node = KnowledgeNode(
                 id=uuid.uuid4(),
                 name=source_text,
@@ -95,8 +97,8 @@ class KnowledgeIntegrationService:
                 source_file_id=source_document_id,
                 status="draft",  # Allow user review before publishing
                 subject_id=subject_id,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
 
             self.db.add(node)
@@ -110,9 +112,9 @@ class KnowledgeIntegrationService:
                 node_id=node.id,
                 mastery_score=0.0,
                 is_unlocked=True,
-                first_unlock_at=datetime.utcnow(),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                first_unlock_at=_utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
 
             self.db.add(user_status)
@@ -138,7 +140,7 @@ class KnowledgeIntegrationService:
         node: KnowledgeNode,
         user_id: UUID,
         context: str,
-        source_url: Optional[str]
+        source_url: str | None
     ) -> KnowledgeNode:
         """Handle logic when vocabulary node already exists."""
         # 1. Ensure User Status Exists
@@ -156,9 +158,9 @@ class KnowledgeIntegrationService:
                 node_id=node.id,
                 mastery_score=0.0,
                 is_unlocked=True,
-                first_unlock_at=datetime.utcnow(),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                first_unlock_at=_utcnow(),
+                created_at=_utcnow(),
+                updated_at=_utcnow(),
             )
             self.db.add(user_status)
             await self._schedule_first_review(user_status)
@@ -171,11 +173,11 @@ class KnowledgeIntegrationService:
                 append_text = f"\n\n**其他场景**:\n{context}"
                 if source_url:
                     append_text += f"\n*来源: {source_url}*"
-                
+
                 node.description += append_text
-                node.updated_at = datetime.utcnow()
+                node.updated_at = _utcnow()
                 logger.info(f"📝 Appended context to node {node.id}")
-        
+
         await self.db.commit()
         await self.db.refresh(node)
         return node
@@ -186,7 +188,7 @@ class KnowledgeIntegrationService:
         translation: str,
         context: str,
         language: str,
-        source_url: Optional[str] = None
+        source_url: str | None = None
     ) -> str:
         """Format node description with translation and context."""
         description_parts = []
@@ -205,7 +207,7 @@ class KnowledgeIntegrationService:
                 f"**{source_text}**"
             )
             description_parts.append(f"\n**使用场景**:\n{highlighted_context}")
-            
+
         if source_url:
             description_parts.append(f"\n*来源: {source_url}*")
 
@@ -222,8 +224,8 @@ class KnowledgeIntegrationService:
         - First review: 24 hours
         - Subsequent reviews determined by mastery score
         """
-        user_status.next_review_at = datetime.utcnow() + timedelta(hours=24)
-        user_status.last_study_at = datetime.utcnow()
+        user_status.next_review_at = _utcnow() + timedelta(hours=24)
+        user_status.last_study_at = _utcnow()
 
         logger.debug(f"📅 Scheduled first review: node={user_status.node_id}, "
                     f"review_at={user_status.next_review_at}")
@@ -232,7 +234,7 @@ class KnowledgeIntegrationService:
         self,
         node_id: UUID,
         name: str,
-        description: Optional[str]
+        description: str | None
     ):
         """
         Generate embedding for the node (async, non-blocking).
@@ -253,7 +255,7 @@ class KnowledgeIntegrationService:
 
             if node:
                 node.embedding = embedding
-                node.updated_at = datetime.utcnow()
+                node.updated_at = _utcnow()
                 await self.db.commit()
                 logger.debug(f"✅ Generated embedding for node {node_id}")
             else:
@@ -298,7 +300,7 @@ class KnowledgeIntegrationService:
 
         # Publish node
         node.status = "published"
-        node.updated_at = datetime.utcnow()
+        node.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(node)
@@ -350,9 +352,9 @@ class KnowledgeIntegrationService:
         self,
         node_id: UUID,
         user_id: UUID,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        keywords: Optional[list] = None,
+        name: str | None = None,
+        description: str | None = None,
+        keywords: list | None = None,
     ) -> KnowledgeNode:
         """
         Update node content before publishing.
@@ -397,7 +399,7 @@ class KnowledgeIntegrationService:
         if keywords is not None:
             node.keywords = keywords
 
-        node.updated_at = datetime.utcnow()
+        node.updated_at = _utcnow()
 
         await self.db.commit()
         await self.db.refresh(node)

@@ -1,14 +1,15 @@
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 from langchain_core.tools import tool
 
 
 @tool
 def query_knowledge(
     query: str,
-    subject_id: Optional[str] = None,
+    subject_id: str | None = None,
     limit: int = 10,
     use_vector_search: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Query the user's knowledge graph for relevant nodes."""
     return {
         "query": query,
@@ -22,10 +23,10 @@ def query_knowledge(
 def create_knowledge_node(
     title: str,
     summary: str,
-    subject_id: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    parent_node_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    subject_id: str | None = None,
+    tags: list[str] | None = None,
+    parent_node_id: str | None = None,
+) -> dict[str, Any]:
     """Create a knowledge node in the user's knowledge graph."""
     return {
         "title": title,
@@ -41,7 +42,7 @@ def link_nodes(
     source_node_id: str,
     target_node_id: str,
     relation_type: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Link two knowledge nodes by relation type."""
     return {
         "source_node_id": source_node_id,
@@ -54,12 +55,12 @@ def link_nodes(
 def create_plan(
     title: str,
     plan_type: str,
-    plan_stage: Optional[str] = None,
-    subject_id: Optional[str] = None,
-    target_date: Optional[str] = None,
-    target_mastery: Optional[float] = None,
-    description: Optional[str] = None,
-) -> Dict[str, Any]:
+    plan_stage: str | None = None,
+    subject_id: str | None = None,
+    target_date: str | None = None,
+    target_mastery: float | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
     """Create a study plan (sprint or growth)."""
     return {
         "title": title,
@@ -78,7 +79,7 @@ def generate_tasks_for_plan(
     topic: str,
     difficulty: str = "medium",
     task_count: int = 5,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate executable tasks for a specific plan."""
     return {
         "plan_id": plan_id,
@@ -91,13 +92,13 @@ def generate_tasks_for_plan(
 @tool
 def create_task(
     title: str,
-    description: Optional[str] = None,
+    description: str | None = None,
     task_type: str = "learning",
-    estimated_minutes: Optional[int] = None,
-    subject_id: Optional[str] = None,
-    due_date: Optional[str] = None,
+    estimated_minutes: int | None = None,
+    subject_id: str | None = None,
+    due_date: str | None = None,
     priority: int = 2,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a single task."""
     return {
         "title": title,
@@ -111,7 +112,7 @@ def create_task(
 
 
 @tool
-def batch_create_tasks(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
+def batch_create_tasks(tasks: list[dict[str, Any]]) -> dict[str, Any]:
     """Create tasks in batch."""
     return {"tasks": tasks}
 
@@ -119,12 +120,46 @@ def batch_create_tasks(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
 @tool
 def suggest_focus_session(
     duration_minutes: int = 25,
-    task_id: Optional[str] = None,
-    task_title: Optional[str] = None,
-) -> Dict[str, Any]:
+    task_id: str | None = None,
+    task_title: str | None = None,
+) -> dict[str, Any]:
     """Suggest a focus session duration and task binding."""
     return {
         "duration_minutes": duration_minutes,
         "task_id": task_id,
         "task_title": task_title,
+    }
+
+
+@tool
+def record_error(
+    question: str,
+    wrong_answer: str | None = None,
+    correct_answer: str | None = None,
+    error_type: str | None = None,
+    root_cause: str | None = None,
+    subject: str = "math",
+) -> dict[str, Any]:
+    """Record an error into error book."""
+    return {
+        "question": question,
+        "wrong_answer": wrong_answer,
+        "correct_answer": correct_answer,
+        "error_type": error_type,
+        "root_cause": root_cause,
+        "subject": subject,
+    }
+
+
+@tool
+def query_error_history(
+    subject: str | None = None,
+    error_type: str | None = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Query user's historical errors."""
+    return {
+        "subject": subject,
+        "error_type": error_type,
+        "limit": limit,
     }

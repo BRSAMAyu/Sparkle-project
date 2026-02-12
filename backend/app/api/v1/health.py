@@ -2,26 +2,31 @@
 Health Check API
 健康检查端点 - 包含数据库连接状态检查
 """
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db, engine
 from app.config import settings
+from app.db.session import engine, get_db
 
 router = APIRouter()
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with existing DB columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DatabaseHealth(BaseModel):
     """数据库健康状态"""
     connected: bool
-    latency_ms: Optional[float] = None
-    pool_size: Optional[int] = None
-    pool_checked_out: Optional[int] = None
-    error: Optional[str] = None
+    latency_ms: float | None = None
+    pool_size: int | None = None
+    pool_checked_out: int | None = None
+    error: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -30,24 +35,24 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     version: str
     database: DatabaseHealth
-    uptime_seconds: Optional[float] = None
+    uptime_seconds: float | None = None
 
 
 # 记录启动时间
-_start_time: Optional[datetime] = None
+_start_time: datetime | None = None
 
 
 def set_start_time():
     """设置启动时间（在应用启动时调用）"""
     global _start_time
-    _start_time = datetime.utcnow()
+    _start_time = _utcnow()
 
 
-def get_uptime_seconds() -> Optional[float]:
+def get_uptime_seconds() -> float | None:
     """获取运行时间（秒）"""
     if _start_time is None:
         return None
-    return (datetime.utcnow() - _start_time).total_seconds()
+    return (_utcnow() - _start_time).total_seconds()
 
 
 async def check_database_health(db: AsyncSession) -> DatabaseHealth:
@@ -57,12 +62,12 @@ async def check_database_health(db: AsyncSession) -> DatabaseHealth:
     执行简单的 SELECT 1 查询来验证连接
     """
     try:
-        start = datetime.utcnow()
+        start = _utcnow()
 
         # 执行简单查询验证连接
         await db.execute(text("SELECT 1"))
 
-        end = datetime.utcnow()
+        end = _utcnow()
         latency_ms = (end - start).total_seconds() * 1000
 
         # 获取连接池信息（仅 PostgreSQL）
@@ -112,7 +117,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 
     return HealthResponse(
         status=status,
-        timestamp=datetime.utcnow(),
+        timestamp=_utcnow(),
         version=settings.APP_VERSION,
         database=db_health,
         uptime_seconds=get_uptime_seconds(),
@@ -120,6 +125,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/liveness")
+@router.get("/live")
 async def liveness_check():
     """
     存活检查（Kubernetes liveness probe）
@@ -130,6 +136,7 @@ async def liveness_check():
 
 
 @router.get("/readiness")
+@router.get("/ready")
 async def readiness_check(db: AsyncSession = Depends(get_db)):
     """
     就绪检查（Kubernetes readiness probe）

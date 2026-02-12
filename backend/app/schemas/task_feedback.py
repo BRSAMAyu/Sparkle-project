@@ -1,9 +1,10 @@
 """
 Task Feedback Schemas
 """
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Any
 from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 
 class TaskFeedbackCategory:
@@ -20,9 +21,9 @@ class TaskFeedbackCategory:
 
 class TaskFeedbackCreate(BaseModel):
     """提交任务反馈请求"""
-    completion_quality: Optional[int] = Field(None, ge=1, le=5, description="完成质量评分 (1-5)")
-    feedback_text: Optional[str] = Field(None, max_length=2000, description="用户文字反馈")
-    category: Optional[str] = Field(None, description="反馈分类")
+    completion_quality: int | None = Field(None, ge=1, le=5, description="完成质量评分 (1-5)")
+    feedback_text: str | None = Field(None, max_length=2000, description="用户文字反馈")
+    category: str | None = Field(None, description="反馈分类")
 
     class Config:
         json_schema_extra = {
@@ -39,14 +40,14 @@ class TaskFeedbackResponse(BaseModel):
     id: UUID
     user_id: UUID
     task_id: UUID
-    completion_quality: Optional[int] = None
-    feedback_text: Optional[str] = None
-    category: Optional[str] = None
-    inferred_depth_delta: Optional[float] = None
-    inferred_difficulty_delta: Optional[float] = None
-    task_difficulty_snapshot: Optional[int] = None
-    task_type_snapshot: Optional[str] = None
-    actual_minutes_snapshot: Optional[int] = None
+    completion_quality: int | None = None
+    feedback_text: str | None = None
+    category: str | None = None
+    inferred_depth_delta: float | None = None
+    inferred_difficulty_delta: float | None = None
+    task_difficulty_snapshot: int | None = None
+    task_type_snapshot: str | None = None
+    actual_minutes_snapshot: int | None = None
     created_at: str
     updated_at: str
 
@@ -57,7 +58,7 @@ class TaskFeedbackResponse(BaseModel):
 class TaskFeedbackStats(BaseModel):
     """用户任务反馈统计"""
     total_feedbacks: int
-    avg_completion_quality: Optional[float] = None
+    avg_completion_quality: float | None = None
     category_distribution: dict
     recent_feedbacks: list[TaskFeedbackResponse]
 
@@ -83,9 +84,9 @@ class NextActionSelectionCreate(BaseModel):
     action_title: str
     selected: bool
     skipped: bool = False
-    display_position: Optional[int] = None
-    displayed_actions_count: Optional[int] = None
-    context: Optional[Dict[str, Any]] = None
+    display_position: int | None = None
+    displayed_actions_count: int | None = None
+    context: dict[str, Any] | None = None
 
     class Config:
         json_schema_extra = {
@@ -103,8 +104,8 @@ class NextActionSelectionCreate(BaseModel):
 
 class PreferenceUpdateDetail(BaseModel):
     """偏好更新详情"""
-    depth_preference: Optional[float] = Field(None, description="深度偏好变化")
-    difficulty_preference: Optional[float] = Field(None, description="难度偏好变化")
+    depth_preference: float | None = Field(None, description="深度偏好变化")
+    difficulty_preference: float | None = Field(None, description="难度偏好变化")
 
     class Config:
         json_schema_extra = {
@@ -118,9 +119,9 @@ class PreferenceUpdateDetail(BaseModel):
 class TaskFeedbackSubmitResponse(BaseModel):
     """任务反馈提交响应（增强版）"""
     success: bool
-    message: Optional[str] = Field(None, description="响应消息")
-    data: Optional[TaskFeedbackResponse] = Field(None, description="反馈数据")
-    preference_updates: Optional[PreferenceUpdateDetail] = Field(None, description="偏好更新详情")
+    message: str | None = Field(None, description="响应消息")
+    data: TaskFeedbackResponse | None = Field(None, description="反馈数据")
+    preference_updates: PreferenceUpdateDetail | None = Field(None, description="偏好更新详情")
 
     class Config:
         json_schema_extra = {

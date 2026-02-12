@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 
@@ -32,7 +33,7 @@ class LearningPathRepository {
       final response = await _apiClient.get<dynamic>(
         ApiEndpoints.learningPath(targetNodeId),
       );
-      final data = response.data as List<dynamic>;
+      final data = ApiResponseParser.unwrapList(response.data, action: 'getLearningPath');
       return data
           .map((e) => LearningPathNode.fromJson(e as Map<String, dynamic>))
           .toList();

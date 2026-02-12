@@ -6,7 +6,8 @@ from logging.config import fileConfig
 import os
 import sys
 
-from sqlalchemy import pool, create_engine
+from sqlalchemy import create_engine, pool
+import sqlalchemy as sa
 
 from alembic import context
 
@@ -82,6 +83,34 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _ensure_alembic_version_table(connection) -> None:
+    inspector = sa.inspect(connection)
+    if not inspector.has_table("alembic_version"):
+        metadata = sa.MetaData()
+        sa.Table(
+            "alembic_version",
+            metadata,
+            sa.Column("version_num", sa.String(64), nullable=False),
+            sa.PrimaryKeyConstraint("version_num", name="alembic_version_pkc"),
+        )
+        metadata.create_all(connection)
+        return
+
+    columns = inspector.get_columns("alembic_version")
+    version_col = next((col for col in columns if col.get("name") == "version_num"), None)
+    if not version_col:
+        return
+
+    length = getattr(version_col.get("type"), "length", None)
+    if length is None or length >= 64:
+        return
+
+    if connection.dialect.name == "postgresql":
+        connection.execute(
+            sa.text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(64)")
+        )
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode with synchronous engine."""
     connectable = create_engine(
@@ -90,6 +119,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        _ensure_alembic_version_table(connection)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

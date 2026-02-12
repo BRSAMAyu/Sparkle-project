@@ -490,12 +490,22 @@ async def test_terminology_notes_extraction(mock_cache_service, mock_llm_service
 
     # Mock cache miss
     mock_cache_service.get.return_value = None
-    mock_llm_service.chat.return_value = "缓存系统使用数据库"
-
     segments = [TranslationSegment(id="s0", text="Cache system uses database")]
 
+    mocked_tx = {
+        "segment": TranslatedSegment(
+            id="s0",
+            translation="缓存系统使用数据库",
+            notes=["cache = 缓存", "database = 数据库"],
+            spans=[],
+        ),
+        "provider": "llm",
+        "model": "mock-model",
+    }
+
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
-         patch("app.services.translation_service.llm_service", mock_llm_service):
+         patch("app.services.translation_service.llm_service", mock_llm_service), \
+         patch.object(service, "_translate_segment", AsyncMock(return_value=mocked_tx)):
         result = await service.translate(
             segments=segments,
             source_lang="en",

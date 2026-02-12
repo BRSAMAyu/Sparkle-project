@@ -1,25 +1,27 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import select
-from loguru import logger
-from datetime import datetime
-import json
-import asyncio
+from datetime import UTC, datetime
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from loguru import logger
+from sqlalchemy import select
+
+from app.config import settings
+from app.core.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.models.task import Task, TaskStatus
-from app.services.notification_service import NotificationService
 from app.schemas.notification import NotificationCreate
-from app.services.decay_service import DecayService
-from app.services.push_service import PushService
 from app.services.cognitive_service import CognitiveService
+from app.services.decay_service import DecayService
 from app.services.event_retention_service import EventRetentionService
-from app.config import settings
-from app.services.nightly_review_service import NightlyReviewService
 from app.services.memory_jobs import MemoryJobsService
-from app.services.curiosity_capsule_service import curiosity_capsule_service
-from app.core.celery_app import celery_app
+from app.services.nightly_review_service import NightlyReviewService
+from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.push_service import PushService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
 
 class SchedulerService:
     def __init__(self):
@@ -119,16 +121,16 @@ class SchedulerService:
         try:
             async with AsyncSessionLocal() as db:
                 # 1. Get all active users
-                result = await db.execute(select(User).where(User.is_active == True))
+                result = await db.execute(select(User).where(User.is_active))
                 users = result.scalars().all()
-                
+
                 cognitive_service = CognitiveService(db)
                 total_fragments = 0
-                
+
                 for user in users:
                     fragments = await cognitive_service.mining_implicit_behaviors(user.id)
                     total_fragments += len(fragments)
-                    
+
                 logger.info(f"Implicit mining completed: {total_fragments} fragments generated across {len(users)} users.")
 
         except Exception as e:
@@ -157,7 +159,7 @@ class SchedulerService:
         logger.info("Starting nightly review job...")
         try:
             async with AsyncSessionLocal() as db:
-                result = await db.execute(select(User).where(User.is_active == True))
+                result = await db.execute(select(User).where(User.is_active))
                 users = result.scalars().all()
                 service = NightlyReviewService(db)
                 for user in users:
@@ -215,7 +217,7 @@ class SchedulerService:
         """
         try:
             # 获取所有有需要复习节点的用户
-            result = await db.execute(select(User).where(User.is_active == True))
+            result = await db.execute(select(User).where(User.is_active))
             users = result.scalars().all()
 
             for user in users:
@@ -251,7 +253,9 @@ class SchedulerService:
         logger.info("Starting weekly inferred preference decay job...")
         try:
             async with AsyncSessionLocal() as db:
-                from app.services.personalization.inferred_preference_decay_service import InferredPreferenceDecayService
+                from app.services.personalization.inferred_preference_decay_service import (
+                    InferredPreferenceDecayService,
+                )
 
                 decay_service = InferredPreferenceDecayService(db)
 
@@ -302,11 +306,11 @@ class SchedulerService:
             async with AsyncSessionLocal() as db:
                 # 获取活跃用户（最近7天有活动）
                 from datetime import timedelta
-                cutoff_date = datetime.utcnow() - timedelta(days=7)
+                cutoff_date = _utcnow() - timedelta(days=7)
 
                 result = await db.execute(
                     select(User).where(
-                        User.is_active == True,
+                        User.is_active,
                         User.last_active_at >= cutoff_date
                     )
                 )
@@ -371,11 +375,11 @@ class SchedulerService:
             async with AsyncSessionLocal() as db:
                 # 获取活跃用户（最近7天有活动）
                 from datetime import timedelta
-                cutoff_date = datetime.utcnow() - timedelta(days=7)
+                cutoff_date = _utcnow() - timedelta(days=7)
 
                 result = await db.execute(
                     select(User).where(
-                        User.is_active == True,
+                        User.is_active,
                         User.last_active_at >= cutoff_date
                     )
                 )

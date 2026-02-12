@@ -27,7 +27,7 @@ services:
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_SECRET=${ADMIN_SECRET}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
@@ -45,6 +45,7 @@ services:
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
+      - agent
       - toxiproxy
     networks:
       - edge
@@ -63,7 +64,7 @@ services:
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_SECRET=${ADMIN_SECRET}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
@@ -81,6 +82,7 @@ services:
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
+      - agent
       - toxiproxy
     networks:
       - edge
@@ -93,11 +95,34 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - ENVIRONMENT=production
+      - SERVICE_ROLE=api
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app
+
+  agent:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    container_name: sparkle_agent
+    restart: unless-stopped
+    command: python grpc_server.py
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=production
+      - SERVICE_ROLE=grpc
+      - GRPC_REQUIRE_TLS=true
+      - GRPC_TLS_CERT_PATH=${GRPC_TLS_CERT_PATH}
+      - GRPC_TLS_KEY_PATH=${GRPC_TLS_KEY_PATH}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
     depends_on:
       - db
       - redis
@@ -117,11 +142,11 @@ services:
     restart: "no"
     depends_on:
       - toxiproxy
-      - backend
+      - agent
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        /go/bin/toxiproxy-cli -h toxiproxy:8474 create grpc_backend -l 0.0.0.0:8666 -u backend:50051 || true
+        /go/bin/toxiproxy-cli -h toxiproxy:8474 create grpc_backend -l 0.0.0.0:8666 -u agent:50051 || true
     networks:
       - app
 

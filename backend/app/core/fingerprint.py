@@ -15,7 +15,6 @@ import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 # Current normalization version - increment on any change
@@ -38,8 +37,8 @@ class NormalizationResult:
 class FingerprintResult:
     """Complete fingerprint set for a text selection"""
     selection_fp: str      # sha256(normalize_core(selected_text))
-    doc_fp: Optional[str]  # sha256(selection_fp + doc_id) - None if no doc
-    anchor_fp: Optional[str]  # sha256(doc_fp + context + page) - None if no context
+    doc_fp: str | None  # sha256(selection_fp + doc_id) - None if no doc
+    anchor_fp: str | None  # sha256(doc_fp + context + page) - None if no context
     norm_version: str
     match_profile: str
 
@@ -192,9 +191,9 @@ def generate_doc_fp(selection_fp: str, doc_id: UUID) -> str:
 
 def generate_anchor_fp(
     doc_fp: str,
-    context_before: Optional[str],
-    context_after: Optional[str],
-    page_no: Optional[int]
+    context_before: str | None,
+    context_after: str | None,
+    page_no: int | None
 ) -> str:
     """
     Generate anchor fingerprint for precise location.
@@ -221,10 +220,10 @@ def generate_anchor_fp(
 
 def generate_fingerprints(
     selected_text: str,
-    doc_id: Optional[UUID] = None,
-    context_before: Optional[str] = None,
-    context_after: Optional[str] = None,
-    page_no: Optional[int] = None,
+    doc_id: UUID | None = None,
+    context_before: str | None = None,
+    context_after: str | None = None,
+    page_no: int | None = None,
     match_profile: str = DEFAULT_MATCH_PROFILE
 ) -> FingerprintResult:
     """

@@ -81,7 +81,8 @@ class PlanReviewResult {
     }
   }
 
-  static PlanReviewResult fromJson(Map<String, dynamic> json) => PlanReviewResult(
+  static PlanReviewResult fromJson(Map<String, dynamic> json) =>
+      PlanReviewResult(
         reviewId: json['review_id'] as String? ?? '',
         planId: json['plan_id'] as String? ?? '',
         decision: _parseDecision(json['decision'] as String? ?? ''),
@@ -117,6 +118,7 @@ class PlanReviewCard extends StatefulWidget {
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onModify;
+
   /// Callback for user decision with the decision type
   final Future<bool> Function(
     ReviewDecision decision, {
@@ -252,10 +254,12 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       position: Tween<Offset>(
         begin: const Offset(0, -0.1),
         end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _slideInController,
-        curve: Curves.easeOut,
-      ),),
+      ).animate(
+        CurvedAnimation(
+          parent: _slideInController,
+          curve: Curves.easeOut,
+        ),
+      ),
       child: GestureDetector(
         onTapDown: showActions ? (_) => _pressController.forward() : null,
         onTapUp: showActions ? (_) => _pressController.reverse() : null,
@@ -302,9 +306,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Colors.transparent,
+                                DS.surfacePrimary.withValues(alpha: 0),
                                 color.withValues(alpha: 0.08),
-                                Colors.transparent,
+                                DS.surfacePrimary.withValues(alpha: 0),
                               ],
                               stops: [
                                 (value - 0.3).clamp(0.0, 1.0),
@@ -331,7 +335,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                             AnimatedBuilder(
                               animation: _iconScaleAnimation,
                               builder: (context, child) => Transform.scale(
-                                scale: showActions ? _iconScaleAnimation.value : 1.0,
+                                scale: showActions
+                                    ? _iconScaleAnimation.value
+                                    : 1.0,
                                 child: Container(
                                   padding: const EdgeInsets.all(DS.spacing10),
                                   decoration: BoxDecoration(
@@ -347,7 +353,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                   ),
                                   child: Icon(
                                     icon,
-                                    color: Colors.white,
+                                    color: DS.textOnPrimary,
                                     size: DS.iconSizeBase,
                                   ),
                                 ),
@@ -430,7 +436,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                         ],
 
                         // Confidence bar
-                        if (widget.review.confidence > 0 && !widget.review.autoApproved) ...[
+                        if (widget.review.confidence > 0 &&
+                            !widget.review.autoApproved) ...[
                           const SizedBox(height: DS.spacing12),
                           _buildConfidenceBar(),
                         ],
@@ -511,12 +518,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         if (criticalComments.isNotEmpty) ...[
           _buildCommentGroup('严重问题', criticalComments, DS.error),
           if (warningComments.isNotEmpty || infoComments.isNotEmpty)
-              const SizedBox(height: DS.spacing8),
+            const SizedBox(height: DS.spacing8),
         ],
         if (warningComments.isNotEmpty) ...[
           _buildCommentGroup('警告', warningComments, DS.warning),
-          if (infoComments.isNotEmpty)
-              const SizedBox(height: DS.spacing8),
+          if (infoComments.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoComments.isNotEmpty &&
             widget.review.decision != ReviewDecision.rejected)
@@ -525,120 +531,124 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     );
   }
 
-  Widget _buildCommentGroup(String title, List<ReviewComment> comments, Color color) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: DS.fontWeightSemibold,
-                color: color,
-              ),
-        ),
-        const SizedBox(height: DS.spacing6),
-        ...comments.take(3).map((comment) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing6),
-              child: _buildCommentItem(comment, color),
-            ),),
-      ],
-    );
-
-  Widget _buildCommentItem(ReviewComment comment, Color color) => Container(
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: DS.borderRadius8,
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
+  Widget _buildCommentGroup(
+          String title, List<ReviewComment> comments, Color color) =>
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                _getCategoryIcon(comment.category),
-                size: DS.iconSizeXs,
-                color: color,
-              ),
-              const SizedBox(width: DS.spacing6),
-              Expanded(
-                child: Text(
-                  comment.message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DS.neutral800,
-                      ),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: color,
+                ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          ...comments.take(3).map(
+                (comment) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.spacing6),
+                  child: _buildCommentItem(comment, color),
                 ),
               ),
-            ],
+        ],
+      );
+
+  Widget _buildCommentItem(ReviewComment comment, Color color) => Container(
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(
+            color: color.withValues(alpha: 0.2),
           ),
-          if (comment.suggestedFix != null) ...[
-            const SizedBox(height: DS.spacing6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.lightbulb_outline_rounded,
+                  _getCategoryIcon(comment.category),
                   size: DS.iconSizeXs,
-                  color: DS.neutral600,
+                  color: color,
                 ),
                 const SizedBox(width: DS.spacing6),
                 Expanded(
                   child: Text(
-                    '建议: ${comment.suggestedFix}',
+                    comment.message,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DS.neutral600,
-                          fontStyle: FontStyle.italic,
+                          color: DS.neutral800,
                         ),
                   ),
                 ),
               ],
             ),
-          ],
-        ],
-      ),
-    );
-
-  Widget _buildConfidenceBar() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '审查置信度',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            if (comment.suggestedFix != null) ...[
+              const SizedBox(height: DS.spacing6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: DS.iconSizeXs,
                     color: DS.neutral600,
                   ),
-            ),
-            Text(
-              '${(widget.review.confidence * 100).toInt()}%',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.neutral900,
-                    fontWeight: DS.fontWeightSemibold,
+                  const SizedBox(width: DS.spacing6),
+                  Expanded(
+                    child: Text(
+                      '建议: ${comment.suggestedFix}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.neutral600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
                   ),
-            ),
+                ],
+              ),
+            ],
           ],
         ),
-        const SizedBox(height: DS.spacing6),
-        ClipRRect(
-          borderRadius: DS.borderRadius4,
-          child: LinearProgressIndicator(
-            value: widget.review.confidence,
-            backgroundColor: DS.neutral200,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              widget.review.confidence >= 0.8
-                  ? DS.success
-                  : widget.review.confidence >= 0.5
-                      ? DS.warning
-                      : DS.error,
-            ),
-            minHeight: 6,
+      );
+
+  Widget _buildConfidenceBar() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '审查置信度',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral600,
+                    ),
+              ),
+              Text(
+                '${(widget.review.confidence * 100).toInt()}%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral900,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+              ),
+            ],
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing6),
+          ClipRRect(
+            borderRadius: DS.borderRadius4,
+            child: LinearProgressIndicator(
+              value: widget.review.confidence,
+              backgroundColor: DS.neutral200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                widget.review.confidence >= 0.8
+                    ? DS.success
+                    : widget.review.confidence >= 0.5
+                        ? DS.warning
+                        : DS.error,
+              ),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      );
 
   Widget _buildActionButtons(ReviewDecision decision, LinearGradient gradient) {
     // For rejected plans, only show retry option
@@ -664,7 +674,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           if (widget.onReject != null || widget.onDecision != null)
             CustomButton.text(
               text: '取消',
-              onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
+              onPressed: _isSubmitting
+                  ? null
+                  : () => _handleDecision(ReviewDecision.rejected),
               size: CustomButtonSize.small,
             ),
           const SizedBox(width: DS.spacing8),
@@ -687,7 +699,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         if (widget.onReject != null || widget.onDecision != null)
           CustomButton.text(
             text: '取消',
-            onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
+            onPressed: _isSubmitting
+                ? null
+                : () => _handleDecision(ReviewDecision.rejected),
             size: CustomButtonSize.small,
           ),
         const SizedBox(width: DS.spacing8),
@@ -795,7 +809,6 @@ class _FeedbackOption {
 
   final String value;
   final String label;
-  final String? subtitle;
 }
 
 extension on _PlanReviewCardState {
@@ -816,7 +829,7 @@ extension on _PlanReviewCardState {
     try {
       return await showModalBottomSheet<_RejectionFeedback>(
         context: context,
-        backgroundColor: Colors.transparent,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         isScrollControlled: true,
         builder: (context) => StatefulBuilder(
           builder: (context, setSheetState) {
@@ -830,7 +843,8 @@ extension on _PlanReviewCardState {
                 return;
               }
               Navigator.of(context).pop(
-                _RejectionFeedback(category: selected!, note: note.isEmpty ? null : note),
+                _RejectionFeedback(
+                    category: selected!, note: note.isEmpty ? null : note),
               );
             }
 
@@ -860,10 +874,12 @@ extension on _PlanReviewCardState {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing20),
                         child: Row(
                           children: [
-                            Icon(Icons.feedback_outlined, color: DS.primaryBase),
+                            Icon(Icons.feedback_outlined,
+                                color: DS.primaryBase),
                             const SizedBox(width: DS.spacing12),
                             Text(
                               '告诉我们拒绝原因',
@@ -892,12 +908,12 @@ extension on _PlanReviewCardState {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? DS.primaryBase.withValues(alpha: 0.08)
-                                  : Colors.transparent,
+                                  : DS.surfacePrimary.withValues(alpha: 0),
                               border: Border(
                                 left: BorderSide(
                                   color: isSelected
                                       ? DS.primaryBase
-                                      : Colors.transparent,
+                                      : DS.surfacePrimary.withValues(alpha: 0),
                                   width: 3,
                                 ),
                               ),
@@ -912,7 +928,9 @@ extension on _PlanReviewCardState {
                                       fontWeight: isSelected
                                           ? DS.fontWeightSemibold
                                           : DS.fontWeightRegular,
-                                      color: isDark ? DS.neutral100 : DS.neutral900,
+                                      color: isDark
+                                          ? DS.neutral100
+                                          : DS.neutral900,
                                     ),
                                   ),
                                 ),
@@ -965,7 +983,8 @@ extension on _PlanReviewCardState {
                         ),
                       const SizedBox(height: DS.spacing16),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing20),
                         child: Row(
                           children: [
                             Expanded(

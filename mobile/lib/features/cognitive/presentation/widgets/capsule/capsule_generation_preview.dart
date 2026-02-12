@@ -123,7 +123,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.15),
             borderRadius: DS.borderRadius8,
