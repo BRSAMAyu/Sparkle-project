@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 
 class ChatRepository {
@@ -36,11 +37,15 @@ class ChatRepository {
 
   /// 发送任务相关消息 (非流式)
   Future<ChatResponseModel> sendMessageToTask(
-      String taskId, String message, String? conversationId,) async {
+    String taskId,
+    String message,
+    String? conversationId,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return ChatResponseModel(
-          message: 'Demo response to task: $message',
-          conversationId: 'demo_id',);
+        message: 'Demo response to task: $message',
+        conversationId: 'demo_id',
+      );
     }
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/chat/task/$taskId',
@@ -49,7 +54,8 @@ class ChatRepository {
         'conversation_id': conversationId,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
     return ChatResponseModel.fromJson(payload);
   }
 
@@ -72,7 +78,8 @@ class ChatRepository {
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final data = ApiResponseParser.unwrapList(response.data, action: 'getConversationHistory');
+    final data = ApiResponseParser.unwrapList(response.data,
+        action: 'getConversationHistory');
     return data
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -90,10 +97,17 @@ class ChatRepository {
       ];
     }
     final response = await _dio.get<dynamic>('/api/v1/chat/sessions');
-    final data = ApiResponseParser.unwrapList(response.data, action: 'getRecentConversations');
+    final data = ApiResponseParser.unwrapList(response.data,
+        action: 'getRecentConversations');
     return List<Map<String, dynamic>>.from(
       data.map((item) => item as Map<String, dynamic>),
     );
+  }
+
+  Future<MultiAgentCatalog> getMultiAgentCatalog() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/v1/multi-agent/catalog');
+    return MultiAgentCatalog.fromJson(response.data ?? const {});
   }
 
   /// 流式聊天（WebSocket）
@@ -189,7 +203,9 @@ class ChatRepository {
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(
-      String message, String? conversationId,) {
+    String message,
+    String? conversationId,
+  ) {
     late StreamController<ChatStreamEvent> controller;
     controller = StreamController<ChatStreamEvent>(
       onCancel: () {
@@ -278,7 +294,8 @@ class ChatRepository {
 
       case 'tool_result':
         return ToolResultEvent(
-          result: ToolResultModel.fromJson(data['result'] as Map<String, dynamic>),
+          result:
+              ToolResultModel.fromJson(data['result'] as Map<String, dynamic>),
         );
 
       case 'widget':
@@ -288,13 +305,13 @@ class ChatRepository {
         );
 
       case 'intervention':
-        final intervention = data['intervention'] as Map<String, dynamic>? ?? {};
+        final intervention =
+            data['intervention'] as Map<String, dynamic>? ?? {};
         final content = intervention['content'] as Map<String, dynamic>? ?? {};
         final widgetType =
             content['widget_type'] as String? ?? 'intervention_card';
-        final widgetData =
-            (content['widget_data'] as Map<String, dynamic>?) ??
-                Map<String, dynamic>.from(content);
+        final widgetData = (content['widget_data'] as Map<String, dynamic>?) ??
+            Map<String, dynamic>.from(content);
         widgetData['intervention_id'] ??= intervention['id'];
         widgetData['intervention_topic'] ??= intervention['topic'];
         widgetData['intervention_level'] ??= intervention['level'];

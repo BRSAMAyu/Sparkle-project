@@ -85,6 +85,10 @@ class AgentProfile:
     role: AgentRole
     display_name: str
     description: str
+    public_entry: bool = False
+    entry_tags: list[str] = field(default_factory=list)
+    entry_rank: int = 999
+    entry_enabled: bool = False
 
     # LLM 配置
     model_tier: ModelTier = ModelTier.STANDARD
@@ -181,6 +185,10 @@ Query: {query}"""
         role=AgentRole.GALAXY_GUIDE,
         display_name="星图向导",
         description="知识图谱专家",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=10,
+        entry_tags=["knowledge", "prerequisite", "learning-path"],
         model_tier=ModelTier.STANDARD,
         temperature=0.5,
         allowed_tools=["query_knowledge", "create_knowledge_node", "link_nodes"],
@@ -199,6 +207,10 @@ Query: {query}"""
         role=AgentRole.EXAM_ORACLE,
         display_name="考试预言家",
         description="考试预测与分析",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=20,
+        entry_tags=["exam", "strategy", "mock"],
         model_tier=ModelTier.REASONING,
         temperature=0.3,
         allowed_tools=["create_plan", "generate_tasks_for_plan", "create_task", "query_knowledge"],
@@ -215,6 +227,10 @@ Query: {query}"""
         role=AgentRole.TIME_TUTOR,
         display_name="时间导师",
         description="学习计划与时间管理",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=30,
+        entry_tags=["schedule", "tasks", "focus"],
         model_tier=ModelTier.STANDARD,
         temperature=0.6,
         allowed_tools=[
@@ -237,6 +253,10 @@ Query: {query}"""
         role=AgentRole.DEEP_ANALYST,
         display_name="深度分析师",
         description="多视角结构化分析专家",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=40,
+        entry_tags=["analysis", "reasoning", "evidence"],
         model_tier=ModelTier.REASONING,
         temperature=0.4,
         allowed_tools=["query_knowledge", "create_knowledge_node"],
@@ -252,6 +272,10 @@ Query: {query}"""
         role=AgentRole.ERROR_ANALYST,
         display_name="错题分析师",
         description="错题诊断与根因分析",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=50,
+        entry_tags=["error-diagnosis", "remediation", "root-cause"],
         model_tier=ModelTier.REASONING,
         temperature=0.3,
         allowed_tools=["query_error_history", "record_error", "query_knowledge", "create_task"],
@@ -286,6 +310,10 @@ Query: {query}"""
         role=AgentRole.MATH_AGENT,
         display_name="数学专家",
         description="数学问题与练习",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=60,
+        entry_tags=["math", "practice", "derivation"],
         model_tier=ModelTier.STANDARD,
         temperature=0.4,
         system_prompt_template="""你是数学专家，负责生成数学练习和讲解数学概念。"""
@@ -295,6 +323,10 @@ Query: {query}"""
         role=AgentRole.CODE_AGENT,
         display_name="编程专家",
         description="代码问题与项目",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=70,
+        entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
         temperature=0.4,
         system_prompt_template="""你是编程专家，负责设计编程项目和讲解代码概念。"""
@@ -304,6 +336,10 @@ Query: {query}"""
         role=AgentRole.SEARCH_AGENT,
         display_name="搜索专家",
         description="知识检索与证据收集",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=90,
+        entry_tags=["search", "evidence", "retrieval"],
         model_tier=ModelTier.FAST,
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
@@ -340,6 +376,10 @@ Query: {query}"""
         role=AgentRole.STUDY_BUDDY,
         display_name="学习伙伴",
         description="日常学习陪伴与闲聊",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=80,
+        entry_tags=["chat", "coaching", "support"],
         specific_model="xiaomi_chat",  # MIMO: 快速响应
         temperature=0.7,
         system_prompt_template="""你是学习伙伴，一个友好、轻松的AI助手。
@@ -355,6 +395,10 @@ Query: {query}"""
         role=AgentRole.WRITING_AGENT,
         display_name="写作专家",
         description="写作指导与文本优化",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=100,
+        entry_tags=["writing", "editing", "expression"],
         specific_model="deepseek_chat",  # DeepSeek: 擅长文本生成
         temperature=0.8,
         system_prompt_template="""你是写作专家，负责指导写作和优化文本。
@@ -370,6 +414,10 @@ Query: {query}"""
         role=AgentRole.SCIENCE_AGENT,
         display_name="科学专家",
         description="科学概念讲解与实验设计",
+        public_entry=True,
+        entry_enabled=True,
+        entry_rank=110,
+        entry_tags=["science", "concepts", "experiments"],
         specific_model="zhipu_chat",  # GLM-4.7: 支持思考模式
         temperature=0.5,
         system_prompt_template="""你是科学专家，负责讲解科学概念和设计实验。
@@ -477,6 +525,66 @@ class AgentProfileRegistry:
             }
             for role, p in self._profiles.items()
         }
+
+    def list_public_entry_profiles(self) -> list[tuple[AgentRole, AgentProfile]]:
+        profiles = [
+            (role, profile)
+            for role, profile in self._profiles.items()
+            if profile.public_entry and profile.entry_enabled
+        ]
+        return sorted(profiles, key=lambda item: (item[1].entry_rank, item[1].display_name))
+
+
+def get_public_agent_catalog() -> list[dict[str, Any]]:
+    """Unified expert catalog for public entry and routing."""
+    catalog: list[dict[str, Any]] = []
+    for role, profile in agent_profile_registry.list_public_entry_profiles():
+        expert_id = role.value
+        catalog.append({
+            "id": expert_id,
+            "display_name": profile.display_name,
+            "description": profile.description,
+            "tags": profile.entry_tags,
+            "entry_chat_mode": f"expert::{expert_id}",
+            "recommended_scenarios": profile.entry_tags[:3],
+            "enabled": profile.entry_enabled,
+            "rank": profile.entry_rank,
+        })
+    return catalog
+
+
+def get_public_mode_catalog() -> list[dict[str, Any]]:
+    """Stable mode catalog returned by /multi-agent/catalog."""
+    return [
+        {
+            "id": "deep_analysis",
+            "label": "深度解析",
+            "description": "多专家协作深度解析问题",
+            "entry_chat_mode": "deep_analysis",
+            "enabled": True,
+        },
+        {
+            "id": "study_plan",
+            "label": "学习计划",
+            "description": "任务分解与学习计划协作",
+            "entry_chat_mode": "study_plan",
+            "enabled": True,
+        },
+        {
+            "id": "error_diagnosis",
+            "label": "错题分析",
+            "description": "错题诊断与分析循环",
+            "entry_chat_mode": "error_diagnosis",
+            "enabled": True,
+        },
+        {
+            "id": "expert_auto",
+            "label": "专家自动路由",
+            "description": "自动选择最合适专家组合",
+            "entry_chat_mode": "expert_auto",
+            "enabled": True,
+        },
+    ]
 
 
 # 全局注册表实例

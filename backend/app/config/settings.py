@@ -389,6 +389,10 @@ class Settings(BaseSettings):
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
     ENABLE_MODE_WORKFLOW_V2: bool = True
+    ENABLE_EXPERT_ENTRY: bool = True
+    ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
+    ENABLE_EXPERT_STRATEGY_V1: bool = True
+    ENABLE_SUMMARIZATION_WORKER: bool = True
 
     # Optional Graph Sync Worker
     ENABLE_GRAPH_SYNC_WORKER: bool = False

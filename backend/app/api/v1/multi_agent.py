@@ -12,6 +12,8 @@ from pydantic import BaseModel
 
 from app.agents.orchestrator_agent import create_multi_agent_workflow
 from app.api.deps import get_current_user
+from app.config import settings
+from app.core.agent_profiles import get_public_agent_catalog, get_public_mode_catalog
 from app.models.user import User
 
 router = APIRouter(prefix="/multi-agent", tags=["multi-agent"])
@@ -168,3 +170,21 @@ async def preview_routing(
     except Exception as e:
         logger.error(f"Routing preview error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/catalog")
+async def get_multi_agent_catalog(current_user: User = Depends(get_current_user)):
+    """Unified catalog for public multi-agent modes and experts."""
+    _ = current_user
+    if not settings.ENABLE_EXPERT_ENTRY:
+        return {
+            "modes": [],
+            "experts": [],
+            "total_experts": 0,
+        }
+    experts = get_public_agent_catalog()
+    return {
+        "modes": get_public_mode_catalog(),
+        "experts": experts,
+        "total_experts": len(experts),
+    }

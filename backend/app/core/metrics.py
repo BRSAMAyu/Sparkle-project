@@ -276,6 +276,64 @@ COLLABORATION_LATENCY = get_or_create_metric(
     buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
 )
 
+EXPERT_SELECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_expert_selected_total',
+    'Total expert selections by strategy and source',
+    ['expert_id', 'strategy', 'entry_source']
+)
+
+EXPERT_INVOKED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_expert_invoked_total',
+    'Total expert invocations',
+    ['expert_id', 'workflow_id']
+)
+
+EXPERT_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_expert_fallback_total',
+    'Total expert fallbacks',
+    ['reason', 'from_mode']
+)
+
+EXPERT_OVERRIDDEN_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_expert_overridden_total',
+    'Total explicit expert overrides',
+    ['requested_expert', 'used_expert']
+)
+
+USER_FEEDBACK_BOUND_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_user_feedback_bound_total',
+    'Total feedback events bound to expert routing context',
+    ['workflow_id']
+)
+
+# ============ Strategy Optimization Metrics ============
+
+ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_adaptive_routing_adjustments_total',
+    'Adaptive routing adjustments by trigger and mode change',
+    ['action', 'trigger', 'from_mode', 'to_mode']
+)
+
+ROUTING_SUMMARY_CONTEXT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_routing_summary_context_total',
+    'Summary context usage in routing',
+    ['phase']
+)
+
+RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_response_fallback_generated_total',
+    'Fallback responses generated to avoid empty output',
+    ['source']
+)
+
 # ============ Phase 4: Preference Inference Metrics ============
 
 PREFERENCE_INFERENCE_TOTAL = get_or_create_metric(

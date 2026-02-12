@@ -3,15 +3,15 @@ from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
+from app.agents.graph.expert_registry import (
+    get_graph_expert_specs,
+    resolve_node_name,
+)
 # Phase 3: Import collaboration nodes
 from app.agents.graph.nodes.collaboration import (
     collaboration_aggregator_node,
     collaboration_node,
 )
-from app.agents.graph.nodes.exam_oracle import exam_oracle_node
-from app.agents.graph.nodes.deep_analyst import deep_analyst_node
-from app.agents.graph.nodes.error_analyst import error_analyst_node
-from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node
 from app.agents.graph.nodes.registry_tools import (
     batch_create_tasks,
     create_knowledge_node,
@@ -25,32 +25,23 @@ from app.agents.graph.nodes.registry_tools import (
     suggest_focus_session,
 )
 from app.agents.graph.nodes.router import router_node
-from app.agents.graph.nodes.time_tutor import time_tutor_node
 from app.agents.graph.state import SparkleState
+
+
+EXPERT_SPECS = get_graph_expert_specs()
+EXPERT_NODE_NAMES = [spec.node_name for spec in EXPERT_SPECS]
 
 # --- 1. 条件边逻辑 (Conditional Edges) ---
 
 def route_after_router(state: SparkleState):
     """Router 节点后的分支逻辑"""
     target = state.get("next_step")
-
-    if target == "galaxy_guide":
-        return "galaxy_guide"
-    elif target == "exam_oracle":
-        return "exam_oracle"
-    elif target == "time_tutor":
-        return "time_tutor"
-    elif target == "deep_analyst":
-        return "deep_analyst"
-    elif target == "error_analyst":
-        return "error_analyst"
-    elif target == "study_buddy":
-        return "study_buddy"  # 暂未实现，可指向 TimeTutor 或 GalaxyGuide 兜底
-    elif target == "human_assist":
+    if target == "human_assist":
         return "human_node"
-    else:
-        # 默认兜底：如果无法识别，交给 TimeTutor 做通用闲聊 (或实现专门的 GeneralChat)
-        return "time_tutor"
+    resolved = resolve_node_name(target)
+    if resolved:
+        return resolved
+    return "study_buddy"
 
 def route_after_agent(state: SparkleState):
     """Agent 节点后的逻辑 (处理工具调用)"""
@@ -85,11 +76,8 @@ workflow = StateGraph(SparkleState)
 
 # (A) 添加 Agent 节点
 workflow.add_node("router", router_node)
-workflow.add_node("galaxy_guide", galaxy_guide_node)
-workflow.add_node("exam_oracle", exam_oracle_node)
-workflow.add_node("time_tutor", time_tutor_node)
-workflow.add_node("deep_analyst", deep_analyst_node)
-workflow.add_node("error_analyst", error_analyst_node)
+for spec in EXPERT_SPECS:
+    workflow.add_node(spec.node_name, spec.node_handler)
 
 # (B) 添加工具节点 (所有 Agent 的工具汇聚于此，也可拆分为多个 ToolNode)
 all_tools = [
@@ -118,23 +106,13 @@ workflow.add_node("human_node", human_node)
 workflow.set_entry_point("router")
 
 # Router -> Agents
-workflow.add_conditional_edges(
-    "router",
-    route_after_router,
-    {
-        "galaxy_guide": "galaxy_guide",
-        "exam_oracle": "exam_oracle",
-        "time_tutor": "time_tutor",
-        "deep_analyst": "deep_analyst",
-        "error_analyst": "error_analyst",
-        "study_buddy": "time_tutor",  # 暂时 fallback
-        "human_node": "human_node",
-        END: END
-    }
-)
+router_edge_map = {name: name for name in EXPERT_NODE_NAMES}
+router_edge_map["human_node"] = "human_node"
+router_edge_map[END] = END
+workflow.add_conditional_edges("router", route_after_router, router_edge_map)
 
 # Agents -> Tools OR End
-for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor", "deep_analyst", "error_analyst"]:
+for agent_name in EXPERT_NODE_NAMES:
     workflow.add_conditional_edges(
         agent_name,
         route_after_agent,
@@ -186,11 +164,8 @@ def create_planning_graph():
     planning_workflow.add_node("router", router_node)
     # Phase 3: Add collaboration node
     planning_workflow.add_node("collaboration", collaboration_node)
-    planning_workflow.add_node("galaxy_guide", galaxy_guide_node)
-    planning_workflow.add_node("exam_oracle", exam_oracle_node)
-    planning_workflow.add_node("time_tutor", time_tutor_node)
-    planning_workflow.add_node("deep_analyst", deep_analyst_node)
-    planning_workflow.add_node("error_analyst", error_analyst_node)
+    for spec in EXPERT_SPECS:
+        planning_workflow.add_node(spec.node_name, spec.node_handler)
     # Phase 3: Add aggregator node
     planning_workflow.add_node("aggregator", collaboration_aggregator_node)
     # P0 Fix: Add reset_collaboration node for review feedback loop
@@ -203,20 +178,14 @@ def create_planning_graph():
     planning_workflow.set_entry_point("router")
 
     # Router -> Reset, Collaboration or Direct Agent (Phase 3 routing)
-    planning_workflow.add_conditional_edges(
-        "router",
-        route_after_router_with_collaboration,
-        {
-            "reset_collaboration": "reset_collaboration",
-            "collaboration": "collaboration",
-            "galaxy_guide": "galaxy_guide",
-            "exam_oracle": "exam_oracle",
-            "time_tutor": "time_tutor",
-            "deep_analyst": "deep_analyst",
-            "error_analyst": "error_analyst",
-            END: END
-        }
-    )
+    router_planning_edges = {
+        "reset_collaboration": "reset_collaboration",
+        "collaboration": "collaboration",
+        END: END,
+    }
+    for name in EXPERT_NODE_NAMES:
+        router_planning_edges[name] = name
+    planning_workflow.add_conditional_edges("router", route_after_router_with_collaboration, router_planning_edges)
 
     # Reset -> Collaboration (after clearing review_feedback)
     planning_workflow.add_conditional_edges(
@@ -228,21 +197,13 @@ def create_planning_graph():
     )
 
     # Collaboration -> Agents (sequential execution)
-    planning_workflow.add_conditional_edges(
-        "collaboration",
-        route_after_collaboration,
-        {
-            "galaxy_guide": "galaxy_guide",
-            "exam_oracle": "exam_oracle",
-            "time_tutor": "time_tutor",
-            "deep_analyst": "deep_analyst",
-            "error_analyst": "error_analyst",
-            "aggregator": "aggregator"  # All done, aggregate results
-        }
-    )
+    collaboration_edges = {"aggregator": "aggregator"}
+    for name in EXPERT_NODE_NAMES:
+        collaboration_edges[name] = name
+    planning_workflow.add_conditional_edges("collaboration", route_after_collaboration, collaboration_edges)
 
     # Agents -> Back to Collaboration or Aggregator
-    for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor", "deep_analyst", "error_analyst"]:
+    for agent_name in EXPERT_NODE_NAMES:
         planning_workflow.add_conditional_edges(
             agent_name,
             route_after_agent_in_collaboration,
@@ -301,19 +262,10 @@ def route_after_router_with_collaboration(state: SparkleState):
 
     if collaboration_mode and collaboration_mode != "single":
         return "collaboration"
-
-    if target == "galaxy_guide":
-        return "galaxy_guide"
-    elif target == "exam_oracle":
-        return "exam_oracle"
-    elif target == "time_tutor":
-        return "time_tutor"
-    elif target == "deep_analyst":
-        return "deep_analyst"
-    elif target == "error_analyst":
-        return "error_analyst"
-    else:
-        return "time_tutor"
+    resolved = resolve_node_name(target)
+    if resolved:
+        return resolved
+    return "study_buddy"
 
 
 def route_after_collaboration(state: SparkleState):
@@ -321,7 +273,9 @@ def route_after_collaboration(state: SparkleState):
     # Collaboration node sets next_step explicitly
     next_step = state.get("next_step")
     if next_step:
-        return next_step
+        resolved = resolve_node_name(next_step)
+        if resolved:
+            return resolved
     return "aggregator"
 
 

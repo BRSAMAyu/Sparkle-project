@@ -175,11 +175,62 @@ class AgentInfo {
           color: DS.brandPrimary.shade600,
         );
       case 'science':
+      case 'science_agent':
         return AgentInfo(
           type: 'science',
           name: 'Science Expert',
           icon: Icons.science,
           color: DS.prismPurple,
+        );
+      case 'galaxy_guide':
+        return AgentInfo(
+          type: 'galaxy_guide',
+          name: 'Galaxy Guide',
+          icon: Icons.auto_awesome,
+          color: DS.info,
+        );
+      case 'exam_oracle':
+        return AgentInfo(
+          type: 'exam_oracle',
+          name: 'Exam Oracle',
+          icon: Icons.quiz,
+          color: DS.warning,
+        );
+      case 'time_tutor':
+        return AgentInfo(
+          type: 'time_tutor',
+          name: 'Time Tutor',
+          icon: Icons.schedule,
+          color: DS.success,
+        );
+      case 'deep_analyst':
+        return AgentInfo(
+          type: 'deep_analyst',
+          name: 'Deep Analyst',
+          icon: Icons.psychology_alt,
+          color: DS.brandSecondary,
+        );
+      case 'error_analyst':
+        return AgentInfo(
+          type: 'error_analyst',
+          name: 'Error Analyst',
+          icon: Icons.rule_folder,
+          color: DS.errorAccent,
+        );
+      case 'study_buddy':
+        return AgentInfo(
+          type: 'study_buddy',
+          name: 'Study Buddy',
+          icon: Icons.favorite_border,
+          color: DS.capsuleAccent,
+        );
+      case 'search':
+      case 'search_agent':
+        return AgentInfo(
+          type: 'search_agent',
+          name: 'Search Expert',
+          icon: Icons.search,
+          color: DS.infoLight,
         );
       case 'orchestrator':
       default:

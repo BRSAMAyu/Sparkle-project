@@ -38,11 +38,18 @@ class ObservabilityLogger:
         decision: dict[str, Any]
     ):
         """Log routing decision"""
+        try:
+            confidence_value = float(decision.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence_value = 0.0
         logger.info(
             f"Route decision: user={user_id[:8]}, "
             f"mode={decision.get('execution_mode')}, "
             f"intent={decision.get('intent')}, "
             f"risk={decision.get('risk_level')}, "
+            f"confidence={confidence_value:.2f}, "
+            f"layer={decision.get('routing_layer', 'unknown')}, "
+            f"adaptive={decision.get('adaptive_notes', '')}, "
             f"reason={decision.get('reason', '')[:50]}"
         )
 
@@ -275,6 +282,135 @@ class ObservabilityLogger:
                 "latency_ms": latency_ms
             }
         )
+
+    async def log_expert_selected(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        expert_id: str,
+        strategy: str,
+        entry_source: str,
+        workflow_id: str,
+    ):
+        await self.log_event(
+            event_type="expert_selected",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "expert_id": expert_id,
+                "strategy": strategy,
+                "entry_source": entry_source,
+                "workflow_id": workflow_id,
+            },
+        )
+        try:
+            from app.core.metrics import EXPERT_SELECTED_TOTAL
+            EXPERT_SELECTED_TOTAL.labels(
+                expert_id=expert_id,
+                strategy=strategy,
+                entry_source=entry_source,
+            ).inc()
+        except ImportError:
+            pass
+
+    async def log_expert_invoked(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        expert_id: str,
+        workflow_id: str,
+    ):
+        await self.log_event(
+            event_type="expert_invoked",
+            user_id=user_id,
+            session_id=session_id,
+            data={"expert_id": expert_id, "workflow_id": workflow_id},
+        )
+        try:
+            from app.core.metrics import EXPERT_INVOKED_TOTAL
+            EXPERT_INVOKED_TOTAL.labels(expert_id=expert_id, workflow_id=workflow_id).inc()
+        except ImportError:
+            pass
+
+    async def log_expert_fallback(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        reason: str,
+        from_mode: str,
+        workflow_id: str,
+    ):
+        await self.log_event(
+            event_type="expert_fallback",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "reason": reason,
+                "from_mode": from_mode,
+                "workflow_id": workflow_id,
+            },
+        )
+        try:
+            from app.core.metrics import EXPERT_FALLBACK_TOTAL
+            EXPERT_FALLBACK_TOTAL.labels(reason=reason, from_mode=from_mode).inc()
+        except ImportError:
+            pass
+
+    async def log_expert_overridden(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        requested_expert: str,
+        used_expert: str,
+        workflow_id: str,
+    ):
+        await self.log_event(
+            event_type="expert_overridden",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "requested_expert": requested_expert,
+                "used_expert": used_expert,
+                "workflow_id": workflow_id,
+            },
+        )
+        try:
+            from app.core.metrics import EXPERT_OVERRIDDEN_TOTAL
+            EXPERT_OVERRIDDEN_TOTAL.labels(
+                requested_expert=requested_expert,
+                used_expert=used_expert,
+            ).inc()
+        except ImportError:
+            pass
+
+    async def log_user_feedback_bound(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        workflow_id: str,
+        selected_experts: list[str],
+    ):
+        await self.log_event(
+            event_type="user_feedback_bound",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "response_id": response_id,
+                "workflow_id": workflow_id,
+                "selected_experts": selected_experts,
+            },
+        )
+        try:
+            from app.core.metrics import USER_FEEDBACK_BOUND_TOTAL
+            USER_FEEDBACK_BOUND_TOTAL.labels(workflow_id=workflow_id).inc()
+        except ImportError:
+            pass
 
     async def log_event(
         self,

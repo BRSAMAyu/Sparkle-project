@@ -38,6 +38,7 @@ var chatInputPool = sync.Pool{
 type chatInput struct {
 	Message           string                 `json:"message"`
 	SessionID         string                 `json:"session_id"`
+	RequestID         string                 `json:"request_id,omitempty"`
 	Nickname          string                 `json:"nickname,omitempty"`
 	FileIds           []string               `json:"file_ids,omitempty"`
 	IncludeReferences bool                   `json:"include_references,omitempty"`
@@ -79,6 +80,7 @@ type wsEnvelopeOut struct {
 func (c *chatInput) Reset() {
 	c.Message = ""
 	c.SessionID = ""
+	c.RequestID = ""
 	c.Nickname = ""
 	c.FileIds = nil
 	c.IncludeReferences = false
@@ -342,7 +344,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 				defer span.End()
 
-				return h.handleChatMessage(ctx, conn, userID, input, "")
+				return h.handleChatMessage(ctx, conn, userID, input, input.RequestID)
 			}
 
 			if envelope.MessageID == "" {

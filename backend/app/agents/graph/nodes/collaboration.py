@@ -11,6 +11,7 @@ from typing import Any
 from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
+from app.agents.graph.expert_registry import resolve_node_name
 from app.agents.graph.state import SparkleState
 
 
@@ -157,15 +158,20 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
             agent = item.get("agent")
             if not agent:
                 continue
+            resolved = resolve_node_name(str(agent))
+            if not resolved:
+                continue
             normalized.append(
                 {
-                    "agent": str(agent),
+                    "agent": resolved,
                     "task": str(item.get("task") or default_task),
                 }
             )
             continue
         if isinstance(item, str):
-            normalized.append({"agent": item, "task": default_task})
+            resolved = resolve_node_name(item)
+            if resolved:
+                normalized.append({"agent": resolved, "task": default_task})
     return normalized
 
 

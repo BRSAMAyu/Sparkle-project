@@ -247,7 +247,45 @@ class AgentMessageRenderer extends StatelessWidget {
           [];
 
       if (steps.isEmpty) {
-        return const SizedBox.shrink();
+        final selectedExpertsRaw = collaborationData['selected_experts'];
+        final routingStrategy =
+            collaborationData['routing_strategy'] as String?;
+        final fallbackReason = collaborationData['fallback_reason'] as String?;
+        final selectedExperts = selectedExpertsRaw is List
+            ? selectedExpertsRaw.map((e) => '$e').toList()
+            : <String>[];
+
+        if (selectedExperts.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final synthesized = <AgentTimelineStep>[
+          ...selectedExperts.map(
+            (expert) => AgentTimelineStep.fromJson({
+              'agent': expert,
+              'action':
+                  routingStrategy == null ? '专家路由' : '策略: $routingStrategy',
+            }),
+          ),
+        ];
+        if (fallbackReason != null && fallbackReason.isNotEmpty) {
+          synthesized.add(
+            AgentTimelineStep.fromJson({
+              'agent': 'orchestrator',
+              'action': '降级: $fallbackReason',
+            }),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
+          child: AgentCollaborationTimeline(
+            steps: synthesized,
+            workflowType:
+                workflowType == 'unknown' ? 'expert_routing' : workflowType,
+            executionTime: executionTime,
+          ),
+        );
       }
 
       return Padding(

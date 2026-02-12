@@ -20,6 +20,15 @@ from app.core.metrics import (
 )
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
+from app.orchestration.chat_modes import (
+    CHAT_MODE_DEEP_ANALYSIS,
+    CHAT_MODE_ERROR_DIAGNOSIS,
+    CHAT_MODE_EXPERT_AUTO,
+    CHAT_MODE_EXPERT_PREFIX,
+    CHAT_MODE_STANDARD,
+    CHAT_MODE_STUDY_PLAN,
+    normalize_chat_mode,
+)
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.services.response_feedback_service import ResponseFeedbackService
@@ -40,6 +49,24 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         self.orchestrator = orchestrator
         self.db_session_factory = db_session_factory
         logger.info("AgentServiceImpl initialized with injected dependencies")
+
+    @staticmethod
+    def _resolve_workflow_id(chat_mode: str) -> str:
+        mode = normalize_chat_mode(chat_mode)
+        if mode == CHAT_MODE_STANDARD:
+            return "standard_chat"
+        if mode == CHAT_MODE_DEEP_ANALYSIS:
+            return "deep_analysis_workflow"
+        if mode == CHAT_MODE_STUDY_PLAN:
+            return "study_plan_workflow"
+        if mode == CHAT_MODE_ERROR_DIAGNOSIS:
+            return "error_diagnosis_workflow"
+        if mode == CHAT_MODE_EXPERT_AUTO:
+            return "expert_auto_workflow"
+        if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
+            expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX):].strip() or "unknown"
+            return f"expert_{expert_id}_workflow"
+        return "standard_chat"
 
     @staticmethod
     def _normalize_v2_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
@@ -119,17 +146,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
             # 🔧 根据请求的 chat_mode 选择 workflow
-            chat_mode = getattr(request, 'chat_mode', None) or "standard"
+            chat_mode = normalize_chat_mode(getattr(request, 'chat_mode', None) or CHAT_MODE_STANDARD)
             logger.info(f"📋 Chat mode: {chat_mode}")
-
-            # 根据 chat_mode 映射到 workflow_id
-            workflow_map = {
-                "standard": "standard_chat",
-                "deep_analysis": "deep_analysis_workflow",
-                "study_plan": "study_plan_workflow",
-                "error_diagnosis": "error_diagnosis_workflow",
-            }
-            workflow_id = workflow_map.get(chat_mode, "standard_chat")
+            workflow_id = self._resolve_workflow_id(chat_mode)
 
             prompt_versions = ["v1", "v2"]
             prompt_version = "v1"
@@ -282,6 +301,17 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     )
 
             message = "already_recorded" if result.already_recorded else "ok"
+            workflow_id = request.workflow_id or ""
+            selected_experts_raw = (request.meta or {}).get("selected_experts", "")
+            selected_experts = [item.strip() for item in selected_experts_raw.split(",") if item.strip()]
+            if workflow_id and hasattr(self.orchestrator, "observability"):
+                await self.orchestrator.observability.log_user_feedback_bound(
+                    user_id=user_id,
+                    session_id="",
+                    response_id=request.response_id,
+                    workflow_id=workflow_id,
+                    selected_experts=selected_experts,
+                )
             return agent_service_pb2.ResponseFeedbackResponse(
                 success=result.success,
                 message=message,
