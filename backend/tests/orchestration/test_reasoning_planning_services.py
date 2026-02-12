@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.orchestration.plan_search_service import PlanSearchService
+from app.orchestration.plan_simulator_service import PlanSimulatorService
 from app.orchestration.reasoning_verifier_service import ReasoningVerifierService
 from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
 from app.orchestration.uncertainty_calibrator import UncertaintyCalibrator
@@ -26,6 +27,7 @@ def test_reasoning_verifier_detects_missing_contract_fields() -> None:
         contract={"goal": "通过考试", "constraints": ["30天"]},
     )
     assert result.contract_coverage < 0.85
+    assert result.verifier_ensemble_score == result.verifier_score
     assert "missing_milestones" in result.verifier_fail_reasons
     assert "missing_acceptance_criteria" in result.verifier_fail_reasons
 
@@ -41,6 +43,7 @@ def test_uncertainty_calibrator_requests_clarification_on_low_confidence() -> No
     )
     assert result.clarification_needed
     assert result.uncertainty_score >= 0.62
+    assert result.clarification_points
 
 
 @pytest.mark.asyncio
@@ -70,3 +73,17 @@ async def test_plan_search_service_selects_better_candidate() -> None:
     assert result.best_score >= 0.9
     assert result.plan_revision_count >= 1
     assert result.search_budget_used_ms >= 0
+    assert result.candidate_count >= 2
+    assert result.winning_margin >= 0.0
+
+
+def test_plan_simulator_estimates_risk_and_actions() -> None:
+    simulator = PlanSimulatorService()
+    result = simulator.simulate(
+        plan=_sample_plan(confidence=0.55),
+        selected_experts=["deep_analyst", "code_agent", "math_agent"],
+        uncertainty_score=0.66,
+        route_confidence=0.48,
+    )
+    assert result.simulated_risk_score > 0.0
+    assert isinstance(result.suggested_actions, list)

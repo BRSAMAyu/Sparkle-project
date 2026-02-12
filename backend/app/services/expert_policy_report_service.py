@@ -82,6 +82,9 @@ class ExpertPolicyReportService:
         fallback_by_task_type: Counter[str] = Counter()
         feedback_by_task_type: Counter[str] = Counter()
         feedback_by_cohort: Counter[str] = Counter()
+        selected_by_cube: Counter[str] = Counter()
+        fallback_by_cube: Counter[str] = Counter()
+        feedback_by_cube: Counter[str] = Counter()
 
         for event in events:
             event_type = str(event.get("event_type", ""))
@@ -99,6 +102,7 @@ class ExpertPolicyReportService:
                 selected_by_cohort[cohort_id] += 1
                 selected_by_complexity[complexity_tier] += 1
                 selected_by_task_type[task_type] += 1
+                selected_by_cube[_cube_key(task_type=task_type, complexity_tier=complexity_tier, cohort_id=cohort_id)] += 1
             elif event_type == "expert_invoked":
                 invoked_total += 1
                 expert_id = str(data.get("expert_id", "unknown"))
@@ -111,6 +115,7 @@ class ExpertPolicyReportService:
                 fallback_by_cohort[cohort_id] += 1
                 fallback_by_complexity[complexity_tier] += 1
                 fallback_by_task_type[task_type] += 1
+                fallback_by_cube[_cube_key(task_type=task_type, complexity_tier=complexity_tier, cohort_id=cohort_id)] += 1
             elif event_type == "expert_overridden":
                 overridden_total += 1
             elif event_type == "prompt_selected":
@@ -129,6 +134,7 @@ class ExpertPolicyReportService:
                 policy_feedback_bindings[policy_id] += 1
                 feedback_by_task_type[task_type] += 1
                 feedback_by_cohort[cohort_id] += 1
+                feedback_by_cube[_cube_key(task_type=task_type, complexity_tier=complexity_tier, cohort_id=cohort_id)] += 1
 
         coverage_rate = (invoked_total / selected_total) if selected_total else 0.0
         fallback_rate = (fallback_total / selected_total) if selected_total else 0.0
@@ -151,9 +157,20 @@ class ExpertPolicyReportService:
             fallback_rate_by_policy=fallback_rate_by_cohort,
             feedback_binding_rate_by_policy=feedback_binding_rate_by_cohort,
         )
+        fallback_rate_by_cube = _rate_by_selected(selected_by_cube, fallback_by_cube)
+        feedback_rate_by_cube = _rate_by_selected(selected_by_cube, feedback_by_cube)
+        q_score_by_cube, _ = _build_q_scores_by_policy(
+            selected_by_policy=selected_by_cube,
+            fallback_rate_by_policy=fallback_rate_by_cube,
+            feedback_binding_rate_by_policy=feedback_rate_by_cube,
+        )
         stable_cohort_q_gap = _stable_q_gap(
             q_score_by_scope=q_score_by_cohort,
             selected_by_scope=selected_by_cohort,
+        )
+        stable_cube_q_gap = _stable_q_gap(
+            q_score_by_scope=q_score_by_cube,
+            selected_by_scope=selected_by_cube,
         )
         policy_health = _build_policy_health(
             selected_by_policy=selected_by_policy,
@@ -197,6 +214,8 @@ class ExpertPolicyReportService:
             "q_score_by_cohort": q_score_by_cohort,
             "cohort_delta_vs_baseline": cohort_delta_vs_baseline,
             "stable_cohort_q_gap": stable_cohort_q_gap,
+            "q_score_by_cube": q_score_by_cube,
+            "stable_cube_q_gap": stable_cube_q_gap,
             "by_expert": {
                 "selected": dict(selected_by_expert.most_common()),
                 "invoked": dict(invoked_by_expert.most_common()),
@@ -222,8 +241,15 @@ class ExpertPolicyReportService:
                 "feedback_binding_rate_by_cohort": feedback_binding_rate_by_cohort,
                 "fallback_rate_by_complexity": fallback_rate_by_complexity,
                 "fallback_rate_by_task_type": fallback_rate_by_task_type,
+                "selected_by_cube": dict(selected_by_cube.most_common()),
+                "fallback_by_cube": dict(fallback_by_cube.most_common()),
+                "fallback_rate_by_cube": fallback_rate_by_cube,
             },
         }
+
+
+def _cube_key(*, task_type: str, complexity_tier: str, cohort_id: str) -> str:
+    return f"{task_type}::{complexity_tier}::{cohort_id}"
 
 
 def _rate_by_selected(selected: Counter[str], fallback: Counter[str]) -> dict[str, float]:

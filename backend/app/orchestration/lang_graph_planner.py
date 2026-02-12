@@ -490,6 +490,41 @@ class LangGraphPlanner:
 
         return summary
 
+    @staticmethod
+    def to_plan_ir_v2(plan: ExecutablePlan, *, user_message: str = "") -> dict[str, Any]:
+        """Build PlanIR v2 for downstream verification/observability.
+
+        PlanIR is internal-only and does not affect proto compatibility.
+        """
+        steps: list[dict[str, Any]] = []
+        dependencies: list[dict[str, str]] = []
+        for tc in plan.tool_calls:
+            step = {
+                "step_id": tc.id,
+                "tool": tc.name,
+                "depends_on": list(tc.depends_on),
+                "timeout_ms": int(tc.timeout_ms or 0),
+                "output_key": tc.output_key or "",
+                "required": bool(getattr(tc.success_criteria, "required", True)) if tc.success_criteria else True,
+            }
+            steps.append(step)
+            for dep in tc.depends_on:
+                dependencies.append({"from": dep, "to": tc.id})
+
+        return {
+            "version": "v2",
+            "intent_text": (user_message or "")[:280],
+            "plan_id": str(plan.plan_id),
+            "total_steps": len(steps),
+            "execution_layers": [list(layer) for layer in plan.execution_order] if plan.execution_order else [],
+            "steps": steps,
+            "dependencies": dependencies,
+            "collaboration": {
+                "mode": str(plan.collaboration_mode),
+                "agents": [str(item) for item in plan.agents_involved],
+            },
+        }
+
     async def _get_plan_version(self, user_id: str, plan_id: str) -> int:
         """获取 PlanState.version (Phase 4)
 

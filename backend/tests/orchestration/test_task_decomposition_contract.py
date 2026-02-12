@@ -20,6 +20,11 @@ def test_build_contract_extracts_core_fields() -> None:
     assert contract.milestones
     assert contract.acceptance_criteria
     assert contract.score > 0.45
+    assert contract.version == "v2"
+    assert contract.goal_hierarchy
+    assert contract.goal_hierarchy_score >= 0.55
+    assert contract.goal_hierarchy["weekly_milestones"]
+    assert contract.goal_hierarchy["daily_actions"]
 
 
 def test_build_contract_flags_missing_goal() -> None:
@@ -37,3 +42,13 @@ def test_generate_questions_from_gaps() -> None:
         ["missing_goal", "missing_constraints", "missing_acceptance_criteria"]
     )
     assert len(questions) == 3
+
+
+def test_build_contract_marks_broken_traceability_gap() -> None:
+    contract = build_task_decomposition_contract(
+        message="",
+        intent="create_plan",
+        extracted_entities={},
+        conversation_context=[],
+    )
+    assert "missing_goal_hierarchy" in contract.gaps

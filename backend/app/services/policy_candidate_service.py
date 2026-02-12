@@ -370,6 +370,7 @@ class PolicyCandidateService:
                 "feedback_down": feedback_down,
                 "repair_success_rate": round(repair_success_rate, 4),
                 "failure_pattern_topn": failure_pattern_topn[:5],
+                "failure_pattern_actions": _map_failure_patterns_to_actions(failure_pattern_topn[:5]),
                 "quality_gate_blocked": int(metrics.get("quality_gate_blocked", 0)),
                 "plan_execution_total": int(metrics.get("plan_execution_total", 0)),
                 "plan_execution_success": int(metrics.get("plan_execution_success", 0)),
@@ -519,6 +520,25 @@ def _support_by_channel(*, metrics: dict[str, int], channel: str) -> int:
     if channel == "toolchain":
         return int(metrics.get("toolchain_selected", 0))
     return int(metrics.get("expert_selected", 0))
+
+
+def _map_failure_patterns_to_actions(failure_pattern_topn: list[dict[str, Any]]) -> list[str]:
+    actions: list[str] = []
+    for item in failure_pattern_topn:
+        if not isinstance(item, dict):
+            continue
+        pattern = str(item.get("pattern", ""))
+        if "fallback" in pattern and "tighten_routing_thresholds" not in actions:
+            actions.append("tighten_routing_thresholds")
+        if "quality_gate" in pattern and "raise_contract_gate_weight" not in actions:
+            actions.append("raise_contract_gate_weight")
+        if "step::timeout" in pattern and "degrade_parallelism" not in actions:
+            actions.append("degrade_parallelism")
+        if "step::missing_output" in pattern and "harden_output_contract" not in actions:
+            actions.append("harden_output_contract")
+        if len(actions) >= 4:
+            break
+    return actions
 
 
 def _rate(numerator: int, denominator: int) -> float:

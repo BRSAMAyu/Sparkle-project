@@ -17,6 +17,8 @@ class PlanSearchResult:
     best_score: float
     search_budget_used_ms: int
     plan_revision_count: int
+    candidate_count: int = 0
+    winning_margin: float = 0.0
     explored_candidates: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -52,6 +54,7 @@ class PlanSearchService:
                 "source": "base",
             }
         ]
+        ranked_candidates: list[tuple[float, ExecutablePlan]] = [(base_score, base_plan)]
 
         frontier: list[tuple[float, ExecutablePlan]] = [(base_score, base_plan)]
         for depth in range(1, depth_limit + 1):
@@ -77,6 +80,7 @@ class PlanSearchService:
                     }
                 )
                 next_frontier.append((score, candidate))
+                ranked_candidates.append((score, candidate))
                 if score > best_score:
                     best_score = score
                     best_plan = candidate
@@ -87,10 +91,23 @@ class PlanSearchService:
                 break
             frontier = next_frontier
 
+        ranked = sorted(
+            ranked_candidates,
+            key=lambda item: (item[0], float(item[1].confidence or 0.0)),
+            reverse=True,
+        )
+        if ranked:
+            best_score, best_plan = ranked[0]
+        winning_margin = 0.0
+        if len(ranked) >= 2:
+            winning_margin = max(0.0, float(ranked[0][0]) - float(ranked[1][0]))
+
         return PlanSearchResult(
             best_plan=best_plan,
             best_score=round(best_score, 4),
             search_budget_used_ms=elapsed_ms(),
             plan_revision_count=revisions,
+            candidate_count=len(explored),
+            winning_margin=round(winning_margin, 4),
             explored_candidates=explored[:100],
         )

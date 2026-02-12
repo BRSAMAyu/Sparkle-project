@@ -291,3 +291,38 @@ async def test_policy_candidate_generation_multi_channel(monkeypatch):
     assert "routing" in channels
     assert "prompt" in channels
     assert "toolchain" in channels
+
+
+@pytest.mark.asyncio
+async def test_policy_registry_research_promotion_flow(monkeypatch):
+    monkeypatch.setattr("app.services.policy_registry_service.settings.ENABLE_POLICY_CANARY_ROLLOUT", True)
+    _MEM_CANDIDATES.clear()
+    _MEM_POLICIES.clear()
+
+    registry = PolicyCandidateService(redis_client=None).registry
+    await registry.create_candidate(
+        {
+            "id": "pc_research_1",
+            "policy_id": "expert_strategy_v2:general_v2:candidate_research_1",
+            "base_policy": "expert_strategy_v2:general_v2",
+            "strategy_pack": "general_v2",
+            "channel": "routing",
+            "scope_type": "global",
+            "scope_key": "all",
+            "research_track": True,
+            "weights": {"semantic_weight": 0.4},
+            "thresholds": {"min_selected_score": 0.35},
+        }
+    )
+    pending = await registry.list_candidates(status="research_pending")
+    assert len(pending) == 1
+
+    result = await registry.approve_research_promotion(
+        candidate_id="pc_research_1",
+        reviewer="admin",
+        note="bench_passed",
+    )
+    assert result["promotion_state"] in {"canary", "active"}
+    approved = await registry.get_candidate("pc_research_1")
+    assert approved is not None
+    assert approved["status"] == "approved"

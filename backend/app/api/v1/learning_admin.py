@@ -156,12 +156,70 @@ async def reasoning_weekly_report(
         "policy_health": policy_report.get("policy_health", {}),
         "q_score_by_policy": policy_report.get("q_score_by_policy", {}),
         "q_score_by_cohort": policy_report.get("q_score_by_cohort", {}),
+        "q_score_by_cube": policy_report.get("q_score_by_cube", {}),
         "stable_cohort_q_gap": policy_report.get("stable_cohort_q_gap", 0.0),
+        "stable_cube_q_gap": policy_report.get("stable_cube_q_gap", 0.0),
         "delta_vs_baseline": policy_report.get("delta_vs_baseline", {}),
         "avg_q_score": round(float(avg_q), 4),
         "avg_repair_success_rate": round(float(avg_repair_success), 4),
         "failure_pattern_samples": top_failures[:20],
     }
+
+
+@router.get("/research-benchmarks")
+async def research_benchmarks(
+    days: int = Query(default=14, ge=7, le=30),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    _ = current_user
+    report_service = ExpertPolicyReportService(redis_client=cache_service.redis)
+    rollup_service = LearningFeatureRollupService(redis_client=cache_service.redis)
+    registry = PolicyRegistryService(redis_client=cache_service.redis)
+
+    policy_report = await report_service.build_report(days=days)
+    rollups = await rollup_service.list_rollups(days=days)
+    pending = await registry.list_candidates(status="research_pending")
+    passed = await registry.list_candidates(status="research_passed")
+
+    by_channel: dict[str, int] = {}
+    for row in pending + passed:
+        channel = str(row.get("channel", "routing"))
+        by_channel[channel] = by_channel.get(channel, 0) + 1
+
+    return {
+        "generated_at": _utcnow().isoformat(),
+        "window_days": days,
+        "q_score_by_policy": policy_report.get("q_score_by_policy", {}),
+        "q_score_by_cohort": policy_report.get("q_score_by_cohort", {}),
+        "q_score_by_cube": policy_report.get("q_score_by_cube", {}),
+        "stable_cohort_q_gap": policy_report.get("stable_cohort_q_gap", 0.0),
+        "stable_cube_q_gap": policy_report.get("stable_cube_q_gap", 0.0),
+        "delta_vs_baseline": policy_report.get("delta_vs_baseline", {}),
+        "candidate_pool": {
+            "research_pending": len(pending),
+            "research_passed": len(passed),
+            "by_channel": by_channel,
+        },
+        "rollup_count": len(rollups),
+    }
+
+
+@router.post("/research-promotions/{candidate_id}/approve")
+async def approve_research_promotion(
+    candidate_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    registry = PolicyRegistryService(redis_client=cache_service.redis)
+    try:
+        result = await registry.approve_research_promotion(
+            candidate_id=candidate_id,
+            reviewer=str(current_user.id),
+            note=str(payload.get("note", "") or ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", **result}
 
 
 @router.get("/fairness-dashboard")

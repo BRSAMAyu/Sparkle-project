@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
@@ -80,6 +81,19 @@ class SchedulerService:
                 day_of_week=str(getattr(settings, "LEARNING_WEEKLY_REPORT_WEEKDAY", "mon")),
                 hour=int(getattr(settings, "LEARNING_WEEKLY_REPORT_HOUR", 4)),
                 minute=int(getattr(settings, "LEARNING_WEEKLY_REPORT_MINUTE", 10)),
+            )
+            self.scheduler.add_job(
+                self.run_research_benchmark_job,
+                "cron",
+                hour=int(getattr(settings, "LEARNING_RESEARCH_BENCHMARK_HOUR", 3)),
+                minute=int(getattr(settings, "LEARNING_RESEARCH_BENCHMARK_MINUTE", 15)),
+            )
+            self.scheduler.add_job(
+                self.run_research_promotion_package_job,
+                "cron",
+                day_of_week=str(getattr(settings, "LEARNING_RESEARCH_PROMOTION_WEEKDAY", "mon")),
+                hour=int(getattr(settings, "LEARNING_RESEARCH_PROMOTION_HOUR", 4)),
+                minute=int(getattr(settings, "LEARNING_RESEARCH_PROMOTION_MINUTE", 35)),
             )
 
         # ========== 胶囊生成调度任务 ==========
@@ -552,6 +566,59 @@ class SchedulerService:
             return payload
 
         return await self._run_learning_job_with_guard("learning_weekly_report", _runner)
+
+    async def run_research_benchmark_job(self):
+        logger.info("Starting research benchmark job...")
+
+        async def _runner():
+            report_service = ExpertPolicyReportService(redis_client=cache_service.redis)
+            registry = PolicyRegistryService(redis_client=cache_service.redis)
+            report = await report_service.build_report(days=14)
+            pending = await registry.list_candidates(status="research_pending")
+            passed = await registry.list_candidates(status="research_passed")
+            payload = {
+                "generated_at": _utcnow().isoformat(),
+                "window_days": 14,
+                "q_score_by_policy": report.get("q_score_by_policy", {}),
+                "q_score_by_cohort": report.get("q_score_by_cohort", {}),
+                "stable_cohort_q_gap": report.get("stable_cohort_q_gap", 0.0),
+                "research_pending": len(pending),
+                "research_passed": len(passed),
+            }
+            return payload
+
+        return await self._run_learning_job_with_guard("learning_research_benchmark", _runner)
+
+    async def run_research_promotion_package_job(self):
+        logger.info("Starting research promotion package job...")
+
+        async def _runner():
+            registry = PolicyRegistryService(redis_client=cache_service.redis)
+            pending = await registry.list_candidates(status="research_pending")
+            passed = await registry.list_candidates(status="research_passed")
+            recommendations: list[dict[str, Any]] = []
+
+            for row in passed[:50]:
+                recommendations.append(
+                    {
+                        "candidate_id": str(row.get("id", "")),
+                        "policy_id": str(row.get("policy_id", "")),
+                        "channel": str(row.get("channel", "routing")),
+                        "scope_type": str(row.get("scope_type", "global")),
+                        "risk_level": str(row.get("risk_level", "medium")),
+                        "expected_delta": float(row.get("expected_delta", 0.0) or 0.0),
+                        "action": "promote_to_canary",
+                    }
+                )
+
+            return {
+                "generated_at": _utcnow().isoformat(),
+                "research_pending_count": len(pending),
+                "research_passed_count": len(passed),
+                "promotion_recommendations": recommendations,
+            }
+
+        return await self._run_learning_job_with_guard("learning_research_promotion_package", _runner)
 
     async def _evaluate_canary_guardrails(self) -> dict[str, Any]:
         if not settings.ENABLE_POLICY_CANARY_ROLLOUT:

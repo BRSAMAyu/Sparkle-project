@@ -10,6 +10,7 @@ from app.orchestration.schemas import ExecutablePlan
 @dataclass
 class ReasoningVerificationResult:
     verifier_score: float
+    verifier_ensemble_score: float
     contract_coverage: float
     verifier_fail_reasons: list[str] = field(default_factory=list)
     dimension_scores: dict[str, float] = field(default_factory=dict)
@@ -17,6 +18,7 @@ class ReasoningVerificationResult:
     def to_metadata(self) -> dict[str, Any]:
         return {
             "verifier_score": round(float(self.verifier_score), 4),
+            "verifier_ensemble_score": round(float(self.verifier_ensemble_score), 4),
             "contract_coverage": round(float(self.contract_coverage), 4),
             "verifier_fail_reasons": list(self.verifier_fail_reasons),
             "dimension_scores": dict(self.dimension_scores),
@@ -85,13 +87,23 @@ class ReasoningVerifierService:
         executability = max(0.0, min(executability, 1.0))
 
         dependency_score = 1.0 if has_dependencies else 0.0
-        verifier_score = (
+        acceptance_verifiability = _acceptance_verifiability(
+            plan=plan,
+            contract=normalized_contract,
+        )
+        time_budget_consistency = _time_budget_consistency(
+            plan=plan,
+            contract=normalized_contract,
+        )
+        verifier_ensemble_score = (
             0.45 * contract_coverage
             + 0.25 * executability
-            + 0.2 * dependency_score
-            + 0.1 * confidence
+            + 0.15 * dependency_score
+            + 0.1 * acceptance_verifiability
+            + 0.05 * time_budget_consistency
         )
-        verifier_score = max(0.0, min(verifier_score, 1.0))
+        verifier_ensemble_score = max(0.0, min(verifier_ensemble_score, 1.0))
+        verifier_score = verifier_ensemble_score
 
         if not has_steps:
             fail_reasons.append("empty_plan")
@@ -99,17 +111,24 @@ class ReasoningVerifierService:
             fail_reasons.append("missing_success_criteria")
         if not has_dependencies:
             fail_reasons.append("missing_dependency_relations")
+        if acceptance_verifiability < 0.6:
+            fail_reasons.append("low_acceptance_verifiability")
+        if time_budget_consistency < 0.55:
+            fail_reasons.append("time_budget_inconsistent")
         if confidence < 0.35:
             fail_reasons.append("low_plan_confidence")
 
         return ReasoningVerificationResult(
             verifier_score=verifier_score,
+            verifier_ensemble_score=verifier_ensemble_score,
             contract_coverage=contract_coverage,
             verifier_fail_reasons=fail_reasons,
             dimension_scores={
                 "contract_coverage": round(contract_coverage, 4),
                 "executability": round(executability, 4),
                 "dependency_score": round(dependency_score, 4),
+                "acceptance_verifiability": round(acceptance_verifiability, 4),
+                "time_budget_consistency": round(time_budget_consistency, 4),
                 "confidence": round(confidence, 4),
             },
         )
@@ -129,3 +148,38 @@ def _has_nonempty_list(value: Any) -> bool:
     if not isinstance(value, list):
         return False
     return any(str(item).strip() for item in value)
+
+
+def _acceptance_verifiability(*, plan: ExecutablePlan | None, contract: dict[str, Any]) -> float:
+    score = 0.0
+    acceptance = contract.get("acceptance_criteria")
+    if isinstance(acceptance, list) and any(str(item).strip() for item in acceptance):
+        score += 0.45
+    if plan and plan.success_criteria:
+        score += 0.35
+    if plan and any(tc.success_criteria for tc in plan.tool_calls):
+        score += 0.2
+    return max(0.0, min(score, 1.0))
+
+
+def _time_budget_consistency(*, plan: ExecutablePlan | None, contract: dict[str, Any]) -> float:
+    constraints = contract.get("constraints")
+    has_time_constraint = False
+    if isinstance(constraints, list):
+        for item in constraints:
+            text = str(item).lower()
+            if any(token in text for token in ("天", "周", "月", "小时", "分钟", "day", "week", "month", "hour", "minute", "deadline", "截止")):
+                has_time_constraint = True
+                break
+
+    if plan is None:
+        return 0.2 if has_time_constraint else 0.0
+
+    avg_timeout_ms = 0.0
+    if plan.tool_calls:
+        avg_timeout_ms = sum(max(0, int(tc.timeout_ms or 0)) for tc in plan.tool_calls) / max(1, len(plan.tool_calls))
+    timeout_score = 1.0 if avg_timeout_ms <= 30000 else max(0.3, 1.0 - (avg_timeout_ms - 30000) / 90000)
+    layering_score = 1.0 if plan.execution_order and len(plan.execution_order) >= 1 else 0.65
+
+    score = 0.4 * timeout_score + 0.35 * layering_score + (0.25 if has_time_constraint else 0.1)
+    return max(0.0, min(score, 1.0))

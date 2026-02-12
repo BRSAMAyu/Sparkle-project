@@ -190,11 +190,13 @@ class AdaptiveReplanner:
             return {"applied": False, "repair_actions": [], "triggered_replan": False}
 
         event_service = LearningEventService(redis_client=self.redis)
+        repair_policy_id = "counterfactual_repair_v1"
         await event_service.emit(
             event_type="plan_repair_triggered",
             user_id=str(user_id),
             workflow_id=str(plan_id),
             data={
+                "repair_policy_id": repair_policy_id,
                 "repair_actions": repair_actions,
                 "failed_tools": list(feedback.failed_tools),
                 "failed_step_types": dict(feedback.failed_step_types or {}),
@@ -207,6 +209,7 @@ class AdaptiveReplanner:
                 "adaptive_meta": {
                     "last_local_repair_at": _utcnow().isoformat(),
                     "last_local_repair_actions": repair_actions,
+                    "repair_policy_id": repair_policy_id,
                 },
                 "local_repair_actions": repair_actions,
             },
@@ -233,6 +236,7 @@ class AdaptiveReplanner:
             user_id=str(user_id),
             workflow_id=str(plan_id),
             data={
+                "repair_policy_id": repair_policy_id,
                 "repair_actions": repair_actions,
                 "quality_score": float(feedback.quality_score),
             },
@@ -240,22 +244,23 @@ class AdaptiveReplanner:
         return {
             "applied": True,
             "repair_actions": repair_actions,
+            "repair_policy_id": repair_policy_id,
             "triggered_replan": False,
         }
 
     @staticmethod
     def _derive_repair_actions(feedback: "PlanExecutionFeedback") -> list[str]:
         actions: list[str] = []
+        if feedback.failed_step_types.get("timeout", 0) > 0 or feedback.slow_tools:
+            actions.append("timeout_rebudget")
+        if feedback.unreliable_dependencies or feedback.failed_step_types.get("dependency_break", 0) > 0:
+            actions.append("dependency_rewire")
+        if feedback.failed_step_types.get("missing_output", 0) > 0:
+            actions.append("output_contract_hardening")
         if feedback.failed_tools:
             actions.append("replace_failed_tools")
-        if feedback.slow_tools:
+        if feedback.slow_tools and "degrade_parallelism" not in actions:
             actions.append("degrade_parallelism")
-        if feedback.unreliable_dependencies:
-            actions.append("strengthen_dependency_order")
-        if feedback.failed_step_types.get("timeout", 0) > 0:
-            actions.append("increase_timeout_budget")
-        if feedback.failed_step_types.get("missing_output", 0) > 0:
-            actions.append("tighten_output_schema")
         return actions[:5]
 
     async def _handle_report(

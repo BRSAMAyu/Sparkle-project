@@ -162,14 +162,22 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 			"decomposition_contract_score": "0.81",
 			"decomposition_gaps":           `["missing_resources"]`,
 			"plan_feasibility_score":       "0.76",
+			"goal_hierarchy_score":         "0.88",
+			"plan_ir_version":              "v2",
 			"verifier_score":               "0.84",
+			"verifier_ensemble_score":      "0.86",
 			"contract_coverage":            "0.88",
 			"verifier_fail_reasons":        `["missing_risks"]`,
 			"uncertainty_score":            "0.41",
 			"clarification_needed":         "false",
+			"clarification_points":         `["补充里程碑","补充验收标准"]`,
 			"search_budget_used":           "932",
 			"plan_revision_count":          "1",
+			"candidate_count":              "4",
+			"winning_margin":               "0.0380",
+			"simulated_risk_score":         "0.53",
 			"repair_actions":               `["degrade_parallelism"]`,
+			"repair_policy_id":             "counterfactual_repair_v1",
 			"quality_gate_block_reason":    "",
 			"q_score_hint":                 "0.83",
 			"policy_layers":                `[{"policy_id":"expert_strategy_v2:general_v2","scope_type":"global"}]`,
@@ -203,16 +211,25 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.True(t, ok)
 	assert.Len(t, gaps, 1)
 	assert.Equal(t, "0.76", meta["plan_feasibility_score"])
+	assert.Equal(t, "0.88", meta["goal_hierarchy_score"])
+	assert.Equal(t, "v2", meta["plan_ir_version"])
 	assert.Equal(t, "0.84", meta["verifier_score"])
+	assert.Equal(t, "0.86", meta["verifier_ensemble_score"])
 	assert.Equal(t, "0.88", meta["contract_coverage"])
 	_, ok = meta["verifier_fail_reasons"].([]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "0.41", meta["uncertainty_score"])
 	assert.Equal(t, "false", meta["clarification_needed"])
+	_, ok = meta["clarification_points"].([]interface{})
+	assert.True(t, ok)
 	assert.Equal(t, "932", meta["search_budget_used"])
 	assert.Equal(t, "1", meta["plan_revision_count"])
+	assert.Equal(t, "4", meta["candidate_count"])
+	assert.Equal(t, "0.0380", meta["winning_margin"])
+	assert.Equal(t, "0.53", meta["simulated_risk_score"])
 	_, ok = meta["repair_actions"].([]interface{})
 	assert.True(t, ok)
+	assert.Equal(t, "counterfactual_repair_v1", meta["repair_policy_id"])
 	assert.Equal(t, "0.83", meta["q_score_hint"])
 	_, ok = meta["policy_layers"].([]interface{})
 	assert.True(t, ok)

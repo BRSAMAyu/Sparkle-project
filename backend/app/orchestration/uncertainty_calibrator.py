@@ -10,6 +10,7 @@ class UncertaintyCalibrationResult:
     uncertainty_score: float
     clarification_needed: bool
     reasons: list[str] = field(default_factory=list)
+    clarification_points: list[str] = field(default_factory=list)
 
     def to_metadata(self) -> dict[str, str]:
         return {
@@ -75,10 +76,31 @@ class UncertaintyCalibrator:
         if decomposition_gap_count > 0:
             reasons.append("decomposition_gaps_present")
 
+        clarification_points = cls._select_clarification_points(reasons)
         threshold = float(getattr(settings, "UNCERTAINTY_CLARIFICATION_THRESHOLD", 0.62))
         clarification_needed = bool(uncertainty >= threshold)
         return UncertaintyCalibrationResult(
             uncertainty_score=round(uncertainty, 4),
             clarification_needed=clarification_needed,
             reasons=reasons,
+            clarification_points=clarification_points,
         )
+
+    @staticmethod
+    def _select_clarification_points(reasons: list[str]) -> list[str]:
+        mapping = {
+            "low_verifier_score": "补充目标与约束",
+            "low_contract_coverage": "补充里程碑和验收标准",
+            "low_route_confidence": "明确任务类型和优先级",
+            "low_plan_feasibility": "提供可用资源与时间预算",
+            "decomposition_gaps_present": "补充缺失的拆解字段",
+            "ambiguous_user_intent": "明确你最想先推进的结果",
+        }
+        selected: list[str] = []
+        for reason in reasons:
+            point = mapping.get(reason)
+            if point and point not in selected:
+                selected.append(point)
+            if len(selected) >= 3:
+                break
+        return selected

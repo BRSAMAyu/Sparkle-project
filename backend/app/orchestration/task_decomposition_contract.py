@@ -19,9 +19,11 @@ class TaskDecompositionContract:
     milestones: list[str] = field(default_factory=list)
     acceptance_criteria: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
+    goal_hierarchy: dict[str, Any] = field(default_factory=dict)
+    goal_hierarchy_score: float = 0.0
     score: float = 0.0
     gaps: list[str] = field(default_factory=list)
-    version: str = "v1"
+    version: str = "v2"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -31,6 +33,8 @@ class TaskDecompositionContract:
             "milestones": self.milestones,
             "acceptance_criteria": self.acceptance_criteria,
             "risks": self.risks,
+            "goal_hierarchy": self.goal_hierarchy,
+            "goal_hierarchy_score": round(float(self.goal_hierarchy_score), 4),
             "score": round(float(self.score), 4),
             "gaps": self.gaps,
             "version": self.version,
@@ -55,6 +59,13 @@ def build_task_decomposition_contract(
     milestones = _extract_milestones(text)
     acceptance = _extract_acceptance_criteria(text)
     risks = _extract_risks(text)
+    goal_hierarchy = _build_goal_hierarchy(
+        text=text,
+        goal=goal,
+        constraints=constraints,
+        milestones=milestones,
+    )
+    goal_hierarchy_score = _score_goal_hierarchy(goal_hierarchy)
 
     decomposition_request = _is_decomposition_request(intent=intent_value, text=text)
     # Planning/decomposition intents require full contract by default.
@@ -73,6 +84,10 @@ def build_task_decomposition_contract(
         gaps.append("missing_acceptance_criteria")
     if must_have_risks and not risks:
         gaps.append("missing_risks")
+    if decomposition_request and goal_hierarchy_score < 0.55:
+        gaps.append("missing_goal_hierarchy")
+    if decomposition_request and not _is_hierarchy_traceable(goal_hierarchy):
+        gaps.append("broken_goal_traceability")
 
     score = _score_contract(
         goal=goal,
@@ -81,6 +96,7 @@ def build_task_decomposition_contract(
         milestones=milestones,
         acceptance_criteria=acceptance,
         risks=risks,
+        goal_hierarchy_score=goal_hierarchy_score,
     )
 
     return TaskDecompositionContract(
@@ -90,6 +106,8 @@ def build_task_decomposition_contract(
         milestones=milestones,
         acceptance_criteria=acceptance,
         risks=risks,
+        goal_hierarchy=goal_hierarchy,
+        goal_hierarchy_score=goal_hierarchy_score,
         score=score,
         gaps=gaps,
     )
@@ -102,6 +120,8 @@ def generate_contract_clarification_questions(gaps: list[str]) -> list[str]:
         "missing_milestones": "你希望分成哪些阶段推进？至少给出 2-3 个里程碑。",
         "missing_acceptance_criteria": "怎样算完成？请给出可验证的验收标准。",
         "missing_risks": "这件事最可能失败的风险是什么？请至少给出 1-2 个风险。",
+        "missing_goal_hierarchy": "请补充层级目标：愿景、12周目标、每周里程碑、每日行动。",
+        "broken_goal_traceability": "请明确每日行动分别归属哪个周里程碑，保证可追溯。",
     }
     questions: list[str] = []
     for gap in gaps:
@@ -220,6 +240,150 @@ def _extract_risks(text: str) -> list[str]:
     return risks[:6]
 
 
+def _build_goal_hierarchy(
+    *,
+    text: str,
+    goal: str,
+    constraints: list[str],
+    milestones: list[str],
+) -> dict[str, Any]:
+    vision = _extract_vision(text=text, goal=goal)
+    goal_12w = _extract_12w_goal(text=text, goal=goal, constraints=constraints)
+
+    weekly_milestones: list[dict[str, str]] = []
+    for idx, item in enumerate(milestones[:12], start=1):
+        weekly_milestones.append(
+            {
+                "week": f"W{idx}",
+                "milestone": _clean_text(item),
+            }
+        )
+
+    if not weekly_milestones and goal:
+        weekly_milestones = [
+            {"week": "W1", "milestone": f"明确目标并搭建执行环境：{goal[:48]}"},
+            {"week": "W2", "milestone": "推进关键任务并完成阶段复盘"},
+        ]
+
+    daily_actions = _extract_daily_actions(text=text, weekly_milestones=weekly_milestones)
+    if not daily_actions and weekly_milestones:
+        for idx, item in enumerate(weekly_milestones, start=1):
+            daily_actions.append(
+                {
+                    "day": f"D{idx}",
+                    "action": f"围绕 {item['milestone'][:32]} 执行一个最小可交付任务",
+                    "milestone_ref": item["week"],
+                }
+            )
+
+    return {
+        "vision": vision,
+        "goal_12w": goal_12w,
+        "weekly_milestones": weekly_milestones,
+        "daily_actions": daily_actions,
+    }
+
+
+def _extract_vision(*, text: str, goal: str) -> str:
+    patterns = [
+        r"(?:愿景|长期目标|终极目标|最终想达到)\s*[:：]?\s*([^。！？\n]{6,120})",
+        r"(?:vision|long[- ]term goal)\s*[:：]?\s*([^.!?\n]{6,120})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_text(match.group(1))
+    if goal:
+        return f"围绕“{goal[:48]}”实现可持续成长与稳定成果"
+    return ""
+
+
+def _extract_12w_goal(*, text: str, goal: str, constraints: list[str]) -> str:
+    patterns = [
+        r"(?:12周目标|三个月目标|12-week goal|12 week goal)\s*[:：]?\s*([^。！？\n]{6,120})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_text(match.group(1))
+
+    constraint_hint = ""
+    for item in constraints:
+        value = str(item)
+        if "周" in value or "week" in value.lower() or "月" in value:
+            constraint_hint = value
+            break
+    if goal and constraint_hint:
+        return f"{constraint_hint} 内达成：{goal[:72]}"
+    if goal:
+        return f"12周内达成：{goal[:72]}"
+    return ""
+
+
+def _extract_daily_actions(*, text: str, weekly_milestones: list[dict[str, str]]) -> list[dict[str, str]]:
+    chunks = re.split(r"[。！？\n]", text)
+    actions: list[dict[str, str]] = []
+    week_refs = [item["week"] for item in weekly_milestones]
+    for chunk in chunks:
+        clean = _clean_text(chunk)
+        if not clean:
+            continue
+        lowered = clean.lower()
+        if not any(token in lowered for token in ("每天", "daily", "今日", "today", "day", "打卡", "复盘")):
+            continue
+        milestone_ref = week_refs[min(len(actions), len(week_refs) - 1)] if week_refs else ""
+        actions.append(
+            {
+                "day": f"D{len(actions) + 1}",
+                "action": clean[:96],
+                "milestone_ref": milestone_ref,
+            }
+        )
+        if len(actions) >= 14:
+            break
+    return actions
+
+
+def _score_goal_hierarchy(hierarchy: dict[str, Any]) -> float:
+    if not isinstance(hierarchy, dict):
+        return 0.0
+    score = 0.0
+    if _clean_text(str(hierarchy.get("vision", ""))):
+        score += 0.25
+    if _clean_text(str(hierarchy.get("goal_12w", ""))):
+        score += 0.25
+    weekly = hierarchy.get("weekly_milestones")
+    if isinstance(weekly, list) and any(isinstance(item, dict) and _clean_text(str(item.get("milestone", ""))) for item in weekly):
+        score += 0.25
+    if _is_hierarchy_traceable(hierarchy):
+        score += 0.25
+    return max(0.0, min(score, 1.0))
+
+
+def _is_hierarchy_traceable(hierarchy: dict[str, Any]) -> bool:
+    if not isinstance(hierarchy, dict):
+        return False
+    weekly = hierarchy.get("weekly_milestones")
+    daily = hierarchy.get("daily_actions")
+    if not isinstance(weekly, list) or not isinstance(daily, list) or not weekly or not daily:
+        return False
+    valid_weeks = {
+        str(item.get("week", "")).strip()
+        for item in weekly
+        if isinstance(item, dict) and str(item.get("week", "")).strip()
+    }
+    if not valid_weeks:
+        return False
+    for item in daily:
+        if not isinstance(item, dict):
+            return False
+        action = _clean_text(str(item.get("action", "")))
+        ref = str(item.get("milestone_ref", "")).strip()
+        if not action or not ref or ref not in valid_weeks:
+            return False
+    return True
+
+
 def _is_decomposition_request(*, intent: str, text: str) -> bool:
     if intent in {"create_plan", "time_planning", "plan", "sprint_plan", "task_decomposition", "study_plan"}:
         return True
@@ -248,18 +412,20 @@ def _score_contract(
     milestones: list[str],
     acceptance_criteria: list[str],
     risks: list[str],
+    goal_hierarchy_score: float,
 ) -> float:
     score = 0.0
     if goal:
-        score += 0.25
-    if constraints:
-        score += 0.16
-    if resources:
-        score += 0.12
-    if milestones:
         score += 0.2
+    if constraints:
+        score += 0.14
+    if resources:
+        score += 0.1
+    if milestones:
+        score += 0.18
     if acceptance_criteria:
-        score += 0.22
+        score += 0.2
     if risks:
         score += 0.05
+    score += 0.13 * max(0.0, min(goal_hierarchy_score, 1.0))
     return max(0.0, min(score, 1.0))

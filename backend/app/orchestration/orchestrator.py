@@ -63,6 +63,7 @@ from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_search_service import PlanSearchService
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.orchestration.reasoning_verifier_service import ReasoningVerifierService
+from app.orchestration.plan_simulator_service import PlanSimulatorService
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision
@@ -77,6 +78,7 @@ from app.orchestration.statechart_engine import WorkflowState
 
 # Phase 4: Sufficiency Checking
 from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
+from app.orchestration.task_decomposition_contract import build_task_decomposition_contract
 from app.orchestration.token_tracker import TokenTracker
 
 # Phase 5: Plan Execution Validation
@@ -244,6 +246,7 @@ class ChatOrchestrator:
         self.reasoning_verifier = ReasoningVerifierService()
         self.uncertainty_calibrator = UncertaintyCalibrator()
         self.plan_search_service = PlanSearchService()
+        self.plan_simulator = PlanSimulatorService()
         logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
 
         # Phase 3: Initialize Circuit Breaker
@@ -1048,6 +1051,13 @@ class ChatOrchestrator:
                     sufficiency_payload["decomposition_contract_score"] = check_result.decomposition_contract_score
                 if check_result.decomposition_gaps:
                     sufficiency_payload["decomposition_gaps"] = list(check_result.decomposition_gaps)
+                if isinstance(check_result.decomposition_contract, dict):
+                    hierarchy_score = check_result.decomposition_contract.get("goal_hierarchy_score")
+                    if hierarchy_score is not None:
+                        sufficiency_payload["goal_hierarchy_score"] = hierarchy_score
+                    version = check_result.decomposition_contract.get("version")
+                    if version:
+                        sufficiency_payload["plan_contract_version"] = str(version)
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
                 questions = check_result.clarification_questions
@@ -1068,7 +1078,9 @@ class ChatOrchestrator:
                         {
                             "decomposition_gaps": json.dumps(decomposition_gaps, ensure_ascii=False),
                             "decomposition_contract_score": f"{check_result.decomposition_contract_score:.2f}",
-                            "plan_contract_version": "v1",
+                            "plan_contract_version": str(
+                                (check_result.decomposition_contract or {}).get("version", "v2")
+                            ),
                         }
                     )
                 await stream_callback(agent_service_pb2.ChatResponse(
@@ -1595,6 +1607,10 @@ class ChatOrchestrator:
                 if isinstance(repair_result, dict) and repair_result.get("applied"):
                     payload["repair_actions"] = repair_result.get("repair_actions", [])
                     final_state.context_data["repair_actions"] = repair_result.get("repair_actions", [])
+                    repair_policy_id = str(repair_result.get("repair_policy_id", "")).strip()
+                    if repair_policy_id:
+                        payload["repair_policy_id"] = repair_policy_id
+                        final_state.context_data["repair_policy_id"] = repair_policy_id
                 return payload
 
             tool_extractor = ToolResultExtractor()
@@ -1769,15 +1785,30 @@ class ChatOrchestrator:
                 response_metadata["plan_feasibility_score"] = f"{float(plan_feasibility_score):.2f}"
             except (TypeError, ValueError):
                 response_metadata["plan_feasibility_score"] = str(plan_feasibility_score)
+        goal_hierarchy_score = final_state.context_data.get("goal_hierarchy_score")
+        if goal_hierarchy_score is not None:
+            try:
+                response_metadata["goal_hierarchy_score"] = f"{float(goal_hierarchy_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["goal_hierarchy_score"] = str(goal_hierarchy_score)
         plan_contract_version = final_state.context_data.get("plan_contract_version")
         if plan_contract_version:
             response_metadata["plan_contract_version"] = str(plan_contract_version)
+        plan_ir_version = final_state.context_data.get("plan_ir_version")
+        if plan_ir_version:
+            response_metadata["plan_ir_version"] = str(plan_ir_version)
         verifier_score = final_state.context_data.get("verifier_score")
         if verifier_score is not None:
             try:
                 response_metadata["verifier_score"] = f"{float(verifier_score):.2f}"
             except (TypeError, ValueError):
                 response_metadata["verifier_score"] = str(verifier_score)
+        verifier_ensemble_score = final_state.context_data.get("verifier_ensemble_score")
+        if verifier_ensemble_score is not None:
+            try:
+                response_metadata["verifier_ensemble_score"] = f"{float(verifier_ensemble_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["verifier_ensemble_score"] = str(verifier_ensemble_score)
         contract_coverage = final_state.context_data.get("contract_coverage")
         if contract_coverage is not None:
             try:
@@ -1799,15 +1830,39 @@ class ChatOrchestrator:
         clarification_needed = final_state.context_data.get("clarification_needed")
         if clarification_needed is not None:
             response_metadata["clarification_needed"] = "true" if bool(clarification_needed) else "false"
+        clarification_points = final_state.context_data.get("clarification_points")
+        if isinstance(clarification_points, list) and clarification_points:
+            response_metadata["clarification_points"] = json.dumps(
+                [str(item) for item in clarification_points if str(item).strip()],
+                ensure_ascii=False,
+            )
         search_budget_used = final_state.context_data.get("search_budget_used")
         if search_budget_used is not None:
             response_metadata["search_budget_used"] = str(search_budget_used)
         plan_revision_count = final_state.context_data.get("plan_revision_count")
         if plan_revision_count is not None:
             response_metadata["plan_revision_count"] = str(plan_revision_count)
+        candidate_count = final_state.context_data.get("candidate_count")
+        if candidate_count is not None:
+            response_metadata["candidate_count"] = str(candidate_count)
+        winning_margin = final_state.context_data.get("winning_margin")
+        if winning_margin is not None:
+            try:
+                response_metadata["winning_margin"] = f"{float(winning_margin):.4f}"
+            except (TypeError, ValueError):
+                response_metadata["winning_margin"] = str(winning_margin)
+        simulated_risk_score = final_state.context_data.get("simulated_risk_score")
+        if simulated_risk_score is not None:
+            try:
+                response_metadata["simulated_risk_score"] = f"{float(simulated_risk_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["simulated_risk_score"] = str(simulated_risk_score)
         repair_actions = final_state.context_data.get("repair_actions")
         if isinstance(repair_actions, list) and repair_actions:
             response_metadata["repair_actions"] = json.dumps(repair_actions, ensure_ascii=False)
+        repair_policy_id = final_state.context_data.get("repair_policy_id")
+        if repair_policy_id:
+            response_metadata["repair_policy_id"] = str(repair_policy_id)
         cohort_id = final_state.context_data.get("cohort_id")
         if cohort_id:
             response_metadata["cohort_id"] = str(cohort_id)
@@ -2369,6 +2424,30 @@ class ChatOrchestrator:
         if route_decision.execution_mode not in ["langgraph", "hybrid"]:
             return route_decision, executable_plan, snapshot, False
 
+        should_compile_goal_contract = (
+            normalize_chat_mode(str(state.context_data.get("chat_mode", CHAT_MODE_STANDARD))) == CHAT_MODE_STUDY_PLAN
+            or self._is_task_decomposition_request(message=user_message, unified_routing_result=None)
+        )
+        if should_compile_goal_contract:
+            existing_contract = state.context_data.get("decomposition_contract")
+            if not isinstance(existing_contract, dict):
+                compiled_contract = build_task_decomposition_contract(
+                    message=user_message,
+                    intent="create_plan",
+                    extracted_entities={},
+                    conversation_context=[],
+                ).to_dict()
+                state.context_data["decomposition_contract"] = compiled_contract
+                state.context_data["decomposition_contract_score"] = compiled_contract.get("score", 0.0)
+                state.context_data["decomposition_gaps"] = list(compiled_contract.get("gaps", []) or [])
+                state.context_data["goal_hierarchy_score"] = compiled_contract.get("goal_hierarchy_score", 0.0)
+                state.context_data["plan_contract_version"] = compiled_contract.get("version", "v2")
+            else:
+                if "goal_hierarchy_score" in existing_contract:
+                    state.context_data["goal_hierarchy_score"] = existing_contract.get("goal_hierarchy_score", 0.0)
+                if "version" in existing_contract:
+                    state.context_data["plan_contract_version"] = str(existing_contract.get("version", "v2"))
+
         logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
         allow, reason = await self.langgraph_breaker.allow_request()
         if not allow:
@@ -2483,12 +2562,22 @@ class ChatOrchestrator:
                 executable_plan = search_result.best_plan
                 state.context_data["search_budget_used"] = search_result.search_budget_used_ms
                 state.context_data["plan_revision_count"] = search_result.plan_revision_count
+                state.context_data["candidate_count"] = search_result.candidate_count
+                state.context_data["winning_margin"] = search_result.winning_margin
+
+            plan_ir = self.lang_graph_planner.to_plan_ir_v2(
+                executable_plan,
+                user_message=user_message,
+            )
+            state.context_data["plan_ir_version"] = str(plan_ir.get("version", "v2"))
+            state.context_data["plan_ir"] = plan_ir
 
             verifier_result = self.reasoning_verifier.verify(
                 plan=executable_plan,
                 contract=state.context_data.get("decomposition_contract"),
             )
             state.context_data["verifier_score"] = verifier_result.verifier_score
+            state.context_data["verifier_ensemble_score"] = verifier_result.verifier_ensemble_score
             state.context_data["contract_coverage"] = verifier_result.contract_coverage
             state.context_data["verifier_fail_reasons"] = list(verifier_result.verifier_fail_reasons)
 
@@ -2506,6 +2595,7 @@ class ChatOrchestrator:
                         metadata={
                             "requires_clarification": "true",
                             "verifier_score": f"{verifier_result.verifier_score:.2f}",
+                            "verifier_ensemble_score": f"{verifier_result.verifier_ensemble_score:.2f}",
                             "contract_coverage": f"{verifier_result.contract_coverage:.2f}",
                             "verifier_fail_reasons": json.dumps(
                                 verifier_result.verifier_fail_reasons,
@@ -2535,6 +2625,7 @@ class ChatOrchestrator:
                 )
                 state.context_data["decomposition_quality_gate"] = gate_result.to_dict()
                 state.context_data["decomposition_contract_score"] = gate_result.decomposition_contract_score
+                state.context_data["goal_hierarchy_score"] = gate_result.goal_hierarchy_score
                 state.context_data["decomposition_gaps"] = list(gate_result.decomposition_gaps)
                 state.context_data["plan_feasibility_score"] = gate_result.plan_feasibility_score
                 state.context_data["plan_contract_version"] = gate_result.contract_version
@@ -2562,6 +2653,7 @@ class ChatOrchestrator:
                             "decomposition_gaps": list(gate_result.decomposition_gaps),
                             "plan_feasibility_score": gate_result.plan_feasibility_score,
                             "decomposition_contract_score": gate_result.decomposition_contract_score,
+                            "goal_hierarchy_score": gate_result.goal_hierarchy_score,
                         },
                     )
                     clarification_prompt = DecompositionQualityGate.build_clarification_prompt(
@@ -2575,6 +2667,7 @@ class ChatOrchestrator:
                         metadata={
                             "requires_clarification": "true",
                             "decomposition_contract_score": f"{gate_result.decomposition_contract_score:.2f}",
+                            "goal_hierarchy_score": f"{gate_result.goal_hierarchy_score:.2f}",
                             "decomposition_gaps": json.dumps(gate_result.decomposition_gaps, ensure_ascii=False),
                             "plan_feasibility_score": f"{gate_result.plan_feasibility_score:.2f}",
                             "quality_gate_block_reason": state.context_data["quality_gate_block_reason"],
@@ -2600,9 +2693,18 @@ class ChatOrchestrator:
                 state.context_data["clarification_needed"] = uncertainty.clarification_needed
                 if uncertainty.reasons:
                     state.context_data["uncertainty_reasons"] = uncertainty.reasons
+                if uncertainty.clarification_points:
+                    state.context_data["clarification_points"] = list(uncertainty.clarification_points)
 
                 if uncertainty.clarification_needed:
-                    prompt = "为了保证后续方案可靠执行，我需要你补充：\n- 时间边界\n- 可量化验收标准\n- 当前可用资源"
+                    clarification_points = uncertainty.clarification_points or [
+                        "提供时间边界",
+                        "补充可量化验收标准",
+                        "说明当前可用资源",
+                    ]
+                    prompt = "为了保证后续方案可靠执行，我需要你补充：\n" + "\n".join(
+                        f"- {item}" for item in clarification_points[:3]
+                    )
                     await stream_callback(
                         agent_service_pb2.ChatResponse(
                             delta=prompt,
@@ -2611,12 +2713,26 @@ class ChatOrchestrator:
                                 "uncertainty_score": f"{uncertainty.uncertainty_score:.2f}",
                                 "clarification_needed": "true",
                                 "verifier_score": f"{verifier_result.verifier_score:.2f}",
+                                "verifier_ensemble_score": f"{verifier_result.verifier_ensemble_score:.2f}",
                                 "contract_coverage": f"{verifier_result.contract_coverage:.2f}",
+                                "clarification_points": json.dumps(clarification_points, ensure_ascii=False),
                             },
                         )
                     )
                     await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
                     return route_decision, executable_plan, snapshot, True
+
+            simulation = self.plan_simulator.simulate(
+                plan=executable_plan,
+                selected_experts=selected_experts if isinstance(selected_experts, list) else [],
+                uncertainty_score=float(state.context_data.get("uncertainty_score", 0.0) or 0.0),
+                route_confidence=float(route_decision.confidence or 0.0),
+            )
+            state.context_data["simulated_risk_score"] = simulation.simulated_risk_score
+            if simulation.risk_factors:
+                state.context_data["simulated_risk_factors"] = simulation.risk_factors
+            if simulation.suggested_actions:
+                state.context_data["simulated_risk_actions"] = simulation.suggested_actions
 
             await self.observability.log_langgraph_plan(
                 user_id=user_id,
@@ -3442,6 +3558,10 @@ class ChatOrchestrator:
                         state.context_data["decomposition_contract_score"] = sufficiency_payload["decomposition_contract_score"]
                     if isinstance(sufficiency_payload.get("decomposition_gaps"), list):
                         state.context_data["decomposition_gaps"] = sufficiency_payload["decomposition_gaps"]
+                    if "goal_hierarchy_score" in sufficiency_payload:
+                        state.context_data["goal_hierarchy_score"] = sufficiency_payload["goal_hierarchy_score"]
+                    if "plan_contract_version" in sufficiency_payload:
+                        state.context_data["plan_contract_version"] = sufficiency_payload["plan_contract_version"]
                 if expert_routing_decision:
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)

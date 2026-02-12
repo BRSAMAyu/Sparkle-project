@@ -51,7 +51,8 @@ class PolicyRegistryService:
             return all_candidates[candidate_id]
         payload = dict(candidate)
         payload.setdefault("channel", "routing")
-        payload.setdefault("status", "pending")
+        research_candidate = bool(payload.get("research_track", False) or payload.get("is_research", False))
+        payload.setdefault("status", "research_pending" if research_candidate else "pending")
         payload.setdefault("created_at", _utcnow().isoformat())
         all_candidates[candidate_id] = payload
         await self._save_candidates(all_candidates)
@@ -68,7 +69,7 @@ class PolicyRegistryService:
         candidate = all_candidates.get(candidate_id)
         if not candidate:
             raise ValueError("candidate_not_found")
-        if candidate.get("status") not in {"pending", "rejected"}:
+        if candidate.get("status") not in {"pending", "rejected", "research_passed"}:
             raise ValueError("candidate_not_pending")
 
         candidate["status"] = "approved"
@@ -95,6 +96,7 @@ class PolicyRegistryService:
             "expected_delta": float(candidate.get("expected_delta", 0.0) or 0.0),
             "risk_level": str(candidate.get("risk_level", "medium")),
             "status": "canary" if getattr(settings, "ENABLE_POLICY_CANARY_ROLLOUT", False) else "active",
+            "lifecycle_state": "canary" if getattr(settings, "ENABLE_POLICY_CANARY_ROLLOUT", False) else "active",
             "rollout_percent": int(candidate.get("rollout_percent", 10)),
             "created_at": candidate.get("created_at"),
             "approved_at": candidate["approved_at"],
@@ -103,6 +105,53 @@ class PolicyRegistryService:
         }
         await self.upsert_policy(policy_payload)
         return candidate
+
+    async def mark_research_passed(
+        self,
+        *,
+        candidate_id: str,
+        reviewer: str,
+        note: str = "",
+    ) -> dict[str, Any]:
+        all_candidates = await self._load_candidates()
+        candidate = all_candidates.get(candidate_id)
+        if not candidate:
+            raise ValueError("candidate_not_found")
+        if candidate.get("status") == "research_passed":
+            return candidate
+        if candidate.get("status") not in {"research_pending", "pending"}:
+            raise ValueError("candidate_not_research_pending")
+        candidate["status"] = "research_passed"
+        candidate["research_passed_at"] = _utcnow().isoformat()
+        candidate["research_reviewer"] = reviewer
+        if note:
+            candidate["research_note"] = note
+        all_candidates[candidate_id] = candidate
+        await self._save_candidates(all_candidates)
+        return candidate
+
+    async def approve_research_promotion(
+        self,
+        *,
+        candidate_id: str,
+        reviewer: str,
+        note: str = "",
+    ) -> dict[str, Any]:
+        candidate = await self.mark_research_passed(
+            candidate_id=candidate_id,
+            reviewer=reviewer,
+            note=note,
+        )
+        approved = await self.approve_candidate(
+            candidate_id=candidate_id,
+            reviewer=reviewer,
+            note=f"research_promotion:{note}" if note else "research_promotion",
+        )
+        return {
+            "candidate": approved,
+            "promotion_state": "canary" if getattr(settings, "ENABLE_POLICY_CANARY_ROLLOUT", False) else "active",
+            "research_passed_at": candidate.get("research_passed_at", ""),
+        }
 
     async def reject_candidate(
         self,

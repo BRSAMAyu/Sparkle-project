@@ -72,6 +72,7 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
         reasoning_weekly = client.get("/admin/learning/reasoning-weekly-report")
         assert reasoning_weekly.status_code == 200
         assert "q_score_by_policy" in reasoning_weekly.json()
+        assert "q_score_by_cube" in reasoning_weekly.json()
 
         meta_list = client.get("/admin/learning/meta-candidates?channel=routing")
         assert meta_list.status_code == 200
@@ -88,3 +89,25 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
         tuning = client.get("/admin/learning/meta-tuning-package")
         assert tuning.status_code == 200
         assert "recommendations" in tuning.json()
+
+        research_benchmarks = client.get("/admin/learning/research-benchmarks")
+        assert research_benchmarks.status_code == 200
+        assert "candidate_pool" in research_benchmarks.json()
+
+        research_candidate = {
+            "id": "pc_research_api_1",
+            "policy_id": "expert_strategy_v2:general_v2:candidate_research_api_1",
+            "base_policy": "expert_strategy_v2:general_v2",
+            "strategy_pack": "general_v2",
+            "channel": "routing",
+            "scope_type": "global",
+            "scope_key": "all",
+            "research_track": True,
+            "weights": {"semantic_weight": 0.4},
+            "thresholds": {"min_selected_score": 0.35},
+            "status": "research_pending",
+        }
+        anyio.run(registry.create_candidate, research_candidate)
+        promote = client.post("/admin/learning/research-promotions/pc_research_api_1/approve", json={"note": "promote"})
+        assert promote.status_code == 200
+        assert promote.json()["status"] == "ok"
