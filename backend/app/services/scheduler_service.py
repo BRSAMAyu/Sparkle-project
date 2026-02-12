@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy import select
 
 from app.config import settings
+from app.core.cache import cache_service
 from app.core.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -12,10 +13,16 @@ from app.schemas.notification import NotificationCreate
 from app.services.cognitive_service import CognitiveService
 from app.services.decay_service import DecayService
 from app.services.event_retention_service import EventRetentionService
+from app.services.expert_policy_report_service import ExpertPolicyReportService
+from app.services.learning_feature_rollup_service import LearningFeatureRollupService
+from app.services.meta_learning_feature_service import MetaLearningFeatureService
+from app.services.meta_policy_recommendation_service import MetaPolicyRecommendationService
 from app.services.memory_jobs import MemoryJobsService
 from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.policy_candidate_service import PolicyCandidateService
+from app.services.policy_registry_service import PolicyRegistryService
 from app.services.push_service import PushService
 
 
@@ -53,6 +60,27 @@ class SchedulerService:
 
         # 推断偏好衰减 (每周日凌晨2点执行)
         self.scheduler.add_job(self.apply_inferred_preference_decay, 'cron', day_of_week='sun', hour=2, minute=0)
+
+        if settings.ENABLE_LEARNING_CONTROL_PLANE:
+            self.scheduler.add_job(
+                self.run_learning_feature_rollup_job,
+                "interval",
+                minutes=max(5, int(getattr(settings, "LEARNING_ROLLUP_WINDOW_MINUTES", 30))),
+            )
+            if settings.ENABLE_POLICY_CANDIDATE_PIPELINE:
+                self.scheduler.add_job(
+                    self.run_policy_candidate_job,
+                    "cron",
+                    hour=int(getattr(settings, "LEARNING_POLICY_CANDIDATE_HOUR", 3)),
+                    minute=int(getattr(settings, "LEARNING_POLICY_CANDIDATE_MINUTE", 40)),
+                )
+            self.scheduler.add_job(
+                self.run_learning_weekly_report_job,
+                "cron",
+                day_of_week=str(getattr(settings, "LEARNING_WEEKLY_REPORT_WEEKDAY", "mon")),
+                hour=int(getattr(settings, "LEARNING_WEEKLY_REPORT_HOUR", 4)),
+                minute=int(getattr(settings, "LEARNING_WEEKLY_REPORT_MINUTE", 10)),
+            )
 
         # ========== 胶囊生成调度任务 ==========
 
@@ -434,6 +462,207 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Error in weekly deep capsule generation: {e}", exc_info=True)
+
+    async def _run_learning_job_with_guard(self, job_name: str, runner):
+        registry = PolicyRegistryService(redis_client=cache_service.redis)
+        if not settings.ENABLE_LEARNING_CONTROL_PLANE:
+            await registry.record_job_run(
+                job=job_name,
+                status="disabled",
+                detail={"reason": "flag_off"},
+            )
+            return {"status": "disabled", "reason": "flag_off"}
+
+        lock_key = f"learning-job:{job_name}"
+        lock_acquired = False
+        try:
+            if cache_service.redis:
+                async with cache_service.distributed_lock(lock_key, expire=1800):
+                    lock_acquired = True
+                    detail = await runner()
+            else:
+                detail = await runner()
+            await registry.record_job_run(job=job_name, status="ok", detail=detail)
+            return detail
+        except Exception as exc:
+            status = "skipped_lock" if not lock_acquired and cache_service.redis else "error"
+            await registry.record_job_run(
+                job=job_name,
+                status=status,
+                detail={"error": str(exc)},
+            )
+            logger.exception("Learning job {} failed: {}", job_name, exc)
+            return {"status": status, "error": str(exc)}
+
+    async def run_learning_feature_rollup_job(self):
+        logger.info("Starting learning feature rollup job...")
+
+        async def _runner():
+            service = LearningFeatureRollupService(redis_client=cache_service.redis)
+            summary = await service.run_rollup_job(
+                window_minutes=max(5, int(getattr(settings, "LEARNING_ROLLUP_WINDOW_MINUTES", 30)))
+            )
+            guardrail = await self._evaluate_canary_guardrails()
+            summary["canary_guardrail"] = guardrail
+            return summary
+
+        return await self._run_learning_job_with_guard("learning_feature_rollup", _runner)
+
+    async def run_policy_candidate_job(self):
+        logger.info("Starting policy candidate generation job...")
+
+        async def _runner():
+            service = PolicyCandidateService(redis_client=cache_service.redis)
+            channels: list[str] = []
+            if bool(getattr(settings, "ENABLE_META_LEARNING_CHANNEL_ROUTING", True)):
+                channels.append("routing")
+            if bool(getattr(settings, "ENABLE_META_LEARNING_CHANNEL_PROMPT", False)):
+                channels.append("prompt")
+            if bool(getattr(settings, "ENABLE_META_LEARNING_CHANNEL_TOOLCHAIN", False)):
+                channels.append("toolchain")
+            if not channels:
+                channels = ["routing"]
+            return await service.run_candidate_job(window_days=7, channels=channels)
+
+        return await self._run_learning_job_with_guard("policy_candidate_generation", _runner)
+
+    async def run_learning_weekly_report_job(self):
+        logger.info("Starting learning weekly report job...")
+
+        async def _runner():
+            report_service = ExpertPolicyReportService(redis_client=cache_service.redis)
+            registry = PolicyRegistryService(redis_client=cache_service.redis)
+            feature_service = MetaLearningFeatureService(redis_client=cache_service.redis)
+            tuning_service = MetaPolicyRecommendationService(redis_client=cache_service.redis)
+            report = await report_service.build_report(days=14)
+            feature_vectors = await feature_service.build_feature_vectors(days=14)
+            payload = {
+                "generated_at": _utcnow().isoformat(),
+                "window_days": 14,
+                "policy_report": report,
+                "meta_feature_vector_count": len(feature_vectors),
+                "meta_feature_vectors_top": feature_vectors[:100],
+                "tuning_package": await tuning_service.build_weekly_tuning_package(days=14),
+                "summary": {
+                    "fallback_rate": report.get("rates", {}).get("fallback_rate", 0.0),
+                    "feedback_binding_rate": report.get("rates", {}).get("feedback_binding_rate", 0.0),
+                },
+            }
+            await registry.save_weekly_report(payload)
+            return payload
+
+        return await self._run_learning_job_with_guard("learning_weekly_report", _runner)
+
+    async def _evaluate_canary_guardrails(self) -> dict[str, Any]:
+        if not settings.ENABLE_POLICY_CANARY_ROLLOUT:
+            return {"checked": 0, "rolled_back": 0, "reason": "canary_flag_off"}
+
+        registry = PolicyRegistryService(redis_client=cache_service.redis)
+        rollups = LearningFeatureRollupService(redis_client=cache_service.redis)
+        canaries = await registry.list_policies(statuses={"canary"})
+        if not canaries:
+            return {"checked": 0, "rolled_back": 0}
+
+        rows = await rollups.list_rollups(days=2)
+        grouped: dict[str, dict[str, int]] = {}
+        for row in rows:
+            policy_id = str(row.get("policy_id", ""))
+            counts = row.get("counts") if isinstance(row.get("counts"), dict) else {}
+            target = grouped.setdefault(policy_id, {})
+            for key, value in counts.items():
+                target[key] = int(target.get(key, 0)) + int(value or 0)
+
+        min_selected = int(getattr(settings, "LEARNING_CANARY_MIN_SELECTED", 30))
+        fallback_limit = float(getattr(settings, "LEARNING_CANARY_MAX_FALLBACK_RATE", 0.12))
+        negative_limit = float(getattr(settings, "LEARNING_CANARY_MAX_NEGATIVE_FEEDBACK_RATE", 0.55))
+
+        checked = 0
+        rolled_back = 0
+        rolled_back_ids: list[str] = []
+        fairness_q_gap = 0.0
+        for policy in canaries:
+            policy_id = str(policy.get("policy_id", ""))
+            metrics = grouped.get(policy_id, {})
+            selected = int(metrics.get("expert_selected", 0))
+            if selected < min_selected:
+                continue
+            checked += 1
+            fallback = int(metrics.get("expert_fallback", 0))
+            feedback_up = int(metrics.get("feedback_up", 0))
+            feedback_down = int(metrics.get("feedback_down", 0))
+            feedback_total = feedback_up + feedback_down
+            fallback_rate = (fallback / selected) if selected > 0 else 0.0
+            negative_feedback_rate = (feedback_down / feedback_total) if feedback_total > 0 else 0.0
+
+            if fallback_rate > fallback_limit or negative_feedback_rate > negative_limit:
+                reason = (
+                    f"guardrail_exceeded:fallback={fallback_rate:.3f},"
+                    f"negative_feedback={negative_feedback_rate:.3f}"
+                )
+                rolled = await registry.rollback_policy(policy_id=policy_id, reason=reason)
+                if rolled:
+                    rolled_back += 1
+                    rolled_back_ids.append(policy_id)
+                    self._metric_policy_rollback(reason_type="guardrail_exceeded")
+
+        if bool(getattr(settings, "ENABLE_META_FAIRNESS_GUARDRAIL", False)):
+            by_cohort: dict[str, dict[str, float]] = {}
+            for row in rows:
+                cohort_id = str(row.get("cohort_id", "") or "")
+                if not cohort_id:
+                    continue
+                counts = row.get("counts") if isinstance(row.get("counts"), dict) else {}
+                selected = int(counts.get("expert_selected", 0))
+                if selected <= 0:
+                    continue
+                q_score = float(row.get("q_score", 0.0) or 0.0)
+                target = by_cohort.setdefault(cohort_id, {"selected": 0.0, "q_weighted": 0.0})
+                target["selected"] += float(selected)
+                target["q_weighted"] += q_score * float(selected)
+            min_support_cohort = int(getattr(settings, "LONG_TAIL_COHORT_MIN_SUPPORT", 20))
+            stable_values = []
+            for stat in by_cohort.values():
+                selected = int(stat["selected"])
+                if selected < min_support_cohort:
+                    continue
+                stable_values.append(float(stat["q_weighted"]) / max(1.0, float(selected)))
+            if stable_values:
+                fairness_q_gap = max(stable_values) - min(stable_values)
+            redline = float(getattr(settings, "FAIRNESS_STABLE_COHORT_Q_GAP_REDLINE", 0.08))
+            if fairness_q_gap > redline:
+                for policy in canaries:
+                    policy_id = str(policy.get("policy_id", ""))
+                    if policy_id in rolled_back_ids:
+                        continue
+                    rolled = await registry.rollback_policy(
+                        policy_id=policy_id,
+                        reason=f"fairness_redline_exceeded:q_gap={fairness_q_gap:.3f}",
+                    )
+                    if rolled:
+                        rolled_back += 1
+                        rolled_back_ids.append(policy_id)
+                        self._metric_policy_rollback(reason_type="fairness_redline")
+
+        try:
+            from app.core.metrics import FAIRNESS_STABLE_Q_GAP
+            FAIRNESS_STABLE_Q_GAP.set(float(fairness_q_gap))
+        except Exception:
+            pass
+
+        return {
+            "checked": checked,
+            "rolled_back": rolled_back,
+            "rolled_back_policy_ids": rolled_back_ids,
+            "fairness_q_gap": round(fairness_q_gap, 4),
+        }
+
+    @staticmethod
+    def _metric_policy_rollback(*, reason_type: str) -> None:
+        try:
+            from app.core.metrics import META_POLICY_ROLLBACK_TOTAL
+            META_POLICY_ROLLBACK_TOTAL.labels(reason_type=str(reason_type)).inc()
+        except Exception:
+            return
 
 
 scheduler_service = SchedulerService()

@@ -32,6 +32,7 @@ from app.api.v1 import (
     interventions,
     inventory,
     leaderboards,
+    learning_admin,
     learning_paths,
     memory,
     memory_admin,
@@ -74,6 +75,7 @@ api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
 api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
 api_router.include_router(feedback_admin.router)
+api_router.include_router(learning_admin.router)
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])

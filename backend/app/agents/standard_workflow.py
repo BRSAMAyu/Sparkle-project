@@ -25,6 +25,7 @@ from app.agents.graph.nodes.review_nodes import (
 from app.agents.tool_fallback import ToolExecutionFallback
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.pending_actions import pending_actions_store
+from app.config import settings
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.prompts import build_system_prompt
@@ -656,6 +657,8 @@ def _classify_user_intent(message: str) -> str | None:
 
 def _should_use_collaboration(message: str, intent: str | None) -> bool:
     """Determine if collaboration workflow should be triggered."""
+    if not settings.ENABLE_LEGACY_TASK_DECOMPOSITION_WORKFLOW:
+        return False
     if not intent:
         return False
 

@@ -29,6 +29,7 @@ class StepFeedback:
     missing_output_keys: list[str] = field(default_factory=list)
     error_message: str | None = None
     required: bool = True
+    failure_type: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -58,6 +59,7 @@ class PlanExecutionFeedback:
     slow_tools: list[str] = field(default_factory=list)
     failed_tools: list[str] = field(default_factory=list)
     unreliable_dependencies: list[str] = field(default_factory=list)
+    failed_step_types: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,6 +80,7 @@ class PlanExecutionFeedback:
             "slow_tools": self.slow_tools,
             "failed_tools": self.failed_tools,
             "unreliable_dependencies": self.unreliable_dependencies,
+            "failed_step_types": self.failed_step_types,
         }
 
     @property
@@ -128,6 +131,7 @@ class StepFeedbackCollector:
         step_feedbacks: list[StepFeedback] = []
         slow_tools: list[str] = []
         failed_tools: list[str] = []
+        failed_step_types: dict[str, int] = {}
 
         for sr in plan_result.step_results:
             spec = spec_map.get(sr.step_id)
@@ -151,6 +155,12 @@ class StepFeedbackCollector:
                 missing_output_keys=missing_keys,
                 error_message=sr.tool_result.error_message if not sr.tool_result.success else None,
                 required=criteria.required if criteria else True,
+                failure_type=self._infer_failure_type(
+                    success=sr.tool_result.success,
+                    exceeded_timeout=exceeded_timeout,
+                    missing_output_keys=missing_keys,
+                    has_dependencies=bool(spec.depends_on) if spec else False,
+                ),
             )
             step_feedbacks.append(sf)
 
@@ -158,6 +168,7 @@ class StepFeedbackCollector:
                 slow_tools.append(sr.tool_name)
             if not sr.tool_result.success:
                 failed_tools.append(sr.tool_name)
+                failed_step_types[sf.failure_type] = failed_step_types.get(sf.failure_type, 0) + 1
 
         # Detect unreliable dependencies: steps that failed AND had dependents
         dep_targets = set()
@@ -187,6 +198,7 @@ class StepFeedbackCollector:
             slow_tools=list(set(slow_tools)),
             failed_tools=list(set(failed_tools)),
             unreliable_dependencies=unreliable,
+            failed_step_types=failed_step_types,
         )
 
         logger.info(
@@ -198,3 +210,21 @@ class StepFeedbackCollector:
         )
 
         return feedback
+
+    @staticmethod
+    def _infer_failure_type(
+        *,
+        success: bool,
+        exceeded_timeout: bool,
+        missing_output_keys: list[str],
+        has_dependencies: bool,
+    ) -> str:
+        if success:
+            return "none"
+        if exceeded_timeout:
+            return "timeout"
+        if missing_output_keys:
+            return "missing_output"
+        if has_dependencies:
+            return "dependency_break"
+        return "tool_error"

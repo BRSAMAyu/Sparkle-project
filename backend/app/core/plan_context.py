@@ -349,6 +349,7 @@ class PlanContextBuilder:
                 logger.warning(f"Failed to fetch behavior patterns: {e}")
 
         # Fetch user preferences from preferences center
+        decomposition_signals: dict[str, Any] = {}
         try:
             from app.services.personalization.preference_service import PreferenceService
 
@@ -368,12 +369,35 @@ class PlanContextBuilder:
                     "inferred_difficulty": inferred.get("difficulty_preference"),
                     "inferred_session_length": inferred.get("session_length_preference"),
                 }
+                expert_affinity = inferred.get("expert_affinity")
+                if isinstance(expert_affinity, dict) and expert_affinity:
+                    decomposition_signals["expert_affinity"] = expert_affinity
+                focus_duration = explicit.get("focus_duration_preference")
+                if isinstance(focus_duration, (int, float)):
+                    decomposition_signals["time_budget_minutes_per_day"] = int(max(20, min(360, focus_duration * 3)))
+                if isinstance(inferred.get("difficulty_preference"), (int, float)):
+                    decomposition_signals["difficulty_preference"] = float(inferred.get("difficulty_preference"))
         except Exception as e:
             logger.debug(f"User preferences not available: {e}")
+
+        cognitive_state = user_profile.get("cognitive_state")
+        if isinstance(cognitive_state, dict):
+            if isinstance(cognitive_state.get("cognitive_load"), (int, float)):
+                decomposition_signals["cognitive_load"] = float(cognitive_state["cognitive_load"])
+            if isinstance(cognitive_state.get("strain_index"), (int, float)):
+                decomposition_signals["strain_index"] = float(cognitive_state["strain_index"])
+
+        task_summary = enriched.get("task_summary")
+        if isinstance(task_summary, dict):
+            completion = task_summary.get("avg_completion_rate")
+            if isinstance(completion, (int, float)):
+                decomposition_signals["historical_execution_rhythm"] = float(completion)
 
         # Add user_profile to enriched context
         if user_profile:
             enriched["user_profile"] = user_profile
+        if decomposition_signals:
+            enriched["decomposition_signals"] = decomposition_signals
 
         logger.debug(
             f"Built enriched plan context: plan_id={plan_id}, "

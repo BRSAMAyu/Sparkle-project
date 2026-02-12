@@ -10,9 +10,11 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.config import settings
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
+from app.services.learning_event_service import LearningEventService
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -78,7 +80,7 @@ class AdaptiveReplanner:
         user_id: UUID,
         plan_id: UUID,
         feedback: "PlanExecutionFeedback",
-    ) -> None:
+    ) -> dict[str, Any]:
         """Handle feedback from DAG plan execution.
 
         Persists step-level feedback to PlanState and triggers
@@ -98,6 +100,7 @@ class AdaptiveReplanner:
                 "slow_tools": feedback.slow_tools,
                 "failed_tools": feedback.failed_tools,
                 "unreliable_dependencies": feedback.unreliable_dependencies,
+                "failed_step_types": feedback.failed_step_types,
                 "aborted": feedback.aborted,
             },
         )
@@ -109,6 +112,8 @@ class AdaptiveReplanner:
             adaptive_facts["recently_failed_tools"] = feedback.failed_tools
         if feedback.unreliable_dependencies:
             adaptive_facts["unreliable_dep_steps"] = feedback.unreliable_dependencies
+        if feedback.failed_step_types:
+            adaptive_facts["failed_step_types"] = feedback.failed_step_types
 
         patch: dict[str, Any] = {"feedback_log": feedback_entry}
         if adaptive_facts:
@@ -121,8 +126,23 @@ class AdaptiveReplanner:
             bump_version=False,
         )
 
+        local_repair_result: dict[str, Any] = {
+            "applied": False,
+            "repair_actions": [],
+            "triggered_replan": False,
+        }
+
         # 2. Trigger replanning if execution feedback warrants it
         if feedback.needs_replanning:
+            if bool(getattr(settings, "ENABLE_PLAN_REPAIR_V1", False)):
+                local_repair_result = await self._attempt_local_repair(
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    feedback=feedback,
+                )
+                if local_repair_result.get("applied"):
+                    return local_repair_result
+
             state = await self.plan_state_service.get_plan_state(user_id, plan_id)
             if state and not self._recently_triggered(
                 state.facts or {}, "last_replan_at", self.AUTO_REPLAN_COOLDOWN,
@@ -155,6 +175,88 @@ class AdaptiveReplanner:
                     "Triggered replan from execution feedback: plan={}, severity={}",
                     plan_id, feedback.severity,
                 )
+                local_repair_result["triggered_replan"] = True
+        return local_repair_result
+
+    async def _attempt_local_repair(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        feedback: "PlanExecutionFeedback",
+    ) -> dict[str, Any]:
+        repair_actions = self._derive_repair_actions(feedback)
+        if not repair_actions:
+            return {"applied": False, "repair_actions": [], "triggered_replan": False}
+
+        event_service = LearningEventService(redis_client=self.redis)
+        await event_service.emit(
+            event_type="plan_repair_triggered",
+            user_id=str(user_id),
+            workflow_id=str(plan_id),
+            data={
+                "repair_actions": repair_actions,
+                "failed_tools": list(feedback.failed_tools),
+                "failed_step_types": dict(feedback.failed_step_types or {}),
+                "quality_score": float(feedback.quality_score),
+            },
+        )
+
+        patch = {
+            "facts": {
+                "adaptive_meta": {
+                    "last_local_repair_at": _utcnow().isoformat(),
+                    "last_local_repair_actions": repair_actions,
+                },
+                "local_repair_actions": repair_actions,
+            },
+            "feedback_log": self._build_feedback_entry(
+                feedback_type="plan_repair",
+                content=f"Local repair actions applied: {', '.join(repair_actions)}",
+                task_id=None,
+                applied_adjustment={
+                    "repair_actions": repair_actions,
+                    "failed_tools": list(feedback.failed_tools),
+                    "failed_step_types": dict(feedback.failed_step_types or {}),
+                },
+            ),
+        }
+        await self.plan_state_service.upsert_plan_state(
+            user_id=user_id,
+            plan_id=plan_id,
+            patch=patch,
+            bump_version=True,
+        )
+
+        await event_service.emit(
+            event_type="plan_repair_succeeded",
+            user_id=str(user_id),
+            workflow_id=str(plan_id),
+            data={
+                "repair_actions": repair_actions,
+                "quality_score": float(feedback.quality_score),
+            },
+        )
+        return {
+            "applied": True,
+            "repair_actions": repair_actions,
+            "triggered_replan": False,
+        }
+
+    @staticmethod
+    def _derive_repair_actions(feedback: "PlanExecutionFeedback") -> list[str]:
+        actions: list[str] = []
+        if feedback.failed_tools:
+            actions.append("replace_failed_tools")
+        if feedback.slow_tools:
+            actions.append("degrade_parallelism")
+        if feedback.unreliable_dependencies:
+            actions.append("strengthen_dependency_order")
+        if feedback.failed_step_types.get("timeout", 0) > 0:
+            actions.append("increase_timeout_budget")
+        if feedback.failed_step_types.get("missing_output", 0) > 0:
+            actions.append("tighten_output_schema")
+        return actions[:5]
 
     async def _handle_report(
         self,

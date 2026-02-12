@@ -337,6 +337,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           feedbackType,
                                         );
                                   },
+                                  onQuickAdjust: (instruction) {
+                                    ref
+                                        .read(chatProvider.notifier)
+                                        .sendMessage(instruction);
+                                  },
                                 );
                               },
                             ),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
 
@@ -20,17 +21,26 @@ class ChatModeSelectorSheet extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentMode = ref.watch(chatModeProvider);
     final catalog = ref.watch(multiAgentCatalogProvider);
-    final expertModes = catalog.when(
-      data: (value) => value.experts
-          .where((expert) => expert.enabled)
-          .map((expert) => ChatModeExpert(
-                expertId: expert.id,
-                expertName: expert.displayName,
-              ))
-          .toList(),
-      loading: () => <ChatMode>[],
-      error: (_, __) => <ChatMode>[],
+    final modeEntries = catalog.when(
+      data: (value) => ChatMode.catalogToModes(value.modes),
+      loading: () => ChatMode.values,
+      error: (_, __) => ChatMode.values,
     );
+    final expertModes = catalog.when<List<ExpertCatalogExpert>>(
+      data: (value) => value.experts.where((expert) => expert.enabled).toList()
+        ..sort((a, b) => a.rank.compareTo(b.rank))
+        ..removeWhere((expert) => expert.entryChatMode.isEmpty),
+      loading: () => <ExpertCatalogExpert>[],
+      error: (_, __) => <ExpertCatalogExpert>[],
+    );
+    final mappedExpertModes = expertModes
+        .map(
+          (expert) => ChatModeExpert(
+            expertId: expert.id,
+            expertName: expert.displayName,
+          ),
+        )
+        .toList();
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -81,7 +91,6 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                     variant: ButtonVariant.ghost,
-                    size: DS.touchTargetMinSize,
                   ),
                 ],
               ),
@@ -89,15 +98,15 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 
             const Divider(height: 1),
 
-            // Mode options
-            ...ChatMode.values.map(
+            // Mode options (server-driven, static fallback)
+            ...modeEntries.map(
               (mode) => _ModeListTile(
                 mode: mode,
                 isSelected: currentMode == mode,
                 isDark: isDark,
               ),
             ),
-            if (expertModes.isNotEmpty) ...[
+            if (mappedExpertModes.isNotEmpty) ...[
               const SizedBox(height: DS.spacing8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing20),
@@ -114,7 +123,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: DS.spacing8),
-              ...expertModes.map(
+              ...mappedExpertModes.map(
                 (mode) => _ModeListTile(
                   mode: mode,
                   isSelected: currentMode == mode,

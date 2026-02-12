@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.agent_profiles import get_public_agent_catalog
+from app.core.agent_capability_registry import get_expert_capability_catalog
 from app.orchestration.chat_modes import (
     CHAT_MODE_EXPERT_AUTO,
     extract_expert_id,
@@ -38,6 +38,26 @@ class ExpertRoutingDecision:
         }
 
 
+def parse_selected_experts(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    if not isinstance(raw, str):
+        return []
+    value = raw.strip()
+    if not value:
+        return []
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+        except json.JSONDecodeError:
+            pass
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 class ExpertStrategyV1:
     """Lightweight expert routing strategy.
 
@@ -56,10 +76,12 @@ class ExpertStrategyV1:
         message: str,
         chat_mode: str,
         user_preferences: dict[str, Any] | None = None,
+        user_context: dict[str, Any] | None = None,
     ) -> ExpertRoutingDecision:
+        _ = user_context
         mode = normalize_chat_mode(chat_mode)
-        catalog = get_public_agent_catalog()
-        available = [c["id"] for c in catalog if c.get("enabled", False)]
+        catalog = [item for item in get_expert_capability_catalog() if item.get("enabled")]
+        available = [str(c["id"]) for c in catalog]
         if not available:
             return ExpertRoutingDecision(
                 selected_experts=[],
@@ -129,6 +151,38 @@ class ExpertStrategyV1:
             complexity_score=complexity,
             complexity_tier=complexity_tier,
         )
+
+    @classmethod
+    def score_experts(
+        cls,
+        *,
+        message: str,
+        user_preferences: dict[str, Any] | None = None,
+        top_k: int = 8,
+    ) -> list[dict[str, Any]]:
+        _ = user_preferences
+        text = (message or "").lower()
+        scored: list[dict[str, Any]] = []
+        for expert in get_expert_capability_catalog():
+            if not expert.get("enabled"):
+                continue
+            expert_id = str(expert["id"])
+            tags = [str(tag).lower() for tag in expert.get("tags", [])]
+            score = 0.2
+            if expert_id in text:
+                score += 0.4
+            score += 0.16 * sum(1 for tag in tags if tag and tag in text)
+            if any(token in text for token in expert_id.split("_")):
+                score += 0.1
+            scored.append(
+                {
+                    "expert_id": expert_id,
+                    "display_name": expert.get("display_name", expert_id),
+                    "score": max(0.0, min(score, 1.0)),
+                }
+            )
+        scored.sort(key=lambda item: item["score"], reverse=True)
+        return scored[:top_k]
 
     @classmethod
     def _score_complexity(cls, *, message: str, user_preferences: dict[str, Any]) -> float:

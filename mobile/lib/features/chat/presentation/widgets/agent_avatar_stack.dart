@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -41,7 +42,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     );
 
     if (widget.animate) {
-      _transitionController.repeat(reverse: true);
+      unawaited(_transitionController.repeat(reverse: true));
     }
   }
 
@@ -50,7 +51,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     super.didUpdateWidget(oldWidget);
 
     if (widget.activeAgents != oldWidget.activeAgents && widget.animate) {
-      _transitionController.forward(from: 0);
+      unawaited(_transitionController.forward(from: 0));
     }
   }
 
@@ -154,6 +155,7 @@ class AgentInfo {
   factory AgentInfo.fromType(String type) {
     switch (type.toLowerCase()) {
       case 'math':
+      case 'math_agent':
         return AgentInfo(
           type: 'math',
           name: 'Math Expert',
@@ -161,6 +163,7 @@ class AgentInfo {
           color: DS.brandPrimary.shade600,
         );
       case 'code':
+      case 'code_agent':
         return AgentInfo(
           type: 'code',
           name: 'Code Expert',
@@ -168,6 +171,7 @@ class AgentInfo {
           color: DS.success.shade600,
         );
       case 'writing':
+      case 'writing_agent':
         return AgentInfo(
           type: 'writing',
           name: 'Writing Expert',
@@ -291,9 +295,11 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
       curve: Curves.easeInOut,
     );
 
-    _controller.forward().then((_) {
-      widget.onComplete?.call();
-    });
+    unawaited(
+      _controller.forward().then((_) {
+        widget.onComplete?.call();
+      }),
+    );
   }
 
   @override

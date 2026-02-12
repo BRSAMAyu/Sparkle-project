@@ -10,6 +10,11 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from app.config import settings
+from app.orchestration.task_decomposition_contract import (
+    build_task_decomposition_contract,
+    generate_contract_clarification_questions,
+)
 
 class SufficiencyStatus(str, Enum):
     """信息充分性状态"""
@@ -27,6 +32,9 @@ class SufficiencyCheckResult:
     clarification_text: str | None = None
     recommended_action: Literal["proceed", "ask", "confirm"] = "proceed"
     missing_fields: list[str] = field(default_factory=list)
+    decomposition_contract: dict[str, Any] = field(default_factory=dict)
+    decomposition_contract_score: float = 0.0
+    decomposition_gaps: list[str] = field(default_factory=list)
 
 
 class SufficiencyChecker:
@@ -170,12 +178,66 @@ class SufficiencyChecker:
                 result.recommended_action = "ask"
                 result.clarification_text = await self._generate_clarification(intent, user_message)
 
+        if settings.ENABLE_DECOMPOSITION_CONTRACT_V1 and user_message:
+            contract = build_task_decomposition_contract(
+                message=user_message,
+                intent=intent,
+                extracted_entities=extracted_entities,
+                conversation_context=conversation_context,
+            )
+            result.decomposition_contract = contract.to_dict()
+            result.decomposition_contract_score = contract.score
+            result.decomposition_gaps = list(contract.gaps)
+
+            is_decomposition_request = self._is_decomposition_request(intent=intent, user_message=user_message)
+            required_contract_gaps = {
+                "missing_goal",
+                "missing_constraints",
+                "missing_milestones",
+                "missing_acceptance_criteria",
+                "missing_risks",
+            }
+            has_blocking_contract_gap = bool(required_contract_gaps.intersection(contract.gaps))
+            if result.status == SufficiencyStatus.SUFFICIENT and is_decomposition_request and has_blocking_contract_gap:
+                result.status = SufficiencyStatus.NEED_CLARIFICATION
+                result.recommended_action = "ask"
+                result.clarification_questions.extend(
+                    generate_contract_clarification_questions(contract.gaps)
+                )
+            elif result.status == SufficiencyStatus.SUFFICIENT and (contract.score < 0.28):
+                result.status = SufficiencyStatus.NEED_CLARIFICATION
+                result.recommended_action = "ask"
+                result.clarification_questions.extend(
+                    generate_contract_clarification_questions(contract.gaps)
+                )
+
         logger.debug(
             f"Sufficiency check: intent={intent}, status={result.status}, "
-            f"missing_fields={result.missing_fields}"
+            f"missing_fields={result.missing_fields}, "
+            f"decomposition_score={result.decomposition_contract_score:.2f}"
         )
 
         return result
+
+    @staticmethod
+    def _is_decomposition_request(intent: str, user_message: str | None) -> bool:
+        intent_value = (intent or "").strip().lower()
+        if intent_value in {"create_plan", "time_planning", "plan", "sprint_plan", "task_decomposition", "study_plan"}:
+            return True
+        msg = (user_message or "").lower()
+        keywords = (
+            "任务拆解",
+            "分解",
+            "计划",
+            "规划",
+            "里程碑",
+            "执行计划",
+            "roadmap",
+            "milestone",
+            "step by step",
+            "阶段计划",
+        )
+        return any(k in msg for k in keywords)
 
     def _has_field_value(self, field: str, entities: dict[str, Any]) -> bool:
         """检查字段是否有有效值"""

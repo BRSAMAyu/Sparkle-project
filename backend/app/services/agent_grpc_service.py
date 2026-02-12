@@ -13,8 +13,9 @@ import grpc
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
+from app.config import settings
 from app.core.metrics import (
+    FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
 )
@@ -29,8 +30,12 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_STUDY_PLAN,
     normalize_chat_mode,
 )
+from app.orchestration.expert_strategy import parse_selected_experts
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
+from app.services.meta_cold_start_service import MetaColdStartService
+from app.services.learning_cohort_service import LearningCohortService
+from app.services.policy_registry_service import PolicyRegistryService
 from app.services.response_feedback_service import ResponseFeedbackService
 
 
@@ -66,7 +71,18 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
             expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX):].strip() or "unknown"
             return f"expert_{expert_id}_workflow"
-        return "standard_chat"
+        return f"{mode}_workflow"
+
+    @staticmethod
+    def _resolve_strategy_pack(chat_mode: str) -> str:
+        mode = normalize_chat_mode(chat_mode)
+        if mode == CHAT_MODE_STUDY_PLAN:
+            return "study_plan_v1"
+        if mode == CHAT_MODE_ERROR_DIAGNOSIS:
+            return "error_diagnosis_v1"
+        if mode == CHAT_MODE_DEEP_ANALYSIS:
+            return "deep_analysis_v1"
+        return "general_v2"
 
     @staticmethod
     def _normalize_v2_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
@@ -152,11 +168,75 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             prompt_versions = ["v1", "v2"]
             prompt_version = "v1"
+            prompt_policy: dict | None = None
+            prompt_policy_id = ""
+            cold_start_bootstrap = False
+            user_scope = LearningCohortService.user_scope_key(user_id)
+            cohort_id = LearningCohortService.resolve_cohort_id(
+                user_id=user_id,
+                message=request.message or "",
+                chat_mode=chat_mode,
+                task_type=chat_mode,
+                complexity_tier="unknown",
+                user_context={},
+            )
+            if settings.ENABLE_COLD_START_BOOTSTRAP:
+                cold_start_bootstrap = await MetaColdStartService.mark_session_bootstrap_once(
+                    redis_client=self.orchestrator.redis,
+                    user_id=user_id,
+                    session_id=request.session_id,
+                )
+            if settings.ENABLE_POLICY_CANDIDATE_PIPELINE and settings.ENABLE_META_POLICY_COMPOSER_V1:
+                try:
+                    strategy_pack = self._resolve_strategy_pack(chat_mode)
+                    prompt_policy = await PolicyRegistryService(redis_client=self.orchestrator.redis).resolve_runtime_policy(
+                        strategy_pack=strategy_pack,
+                        user_id=user_id,
+                        session_id=request.session_id,
+                        channel="prompt",
+                        cohort_id=cohort_id,
+                        user_scope=user_scope,
+                        disable_personal=bool(cold_start_bootstrap),
+                    )
+                    if isinstance(prompt_policy, dict):
+                        prompt_policy_id = str(prompt_policy.get("policy_id", ""))
+                except Exception as e:
+                    logger.warning(f"Prompt policy resolve failed: {e}")
             try:
                 bandit = PromptBandit(redis_client=self.orchestrator.redis)
-                prompt_version = await bandit.select(workflow_id, prompt_versions)
+                prompt_version = await bandit.select(
+                    workflow_id,
+                    prompt_versions,
+                    policy_override=prompt_policy,
+                )
             except Exception as e:
                 logger.warning(f"Prompt bandit selection failed: {e}")
+
+            await self.orchestrator.observability.log_prompt_selected(
+                user_id=user_id,
+                session_id=request.session_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                trace_id=trace_id,
+                policy_id=prompt_policy_id,
+                strategy_pack=self._resolve_strategy_pack(chat_mode),
+                cohort_id=cohort_id,
+                user_scope=user_scope,
+                task_type=chat_mode,
+            )
+            if cold_start_bootstrap:
+                await self.orchestrator.observability.log_cold_start_bootstrap(
+                    user_id=user_id,
+                    session_id=request.session_id,
+                    workflow_id=workflow_id,
+                    strategy="prompt_bootstrap",
+                    chat_mode=chat_mode,
+                    trace_id=trace_id,
+                    cohort_id=cohort_id,
+                    user_scope=user_scope,
+                    policy_id=prompt_policy_id,
+                    strategy_pack=self._resolve_strategy_pack(chat_mode),
+                )
 
             await self._observe_feedback_effect(user_id, workflow_id, prompt_version)
 
@@ -167,6 +247,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Create a dedicated DB session for this stream
             has_text_content = False
+            last_response_id = ""
             async with self.db_session_factory() as db_session:
                 try:
                     # Delegate to Orchestrator
@@ -177,11 +258,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             "chat_mode": chat_mode,
                             "workflow_id": workflow_id,
                             "prompt_version": prompt_version,
+                            "prompt_policy_id": prompt_policy_id,
+                            "prompt_policy_scope": str((prompt_policy or {}).get("meta_learning_scope", "")),
+                            "prompt_policy_layers": (prompt_policy or {}).get("selected_layers", []),
+                            "cold_start_bootstrap": "true" if cold_start_bootstrap else "false",
                         },
                     ):
                         # Track whether we actually streamed any text content
                         if response.WhichOneof("content") in ("delta", "full_text"):
                             has_text_content = True
+                        last_response_id = str(response.response_id or last_response_id)
                         response.trace_id = trace_id
                         if not response.workflow_id:
                             response.workflow_id = workflow_id
@@ -192,6 +278,21 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 except Exception:
                     await db_session.rollback()
                     raise
+
+            if has_text_content:
+                await self.orchestrator.observability.log_prompt_applied(
+                    user_id=user_id,
+                    session_id=request.session_id,
+                    workflow_id=workflow_id,
+                    prompt_version=prompt_version,
+                    response_id=last_response_id,
+                    trace_id=trace_id,
+                    policy_id=prompt_policy_id,
+                    strategy_pack=self._resolve_strategy_pack(chat_mode),
+                    cohort_id=cohort_id,
+                    user_scope=user_scope,
+                    task_type=chat_mode,
+                )
 
             if not has_text_content:
                 logger.warning(
@@ -302,8 +403,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             message = "already_recorded" if result.already_recorded else "ok"
             workflow_id = request.workflow_id or ""
-            selected_experts_raw = (request.meta or {}).get("selected_experts", "")
-            selected_experts = [item.strip() for item in selected_experts_raw.split(",") if item.strip()]
+            selected_experts = parse_selected_experts((request.meta or {}).get("selected_experts", ""))
             if workflow_id and hasattr(self.orchestrator, "observability"):
                 await self.orchestrator.observability.log_user_feedback_bound(
                     user_id=user_id,
@@ -311,6 +411,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     response_id=request.response_id,
                     workflow_id=workflow_id,
                     selected_experts=selected_experts,
+                    policy_id=(request.meta or {}).get("policy_id", ""),
+                    cohort_id=(request.meta or {}).get("cohort_id", ""),
+                    user_scope=(request.meta or {}).get("user_scope", ""),
                 )
             return agent_service_pb2.ResponseFeedbackResponse(
                 success=result.success,

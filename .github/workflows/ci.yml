@@ -159,6 +159,14 @@ jobs:
         run: |
           pytest backend/tests -v --cov=backend/app --cov-report=xml
 
+      - name: Task Decomposition Benchmark Gate
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/evals/test_task_decomposition_benchmark.py -v
+
       - name: OpenAPI Contract Check
         run: python3 scripts/check_openapi_contract.py
 

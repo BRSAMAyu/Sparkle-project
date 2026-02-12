@@ -254,12 +254,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final policyId = metadata['policy_id'];
+            final complexityScore = metadata['complexity_score'];
+            final complexityTier = metadata['complexity_tier'];
+            final decompositionContract = metadata['decomposition_contract'];
+            final decompositionContractScore =
+                metadata['decomposition_contract_score'];
+            final decompositionGaps = metadata['decomposition_gaps'];
+            final planFeasibilityScore = metadata['plan_feasibility_score'];
+            final planContractVersion = metadata['plan_contract_version'];
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
                 routeConfidence != null ||
-                expertEntrySource != null) {
-              List<String> selectedExperts = const [];
+                expertEntrySource != null ||
+                policyId != null ||
+                complexityScore != null ||
+                complexityTier != null ||
+                decompositionContract != null ||
+                decompositionContractScore != null ||
+                decompositionGaps != null ||
+                planFeasibilityScore != null ||
+                planContractVersion != null) {
+              var selectedExperts = <String>[];
               if (selectedExpertsRaw is List) {
                 selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
               } else if (selectedExpertsRaw is String &&
@@ -287,6 +304,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
+                'policy_id': policyId,
+                'complexity_score': complexityScore,
+                'complexity_tier': complexityTier,
+                'decomposition_contract': decompositionContract,
+                'decomposition_contract_score': decompositionContractScore,
+                'decomposition_gaps': decompositionGaps,
+                'plan_feasibility_score': planFeasibilityScore,
+                'plan_contract_version': planContractVersion,
               };
             }
           }
@@ -322,12 +347,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final fallbackReason = metadata['fallback_reason'];
             final routeConfidence = metadata['route_confidence'];
             final expertEntrySource = metadata['expert_entry_source'];
+            final policyId = metadata['policy_id'];
+            final complexityScore = metadata['complexity_score'];
+            final complexityTier = metadata['complexity_tier'];
+            final decompositionContract = metadata['decomposition_contract'];
+            final decompositionContractScore =
+                metadata['decomposition_contract_score'];
+            final decompositionGaps = metadata['decomposition_gaps'];
+            final planFeasibilityScore = metadata['plan_feasibility_score'];
+            final planContractVersion = metadata['plan_contract_version'];
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
                 routeConfidence != null ||
-                expertEntrySource != null) {
-              List<String> selectedExperts = const [];
+                expertEntrySource != null ||
+                policyId != null ||
+                complexityScore != null ||
+                complexityTier != null ||
+                decompositionContract != null ||
+                decompositionContractScore != null ||
+                decompositionGaps != null ||
+                planFeasibilityScore != null ||
+                planContractVersion != null) {
+              var selectedExperts = <String>[];
               if (selectedExpertsRaw is List) {
                 selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
               } else if (selectedExpertsRaw is String &&
@@ -355,6 +397,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'fallback_reason': fallbackReason,
                 'route_confidence': routeConfidence,
                 'expert_entry_source': expertEntrySource,
+                'policy_id': policyId,
+                'complexity_score': complexityScore,
+                'complexity_tier': complexityTier,
+                'decomposition_contract': decompositionContract,
+                'decomposition_contract_score': decompositionContractScore,
+                'decomposition_gaps': decompositionGaps,
+                'plan_feasibility_score': planFeasibilityScore,
+                'plan_contract_version': planContractVersion,
               };
             }
           }

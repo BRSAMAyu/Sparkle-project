@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_avatar_stack.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collaboration_timeline.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/prism_behavior_card.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
@@ -34,9 +37,11 @@ class AgentMessageRenderer extends StatelessWidget {
           if (message.widgets != null && message.widgets!.isNotEmpty)
             ...message.widgets!.map((widget) => _buildWidget(context, widget)),
 
-          // 3. 多Agent协作时间线（如果有）
-          if (message.agentCollaboration != null)
+          // 3. 多Agent协作解释与时间线（如果有）
+          if (message.agentCollaboration != null) ...[
+            _buildCollaborationSummary(context, message.agentCollaboration!),
             _buildCollaborationTimeline(context, message.agentCollaboration!),
+          ],
 
           // 4. 错误提示（如果有）
           if ((message.hasErrors ?? false) && message.errors != null)
@@ -242,7 +247,10 @@ class AgentMessageRenderer extends StatelessWidget {
           (collaborationData['timeline'] as List<dynamic>?);
       final steps = stepsList
               ?.map(
-                  (e) => AgentTimelineStep.fromJson(e as Map<String, dynamic>))
+                (e) => AgentTimelineStep.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
               .toList() ??
           [];
 
@@ -300,6 +308,193 @@ class AgentMessageRenderer extends StatelessWidget {
       debugPrint('Error building collaboration timeline: $e');
       return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildCollaborationSummary(
+    BuildContext context,
+    Map<String, dynamic> collaborationData,
+  ) {
+    final selectedExpertsRaw = collaborationData['selected_experts'];
+    final routingStrategy = collaborationData['routing_strategy'] as String?;
+    final fallbackReason = collaborationData['fallback_reason'] as String?;
+    final expertEntrySource =
+        collaborationData['expert_entry_source'] as String?;
+    final policyId = collaborationData['policy_id'] as String?;
+    final complexityTier = collaborationData['complexity_tier'] as String?;
+    final routeConfidenceRaw = collaborationData['route_confidence'];
+    final decompositionContractRaw = collaborationData['decomposition_contract'];
+    final decompositionContractScoreRaw =
+        collaborationData['decomposition_contract_score'];
+    final decompositionGapsRaw = collaborationData['decomposition_gaps'];
+    final planFeasibilityScoreRaw = collaborationData['plan_feasibility_score'];
+    final planContractVersion =
+        collaborationData['plan_contract_version'] as String?;
+
+    final selectedExperts = selectedExpertsRaw is List
+        ? selectedExpertsRaw
+            .map((e) => '$e')
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : <String>[];
+    if (selectedExperts.isEmpty &&
+        (routingStrategy == null || routingStrategy.isEmpty) &&
+        (fallbackReason == null || fallbackReason.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    final avatars = selectedExperts.map(AgentInfo.fromType).toList();
+    final routeConfidence = routeConfidenceRaw is num
+        ? routeConfidenceRaw.toDouble()
+        : double.tryParse('${routeConfidenceRaw ?? ''}');
+    final decompositionContractScore = decompositionContractScoreRaw is num
+        ? decompositionContractScoreRaw.toDouble()
+        : double.tryParse('${decompositionContractScoreRaw ?? ''}');
+    final planFeasibilityScore = planFeasibilityScoreRaw is num
+        ? planFeasibilityScoreRaw.toDouble()
+        : double.tryParse('${planFeasibilityScoreRaw ?? ''}');
+    final decompositionGaps = () {
+      if (decompositionGapsRaw is List) {
+        return decompositionGapsRaw.map((e) => '$e').toList();
+      }
+      if (decompositionGapsRaw is String && decompositionGapsRaw.isNotEmpty) {
+        if (decompositionGapsRaw.trim().startsWith('[')) {
+          try {
+            final parsed = jsonDecode(decompositionGapsRaw);
+            if (parsed is List) {
+              return parsed.map((e) => '$e').toList();
+            }
+          } catch (_) {}
+        }
+        return decompositionGapsRaw
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+      return <String>[];
+    }();
+    final decompositionContract = () {
+      if (decompositionContractRaw is Map<String, dynamic>) {
+        return decompositionContractRaw;
+      }
+      if (decompositionContractRaw is String &&
+          decompositionContractRaw.trim().startsWith('{')) {
+        try {
+          final parsed = jsonDecode(decompositionContractRaw);
+          if (parsed is Map<String, dynamic>) {
+            return parsed;
+          }
+        } catch (_) {}
+      }
+      return <String, dynamic>{};
+    }();
+    final contractGoal = decompositionContract['goal']?.toString() ?? '';
+    final contractMilestonesRaw = decompositionContract['milestones'];
+    final contractAcceptanceRaw = decompositionContract['acceptance_criteria'];
+    final contractMilestones = contractMilestonesRaw is List
+        ? contractMilestonesRaw.map((e) => '$e').toList()
+        : <String>[];
+    final contractAcceptance = contractAcceptanceRaw is List
+        ? contractAcceptanceRaw.map((e) => '$e').toList()
+        : <String>[];
+    final explainLine = <String>[
+      if (routingStrategy != null && routingStrategy.isNotEmpty)
+        '策略: $routingStrategy',
+      if (routeConfidence != null)
+        '置信度: ${(routeConfidence * 100).toStringAsFixed(0)}%',
+      if (complexityTier != null && complexityTier.isNotEmpty)
+        '复杂度: $complexityTier',
+      if (expertEntrySource != null && expertEntrySource.isNotEmpty)
+        '入口: $expertEntrySource',
+      if (policyId != null && policyId.isNotEmpty) '策略版本: $policyId',
+      if (decompositionContractScore != null)
+        '拆解契约: ${(decompositionContractScore * 100).toStringAsFixed(0)}%',
+      if (planFeasibilityScore != null)
+        '可执行性: ${(planFeasibilityScore * 100).toStringAsFixed(0)}%',
+      if (planContractVersion != null && planContractVersion.isNotEmpty)
+        '契约版本: $planContractVersion',
+    ].join(' · ');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: DS.spacing8),
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (avatars.isNotEmpty)
+            Row(
+              children: [
+                AgentAvatarStack(activeAgents: avatars, size: 30),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    '本轮专家: ${selectedExperts.join('、')}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          if (explainLine.isNotEmpty) ...[
+            if (avatars.isNotEmpty) const SizedBox(height: DS.spacing8),
+            Text(
+              explainLine,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          if (fallbackReason != null && fallbackReason.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              '降级原因: $fallbackReason',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ],
+          if (decompositionGaps.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              '需补齐: ${decompositionGaps.join('、')}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          if (contractGoal.isNotEmpty ||
+              contractMilestones.isNotEmpty ||
+              contractAcceptance.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            if (contractGoal.isNotEmpty)
+              Text(
+                '目标: $contractGoal',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (contractMilestones.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing4),
+              Text(
+                '里程碑: ${contractMilestones.take(3).join('、')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            if (contractAcceptance.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing4),
+              Text(
+                '验收标准: ${contractAcceptance.take(2).join('、')}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildUnknownWidget(WidgetPayload widget) => Card(

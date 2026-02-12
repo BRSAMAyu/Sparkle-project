@@ -1,0 +1,2 @@
+{"case_id":"study_plan_high_quality","message":"请帮我制定12周考研数学复习计划，我每天2小时，目标模考120分以上，按周里程碑拆解并给验收标准与风险。","route_confidence":0.78,"min_verifier_score":0.7,"max_uncertainty_score":0.62}
+{"case_id":"ambiguous_low_quality","message":"先试试吧，随便给我一个计划就行。","route_confidence":0.4,"min_verifier_score":0.35,"min_uncertainty_score":0.62}

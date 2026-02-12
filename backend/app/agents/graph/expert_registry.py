@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Callable
 
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
@@ -12,6 +13,7 @@ from app.agents.graph.nodes.registry_tools import create_task, query_knowledge
 from app.agents.graph.nodes.study_buddy import study_buddy_node
 from app.agents.graph.nodes.time_tutor import time_tutor_node
 from app.agents.graph.state import SparkleState
+from app.core.agent_capability_registry import get_expert_capability_catalog
 
 
 @dataclass(frozen=True)
@@ -24,82 +26,87 @@ class GraphExpertSpec:
     supports_collaboration: bool = True
 
 
-_math_node = create_specialist_node(
-    agent_id="math_agent",
-    planning_prompt=(
-        "You are in planning-only mode as Math Expert. Use tool calls to retrieve relevant "
-        "knowledge and create practice tasks when needed."
-    ),
-    task_prompt_prefix="Math expert context",
-    toolset=[query_knowledge, create_task],
-)
-
-_code_node = create_specialist_node(
-    agent_id="code_agent",
-    planning_prompt=(
-        "You are in planning-only mode as Code Expert. Use tool calls to retrieve references "
-        "and create executable coding tasks."
-    ),
-    task_prompt_prefix="Code expert context",
-    toolset=[query_knowledge, create_task],
-)
-
-_writing_node = create_specialist_node(
-    agent_id="writing_agent",
-    planning_prompt=(
-        "You are in planning-only mode as Writing Expert. Generate structured writing guidance "
-        "and optional practice tasks with tool calls."
-    ),
-    task_prompt_prefix="Writing expert context",
-    toolset=[create_task],
-)
-
-_science_node = create_specialist_node(
-    agent_id="science_agent",
-    planning_prompt=(
-        "You are in planning-only mode as Science Expert. Use tool calls for evidence retrieval "
-        "and follow-up task creation."
-    ),
-    task_prompt_prefix="Science expert context",
-    toolset=[query_knowledge, create_task],
-)
-
-_search_node = create_specialist_node(
-    agent_id="search_agent",
-    planning_prompt=(
-        "You are in planning-only mode as Search Expert. Focus on evidence gathering using "
-        "query_knowledge tool calls."
-    ),
-    task_prompt_prefix="Search expert context",
-    toolset=[query_knowledge],
-)
+_ALIASES: dict[str, tuple[str, ...]] = {
+    "galaxy_guide": ("knowledge_agent",),
+    "study_buddy": ("general_chat",),
+    "math_agent": ("math",),
+    "code_agent": ("code",),
+    "writing_agent": ("writing",),
+    "science_agent": ("science",),
+    "search_agent": ("search",),
+}
 
 
-GRAPH_EXPERT_SPECS: tuple[GraphExpertSpec, ...] = (
-    GraphExpertSpec("galaxy_guide", "galaxy_guide", galaxy_guide_node, aliases=("knowledge_agent",), default_rank=10),
-    GraphExpertSpec("exam_oracle", "exam_oracle", exam_oracle_node, default_rank=20),
-    GraphExpertSpec("time_tutor", "time_tutor", time_tutor_node, default_rank=30),
-    GraphExpertSpec("deep_analyst", "deep_analyst", deep_analyst_node, default_rank=40),
-    GraphExpertSpec("error_analyst", "error_analyst", error_analyst_node, default_rank=50),
-    GraphExpertSpec("study_buddy", "study_buddy", study_buddy_node, aliases=("general_chat",), default_rank=60),
-    GraphExpertSpec("math_agent", "math_agent", _math_node, aliases=("math",), default_rank=70),
-    GraphExpertSpec("code_agent", "code_agent", _code_node, aliases=("code",), default_rank=80),
-    GraphExpertSpec("writing_agent", "writing_agent", _writing_node, aliases=("writing",), default_rank=90),
-    GraphExpertSpec("science_agent", "science_agent", _science_node, aliases=("science",), default_rank=100),
-    GraphExpertSpec("search_agent", "search_agent", _search_node, aliases=("search",), default_rank=110),
-)
+_SPECIALIZED_NODES: dict[str, Callable[[SparkleState], dict]] = {
+    "galaxy_guide": galaxy_guide_node,
+    "exam_oracle": exam_oracle_node,
+    "time_tutor": time_tutor_node,
+    "deep_analyst": deep_analyst_node,
+    "error_analyst": error_analyst_node,
+    "study_buddy": study_buddy_node,
+}
 
 
+_GENERIC_TOOLSET_BY_EXPERT: dict[str, list] = {
+    "search_agent": [query_knowledge],
+    "writing_agent": [create_task],
+}
+
+
+def _build_generic_node(expert_id: str) -> Callable[[SparkleState], dict]:
+    toolset = _GENERIC_TOOLSET_BY_EXPERT.get(expert_id, [query_knowledge, create_task])
+    return create_specialist_node(
+        agent_id=expert_id,
+        planning_prompt=(
+            f"You are in planning-only mode as {expert_id}. Use tools when needed and "
+            "produce concise, executable outputs."
+        ),
+        task_prompt_prefix=f"{expert_id} context",
+        toolset=toolset,
+    )
+
+
+@lru_cache(maxsize=1)
 def get_graph_expert_specs() -> tuple[GraphExpertSpec, ...]:
-    return GRAPH_EXPERT_SPECS
+    specs: list[GraphExpertSpec] = []
+    for expert in get_expert_capability_catalog():
+        if not expert.get("enabled", False):
+            continue
+        expert_id = str(expert["id"])
+        node_handler = _SPECIALIZED_NODES.get(expert_id) or _build_generic_node(expert_id)
+        specs.append(
+            GraphExpertSpec(
+                expert_id=expert_id,
+                node_name=expert_id,
+                node_handler=node_handler,
+                aliases=_ALIASES.get(expert_id, ()),
+                default_rank=int(expert.get("rank", 100)),
+                supports_collaboration=True,
+            )
+        )
+
+    # Keep a safe fallback when all public experts are disabled.
+    if not specs:
+        specs.append(
+            GraphExpertSpec(
+                expert_id="study_buddy",
+                node_name="study_buddy",
+                node_handler=study_buddy_node,
+                aliases=_ALIASES.get("study_buddy", ()),
+                default_rank=999,
+            )
+        )
+
+    specs.sort(key=lambda item: item.default_rank)
+    return tuple(specs)
 
 
 def get_graph_routable_targets() -> tuple[str, ...]:
     targets: list[str] = []
-    for spec in GRAPH_EXPERT_SPECS:
+    for spec in get_graph_expert_specs():
         targets.append(spec.node_name)
         targets.extend(spec.aliases)
-    targets.extend(["human_assist"])
+    targets.append("human_assist")
     return tuple(dict.fromkeys(targets))
 
 
@@ -107,11 +114,13 @@ def resolve_node_name(target: str | None) -> str | None:
     if not target:
         return None
     target_norm = target.strip().lower()
-    for spec in GRAPH_EXPERT_SPECS:
-        if target_norm == spec.node_name:
-            return spec.node_name
-        if target_norm == spec.expert_id:
+    for spec in get_graph_expert_specs():
+        if target_norm in (spec.node_name, spec.expert_id):
             return spec.node_name
         if target_norm in spec.aliases:
             return spec.node_name
     return None
+
+
+def reset_graph_expert_registry_cache() -> None:
+    get_graph_expert_specs.cache_clear()

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,6 +26,7 @@ class ChatBubble extends StatefulWidget {
     this.onActionConfirm,
     this.onActionDismiss,
     this.onResponseFeedback,
+    this.onQuickAdjust,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
@@ -35,6 +37,7 @@ class ChatBubble extends StatefulWidget {
   final void Function(WidgetPayload action)? onActionDismiss;
   final void Function(ChatMessageModel message, String feedbackType)?
       onResponseFeedback;
+  final void Function(String instruction)? onQuickAdjust;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -486,6 +489,22 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
+                            if (widget.message is ChatMessageModel &&
+                                !isUser &&
+                                (widget.message as ChatMessageModel)
+                                        .agentCollaboration !=
+                                    null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: _buildQuickAdjustActions(
+                                  (widget.message as ChatMessageModel)
+                                      .agentCollaboration!,
+                                ),
+                              ),
                           ],
                         ),
                         if (_showHeart) _buildHeartAnimation(context),
@@ -540,6 +559,71 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final contentMaxWidth = ContentConstraintSystem.maxWidth(context);
     final baseMax = contentMaxWidth.isFinite ? contentMaxWidth : screenWidth;
     return min(screenWidth * 0.72, baseMax * 0.9);
+  }
+
+  Widget _buildQuickAdjustActions(Map<String, dynamic> collaboration) {
+    final scoreRaw = collaboration['decomposition_contract_score'];
+    final score = scoreRaw is num
+        ? scoreRaw.toDouble()
+        : double.tryParse('${scoreRaw ?? ''}');
+    final gapsRaw = collaboration['decomposition_gaps'];
+    final gaps = <String>[];
+    if (gapsRaw is List) {
+      gaps.addAll(gapsRaw.map((e) => '$e'));
+    } else if (gapsRaw is String && gapsRaw.isNotEmpty) {
+      if (gapsRaw.trim().startsWith('[')) {
+        try {
+          final parsed = jsonDecode(gapsRaw);
+          if (parsed is List) {
+            gaps.addAll(parsed.map((e) => '$e'));
+          }
+        } catch (_) {}
+      } else {
+        gaps.addAll(gapsRaw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
+      }
+    }
+
+    final shouldShow = (score != null) || gaps.isNotEmpty;
+    if (!shouldShow || widget.onQuickAdjust == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildAdjustChip(
+          label: '放慢节奏',
+          onTap: () => widget.onQuickAdjust!.call(
+            '请基于当前拆解方案放慢节奏，降低每日负荷，并保持里程碑不变。',
+          ),
+        ),
+        _buildAdjustChip(
+          label: '加快节奏',
+          onTap: () => widget.onQuickAdjust!.call(
+            '请基于当前拆解方案加快节奏，增加每周推进强度，并给出风险控制措施。',
+          ),
+        ),
+        _buildAdjustChip(
+          label: '偏重实战',
+          onTap: () => widget.onQuickAdjust!.call(
+            '请调整后续拆解偏好，减少理论说明，增加可交付实战任务与验收标准。',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdjustChip({
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ActionChip(
+      label: Text(label),
+      onPressed: onTap,
+      labelStyle: const TextStyle(fontSize: 12),
+      visualDensity: VisualDensity.compact,
+    );
   }
 
   Widget _buildQuoteArea(

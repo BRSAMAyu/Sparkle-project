@@ -15,11 +15,16 @@ from app.core.metrics import RESPONSE_FEEDBACK_DEDUPE_TOTAL, RESPONSE_FEEDBACK_I
 from app.learning.prompt_bandit import PromptBandit
 from app.models.context_pack import ContextPackFeedback, ContextPackRun
 from app.models.response_feedback import ResponseFeedback
+from app.orchestration.expert_strategy import parse_selected_experts
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.content_quality_evaluator import ContentQualityEvaluator
 
 MAX_REASONS = 3
 MAX_FREE_TEXT_LEN = 120
+EXPERT_AFFINITY_STEP_UP = 0.08
+EXPERT_AFFINITY_STEP_DOWN = -0.08
+EXPERT_AFFINITY_MIN = 0.1
+EXPERT_AFFINITY_MAX = 0.95
 
 
 FEEDBACK_REASON_MAP = {
@@ -116,6 +121,19 @@ class ResponseFeedbackService:
             reasons,
             meta or {},
         )
+        await self._update_expert_affinity(
+            user_id=user_uuid,
+            feedback_type=feedback_type,
+            meta=meta or {},
+        )
+        await self._emit_learning_feedback_event(
+            user_id=user_id,
+            trace_id=trace_id,
+            workflow_id=workflow_id,
+            feedback_type=feedback_type,
+            reasons=reasons,
+            meta=meta or {},
+        )
 
         # Opportunistically evaluate and auto-seed high-quality responses.
         try:
@@ -138,6 +156,70 @@ class ResponseFeedbackService:
             already_recorded=False,
             response_id=response_id,
         )
+
+    async def _emit_learning_feedback_event(
+        self,
+        *,
+        user_id: str,
+        trace_id: str,
+        workflow_id: str | None,
+        feedback_type: int,
+        reasons: list[str],
+        meta: dict[str, Any],
+    ) -> None:
+        if not getattr(settings, "ENABLE_LEARNING_CONTROL_PLANE", False):
+            return
+        try:
+            from app.services.learning_event_service import LearningEventService
+
+            policy_id = str(meta.get("policy_id", ""))
+            strategy_pack = ""
+            if policy_id.startswith("meta_policy_v1:"):
+                # meta_policy_v1:<channel>:<strategy_pack>:<hash>
+                parts = policy_id.split(":")
+                if len(parts) >= 3:
+                    strategy_pack = parts[2]
+            elif ":" in policy_id:
+                rest = policy_id.split(":", 1)[1]
+                if ":candidate_" in rest:
+                    strategy_pack = rest.split(":candidate_", 1)[0]
+                elif ":" in rest:
+                    strategy_pack = rest.split(":", 1)[0]
+                else:
+                    strategy_pack = rest
+            event_data = {
+                "feedback_type": "up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                "reasons": list(reasons),
+                "workflow_id": str(workflow_id or ""),
+                "response_id": str(meta.get("response_id", "")),
+                "policy_id": policy_id,
+                "prompt_policy_id": str(meta.get("prompt_policy_id", "")),
+                "toolchain_policy_id": str(meta.get("toolchain_policy_id", "")),
+                "strategy_pack": strategy_pack,
+                "selected_experts": parse_selected_experts(meta.get("selected_experts")),
+                "cohort_id": str(meta.get("cohort_id", "")),
+                "user_scope": str(meta.get("user_scope", "")),
+                "complexity_tier": str(meta.get("complexity_tier", "")),
+                "task_type": str(meta.get("task_type", "")),
+                "trace_id": trace_id,
+            }
+            service = LearningEventService(redis_client=self.redis)
+            await service.emit(
+                event_type="response_feedback",
+                user_id=user_id,
+                workflow_id=str(workflow_id or ""),
+                trace_id=trace_id,
+                response_id=str(meta.get("response_id", "")),
+                policy_id=policy_id,
+                strategy_pack=strategy_pack,
+                cohort_id=str(meta.get("cohort_id", "")),
+                user_scope=str(meta.get("user_scope", "")),
+                complexity_tier=str(meta.get("complexity_tier", "")),
+                task_type=str(meta.get("task_type", "")),
+                data=event_data,
+            )
+        except Exception as exc:
+            logger.warning("Failed to emit learning feedback event: {}", exc)
 
     async def _handle_context_pack_feedback(
         self,
@@ -244,6 +326,44 @@ class ResponseFeedbackService:
             return
         key = f"bandit:last_feedback_ts:{user_id}:{workflow_id}:{prompt_version}"
         await self.redis.setex(key, settings.FEEDBACK_EFFECT_TTL_SECONDS, int(time.time()))
+
+    async def _update_expert_affinity(
+        self,
+        *,
+        user_id: uuid.UUID,
+        feedback_type: int,
+        meta: dict[str, Any],
+    ) -> None:
+        if not settings.ENABLE_EXPERT_AFFINITY_MEMORY:
+            return
+
+        selected_experts = parse_selected_experts(meta.get("selected_experts"))
+        if not selected_experts:
+            return
+
+        from app.services.personalization.preference_service import PreferenceService
+
+        pref_service = PreferenceService(self.db, self.redis)
+        prefs = await pref_service.get_preferences(user_id)
+        inferred = prefs.inferred.copy() if isinstance(prefs.inferred, dict) else {}
+
+        affinity_map = inferred.get("expert_affinity")
+        if not isinstance(affinity_map, dict):
+            affinity_map = {}
+
+        delta = EXPERT_AFFINITY_STEP_UP if feedback_type == ResponseFeedback.FEEDBACK_UP else EXPERT_AFFINITY_STEP_DOWN
+        for expert_id in selected_experts:
+            current = affinity_map.get(expert_id, 0.5)
+            try:
+                current_value = float(current)
+            except (TypeError, ValueError):
+                current_value = 0.5
+            updated = max(EXPERT_AFFINITY_MIN, min(EXPERT_AFFINITY_MAX, current_value + delta))
+            affinity_map[expert_id] = round(updated, 4)
+
+        inferred["expert_affinity"] = affinity_map
+        inferred["expert_affinity_last_updated"] = _utcnow().isoformat()
+        await pref_service.update_inferred(user_id, inferred)
 
     async def get_summary(self, window: timedelta) -> dict[str, Any]:
         since = _utcnow() - window

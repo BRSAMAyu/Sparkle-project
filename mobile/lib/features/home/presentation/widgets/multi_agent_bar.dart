@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
 
@@ -22,23 +23,34 @@ class MultiAgentBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Multi-agent modes (excluding standard)
-    final multiAgentModes =
-        ChatMode.values.where((m) => m.isMultiAgent).toList();
     final catalog = ref.watch(multiAgentCatalogProvider);
-    final expertModes = catalog.when(
-      data: (value) => value.experts
-          .where((expert) => expert.enabled)
-          .take(6)
-          .map((expert) => ChatModeExpert(
-                expertId: expert.id,
-                expertName: expert.displayName,
-              ))
+    final multiAgentModes = catalog.when<List<ChatMode>>(
+      data: (value) => ChatMode.catalogToModes(value.modes)
+          .where((mode) => mode.isMultiAgent)
           .toList(),
-      loading: () => <ChatMode>[],
-      error: (_, __) => <ChatMode>[],
+      loading: () => ChatMode.values.where((m) => m.isMultiAgent).toList(),
+      error: (_, __) => ChatMode.values.where((m) => m.isMultiAgent).toList(),
     );
-    final entryModes = [...multiAgentModes, ...expertModes];
+    final expertModes = catalog.when<List<ExpertCatalogExpert>>(
+      data: (value) => value.experts.where((expert) => expert.enabled).toList()
+        ..sort((a, b) => a.rank.compareTo(b.rank)),
+      loading: () => <ExpertCatalogExpert>[],
+      error: (_, __) => <ExpertCatalogExpert>[],
+    );
+    final mappedExperts = expertModes
+        .take(6)
+        .map(
+          (expert) => ChatModeExpert(
+            expertId: expert.id,
+            expertName: expert.displayName,
+          ),
+        )
+        .toList();
+    final entryMap = <String, ChatMode>{};
+    for (final mode in [...multiAgentModes, ...mappedExperts]) {
+      entryMap[mode.apiValue] = mode;
+    }
+    final entryModes = entryMap.values.toList();
 
     return MaterialStyler(
       material: AppMaterials.neoGlass.copyWith(

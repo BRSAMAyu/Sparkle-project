@@ -15,6 +15,7 @@ from loguru import logger
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.orchestration.plan_dependency_resolver import PlanDependencyResolver
 from app.orchestration.schemas import ExecutablePlan, StateSnapshot, StepCriteria, ToolCallSpec
 
 
@@ -56,6 +57,7 @@ class LangGraphPlanner:
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
+        self.dependency_resolver = PlanDependencyResolver()
         # Phase 2: Use planning-only graph (no ToolNode)
         # This ensures planner does NOT execute tools
         self.graph = sparkle_planning_graph
@@ -311,11 +313,18 @@ class LangGraphPlanner:
            ``create_plan`` if present.
         4. Per-step ``success_criteria`` are assigned from the default map.
         """
+        # Pass 0 — explicit/semantic dependency resolution via dedicated resolver
+        try:
+            self.dependency_resolver.resolve(tool_calls)
+        except Exception as exc:
+            logger.warning(f"Dependency resolver failed, fallback to heuristic-only mode: {exc}")
+
         # Pass 1 — assign output_keys and criteria to creator tools
         creator_index: dict[str, str] = {}  # tool_name -> spec.id (latest)
         for tc in tool_calls:
             if tc.name in self.CREATOR_TOOLS:
-                tc.output_key = f"{tc.name}_result_{tc.id[-8:]}"
+                if not tc.output_key:
+                    tc.output_key = f"{tc.name}_result_{tc.id[-8:]}"
                 creator_index[tc.name] = tc.id
             if tc.name in self._STEP_CRITERIA and tc.success_criteria is None:
                 tc.success_criteria = self._STEP_CRITERIA[tc.name]

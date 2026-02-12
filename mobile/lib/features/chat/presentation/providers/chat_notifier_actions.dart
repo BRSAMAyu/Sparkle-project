@@ -46,7 +46,7 @@ extension ChatNotifierActions on ChatNotifier {
     if (action.type == 'nightly_review') {
       final reviewId = action.data['review_id']?.toString() ?? '';
       if (reviewId.isNotEmpty) {
-        _markNightlyReviewed(reviewId);
+        unawaited(_markNightlyReviewed(reviewId));
         return;
       }
     }
@@ -141,9 +141,15 @@ extension ChatNotifierActions on ChatNotifier {
     }
 
     final selectedExpertsRaw = message.agentCollaboration?['selected_experts'];
+    final policyId = message.agentCollaboration?['policy_id']?.toString();
+    final decompositionContractScore =
+        message.agentCollaboration?['decomposition_contract_score']?.toString();
+    final planFeasibilityScore =
+        message.agentCollaboration?['plan_feasibility_score']?.toString();
     String? selectedExpertsMeta;
     if (selectedExpertsRaw is List) {
-      selectedExpertsMeta = selectedExpertsRaw.map((e) => '$e').join(',');
+      selectedExpertsMeta =
+          jsonEncode(selectedExpertsRaw.map((e) => '$e').toList());
     } else if (selectedExpertsRaw is String && selectedExpertsRaw.isNotEmpty) {
       selectedExpertsMeta = selectedExpertsRaw;
     }
@@ -158,6 +164,12 @@ extension ChatNotifierActions on ChatNotifier {
         'message_id': message.id,
         if (selectedExpertsMeta != null)
           'selected_experts': selectedExpertsMeta,
+        if (policyId != null && policyId.isNotEmpty) 'policy_id': policyId,
+        if (decompositionContractScore != null &&
+            decompositionContractScore.isNotEmpty)
+          'decomposition_contract_score': decompositionContractScore,
+        if (planFeasibilityScore != null && planFeasibilityScore.isNotEmpty)
+          'plan_feasibility_score': planFeasibilityScore,
       },
     );
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
@@ -439,7 +451,10 @@ extension ChatNotifierActions on ChatNotifier {
 
   /// Get user-friendly reflection result message
   String _getReflectionResultMessage(
-      String outcome, double scoreDelta, int rounds) {
+    String outcome,
+    double scoreDelta,
+    int rounds,
+  ) {
     final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
     switch (outcome) {
       case 'fixed':

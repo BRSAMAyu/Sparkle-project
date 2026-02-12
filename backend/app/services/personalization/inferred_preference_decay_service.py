@@ -2,6 +2,7 @@
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -35,7 +36,7 @@ class InferredPreferenceDecayService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def apply_decay_to_user(self, user_id: UUID) -> dict[str, any]:
+    async def apply_decay_to_user(self, user_id: UUID) -> dict[str, Any]:
         """
         对单个用户的推断偏好应用衰减
 
@@ -113,6 +114,33 @@ class InferredPreferenceDecayService:
 
             changes += 1
 
+        expert_affinity = inferred.get("expert_affinity")
+        if isinstance(expert_affinity, dict):
+            decayed_affinity: dict[str, float] = {}
+            affinity_changed = False
+            weeks_elapsed = days_since_update / 7.0
+            decay_factor = DECAY_WEEKLY_FACTOR ** weeks_elapsed
+            baseline = 0.5
+            for expert_id, raw_score in expert_affinity.items():
+                try:
+                    current_score = float(raw_score)
+                except (TypeError, ValueError):
+                    continue
+                next_score = baseline + (current_score - baseline) * decay_factor
+                bounded = max(0.1, min(0.95, next_score))
+                decayed_affinity[str(expert_id)] = round(bounded, 4)
+                if abs(bounded - current_score) >= 0.0001:
+                    affinity_changed = True
+
+            if affinity_changed:
+                inferred["expert_affinity"] = decayed_affinity
+                inferred["expert_affinity_last_decayed"] = now.isoformat()
+                PREFERENCE_DECAY_APPLIED_TOTAL.labels(
+                    preference_key="expert_affinity",
+                    action="decay"
+                ).inc()
+                changes += 1
+
         # 清理过期的推断数据
         cleaned = self._cleanup_stale_data(inferred, now)
 
@@ -137,7 +165,7 @@ class InferredPreferenceDecayService:
             "cleaned": cleaned
         }
 
-    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> dict[str, any]:
+    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> dict[str, Any]:
         """
         批量应用衰减到所有有推断偏好的活跃用户
 

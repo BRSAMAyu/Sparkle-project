@@ -12,6 +12,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.config import settings
 from app.orchestration.schemas import ObservabilityEvent
 
 
@@ -50,6 +51,8 @@ class ObservabilityLogger:
             f"confidence={confidence_value:.2f}, "
             f"layer={decision.get('routing_layer', 'unknown')}, "
             f"adaptive={decision.get('adaptive_notes', '')}, "
+            f"policy={decision.get('policy_id', '')}, "
+            f"pack={decision.get('strategy_pack', '')}, "
             f"reason={decision.get('reason', '')[:50]}"
         )
 
@@ -292,6 +295,10 @@ class ObservabilityLogger:
         strategy: str,
         entry_source: str,
         workflow_id: str,
+        policy_id: str = "",
+        cohort_id: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
     ):
         await self.log_event(
             event_type="expert_selected",
@@ -302,6 +309,10 @@ class ObservabilityLogger:
                 "strategy": strategy,
                 "entry_source": entry_source,
                 "workflow_id": workflow_id,
+                "policy_id": policy_id,
+                "cohort_id": cohort_id,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
             },
         )
         try:
@@ -321,12 +332,23 @@ class ObservabilityLogger:
         session_id: str,
         expert_id: str,
         workflow_id: str,
+        policy_id: str = "",
+        cohort_id: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
     ):
         await self.log_event(
             event_type="expert_invoked",
             user_id=user_id,
             session_id=session_id,
-            data={"expert_id": expert_id, "workflow_id": workflow_id},
+            data={
+                "expert_id": expert_id,
+                "workflow_id": workflow_id,
+                "policy_id": policy_id,
+                "cohort_id": cohort_id,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
+            },
         )
         try:
             from app.core.metrics import EXPERT_INVOKED_TOTAL
@@ -342,6 +364,10 @@ class ObservabilityLogger:
         reason: str,
         from_mode: str,
         workflow_id: str,
+        policy_id: str = "",
+        cohort_id: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
     ):
         await self.log_event(
             event_type="expert_fallback",
@@ -351,6 +377,10 @@ class ObservabilityLogger:
                 "reason": reason,
                 "from_mode": from_mode,
                 "workflow_id": workflow_id,
+                "policy_id": policy_id,
+                "cohort_id": cohort_id,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
             },
         )
         try:
@@ -367,6 +397,10 @@ class ObservabilityLogger:
         requested_expert: str,
         used_expert: str,
         workflow_id: str,
+        policy_id: str = "",
+        cohort_id: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
     ):
         await self.log_event(
             event_type="expert_overridden",
@@ -376,6 +410,10 @@ class ObservabilityLogger:
                 "requested_expert": requested_expert,
                 "used_expert": used_expert,
                 "workflow_id": workflow_id,
+                "policy_id": policy_id,
+                "cohort_id": cohort_id,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
             },
         )
         try:
@@ -395,6 +433,9 @@ class ObservabilityLogger:
         response_id: str,
         workflow_id: str,
         selected_experts: list[str],
+        policy_id: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
     ):
         await self.log_event(
             event_type="user_feedback_bound",
@@ -404,11 +445,209 @@ class ObservabilityLogger:
                 "response_id": response_id,
                 "workflow_id": workflow_id,
                 "selected_experts": selected_experts,
+                "policy_id": policy_id,
+                "cohort_id": cohort_id,
+                "user_scope": user_scope,
             },
         )
         try:
             from app.core.metrics import USER_FEEDBACK_BOUND_TOTAL
             USER_FEEDBACK_BOUND_TOTAL.labels(workflow_id=workflow_id).inc()
+        except ImportError:
+            pass
+
+    async def log_prompt_selected(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        trace_id: str = "",
+        policy_id: str = "",
+        strategy_pack: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
+    ) -> None:
+        await self.log_event(
+            event_type="prompt_selected",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "workflow_id": workflow_id,
+                "prompt_version": prompt_version,
+                "trace_id": trace_id,
+                "policy_id": policy_id,
+                "strategy_pack": strategy_pack,
+                "cohort_id": cohort_id,
+                "user_scope": user_scope,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
+            },
+        )
+        try:
+            from app.core.metrics import PROMPT_SELECTED_TOTAL
+            PROMPT_SELECTED_TOTAL.labels(workflow_id=workflow_id, prompt_version=prompt_version).inc()
+        except ImportError:
+            pass
+
+    async def log_prompt_applied(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        response_id: str = "",
+        trace_id: str = "",
+        policy_id: str = "",
+        strategy_pack: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
+    ) -> None:
+        await self.log_event(
+            event_type="prompt_applied",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "workflow_id": workflow_id,
+                "prompt_version": prompt_version,
+                "response_id": response_id,
+                "trace_id": trace_id,
+                "policy_id": policy_id,
+                "strategy_pack": strategy_pack,
+                "cohort_id": cohort_id,
+                "user_scope": user_scope,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
+            },
+        )
+        try:
+            from app.core.metrics import PROMPT_APPLIED_TOTAL
+            PROMPT_APPLIED_TOTAL.labels(workflow_id=workflow_id, prompt_version=prompt_version).inc()
+        except ImportError:
+            pass
+
+    async def log_toolchain_selected(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        workflow_id: str,
+        toolchain_id: str,
+        trace_id: str = "",
+        response_id: str = "",
+        policy_id: str = "",
+        strategy_pack: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
+        latency_ms: float | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {
+            "workflow_id": workflow_id,
+            "toolchain_id": toolchain_id,
+            "trace_id": trace_id,
+            "response_id": response_id,
+            "policy_id": policy_id,
+            "strategy_pack": strategy_pack,
+            "cohort_id": cohort_id,
+            "user_scope": user_scope,
+            "complexity_tier": complexity_tier,
+            "task_type": task_type,
+        }
+        if latency_ms is not None:
+            payload["latency_ms"] = float(latency_ms)
+        await self.log_event(
+            event_type="toolchain_selected",
+            user_id=user_id,
+            session_id=session_id,
+            data=payload,
+        )
+        try:
+            from app.core.metrics import TOOLCHAIN_SELECTED_TOTAL
+            TOOLCHAIN_SELECTED_TOTAL.labels(workflow_id=workflow_id, toolchain_id=toolchain_id).inc()
+        except ImportError:
+            pass
+
+    async def log_toolchain_degraded(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        workflow_id: str,
+        reason: str,
+        trace_id: str = "",
+        response_id: str = "",
+        policy_id: str = "",
+        strategy_pack: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
+        complexity_tier: str = "",
+        task_type: str = "",
+    ) -> None:
+        await self.log_event(
+            event_type="toolchain_degraded",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "workflow_id": workflow_id,
+                "reason": reason,
+                "trace_id": trace_id,
+                "response_id": response_id,
+                "policy_id": policy_id,
+                "strategy_pack": strategy_pack,
+                "cohort_id": cohort_id,
+                "user_scope": user_scope,
+                "complexity_tier": complexity_tier,
+                "task_type": task_type,
+            },
+        )
+        try:
+            from app.core.metrics import TOOLCHAIN_DEGRADED_TOTAL
+            TOOLCHAIN_DEGRADED_TOTAL.labels(workflow_id=workflow_id, reason=reason).inc()
+        except ImportError:
+            pass
+
+    async def log_cold_start_bootstrap(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        workflow_id: str,
+        strategy: str,
+        chat_mode: str,
+        trace_id: str = "",
+        response_id: str = "",
+        cohort_id: str = "",
+        user_scope: str = "",
+        policy_id: str = "",
+        strategy_pack: str = "",
+    ) -> None:
+        await self.log_event(
+            event_type="cold_start_bootstrap_applied",
+            user_id=user_id,
+            session_id=session_id,
+            data={
+                "workflow_id": workflow_id,
+                "strategy": strategy,
+                "chat_mode": chat_mode,
+                "trace_id": trace_id,
+                "response_id": response_id,
+                "cohort_id": cohort_id,
+                "user_scope": user_scope,
+                "policy_id": policy_id,
+                "strategy_pack": strategy_pack,
+            },
+        )
+        try:
+            from app.core.metrics import COLD_START_BOOTSTRAP_TOTAL
+            COLD_START_BOOTSTRAP_TOTAL.labels(strategy=strategy, chat_mode=chat_mode).inc()
         except ImportError:
             pass
 
@@ -433,6 +672,14 @@ class ObservabilityLogger:
         if self.redis:
             await self._write_to_redis(event)
 
+        if getattr(settings, "ENABLE_LEARNING_CONTROL_PLANE", False):
+            await self._write_to_learning_stream(
+                event_type=event_type,
+                user_id=user_id,
+                session_id=session_id,
+                data=data or {},
+            )
+
     async def _write_to_redis(self, event: ObservabilityEvent):
         """Write to Redis"""
         key = f"observability:event:{event.event_type}:{event.timestamp}"
@@ -449,6 +696,45 @@ class ObservabilityLogger:
             await self.redis.setex(key, 3600, payload)  # TTL 1 hour
         except Exception as e:
             logger.warning(f"Failed to write event to Redis: {e}")
+
+    async def _write_to_learning_stream(
+        self,
+        *,
+        event_type: str,
+        user_id: str,
+        session_id: str,
+        data: dict[str, Any],
+    ) -> None:
+        try:
+            from app.services.learning_event_service import LearningEventService
+
+            payload = data if isinstance(data, dict) else {}
+            policy_id = str(payload.get("policy_id", ""))
+            strategy_pack = str(payload.get("strategy_pack", ""))
+            if not strategy_pack and ":" in policy_id:
+                rest = policy_id.split(":", 1)[1]
+                if ":candidate_" in rest:
+                    strategy_pack = rest.split(":candidate_", 1)[0]
+                else:
+                    strategy_pack = rest.split(":", 1)[0]
+            service = LearningEventService(redis_client=self.redis)
+            await service.emit(
+                event_type=event_type,
+                user_id=user_id,
+                session_id=session_id,
+                workflow_id=str(payload.get("workflow_id", "")),
+                trace_id=str(payload.get("trace_id", "")),
+                response_id=str(payload.get("response_id", "")),
+                policy_id=policy_id,
+                strategy_pack=strategy_pack,
+                cohort_id=str(payload.get("cohort_id", "")),
+                user_scope=str(payload.get("user_scope", "")),
+                complexity_tier=str(payload.get("complexity_tier", "")),
+                task_type=str(payload.get("task_type", "")),
+                data=payload,
+            )
+        except Exception as exc:
+            logger.warning("Failed writing learning event from observability: {}", exc)
 
 
 # Global instance

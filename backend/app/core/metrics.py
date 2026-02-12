@@ -311,6 +311,61 @@ USER_FEEDBACK_BOUND_TOTAL = get_or_create_metric(
     ['workflow_id']
 )
 
+PROMPT_SELECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_selected_total',
+    'Total prompt variant selections',
+    ['workflow_id', 'prompt_version']
+)
+
+PROMPT_APPLIED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_applied_total',
+    'Total prompt variant applications',
+    ['workflow_id', 'prompt_version']
+)
+
+TOOLCHAIN_SELECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_toolchain_selected_total',
+    'Total toolchain policy selections',
+    ['workflow_id', 'toolchain_id']
+)
+
+TOOLCHAIN_DEGRADED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_toolchain_degraded_total',
+    'Total toolchain degradations',
+    ['workflow_id', 'reason']
+)
+
+META_POLICY_CANDIDATE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_meta_policy_candidate_total',
+    'Meta policy candidate generation totals',
+    ['channel', 'scope_type', 'result']
+)
+
+META_POLICY_ROLLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_meta_policy_rollback_total',
+    'Meta policy rollback totals',
+    ['reason_type']
+)
+
+FAIRNESS_STABLE_Q_GAP = get_or_create_metric(
+    Gauge,
+    'sparkle_fairness_stable_q_gap',
+    'Stable cohort q-score gap for fairness guardrail'
+)
+
+COLD_START_BOOTSTRAP_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_cold_start_bootstrap_total',
+    'Total cold-start bootstrap activations',
+    ['strategy', 'chat_mode']
+)
+
 # ============ Strategy Optimization Metrics ============
 
 ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL = get_or_create_metric(

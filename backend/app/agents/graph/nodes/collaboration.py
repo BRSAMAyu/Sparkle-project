@@ -13,6 +13,9 @@ from loguru import logger
 
 from app.agents.graph.expert_registry import resolve_node_name
 from app.agents.graph.state import SparkleState
+from app.orchestration.chat_modes import CHAT_MODE_EXPERT_AUTO
+from app.orchestration.expert_strategy_v2 import ExpertStrategyV2
+from app.orchestration.mode_workflow_config import get_workflow_config
 
 
 async def collaboration_node(state: SparkleState) -> SparkleState:
@@ -44,7 +47,7 @@ async def collaboration_node(state: SparkleState) -> SparkleState:
         }
     else:
         # 1. Analyze if collaboration is needed
-        collaboration_plan = _analyze_collaboration_needs(user_message)
+        collaboration_plan = _analyze_collaboration_needs(user_message, state=state)
 
     if collaboration_plan["mode"] == "single":
         # Single agent mode, route directly
@@ -96,7 +99,7 @@ def _get_latest_human_message(messages: list[BaseMessage]) -> str:
     return messages[-1].content if messages else ""
 
 
-def _analyze_collaboration_needs(message: str) -> dict[str, Any]:
+def _analyze_collaboration_needs(message: str, state: SparkleState | None = None) -> dict[str, Any]:
     """Analyze if message needs multi-agent collaboration
 
     Returns:
@@ -106,49 +109,106 @@ def _analyze_collaboration_needs(message: str) -> dict[str, Any]:
         - agents: List of participating agents
         - order: Execution order
     """
-    msg_lower = message.lower()
+    state_data = state or {}
+    mode_name = str(state_data.get("mode_name") or "").strip()
+    mode_config = get_workflow_config(mode_name) if mode_name else None
 
-    # Collaboration mode keywords
-    collaboration_keywords = {
-        ("复习计划", "学习计划", "study plan", "复习策略"): {
-            "mode": "sequential",
-            "agents": ["galaxy_guide", "exam_oracle", "time_tutor"],
-            "order": [
-                {"agent": "galaxy_guide", "task": f"Analyze knowledge prerequisites: {message}"},
-                {"agent": "exam_oracle", "task": f"Analyze exam focus: {message}"},
-                {"agent": "time_tutor", "task": f"Create schedule: {message}"},
-            ]
-        },
-        ("基础差", "先修", "prerequisite", "知识关联"): {
-            "mode": "sequential",
-            "agents": ["galaxy_guide", "time_tutor"],
-            "order": [
-                {"agent": "galaxy_guide", "task": f"Analyze knowledge graph: {message}"},
-                {"agent": "time_tutor", "task": f"Create foundation plan: {message}"},
-            ]
-        },
-        ("考试预测", "重点", "exam focus", "past paper"): {
-            "mode": "sequential",
-            "agents": ["exam_oracle", "time_tutor"],
-            "order": [
-                {"agent": "exam_oracle", "task": f"Analyze exam focus: {message}"},
-                {"agent": "time_tutor", "task": f"Schedule review: {message}"},
-            ]
-        },
-    }
+    # Priority 1: mode workflow config (single source for rich mode decomposition).
+    if mode_config and mode_config.collaboration_agents:
+        configured_order = _normalize_order(mode_config.collaboration_order, default_task=message)
+        if not configured_order:
+            configured_order = _build_order_from_agents(mode_config.collaboration_agents, message)
+        configured_agents = [step["agent"] for step in configured_order]
+        if configured_agents:
+            return {
+                "mode": mode_config.collaboration_mode if len(configured_agents) > 1 else "single",
+                "primary_agent": configured_agents[0],
+                "agents": configured_agents,
+                "order": configured_order,
+            }
 
-    # Check if matches collaboration scenario
-    for keywords, plan in collaboration_keywords.items():
-        if any(kw in msg_lower for kw in keywords):
-            return plan
+    # Priority 2: explicit selected experts propagated from orchestrator strategy.
+    selected_experts = state_data.get("selected_experts")
+    if isinstance(selected_experts, list):
+        normalized_agents = []
+        for expert_id in selected_experts:
+            resolved = resolve_node_name(str(expert_id))
+            if resolved and resolved not in normalized_agents:
+                normalized_agents.append(resolved)
+        if normalized_agents:
+            return {
+                "mode": "sequential" if len(normalized_agents) > 1 else "single",
+                "primary_agent": normalized_agents[0],
+                "agents": normalized_agents,
+                "order": _build_order_from_agents(normalized_agents, message),
+            }
 
-    # Default single agent mode
+    # Priority 3: scored strategy (v2) for dynamic collaboration routing.
+    user_profile = state_data.get("user_profile")
+    user_preferences = user_profile if isinstance(user_profile, dict) else {}
+    chat_mode = mode_name or CHAT_MODE_EXPERT_AUTO
+    try:
+        decision = ExpertStrategyV2.route(
+            message=message,
+            chat_mode=chat_mode,
+            user_preferences=user_preferences,
+            user_context=user_preferences,
+        )
+        resolved_agents: list[str] = []
+        for expert_id in decision.selected_experts:
+            resolved = resolve_node_name(str(expert_id))
+            if resolved and resolved not in resolved_agents:
+                resolved_agents.append(resolved)
+        if resolved_agents:
+            return {
+                "mode": "sequential" if len(resolved_agents) > 1 else "single",
+                "primary_agent": resolved_agents[0],
+                "agents": resolved_agents,
+                "order": _build_order_from_agents(resolved_agents, message),
+            }
+    except Exception as exc:
+        logger.warning(f"ExpertStrategyV2 route failed in collaboration node: {exc}")
+
+    # Priority 4: legacy keyword fallback only.
+    legacy_plan = _legacy_keyword_plan(message)
+    if legacy_plan:
+        return legacy_plan
+
+    primary_agent = _classify_primary_agent(message)
     return {
         "mode": "single",
-        "primary_agent": _classify_primary_agent(message),
+        "primary_agent": primary_agent,
         "agents": [],
-        "order": []
+        "order": [],
     }
+
+
+def _legacy_keyword_plan(message: str) -> dict[str, Any] | None:
+    msg_lower = message.lower()
+    collaboration_keywords = {
+        ("复习计划", "学习计划", "study plan", "复习策略"): ["galaxy_guide", "exam_oracle", "time_tutor"],
+        ("基础差", "先修", "prerequisite", "知识关联"): ["galaxy_guide", "time_tutor"],
+        ("考试预测", "重点", "exam focus", "past paper"): ["exam_oracle", "time_tutor"],
+    }
+    for keywords, agents in collaboration_keywords.items():
+        if any(kw in msg_lower for kw in keywords):
+            return {
+                "mode": "sequential" if len(agents) > 1 else "single",
+                "primary_agent": agents[0],
+                "agents": agents,
+                "order": _build_order_from_agents(agents, message),
+            }
+    return None
+
+
+def _build_order_from_agents(agents: list[str], message: str) -> list[dict[str, str]]:
+    order: list[dict[str, str]] = []
+    for expert in agents:
+        resolved = resolve_node_name(str(expert))
+        if not resolved:
+            continue
+        order.append({"agent": resolved, "task": f"[{resolved}] {message}"})
+    return order
 
 
 def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]]:

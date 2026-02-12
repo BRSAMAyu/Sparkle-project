@@ -149,11 +149,34 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		ResponseId: "resp-expert-meta",
 		RequestId:  "req-expert-meta",
 		Metadata: map[string]string{
-			"selected_experts":    `["deep_analyst","code_agent"]`,
-			"routing_strategy":    "auto_multi_expert",
-			"fallback_reason":     "",
-			"route_confidence":    "0.82",
-			"expert_entry_source": "auto",
+			"selected_experts":             `["deep_analyst","code_agent"]`,
+			"routing_strategy":             "auto_multi_expert",
+			"fallback_reason":              "",
+			"route_confidence":             "0.82",
+			"expert_entry_source":          "auto",
+			"policy_id":                    "expert_strategy_v2",
+			"strategy_pack":                "general_v2",
+			"complexity_score":             "0.74",
+			"complexity_tier":              "medium",
+			"decomposition_contract":       `{"goal":"prepare exam","milestones":["phase1","phase2"],"acceptance_criteria":["score>=90"]}`,
+			"decomposition_contract_score": "0.81",
+			"decomposition_gaps":           `["missing_resources"]`,
+			"plan_feasibility_score":       "0.76",
+			"verifier_score":               "0.84",
+			"contract_coverage":            "0.88",
+			"verifier_fail_reasons":        `["missing_risks"]`,
+			"uncertainty_score":            "0.41",
+			"clarification_needed":         "false",
+			"search_budget_used":           "932",
+			"plan_revision_count":          "1",
+			"repair_actions":               `["degrade_parallelism"]`,
+			"quality_gate_block_reason":    "",
+			"q_score_hint":                 "0.83",
+			"policy_layers":                `[{"policy_id":"expert_strategy_v2:general_v2","scope_type":"global"}]`,
+			"prompt_policy_id":             "meta_policy_v1:prompt:general_v2:abc12345",
+			"toolchain_policy_id":          "meta_policy_v1:toolchain:general_v2:def67890",
+			"meta_learning_scope":          "composed",
+			"plan_contract_version":        "v1",
 		},
 		Content: &agentv1.ChatResponse_FullText{
 			FullText: "done",
@@ -168,6 +191,35 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.Len(t, selected, 2)
 	assert.Equal(t, "auto_multi_expert", meta["routing_strategy"])
 	assert.Equal(t, "0.82", meta["route_confidence"])
+	assert.Equal(t, "expert_strategy_v2", meta["policy_id"])
+	assert.Equal(t, "general_v2", meta["strategy_pack"])
+	assert.Equal(t, "0.74", meta["complexity_score"])
+	assert.Equal(t, "medium", meta["complexity_tier"])
+	assert.Equal(t, "0.81", meta["decomposition_contract_score"])
+	contract, ok := meta["decomposition_contract"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "prepare exam", contract["goal"])
+	gaps, ok := meta["decomposition_gaps"].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, gaps, 1)
+	assert.Equal(t, "0.76", meta["plan_feasibility_score"])
+	assert.Equal(t, "0.84", meta["verifier_score"])
+	assert.Equal(t, "0.88", meta["contract_coverage"])
+	_, ok = meta["verifier_fail_reasons"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "0.41", meta["uncertainty_score"])
+	assert.Equal(t, "false", meta["clarification_needed"])
+	assert.Equal(t, "932", meta["search_budget_used"])
+	assert.Equal(t, "1", meta["plan_revision_count"])
+	_, ok = meta["repair_actions"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "0.83", meta["q_score_hint"])
+	_, ok = meta["policy_layers"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "meta_policy_v1:prompt:general_v2:abc12345", meta["prompt_policy_id"])
+	assert.Equal(t, "meta_policy_v1:toolchain:general_v2:def67890", meta["toolchain_policy_id"])
+	assert.Equal(t, "composed", meta["meta_learning_scope"])
+	assert.Equal(t, "v1", meta["plan_contract_version"])
 }
 
 func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {

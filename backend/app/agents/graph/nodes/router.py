@@ -116,7 +116,7 @@ async def router_node(state: SparkleState):
     if not state.get("collaboration_mode"):
         try:
             from app.agents.graph.nodes.collaboration import _analyze_collaboration_needs
-            collaboration_plan = _analyze_collaboration_needs(user_query)
+            collaboration_plan = _analyze_collaboration_needs(user_query, state=state)
             if collaboration_plan.get("mode") != "single":
                 state_updates.update({
                     "collaboration_mode": collaboration_plan.get("mode"),

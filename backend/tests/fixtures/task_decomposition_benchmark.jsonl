@@ -1,0 +1,3 @@
+{"case_id":"decomp_case_1","message":"我想在6周内完成数据分析转岗准备，每天2小时，先补统计学再做项目，目标是完成2个可展示项目并通过一次模拟面试。","intent":"create_plan","min_score":0.55,"must_not_have_gaps":["missing_goal","missing_acceptance_criteria"]}
+{"case_id":"decomp_case_2","message":"帮我拆解一个可执行的学习计划，先打基础，再强化，再冲刺，最终目标是期末达到90分。","intent":"create_plan","min_score":0.50,"must_not_have_gaps":["missing_goal"]}
+{"case_id":"decomp_case_3","message":"I want to build a 12-week roadmap to learn system design, with weekly milestones and measurable outcomes.","intent":"create_plan","min_score":0.45,"must_not_have_gaps":["missing_goal"]}

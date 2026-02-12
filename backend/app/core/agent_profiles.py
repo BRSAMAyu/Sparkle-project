@@ -512,6 +512,15 @@ class AgentProfileRegistry:
             current = self._profiles[role]
             for key, value in updates.items():
                 setattr(current, key, value)
+            # Keep registry-derived catalogs/nodes in sync with runtime profile updates.
+            try:
+                from app.agents.graph.expert_registry import reset_graph_expert_registry_cache
+                from app.core.agent_capability_registry import reset_capability_registry_cache
+
+                reset_capability_registry_cache()
+                reset_graph_expert_registry_cache()
+            except Exception:
+                pass
             logger.info(f"Updated profile for {role}: {updates}")
 
     def list_all_profiles(self) -> dict[AgentRole, dict[str, Any]]:
@@ -537,54 +546,16 @@ class AgentProfileRegistry:
 
 def get_public_agent_catalog() -> list[dict[str, Any]]:
     """Unified expert catalog for public entry and routing."""
-    catalog: list[dict[str, Any]] = []
-    for role, profile in agent_profile_registry.list_public_entry_profiles():
-        expert_id = role.value
-        catalog.append({
-            "id": expert_id,
-            "display_name": profile.display_name,
-            "description": profile.description,
-            "tags": profile.entry_tags,
-            "entry_chat_mode": f"expert::{expert_id}",
-            "recommended_scenarios": profile.entry_tags[:3],
-            "enabled": profile.entry_enabled,
-            "rank": profile.entry_rank,
-        })
-    return catalog
+    from app.core.agent_capability_registry import get_expert_capability_catalog
+
+    return [dict(item) for item in get_expert_capability_catalog()]
 
 
 def get_public_mode_catalog() -> list[dict[str, Any]]:
     """Stable mode catalog returned by /multi-agent/catalog."""
-    return [
-        {
-            "id": "deep_analysis",
-            "label": "深度解析",
-            "description": "多专家协作深度解析问题",
-            "entry_chat_mode": "deep_analysis",
-            "enabled": True,
-        },
-        {
-            "id": "study_plan",
-            "label": "学习计划",
-            "description": "任务分解与学习计划协作",
-            "entry_chat_mode": "study_plan",
-            "enabled": True,
-        },
-        {
-            "id": "error_diagnosis",
-            "label": "错题分析",
-            "description": "错题诊断与分析循环",
-            "entry_chat_mode": "error_diagnosis",
-            "enabled": True,
-        },
-        {
-            "id": "expert_auto",
-            "label": "专家自动路由",
-            "description": "自动选择最合适专家组合",
-            "entry_chat_mode": "expert_auto",
-            "enabled": True,
-        },
-    ]
+    from app.core.agent_capability_registry import get_mode_capability_catalog
+
+    return [dict(item) for item in get_mode_capability_catalog()]
 
 
 # 全局注册表实例

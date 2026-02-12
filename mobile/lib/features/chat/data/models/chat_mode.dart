@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 
 const String expertChatModePrefix = 'expert::';
 
@@ -13,6 +14,7 @@ abstract class ChatMode {
     required this.label,
     required this.icon,
     required this.color,
+    this.descriptionText,
   });
 
   /// API value sent to the backend
@@ -26,6 +28,9 @@ abstract class ChatMode {
 
   /// Primary color associated with this mode
   final Color color;
+
+  /// Optional server-driven description
+  final String? descriptionText;
 
   /// Get ChatMode from API value
   static ChatMode fromApiValue(String value) {
@@ -47,11 +52,36 @@ abstract class ChatMode {
     );
   }
 
+  static ChatMode fromCatalogMode(ExpertCatalogMode mode) => ChatModeCatalog(
+        apiValue: mode.entryChatMode,
+        label: mode.label.isEmpty ? mode.id : mode.label,
+        descriptionText: mode.description,
+        icon: _iconForMode(mode.id, mode.entryChatMode),
+        color: _colorForMode(mode.id, mode.entryChatMode),
+      );
+
+  static List<ChatMode> catalogToModes(List<ExpertCatalogMode> modes) {
+    final mapped = <String, ChatMode>{
+      standard.apiValue: standard,
+    };
+    for (final mode in modes) {
+      if (!mode.enabled) {
+        continue;
+      }
+      final chatMode = ChatMode.fromCatalogMode(mode);
+      mapped[chatMode.apiValue] = chatMode;
+    }
+    return mapped.values.toList();
+  }
+
   /// Check if this is a multi-agent mode (not standard)
   bool get isMultiAgent => apiValue != 'standard';
 
   /// Get description text for the mode
   String get description {
+    if (descriptionText != null && descriptionText!.isNotEmpty) {
+      return descriptionText!;
+    }
     switch (apiValue) {
       case 'standard':
         return '使用标准 AI 对话模式';
@@ -158,7 +188,57 @@ class ChatModeExpert extends ChatMode {
   final String expertName;
 }
 
-/// All available chat modes
+class ChatModeCatalog extends ChatMode {
+  ChatModeCatalog({
+    required super.apiValue,
+    required super.label,
+    required super.icon,
+    required super.color,
+    super.descriptionText,
+  });
+}
+
+IconData _iconForMode(String modeId, String chatMode) {
+  switch (modeId) {
+    case 'standard':
+      return Icons.chat_bubble_outline;
+    case 'deep_analysis':
+      return Icons.psychology;
+    case 'study_plan':
+      return Icons.calendar_month;
+    case 'error_diagnosis':
+      return Icons.quiz;
+    case 'expert_auto':
+      return Icons.auto_awesome_mosaic;
+    default:
+      if (chatMode.startsWith(expertChatModePrefix)) {
+        return Icons.person_search;
+      }
+      return Icons.hub;
+  }
+}
+
+Color _colorForMode(String modeId, String chatMode) {
+  switch (modeId) {
+    case 'standard':
+      return DS.brandPrimaryConst;
+    case 'deep_analysis':
+      return const Color(0xFF9C27B0);
+    case 'study_plan':
+      return DS.successAccent;
+    case 'error_diagnosis':
+      return DS.errorAccent;
+    case 'expert_auto':
+      return const Color(0xFF00897B);
+    default:
+      if (chatMode.startsWith(expertChatModePrefix)) {
+        return const Color(0xFF1565C0);
+      }
+      return DS.brandPrimaryConst;
+  }
+}
+
+/// All available chat modes (offline fallback)
 final List<ChatMode> chatModeValues = [
   ChatModeStandard(),
   ChatModeDeepAnalysis(),

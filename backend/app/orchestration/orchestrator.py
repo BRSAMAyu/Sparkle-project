@@ -1,9 +1,10 @@
 import asyncio
 import contextlib
+import hashlib
 import json
 import time
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -36,26 +37,32 @@ from app.models.plan import Plan
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 
+# Multi-Agent Mode Support
+from app.orchestration.chat_modes import (
+    CHAT_MODE_STUDY_PLAN,
+    CHAT_MODE_STANDARD,
+    extract_expert_id,
+    is_expert_chat_mode,
+    normalize_chat_mode,
+)
+
 # Phase 3: Circuit Breaker, Observability, Shadow Mode
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.executor import ToolExecutor
+from app.orchestration.expert_strategy import ExpertStrategyV1
+from app.orchestration.expert_strategy_v2 import ExpertStrategyV2
+from app.orchestration.decomposition_quality_gate import DecompositionQualityGate
 from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
-
-# Multi-Agent Mode Support
-from app.orchestration.chat_modes import (
-    CHAT_MODE_STANDARD,
-    is_expert_chat_mode,
-    normalize_chat_mode,
-)
-from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.mode_workflow_config import get_workflow_config
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow
 from app.orchestration.observability_logger import observability_logger
+from app.orchestration.plan_search_service import PlanSearchService
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
+from app.orchestration.reasoning_verifier_service import ReasoningVerifierService
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision
@@ -75,10 +82,13 @@ from app.orchestration.token_tracker import TokenTracker
 # Phase 5: Plan Execution Validation
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
+from app.orchestration.uncertainty_calibrator import UncertaintyCalibrator
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
 from app.services.llm_service import llm_service
+from app.services.learning_cohort_service import LearningCohortService
+from app.services.meta_cold_start_service import MetaColdStartService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.shadow_prediction_service import shadow_prediction_service
@@ -231,6 +241,9 @@ class ChatOrchestrator:
         # Phase 2: Initialize LangGraph Planner and Snapshot Manager
         self.lang_graph_planner = LangGraphPlanner(redis_client)
         self.snapshot_manager = StateSnapshotManager(redis_client)
+        self.reasoning_verifier = ReasoningVerifierService()
+        self.uncertainty_calibrator = UncertaintyCalibrator()
+        self.plan_search_service = PlanSearchService()
         logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
 
         # Phase 3: Initialize Circuit Breaker
@@ -997,16 +1010,20 @@ class ChatOrchestrator:
         conversation_context: dict[str, Any] | None,
         stream_callback,
         queue: asyncio.Queue,
+        sufficiency_payload: dict[str, Any] | None = None,
     ) -> bool:
         if request.HasField("tool_result"):
             return False
         try:
+            request_chat_mode = normalize_chat_mode(getattr(request, "chat_mode", None) or CHAT_MODE_STANDARD)
             prediction = await shadow_prediction_service.predict_intent_only(
                 user_message=user_message,
                 active_plan_id=str(plan_id) if plan_id else None,
                 user_id=user_id,
             )
             intent_type = prediction.get("intent_type", "unknown")
+            if request_chat_mode == CHAT_MODE_STUDY_PLAN and intent_type not in {"create_plan", "time_planning"}:
+                intent_type = "create_plan"
             extracted_entities = {
                 "intent_type": intent_type,
                 "suggested_tools": prediction.get("suggested_tools", []),
@@ -1019,18 +1036,44 @@ class ChatOrchestrator:
                 user_message=user_message,
                 use_llm_fallback=intent_type in plan_intents,
             )
+            should_attach_decomposition = (
+                intent_type in plan_intents
+                or request_chat_mode == CHAT_MODE_STUDY_PLAN
+                or self._is_task_decomposition_request(message=user_message, unified_routing_result=None)
+            )
+            if sufficiency_payload is not None and should_attach_decomposition:
+                if check_result.decomposition_contract:
+                    sufficiency_payload["decomposition_contract"] = check_result.decomposition_contract
+                if check_result.decomposition_contract_score:
+                    sufficiency_payload["decomposition_contract_score"] = check_result.decomposition_contract_score
+                if check_result.decomposition_gaps:
+                    sufficiency_payload["decomposition_gaps"] = list(check_result.decomposition_gaps)
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
                 questions = check_result.clarification_questions
                 if check_result.clarification_text:
                     questions = [check_result.clarification_text]
                 question_text = "\n".join([f"- {q}" for q in questions if q]) if questions else "- 请补充更多关键信息"
+                decomposition_gaps = (
+                    check_result.decomposition_gaps
+                    if check_result.decomposition_gaps
+                    else check_result.missing_fields
+                )
+                clarification_metadata = {
+                    "requires_clarification": "true",
+                    "missing_fields": ",".join(check_result.missing_fields),
+                }
+                if should_attach_decomposition:
+                    clarification_metadata.update(
+                        {
+                            "decomposition_gaps": json.dumps(decomposition_gaps, ensure_ascii=False),
+                            "decomposition_contract_score": f"{check_result.decomposition_contract_score:.2f}",
+                            "plan_contract_version": "v1",
+                        }
+                    )
                 await stream_callback(agent_service_pb2.ChatResponse(
                     delta=f"我需要更多信息来帮您：\n\n{question_text}\n\n请提供以上信息，我将为您处理。",
-                    metadata={
-                        "requires_clarification": "true",
-                        "missing_fields": ",".join(check_result.missing_fields),
-                    },
+                    metadata=clarification_metadata,
                 ))
                 await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
                 return True
@@ -1115,6 +1158,33 @@ class ChatOrchestrator:
                 "risk_level": route_decision.risk_level,
                 "reason": route_decision.reason,
             }
+        if self._is_task_decomposition_request(
+            message=user_message,
+            unified_routing_result=unified_routing_result,
+        ):
+            from_mode = route_decision.execution_mode
+            route_decision.execution_mode = "langgraph"
+            if route_decision.risk_level == "low":
+                route_decision.risk_level = "medium"
+            route_decision.reason = (
+                f"{route_decision.reason}|forced_task_decomposition_langgraph"
+                if route_decision.reason
+                else "forced_task_decomposition_langgraph"
+            )
+            if from_mode != "langgraph":
+                ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL.labels(
+                    action="upgrade",
+                    trigger="task_decomposition_force",
+                    from_mode=from_mode,
+                    to_mode=route_decision.execution_mode,
+                ).inc()
+            adaptive_notes = [*adaptive_notes, "forced_task_decomposition_langgraph"]
+            state.context_data["adaptive_routing"] = {
+                "notes": adaptive_notes,
+                "execution_mode": route_decision.execution_mode,
+                "risk_level": route_decision.risk_level,
+                "reason": route_decision.reason,
+            }
         if unified_routing_result and "unified_intent" in state.context_data:
             state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
             state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
@@ -1131,6 +1201,36 @@ class ChatOrchestrator:
         }
         state.context_data["grounding_validator"] = self.grounding_validator
         return route_decision, unified_routing_result
+
+    @staticmethod
+    def _is_task_decomposition_request(
+        *,
+        message: str,
+        unified_routing_result: Any | None,
+    ) -> bool:
+        if not settings.ENABLE_DECOMPOSITION_CONTRACT_V1:
+            return False
+        if unified_routing_result and getattr(unified_routing_result, "primary_intent", None) in {
+            UnifiedIntentType.PLAN,
+            UnifiedIntentType.SPRINT_PLAN,
+        }:
+            return True
+        msg_lower = (message or "").lower()
+        decomposition_keywords = (
+            "任务拆解",
+            "分解",
+            "计划",
+            "规划",
+            "里程碑",
+            "阶段计划",
+            "执行方案",
+            "roadmap",
+            "milestone",
+            "execution plan",
+            "step by step",
+            "拆分",
+        )
+        return any(keyword in msg_lower for keyword in decomposition_keywords)
 
     @staticmethod
     def _build_routing_history(conversation_context: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -1199,6 +1299,37 @@ class ChatOrchestrator:
         if ":" in reason_lc:
             return reason_lc.split(":", 1)[0]
         return reason_lc
+
+    @staticmethod
+    def _extract_strategy_pack_from_policy_id(policy_id: str) -> str:
+        value = str(policy_id or "").strip()
+        if not value or ":" not in value:
+            return "default"
+        rest = value.split(":", 1)[1]
+        if ":candidate_" in rest:
+            return rest.split(":candidate_", 1)[0]
+        if ":" in rest:
+            return rest.split(":", 1)[0]
+        return rest
+
+    @staticmethod
+    def _assign_strategy_bucket(user_id: str, session_id: str) -> int:
+        seed = f"{user_id}:{session_id}".encode("utf-8", errors="ignore")
+        digest = hashlib.sha1(seed).hexdigest()[:8]
+        return int(digest, 16) % 100
+
+    def _should_use_expert_strategy_v2(self, *, user_id: str, session_id: str) -> bool:
+        if not settings.ENABLE_EXPERT_STRATEGY_V2:
+            return False
+        if not settings.ENABLE_EXPERT_POLICY_AB:
+            return True
+        percent = int(getattr(settings, "EXPERT_STRATEGY_V2_PERCENT", 0))
+        percent = max(0, min(percent, 100))
+        if percent <= 0:
+            return False
+        if percent >= 100:
+            return True
+        return self._assign_strategy_bucket(user_id=user_id, session_id=session_id) < percent
 
     def _apply_adaptive_routing_policy(
         self,
@@ -1389,9 +1520,9 @@ class ChatOrchestrator:
         validation_result: Any,
         user_id: str,
         session_id: str,
-    ) -> None:
+    ) -> dict[str, Any] | None:
         if not active_db:
-            return
+            return None
         try:
             from app.orchestration.adaptive_replanner import AdaptiveReplanner
             from app.orchestration.step_feedback_collector import StepFeedbackCollector
@@ -1405,13 +1536,14 @@ class ChatOrchestrator:
                 session_id=session_id,
             )
             replanner = AdaptiveReplanner(active_db, redis=self.redis)
-            await replanner.on_plan_execution_completed(
+            return await replanner.on_plan_execution_completed(
                 user_id=uuid.UUID(user_id),
                 plan_id=uuid.UUID(str(executable_plan.plan_id)),
                 feedback=feedback,
             )
         except Exception as e:
             logger.warning(f"Failed to publish execution feedback: {e}", exc_info=True)
+            return None
 
     async def _validate_plan_execution(
         self,
@@ -1435,7 +1567,7 @@ class ChatOrchestrator:
                     plan_result=plan_result,
                     user_id=uuid.UUID(user_id),
                 )
-                await self._publish_execution_feedback(
+                repair_result = await self._publish_execution_feedback(
                     active_db=active_db,
                     executable_plan=executable_plan,
                     plan_result=plan_result,
@@ -1451,7 +1583,7 @@ class ChatOrchestrator:
                     len(getattr(validation_result, "step_validations", []) or []),
                     getattr(validation_result, "aborted", False),
                 )
-                return {
+                payload = {
                     "validation_status": validation_result.validation_status,
                     "quality_score": validation_result.quality_score,
                     "tools_total": validation_result.tool_summary.get("total", 0),
@@ -1460,6 +1592,10 @@ class ChatOrchestrator:
                     "steps_passed": sum(1 for sv in (getattr(validation_result, "step_validations", []) or []) if sv.passed),
                     "aborted": bool(getattr(validation_result, "aborted", False)),
                 }
+                if isinstance(repair_result, dict) and repair_result.get("applied"):
+                    payload["repair_actions"] = repair_result.get("repair_actions", [])
+                    final_state.context_data["repair_actions"] = repair_result.get("repair_actions", [])
+                return payload
 
             tool_extractor = ToolResultExtractor()
             tool_results = tool_extractor.extract_from_messages(final_state.messages)
@@ -1606,6 +1742,107 @@ class ChatOrchestrator:
                 [str(expert) for expert in selected_experts],
                 ensure_ascii=False,
             )
+        policy_id = str(response_metadata.get("policy_id", ""))
+        if policy_id and "strategy_pack" not in response_metadata:
+            response_metadata["strategy_pack"] = self._extract_strategy_pack_from_policy_id(policy_id)
+        decomposition_contract_score = final_state.context_data.get("decomposition_contract_score")
+        if decomposition_contract_score is not None:
+            try:
+                response_metadata["decomposition_contract_score"] = f"{float(decomposition_contract_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["decomposition_contract_score"] = str(decomposition_contract_score)
+        decomposition_gaps = final_state.context_data.get("decomposition_gaps")
+        if isinstance(decomposition_gaps, list):
+            response_metadata["decomposition_gaps"] = json.dumps(
+                [str(item) for item in decomposition_gaps if str(item).strip()],
+                ensure_ascii=False,
+            )
+        decomposition_contract = final_state.context_data.get("decomposition_contract")
+        if isinstance(decomposition_contract, dict) and decomposition_contract:
+            response_metadata["decomposition_contract"] = json.dumps(
+                decomposition_contract,
+                ensure_ascii=False,
+            )
+        plan_feasibility_score = final_state.context_data.get("plan_feasibility_score")
+        if plan_feasibility_score is not None:
+            try:
+                response_metadata["plan_feasibility_score"] = f"{float(plan_feasibility_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["plan_feasibility_score"] = str(plan_feasibility_score)
+        plan_contract_version = final_state.context_data.get("plan_contract_version")
+        if plan_contract_version:
+            response_metadata["plan_contract_version"] = str(plan_contract_version)
+        verifier_score = final_state.context_data.get("verifier_score")
+        if verifier_score is not None:
+            try:
+                response_metadata["verifier_score"] = f"{float(verifier_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["verifier_score"] = str(verifier_score)
+        contract_coverage = final_state.context_data.get("contract_coverage")
+        if contract_coverage is not None:
+            try:
+                response_metadata["contract_coverage"] = f"{float(contract_coverage):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["contract_coverage"] = str(contract_coverage)
+        verifier_fail_reasons = final_state.context_data.get("verifier_fail_reasons")
+        if isinstance(verifier_fail_reasons, list):
+            response_metadata["verifier_fail_reasons"] = json.dumps(
+                [str(item) for item in verifier_fail_reasons if str(item).strip()],
+                ensure_ascii=False,
+            )
+        uncertainty_score = final_state.context_data.get("uncertainty_score")
+        if uncertainty_score is not None:
+            try:
+                response_metadata["uncertainty_score"] = f"{float(uncertainty_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["uncertainty_score"] = str(uncertainty_score)
+        clarification_needed = final_state.context_data.get("clarification_needed")
+        if clarification_needed is not None:
+            response_metadata["clarification_needed"] = "true" if bool(clarification_needed) else "false"
+        search_budget_used = final_state.context_data.get("search_budget_used")
+        if search_budget_used is not None:
+            response_metadata["search_budget_used"] = str(search_budget_used)
+        plan_revision_count = final_state.context_data.get("plan_revision_count")
+        if plan_revision_count is not None:
+            response_metadata["plan_revision_count"] = str(plan_revision_count)
+        repair_actions = final_state.context_data.get("repair_actions")
+        if isinstance(repair_actions, list) and repair_actions:
+            response_metadata["repair_actions"] = json.dumps(repair_actions, ensure_ascii=False)
+        cohort_id = final_state.context_data.get("cohort_id")
+        if cohort_id:
+            response_metadata["cohort_id"] = str(cohort_id)
+        user_scope = final_state.context_data.get("user_scope")
+        if user_scope:
+            response_metadata["user_scope"] = str(user_scope)
+        policy_layers = final_state.context_data.get("policy_layers")
+        if isinstance(policy_layers, list) and policy_layers:
+            response_metadata["policy_layers"] = json.dumps(policy_layers, ensure_ascii=False)
+        prompt_policy_id = final_state.context_data.get("prompt_policy_id")
+        if prompt_policy_id:
+            response_metadata["prompt_policy_id"] = str(prompt_policy_id)
+        toolchain_policy_id = final_state.context_data.get("toolchain_policy_id")
+        if toolchain_policy_id:
+            response_metadata["toolchain_policy_id"] = str(toolchain_policy_id)
+        meta_learning_scope = final_state.context_data.get("meta_learning_scope")
+        if meta_learning_scope:
+            response_metadata["meta_learning_scope"] = str(meta_learning_scope)
+        cold_start_bootstrap = final_state.context_data.get("cold_start_bootstrap")
+        if cold_start_bootstrap:
+            response_metadata["cold_start_bootstrap"] = str(cold_start_bootstrap)
+        cold_start_strategy = final_state.context_data.get("cold_start_strategy")
+        if cold_start_strategy:
+            response_metadata["cold_start_strategy"] = str(cold_start_strategy)
+        quality_gate_block_reason = final_state.context_data.get("quality_gate_block_reason")
+        if quality_gate_block_reason:
+            response_metadata["quality_gate_block_reason"] = str(quality_gate_block_reason)
+
+        q_score_hint = self._estimate_q_score_hint(
+            route_confidence=float(response_metadata.get("route_confidence", 0.0) or 0.0),
+            fallback_reason=str(response_metadata.get("fallback_reason", "")),
+            quality_gate_blocked=bool(response_metadata.get("quality_gate_block_reason")),
+            latency_ms=float(final_state.context_data.get("response_latency_ms", 0.0) or 0.0),
+        )
+        response_metadata["q_score_hint"] = f"{q_score_hint:.2f}"
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,
@@ -1648,6 +1885,69 @@ class ChatOrchestrator:
             finish_reason=agent_service_pb2.STOP,
         )
         return final_response, final_response_data
+
+    @staticmethod
+    def _estimate_q_score_hint(
+        *,
+        route_confidence: float,
+        fallback_reason: str,
+        quality_gate_blocked: bool,
+        latency_ms: float,
+    ) -> float:
+        fallback_rate = 1.0 if fallback_reason else 0.0
+        feedback_up_rate = max(0.0, min(route_confidence, 1.0))
+        quality_gate_pass_rate = 0.0 if quality_gate_blocked else 1.0
+        normalized_latency = max(0.0, min(latency_ms / 4000.0, 1.0))
+        q_score = (
+            0.4 * (1.0 - fallback_rate)
+            + 0.3 * feedback_up_rate
+            + 0.2 * quality_gate_pass_rate
+            + 0.1 * (1.0 - normalized_latency)
+        )
+        return max(0.0, min(round(q_score, 4), 1.0))
+
+    @staticmethod
+    def _estimate_plan_task_fit(plan: ExecutablePlan) -> float:
+        score = 0.25
+        tool_count = len(plan.tool_calls or [])
+        if tool_count > 0:
+            score += 0.3
+        if plan.execution_order:
+            score += 0.2
+        if plan.success_criteria:
+            score += 0.15
+        score += min(max(float(plan.confidence or 0.0), 0.0), 1.0) * 0.1
+        if tool_count > 6:
+            score -= 0.08
+        return max(0.0, min(score, 1.0))
+
+    @staticmethod
+    def _estimate_plan_personalization_fit(
+        *,
+        plan: ExecutablePlan,
+        user_context_payload: dict[str, Any] | None,
+        selected_experts: list[str] | None,
+    ) -> float:
+        score = 0.45
+        selected = [str(item) for item in (selected_experts or []) if str(item).strip()]
+        agents = [str(item) for item in (plan.agents_involved or []) if str(item).strip()]
+        if selected and agents:
+            overlap = len(set(selected).intersection(set(agents)))
+            score += min(0.3, 0.15 * overlap)
+        preferences = ((user_context_payload or {}).get("preferences") or {}) if isinstance(user_context_payload, dict) else {}
+        if isinstance(preferences, dict):
+            if bool(preferences.get("prefer_deep_analysis")) and "deep_analyst" in agents:
+                score += 0.1
+            if bool(preferences.get("prefer_fast_response")) and len(plan.tool_calls or []) <= 3:
+                score += 0.08
+        return max(0.0, min(score, 1.0))
+
+    @staticmethod
+    def _estimate_plan_latency_norm(plan: ExecutablePlan) -> float:
+        tool_count = len(plan.tool_calls or [])
+        parallel_layers = len(plan.execution_order or [])
+        raw = 0.08 * tool_count + 0.04 * parallel_layers
+        return max(0.0, min(raw, 1.0))
 
     def _build_nonempty_fallback_response(
         self,
@@ -1750,13 +2050,11 @@ class ChatOrchestrator:
         response_id: str,
         stream_callback,
         tracer,
-    ) -> tuple[TransparencyDataGenerator, "typing.Callable"]:
+    ) -> tuple[TransparencyDataGenerator, Callable[..., Any]]:
         """Prepare transparency tracking, tools schema, and initial status.
 
         Returns (transparency_generator, emit_transparency_event).
         """
-        import typing
-
         transparency_enabled = bool(
             settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
         )
@@ -2130,6 +2428,195 @@ class ChatOrchestrator:
                 mode_config=mode_config,
                 state_overrides=state_overrides or None,
             )
+
+            if settings.ENABLE_BUDGETED_PLAN_SEARCH_V1:
+                async def _score_candidate_plan(candidate_plan: ExecutablePlan) -> float:
+                    verifier = self.reasoning_verifier.verify(
+                        plan=candidate_plan,
+                        contract=state.context_data.get("decomposition_contract"),
+                    )
+                    task_fit = self._estimate_plan_task_fit(candidate_plan)
+                    personalization_fit = self._estimate_plan_personalization_fit(
+                        plan=candidate_plan,
+                        user_context_payload=user_context_payload,
+                        selected_experts=selected_experts if isinstance(selected_experts, list) else [],
+                    )
+                    latency_norm = self._estimate_plan_latency_norm(candidate_plan)
+                    score = (
+                        0.45 * verifier.verifier_score
+                        + 0.25 * task_fit
+                        + 0.20 * personalization_fit
+                        + 0.10 * (1.0 - latency_norm)
+                    )
+                    return max(0.0, min(score, 1.0))
+
+                async def _generate_candidate_plan(
+                    seed_plan: ExecutablePlan,
+                    depth: int,
+                    branch_index: int,
+                ) -> ExecutablePlan | None:
+                    if depth > 1:
+                        return None
+                    search_hint = (
+                        "\n\n[Search hint: produce an alternative plan that improves execution clarity, "
+                        "dependency ordering, and acceptance criteria while controlling latency budget.]"
+                    )
+                    return await self.lang_graph_planner.replan(
+                        message=f"{user_message}{search_hint}",
+                        snapshot=snapshot,
+                        user_id=user_id,
+                        session_id=session_id,
+                        previous_plan=seed_plan,
+                        conflict_info={"has_conflict": False, "search_branch": branch_index, "search_depth": depth},
+                        plan_id=plan_id_str,
+                        execution_feedback=execution_feedback,
+                    )
+
+                search_result = await self.plan_search_service.search(
+                    base_plan=executable_plan,
+                    generate_candidate=_generate_candidate_plan,
+                    score_plan=_score_candidate_plan,
+                    beam_width=int(getattr(settings, "PLAN_SEARCH_BEAM_WIDTH", 3)),
+                    max_depth=int(getattr(settings, "PLAN_SEARCH_MAX_DEPTH", 4)),
+                    time_budget_ms=int(getattr(settings, "PLAN_SEARCH_TIME_BUDGET_MS", 1200)),
+                )
+                executable_plan = search_result.best_plan
+                state.context_data["search_budget_used"] = search_result.search_budget_used_ms
+                state.context_data["plan_revision_count"] = search_result.plan_revision_count
+
+            verifier_result = self.reasoning_verifier.verify(
+                plan=executable_plan,
+                contract=state.context_data.get("decomposition_contract"),
+            )
+            state.context_data["verifier_score"] = verifier_result.verifier_score
+            state.context_data["contract_coverage"] = verifier_result.contract_coverage
+            state.context_data["verifier_fail_reasons"] = list(verifier_result.verifier_fail_reasons)
+
+            if settings.ENABLE_REASONING_VERIFIER_V1 and self.reasoning_verifier.should_block(verifier_result):
+                clarification_lines = [
+                    "为保证方案质量，我需要先补充以下关键信息：",
+                    "- 请明确目标、约束、里程碑、验收标准和风险。",
+                ]
+                if verifier_result.verifier_fail_reasons:
+                    compact_reasons = "、".join(verifier_result.verifier_fail_reasons[:4])
+                    clarification_lines.append(f"- 当前主要问题：{compact_reasons}")
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        delta="\n".join(clarification_lines),
+                        metadata={
+                            "requires_clarification": "true",
+                            "verifier_score": f"{verifier_result.verifier_score:.2f}",
+                            "contract_coverage": f"{verifier_result.contract_coverage:.2f}",
+                            "verifier_fail_reasons": json.dumps(
+                                verifier_result.verifier_fail_reasons,
+                                ensure_ascii=False,
+                            ),
+                            "clarification_needed": "true",
+                        },
+                    )
+                )
+                await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                return route_decision, executable_plan, snapshot, True
+
+            should_apply_decomposition_gate = (
+                settings.ENABLE_DECOMPOSITION_QUALITY_GATE
+                and (
+                    normalize_chat_mode(chat_mode) == CHAT_MODE_STUDY_PLAN
+                    or self._is_task_decomposition_request(
+                        message=user_message,
+                        unified_routing_result=None,
+                    )
+                )
+            )
+            if should_apply_decomposition_gate:
+                gate_result = DecompositionQualityGate.evaluate(
+                    contract=state.context_data.get("decomposition_contract"),
+                    plan=executable_plan,
+                )
+                state.context_data["decomposition_quality_gate"] = gate_result.to_dict()
+                state.context_data["decomposition_contract_score"] = gate_result.decomposition_contract_score
+                state.context_data["decomposition_gaps"] = list(gate_result.decomposition_gaps)
+                state.context_data["plan_feasibility_score"] = gate_result.plan_feasibility_score
+                state.context_data["plan_contract_version"] = gate_result.contract_version
+                state.context_data["quality_gate_block_reason"] = (
+                    ";".join(gate_result.decomposition_gaps) if gate_result.decomposition_gaps else ""
+                )
+                if not gate_result.passed:
+                    await self.observability.log_event(
+                        event_type="quality_gate_blocked",
+                        user_id=user_id,
+                        session_id=session_id,
+                        data={
+                            "workflow_id": str(state.context_data.get("workflow_id", "")),
+                            "policy_id": str(state.context_data.get("expert_policy_id", "")),
+                            "strategy_pack": self._extract_strategy_pack_from_policy_id(
+                                str(state.context_data.get("expert_policy_id", ""))
+                            ),
+                            "cohort_id": str(state.context_data.get("cohort_id", "")),
+                            "user_scope": str(state.context_data.get("user_scope", "")),
+                            "complexity_tier": str(
+                                (state.context_data.get("expert_routing_metadata") or {}).get("complexity_tier", "")
+                            ),
+                            "task_type": str(chat_mode or CHAT_MODE_STANDARD),
+                            "quality_gate_block_reason": state.context_data["quality_gate_block_reason"],
+                            "decomposition_gaps": list(gate_result.decomposition_gaps),
+                            "plan_feasibility_score": gate_result.plan_feasibility_score,
+                            "decomposition_contract_score": gate_result.decomposition_contract_score,
+                        },
+                    )
+                    clarification_prompt = DecompositionQualityGate.build_clarification_prompt(
+                        gate_result.decomposition_gaps
+                    )
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=(
+                            "为保证方案可执行性，我需要补充以下关键信息：\n\n"
+                            f"{clarification_prompt}\n\n补充后我将立即生成可落地拆解。"
+                        ),
+                        metadata={
+                            "requires_clarification": "true",
+                            "decomposition_contract_score": f"{gate_result.decomposition_contract_score:.2f}",
+                            "decomposition_gaps": json.dumps(gate_result.decomposition_gaps, ensure_ascii=False),
+                            "plan_feasibility_score": f"{gate_result.plan_feasibility_score:.2f}",
+                            "quality_gate_block_reason": state.context_data["quality_gate_block_reason"],
+                            "plan_contract_version": gate_result.contract_version,
+                        },
+                    ))
+                    await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                    return route_decision, executable_plan, snapshot, True
+
+            if settings.ENABLE_REASONING_VERIFIER_V1:
+                feasibility_score = float(
+                    state.context_data.get("plan_feasibility_score", executable_plan.confidence or 0.0) or 0.0
+                )
+                uncertainty = self.uncertainty_calibrator.calibrate(
+                    message=user_message,
+                    route_confidence=float(route_decision.confidence or 0.0),
+                    verifier_score=float(verifier_result.verifier_score),
+                    contract_coverage=float(verifier_result.contract_coverage),
+                    plan_feasibility_score=feasibility_score,
+                    decomposition_gap_count=len(state.context_data.get("decomposition_gaps", []) or []),
+                )
+                state.context_data["uncertainty_score"] = uncertainty.uncertainty_score
+                state.context_data["clarification_needed"] = uncertainty.clarification_needed
+                if uncertainty.reasons:
+                    state.context_data["uncertainty_reasons"] = uncertainty.reasons
+
+                if uncertainty.clarification_needed:
+                    prompt = "为了保证后续方案可靠执行，我需要你补充：\n- 时间边界\n- 可量化验收标准\n- 当前可用资源"
+                    await stream_callback(
+                        agent_service_pb2.ChatResponse(
+                            delta=prompt,
+                            metadata={
+                                "requires_clarification": "true",
+                                "uncertainty_score": f"{uncertainty.uncertainty_score:.2f}",
+                                "clarification_needed": "true",
+                                "verifier_score": f"{verifier_result.verifier_score:.2f}",
+                                "contract_coverage": f"{verifier_result.contract_coverage:.2f}",
+                            },
+                        )
+                    )
+                    await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+                    return route_decision, executable_plan, snapshot, True
 
             await self.observability.log_langgraph_plan(
                 user_id=user_id,
@@ -2513,6 +3000,34 @@ class ChatOrchestrator:
             workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
             prompt_version = (context_data or {}).get("prompt_version", "v1")
             active_db = db_session or self.db_session
+            chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
+            user_message = request.message or ""
+            user_context_payload: dict[str, Any] | None = None
+            conversation_context: dict[str, Any] | None = None
+            plan_context: dict[str, Any] | None = None
+            grpc_context: dict[str, Any] | None = None
+            plan_id: uuid.UUID | None = None
+            plan_switched = False
+            stream_callback = None
+            cohort_id = ""
+            user_scope = LearningCohortService.user_scope_key(user_id)
+            runtime_policy_layers: list[dict[str, Any]] = []
+            prompt_policy_id = str((context_data or {}).get("prompt_policy_id", "") or "")
+            prompt_policy_layers = (
+                (context_data or {}).get("prompt_policy_layers", [])
+                if isinstance((context_data or {}).get("prompt_policy_layers", []), list)
+                else []
+            )
+            toolchain_policy_id = ""
+            meta_learning_scope = str((context_data or {}).get("prompt_policy_scope", "") or "")
+            cold_start_bootstrap = str((context_data or {}).get("cold_start_bootstrap", "false")).lower() in {"1", "true", "yes"}
+            cold_start_strategy = ""
+            if prompt_policy_layers:
+                runtime_policy_layers = [
+                    {**item, "channel": "prompt"}
+                    for item in prompt_policy_layers
+                    if isinstance(item, dict)
+                ]
 
             # Step 1: Validation & idempotency (early exits)
             with tracer.start_as_current_span("orchestrator.validate_request"):
@@ -2547,8 +3062,6 @@ class ChatOrchestrator:
 
                 # Step 3: Initialize state & extract message
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
-                chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
-                user_message = request.message or ""
                 if not user_message and request.HasField("tool_result"):
                     tr = request.tool_result
                     user_message = f"Tool '{tr.tool_name}' execution result: {tr.result_json}"
@@ -2558,13 +3071,208 @@ class ChatOrchestrator:
                     await self._build_full_context(request=request, active_db=active_db, user_id=user_id, session_id=session_id, user_message=user_message, request_id=request_id, tracer=tracer)
 
                 expert_routing_decision = None
-                if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
+                if (settings.ENABLE_EXPERT_STRATEGY_V1 or settings.ENABLE_EXPERT_STRATEGY_V2) and is_expert_chat_mode(chat_mode):
+                    if settings.ENABLE_COLD_START_BOOTSTRAP and not cold_start_bootstrap:
+                        cold_start_bootstrap = MetaColdStartService.is_cold_start(
+                            user_context=user_context_payload if isinstance(user_context_payload, dict) else {},
+                            conversation_context=conversation_context if isinstance(conversation_context, dict) else {},
+                        )
+                    if cold_start_bootstrap:
+                        cold_start_strategy = "cohort_global_bootstrap"
                     user_preferences = (user_context_payload or {}).get("preferences", {})
-                    expert_routing_decision = ExpertStrategyV1.route(
+                    if isinstance(user_preferences, dict) and settings.ENABLE_BUDGETED_PLAN_SEARCH_V1:
+                        user_preferences = dict(user_preferences)
+                        user_preferences.setdefault(
+                            "plan_search_time_budget_ms",
+                            int(getattr(settings, "PLAN_SEARCH_TIME_BUDGET_MS", 1200)),
+                        )
+                    cohort_id = LearningCohortService.resolve_cohort_id(
+                        user_id=user_id,
+                        message=user_message,
+                        chat_mode=chat_mode,
+                        task_type=str(chat_mode or "standard"),
+                        complexity_tier="unknown",
+                        user_context=user_context_payload if isinstance(user_context_payload, dict) else {},
+                    )
+                    strategy_v2 = self._should_use_expert_strategy_v2(user_id=user_id, session_id=session_id)
+                    strategy = ExpertStrategyV2 if strategy_v2 else ExpertStrategyV1
+                    strategy_kwargs: dict[str, Any] = {}
+                    runtime_policy: dict[str, Any] | None = None
+                    runtime_policies: dict[str, dict[str, Any]] = {}
+                    strategy_pack_id = ExpertStrategyV2._resolve_strategy_pack(
+                        mode=chat_mode,
+                        message=user_message,
+                    ).pack_id
+                    if strategy_v2:
+                        strategy_kwargs = {
+                            "session_weight": float(getattr(settings, "EXPERT_AFFINITY_SESSION_WEIGHT", 0.65)),
+                            "long_term_weight": float(getattr(settings, "EXPERT_AFFINITY_LONG_TERM_WEIGHT", 0.35)),
+                        }
+                        if cold_start_bootstrap:
+                            strategy_kwargs["session_weight"] = max(0.7, float(strategy_kwargs["session_weight"]))
+                            strategy_kwargs["long_term_weight"] = min(0.3, float(strategy_kwargs["long_term_weight"]))
+                            bootstrap_overrides = MetaColdStartService.build_bootstrap_overrides(chat_mode=chat_mode)
+                            strategy_kwargs["pack_overrides"] = bootstrap_overrides.get("routing_pack_overrides", {})
+                            meta_learning_scope = str(bootstrap_overrides.get("scope", meta_learning_scope))
+                        if settings.ENABLE_POLICY_CANDIDATE_PIPELINE:
+                            try:
+                                from app.services.policy_registry_service import PolicyRegistryService
+
+                                registry = PolicyRegistryService(redis_client=self.redis)
+                                if bool(getattr(settings, "ENABLE_META_POLICY_COMPOSER_V1", False)):
+                                    enabled_channels = ["routing"]
+                                    if bool(getattr(settings, "ENABLE_META_LEARNING_CHANNEL_PROMPT", False)):
+                                        enabled_channels.append("prompt")
+                                    if bool(getattr(settings, "ENABLE_META_LEARNING_CHANNEL_TOOLCHAIN", False)):
+                                        enabled_channels.append("toolchain")
+                                    runtime_policies = await registry.resolve_runtime_policies(
+                                        strategy_pack=strategy_pack_id,
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        cohort_id=cohort_id,
+                                        user_scope=user_scope,
+                                        disable_personal=bool(cold_start_bootstrap),
+                                        channels=tuple(enabled_channels),
+                                    )
+                                    runtime_policy = runtime_policies.get("routing")
+                                else:
+                                    runtime_policy = await registry.resolve_runtime_policy(
+                                        strategy_pack=strategy_pack_id,
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        channel="routing",
+                                        cohort_id=cohort_id,
+                                        user_scope=user_scope,
+                                        disable_personal=bool(cold_start_bootstrap),
+                                    )
+                                if runtime_policy:
+                                    strategy_kwargs["policy_id_override"] = runtime_policy.get("policy_id")
+                                    learned_overrides = {
+                                        "weights": runtime_policy.get("weights", {}),
+                                        "thresholds": runtime_policy.get("thresholds", {}),
+                                    }
+                                    if isinstance(strategy_kwargs.get("pack_overrides"), dict):
+                                        merged_pack_overrides = dict(strategy_kwargs["pack_overrides"])
+                                        for key, value in learned_overrides.items():
+                                            if isinstance(value, dict):
+                                                base = (
+                                                    merged_pack_overrides.get(key)
+                                                    if isinstance(merged_pack_overrides.get(key), dict)
+                                                    else {}
+                                                )
+                                                merged_pack_overrides[key] = {**base, **value}
+                                        strategy_kwargs["pack_overrides"] = merged_pack_overrides
+                                    else:
+                                        strategy_kwargs["pack_overrides"] = learned_overrides
+                                    if not meta_learning_scope:
+                                        meta_learning_scope = str(runtime_policy.get("meta_learning_scope", ""))
+                                prompt_policy = runtime_policies.get("prompt", {}) if runtime_policies else {}
+                                if isinstance(prompt_policy, dict) and prompt_policy:
+                                    prompt_policy_id = str(prompt_policy.get("policy_id", "") or prompt_policy_id)
+                                    prompt_layers = prompt_policy.get("selected_layers", [])
+                                    if isinstance(prompt_layers, list):
+                                        prompt_policy_layers = [item for item in prompt_layers if isinstance(item, dict)]
+                                    if not meta_learning_scope:
+                                        meta_learning_scope = str(prompt_policy.get("meta_learning_scope", ""))
+                                toolchain_policy = runtime_policies.get("toolchain", {}) if runtime_policies else {}
+                                if isinstance(toolchain_policy, dict) and toolchain_policy:
+                                    toolchain_policy_id = str(toolchain_policy.get("policy_id", ""))
+                                    if not meta_learning_scope:
+                                        meta_learning_scope = str(toolchain_policy.get("meta_learning_scope", ""))
+                                elif cold_start_bootstrap:
+                                    toolchain_policy_id = "cold_start:toolchain_bootstrap"
+                            except Exception as exc:
+                                logger.warning("Failed to resolve runtime policy override: {}", exc)
+                    expert_routing_decision = strategy.route(
                         message=user_message,
                         chat_mode=chat_mode,
                         user_preferences=user_preferences if isinstance(user_preferences, dict) else {},
+                        user_context=user_context_payload if isinstance(user_context_payload, dict) else {},
+                        **strategy_kwargs,
                     )
+                    cohort_id = LearningCohortService.resolve_cohort_id(
+                        user_id=user_id,
+                        message=user_message,
+                        chat_mode=chat_mode,
+                        task_type=str(chat_mode or "standard"),
+                        complexity_tier=expert_routing_decision.complexity_tier,
+                        user_context=user_context_payload if isinstance(user_context_payload, dict) else {},
+                    )
+                    inferred_task_type = str(chat_mode or "standard")
+                    if cold_start_bootstrap:
+                        await self.observability.log_cold_start_bootstrap(
+                            user_id=user_id,
+                            session_id=session_id,
+                            workflow_id=workflow_id,
+                            strategy=cold_start_strategy or "cohort_global_bootstrap",
+                            chat_mode=chat_mode,
+                            trace_id=trace_id,
+                            response_id=response_id,
+                            cohort_id=cohort_id,
+                            user_scope=user_scope,
+                            policy_id=expert_routing_decision.policy_id,
+                            strategy_pack=strategy_pack_id,
+                        )
+                    toolchain_policy = runtime_policies.get("toolchain", {}) if runtime_policies else {}
+                    toolchain_params: dict[str, Any] = {}
+                    selected_toolchain_id = "toolchain:default"
+                    if isinstance(toolchain_policy, dict) and toolchain_policy:
+                        toolchain_params = (
+                            toolchain_policy.get("params") if isinstance(toolchain_policy.get("params"), dict) else {}
+                        )
+                        selected_toolchain_id = str(toolchain_policy.get("policy_id", "toolchain:default"))
+                    elif cold_start_bootstrap:
+                        bootstrap = MetaColdStartService.build_bootstrap_overrides(chat_mode=chat_mode)
+                        toolchain_params = (
+                            bootstrap.get("toolchain_params")
+                            if isinstance(bootstrap.get("toolchain_params"), dict)
+                            else {}
+                        )
+                        selected_toolchain_id = "cold_start:toolchain_bootstrap"
+                    max_parallel = int(float(toolchain_params.get("max_parallel_experts", 0) or 0))
+                    if max_parallel > 0 and len(expert_routing_decision.selected_experts) > max_parallel:
+                        original_count = len(expert_routing_decision.selected_experts)
+                        expert_routing_decision.selected_experts = expert_routing_decision.selected_experts[
+                            :max_parallel
+                        ]
+                        degrade_reason = f"toolchain_parallel_cap:{original_count}->{max_parallel}"
+                        if expert_routing_decision.fallback_reason:
+                            expert_routing_decision.fallback_reason = (
+                                f"{expert_routing_decision.fallback_reason};{degrade_reason}"
+                            )
+                        else:
+                            expert_routing_decision.fallback_reason = degrade_reason
+                        await self.observability.log_toolchain_degraded(
+                            user_id=user_id,
+                            session_id=session_id,
+                            workflow_id=workflow_id,
+                            reason=degrade_reason,
+                            trace_id=trace_id,
+                            response_id=response_id,
+                            policy_id=toolchain_policy_id,
+                            strategy_pack=strategy_pack_id,
+                            cohort_id=cohort_id,
+                            user_scope=user_scope,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
+                        )
+
+                    if toolchain_params:
+                        await self.observability.log_toolchain_selected(
+                            user_id=user_id,
+                            session_id=session_id,
+                            workflow_id=workflow_id,
+                            toolchain_id=selected_toolchain_id,
+                            trace_id=trace_id,
+                            response_id=response_id,
+                            policy_id=toolchain_policy_id,
+                            strategy_pack=strategy_pack_id,
+                            cohort_id=cohort_id,
+                            user_scope=user_scope,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
+                            latency_ms=round((time.time() - start_time) * 1000.0, 3),
+                        )
                     for expert_id in expert_routing_decision.selected_experts:
                         await self.observability.log_expert_selected(
                             user_id=user_id,
@@ -2573,12 +3281,20 @@ class ChatOrchestrator:
                             strategy=expert_routing_decision.routing_strategy,
                             entry_source=expert_routing_decision.expert_entry_source,
                             workflow_id=workflow_id,
+                            policy_id=expert_routing_decision.policy_id,
+                            cohort_id=cohort_id,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
                         )
                         await self.observability.log_expert_invoked(
                             user_id=user_id,
                             session_id=session_id,
                             expert_id=expert_id,
                             workflow_id=workflow_id,
+                            policy_id=expert_routing_decision.policy_id,
+                            cohort_id=cohort_id,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
                         )
                     if expert_routing_decision.fallback_reason:
                         await self.observability.log_expert_fallback(
@@ -2587,13 +3303,62 @@ class ChatOrchestrator:
                             reason=expert_routing_decision.fallback_reason,
                             from_mode=chat_mode,
                             workflow_id=workflow_id,
+                            policy_id=expert_routing_decision.policy_id,
+                            cohort_id=cohort_id,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
                         )
+                    requested_expert = extract_expert_id(chat_mode)
+                    if (
+                        requested_expert
+                        and expert_routing_decision.selected_experts
+                        and expert_routing_decision.selected_experts[0] != requested_expert
+                    ):
+                        await self.observability.log_expert_overridden(
+                            user_id=user_id,
+                            session_id=session_id,
+                            requested_expert=requested_expert,
+                            used_expert=expert_routing_decision.selected_experts[0],
+                            workflow_id=workflow_id,
+                            policy_id=expert_routing_decision.policy_id,
+                            cohort_id=cohort_id,
+                            complexity_tier=expert_routing_decision.complexity_tier,
+                            task_type=inferred_task_type,
+                        )
+                    runtime_policy_layers = []
+                    if runtime_policy and isinstance(runtime_policy.get("selected_layers"), list):
+                        runtime_policy_layers.extend(
+                            [
+                                {**layer, "channel": "routing"}
+                                for layer in runtime_policy.get("selected_layers", [])
+                                if isinstance(layer, dict)
+                            ]
+                        )
+                    if prompt_policy_layers:
+                        runtime_policy_layers.extend(
+                            [{**layer, "channel": "prompt"} for layer in prompt_policy_layers if isinstance(layer, dict)]
+                        )
+                    toolchain_layers = (
+                        runtime_policies.get("toolchain", {}).get("selected_layers", [])
+                        if runtime_policies
+                        else []
+                    )
+                    if isinstance(toolchain_layers, list):
+                        runtime_policy_layers.extend(
+                            [
+                                {**layer, "channel": "toolchain"}
+                                for layer in toolchain_layers
+                                if isinstance(layer, dict)
+                            ]
+                        )
+                    if not runtime_policy_layers:
+                        runtime_policy_layers = []
 
                 state = WorkflowState()
                 state.append_message("user", user_message)
                 queue: asyncio.Queue = asyncio.Queue()
 
-                async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                async def _stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
@@ -2601,10 +3366,53 @@ class ChatOrchestrator:
                     resp.prompt_version = resp.prompt_version or prompt_version
                     resp.trace_id = resp.trace_id or trace_id
                     await queue.put(resp)
+                stream_callback = _stream_callback
+
+                if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
+                    logger.warning(
+                        f"Unified graph routing disabled, using legacy mode adapter for chat_mode={chat_mode}"
+                    )
+                    mode_result: dict[str, Any] = {}
+                    async for resp in self._handle_multi_agent_mode(
+                        chat_mode=chat_mode,
+                        user_message=user_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        start_time=start_time,
+                        user_context_payload=user_context_payload,
+                        conversation_context=conversation_context,
+                        plan_context=plan_context,
+                        active_db=active_db,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        stream_callback=stream_callback,
+                        result_holder=mode_result,
+                    ):
+                        yield resp
+                    final_response_data = mode_result.get("final_response_data")
+                    if isinstance(final_response_data, dict):
+                        with tracer.start_as_current_span("orchestrator.cache_mode_response"):
+                            await self._cache_response(session_id, request_id, final_response_data)
+                        for update_resp in await self._emit_system_updates(user_id):
+                            yield update_resp
+                    return
 
                 # Step 5: Sufficiency check (may short-circuit)
+                sufficiency_payload: dict[str, Any] = {}
                 with tracer.start_as_current_span("orchestrator.sufficiency_check"):
-                    if await self._check_sufficiency(request=request, user_message=user_message, user_id=user_id, plan_id=plan_id, conversation_context=conversation_context, stream_callback=stream_callback, queue=queue):
+                    if await self._check_sufficiency(
+                        request=request,
+                        user_message=user_message,
+                        user_id=user_id,
+                        plan_id=plan_id,
+                        conversation_context=conversation_context,
+                        stream_callback=stream_callback,
+                        queue=queue,
+                        sufficiency_payload=sufficiency_payload,
+                    ):
                         async for queued in self._drain_queue(queue):
                             yield queued
                         return
@@ -2627,36 +3435,39 @@ class ChatOrchestrator:
                     workflow_id=workflow_id, prompt_version=prompt_version,
                 )
                 state.context_data["chat_mode"] = chat_mode
+                if sufficiency_payload:
+                    if isinstance(sufficiency_payload.get("decomposition_contract"), dict):
+                        state.context_data["decomposition_contract"] = sufficiency_payload["decomposition_contract"]
+                    if "decomposition_contract_score" in sufficiency_payload:
+                        state.context_data["decomposition_contract_score"] = sufficiency_payload["decomposition_contract_score"]
+                    if isinstance(sufficiency_payload.get("decomposition_gaps"), list):
+                        state.context_data["decomposition_gaps"] = sufficiency_payload["decomposition_gaps"]
                 if expert_routing_decision:
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
                     state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
+                    state.context_data["cohort_id"] = cohort_id
+                    state.context_data["user_scope"] = user_scope
+                    if runtime_policy_layers:
+                        state.context_data["policy_layers"] = runtime_policy_layers
+                if prompt_policy_id:
+                    state.context_data["prompt_policy_id"] = prompt_policy_id
+                if toolchain_policy_id:
+                    state.context_data["toolchain_policy_id"] = toolchain_policy_id
+                if meta_learning_scope:
+                    state.context_data["meta_learning_scope"] = meta_learning_scope
+                if cold_start_bootstrap:
+                    state.context_data["cold_start_bootstrap"] = "true"
+                    state.context_data["cold_start_strategy"] = cold_start_strategy or "cohort_global_bootstrap"
+                if runtime_policy_layers and "policy_layers" not in state.context_data:
+                    state.context_data["policy_layers"] = runtime_policy_layers
 
-                # Step 9: Multi-agent mode (early exit)
-                if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
-                    mode_result: dict[str, Any] = {}
-                    async for resp in self._handle_multi_agent_mode(
-                        chat_mode=chat_mode, user_message=user_message, user_id=user_id, session_id=session_id,
-                        response_id=response_id, request_id=request_id, trace_id=trace_id, start_time=start_time,
-                        user_context_payload=user_context_payload, conversation_context=conversation_context,
-                        plan_context=plan_context, active_db=active_db, workflow_id=workflow_id,
-                        prompt_version=prompt_version, stream_callback=stream_callback, result_holder=mode_result,
-                    ):
-                        yield resp
-                    final_response_data = mode_result.get("final_response_data")
-                    if isinstance(final_response_data, dict):
-                        with tracer.start_as_current_span("orchestrator.cache_mode_response"):
-                            await self._cache_response(session_id, request_id, final_response_data)
-                        for update_resp in await self._emit_system_updates(user_id):
-                            yield update_resp
-                    return
-
-                # Step 10: Route
+                # Step 9: Route
                 route_decision, unified_routing_result = await self._route_and_classify(
                     user_message=user_message, user_id=user_id, session_id=session_id,
                     grpc_context=grpc_context, conversation_context=conversation_context, state=state,
                 )
-                if settings.ENABLE_UNIFIED_GRAPH_ROUTING and chat_mode != CHAT_MODE_STANDARD:
+                if chat_mode != CHAT_MODE_STANDARD:
                     route_decision.execution_mode = "langgraph"
                     route_decision.reason = (
                         f"{route_decision.reason} | unified_mode:{chat_mode}"
@@ -2664,7 +3475,7 @@ class ChatOrchestrator:
                         else f"unified_mode:{chat_mode}"
                     )
 
-                # Step 11: Plan & validate (langgraph/hybrid mode)
+                # Step 10: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
                     route_decision=route_decision, user_message=user_message, user_id=user_id, session_id=session_id,
                     active_db=active_db, plan_id=plan_id, conversation_context=conversation_context,
@@ -2673,34 +3484,54 @@ class ChatOrchestrator:
                 if should_return:
                     return
 
-                # Step 12: Log route decision
+                # Step 11: Log route decision
                 route_intent = (
                     unified_routing_result.primary_intent.value
                     if unified_routing_result
                     else self._extract_route_intent(route_decision.reason)
                 )
                 plan_meta = state.context_data.get("plan_metadata", {})
+                policy_id = str(state.context_data.get("expert_policy_id", ""))
+                strategy_pack = self._extract_strategy_pack_from_policy_id(policy_id)
+                complexity_tier = (
+                    str(expert_routing_decision.complexity_tier)
+                    if expert_routing_decision is not None
+                    else ""
+                )
                 await self.observability.log_route_decision(
                     user_id=user_id, session_id=session_id, message=user_message,
                     decision={"execution_mode": route_decision.execution_mode, "risk_level": route_decision.risk_level,
                               "reason": route_decision.reason, "intent": route_intent,
                               "confidence": route_decision.confidence,
+                              "trace_id": trace_id,
+                              "policy_id": policy_id,
+                              "prompt_policy_id": str(state.context_data.get("prompt_policy_id", "")),
+                              "toolchain_policy_id": str(state.context_data.get("toolchain_policy_id", "")),
+                              "strategy_pack": strategy_pack,
+                              "cohort_id": cohort_id,
+                              "user_scope": user_scope,
+                              "complexity_tier": complexity_tier,
+                              "task_type": str(chat_mode or CHAT_MODE_STANDARD),
+                              "meta_learning_scope": str(state.context_data.get("meta_learning_scope", "")),
+                              "cold_start_bootstrap": str(state.context_data.get("cold_start_bootstrap", "")),
+                              "latency_ms": round((time.time() - start_time) * 1000.0, 3),
                               "routing_layer": plan_meta.get("routing_layer", "unknown"),
                               "adaptive_notes": plan_meta.get("adaptive_notes", ""),
                               "summary_used_for_routing": plan_meta.get("summary_used_for_routing", "false")},
                 )
 
-                # Step 13: Execute graph
+                # Step 12: Execute graph
                 result_holder: dict[str, Any] = {}
                 with tracer.start_as_current_span("agent_graph.invoke"):
                     async for item in self._execute_graph(state=state, user_id=user_id, queue=queue, result_holder=result_holder):
                         yield item
 
-                # Step 14: Build & yield final response
+                # Step 13: Build & yield final response
                 final_state = result_holder.get("final_state")
                 if final_state is not None:
                     total_prompt_tokens = result_holder.get("total_prompt_tokens", 0)
                     total_completion_tokens = result_holder.get("total_completion_tokens", 0)
+                    final_state.context_data["response_latency_ms"] = round((time.time() - start_time) * 1000.0, 3)
                     with tracer.start_as_current_span("orchestrator.build_final_response"):
                         final_response, final_response_data = await self._build_final_response(
                             final_state=final_state, executable_plan=executable_plan, active_db=active_db,
@@ -2724,6 +3555,32 @@ class ChatOrchestrator:
                         await emit_transparency_event(transparency_generator.get_complete_event())
                     for update_resp in await self._emit_system_updates(user_id):
                         yield update_resp
+                    await self.observability.log_event(
+                        event_type="plan_execution_outcome",
+                        user_id=user_id,
+                        session_id=session_id,
+                        data={
+                            "workflow_id": workflow_id,
+                            "trace_id": trace_id,
+                            "response_id": response_id,
+                            "policy_id": str(final_state.context_data.get("expert_policy_id", "")),
+                            "prompt_policy_id": str(final_state.context_data.get("prompt_policy_id", "")),
+                            "toolchain_policy_id": str(final_state.context_data.get("toolchain_policy_id", "")),
+                            "strategy_pack": str(final_response_data.get("metadata", {}).get("strategy_pack", "")),
+                            "cohort_id": str(final_state.context_data.get("cohort_id", "")),
+                            "user_scope": str(final_state.context_data.get("user_scope", "")),
+                            "complexity_tier": str(final_response_data.get("metadata", {}).get("complexity_tier", "")),
+                            "task_type": str(chat_mode or CHAT_MODE_STANDARD),
+                            "latency_ms": float(final_state.context_data.get("response_latency_ms", 0.0) or 0.0),
+                            "success": True,
+                            "quality_gate_passed": not bool(
+                                final_state.context_data.get("quality_gate_block_reason", "")
+                            ),
+                            "plan_feasibility_score": str(
+                                final_state.context_data.get("plan_feasibility_score", "")
+                            ),
+                        },
+                    )
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
@@ -2734,6 +3591,45 @@ class ChatOrchestrator:
                 COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="error").inc()
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
+                if chat_mode != CHAT_MODE_STANDARD:
+                    logger.warning(
+                        f"Unified orchestration failed for chat_mode={chat_mode}, attempting legacy fallback"
+                    )
+                    mode_result: dict[str, Any] = {}
+                    fallback_stream_callback = stream_callback
+                    if fallback_stream_callback is None:
+                        async def _noop_stream_callback(_resp: agent_service_pb2.ChatResponse):
+                            return None
+                        fallback_stream_callback = _noop_stream_callback
+                    try:
+                        async for resp in self._handle_multi_agent_mode(
+                            chat_mode=chat_mode,
+                            user_message=user_message,
+                            user_id=user_id,
+                            session_id=session_id,
+                            response_id=response_id,
+                            request_id=request_id,
+                            trace_id=trace_id,
+                            start_time=start_time,
+                            user_context_payload=user_context_payload,
+                            conversation_context=conversation_context,
+                            plan_context=plan_context,
+                            active_db=active_db,
+                            workflow_id=workflow_id,
+                            prompt_version=prompt_version,
+                            stream_callback=fallback_stream_callback,
+                            result_holder=mode_result,
+                        ):
+                            yield resp
+                        final_response_data = mode_result.get("final_response_data")
+                        if isinstance(final_response_data, dict):
+                            with tracer.start_as_current_span("orchestrator.cache_mode_response"):
+                                await self._cache_response(session_id, request_id, final_response_data)
+                            for update_resp in await self._emit_system_updates(user_id):
+                                yield update_resp
+                        return
+                    except Exception as fallback_exc:
+                        logger.error("Legacy fallback also failed: %s", fallback_exc, exc_info=True)
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
                 yield agent_service_pb2.ChatResponse(

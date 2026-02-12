@@ -66,7 +66,16 @@ class PromptBandit:
         state["updated_at"] = int(time.time())
         await self.redis.set(key, json.dumps(state), ex=self.ttl_seconds)
 
-    async def select(self, workflow_id: str, arms: list[str]) -> str:
+    async def select(
+        self,
+        workflow_id: str,
+        arms: list[str],
+        policy_override: dict | None = None,
+    ) -> str:
+        if policy_override:
+            forced = self._select_from_policy_override(arms=arms, policy_override=policy_override)
+            if forced:
+                return forced
         state = await self._load_state(workflow_id, arms)
         best_arm = arms[0]
         best_sample = -1.0
@@ -117,3 +126,36 @@ class PromptBandit:
             "state": summary,
             "selection_probabilities": probabilities,
         }
+
+    def _select_from_policy_override(self, *, arms: list[str], policy_override: dict) -> str | None:
+        thresholds = policy_override.get("thresholds") if isinstance(policy_override.get("thresholds"), dict) else {}
+        params = policy_override.get("params") if isinstance(policy_override.get("params"), dict) else {}
+        arm_weights = policy_override.get("arm_weights") if isinstance(policy_override.get("arm_weights"), dict) else {}
+
+        preferred_arm = str(thresholds.get("preferred_arm", "")).strip()
+        exploration_ratio = float(params.get("exploration_ratio", 0.18) or 0.18)
+        exploration_ratio = max(0.0, min(exploration_ratio, 1.0))
+        if preferred_arm in arms and self.rng.random() >= exploration_ratio:
+            return preferred_arm
+
+        weighted: list[tuple[str, float]] = []
+        total = 0.0
+        for arm in arms:
+            try:
+                weight = float(arm_weights.get(arm, 0.0))
+            except (TypeError, ValueError):
+                weight = 0.0
+            if weight <= 0:
+                continue
+            weighted.append((arm, weight))
+            total += weight
+        if total <= 0:
+            return None
+
+        pointer = self.rng.random() * total
+        cursor = 0.0
+        for arm, weight in weighted:
+            cursor += weight
+            if pointer <= cursor:
+                return arm
+        return weighted[-1][0] if weighted else None
