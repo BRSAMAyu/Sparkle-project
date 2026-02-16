@@ -13,8 +13,10 @@ from app.services.expert_policy_report_service import ExpertPolicyReportService
 from app.services.learning_feature_rollup_service import LearningFeatureRollupService
 from app.services.meta_learning_feature_service import MetaLearningFeatureService
 from app.services.meta_policy_recommendation_service import MetaPolicyRecommendationService
+from app.services.cognitive_pattern_mining_service import CognitivePatternMiningService
 from app.services.policy_candidate_service import PolicyCandidateService
 from app.services.policy_registry_service import PolicyRegistryService
+from app.services.task_motif_registry_service import TaskMotifRegistryService
 
 router = APIRouter(
     prefix="/admin/learning",
@@ -180,11 +182,18 @@ async def research_benchmarks(
     rollups = await rollup_service.list_rollups(days=days)
     pending = await registry.list_candidates(status="research_pending")
     passed = await registry.list_candidates(status="research_passed")
+    motif_registry = TaskMotifRegistryService()
+    active_rules = await motif_registry.list_rules(status="active")
+    validated_rules = await motif_registry.list_rules(status="validated")
+    approved_rules = await motif_registry.list_rules(status="approved")
+    draft_rules = await motif_registry.list_rules(status="draft")
+    active_graphs = await motif_registry.list_graphs()
 
     by_channel: dict[str, int] = {}
     for row in pending + passed:
         channel = str(row.get("channel", "routing"))
         by_channel[channel] = by_channel.get(channel, 0) + 1
+    transfer_gain = _estimate_transfer_gain_new_user(rollups)
 
     return {
         "generated_at": _utcnow().isoformat(),
@@ -195,12 +204,157 @@ async def research_benchmarks(
         "stable_cohort_q_gap": policy_report.get("stable_cohort_q_gap", 0.0),
         "stable_cube_q_gap": policy_report.get("stable_cube_q_gap", 0.0),
         "delta_vs_baseline": policy_report.get("delta_vs_baseline", {}),
+        "rule_coverage": _rule_coverage(active_rules=active_rules, rollups=rollups),
+        "motif_stability": _motif_stability(active_graphs),
+        "transfer_gain_new_user": transfer_gain,
+        "rule_status_breakdown": {
+            "draft": len(draft_rules),
+            "validated": len(validated_rules),
+            "approved": len(approved_rules),
+            "active": len(active_rules),
+        },
         "candidate_pool": {
             "research_pending": len(pending),
             "research_passed": len(passed),
             "by_channel": by_channel,
         },
         "rollup_count": len(rollups),
+    }
+
+
+@router.get("/cognitive-rules")
+async def list_cognitive_rules(
+    status: str | None = Query(default=None),
+    domain: str | None = Query(default=None),
+    task_type: str | None = Query(default=None),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    _ = current_user
+    registry = TaskMotifRegistryService()
+    rows = await registry.list_rules(status=status, domain=domain, task_type=task_type)
+    return {"items": rows}
+
+
+@router.post("/cognitive-rules/{rule_id}/approve")
+async def approve_cognitive_rule(
+    rule_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    registry = TaskMotifRegistryService()
+    try:
+        row = await registry.approve_rule(
+            rule_id=rule_id,
+            reviewer=str(current_user.id),
+            note=str(payload.get("note", "") or ""),
+            activate=bool(payload.get("activate", True)),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", "rule": row}
+
+
+@router.post("/cognitive-rules/{rule_id}/validate")
+async def validate_cognitive_rule(
+    rule_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    registry = TaskMotifRegistryService()
+    try:
+        row = await registry.validate_rule(
+            rule_id=rule_id,
+            reviewer=str(current_user.id),
+            note=str(payload.get("note", "") or ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", "rule": row}
+
+
+@router.post("/cognitive-rules/{rule_id}/activate")
+async def activate_cognitive_rule(
+    rule_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    registry = TaskMotifRegistryService()
+    try:
+        row = await registry.activate_rule(
+            rule_id=rule_id,
+            reviewer=str(current_user.id),
+            note=str(payload.get("note", "") or ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", "rule": row}
+
+
+@router.post("/cognitive-rules/{rule_id}/reject")
+async def reject_cognitive_rule(
+    rule_id: str,
+    payload: dict[str, Any] = Body(default={}),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    registry = TaskMotifRegistryService()
+    try:
+        row = await registry.reject_rule(
+            rule_id=rule_id,
+            reviewer=str(current_user.id),
+            note=str(payload.get("note", "") or ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok", "rule": row}
+
+
+@router.post("/cognitive-rules/mine")
+async def mine_cognitive_rules(
+    days: int = Query(default=14, ge=7, le=30),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    _ = current_user
+    service = CognitivePatternMiningService(redis_client=cache_service.redis)
+    return await service.run_mining_job(days=days)
+
+
+@router.get("/meta-generalization-report")
+async def meta_generalization_report(
+    days: int = Query(default=14, ge=7, le=30),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    _ = current_user
+    rollup_service = LearningFeatureRollupService(redis_client=cache_service.redis)
+    report_service = ExpertPolicyReportService(redis_client=cache_service.redis)
+    motif_registry = TaskMotifRegistryService()
+
+    rollups = await rollup_service.list_rollups(days=days)
+    report = await report_service.build_report(days=days)
+    active_rules = await motif_registry.list_rules(status="active")
+    validated_rules = await motif_registry.list_rules(status="validated")
+    approved_rules = await motif_registry.list_rules(status="approved")
+    draft_rules = await motif_registry.list_rules(status="draft")
+    active_graphs = await motif_registry.list_graphs()
+
+    return {
+        "generated_at": _utcnow().isoformat(),
+        "window_days": days,
+        "transfer_gain_new_user": _estimate_transfer_gain_new_user(rollups),
+        "rule_coverage": _rule_coverage(active_rules=active_rules, rollups=rollups),
+        "motif_stability": _motif_stability(active_graphs),
+        "stable_cohort_q_gap": report.get("stable_cohort_q_gap", 0.0),
+        "stable_cube_q_gap": report.get("stable_cube_q_gap", 0.0),
+        "q_score_by_policy": report.get("q_score_by_policy", {}),
+        "q_score_by_cohort": report.get("q_score_by_cohort", {}),
+        "q_score_by_cube": report.get("q_score_by_cube", {}),
+        "active_rule_count": len(active_rules),
+        "active_graph_count": len(active_graphs),
+        "rule_status_breakdown": {
+            "draft": len(draft_rules),
+            "validated": len(validated_rules),
+            "approved": len(approved_rules),
+            "active": len(active_rules),
+        },
     }
 
 
@@ -487,3 +641,46 @@ def _build_fairness_summary(rows: list[dict[str, Any]], *, view: str = "cohort")
         },
         "alerts": alerts,
     }
+
+
+def _rule_coverage(*, active_rules: list[dict[str, Any]], rollups: list[dict[str, Any]]) -> float:
+    if not rollups:
+        return 0.0
+    task_types = {str(row.get("task_type", "")) for row in rollups if str(row.get("task_type", ""))}
+    if not task_types:
+        return 0.0
+    covered = 0
+    for task_type in task_types:
+        if any(str(rule.get("task_type", "")) == task_type for rule in active_rules):
+            covered += 1
+    return round(float(covered) / max(1, len(task_types)), 4)
+
+
+def _motif_stability(graphs: list[dict[str, Any]]) -> float:
+    scores = []
+    for row in graphs:
+        try:
+            scores.append(float(row.get("stability_score", 0.0)))
+        except (TypeError, ValueError):
+            continue
+    if not scores:
+        return 0.0
+    return round(sum(scores) / len(scores), 4)
+
+
+def _estimate_transfer_gain_new_user(rollups: list[dict[str, Any]]) -> float:
+    baseline_scores: list[float] = []
+    cold_start_scores: list[float] = []
+    for row in rollups:
+        try:
+            q_score = float(row.get("q_score", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            q_score = 0.0
+        baseline_scores.append(q_score)
+        counts = row.get("counts") if isinstance(row.get("counts"), dict) else {}
+        if int(counts.get("cold_start_bootstrap_applied", 0)) > 0:
+            cold_start_scores.append(q_score)
+
+    baseline = (sum(baseline_scores) / len(baseline_scores)) if baseline_scores else 0.0
+    cold_start = (sum(cold_start_scores) / len(cold_start_scores)) if cold_start_scores else baseline
+    return round(cold_start - baseline, 4)

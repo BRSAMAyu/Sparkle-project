@@ -149,42 +149,56 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		ResponseId: "resp-expert-meta",
 		RequestId:  "req-expert-meta",
 		Metadata: map[string]string{
-			"selected_experts":             `["deep_analyst","code_agent"]`,
-			"routing_strategy":             "auto_multi_expert",
-			"fallback_reason":              "",
-			"route_confidence":             "0.82",
-			"expert_entry_source":          "auto",
-			"policy_id":                    "expert_strategy_v2",
-			"strategy_pack":                "general_v2",
-			"complexity_score":             "0.74",
-			"complexity_tier":              "medium",
-			"decomposition_contract":       `{"goal":"prepare exam","milestones":["phase1","phase2"],"acceptance_criteria":["score>=90"]}`,
-			"decomposition_contract_score": "0.81",
-			"decomposition_gaps":           `["missing_resources"]`,
-			"plan_feasibility_score":       "0.76",
-			"goal_hierarchy_score":         "0.88",
-			"plan_ir_version":              "v2",
-			"verifier_score":               "0.84",
-			"verifier_ensemble_score":      "0.86",
-			"contract_coverage":            "0.88",
-			"verifier_fail_reasons":        `["missing_risks"]`,
-			"uncertainty_score":            "0.41",
-			"clarification_needed":         "false",
-			"clarification_points":         `["补充里程碑","补充验收标准"]`,
-			"search_budget_used":           "932",
-			"plan_revision_count":          "1",
-			"candidate_count":              "4",
-			"winning_margin":               "0.0380",
-			"simulated_risk_score":         "0.53",
-			"repair_actions":               `["degrade_parallelism"]`,
-			"repair_policy_id":             "counterfactual_repair_v1",
-			"quality_gate_block_reason":    "",
-			"q_score_hint":                 "0.83",
-			"policy_layers":                `[{"policy_id":"expert_strategy_v2:general_v2","scope_type":"global"}]`,
-			"prompt_policy_id":             "meta_policy_v1:prompt:general_v2:abc12345",
-			"toolchain_policy_id":          "meta_policy_v1:toolchain:general_v2:def67890",
-			"meta_learning_scope":          "composed",
-			"plan_contract_version":        "v1",
+			"selected_experts":              `["deep_analyst","code_agent"]`,
+			"routing_strategy":              "auto_multi_expert",
+			"fallback_reason":               "",
+			"route_confidence":              "0.82",
+			"expert_entry_source":           "auto",
+			"policy_id":                     "expert_strategy_v2",
+			"strategy_pack":                 "general_v2",
+			"complexity_score":              "0.74",
+			"complexity_tier":               "medium",
+			"decomposition_contract":        `{"goal":"prepare exam","milestones":["phase1","phase2"],"acceptance_criteria":["score>=90"]}`,
+			"decomposition_contract_score":  "0.81",
+			"decomposition_gaps":            `["missing_resources"]`,
+			"ambiguity_profile":             `{"ambiguity_score":0.42,"ambiguous_dimensions":["goal_clarity"]}`,
+			"plan_feasibility_score":        "0.76",
+			"goal_hierarchy_score":          "0.88",
+			"goal_traceability":             "0.84",
+			"final_plan_score":              "0.81",
+			"plan_ir_version":               "v2",
+			"verifier_score":                "0.84",
+			"verifier_ensemble_score":       "0.86",
+			"contract_coverage":             "0.88",
+			"verifier_fail_reasons":         `["missing_risks"]`,
+			"uncertainty_score":             "0.41",
+			"clarification_needed":          "false",
+			"clarification_points":          `["补充里程碑","补充验收标准"]`,
+			"clarification_priority_points": `[{"priority":1,"question":"你的关键约束是什么？","expected_gain":0.31}]`,
+			"clarification_voi_score":       "0.3100",
+			"search_budget_used":            "932",
+			"plan_revision_count":           "1",
+			"candidate_count":               "4",
+			"winning_margin":                "0.0380",
+			"counterfactual_options_count":  "3",
+			"simulated_risk_score":          "0.53",
+			"simulated_failure_paths":       `[{"path":"dependency_break","impact":"high"}]`,
+			"execution_copilot_hint":        "建议先执行纠偏动作：tighten_dependency_order",
+			"repair_actions":                `["degrade_parallelism"]`,
+			"repair_policy_id":              "counterfactual_repair_v1",
+			"quality_gate_block_reason":     "",
+			"q_score_hint":                  "0.83",
+			"policy_layers":                 `[{"policy_id":"expert_strategy_v2:general_v2","scope_type":"global"}]`,
+			"prompt_policy_id":              "meta_policy_v1:prompt:general_v2:abc12345",
+			"toolchain_policy_id":           "meta_policy_v1:toolchain:general_v2:def67890",
+			"meta_learning_scope":           "composed",
+			"meta_rule_ids":                 `["cr_demo_1","cr_demo_2"]`,
+			"motif_graph_id":                "motif_demo_1",
+			"transfer_source":               "cohort",
+			"rule_confidence":               "0.81",
+			"rule_block_reason":             "",
+			"rule_block_detail":             `{"reason":"","metric":"fallback_rate","threshold":0.12,"observed":0.04,"source":"blended_rollup"}`,
+			"plan_contract_version":         "v1",
 		},
 		Content: &agentv1.ChatResponse_FullText{
 			FullText: "done",
@@ -210,8 +224,12 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	gaps, ok := meta["decomposition_gaps"].([]interface{})
 	assert.True(t, ok)
 	assert.Len(t, gaps, 1)
+	_, ok = meta["ambiguity_profile"].(map[string]interface{})
+	assert.True(t, ok)
 	assert.Equal(t, "0.76", meta["plan_feasibility_score"])
 	assert.Equal(t, "0.88", meta["goal_hierarchy_score"])
+	assert.Equal(t, "0.84", meta["goal_traceability"])
+	assert.Equal(t, "0.81", meta["final_plan_score"])
 	assert.Equal(t, "v2", meta["plan_ir_version"])
 	assert.Equal(t, "0.84", meta["verifier_score"])
 	assert.Equal(t, "0.86", meta["verifier_ensemble_score"])
@@ -222,11 +240,18 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.Equal(t, "false", meta["clarification_needed"])
 	_, ok = meta["clarification_points"].([]interface{})
 	assert.True(t, ok)
+	_, ok = meta["clarification_priority_points"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "0.3100", meta["clarification_voi_score"])
 	assert.Equal(t, "932", meta["search_budget_used"])
 	assert.Equal(t, "1", meta["plan_revision_count"])
 	assert.Equal(t, "4", meta["candidate_count"])
 	assert.Equal(t, "0.0380", meta["winning_margin"])
+	assert.Equal(t, "3", meta["counterfactual_options_count"])
 	assert.Equal(t, "0.53", meta["simulated_risk_score"])
+	_, ok = meta["simulated_failure_paths"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "建议先执行纠偏动作：tighten_dependency_order", meta["execution_copilot_hint"])
 	_, ok = meta["repair_actions"].([]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "counterfactual_repair_v1", meta["repair_policy_id"])
@@ -236,6 +261,13 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.Equal(t, "meta_policy_v1:prompt:general_v2:abc12345", meta["prompt_policy_id"])
 	assert.Equal(t, "meta_policy_v1:toolchain:general_v2:def67890", meta["toolchain_policy_id"])
 	assert.Equal(t, "composed", meta["meta_learning_scope"])
+	_, ok = meta["meta_rule_ids"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "motif_demo_1", meta["motif_graph_id"])
+	assert.Equal(t, "cohort", meta["transfer_source"])
+	assert.Equal(t, "0.81", meta["rule_confidence"])
+	_, ok = meta["rule_block_detail"].(map[string]interface{})
+	assert.True(t, ok)
 	assert.Equal(t, "v1", meta["plan_contract_version"])
 }
 

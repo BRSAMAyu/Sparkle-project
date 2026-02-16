@@ -201,6 +201,12 @@ class ResponseFeedbackService:
                 "user_scope": str(meta.get("user_scope", "")),
                 "complexity_tier": str(meta.get("complexity_tier", "")),
                 "task_type": str(meta.get("task_type", "")),
+                "meta_rule_ids": parse_selected_experts(meta.get("meta_rule_ids")),
+                "motif_graph_id": str(meta.get("motif_graph_id", "")),
+                "transfer_source": str(meta.get("transfer_source", "")),
+                "rule_confidence": str(meta.get("rule_confidence", "")),
+                "rule_block_reason": str(meta.get("rule_block_reason", "")),
+                "rule_block_detail": meta.get("rule_block_detail"),
                 "trace_id": trace_id,
             }
             service = LearningEventService(redis_client=self.redis)

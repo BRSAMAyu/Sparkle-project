@@ -794,6 +794,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     BoxConstraints constraints,
   ) {
     final transparentMode = ref.watch(transparentModeProvider);
+    final selectedPlanId = ref.watch(activePlanProvider);
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -822,6 +823,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           const PlanSelectorPill(),
           const ChatModeSelectorPill(),
           const IntentPredictionBar(showIdle: false),
+          if (selectedPlanId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing16,
+                DS.spacing8,
+                DS.spacing16,
+                DS.spacing4,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.checklist_rounded, size: 18),
+                  label: const Text('今日执行驾驶舱'),
+                  onPressed: chatState.isSending
+                      ? null
+                      : () {
+                          unawaited(
+                            ref.read(chatProvider.notifier).sendMessage(
+                              '请基于当前计划生成今日执行驾驶舱，并给我今日最关键的三步行动，附带阻塞点与纠偏建议。',
+                              extraContextOverride: {
+                                'plan_id': selectedPlanId,
+                                'execution_copilot': true,
+                              },
+                            ),
+                          );
+                        },
+                ),
+              ),
+            ),
           ChatInput(
             enabled: !chatState.isSending,
             onTextChanged: (text) {

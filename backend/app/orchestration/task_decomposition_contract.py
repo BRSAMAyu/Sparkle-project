@@ -19,6 +19,9 @@ class TaskDecompositionContract:
     milestones: list[str] = field(default_factory=list)
     acceptance_criteria: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
+    assumptions: list[str] = field(default_factory=list)
+    tradeoffs: list[str] = field(default_factory=list)
+    success_evidence: list[str] = field(default_factory=list)
     goal_hierarchy: dict[str, Any] = field(default_factory=dict)
     goal_hierarchy_score: float = 0.0
     score: float = 0.0
@@ -33,6 +36,9 @@ class TaskDecompositionContract:
             "milestones": self.milestones,
             "acceptance_criteria": self.acceptance_criteria,
             "risks": self.risks,
+            "assumptions": self.assumptions,
+            "tradeoffs": self.tradeoffs,
+            "success_evidence": self.success_evidence,
             "goal_hierarchy": self.goal_hierarchy,
             "goal_hierarchy_score": round(float(self.goal_hierarchy_score), 4),
             "score": round(float(self.score), 4),
@@ -59,6 +65,12 @@ def build_task_decomposition_contract(
     milestones = _extract_milestones(text)
     acceptance = _extract_acceptance_criteria(text)
     risks = _extract_risks(text)
+    assumptions = _extract_assumptions(text)
+    tradeoffs = _extract_tradeoffs(text)
+    success_evidence = _extract_success_evidence(
+        text=text,
+        acceptance_criteria=acceptance,
+    )
     goal_hierarchy = _build_goal_hierarchy(
         text=text,
         goal=goal,
@@ -96,6 +108,9 @@ def build_task_decomposition_contract(
         milestones=milestones,
         acceptance_criteria=acceptance,
         risks=risks,
+        assumptions=assumptions,
+        tradeoffs=tradeoffs,
+        success_evidence=success_evidence,
         goal_hierarchy_score=goal_hierarchy_score,
     )
 
@@ -106,6 +121,9 @@ def build_task_decomposition_contract(
         milestones=milestones,
         acceptance_criteria=acceptance,
         risks=risks,
+        assumptions=assumptions,
+        tradeoffs=tradeoffs,
+        success_evidence=success_evidence,
         goal_hierarchy=goal_hierarchy,
         goal_hierarchy_score=goal_hierarchy_score,
         score=score,
@@ -238,6 +256,62 @@ def _extract_risks(text: str) -> list[str]:
             if value and value not in risks:
                 risks.append(value)
     return risks[:6]
+
+
+def _extract_assumptions(text: str) -> list[str]:
+    assumptions: list[str] = []
+    lowered = text.lower()
+    patterns = [
+        r"(?:假设|前提|assumption|assume)\s*[:：]?\s*([^。！？\n]{4,96})",
+        r"(?:默认|默认情况下|by default)\s*([^。！？\n]{4,96})",
+    ]
+    for pattern in patterns:
+        for match in re.findall(pattern, lowered, flags=re.IGNORECASE):
+            value = _clean_text(match if isinstance(match, str) else "".join(match))
+            if value and value not in assumptions:
+                assumptions.append(value)
+    return assumptions[:6]
+
+
+def _extract_tradeoffs(text: str) -> list[str]:
+    tradeoffs: list[str] = []
+    lowered = text.lower()
+    patterns = [
+        r"(?:取舍|权衡|trade[- ]?off)\s*[:：]?\s*([^。！？\n]{4,96})",
+        r"(?:优先|priority)\s*([^。！？\n]{4,96})",
+        r"(?:牺牲|sacrifice)\s*([^。！？\n]{4,96})",
+    ]
+    for pattern in patterns:
+        for match in re.findall(pattern, lowered, flags=re.IGNORECASE):
+            value = _clean_text(match if isinstance(match, str) else "".join(match))
+            if value and value not in tradeoffs:
+                tradeoffs.append(value)
+    return tradeoffs[:6]
+
+
+def _extract_success_evidence(*, text: str, acceptance_criteria: list[str]) -> list[str]:
+    evidences: list[str] = []
+    lowered = text.lower()
+    patterns = [
+        r"(?:证据|证明|evidence)\s*[:：]?\s*([^。！？\n]{4,96})",
+        r"(?:结果显示|数据显示|result shows)\s*([^。！？\n]{4,96})",
+    ]
+    for pattern in patterns:
+        for match in re.findall(pattern, lowered, flags=re.IGNORECASE):
+            value = _clean_text(match if isinstance(match, str) else "".join(match))
+            if value and value not in evidences:
+                evidences.append(value)
+
+    if not evidences:
+        for item in acceptance_criteria:
+            text_item = _clean_text(str(item))
+            if not text_item:
+                continue
+            if any(token in text_item.lower() for token in ("%", "分", "score", "完成", "达成", "通过")):
+                evidences.append(f"验收达成证据：{text_item}")
+            if len(evidences) >= 4:
+                break
+    return evidences[:6]
 
 
 def _build_goal_hierarchy(
@@ -412,20 +486,29 @@ def _score_contract(
     milestones: list[str],
     acceptance_criteria: list[str],
     risks: list[str],
+    assumptions: list[str],
+    tradeoffs: list[str],
+    success_evidence: list[str],
     goal_hierarchy_score: float,
 ) -> float:
     score = 0.0
     if goal:
-        score += 0.2
+        score += 0.16
     if constraints:
-        score += 0.14
+        score += 0.12
     if resources:
-        score += 0.1
+        score += 0.08
     if milestones:
-        score += 0.18
+        score += 0.14
     if acceptance_criteria:
-        score += 0.2
+        score += 0.16
     if risks:
+        score += 0.08
+    if assumptions:
         score += 0.05
-    score += 0.13 * max(0.0, min(goal_hierarchy_score, 1.0))
+    if tradeoffs:
+        score += 0.05
+    if success_evidence:
+        score += 0.05
+    score += 0.11 * max(0.0, min(goal_hierarchy_score, 1.0))
     return max(0.0, min(score, 1.0))

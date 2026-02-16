@@ -1,5 +1,5 @@
 from app.orchestration.orchestrator import ChatOrchestrator
-from app.orchestration.schemas import RouteDecision
+from app.orchestration.schemas import ExecutablePlan, RouteDecision, ToolCallSpec
 
 
 def test_build_routing_history_includes_summary():
@@ -33,3 +33,25 @@ def test_adaptive_policy_upgrades_to_hybrid_for_low_confidence_complex_query():
     assert updated.execution_mode == "hybrid"
     assert updated.reason.startswith("adaptive:low_confidence_complex:")
     assert "upgraded_to_hybrid_low_confidence_complex" in notes
+
+
+def test_meta_rule_toolchain_patch_degrades_parallelism_to_cap():
+    plan = ExecutablePlan(
+        tool_calls=[
+            ToolCallSpec(id="a", name="create_plan", params={}),
+            ToolCallSpec(id="b", name="create_task", params={}),
+            ToolCallSpec(id="c", name="create_task", params={}),
+        ],
+        execution_order=[["a", "b", "c"]],
+    )
+    ChatOrchestrator._apply_meta_rule_patch_to_plan(
+        executable_plan=plan,
+        patch={
+            "channel": "toolchain",
+            "threshold_overrides": {"max_parallel_experts": 1, "timeout_multiplier": 1.2},
+            "action_overrides": ["degrade_parallelism"],
+        },
+    )
+    assert len(plan.execution_order) == 1
+    assert len(plan.execution_order[0]) == 1
+    assert all(step.timeout_ms >= 10000 for step in plan.tool_calls)

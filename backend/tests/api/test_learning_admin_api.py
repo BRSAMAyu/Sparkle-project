@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import get_current_active_superuser
 from app.api.v1.learning_admin import router as learning_admin_router
 from app.services.policy_registry_service import PolicyRegistryService, _MEM_CANDIDATES, _MEM_POLICIES
+from app.services.task_motif_registry_service import _MEM_GRAPHS, _MEM_RULES
 
 
 def _build_client() -> TestClient:
@@ -25,6 +26,8 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
 
     _MEM_CANDIDATES.clear()
     _MEM_POLICIES.clear()
+    _MEM_RULES.clear()
+    _MEM_GRAPHS.clear()
     registry = PolicyRegistryService(redis_client=None)
 
     candidate = {
@@ -111,3 +114,50 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
         promote = client.post("/admin/learning/research-promotions/pc_research_api_1/approve", json={"note": "promote"})
         assert promote.status_code == 200
         assert promote.json()["status"] == "ok"
+
+        cognitive_mine = client.post("/admin/learning/cognitive-rules/mine?days=14")
+        assert cognitive_mine.status_code == 200
+        assert "candidate_count" in cognitive_mine.json()
+
+        cognitive_list = client.get("/admin/learning/cognitive-rules")
+        assert cognitive_list.status_code == 200
+        assert "items" in cognitive_list.json()
+
+        rule_id = "cr_test_rule_1"
+        from app.services.task_motif_registry_service import TaskMotifRegistryService
+
+        motif_registry = TaskMotifRegistryService()
+        anyio.run(
+            motif_registry.upsert_rule,
+            {
+                "rule_id": rule_id,
+                "domain": "education",
+                "task_type": "study_plan",
+                "complexity_tier": "medium",
+                "trigger_conditions": {"quality_gate_blocked_min": 3},
+                "recommended_actions": ["require_minimal_clarification"],
+                "expected_delta_q": 0.05,
+                "support_size": 50,
+                "confidence": 0.72,
+                "fairness_risk": 0.08,
+                "latency_risk": 0.12,
+                "evidence_window": "last_14d",
+                "status": "draft",
+                "version": "v1",
+            },
+        )
+        validate_rule = client.post(f"/admin/learning/cognitive-rules/{rule_id}/validate", json={"note": "valid"})
+        assert validate_rule.status_code == 200
+        assert validate_rule.json()["rule"]["status"] == "validated"
+
+        approve_rule = client.post(f"/admin/learning/cognitive-rules/{rule_id}/approve", json={"note": "ok"})
+        assert approve_rule.status_code == 200
+        assert approve_rule.json()["rule"]["status"] == "active"
+
+        reject_rule = client.post(f"/admin/learning/cognitive-rules/{rule_id}/reject", json={"note": "stop"})
+        assert reject_rule.status_code == 200
+        assert reject_rule.json()["rule"]["status"] == "deprecated"
+
+        meta_generalization = client.get("/admin/learning/meta-generalization-report")
+        assert meta_generalization.status_code == 200
+        assert "transfer_gain_new_user" in meta_generalization.json()

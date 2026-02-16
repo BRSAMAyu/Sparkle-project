@@ -12,6 +12,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
 from app.services.cognitive_service import CognitiveService
+from app.services.cognitive_pattern_mining_service import CognitivePatternMiningService
 from app.services.decay_service import DecayService
 from app.services.event_retention_service import EventRetentionService
 from app.services.expert_policy_report_service import ExpertPolicyReportService
@@ -95,6 +96,13 @@ class SchedulerService:
                 hour=int(getattr(settings, "LEARNING_RESEARCH_PROMOTION_HOUR", 4)),
                 minute=int(getattr(settings, "LEARNING_RESEARCH_PROMOTION_MINUTE", 35)),
             )
+            if bool(getattr(settings, "ENABLE_META_RULE_AUTO_MINING", False)):
+                self.scheduler.add_job(
+                    self.run_cognitive_pattern_mining_job,
+                    "cron",
+                    hour=int(getattr(settings, "LEARNING_META_RULE_MINING_HOUR", 2)),
+                    minute=int(getattr(settings, "LEARNING_META_RULE_MINING_MINUTE", 50)),
+                )
 
         # ========== 胶囊生成调度任务 ==========
 
@@ -619,6 +627,15 @@ class SchedulerService:
             }
 
         return await self._run_learning_job_with_guard("learning_research_promotion_package", _runner)
+
+    async def run_cognitive_pattern_mining_job(self):
+        logger.info("Starting cognitive pattern mining job...")
+
+        async def _runner():
+            service = CognitivePatternMiningService(redis_client=cache_service.redis)
+            return await service.run_mining_job(days=14)
+
+        return await self._run_learning_job_with_guard("learning_cognitive_pattern_mining", _runner)
 
     async def _evaluate_canary_guardrails(self) -> dict[str, Any]:
         if not settings.ENABLE_POLICY_CANARY_ROLLOUT:

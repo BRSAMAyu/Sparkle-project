@@ -32,7 +32,8 @@ class ApiEndpoints {
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
-  static String nextActionSelection(String id) => '/tasks/$id/next-action-selection';
+  static String nextActionSelection(String id) =>
+      '/tasks/$id/next-action-selection';
   static const String taskSuggestions = '/tasks/suggestions';
 
   // Subtasks
@@ -213,7 +214,8 @@ class ApiEndpoints {
 
   // Interventions
   static const String interventionsRequest = '/interventions/request';
-  static const String interventionsPassiveSignals = '/interventions/passive-signals';
+  static const String interventionsPassiveSignals =
+      '/interventions/passive-signals';
   static const String interventionsOutcomes = '/interventions/outcomes';
   static String interventionFeedback(String id) =>
       '/interventions/requests/$id/feedback';
@@ -227,9 +229,12 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
-  static String achievementDetail(String id) => '/achievements/achievements/$id';
-  static String achievementShare(String id) => '/achievements/achievements/$id/share';
-  static String achievementPin(String id) => '/achievements/achievements/$id/pin';
+  static String achievementDetail(String id) =>
+      '/achievements/achievements/$id';
+  static String achievementShare(String id) =>
+      '/achievements/achievements/$id/share';
+  static String achievementPin(String id) =>
+      '/achievements/achievements/$id/pin';
 
   // Contracts
   static const String contracts = '/achievements/contracts';
@@ -245,21 +250,28 @@ class ApiEndpoints {
 
   // Achievement Events (internal)
   static const String achievementEventsProcess = '/achievements/events/process';
-  static const String achievementsCloseToUnlock = '/achievements/close-to-unlock';
+  static const String achievementsCloseToUnlock =
+      '/achievements/close-to-unlock';
 
   // Multi-Intent
   static const String multiIntentParse = '/multi-intent/parse';
   static const String multiIntentPreview = '/multi-intent/preview';
   static const String multiIntentExecute = '/multi-intent/execute';
-  static const String multiIntentAnalyzeExecute = '/multi-intent/analyze-and-execute';
+  static const String multiIntentAnalyzeExecute =
+      '/multi-intent/analyze-and-execute';
   static const String multiIntentTypes = '/multi-intent/intent-types';
 
   // Recommendations
-  static const String recommendationsCollaborative = '/recommendations/collaborative';
-  static const String recommendationsSimilarUsers = '/recommendations/similar-users';
-  static const String recommendationsSimilarItems = '/recommendations/similar-items';
-  static const String recommendationsMyInteractions = '/recommendations/my-interactions';
-  static const String recommendationsRecord = '/recommendations/record-interaction';
+  static const String recommendationsCollaborative =
+      '/recommendations/collaborative';
+  static const String recommendationsSimilarUsers =
+      '/recommendations/similar-users';
+  static const String recommendationsSimilarItems =
+      '/recommendations/similar-items';
+  static const String recommendationsMyInteractions =
+      '/recommendations/my-interactions';
+  static const String recommendationsRecord =
+      '/recommendations/record-interaction';
   static const String recommendationsStats = '/recommendations/stats';
 
   // Leaderboards
@@ -267,7 +279,8 @@ class ApiEndpoints {
   static const String leaderboardsSummary = '/leaderboards/summary';
   static const String leaderboardsMyRank = '/leaderboards/my-rank';
   static const String leaderboardsTypes = '/leaderboards/types';
-  static String leaderboardsTopThree(String type) => '/leaderboards/top-three/$type';
+  static String leaderboardsTopThree(String type) =>
+      '/leaderboards/top-three/$type';
   static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
 
   // Seed Libraries
@@ -277,13 +290,39 @@ class ApiEndpoints {
   static String seedLibraryItem(String libraryId, String itemId) =>
       '/seed-libraries/$libraryId/items/$itemId';
   static String seedLibrarySubscribe(String id) =>
-      '/seed-libraries/$id/subscribe';
+      '/seed-libraries/subscribe/$id';
   static String seedLibraryUnsubscribe(String id) =>
-      '/seed-libraries/$id/unsubscribe';
-  static String seedLibrarySubscriptions = '/seed-libraries/my-subscriptions';
+      '/seed-libraries/subscribe/$id';
+  static String seedLibrarySubscriptions = '/seed-libraries/subscriptions/me';
   static String seedLibraryCrossQuery = '/seed-libraries/query';
-  static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
-  static String seedLibraryReplyTemplate = '/seed-libraries/query/reply-template';
+  static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';
+  static String seedLibraryReplyTemplate =
+      '/seed-libraries/query/reply-template';
+
+  // Seed Templates 2.0
+  static const String seedTemplatePacks = '/seed-templates/packs';
+  static String seedTemplatePackTemplates(String packId) =>
+      '/seed-templates/packs/$packId/templates';
+  static String seedTemplate(String id) => '/seed-templates/$id';
+  static String seedTemplateFork(String id) => '/seed-templates/$id/fork';
+  static String seedTemplateVersions(String id) =>
+      '/seed-templates/$id/versions';
+  static String seedTemplatePublish(String id) => '/seed-templates/$id/publish';
+  static String seedTemplateSignals(String id) => '/seed-templates/$id/signals';
+  static String seedTemplateSubscribe(String id) =>
+      '/seed-templates/$id/subscribe';
+  static const String seedTemplateSubscriptionsMe =
+      '/seed-templates/subscriptions/me';
+  static String seedTemplateInstantiate(String id) =>
+      '/seed-templates/$id/instantiate';
+  static const String adminSeedTemplateReviewQueue =
+      '/admin/seed-templates/review-queue';
+  static String adminSeedTemplateApprove(String versionId) =>
+      '/admin/seed-templates/$versionId/approve';
+  static String adminSeedTemplateReject(String versionId) =>
+      '/admin/seed-templates/$versionId/reject';
+  static const String adminSeedTemplateDashboard =
+      '/admin/seed-templates/promotion-dashboard';
 
   // Shop System
   static const String shopItems = '/shop/items';

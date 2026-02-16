@@ -5,6 +5,7 @@ import 'package:sparkle/features/seed_library/data/models/seed_library_model.dar
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
+import 'package:sparkle/features/seed_library/presentation/screens/seed_template_pack_list_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_library_card.dart';
 
 /// Seed Library List Screen
@@ -98,6 +99,19 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             size: DS.touchTargetMinSize,
             icon: const Icon(Icons.filter_list),
             onPressed: _showFilterDialog,
+          ),
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            size: DS.touchTargetMinSize,
+            icon: const Icon(Icons.auto_awesome),
+            onPressed: () {
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SeedTemplatePackListScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),

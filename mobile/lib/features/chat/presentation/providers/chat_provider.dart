@@ -95,7 +95,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
-  Future<void> sendMessage(String content, {String? taskId}) async {
+  Future<void> sendMessage(
+    String content, {
+    String? taskId,
+    Map<String, dynamic>? extraContextOverride,
+    String? chatModeOverride,
+  }) async {
     // 获取当前用户信息
     final authState = _ref.read(authProvider);
     final user = authState.user;
@@ -195,12 +200,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // Get selected plan for chat context
       final selectedPlanId = _ref.read(activePlanProvider);
-      final extraContext =
-          selectedPlanId != null ? {'plan_id': selectedPlanId} : null;
+      final extraContext = <String, dynamic>{
+        if (selectedPlanId != null) 'plan_id': selectedPlanId,
+        ...?extraContextOverride,
+      };
+      final resolvedExtraContext = extraContext.isEmpty ? null : extraContext;
 
       // Get selected chat mode
       final chatMode = _ref.read(chatModeProvider);
-      final chatModeValue = chatMode.apiValue;
+      final chatModeValue = chatModeOverride ?? chatMode.apiValue;
 
       await for (final event in _chatRepository.chatStream(
         content,
@@ -210,7 +218,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         token: token,
         fileIds: fileIds,
         includeReferences: fileIds.isNotEmpty,
-        extraContext: extraContext,
+        extraContext: resolvedExtraContext,
         chatMode: chatModeValue,
       )) {
         if (event.responseId != null && event.responseId!.isNotEmpty) {
@@ -263,6 +271,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final decompositionGaps = metadata['decomposition_gaps'];
             final planFeasibilityScore = metadata['plan_feasibility_score'];
             final planContractVersion = metadata['plan_contract_version'];
+            final verifierEnsembleScore = metadata['verifier_ensemble_score'];
+            final candidateCount = metadata['candidate_count'];
+            final winningMargin = metadata['winning_margin'];
+            final ambiguityProfile = metadata['ambiguity_profile'];
+            final clarificationPriorityPoints =
+                metadata['clarification_priority_points'];
+            final clarificationVoiScore = metadata['clarification_voi_score'];
+            final counterfactualOptionsCount =
+                metadata['counterfactual_options_count'];
+            final simulatedRiskScore = metadata['simulated_risk_score'];
+            final simulatedFailurePaths = metadata['simulated_failure_paths'];
+            final executionCopilotHint = metadata['execution_copilot_hint'];
+            final qualityGateBlockReason =
+                metadata['quality_gate_block_reason'];
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -275,7 +297,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 decompositionContractScore != null ||
                 decompositionGaps != null ||
                 planFeasibilityScore != null ||
-                planContractVersion != null) {
+                planContractVersion != null ||
+                verifierEnsembleScore != null ||
+                candidateCount != null ||
+                winningMargin != null ||
+                ambiguityProfile != null ||
+                clarificationPriorityPoints != null ||
+                clarificationVoiScore != null ||
+                counterfactualOptionsCount != null ||
+                simulatedRiskScore != null ||
+                simulatedFailurePaths != null ||
+                executionCopilotHint != null ||
+                qualityGateBlockReason != null) {
               var selectedExperts = <String>[];
               if (selectedExpertsRaw is List) {
                 selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
@@ -312,6 +345,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'decomposition_gaps': decompositionGaps,
                 'plan_feasibility_score': planFeasibilityScore,
                 'plan_contract_version': planContractVersion,
+                'verifier_ensemble_score': verifierEnsembleScore,
+                'candidate_count': candidateCount,
+                'winning_margin': winningMargin,
+                'ambiguity_profile': ambiguityProfile,
+                'clarification_priority_points': clarificationPriorityPoints,
+                'clarification_voi_score': clarificationVoiScore,
+                'counterfactual_options_count': counterfactualOptionsCount,
+                'simulated_risk_score': simulatedRiskScore,
+                'simulated_failure_paths': simulatedFailurePaths,
+                'execution_copilot_hint': executionCopilotHint,
+                'quality_gate_block_reason': qualityGateBlockReason,
               };
             }
           }
@@ -356,6 +400,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
             final decompositionGaps = metadata['decomposition_gaps'];
             final planFeasibilityScore = metadata['plan_feasibility_score'];
             final planContractVersion = metadata['plan_contract_version'];
+            final verifierEnsembleScore = metadata['verifier_ensemble_score'];
+            final candidateCount = metadata['candidate_count'];
+            final winningMargin = metadata['winning_margin'];
+            final ambiguityProfile = metadata['ambiguity_profile'];
+            final clarificationPriorityPoints =
+                metadata['clarification_priority_points'];
+            final clarificationVoiScore = metadata['clarification_voi_score'];
+            final counterfactualOptionsCount =
+                metadata['counterfactual_options_count'];
+            final simulatedRiskScore = metadata['simulated_risk_score'];
+            final simulatedFailurePaths = metadata['simulated_failure_paths'];
+            final executionCopilotHint = metadata['execution_copilot_hint'];
+            final qualityGateBlockReason =
+                metadata['quality_gate_block_reason'];
             if (selectedExpertsRaw != null ||
                 routingStrategy != null ||
                 fallbackReason != null ||
@@ -368,7 +426,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 decompositionContractScore != null ||
                 decompositionGaps != null ||
                 planFeasibilityScore != null ||
-                planContractVersion != null) {
+                planContractVersion != null ||
+                verifierEnsembleScore != null ||
+                candidateCount != null ||
+                winningMargin != null ||
+                ambiguityProfile != null ||
+                clarificationPriorityPoints != null ||
+                clarificationVoiScore != null ||
+                counterfactualOptionsCount != null ||
+                simulatedRiskScore != null ||
+                simulatedFailurePaths != null ||
+                executionCopilotHint != null ||
+                qualityGateBlockReason != null) {
               var selectedExperts = <String>[];
               if (selectedExpertsRaw is List) {
                 selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
@@ -405,6 +474,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 'decomposition_gaps': decompositionGaps,
                 'plan_feasibility_score': planFeasibilityScore,
                 'plan_contract_version': planContractVersion,
+                'verifier_ensemble_score': verifierEnsembleScore,
+                'candidate_count': candidateCount,
+                'winning_margin': winningMargin,
+                'ambiguity_profile': ambiguityProfile,
+                'clarification_priority_points': clarificationPriorityPoints,
+                'clarification_voi_score': clarificationVoiScore,
+                'counterfactual_options_count': counterfactualOptionsCount,
+                'simulated_risk_score': simulatedRiskScore,
+                'simulated_failure_paths': simulatedFailurePaths,
+                'execution_copilot_hint': executionCopilotHint,
+                'quality_gate_block_reason': qualityGateBlockReason,
               };
             }
           }

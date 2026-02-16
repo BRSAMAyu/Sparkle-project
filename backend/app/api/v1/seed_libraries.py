@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_current_user
+from app.config import settings
 from app.db.session import get_db
+from app.models.seed_template import SeedTemplate, SeedTemplatePack
 from app.models.user import User
 from app.schemas.common import PaginationMeta
 from app.schemas.seed_content import (
@@ -34,9 +36,82 @@ from app.schemas.seed_content import (
     SubscriptionResponse,
 )
 from app.services.seed_library_service import SeedLibraryService
+from app.services.seed_template_service import SeedTemplateService
 
 router = APIRouter()
 service = SeedLibraryService()
+template_service = SeedTemplateService()
+
+
+def _template_bff_enabled() -> bool:
+    return bool(settings.ENABLE_SEED_LIBRARY_TEMPLATE_BFF and settings.ENABLE_SEED_TEMPLATE_PACKS_V1)
+
+
+def _scenario_to_category(scenario_type: str) -> str:
+    if scenario_type == "study_plan":
+        return "teaching_content"
+    if scenario_type == "deep_analysis":
+        return "few_shot"
+    if scenario_type == "writing":
+        return "reply_template"
+    return "custom"
+
+
+def _map_pack_to_library_info(pack: SeedTemplatePack) -> LibraryInfo:
+    adoption = float(pack.adoption_score or 0.0)
+    estimated_usage = int(max(0.0, adoption * 1000))
+    return LibraryInfo(
+        id=pack.id,
+        name=pack.name,
+        description=pack.description,
+        category=_scenario_to_category(str(pack.scenario_type)),
+        visibility=str(pack.visibility),
+        owner_id=pack.owner_id,
+        language=str(pack.language or "zh"),
+        tags=list(pack.tags or []),
+        extra_metadata={
+            "source": "seed_templates_pack",
+            "pack_status": str(pack.status),
+            "scenario_type": str(pack.scenario_type),
+        },
+        is_official=bool(str(pack.visibility) == "official"),
+        is_featured=bool(pack.adoption_score and pack.adoption_score >= 0.3),
+        usage_count=estimated_usage,
+        quality_score=pack.quality_score,
+        item_count=0,
+        subscriber_count=0,
+        created_at=pack.created_at,
+        updated_at=pack.updated_at,
+    )
+
+
+def _map_template_to_library_info(template: SeedTemplate, pack: SeedTemplatePack | None) -> LibraryInfo:
+    category = _scenario_to_category(str(pack.scenario_type)) if pack else "custom"
+    visibility = str(pack.visibility) if pack else ("official" if template.is_official else "public")
+    return LibraryInfo(
+        id=template.id,
+        name=template.name,
+        description=(pack.description if pack else None),
+        category=category,
+        visibility=visibility,
+        owner_id=template.owner_id,
+        language=str(pack.language if pack and pack.language else "zh"),
+        tags=list(pack.tags or []) if pack else [],
+        extra_metadata={
+            "source": "seed_templates_template",
+            "pack_id": str(pack.id) if pack else None,
+            "template_role": template.template_role,
+            "current_version_id": str(template.current_version_id) if template.current_version_id else None,
+        },
+        is_official=bool(template.is_official),
+        is_featured=bool(template.is_featured),
+        usage_count=0,
+        quality_score=(pack.quality_score if pack else None),
+        item_count=0,
+        subscriber_count=0,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
 
 
 # ============ 库管理接口 ============
@@ -84,10 +159,69 @@ async def list_libraries(
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
     sort_by: str = Query("created_at", description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
+    source: str | None = Query(None, description="数据源（templates 启用模板桥接）"),
     current_user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """获取库列表"""
+    use_template_bridge = _template_bff_enabled() and str(source or "").lower() == "templates"
+    if use_template_bridge:
+        scenario_filter: str | None = None
+        if category == "teaching_content":
+            scenario_filter = "study_plan"
+        elif category == "few_shot":
+            scenario_filter = "deep_analysis"
+        elif category == "reply_template":
+            scenario_filter = "writing"
+
+        packs = await template_service.list_packs(
+            db,
+            scenario_type=scenario_filter,
+            visibility=visibility,
+            current_user_id=current_user.id if current_user else None,
+            limit=max(page_size * 5, 100),
+        )
+
+        mapped = [_map_pack_to_library_info(pack) for pack in packs]
+        if is_official is not None:
+            mapped = [item for item in mapped if item.is_official == is_official]
+        if is_featured is not None:
+            mapped = [item for item in mapped if item.is_featured == is_featured]
+        if owner_id is not None:
+            mapped = [item for item in mapped if item.owner_id == owner_id]
+        if language:
+            mapped = [item for item in mapped if item.language == language]
+        if search:
+            search_l = search.lower().strip()
+            mapped = [
+                item
+                for item in mapped
+                if search_l in item.name.lower()
+                or (item.description and search_l in item.description.lower())
+            ]
+        if tags:
+            tag_set = {tag.strip() for tag in tags if tag and tag.strip()}
+            if tag_set:
+                mapped = [
+                    item for item in mapped if tag_set.issubset(set(item.tags or []))
+                ]
+
+        total = len(mapped)
+        offset = (page - 1) * page_size
+        paged = mapped[offset : offset + page_size]
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+        return LibraryListResponse(
+            data=paged,
+            meta=PaginationMeta(
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages,
+                has_next=page < total_pages,
+                has_prev=page > 1,
+            ),
+        )
+
     params = LibraryListParams(
         category=category,
         visibility=visibility,
@@ -144,6 +278,14 @@ async def get_library(
 ):
     """获取库详情"""
     library = await service.get_library(db, library_id, include_items=False)
+    if not library and _template_bff_enabled():
+        template = await template_service.get_template(db, template_id=library_id)
+        if template is not None:
+            pack = await template_service.get_pack(db, pack_id=template.pack_id)
+            return LibraryResponse(data=_map_template_to_library_info(template, pack))
+        pack = await template_service.get_pack(db, pack_id=library_id)
+        if pack is not None:
+            return LibraryResponse(data=_map_pack_to_library_info(pack))
     if not library:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
 
@@ -319,6 +461,32 @@ async def update_item(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
+@router.put(
+    "/seed-libraries/{library_id}/items/{item_id}",
+    response_model=ItemResponse,
+    summary="更新内容项（兼容路径）",
+    description="兼容旧客户端路径，等价于 /seed-libraries/items/{item_id}"
+)
+async def update_item_compat(
+    library_id: UUID,
+    item_id: UUID,
+    update_data: ItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新内容项（兼容路径）"""
+    _ = library_id  # item_id 已全局唯一，保留参数用于兼容旧路由
+    try:
+        is_superuser = getattr(current_user, "is_superuser", False)
+        item = await service.update_item(db, item_id, update_data, current_user.id, is_superuser)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        await db.commit()
+        return ItemResponse(data=ItemInfo.model_validate(item))
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
 @router.delete(
     "/seed-libraries/items/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -331,6 +499,31 @@ async def delete_item(
     db: AsyncSession = Depends(get_db),
 ):
     """删除内容项"""
+    try:
+        is_superuser = getattr(current_user, "is_superuser", False)
+        success = await service.delete_item(db, item_id, current_user.id, is_superuser)
+        if not success:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        await db.commit()
+        return None
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.delete(
+    "/seed-libraries/{library_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除内容项（兼容路径）",
+    description="兼容旧客户端路径，等价于 /seed-libraries/items/{item_id}"
+)
+async def delete_item_compat(
+    library_id: UUID,
+    item_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除内容项（兼容路径）"""
+    _ = library_id
     try:
         is_superuser = getattr(current_user, "is_superuser", False)
         success = await service.delete_item(db, item_id, current_user.id, is_superuser)
@@ -358,6 +551,36 @@ async def subscribe_library(
     db: AsyncSession = Depends(get_db),
 ):
     """订阅库"""
+    if _template_bff_enabled():
+        template = await template_service.get_template(db, template_id=library_id)
+        if template is None:
+            pack = await template_service.get_pack(db, pack_id=library_id)
+            if pack is not None:
+                templates = await template_service.list_templates(db, pack_id=pack.id, limit=1)
+                if templates:
+                    template = templates[0]
+        if template is not None:
+            sub = await template_service.subscribe(
+                db,
+                template_id=template.id,
+                user_id=current_user.id,
+                priority=subscription_data.priority,
+            )
+            await db.commit()
+            sub_info = SubscriptionInfo(
+                id=sub.id,
+                user_id=sub.user_id,
+                library_id=template.id,
+                library_name=template.name,
+                is_enabled=sub.is_enabled,
+                priority=sub.priority,
+                notes=subscription_data.notes,
+                subscribed_at=sub.created_at,
+                last_used_at=None,
+                created_at=sub.created_at,
+            )
+            return SubscriptionResponse(data=sub_info)
+
     try:
         subscription = await service.subscribe(db, library_id, current_user.id, subscription_data)
         if not subscription:
@@ -383,6 +606,23 @@ async def subscribe_library(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.post(
+    "/seed-libraries/{library_id}/subscribe",
+    response_model=SubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="订阅库（兼容路径）",
+    description="兼容旧客户端路径，等价于 /seed-libraries/subscribe/{library_id}"
+)
+async def subscribe_library_compat(
+    library_id: UUID,
+    subscription_data: SubscriptionCreate = SubscriptionCreate(),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """订阅库（兼容路径）"""
+    return await subscribe_library(library_id, subscription_data, current_user, db)
+
+
 @router.delete(
     "/seed-libraries/subscribe/{library_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -395,11 +635,41 @@ async def unsubscribe_library(
     db: AsyncSession = Depends(get_db),
 ):
     """取消订阅"""
+    if _template_bff_enabled():
+        template = await template_service.get_template(db, template_id=library_id)
+        if template is None:
+            pack = await template_service.get_pack(db, pack_id=library_id)
+            if pack is not None:
+                templates = await template_service.list_templates(db, pack_id=pack.id, limit=1)
+                if templates:
+                    template = templates[0]
+        if template is not None:
+            success = await template_service.unsubscribe(db, template_id=template.id, user_id=current_user.id)
+            if not success:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+            await db.commit()
+            return None
+
     success = await service.unsubscribe(db, library_id, current_user.id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     await db.commit()
     return None
+
+
+@router.delete(
+    "/seed-libraries/{library_id}/unsubscribe",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="取消订阅（兼容路径）",
+    description="兼容旧客户端路径，等价于 DELETE /seed-libraries/subscribe/{library_id}"
+)
+async def unsubscribe_library_compat(
+    library_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """取消订阅（兼容路径）"""
+    return await unsubscribe_library(library_id, current_user, db)
 
 
 @router.get(
@@ -414,6 +684,32 @@ async def get_my_subscriptions(
     db: AsyncSession = Depends(get_db),
 ):
     """获取我的订阅"""
+    if _template_bff_enabled():
+        template_subs = await template_service.list_subscriptions(
+            db,
+            user_id=current_user.id,
+            only_enabled=is_enabled if is_enabled is not None else True,
+            limit=200,
+        )
+        data = []
+        for sub in template_subs:
+            template = await template_service.get_template(db, template_id=sub.template_id)
+            data.append(
+                SubscriptionInfo(
+                    id=sub.id,
+                    user_id=sub.user_id,
+                    library_id=sub.template_id,
+                    library_name=template.name if template else "",
+                    is_enabled=sub.is_enabled,
+                    priority=sub.priority,
+                    notes=None,
+                    subscribed_at=sub.created_at,
+                    last_used_at=None,
+                    created_at=sub.created_at,
+                )
+            )
+        return SubscriptionListResponse(data=data)
+
     subscriptions = await service.get_subscriptions(db, current_user.id, is_enabled)
 
     data = []

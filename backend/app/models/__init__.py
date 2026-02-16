@@ -120,6 +120,20 @@ from app.models.seed_content import (
     SeedLibrary,
     UserLibrarySubscription,
 )
+from app.models.seed_template import (
+    SeedTemplate,
+    SeedTemplatePack,
+    SeedTemplateRewardLedger,
+    SeedTemplateSignal,
+    SeedTemplateSubscription,
+    SeedTemplateVersion,
+    TemplatePackScenario,
+    TemplatePackStatus,
+    TemplatePromotionState,
+    TemplateSignalType,
+    TemplateVersionStatus,
+    TemplateVisibility,
+)
 from app.models.semantic_memory import SemanticLink, StrategyNode
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.subject import Subject
@@ -244,6 +258,19 @@ __all__ = [
     "LibraryVisibility",
     "ItemType",
     "DifficultyLevel",
+    # Seed Template Library 2.0
+    "SeedTemplatePack",
+    "SeedTemplate",
+    "SeedTemplateVersion",
+    "SeedTemplateSignal",
+    "SeedTemplateSubscription",
+    "SeedTemplateRewardLedger",
+    "TemplatePackScenario",
+    "TemplateVisibility",
+    "TemplatePackStatus",
+    "TemplateVersionStatus",
+    "TemplatePromotionState",
+    "TemplateSignalType",
     # A/B Testing
     "ABExperiment",
     "ABExperimentVariant",

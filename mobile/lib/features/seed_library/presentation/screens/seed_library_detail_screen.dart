@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_card.dart';
@@ -25,13 +26,16 @@ class _SeedLibraryDetailScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(seedLibraryDetailProvider(widget.libraryId));
+    final currentUser = ref.watch(currentUserProvider);
+    final canEdit = state.library != null &&
+        currentUser != null &&
+        state.library!.ownerId == currentUser.id;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(state.library?.name ?? '种子库详情'),
         actions: [
-          if (state.library != null &&
-              state.library!.ownerId == null) // Editable check
+          if (canEdit)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: DS.touchTargetMinSize,
@@ -40,7 +44,7 @@ class _SeedLibraryDetailScreenState
                 // TODO: Implement edit
               },
             ),
-          if (state.library != null && state.library!.ownerId == null)
+          if (canEdit)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: DS.touchTargetMinSize,

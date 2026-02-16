@@ -9,6 +9,7 @@ from app.api.v1 import (
     analytics,
     audit,
     auth,
+    brain,
     capsules,
     chat,
     cognitive,
@@ -19,6 +20,7 @@ from app.api.v1 import (
     decay_timemachine,
     dlq_admin,
     error_book,
+    execution_copilot,
     events,
     experiments,
     feedback_admin,
@@ -51,6 +53,7 @@ from app.api.v1 import (
     profile_transparency,
     recommendations,
     seed_libraries,
+    seed_templates,
     shop,
     statistics,
     stt,
@@ -67,6 +70,7 @@ from app.config import settings
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(brain.router)
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(suggestions.router, prefix="/suggestions", tags=["suggestions"]) # Vision Item 3
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
@@ -80,6 +84,7 @@ api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
 api_router.include_router(error_book.router) # Prefix is defined in router itself (/errors)
+api_router.include_router(execution_copilot.router)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
@@ -103,6 +108,7 @@ api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(preferences.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
+api_router.include_router(seed_templates.router, tags=["seed-templates"])
 api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
 api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])

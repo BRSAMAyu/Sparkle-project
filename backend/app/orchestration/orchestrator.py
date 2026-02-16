@@ -89,12 +89,15 @@ from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
 from app.services.llm_service import llm_service
+from app.services.learning_feature_rollup_service import LearningFeatureRollupService
 from app.services.learning_cohort_service import LearningCohortService
 from app.services.meta_cold_start_service import MetaColdStartService
+from app.services.meta_rule_compiler_service import MetaRuleCompilerService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService
+from app.services.task_motif_registry_service import TaskMotifRegistryService
 from app.services.user_service import UserService
 
 # FSM States
@@ -247,6 +250,11 @@ class ChatOrchestrator:
         self.uncertainty_calibrator = UncertaintyCalibrator()
         self.plan_search_service = PlanSearchService()
         self.plan_simulator = PlanSimulatorService()
+        self.meta_rule_registry = TaskMotifRegistryService()
+        self.meta_rule_compiler = MetaRuleCompilerService()
+        self.learning_feature_rollups = LearningFeatureRollupService(redis_client=redis_client)
+        self._meta_guardrail_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+        self._meta_guardrail_cache_ttl_seconds = 120.0
         logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
 
         # Phase 3: Initialize Circuit Breaker
@@ -1051,6 +1059,16 @@ class ChatOrchestrator:
                     sufficiency_payload["decomposition_contract_score"] = check_result.decomposition_contract_score
                 if check_result.decomposition_gaps:
                     sufficiency_payload["decomposition_gaps"] = list(check_result.decomposition_gaps)
+                if check_result.ambiguity_profile:
+                    sufficiency_payload["ambiguity_profile"] = check_result.ambiguity_profile
+                if check_result.intent_hypotheses:
+                    sufficiency_payload["intent_hypotheses"] = list(check_result.intent_hypotheses)
+                if check_result.recommended_clarifications:
+                    sufficiency_payload["clarification_priority_points"] = list(
+                        check_result.recommended_clarifications
+                    )
+                if check_result.clarification_voi_score:
+                    sufficiency_payload["clarification_voi_score"] = check_result.clarification_voi_score
                 if isinstance(check_result.decomposition_contract, dict):
                     hierarchy_score = check_result.decomposition_contract.get("goal_hierarchy_score")
                     if hierarchy_score is not None:
@@ -1081,6 +1099,15 @@ class ChatOrchestrator:
                             "plan_contract_version": str(
                                 (check_result.decomposition_contract or {}).get("version", "v2")
                             ),
+                            "clarification_priority_points": json.dumps(
+                                check_result.recommended_clarifications,
+                                ensure_ascii=False,
+                            ),
+                            "ambiguity_profile": json.dumps(
+                                check_result.ambiguity_profile,
+                                ensure_ascii=False,
+                            ),
+                            "clarification_voi_score": f"{check_result.clarification_voi_score:.4f}",
                         }
                     )
                 await stream_callback(agent_service_pb2.ChatResponse(
@@ -1779,6 +1806,18 @@ class ChatOrchestrator:
                 decomposition_contract,
                 ensure_ascii=False,
             )
+        ambiguity_profile = final_state.context_data.get("ambiguity_profile")
+        if isinstance(ambiguity_profile, dict) and ambiguity_profile:
+            response_metadata["ambiguity_profile"] = json.dumps(
+                ambiguity_profile,
+                ensure_ascii=False,
+            )
+        intent_hypotheses = final_state.context_data.get("intent_hypotheses")
+        if isinstance(intent_hypotheses, list) and intent_hypotheses:
+            response_metadata["intent_hypotheses"] = json.dumps(
+                intent_hypotheses,
+                ensure_ascii=False,
+            )
         plan_feasibility_score = final_state.context_data.get("plan_feasibility_score")
         if plan_feasibility_score is not None:
             try:
@@ -1791,6 +1830,18 @@ class ChatOrchestrator:
                 response_metadata["goal_hierarchy_score"] = f"{float(goal_hierarchy_score):.2f}"
             except (TypeError, ValueError):
                 response_metadata["goal_hierarchy_score"] = str(goal_hierarchy_score)
+        goal_traceability = final_state.context_data.get("goal_traceability")
+        if goal_traceability is not None:
+            try:
+                response_metadata["goal_traceability"] = f"{float(goal_traceability):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["goal_traceability"] = str(goal_traceability)
+        final_plan_score = final_state.context_data.get("final_plan_score")
+        if final_plan_score is not None:
+            try:
+                response_metadata["final_plan_score"] = f"{float(final_plan_score):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["final_plan_score"] = str(final_plan_score)
         plan_contract_version = final_state.context_data.get("plan_contract_version")
         if plan_contract_version:
             response_metadata["plan_contract_version"] = str(plan_contract_version)
@@ -1836,6 +1887,18 @@ class ChatOrchestrator:
                 [str(item) for item in clarification_points if str(item).strip()],
                 ensure_ascii=False,
             )
+        clarification_priority_points = final_state.context_data.get("clarification_priority_points")
+        if isinstance(clarification_priority_points, list) and clarification_priority_points:
+            response_metadata["clarification_priority_points"] = json.dumps(
+                clarification_priority_points,
+                ensure_ascii=False,
+            )
+        clarification_voi_score = final_state.context_data.get("clarification_voi_score")
+        if clarification_voi_score is not None:
+            try:
+                response_metadata["clarification_voi_score"] = f"{float(clarification_voi_score):.4f}"
+            except (TypeError, ValueError):
+                response_metadata["clarification_voi_score"] = str(clarification_voi_score)
         search_budget_used = final_state.context_data.get("search_budget_used")
         if search_budget_used is not None:
             response_metadata["search_budget_used"] = str(search_budget_used)
@@ -1851,12 +1914,24 @@ class ChatOrchestrator:
                 response_metadata["winning_margin"] = f"{float(winning_margin):.4f}"
             except (TypeError, ValueError):
                 response_metadata["winning_margin"] = str(winning_margin)
+        counterfactual_options_count = final_state.context_data.get("counterfactual_options_count")
+        if counterfactual_options_count is not None:
+            response_metadata["counterfactual_options_count"] = str(counterfactual_options_count)
         simulated_risk_score = final_state.context_data.get("simulated_risk_score")
         if simulated_risk_score is not None:
             try:
                 response_metadata["simulated_risk_score"] = f"{float(simulated_risk_score):.2f}"
             except (TypeError, ValueError):
                 response_metadata["simulated_risk_score"] = str(simulated_risk_score)
+        simulated_failure_paths = final_state.context_data.get("simulated_failure_paths")
+        if isinstance(simulated_failure_paths, list) and simulated_failure_paths:
+            response_metadata["simulated_failure_paths"] = json.dumps(
+                simulated_failure_paths,
+                ensure_ascii=False,
+            )
+        execution_copilot_hint = final_state.context_data.get("execution_copilot_hint")
+        if execution_copilot_hint:
+            response_metadata["execution_copilot_hint"] = str(execution_copilot_hint)
         repair_actions = final_state.context_data.get("repair_actions")
         if isinstance(repair_actions, list) and repair_actions:
             response_metadata["repair_actions"] = json.dumps(repair_actions, ensure_ascii=False)
@@ -1890,6 +1965,48 @@ class ChatOrchestrator:
         quality_gate_block_reason = final_state.context_data.get("quality_gate_block_reason")
         if quality_gate_block_reason:
             response_metadata["quality_gate_block_reason"] = str(quality_gate_block_reason)
+        meta_rule_ids = final_state.context_data.get("meta_rule_ids")
+        if isinstance(meta_rule_ids, list) and meta_rule_ids:
+            response_metadata["meta_rule_ids"] = json.dumps(
+                [str(item) for item in meta_rule_ids if str(item).strip()],
+                ensure_ascii=False,
+            )
+        motif_graph_id = final_state.context_data.get("motif_graph_id")
+        if motif_graph_id:
+            response_metadata["motif_graph_id"] = str(motif_graph_id)
+        transfer_source = final_state.context_data.get("transfer_source")
+        if transfer_source:
+            response_metadata["transfer_source"] = str(transfer_source)
+        rule_confidence = final_state.context_data.get("rule_confidence")
+        if rule_confidence is not None:
+            try:
+                response_metadata["rule_confidence"] = f"{float(rule_confidence):.2f}"
+            except (TypeError, ValueError):
+                response_metadata["rule_confidence"] = str(rule_confidence)
+        rule_block_reason = final_state.context_data.get("rule_block_reason")
+        if rule_block_reason:
+            response_metadata["rule_block_reason"] = str(rule_block_reason)
+        rule_block_detail = final_state.context_data.get("rule_block_detail")
+        if isinstance(rule_block_detail, dict) and rule_block_detail:
+            response_metadata["rule_block_detail"] = json.dumps(rule_block_detail, ensure_ascii=False)
+        seed_template_id = final_state.context_data.get("seed_template_id")
+        if seed_template_id:
+            response_metadata["seed_template_id"] = str(seed_template_id)
+        seed_template_version_id = final_state.context_data.get("seed_template_version_id")
+        if seed_template_version_id:
+            response_metadata["seed_template_version_id"] = str(seed_template_version_id)
+        seed_template_source = final_state.context_data.get("seed_template_source")
+        if seed_template_source:
+            response_metadata["seed_template_source"] = str(seed_template_source)
+        seed_template_pack = final_state.context_data.get("seed_template_pack")
+        if seed_template_pack:
+            response_metadata["seed_template_pack"] = str(seed_template_pack)
+        template_instantiation_context = final_state.context_data.get("template_instantiation_context")
+        if isinstance(template_instantiation_context, dict) and template_instantiation_context:
+            response_metadata["template_instantiation_context"] = json.dumps(
+                template_instantiation_context,
+                ensure_ascii=False,
+            )
 
         q_score_hint = self._estimate_q_score_hint(
             route_confidence=float(response_metadata.get("route_confidence", 0.0) or 0.0),
@@ -1977,6 +2094,26 @@ class ChatOrchestrator:
         return max(0.0, min(score, 1.0))
 
     @staticmethod
+    def _estimate_goal_traceability(
+        *,
+        contract: dict[str, Any] | None,
+    ) -> float:
+        data = contract if isinstance(contract, dict) else {}
+        hierarchy_score = float(data.get("goal_hierarchy_score", 0.0) or 0.0)
+        milestones = data.get("milestones")
+        acceptance = data.get("acceptance_criteria")
+        has_goal = bool(str(data.get("goal", "")).strip())
+        milestone_count = len(milestones) if isinstance(milestones, list) else 0
+        acceptance_count = len(acceptance) if isinstance(acceptance, list) else 0
+        traceability = (
+            0.5 * max(0.0, min(hierarchy_score, 1.0))
+            + 0.2 * (1.0 if has_goal else 0.0)
+            + 0.15 * min(milestone_count / 3.0, 1.0)
+            + 0.15 * min(acceptance_count / 2.0, 1.0)
+        )
+        return max(0.0, min(traceability, 1.0))
+
+    @staticmethod
     def _estimate_plan_personalization_fit(
         *,
         plan: ExecutablePlan,
@@ -2003,6 +2140,168 @@ class ChatOrchestrator:
         parallel_layers = len(plan.execution_order or [])
         raw = 0.08 * tool_count + 0.04 * parallel_layers
         return max(0.0, min(raw, 1.0))
+
+    @staticmethod
+    def _build_meta_rule_guardrail_inputs(
+        *,
+        uncertainty_score: float,
+        simulated_risk_score: float,
+        route_confidence: float,
+    ) -> dict[str, float]:
+        negative_feedback_rate = max(0.0, min(1.0, 1.0 - route_confidence))
+        fallback_rate = max(0.0, min(1.0, simulated_risk_score))
+        stable_cohort_q_gap = max(0.0, min(1.0, uncertainty_score * 0.2))
+        p95_latency_delta = max(0.0, min(1.0, simulated_risk_score * 0.2))
+        return {
+            "negative_feedback_rate": negative_feedback_rate,
+            "fallback_rate": fallback_rate,
+            "stable_cohort_q_gap": stable_cohort_q_gap,
+            "p95_latency_delta": p95_latency_delta,
+        }
+
+    async def _resolve_meta_rule_guardrail_inputs(
+        self,
+        *,
+        task_type: str,
+        complexity_tier: str,
+        cohort_id: str,
+        user_scope: str,
+        uncertainty_score: float,
+        simulated_risk_score: float,
+        route_confidence: float,
+    ) -> dict[str, Any]:
+        baseline = self._build_meta_rule_guardrail_inputs(
+            uncertainty_score=uncertainty_score,
+            simulated_risk_score=simulated_risk_score,
+            route_confidence=route_confidence,
+        )
+
+        try:
+            now = time.monotonic()
+            cache_key = "rollups:2d"
+            cached = self._meta_guardrail_cache.get(cache_key)
+            if cached and now < cached[0]:
+                rollups = cached[1]
+            else:
+                rollups = await self.learning_feature_rollups.list_rollups(days=2)
+                self._meta_guardrail_cache[cache_key] = (now + self._meta_guardrail_cache_ttl_seconds, rollups)
+        except Exception:
+            rollups = []
+
+        if not isinstance(rollups, list) or not rollups:
+            return {**baseline, "_source": "heuristic", "_support": 0}
+
+        def _match(row: dict[str, Any]) -> bool:
+            if str(row.get("task_type", "unknown")) != task_type:
+                return False
+            row_tier = str(row.get("complexity_tier", "unknown"))
+            if row_tier not in {"unknown", complexity_tier}:
+                return False
+            row_cohort = str(row.get("cohort_id", "") or "")
+            row_scope = str(row.get("user_scope", "") or "")
+            if cohort_id and row_cohort == cohort_id:
+                return True
+            if user_scope and row_scope == user_scope:
+                return True
+            return not row_cohort
+
+        matched = [row for row in rollups if isinstance(row, dict) and _match(row)]
+        if not matched:
+            return {**baseline, "_source": "heuristic", "_support": 0}
+
+        selected_total = 0
+        fallback_total = 0
+        feedback_up_total = 0
+        feedback_down_total = 0
+        latency_weighted = 0.0
+        latency_selected = 0
+        cohort_scores: dict[str, tuple[float, int]] = {}
+
+        for row in matched:
+            counts = row.get("counts") if isinstance(row.get("counts"), dict) else {}
+            selected = int(counts.get("expert_selected", 0) or 0)
+            if selected <= 0:
+                continue
+            selected_total += selected
+            fallback_total += int(counts.get("expert_fallback", 0) or 0)
+            feedback_up_total += int(counts.get("feedback_up", 0) or 0)
+            feedback_down_total += int(counts.get("feedback_down", 0) or 0)
+            latency_weighted += float(row.get("normalized_latency", 0.0) or 0.0) * selected
+            latency_selected += selected
+            cohort_key = str(row.get("cohort_id", "") or "")
+            if cohort_key:
+                q_score = float(row.get("q_score", 0.0) or 0.0)
+                current_q, current_n = cohort_scores.get(cohort_key, (0.0, 0))
+                cohort_scores[cohort_key] = (current_q + (q_score * selected), current_n + selected)
+
+        if selected_total <= 0:
+            return {**baseline, "_source": "heuristic", "_support": 0}
+
+        feedback_total = feedback_up_total + feedback_down_total
+        observed = {
+            "fallback_rate": max(0.0, min(1.0, fallback_total / selected_total)),
+            "negative_feedback_rate": max(
+                0.0,
+                min(1.0, (feedback_down_total / feedback_total) if feedback_total > 0 else baseline["negative_feedback_rate"]),
+            ),
+            "p95_latency_delta": max(
+                0.0,
+                min(1.0, (latency_weighted / latency_selected) if latency_selected > 0 else baseline["p95_latency_delta"]),
+            ),
+            "stable_cohort_q_gap": baseline["stable_cohort_q_gap"],
+        }
+
+        stable_scores = [
+            total_q / total_n
+            for total_q, total_n in cohort_scores.values()
+            if total_n >= 20
+        ]
+        if len(stable_scores) >= 2:
+            observed["stable_cohort_q_gap"] = max(0.0, min(1.0, max(stable_scores) - min(stable_scores)))
+
+        alpha = min(0.8, max(0.0, selected_total / 120.0))
+        return {
+            "negative_feedback_rate": round((alpha * observed["negative_feedback_rate"]) + ((1.0 - alpha) * baseline["negative_feedback_rate"]), 4),
+            "fallback_rate": round((alpha * observed["fallback_rate"]) + ((1.0 - alpha) * baseline["fallback_rate"]), 4),
+            "stable_cohort_q_gap": round((alpha * observed["stable_cohort_q_gap"]) + ((1.0 - alpha) * baseline["stable_cohort_q_gap"]), 4),
+            "p95_latency_delta": round((alpha * observed["p95_latency_delta"]) + ((1.0 - alpha) * baseline["p95_latency_delta"]), 4),
+            "_source": "blended_rollup",
+            "_support": selected_total,
+        }
+
+    @staticmethod
+    def _apply_meta_rule_patch_to_plan(
+        *,
+        executable_plan: ExecutablePlan,
+        patch: dict[str, Any],
+    ) -> None:
+        channel = str(patch.get("channel", ""))
+        thresholds = patch.get("threshold_overrides") if isinstance(patch.get("threshold_overrides"), dict) else {}
+        action_overrides = patch.get("action_overrides") if isinstance(patch.get("action_overrides"), list) else []
+
+        if channel == "toolchain":
+            max_parallel = int(float(thresholds.get("max_parallel_experts", 0) or 0))
+            timeout_multiplier = float(thresholds.get("timeout_multiplier", 1.0) or 1.0)
+            if timeout_multiplier != 1.0:
+                for step in executable_plan.tool_calls:
+                    step.timeout_ms = int(max(1000, float(step.timeout_ms) * timeout_multiplier))
+            if max_parallel > 0 and executable_plan.execution_order:
+                trimmed_layers: list[list[str]] = []
+                for layer in executable_plan.execution_order:
+                    current = [str(item) for item in layer][:max_parallel]
+                    if current:
+                        trimmed_layers.append(current)
+                if trimmed_layers:
+                    executable_plan.execution_order = trimmed_layers
+
+        if channel == "routing":
+            if "degrade_parallelism" in [str(item) for item in action_overrides] and executable_plan.execution_order:
+                sequential_order: list[list[str]] = []
+                for layer in executable_plan.execution_order:
+                    for step_id in layer:
+                        sequential_order.append([str(step_id)])
+                if sequential_order:
+                    executable_plan.execution_order = sequential_order
 
     def _build_nonempty_fallback_response(
         self,
@@ -2514,7 +2813,10 @@ class ChatOrchestrator:
                         plan=candidate_plan,
                         contract=state.context_data.get("decomposition_contract"),
                     )
-                    task_fit = self._estimate_plan_task_fit(candidate_plan)
+                    verifier_ensemble = float(verifier.verifier_ensemble_score)
+                    goal_traceability = self._estimate_goal_traceability(
+                        contract=state.context_data.get("decomposition_contract"),
+                    )
                     personalization_fit = self._estimate_plan_personalization_fit(
                         plan=candidate_plan,
                         user_context_payload=user_context_payload,
@@ -2522,9 +2824,10 @@ class ChatOrchestrator:
                     )
                     latency_norm = self._estimate_plan_latency_norm(candidate_plan)
                     score = (
-                        0.45 * verifier.verifier_score
-                        + 0.25 * task_fit
-                        + 0.20 * personalization_fit
+                        0.35 * verifier_ensemble
+                        + 0.25 * max(0.0, min(float(verifier.contract_coverage), 1.0))
+                        + 0.15 * goal_traceability
+                        + 0.15 * personalization_fit
                         + 0.10 * (1.0 - latency_norm)
                     )
                     return max(0.0, min(score, 1.0))
@@ -2534,11 +2837,18 @@ class ChatOrchestrator:
                     depth: int,
                     branch_index: int,
                 ) -> ExecutablePlan | None:
-                    if depth > 1:
+                    if depth > max(1, int(getattr(settings, "PLAN_SEARCH_MAX_DEPTH", 3))):
                         return None
+                    variant_hints = [
+                        "focus on stronger acceptance criteria and measurable outputs",
+                        "focus on tighter dependency graph and fewer critical-path breaks",
+                        "focus on lower latency and smaller parallel fanout without losing quality",
+                    ]
+                    variant_hint = variant_hints[branch_index % len(variant_hints)]
                     search_hint = (
                         "\n\n[Search hint: produce an alternative plan that improves execution clarity, "
-                        "dependency ordering, and acceptance criteria while controlling latency budget.]"
+                        "dependency ordering, and acceptance criteria while controlling latency budget. "
+                        f"Variant={variant_hint}.]"
                     )
                     return await self.lang_graph_planner.replan(
                         message=f"{user_message}{search_hint}",
@@ -2546,24 +2856,33 @@ class ChatOrchestrator:
                         user_id=user_id,
                         session_id=session_id,
                         previous_plan=seed_plan,
-                        conflict_info={"has_conflict": False, "search_branch": branch_index, "search_depth": depth},
+                        conflict_info={
+                            "has_conflict": False,
+                            "search_branch": branch_index,
+                            "search_depth": depth,
+                            "search_variant": variant_hint,
+                        },
                         plan_id=plan_id_str,
                         execution_feedback=execution_feedback,
                     )
 
+                normalized_mode = normalize_chat_mode(str(chat_mode or CHAT_MODE_STANDARD))
+                is_edu_mode = normalized_mode in {"study_plan", "error_diagnosis", "deep_analysis"}
                 search_result = await self.plan_search_service.search(
                     base_plan=executable_plan,
                     generate_candidate=_generate_candidate_plan,
                     score_plan=_score_candidate_plan,
-                    beam_width=int(getattr(settings, "PLAN_SEARCH_BEAM_WIDTH", 3)),
-                    max_depth=int(getattr(settings, "PLAN_SEARCH_MAX_DEPTH", 4)),
-                    time_budget_ms=int(getattr(settings, "PLAN_SEARCH_TIME_BUDGET_MS", 1200)),
+                    beam_width=int(getattr(settings, "PLAN_SEARCH_BEAM_WIDTH", 4 if is_edu_mode else 3)),
+                    max_depth=int(getattr(settings, "PLAN_SEARCH_MAX_DEPTH", 3 if is_edu_mode else 4)),
+                    time_budget_ms=int(getattr(settings, "PLAN_SEARCH_TIME_BUDGET_MS", 1400 if is_edu_mode else 1200)),
+                    candidates_per_branch=int(getattr(settings, "PLAN_SEARCH_CANDIDATES_PER_BRANCH", 3)),
                 )
                 executable_plan = search_result.best_plan
                 state.context_data["search_budget_used"] = search_result.search_budget_used_ms
                 state.context_data["plan_revision_count"] = search_result.plan_revision_count
                 state.context_data["candidate_count"] = search_result.candidate_count
                 state.context_data["winning_margin"] = search_result.winning_margin
+                state.context_data["counterfactual_options_count"] = max(0, int(search_result.candidate_count) - 1)
 
             plan_ir = self.lang_graph_planner.to_plan_ir_v2(
                 executable_plan,
@@ -2580,6 +2899,25 @@ class ChatOrchestrator:
             state.context_data["verifier_ensemble_score"] = verifier_result.verifier_ensemble_score
             state.context_data["contract_coverage"] = verifier_result.contract_coverage
             state.context_data["verifier_fail_reasons"] = list(verifier_result.verifier_fail_reasons)
+            goal_traceability = self._estimate_goal_traceability(
+                contract=state.context_data.get("decomposition_contract"),
+            )
+            personalization_fit = self._estimate_plan_personalization_fit(
+                plan=executable_plan,
+                user_context_payload=user_context_payload,
+                selected_experts=selected_experts if isinstance(selected_experts, list) else [],
+            )
+            latency_norm = self._estimate_plan_latency_norm(executable_plan)
+            final_plan_score = (
+                0.35 * float(verifier_result.verifier_ensemble_score)
+                + 0.25 * float(verifier_result.contract_coverage)
+                + 0.15 * goal_traceability
+                + 0.15 * personalization_fit
+                + 0.10 * (1.0 - latency_norm)
+            )
+            state.context_data["goal_traceability"] = round(goal_traceability, 4)
+            state.context_data["personalization_fit"] = round(personalization_fit, 4)
+            state.context_data["final_plan_score"] = round(max(0.0, min(final_plan_score, 1.0)), 4)
 
             if settings.ENABLE_REASONING_VERIFIER_V1 and self.reasoning_verifier.should_block(verifier_result):
                 clarification_lines = [
@@ -2611,7 +2949,8 @@ class ChatOrchestrator:
             should_apply_decomposition_gate = (
                 settings.ENABLE_DECOMPOSITION_QUALITY_GATE
                 and (
-                    normalize_chat_mode(chat_mode) == CHAT_MODE_STUDY_PLAN
+                    normalize_chat_mode(chat_mode) in {"study_plan", "deep_analysis", "error_diagnosis", "expert_auto"}
+                    or is_expert_chat_mode(chat_mode)
                     or self._is_task_decomposition_request(
                         message=user_message,
                         unified_routing_result=None,
@@ -2695,6 +3034,10 @@ class ChatOrchestrator:
                     state.context_data["uncertainty_reasons"] = uncertainty.reasons
                 if uncertainty.clarification_points:
                     state.context_data["clarification_points"] = list(uncertainty.clarification_points)
+                if uncertainty.clarification_priority_points:
+                    state.context_data["clarification_priority_points"] = list(
+                        uncertainty.clarification_priority_points
+                    )
 
                 if uncertainty.clarification_needed:
                     clarification_points = uncertainty.clarification_points or [
@@ -2716,6 +3059,10 @@ class ChatOrchestrator:
                                 "verifier_ensemble_score": f"{verifier_result.verifier_ensemble_score:.2f}",
                                 "contract_coverage": f"{verifier_result.contract_coverage:.2f}",
                                 "clarification_points": json.dumps(clarification_points, ensure_ascii=False),
+                                "clarification_priority_points": json.dumps(
+                                    state.context_data.get("clarification_priority_points", []),
+                                    ensure_ascii=False,
+                                ),
                             },
                         )
                     )
@@ -2733,6 +3080,94 @@ class ChatOrchestrator:
                 state.context_data["simulated_risk_factors"] = simulation.risk_factors
             if simulation.suggested_actions:
                 state.context_data["simulated_risk_actions"] = simulation.suggested_actions
+            if simulation.simulated_failure_paths:
+                state.context_data["simulated_failure_paths"] = simulation.simulated_failure_paths
+            if simulation.preemptive_actions:
+                state.context_data["preemptive_actions"] = simulation.preemptive_actions
+                state.context_data["execution_copilot_hint"] = (
+                    f"建议先执行纠偏动作：{simulation.preemptive_actions[0]}"
+                )
+
+            if bool(getattr(settings, "ENABLE_META_RULE_ENGINE_V1", False)):
+                normalized_mode = normalize_chat_mode(str(chat_mode or CHAT_MODE_STANDARD))
+                if normalized_mode in {"study_plan", "error_diagnosis", "deep_analysis"}:
+                    active_rules = await self.meta_rule_registry.list_active_rules(
+                        domain="education",
+                        task_type=normalized_mode,
+                        redis_client=self.redis,
+                    )
+                    guardrail_inputs = await self._resolve_meta_rule_guardrail_inputs(
+                        task_type=normalized_mode,
+                        complexity_tier=str(
+                            (state.context_data.get("expert_routing_metadata") or {}).get("complexity_tier", "unknown")
+                        ),
+                        cohort_id=str(state.context_data.get("cohort_id", "")),
+                        user_scope=str(state.context_data.get("user_scope", "")),
+                        uncertainty_score=float(state.context_data.get("uncertainty_score", 0.0) or 0.0),
+                        simulated_risk_score=float(simulation.simulated_risk_score),
+                        route_confidence=float(route_decision.confidence or 0.0),
+                    )
+                    compiled_rules = self.meta_rule_compiler.compile(
+                        rules=active_rules,
+                        task_type=normalized_mode,
+                        complexity_tier=str(
+                            (state.context_data.get("expert_routing_metadata") or {}).get("complexity_tier", "unknown")
+                        ),
+                        cohort_id=str(state.context_data.get("cohort_id", "")),
+                        user_scope=str(state.context_data.get("user_scope", "")),
+                        allow_personal=not bool(state.context_data.get("cold_start_bootstrap", "")),
+                        guardrail_inputs=guardrail_inputs,
+                    )
+                    state.context_data["meta_rule_ids"] = list(compiled_rules.meta_rule_ids)
+                    state.context_data["motif_graph_id"] = str(compiled_rules.motif_graph_id)
+                    state.context_data["transfer_source"] = str(compiled_rules.transfer_source)
+                    state.context_data["rule_confidence"] = float(compiled_rules.rule_confidence)
+                    if compiled_rules.rule_block_reason:
+                        state.context_data["rule_block_reason"] = str(compiled_rules.rule_block_reason)
+                        if isinstance(compiled_rules.rule_block_detail, dict):
+                            state.context_data["rule_block_detail"] = compiled_rules.rule_block_detail
+                    elif compiled_rules.patches:
+                        ordered_channels = ("routing", "prompt", "toolchain")
+                        applied_patches: dict[str, dict[str, Any]] = {}
+                        for channel in ordered_channels:
+                            patch = compiled_rules.patches.get(channel)
+                            if not isinstance(patch, dict):
+                                continue
+                            self._apply_meta_rule_patch_to_plan(
+                                executable_plan=executable_plan,
+                                patch=patch,
+                            )
+                            applied_patches[channel] = patch
+                        if applied_patches:
+                            state.context_data["meta_rule_patches"] = applied_patches
+                            existing_layers = state.context_data.get("policy_layers", [])
+                            normalized_layers = [
+                                layer
+                                for layer in existing_layers
+                                if isinstance(layer, dict) and str(layer.get("policy_id", "")) != "meta_rule_engine_v1"
+                            ]
+                            transfer_source = str(compiled_rules.transfer_source or "global")
+                            if transfer_source == "cohort":
+                                scope_key = str(state.context_data.get("cohort_id", "") or "")
+                            elif transfer_source == "personal":
+                                scope_key = str(state.context_data.get("user_scope", "") or "")
+                            else:
+                                scope_key = "all"
+                            for channel in ordered_channels:
+                                patch = applied_patches.get(channel)
+                                if not isinstance(patch, dict):
+                                    continue
+                                normalized_layers.append(
+                                    {
+                                        "channel": channel,
+                                        "policy_id": "meta_rule_engine_v1",
+                                        "scope_type": transfer_source,
+                                        "scope_key": scope_key,
+                                        "source_rule_ids": list(patch.get("source_rule_ids", [])),
+                                        "confidence": float(patch.get("confidence", compiled_rules.rule_confidence)),
+                                    }
+                                )
+                            state.context_data["policy_layers"] = normalized_layers
 
             await self.observability.log_langgraph_plan(
                 user_id=user_id,
@@ -3551,6 +3986,18 @@ class ChatOrchestrator:
                     workflow_id=workflow_id, prompt_version=prompt_version,
                 )
                 state.context_data["chat_mode"] = chat_mode
+                for key in (
+                    "seed_template_id",
+                    "seed_template_version_id",
+                    "seed_template_source",
+                    "seed_template_pack",
+                ):
+                    value = grpc_context.get(key) if isinstance(grpc_context, dict) else None
+                    if value:
+                        state.context_data[key] = value
+                template_inst_context = grpc_context.get("template_instantiation_context") if isinstance(grpc_context, dict) else None
+                if isinstance(template_inst_context, dict) and template_inst_context:
+                    state.context_data["template_instantiation_context"] = template_inst_context
                 if sufficiency_payload:
                     if isinstance(sufficiency_payload.get("decomposition_contract"), dict):
                         state.context_data["decomposition_contract"] = sufficiency_payload["decomposition_contract"]
@@ -3562,6 +4009,16 @@ class ChatOrchestrator:
                         state.context_data["goal_hierarchy_score"] = sufficiency_payload["goal_hierarchy_score"]
                     if "plan_contract_version" in sufficiency_payload:
                         state.context_data["plan_contract_version"] = sufficiency_payload["plan_contract_version"]
+                    if isinstance(sufficiency_payload.get("ambiguity_profile"), dict):
+                        state.context_data["ambiguity_profile"] = sufficiency_payload["ambiguity_profile"]
+                    if isinstance(sufficiency_payload.get("intent_hypotheses"), list):
+                        state.context_data["intent_hypotheses"] = sufficiency_payload["intent_hypotheses"]
+                    if isinstance(sufficiency_payload.get("clarification_priority_points"), list):
+                        state.context_data["clarification_priority_points"] = sufficiency_payload[
+                            "clarification_priority_points"
+                        ]
+                    if "clarification_voi_score" in sufficiency_payload:
+                        state.context_data["clarification_voi_score"] = sufficiency_payload["clarification_voi_score"]
                 if expert_routing_decision:
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)

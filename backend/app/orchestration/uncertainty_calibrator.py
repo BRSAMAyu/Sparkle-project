@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.config import settings
 
@@ -11,6 +12,7 @@ class UncertaintyCalibrationResult:
     clarification_needed: bool
     reasons: list[str] = field(default_factory=list)
     clarification_points: list[str] = field(default_factory=list)
+    clarification_priority_points: list[dict[str, Any]] = field(default_factory=list)
 
     def to_metadata(self) -> dict[str, str]:
         return {
@@ -76,7 +78,11 @@ class UncertaintyCalibrator:
         if decomposition_gap_count > 0:
             reasons.append("decomposition_gaps_present")
 
-        clarification_points = cls._select_clarification_points(reasons)
+        clarification_ranked = cls._rank_clarification_points(
+            reasons=reasons,
+            uncertainty=uncertainty,
+        )
+        clarification_points = [str(item.get("question", "")) for item in clarification_ranked if str(item.get("question", "")).strip()]
         threshold = float(getattr(settings, "UNCERTAINTY_CLARIFICATION_THRESHOLD", 0.62))
         clarification_needed = bool(uncertainty >= threshold)
         return UncertaintyCalibrationResult(
@@ -84,23 +90,50 @@ class UncertaintyCalibrator:
             clarification_needed=clarification_needed,
             reasons=reasons,
             clarification_points=clarification_points,
+            clarification_priority_points=clarification_ranked,
         )
 
     @staticmethod
-    def _select_clarification_points(reasons: list[str]) -> list[str]:
-        mapping = {
-            "low_verifier_score": "补充目标与约束",
-            "low_contract_coverage": "补充里程碑和验收标准",
-            "low_route_confidence": "明确任务类型和优先级",
-            "low_plan_feasibility": "提供可用资源与时间预算",
-            "decomposition_gaps_present": "补充缺失的拆解字段",
-            "ambiguous_user_intent": "明确你最想先推进的结果",
+    def _rank_clarification_points(
+        *,
+        reasons: list[str],
+        uncertainty: float,
+    ) -> list[dict[str, Any]]:
+        mapping: dict[str, tuple[str, float]] = {
+            "low_verifier_score": ("补充目标与约束", 0.34),
+            "low_contract_coverage": ("补充里程碑和验收标准", 0.31),
+            "low_route_confidence": ("明确任务类型和优先级", 0.24),
+            "low_plan_feasibility": ("提供可用资源与时间预算", 0.26),
+            "decomposition_gaps_present": ("补充缺失的拆解字段", 0.28),
+            "ambiguous_user_intent": ("明确你最想先推进的结果", 0.30),
         }
-        selected: list[str] = []
+        selected: list[dict[str, Any]] = []
         for reason in reasons:
-            point = mapping.get(reason)
-            if point and point not in selected:
-                selected.append(point)
-            if len(selected) >= 3:
+            item = mapping.get(reason)
+            if item is None:
+                continue
+            question, base_gain = item
+            if any(str(existing.get("question", "")) == question for existing in selected):
+                continue
+            expected_gain = base_gain * (0.75 + 0.25 * max(0.0, min(uncertainty, 1.0)))
+            selected.append(
+                {
+                    "reason": reason,
+                    "question": question,
+                    "expected_gain": round(max(0.01, min(expected_gain, 1.0)), 4),
+                }
+            )
+        selected.sort(key=lambda item: float(item.get("expected_gain", 0.0)), reverse=True)
+        ranked: list[dict[str, Any]] = []
+        for idx, item in enumerate(selected, start=1):
+            ranked.append(
+                {
+                    "priority": idx,
+                    "reason": item["reason"],
+                    "question": item["question"],
+                    "expected_gain": item["expected_gain"],
+                }
+            )
+            if len(ranked) >= 3:
                 break
-        return selected
+        return ranked

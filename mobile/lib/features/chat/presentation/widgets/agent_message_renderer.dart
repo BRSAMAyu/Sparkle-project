@@ -322,13 +322,32 @@ class AgentMessageRenderer extends StatelessWidget {
     final policyId = collaborationData['policy_id'] as String?;
     final complexityTier = collaborationData['complexity_tier'] as String?;
     final routeConfidenceRaw = collaborationData['route_confidence'];
-    final decompositionContractRaw = collaborationData['decomposition_contract'];
+    final decompositionContractRaw =
+        collaborationData['decomposition_contract'];
     final decompositionContractScoreRaw =
         collaborationData['decomposition_contract_score'];
     final decompositionGapsRaw = collaborationData['decomposition_gaps'];
     final planFeasibilityScoreRaw = collaborationData['plan_feasibility_score'];
     final planContractVersion =
         collaborationData['plan_contract_version'] as String?;
+    final verifierEnsembleScoreRaw =
+        collaborationData['verifier_ensemble_score'];
+    final candidateCountRaw = collaborationData['candidate_count'];
+    final winningMarginRaw = collaborationData['winning_margin'];
+    final ambiguityProfileRaw = collaborationData['ambiguity_profile'];
+    final clarificationPriorityPointsRaw =
+        collaborationData['clarification_priority_points'];
+    final clarificationVoiScoreRaw =
+        collaborationData['clarification_voi_score'];
+    final counterfactualOptionsCountRaw =
+        collaborationData['counterfactual_options_count'];
+    final simulatedRiskScoreRaw = collaborationData['simulated_risk_score'];
+    final simulatedFailurePathsRaw =
+        collaborationData['simulated_failure_paths'];
+    final executionCopilotHint =
+        collaborationData['execution_copilot_hint'] as String?;
+    final qualityGateBlockReason =
+        collaborationData['quality_gate_block_reason'] as String?;
 
     final selectedExperts = selectedExpertsRaw is List
         ? selectedExpertsRaw
@@ -352,6 +371,73 @@ class AgentMessageRenderer extends StatelessWidget {
     final planFeasibilityScore = planFeasibilityScoreRaw is num
         ? planFeasibilityScoreRaw.toDouble()
         : double.tryParse('${planFeasibilityScoreRaw ?? ''}');
+    final verifierEnsembleScore = verifierEnsembleScoreRaw is num
+        ? verifierEnsembleScoreRaw.toDouble()
+        : double.tryParse('${verifierEnsembleScoreRaw ?? ''}');
+    final candidateCount = candidateCountRaw is num
+        ? candidateCountRaw.toInt()
+        : int.tryParse('${candidateCountRaw ?? ''}');
+    final winningMargin = winningMarginRaw is num
+        ? winningMarginRaw.toDouble()
+        : double.tryParse('${winningMarginRaw ?? ''}');
+    final clarificationVoiScore = clarificationVoiScoreRaw is num
+        ? clarificationVoiScoreRaw.toDouble()
+        : double.tryParse('${clarificationVoiScoreRaw ?? ''}');
+    final counterfactualOptionsCount = counterfactualOptionsCountRaw is num
+        ? counterfactualOptionsCountRaw.toInt()
+        : int.tryParse('${counterfactualOptionsCountRaw ?? ''}');
+    final simulatedRiskScore = simulatedRiskScoreRaw is num
+        ? simulatedRiskScoreRaw.toDouble()
+        : double.tryParse('${simulatedRiskScoreRaw ?? ''}');
+    final ambiguityProfile = () {
+      if (ambiguityProfileRaw is Map<String, dynamic>) {
+        return ambiguityProfileRaw;
+      }
+      if (ambiguityProfileRaw is String &&
+          ambiguityProfileRaw.trim().startsWith('{')) {
+        try {
+          final parsed = jsonDecode(ambiguityProfileRaw);
+          if (parsed is Map<String, dynamic>) {
+            return parsed;
+          }
+        } catch (_) {}
+      }
+      return <String, dynamic>{};
+    }();
+    final clarificationPriorityPoints = () {
+      if (clarificationPriorityPointsRaw is List) {
+        return clarificationPriorityPointsRaw
+            .whereType<Map<String, dynamic>>()
+            .toList();
+      }
+      if (clarificationPriorityPointsRaw is String &&
+          clarificationPriorityPointsRaw.trim().startsWith('[')) {
+        try {
+          final parsed = jsonDecode(clarificationPriorityPointsRaw);
+          if (parsed is List) {
+            return parsed.whereType<Map<String, dynamic>>().toList();
+          }
+        } catch (_) {}
+      }
+      return <Map<String, dynamic>>[];
+    }();
+    final simulatedFailurePaths = () {
+      if (simulatedFailurePathsRaw is List) {
+        return simulatedFailurePathsRaw
+            .whereType<Map<String, dynamic>>()
+            .toList();
+      }
+      if (simulatedFailurePathsRaw is String &&
+          simulatedFailurePathsRaw.trim().startsWith('[')) {
+        try {
+          final parsed = jsonDecode(simulatedFailurePathsRaw);
+          if (parsed is List) {
+            return parsed.whereType<Map<String, dynamic>>().toList();
+          }
+        } catch (_) {}
+      }
+      return <Map<String, dynamic>>[];
+    }();
     final decompositionGaps = () {
       if (decompositionGapsRaw is List) {
         return decompositionGapsRaw.map((e) => '$e').toList();
@@ -411,9 +497,39 @@ class AgentMessageRenderer extends StatelessWidget {
         '拆解契约: ${(decompositionContractScore * 100).toStringAsFixed(0)}%',
       if (planFeasibilityScore != null)
         '可执行性: ${(planFeasibilityScore * 100).toStringAsFixed(0)}%',
+      if (verifierEnsembleScore != null)
+        '验证器: ${(verifierEnsembleScore * 100).toStringAsFixed(0)}%',
+      if (candidateCount != null) '候选: $candidateCount',
+      if (winningMargin != null)
+        '领先边际: ${(winningMargin * 100).toStringAsFixed(1)}%',
+      if (counterfactualOptionsCount != null)
+        '反事实备选: $counterfactualOptionsCount',
+      if (simulatedRiskScore != null)
+        '仿真风险: ${(simulatedRiskScore * 100).toStringAsFixed(0)}%',
       if (planContractVersion != null && planContractVersion.isNotEmpty)
         '契约版本: $planContractVersion',
     ].join(' · ');
+    final ambiguityScoreRaw = ambiguityProfile['ambiguity_score'];
+    final ambiguityScore = ambiguityScoreRaw is num
+        ? ambiguityScoreRaw.toDouble()
+        : double.tryParse('${ambiguityScoreRaw ?? ''}');
+    final ambiguityDimensionsRaw = ambiguityProfile['ambiguous_dimensions'];
+    final ambiguityDimensions = ambiguityDimensionsRaw is List
+        ? ambiguityDimensionsRaw.map((e) => '$e').toList()
+        : <String>[];
+    final topClarification = clarificationPriorityPoints.isNotEmpty
+        ? clarificationPriorityPoints.first
+        : null;
+    final topClarificationQuestion = topClarification?['question']?.toString();
+    final topClarificationReason = topClarification?['reason']?.toString();
+    final topClarificationExpectedGain = double.tryParse(
+      '${topClarification?['expected_gain'] ?? ''}',
+    );
+    final simulatedFailurePathLabels = simulatedFailurePaths
+        .map((e) => e['path']?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .take(2)
+        .toList();
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacing8),
@@ -459,6 +575,16 @@ class AgentMessageRenderer extends StatelessWidget {
                   ),
             ),
           ],
+          if (qualityGateBlockReason != null &&
+              qualityGateBlockReason.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              '质量门阻断: $qualityGateBlockReason',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ],
           if (decompositionGaps.isNotEmpty) ...[
             const SizedBox(height: DS.spacing6),
             Text(
@@ -468,6 +594,66 @@ class AgentMessageRenderer extends StatelessWidget {
                   ),
             ),
           ],
+          if (clarificationPriorityPoints.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '我为什么问这 1 个问题',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              topClarificationQuestion ?? '',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (topClarificationReason != null)
+              Padding(
+                padding: const EdgeInsets.only(top: DS.spacing4),
+                child: Text(
+                  '原因: $topClarificationReason'
+                  '${topClarificationExpectedGain != null ? ' · 信息增益 ${(topClarificationExpectedGain * 100).round()}%' : ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+          ],
+          if (ambiguityScore != null || ambiguityDimensions.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              [
+                if (ambiguityScore != null)
+                  '意图歧义: ${(ambiguityScore * 100).toStringAsFixed(0)}%',
+                if (clarificationVoiScore != null)
+                  '澄清价值: ${(clarificationVoiScore * 100).toStringAsFixed(0)}%',
+                if (ambiguityDimensions.isNotEmpty)
+                  '维度: ${ambiguityDimensions.take(3).join('、')}',
+              ].join(' · '),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          if (simulatedFailurePaths.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              '预估风险路径: ${simulatedFailurePathLabels.join('、')}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          if (executionCopilotHint != null && executionCopilotHint.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing6),
+              child: Text(
+                '执行建议: $executionCopilotHint',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ),
           if (contractGoal.isNotEmpty ||
               contractMilestones.isNotEmpty ||
               contractAcceptance.isNotEmpty) ...[

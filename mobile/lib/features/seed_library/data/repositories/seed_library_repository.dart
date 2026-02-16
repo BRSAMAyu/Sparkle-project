@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 
 /// Seed Library Repository
@@ -59,11 +60,12 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraries,
         queryParameters: queryParams,
       );
-
-      final data = response.data!;
-      return PaginatedResponse<SeedLibrary>.fromJson(
-        data,
-        (json) => SeedLibrary.fromJson(json as Map<String, dynamic>),
+      return PaginatedResponse<SeedLibrary>.fromShared(
+        ApiResponseParser.parsePaginated<SeedLibrary>(
+          response.data,
+          (json) => SeedLibrary.fromJson(json as Map<String, dynamic>),
+          action: 'list libraries',
+        ),
       );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to load libraries';
@@ -77,8 +79,9 @@ class SeedLibraryRepository {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.seedLibrary(id),
       );
-
-      return SeedLibrary.fromJson(response.data!);
+      return SeedLibrary.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'get library'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to load library';
       throw Exception(error.toString());
@@ -92,8 +95,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraries,
         data: request.toJson(),
       );
-
-      return SeedLibrary.fromJson(response.data!);
+      return SeedLibrary.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'create library'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to create library';
       throw Exception(error.toString());
@@ -110,8 +114,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibrary(id),
         data: request.toJson(),
       );
-
-      return SeedLibrary.fromJson(response.data!);
+      return SeedLibrary.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'update library'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to update library';
       throw Exception(error.toString());
@@ -161,11 +166,12 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraryItems(libraryId),
         queryParameters: queryParams,
       );
-
-      final data = response.data!;
-      return PaginatedResponse<SeedItem>.fromJson(
-        data,
-        (json) => SeedItem.fromJson(json as Map<String, dynamic>),
+      return PaginatedResponse<SeedItem>.fromShared(
+        ApiResponseParser.parsePaginated<SeedItem>(
+          response.data,
+          (json) => SeedItem.fromJson(json as Map<String, dynamic>),
+          action: 'list library items',
+        ),
       );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to load items';
@@ -202,8 +208,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraryItems(libraryId),
         data: data,
       );
-
-      return SeedItem.fromJson(response.data!);
+      return SeedItem.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'add library item'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to add item';
       throw Exception(error.toString());
@@ -239,8 +246,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibraryItem(libraryId, itemId),
         data: data,
       );
-
-      return SeedItem.fromJson(response.data!);
+      return SeedItem.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'update library item'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to update item';
       throw Exception(error.toString());
@@ -274,8 +282,9 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibrarySubscribe(libraryId),
         data: data,
       );
-
-      return UserLibrarySubscription.fromJson(response.data!);
+      return UserLibrarySubscription.fromJson(
+        ApiResponseParser.unwrapMap(response.data, action: 'subscribe library'),
+      );
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Failed to subscribe';
       throw Exception(error.toString());
@@ -285,7 +294,7 @@ class SeedLibraryRepository {
   /// Unsubscribe from library
   Future<void> unsubscribeFromLibrary(String libraryId) async {
     try {
-      await _apiClient.post<dynamic>(
+      await _apiClient.delete<dynamic>(
         ApiEndpoints.seedLibraryUnsubscribe(libraryId),
       );
     } on DioException catch (e) {
@@ -314,11 +323,12 @@ class SeedLibraryRepository {
         ApiEndpoints.seedLibrarySubscriptions,
         queryParameters: queryParams,
       );
-
-      final data = response.data!;
-      return PaginatedResponse<UserLibrarySubscription>.fromJson(
-        data,
-        (json) => UserLibrarySubscription.fromJson(json as Map<String, dynamic>),
+      return PaginatedResponse<UserLibrarySubscription>.fromShared(
+        ApiResponseParser.parsePaginated<UserLibrarySubscription>(
+          response.data,
+          (json) => UserLibrarySubscription.fromJson(json as Map<String, dynamic>),
+          action: 'list subscriptions',
+        ),
       );
     } on DioException catch (e) {
       final error =
@@ -328,49 +338,54 @@ class SeedLibraryRepository {
   }
 
   /// Query across subscribed libraries
-  Future<Map<String, List<SeedItem>>> crossLibraryQuery({
+  Future<List<SeedItem>> crossLibraryQuery({
+    required String query,
     List<String>? itemTypes,
     List<String>? subjects,
     List<DifficultyLevel>? difficultyLevels,
     List<String>? tags,
+    bool useSubscribedOnly = true,
+    bool includeOfficial = true,
     int? limit,
   }) async {
     try {
-      final queryParams = <String, dynamic>{};
+      final payload = <String, dynamic>{
+        'query': query,
+        'use_subscribed_only': useSubscribedOnly,
+        'include_official': includeOfficial,
+      };
 
       if (itemTypes != null && itemTypes.isNotEmpty) {
-        queryParams['item_types'] = itemTypes;
+        payload['item_types'] = itemTypes;
       }
       if (subjects != null && subjects.isNotEmpty) {
-        queryParams['subjects'] = subjects;
+        payload['subjects'] = subjects;
       }
       if (difficultyLevels != null && difficultyLevels.isNotEmpty) {
-        queryParams['difficulty_levels'] =
+        payload['difficulty_levels'] =
             difficultyLevels.map((e) => e.name).toList();
       }
       if (tags != null && tags.isNotEmpty) {
-        queryParams['tags'] = tags;
+        payload['tags'] = tags;
       }
       if (limit != null) {
-        queryParams['limit'] = limit;
+        payload['limit'] = limit;
       }
 
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.seedLibraryCrossQuery,
-        queryParameters: queryParams,
+        data: payload,
       );
 
-      final data = response.data!;
-      final result = <String, List<SeedItem>>{};
-
-      for (final entry in data.entries) {
-        final itemsList = entry.value as List;
-        result[entry.key] = itemsList
-            .map((json) => SeedItem.fromJson(json as Map<String, dynamic>))
-            .toList();
-      }
-
-      return result;
+      final data = response.data ?? const <String, dynamic>{};
+      final wrapped = data['data'] is Map<String, dynamic>
+          ? data['data'] as Map<String, dynamic>
+          : data;
+      final items = wrapped['items'] as List<dynamic>? ?? const [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map((json) => SeedItem.fromJson(json))
+          .toList();
     } on DioException catch (e) {
       final error = e.response?.data?['detail'] ?? 'Query failed';
       throw Exception(error.toString());
@@ -378,23 +393,33 @@ class SeedLibraryRepository {
   }
 
   /// Get few-shot examples for prompt enhancement
-  Future<List<SeedItem>> getFewShotExamples({
+  Future<List<Map<String, dynamic>>> getFewShotExamples({
     String? subject,
+    DifficultyLevel? difficultyLevel,
+    String? taskType,
     int? limit,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (subject != null) queryParams['subject'] = subject;
-      if (limit != null) queryParams['limit'] = limit;
+      if (difficultyLevel != null) {
+        queryParams['difficulty_level'] = difficultyLevel.name;
+      }
+      if (taskType != null) queryParams['task_type'] = taskType;
+      if (limit != null) queryParams['count'] = limit;
 
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.seedLibraryFewShot,
         queryParameters: queryParams,
       );
-
-      final data = response.data!['items'] as List;
-      return data
-          .map((json) => SeedItem.fromJson(json as Map<String, dynamic>))
+      final rawList = response.data is List
+          ? response.data as List<dynamic>
+          : ApiResponseParser.unwrapList(
+              response.data,
+              action: 'get few shot examples',
+            );
+      return rawList
+          .whereType<Map<String, dynamic>>()
           .toList();
     } on DioException catch (e) {
       final error =

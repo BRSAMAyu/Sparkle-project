@@ -3,6 +3,7 @@
 library;
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/shared/models/api_response_model.dart' as shared;
 
 part 'seed_library_model.g.dart';
 
@@ -444,6 +445,15 @@ class PaginatedResponse<T> {
 
   Map<String, dynamic> toJson(Object? Function(T value) toJsonT) =>
       _$PaginatedResponseToJson(this, toJsonT);
+
+  factory PaginatedResponse.fromShared(shared.PaginatedResponse<T> source) =>
+      PaginatedResponse<T>(
+        items: source.items,
+        total: source.total,
+        page: source.page,
+        pageSize: source.pageSize,
+        totalPages: (source.total / (source.pageSize == 0 ? 1 : source.pageSize)).ceil(),
+      );
 }
 
 /// Create library request model

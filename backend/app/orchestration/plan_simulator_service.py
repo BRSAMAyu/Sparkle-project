@@ -10,6 +10,8 @@ class PlanSimulationResult:
     simulated_risk_score: float
     risk_factors: list[str] = field(default_factory=list)
     suggested_actions: list[str] = field(default_factory=list)
+    simulated_failure_paths: list[dict[str, str]] = field(default_factory=list)
+    preemptive_actions: list[str] = field(default_factory=list)
 
 
 class PlanSimulatorService:
@@ -28,6 +30,14 @@ class PlanSimulatorService:
                 simulated_risk_score=0.8,
                 risk_factors=["missing_plan"],
                 suggested_actions=["fallback_single_expert"],
+                simulated_failure_paths=[
+                    {
+                        "path": "missing_plan",
+                        "trigger": "planner_output_empty",
+                        "impact": "high",
+                    }
+                ],
+                preemptive_actions=["fallback_single_expert"],
             )
 
         experts = [str(item).strip() for item in (selected_experts or []) if str(item).strip()]
@@ -78,8 +88,52 @@ class PlanSimulatorService:
             if action not in dedup_actions:
                 dedup_actions.append(action)
 
+        failure_paths: list[dict[str, str]] = []
+        if "high_step_count" in risk_factors:
+            failure_paths.append(
+                {
+                    "path": "critical_path_overload",
+                    "trigger": "too_many_serial_steps",
+                    "impact": "medium",
+                }
+            )
+        if "high_expert_parallelism" in risk_factors:
+            failure_paths.append(
+                {
+                    "path": "parallel_coordination_failure",
+                    "trigger": "fanout_too_high",
+                    "impact": "medium",
+                }
+            )
+        if "weak_dependency_graph" in risk_factors:
+            failure_paths.append(
+                {
+                    "path": "dependency_break",
+                    "trigger": "missing_dep_bindings",
+                    "impact": "high",
+                }
+            )
+        if "high_uncertainty" in risk_factors:
+            failure_paths.append(
+                {
+                    "path": "intent_mismatch",
+                    "trigger": "clarity_insufficient",
+                    "impact": "high",
+                }
+            )
+        if "timeout_pressure" in risk_factors:
+            failure_paths.append(
+                {
+                    "path": "timeout_chain_reaction",
+                    "trigger": "tool_timeout_pressure",
+                    "impact": "medium",
+                }
+            )
+
         return PlanSimulationResult(
             simulated_risk_score=round(risk, 4),
             risk_factors=risk_factors,
             suggested_actions=dedup_actions[:3],
+            simulated_failure_paths=failure_paths[:4],
+            preemptive_actions=dedup_actions[:3],
         )

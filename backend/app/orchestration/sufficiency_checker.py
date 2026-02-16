@@ -11,6 +11,8 @@ from typing import Any, Literal
 from loguru import logger
 
 from app.config import settings
+from app.orchestration.clarification_voi_service import ClarificationVOIService
+from app.orchestration.idea_crystallization_service import IdeaCrystallizationService
 from app.orchestration.task_decomposition_contract import (
     build_task_decomposition_contract,
     generate_contract_clarification_questions,
@@ -35,6 +37,10 @@ class SufficiencyCheckResult:
     decomposition_contract: dict[str, Any] = field(default_factory=dict)
     decomposition_contract_score: float = 0.0
     decomposition_gaps: list[str] = field(default_factory=list)
+    ambiguity_profile: dict[str, Any] = field(default_factory=dict)
+    intent_hypotheses: list[dict[str, Any]] = field(default_factory=list)
+    recommended_clarifications: list[dict[str, Any]] = field(default_factory=list)
+    clarification_voi_score: float = 0.0
 
 
 class SufficiencyChecker:
@@ -125,6 +131,8 @@ class SufficiencyChecker:
             intent,
             self.DEFAULT_REQUIREMENTS
         )
+        idea_crystallizer = IdeaCrystallizationService()
+        voi_service = ClarificationVOIService()
 
         required_fields = requirements.get("required", [])
         clarify_fields = requirements.get("clarify_if_missing", [])
@@ -189,7 +197,37 @@ class SufficiencyChecker:
             result.decomposition_contract_score = contract.score
             result.decomposition_gaps = list(contract.gaps)
 
-            is_decomposition_request = self._is_decomposition_request(intent=intent, user_message=user_message)
+            decomposition_request = self._is_decomposition_request(intent=intent, user_message=user_message)
+            if decomposition_request:
+                crystallized = idea_crystallizer.crystallize(
+                    message=user_message,
+                    intent=intent,
+                    extracted_entities=extracted_entities,
+                    conversation_context=conversation_context,
+                )
+                result.decomposition_contract = crystallized.draft_goal_contract
+                result.decomposition_contract_score = float(
+                    crystallized.draft_goal_contract.get("score", result.decomposition_contract_score) or 0.0
+                )
+                result.decomposition_gaps = [
+                    str(item)
+                    for item in (crystallized.draft_goal_contract.get("gaps") or result.decomposition_gaps)
+                    if str(item).strip()
+                ]
+                result.ambiguity_profile = crystallized.ambiguity_profile
+                result.intent_hypotheses = crystallized.intent_hypotheses
+
+                uncertainty_seed = max(0.0, min(1.0, 1.0 - result.decomposition_contract_score))
+                voi_result = voi_service.rank(
+                    contract=result.decomposition_contract,
+                    ambiguity_profile=result.ambiguity_profile,
+                    uncertainty_score=uncertainty_seed,
+                    max_questions=3,
+                )
+                result.clarification_voi_score = voi_result.voi_score
+                result.recommended_clarifications = voi_result.clarification_priority_points
+
+            is_decomposition_request = decomposition_request
             required_contract_gaps = {
                 "missing_goal",
                 "missing_constraints",
@@ -210,6 +248,19 @@ class SufficiencyChecker:
                 result.clarification_questions.extend(
                     generate_contract_clarification_questions(contract.gaps)
                 )
+
+            if (
+                result.status == SufficiencyStatus.SUFFICIENT
+                and is_decomposition_request
+                and result.clarification_voi_score >= 0.18
+                and result.recommended_clarifications
+            ):
+                result.status = SufficiencyStatus.NEED_CLARIFICATION
+                result.recommended_action = "ask"
+                for item in result.recommended_clarifications:
+                    question = str(item.get("question", "")).strip()
+                    if question and question not in result.clarification_questions:
+                        result.clarification_questions.append(question)
 
         logger.debug(
             f"Sufficiency check: intent={intent}, status={result.status}, "
