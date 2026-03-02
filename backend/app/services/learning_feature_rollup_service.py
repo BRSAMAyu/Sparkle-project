@@ -184,6 +184,12 @@ class LearningFeatureRollupService:
                     counts[f"plan_repair_action::{str(action)}"] += 1
             elif event_type == "plan_repair_succeeded":
                 counts["plan_repair_succeeded"] += 1
+            elif event_type == "checkpoint_due":
+                counts["checkpoint_due"] += 1
+            elif event_type == "checkpoint_done":
+                counts["checkpoint_done"] += 1
+            elif event_type == "checkpoint_skipped":
+                counts["checkpoint_skipped"] += 1
             elif event_type == "route_decision":
                 counts["route_decision"] += 1
 
@@ -221,6 +227,14 @@ class LearningFeatureRollupService:
                 counts.get("plan_repair_succeeded", 0),
                 counts.get("plan_repair_triggered", 0),
             )
+            checkpoint_done_rate = _safe_rate(
+                counts.get("checkpoint_done", 0),
+                counts.get("checkpoint_done", 0) + counts.get("checkpoint_skipped", 0),
+            )
+            checkpoint_skip_rate = _safe_rate(
+                counts.get("checkpoint_skipped", 0),
+                counts.get("checkpoint_done", 0) + counts.get("checkpoint_skipped", 0),
+            )
             failure_pattern_topn = _top_prefixed_counts(counts, prefix="failure_pattern::", limit=5)
             normalized_latency = min(max(avg_latency_ms / 4000.0, 0.0), 1.0)
             q_score = (
@@ -246,6 +260,8 @@ class LearningFeatureRollupService:
                 "prompt_apply_rate": round(prompt_apply_rate, 4),
                 "toolchain_degrade_rate": round(toolchain_degrade_rate, 4),
                 "repair_success_rate": round(repair_success_rate, 4),
+                "checkpoint_done_rate": round(checkpoint_done_rate, 4),
+                "checkpoint_skip_rate": round(checkpoint_skip_rate, 4),
                 "failure_pattern_topn": failure_pattern_topn,
                 "normalized_latency": round(normalized_latency, 4),
                 "q_score": round(q_score, 4),
@@ -319,6 +335,14 @@ def _merge_rollups(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[s
         merged_counts.get("plan_repair_succeeded", 0),
         merged_counts.get("plan_repair_triggered", 0),
     )
+    checkpoint_done_rate = _safe_rate(
+        merged_counts.get("checkpoint_done", 0),
+        merged_counts.get("checkpoint_done", 0) + merged_counts.get("checkpoint_skipped", 0),
+    )
+    checkpoint_skip_rate = _safe_rate(
+        merged_counts.get("checkpoint_skipped", 0),
+        merged_counts.get("checkpoint_done", 0) + merged_counts.get("checkpoint_skipped", 0),
+    )
     failure_pattern_topn = _top_prefixed_counts(merged_counts, prefix="failure_pattern::", limit=5)
     normalized_latency = min(max(avg_latency_ms / 4000.0, 0.0), 1.0)
     q_score = (
@@ -338,6 +362,8 @@ def _merge_rollups(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[s
     merged["prompt_apply_rate"] = round(prompt_apply_rate, 4)
     merged["toolchain_degrade_rate"] = round(toolchain_degrade_rate, 4)
     merged["repair_success_rate"] = round(repair_success_rate, 4)
+    merged["checkpoint_done_rate"] = round(checkpoint_done_rate, 4)
+    merged["checkpoint_skip_rate"] = round(checkpoint_skip_rate, 4)
     merged["failure_pattern_topn"] = failure_pattern_topn
     merged["normalized_latency"] = round(normalized_latency, 4)
     merged["q_score"] = round(q_score, 4)

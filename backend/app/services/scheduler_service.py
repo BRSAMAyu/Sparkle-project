@@ -11,15 +11,15 @@ from app.core.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.notification import NotificationCreate
-from app.services.cognitive_service import CognitiveService
 from app.services.cognitive_pattern_mining_service import CognitivePatternMiningService
+from app.services.cognitive_service import CognitiveService
 from app.services.decay_service import DecayService
 from app.services.event_retention_service import EventRetentionService
 from app.services.expert_policy_report_service import ExpertPolicyReportService
 from app.services.learning_feature_rollup_service import LearningFeatureRollupService
+from app.services.memory_jobs import MemoryJobsService
 from app.services.meta_learning_feature_service import MetaLearningFeatureService
 from app.services.meta_policy_recommendation_service import MetaPolicyRecommendationService
-from app.services.memory_jobs import MemoryJobsService
 from app.services.nightly_review_service import NightlyReviewService
 from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
@@ -553,10 +553,14 @@ class SchedulerService:
 
         async def _runner():
             report_service = ExpertPolicyReportService(redis_client=cache_service.redis)
+            rollup_service = LearningFeatureRollupService(redis_client=cache_service.redis)
             registry = PolicyRegistryService(redis_client=cache_service.redis)
             feature_service = MetaLearningFeatureService(redis_client=cache_service.redis)
             tuning_service = MetaPolicyRecommendationService(redis_client=cache_service.redis)
             report = await report_service.build_report(days=14)
+            rollups = await rollup_service.list_rollups(days=14)
+            stable_cohort_q_gap = float(report.get("stable_cohort_q_gap", 0.0) or 0.0)
+            redline = float(getattr(settings, "FAIRNESS_STABLE_COHORT_Q_GAP_REDLINE", 0.08))
             feature_vectors = await feature_service.build_feature_vectors(days=14)
             payload = {
                 "generated_at": _utcnow().isoformat(),
@@ -564,12 +568,25 @@ class SchedulerService:
                 "policy_report": report,
                 "meta_feature_vector_count": len(feature_vectors),
                 "meta_feature_vectors_top": feature_vectors[:100],
+                "new_user_transfer_gain": self._estimate_transfer_gain_new_user(rollups),
+                "channel_health": report.get("channel_health", {}),
+                "rollback_recommendation": report.get("rollback_recommendation", {}),
+                "long_tail_guardrail": {
+                    "stable_cohort_q_gap": round(stable_cohort_q_gap, 4),
+                    "redline": redline,
+                    "is_healthy": stable_cohort_q_gap <= redline,
+                },
+                "failure_mode_topn": self._extract_failure_modes(rollups, limit=20),
                 "tuning_package": await tuning_service.build_weekly_tuning_package(days=14),
                 "summary": {
                     "fallback_rate": report.get("rates", {}).get("fallback_rate", 0.0),
                     "feedback_binding_rate": report.get("rates", {}).get("feedback_binding_rate", 0.0),
                 },
             }
+            payload["required_next_candidate_focus"] = [
+                item.get("pattern", "")
+                for item in payload.get("failure_mode_topn", [])[:3]
+            ]
             await registry.save_weekly_report(payload)
             return payload
 
@@ -747,6 +764,43 @@ class SchedulerService:
             META_POLICY_ROLLBACK_TOTAL.labels(reason_type=str(reason_type)).inc()
         except Exception:
             return
+
+    @staticmethod
+    def _estimate_transfer_gain_new_user(rollups: list[dict[str, Any]]) -> float:
+        baseline_scores: list[float] = []
+        cold_start_scores: list[float] = []
+        for row in rollups:
+            try:
+                q_score = float(row.get("q_score", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                q_score = 0.0
+            baseline_scores.append(q_score)
+            counts = row.get("counts") if isinstance(row.get("counts"), dict) else {}
+            if int(counts.get("cold_start_bootstrap_applied", 0)) > 0:
+                cold_start_scores.append(q_score)
+
+        baseline = (sum(baseline_scores) / len(baseline_scores)) if baseline_scores else 0.0
+        cold_start = (sum(cold_start_scores) / len(cold_start_scores)) if cold_start_scores else baseline
+        return round(cold_start - baseline, 4)
+
+    @staticmethod
+    def _extract_failure_modes(rollups: list[dict[str, Any]], *, limit: int = 20) -> list[dict[str, Any]]:
+        merged: dict[str, int] = {}
+        for row in rollups:
+            patterns = row.get("failure_pattern_topn") if isinstance(row.get("failure_pattern_topn"), list) else []
+            for item in patterns:
+                if not isinstance(item, dict):
+                    continue
+                pattern = str(item.get("pattern", "")).strip()
+                if not pattern:
+                    continue
+                try:
+                    count = int(item.get("count", 0))
+                except (TypeError, ValueError):
+                    count = 0
+                merged[pattern] = int(merged.get(pattern, 0)) + max(0, count)
+        ordered = sorted(merged.items(), key=lambda pair: pair[1], reverse=True)
+        return [{"pattern": pattern, "count": count} for pattern, count in ordered[: max(1, limit)]]
 
 
 scheduler_service = SchedulerService()

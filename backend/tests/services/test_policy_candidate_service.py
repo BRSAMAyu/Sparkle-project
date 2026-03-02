@@ -287,7 +287,16 @@ async def test_policy_candidate_generation_multi_channel(monkeypatch):
     assert set(result["channels"]) == {"routing", "prompt", "toolchain"}
 
     pending = await service.registry.list_candidates(status="pending")
-    channels = {str(item.get("channel", "routing")) for item in pending}
+    research_pending = await service.registry.list_candidates(status="research_pending")
+
+    pending_channels = {str(item.get("channel", "routing")) for item in pending}
+    research_channels = {str(item.get("channel", "routing")) for item in research_pending}
+
+    assert "routing" in pending_channels
+    assert "prompt" in research_channels
+    assert "toolchain" in research_channels
+
+    channels = pending_channels | research_channels
     assert "routing" in channels
     assert "prompt" in channels
     assert "toolchain" in channels

@@ -51,6 +51,8 @@ def test_policy_report_aggregate_contains_breakdowns() -> None:
     assert report["feedback_bindings"]["by_policy"]["expert_strategy_v2"] == 1
     assert report["breakdown"]["fallback_rate_by_policy"]["expert_strategy_v2"] == 1.0
     assert "policy_health" in report
+    assert "channel_health" in report
+    assert "rollback_recommendation" in report
     assert "recommendations" in report
     assert report["policy_health"]["expert_strategy_v2"]["status"] in {
         "healthy",

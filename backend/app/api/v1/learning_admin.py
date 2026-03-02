@@ -9,11 +9,11 @@ from app.api.deps import get_current_active_superuser
 from app.config import settings
 from app.core.cache import cache_service
 from app.models.user import User
+from app.services.cognitive_pattern_mining_service import CognitivePatternMiningService
 from app.services.expert_policy_report_service import ExpertPolicyReportService
 from app.services.learning_feature_rollup_service import LearningFeatureRollupService
 from app.services.meta_learning_feature_service import MetaLearningFeatureService
 from app.services.meta_policy_recommendation_service import MetaPolicyRecommendationService
-from app.services.cognitive_pattern_mining_service import CognitivePatternMiningService
 from app.services.policy_candidate_service import PolicyCandidateService
 from app.services.policy_registry_service import PolicyRegistryService
 from app.services.task_motif_registry_service import TaskMotifRegistryService
@@ -107,6 +107,9 @@ async def weekly_learning_report(
     policy_report = await report_service.build_report(days=days)
     rollups = await rollup_service.list_rollups(days=days)
     candidates = await registry.list_candidates()
+    fairness = _build_fairness_summary(rollups)
+    new_user_transfer_gain = _estimate_transfer_gain_new_user(rollups)
+    failure_mode_topn = _extract_failure_modes(rollups=rollups, limit=20)
 
     report_payload = {
         "generated_at": _utcnow().isoformat(),
@@ -115,7 +118,13 @@ async def weekly_learning_report(
         "rollup_count": len(rollups),
         "candidate_count": len(candidates),
         "candidates": candidates[:30],
-        "fairness": _build_fairness_summary(rollups),
+        "fairness": fairness,
+        "new_user_transfer_gain": new_user_transfer_gain,
+        "channel_health": policy_report.get("channel_health", {}),
+        "rollback_recommendation": policy_report.get("rollback_recommendation", {}),
+        "long_tail_guardrail": _build_long_tail_guardrail(fairness),
+        "failure_mode_topn": failure_mode_topn,
+        "required_next_candidate_focus": [item.get("pattern", "") for item in failure_mode_topn[:3]],
     }
     tuning_service = MetaPolicyRecommendationService(redis_client=cache_service.redis)
     report_payload["tuning_package"] = await tuning_service.build_weekly_tuning_package(days=days)
@@ -496,10 +505,16 @@ async def meta_weekly_report(
         "window_days": days,
         "policy_report": policy_report,
         "fairness": fairness,
+        "new_user_transfer_gain": _estimate_transfer_gain_new_user(rollups),
+        "channel_health": policy_report.get("channel_health", {}),
+        "rollback_recommendation": policy_report.get("rollback_recommendation", {}),
+        "long_tail_guardrail": _build_long_tail_guardrail(fairness),
         "candidate_count_by_channel": by_channel,
         "feature_vectors": features[:200],
+        "failure_mode_topn": _extract_failure_modes(rollups=rollups, limit=20),
         "tuning_package": await tuning_service.build_weekly_tuning_package(days=days),
     }
+    payload["required_next_candidate_focus"] = [item.get("pattern", "") for item in payload["failure_mode_topn"][:3]]
     await registry.save_weekly_report(payload)
     return payload
 
@@ -684,3 +699,39 @@ def _estimate_transfer_gain_new_user(rollups: list[dict[str, Any]]) -> float:
     baseline = (sum(baseline_scores) / len(baseline_scores)) if baseline_scores else 0.0
     cold_start = (sum(cold_start_scores) / len(cold_start_scores)) if cold_start_scores else baseline
     return round(cold_start - baseline, 4)
+
+
+def _build_long_tail_guardrail(fairness: dict[str, Any]) -> dict[str, Any]:
+    overview = fairness.get("fairness_overview") if isinstance(fairness.get("fairness_overview"), dict) else {}
+    overall_q = float(overview.get("overall_q_score", 0.0) or 0.0)
+    long_tail_q = float(overview.get("long_tail_avg_q_score", 0.0) or 0.0)
+    gap = round(overall_q - long_tail_q, 4)
+    threshold = float(getattr(settings, "LONG_TAIL_Q_GAP_ALERT_THRESHOLD", 0.08))
+    return {
+        "threshold": threshold,
+        "overall_q_score": round(overall_q, 4),
+        "long_tail_avg_q_score": round(long_tail_q, 4),
+        "gap_vs_overall": gap,
+        "is_healthy": gap <= threshold,
+        "long_tail_count": int(overview.get("long_tail_count", 0) or 0),
+    }
+
+
+def _extract_failure_modes(*, rollups: list[dict[str, Any]], limit: int = 20) -> list[dict[str, Any]]:
+    merged: dict[str, int] = {}
+    for row in rollups:
+        patterns = row.get("failure_pattern_topn") if isinstance(row.get("failure_pattern_topn"), list) else []
+        for item in patterns:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("pattern", "")).strip()
+            if not name:
+                continue
+            try:
+                count = int(item.get("count", 0))
+            except (TypeError, ValueError):
+                count = 0
+            merged[name] = int(merged.get(name, 0)) + max(0, count)
+
+    ordered = sorted(merged.items(), key=lambda pair: pair[1], reverse=True)
+    return [{"pattern": name, "count": count} for name, count in ordered[: max(1, limit)]]

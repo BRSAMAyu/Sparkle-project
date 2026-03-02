@@ -322,9 +322,7 @@ class PolicyCandidateService:
             4,
         )
         risk_level = "low"
-        if scope_type == "personal":
-            risk_level = "high"
-        elif expected_delta >= 0.12 or selected_count < 60:
+        if scope_type == "personal" or expected_delta >= 0.12 or selected_count < 60:
             risk_level = "high"
         elif expected_delta >= 0.06:
             risk_level = "medium"
@@ -338,6 +336,7 @@ class PolicyCandidateService:
         scope_prefix = {"global": "g", "cohort": "c", "personal": "p"}.get(scope_type, "g")
         channel_prefix = {"routing": "r", "prompt": "pm", "toolchain": "tc"}.get(channel, "r")
         policy_id = f"expert_strategy_v2:{strategy_pack}:candidate_{channel_prefix}_{scope_prefix}_{candidate_hash}"
+        research_track = channel in {"prompt", "toolchain"}
 
         payload = {
             "id": candidate_id,
@@ -355,7 +354,8 @@ class PolicyCandidateService:
             "created_from_window": f"last_{window_days}d",
             "expected_delta": expected_delta,
             "risk_level": risk_level,
-            "status": "pending",
+            "research_track": research_track,
+            "status": "research_pending" if research_track else "pending",
             "rollout_percent": 10,
             "q_score_baseline": round(baseline_q, 4),
             "q_score_source": round(q_score_source, 4),

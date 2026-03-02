@@ -20,6 +20,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/screens/execution_copilot_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -734,6 +735,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  void _openExecutionCopilot({
+    required BuildContext context,
+    required String planId,
+  }) {
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ExecutionCopilotScreen(planId: planId),
+        ),
+      ),
+    );
+  }
+
   /// Calculate bottom padding for ListView to prevent messages being hidden
   /// behind fixed components at the bottom.
   double _calculateBottomPadding(BuildContext context, ChatState chatState) {
@@ -839,14 +853,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   onPressed: chatState.isSending
                       ? null
                       : () {
-                          unawaited(
-                            ref.read(chatProvider.notifier).sendMessage(
-                              '请基于当前计划生成今日执行驾驶舱，并给我今日最关键的三步行动，附带阻塞点与纠偏建议。',
-                              extraContextOverride: {
-                                'plan_id': selectedPlanId,
-                                'execution_copilot': true,
-                              },
-                            ),
+                          _openExecutionCopilot(
+                            context: context,
+                            planId: selectedPlanId,
                           );
                         },
                 ),

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_active_superuser
 from app.api.v1.learning_admin import router as learning_admin_router
-from app.services.policy_registry_service import PolicyRegistryService, _MEM_CANDIDATES, _MEM_POLICIES
+from app.services.policy_registry_service import _MEM_CANDIDATES, _MEM_POLICIES, PolicyRegistryService
 from app.services.task_motif_registry_service import _MEM_GRAPHS, _MEM_RULES
 
 
@@ -64,6 +64,11 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
         body = weekly.json()
         assert "policy_report" in body
         assert "fairness" in body
+        assert "channel_health" in body
+        assert "rollback_recommendation" in body
+        assert "new_user_transfer_gain" in body
+        assert "long_tail_guardrail" in body
+        assert "required_next_candidate_focus" in body
 
         fairness = client.get("/admin/learning/fairness-dashboard")
         assert fairness.status_code == 200
@@ -84,6 +89,9 @@ def test_learning_admin_candidate_approve_flow(monkeypatch):
         meta_report = client.get("/admin/learning/meta-weekly-report")
         assert meta_report.status_code == 200
         assert "candidate_count_by_channel" in meta_report.json()
+        assert "channel_health" in meta_report.json()
+        assert "rollback_recommendation" in meta_report.json()
+        assert "new_user_transfer_gain" in meta_report.json()
 
         gen_meta = client.post("/admin/learning/meta-candidates/generate?channels=routing,prompt")
         assert gen_meta.status_code == 200

@@ -47,6 +47,11 @@ class ApiEndpoints {
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
   static String planArchive(String id) => '/plans/$id/archive';
   static String planRestore(String id) => '/plans/$id/restore';
+  static String executionCopilot(String planId) => '/execution/copilot/$planId';
+  static String executionCopilotCheckpoint(String planId) =>
+      '/execution/copilot/$planId/checkpoint';
+  static String executionCopilotTimeline(String planId) =>
+      '/execution/copilot/$planId/timeline';
 
   // Chat
   static const String chat = '/chat';

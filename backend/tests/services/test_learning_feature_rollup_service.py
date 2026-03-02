@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.learning_event_service import LearningEventService, _MEM_EVENTS
-from app.services.learning_feature_rollup_service import LearningFeatureRollupService, _MEM_ROLLUPS
+from app.services.learning_event_service import _MEM_EVENTS, LearningEventService
+from app.services.learning_feature_rollup_service import _MEM_ROLLUPS, LearningFeatureRollupService
 
 
 async def _seed_events(service: LearningEventService) -> None:
@@ -131,6 +131,32 @@ async def _seed_events(service: LearningEventService) -> None:
         task_type="expert_auto",
         data={"repair_actions": ["degrade_parallelism"]},
     )
+    await service.emit(
+        event_type="checkpoint_done",
+        user_id="u1",
+        session_id="s1",
+        workflow_id="expert_auto_workflow",
+        policy_id="expert_strategy_v2:general_v2",
+        strategy_pack="general_v2",
+        cohort_id="cohort::study::medium::high_engagement::rhythm_steady",
+        user_scope="usr::abc123def456",
+        complexity_tier="medium",
+        task_type="execution_copilot",
+        data={"status": "done"},
+    )
+    await service.emit(
+        event_type="checkpoint_skipped",
+        user_id="u1",
+        session_id="s1",
+        workflow_id="expert_auto_workflow",
+        policy_id="expert_strategy_v2:general_v2",
+        strategy_pack="general_v2",
+        cohort_id="cohort::study::medium::high_engagement::rhythm_steady",
+        user_scope="usr::abc123def456",
+        complexity_tier="medium",
+        task_type="execution_copilot",
+        data={"status": "skipped"},
+    )
 
 
 @pytest.mark.asyncio
@@ -169,5 +195,7 @@ async def test_learning_feature_rollup_builds_q_score(monkeypatch):
     assert total_toolchain_selected >= 1
     assert any(0.0 <= float(item.get("prompt_apply_rate", 0.0)) <= 1.0 for item in rows)
     assert any(0.0 <= float(item.get("repair_success_rate", 0.0)) <= 1.0 for item in rows)
+    assert any(0.0 <= float(item.get("checkpoint_done_rate", 0.0)) <= 1.0 for item in rows)
+    assert any(0.0 <= float(item.get("checkpoint_skip_rate", 0.0)) <= 1.0 for item in rows)
     assert isinstance(row.get("failure_pattern_topn", []), list)
     assert 0.0 <= float(row["q_score"]) <= 1.0

@@ -172,6 +172,20 @@ class ExpertPolicyReportService:
             q_score_by_scope=q_score_by_cube,
             selected_by_scope=selected_by_cube,
         )
+        channel_health = _build_channel_health(
+            selected_total=selected_total,
+            fallback_rate=fallback_rate,
+            prompt_selected_total=prompt_selected_total,
+            prompt_apply_rate=prompt_apply_rate,
+            toolchain_selected_total=toolchain_selected_total,
+            toolchain_degrade_rate=toolchain_degrade_rate,
+        )
+        rollback_recommendation = _build_rollback_recommendation(
+            fallback_rate=fallback_rate,
+            prompt_apply_rate=prompt_apply_rate,
+            toolchain_degrade_rate=toolchain_degrade_rate,
+            stable_cohort_q_gap=stable_cohort_q_gap,
+        )
         policy_health = _build_policy_health(
             selected_by_policy=selected_by_policy,
             fallback_rate_by_policy=fallback_rate_by_policy,
@@ -208,6 +222,8 @@ class ExpertPolicyReportService:
                 "toolchain_degrade_rate": round(toolchain_degrade_rate, 4),
             },
             "policy_health": policy_health,
+            "channel_health": channel_health,
+            "rollback_recommendation": rollback_recommendation,
             "recommendations": recommendations,
             "q_score_by_policy": q_score_by_policy,
             "delta_vs_baseline": delta_vs_baseline,
@@ -246,6 +262,104 @@ class ExpertPolicyReportService:
                 "fallback_rate_by_cube": fallback_rate_by_cube,
             },
         }
+
+
+def _build_channel_health(
+    *,
+    selected_total: int,
+    fallback_rate: float,
+    prompt_selected_total: int,
+    prompt_apply_rate: float,
+    toolchain_selected_total: int,
+    toolchain_degrade_rate: float,
+) -> dict[str, dict[str, Any]]:
+    routing_status = "healthy"
+    if selected_total <= 0:
+        routing_status = "insufficient_data"
+    elif fallback_rate > 0.12:
+        routing_status = "needs_rollback"
+    elif fallback_rate > 0.08:
+        routing_status = "watch"
+
+    prompt_status = "healthy"
+    if prompt_selected_total <= 0:
+        prompt_status = "insufficient_data"
+    elif prompt_apply_rate < 0.75:
+        prompt_status = "needs_tuning"
+    elif prompt_apply_rate < 0.85:
+        prompt_status = "watch"
+
+    toolchain_status = "healthy"
+    if toolchain_selected_total <= 0:
+        toolchain_status = "insufficient_data"
+    elif toolchain_degrade_rate > 0.12:
+        toolchain_status = "needs_tuning"
+    elif toolchain_degrade_rate > 0.08:
+        toolchain_status = "watch"
+
+    return {
+        "routing": {
+            "selected": int(selected_total),
+            "fallback_rate": round(float(fallback_rate), 4),
+            "status": routing_status,
+        },
+        "prompt": {
+            "selected": int(prompt_selected_total),
+            "apply_rate": round(float(prompt_apply_rate), 4),
+            "status": prompt_status,
+        },
+        "toolchain": {
+            "selected": int(toolchain_selected_total),
+            "degrade_rate": round(float(toolchain_degrade_rate), 4),
+            "status": toolchain_status,
+        },
+    }
+
+
+def _build_rollback_recommendation(
+    *,
+    fallback_rate: float,
+    prompt_apply_rate: float,
+    toolchain_degrade_rate: float,
+    stable_cohort_q_gap: float,
+) -> dict[str, Any]:
+    fairness_redline = float(getattr(settings, "FAIRNESS_STABLE_COHORT_Q_GAP_REDLINE", 0.08))
+    if stable_cohort_q_gap > fairness_redline:
+        return {
+            "should_rollback": True,
+            "priority": "P0",
+            "action": "rollback_toolchain_then_prompt",
+            "reason": (
+                f"stable_cohort_q_gap={stable_cohort_q_gap:.4f} exceeds redline={fairness_redline:.4f}"
+            ),
+        }
+    if toolchain_degrade_rate > 0.12:
+        return {
+            "should_rollback": True,
+            "priority": "P1",
+            "action": "rollback_toolchain_channel",
+            "reason": f"toolchain_degrade_rate={toolchain_degrade_rate:.4f} exceeded 0.12",
+        }
+    if prompt_apply_rate < 0.75:
+        return {
+            "should_rollback": True,
+            "priority": "P1",
+            "action": "rollback_prompt_channel",
+            "reason": f"prompt_apply_rate={prompt_apply_rate:.4f} below 0.75",
+        }
+    if fallback_rate > 0.12:
+        return {
+            "should_rollback": True,
+            "priority": "P0",
+            "action": "rollback_routing_channel",
+            "reason": f"fallback_rate={fallback_rate:.4f} exceeded 0.12",
+        }
+    return {
+        "should_rollback": False,
+        "priority": "P2",
+        "action": "hold_and_observe",
+        "reason": "all guardrails within threshold",
+    }
 
 
 def _cube_key(*, task_type: str, complexity_tier: str, cohort_id: str) -> str:

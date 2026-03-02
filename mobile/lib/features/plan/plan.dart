@@ -1,9 +1,11 @@
 export 'domain/entities/sprint_statistics.dart';
 export 'plan_routes.dart';
 export 'presentation/providers/plan_provider.dart';
+export 'presentation/providers/execution_copilot_provider.dart';
 export 'presentation/providers/sprint_actions_provider.dart';
 export 'presentation/providers/sprint_history_provider.dart';
 export 'presentation/providers/sprint_statistics_provider.dart';
+export 'presentation/screens/execution_copilot_screen.dart';
 export 'presentation/screens/growth_screen.dart';
 export 'presentation/screens/plan_create_screen.dart';
 export 'presentation/screens/plan_detail_screen.dart';
