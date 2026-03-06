@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
 
 # Migration Contract:
@@ -28,22 +29,26 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Create chat_sessions table for E2E test support."""
-    op.create_table('chat_sessions',
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('title', sa.String(length=200), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('last_message_at', sa.DateTime(), nullable=True),
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
-        sa.Column('deleted_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('chat_sessions', schema=None) as batch_op:
-        batch_op.create_index('idx_chat_session_active', ['is_active'], unique=False)
-        batch_op.create_index('idx_chat_session_user_id', ['user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_chat_sessions_deleted_at'), ['deleted_at'], unique=False)
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    if not inspector.has_table('chat_sessions'):
+        op.create_table('chat_sessions',
+            sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+            sa.Column('title', sa.String(length=200), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
+            sa.Column('last_message_at', sa.DateTime(), nullable=True),
+            sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
+            sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
+            sa.Column('deleted_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+            sa.PrimaryKeyConstraint('id')
+        )
+
+    op.execute("CREATE INDEX IF NOT EXISTS idx_chat_session_active ON chat_sessions (is_active)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_chat_session_user_id ON chat_sessions (user_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_chat_sessions_deleted_at ON chat_sessions (deleted_at)")
 
 
 def downgrade() -> None:

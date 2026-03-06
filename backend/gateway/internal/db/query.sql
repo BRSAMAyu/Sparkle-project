@@ -86,8 +86,8 @@ SELECT * FROM users WHERE id = $1;
 -- name: InsertOutboxEntry :exec
 INSERT INTO event_outbox (
     id, aggregate_type, aggregate_id, event_type,
-    event_version, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+    event_version, sequence_number, payload, metadata, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetUnpublishedOutboxEntries :many
 SELECT id, aggregate_type, aggregate_id, event_type,

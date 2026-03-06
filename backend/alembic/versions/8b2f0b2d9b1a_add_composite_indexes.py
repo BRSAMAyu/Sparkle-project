@@ -25,20 +25,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_index(
-        'idx_chat_user_session_created_at',
-        'chat_messages',
-        ['user_id', 'session_id', 'created_at'],
+    op.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_user_session_created_at '
+        'ON chat_messages (user_id, session_id, created_at)'
     )
-    op.create_index(
-        'idx_tasks_user_status_created_at',
-        'tasks',
-        ['user_id', 'status', 'created_at'],
+    op.execute(
+        'CREATE INDEX IF NOT EXISTS idx_tasks_user_status_created_at '
+        'ON tasks (user_id, status, created_at)'
     )
-    op.create_index(
-        'idx_tasks_user_created_at',
-        'tasks',
-        ['user_id', 'created_at'],
+    op.execute(
+        'CREATE INDEX IF NOT EXISTS idx_tasks_user_created_at '
+        'ON tasks (user_id, created_at)'
     )
 
 

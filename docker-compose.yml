@@ -4,7 +4,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: sparkle_db
     ports:
-      - "5432:5432"
+      - "${SPARKLE_DB_PORT:-5432}:5432"
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -35,8 +35,8 @@ services:
     hostname: minio
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${SPARKLE_MINIO_API_PORT:-9000}:9000"
+      - "${SPARKLE_MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -51,7 +51,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "${SPARKLE_API_PORT:-8000}:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
@@ -75,7 +75,7 @@ services:
       - .env
     command: python grpc_server.py
     ports:
-      - "50051:50051"
+      - "${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
@@ -116,7 +116,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8080"
+      - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=sparkle_redis:6379
