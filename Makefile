@@ -4,6 +4,8 @@ DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
 PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
+BACKEND_VENV?=backend/.venv/bin
+ALEMBIC?=$(BACKEND_VENV)/alembic
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -41,30 +43,30 @@ db-migrate:
 	@echo "🔄 Running Python Alembic Migrations..."
 	cd backend && ( \
 		set -e; \
-		heads_output="$$(alembic heads 2>&1)" || { echo "❌ Failed to read Alembic heads."; echo "$$heads_output"; exit 1; }; \
+		heads_output="$$(../$(ALEMBIC) heads 2>&1)" || { echo "❌ Failed to read Alembic heads."; echo "$$heads_output"; exit 1; }; \
 		heads_count="$$(printf "%s\n" "$$heads_output" | rg -c "^[0-9a-f]" || true)"; \
 		if [ "$$heads_count" -ne 1 ]; then \
 			echo "❌ Alembic head mismatch detected (expected 1 head, got $$heads_count)."; \
 			echo "alembic heads:"; printf "%s\n" "$$heads_output"; \
-			echo "alembic current:"; alembic current || true; \
-			echo "alembic history (last 20 lines):"; alembic history | tail -n 20 || true; \
+			echo "alembic current:"; ../$(ALEMBIC) current || true; \
+			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
-				alembic stamp heads; \
+				../$(ALEMBIC) stamp heads; \
 			else \
 				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
 				exit 1; \
 			fi; \
 		fi; \
-		if ! alembic upgrade head; then \
+		if ! ../$(ALEMBIC) upgrade head; then \
 			echo "❌ Alembic upgrade failed. Diagnostic output:"; \
-			echo "alembic heads:"; alembic heads || true; \
-			echo "alembic current:"; alembic current || true; \
-			echo "alembic history (last 20 lines):"; alembic history | tail -n 20 || true; \
+			echo "alembic heads:"; ../$(ALEMBIC) heads || true; \
+			echo "alembic current:"; ../$(ALEMBIC) current || true; \
+			echo "alembic history (last 20 lines):"; ../$(ALEMBIC) history | tail -n 20 || true; \
 			if [ "$$FORCE_STAMP" = "1" ]; then \
 				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
-				alembic stamp heads; \
-				alembic upgrade head; \
+				../$(ALEMBIC) stamp heads; \
+				../$(ALEMBIC) upgrade head; \
 			else \
 				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
 				exit 1; \
@@ -216,7 +218,7 @@ proto-gen-legacy:
 # Python gRPC 服务相关命令
 grpc-server:
 	@echo "🚀 Starting Python gRPC Server..."
-	@bash backend/scripts/run_grpc_with_env.sh
+	@/bin/bash backend/scripts/run_grpc_with_env.sh
 
 # Python FastAPI 服务
 api-server:
@@ -239,7 +241,7 @@ gateway-run:
 
 gateway-dev:
 	@echo "🚀 Starting Go Gateway (dev mode with rebuild)..."
-	cd backend/gateway && go run cmd/server/main.go
+	cd backend/gateway && go run ./cmd/server
 
 # 集成测试
 integration-test:
