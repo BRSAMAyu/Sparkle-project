@@ -31,14 +31,39 @@ void main() {
   vec2 coord = FlutterFragCoord().xy;
   vec2 uv = coord / u_resolution;
 
-  vec4 bursts[4] = vec4[](u_burst0, u_burst1, u_burst2, u_burst3);
   float intensity = 0.0;
 
-  for (int i = 0; i < 4; i++) {
-    vec2 origin = bursts[i].xy;
-    float start = bursts[i].z;
-    float strength = bursts[i].w;
-    if (strength <= 0.0) continue;
+  vec2 origin = u_burst0.xy;
+  float start = u_burst0.z;
+  float strength = u_burst0.w;
+  if (strength > 0.0) {
+    float age = u_time - start;
+    intensity += ring(uv, origin, age, strength);
+    intensity += glow(uv, origin, age, strength) * 0.6;
+  }
+
+  origin = u_burst1.xy;
+  start = u_burst1.z;
+  strength = u_burst1.w;
+  if (strength > 0.0) {
+    float age = u_time - start;
+    intensity += ring(uv, origin, age, strength);
+    intensity += glow(uv, origin, age, strength) * 0.6;
+  }
+
+  origin = u_burst2.xy;
+  start = u_burst2.z;
+  strength = u_burst2.w;
+  if (strength > 0.0) {
+    float age = u_time - start;
+    intensity += ring(uv, origin, age, strength);
+    intensity += glow(uv, origin, age, strength) * 0.6;
+  }
+
+  origin = u_burst3.xy;
+  start = u_burst3.z;
+  strength = u_burst3.w;
+  if (strength > 0.0) {
     float age = u_time - start;
     intensity += ring(uv, origin, age, strength);
     intensity += glow(uv, origin, age, strength) * 0.6;

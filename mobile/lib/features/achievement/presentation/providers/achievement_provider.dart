@@ -435,29 +435,3 @@ class AchievementMapNotifier extends StateNotifier<AchievementMapState> {
     await loadMap();
   }
 }
-
-// ========== Helper Classes ==========
-
-class AchievementListResponse {
-  AchievementListResponse({
-    required this.achievements,
-    required this.totalAchievements,
-    required this.totalUnlocked,
-    required this.categories,
-  });
-
-  final List<AchievementWithProgress> achievements;
-  final int totalAchievements;
-  final int totalUnlocked;
-  final Map<String, dynamic> categories;
-}
-
-class GalaxySkinListResponse {
-  GalaxySkinListResponse({
-    required this.skins,
-    this.equippedSkinId,
-  });
-
-  final List<GalaxySkin> skins;
-  final String? equippedSkinId;
-}

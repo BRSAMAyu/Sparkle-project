@@ -453,7 +453,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		commCmdService := service.NewCommunityCommandService(dbh.pool)
 		commQueryService := service.NewCommunityQueryService(rdb)
 		commHandler := v1.NewCommunityHandler(commCmdService, commQueryService)
-		commHandler.RegisterRoutes(api)
+		commHandler.RegisterRoutes(api, authMiddleware)
 
 		handlers.fileHandler.RegisterRoutes(api, authMiddleware)
 		handlers.dataConsistencyHandler.RegisterRoutes(api)

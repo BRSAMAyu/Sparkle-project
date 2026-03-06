@@ -261,15 +261,15 @@ async def update_my_preferences(
     """
     Update current user's depth and curiosity preferences
     """
-    current_user.depth_preference = preferences.depth_preference
-    current_user.curiosity_preference = preferences.curiosity_preference
+    current_user.depth_preference = preferences.learning_depth
+    current_user.curiosity_preference = preferences.curiosity_level
 
     pref_service = PreferenceService(db, cache_service.redis)
     await pref_service.update_explicit(
         current_user.id,
         {
-            "depth_preference": preferences.depth_preference,
-            "curiosity_preference": preferences.curiosity_preference,
+            "depth_preference": preferences.learning_depth,
+            "curiosity_preference": preferences.curiosity_level,
         },
     )
 

@@ -88,6 +88,7 @@ class LLMRouter:
 
     def _load_model_configs(self):
         """从settings加载所有可用模型配置"""
+        dashscope_base_url = settings.DASHSCOPE_BASE_URL_COMPATIBLE or "https://dashscope.aliyuncs.com/compatible-mode/v1"
         configs = {
             # ===== XiaoMi MIMO (快速) =====
             "xiaomi_chat": ModelConfig(
@@ -191,7 +192,7 @@ class LLMRouter:
             "dashscope_chat": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_CHAT_MODEL,
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+                base_url=dashscope_base_url,
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=settings.DASHSCOPE_TEMPERATURE,
                 tier=ModelTier.STANDARD,
@@ -201,7 +202,7 @@ class LLMRouter:
             "dashscope_reason": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_REASON_MODEL,
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+                base_url=dashscope_base_url,
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=0.2,
                 tier=ModelTier.REASONING,
@@ -253,12 +254,40 @@ class LLMRouter:
         # - STANDARD: 付费标准模型
         # - REASONING: 付费推理模型
         # - SPECIALIST: 专家模型（OCR、翻译等专用功能）
+        standard_models = ["zhipu_chat", "deepseek_chat", "dashscope_chat"]
+        reasoning_models = ["zhipu_reason", "deepseek_reason", "dashscope_reason"]
+
+        preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
+        provider_standard_preference = {
+            "qwen": "dashscope_chat",
+            "dashscope": "dashscope_chat",
+            "deepseek": "deepseek_chat",
+            "zhipu": "zhipu_chat",
+            "xiaomi": "deepseek_chat",
+        }
+        provider_reasoning_preference = {
+            "qwen": "dashscope_reason",
+            "dashscope": "dashscope_reason",
+            "deepseek": "deepseek_reason",
+            "zhipu": "zhipu_reason",
+            "xiaomi": "deepseek_reason",
+        }
+
+        preferred_standard = provider_standard_preference.get(preferred_provider)
+        preferred_reasoning = provider_reasoning_preference.get(preferred_provider)
+        if preferred_standard in standard_models:
+            standard_models.remove(preferred_standard)
+            standard_models.insert(0, preferred_standard)
+        if preferred_reasoning in reasoning_models:
+            reasoning_models.remove(preferred_reasoning)
+            reasoning_models.insert(0, preferred_reasoning)
+
         self._tier_mapping = {
             ModelTier.FREE_FAST: ["glm_4_7_flash_no_thinking"],
             ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking"],
             ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
-            ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
-            ModelTier.REASONING: ["zhipu_reason", "deepseek_reason", "dashscope_reason"],
+            ModelTier.STANDARD: standard_models,
+            ModelTier.REASONING: reasoning_models,
             ModelTier.SPECIALIST: ["siliconflow_ocr", "siliconflow_translate"],
         }
         self._override_tier_mapping_from_env()

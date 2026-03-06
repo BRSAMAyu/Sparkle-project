@@ -1,10 +1,11 @@
-.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint
+.PHONY: dev-up sync-db proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance auth-test community-test file-pipeline-test worker-test
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
 DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
 PROTO_TOOLCHAIN_IMAGE?=sparkle/proto-toolchain:latest
 BACKEND_VENV?=backend/.venv/bin
+BACKEND_PYTHON?=$(BACKEND_VENV)/python
 ALEMBIC?=$(BACKEND_VENV)/alembic
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
@@ -102,7 +103,7 @@ sync-rag:
 smoke:
 	@set -e; \
 	echo "🔎 Running config self-check..."; \
-	python backend/scripts/check_config_effective.py; \
+	$(BACKEND_PYTHON) backend/scripts/check_config_effective.py; \
 	echo "🔎 Checking backend health..."; \
 	curl -fsS http://localhost:8000/health > /dev/null || (echo "❌ Backend /health failed" && exit 1); \
 	echo "🔎 Checking gateway health..."; \
@@ -227,7 +228,7 @@ api-server:
 
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."
-	cd backend && python test_grpc_simple.py
+	cd backend && ../$(BACKEND_PYTHON) test_grpc_simple.py
 
 # Go Gateway 相关命令
 gateway-build:
@@ -247,7 +248,7 @@ gateway-dev:
 integration-test:
 	@echo "🧪 Running WebSocket Integration Test..."
 	@echo "⚠️  Make sure Python gRPC server and Go Gateway are running!"
-	cd backend && python test_websocket_client.py
+	cd backend && ../$(BACKEND_PYTHON) test_websocket_client.py
 
 # Celery 任务队列相关命令
 celery-up:
@@ -357,4 +358,44 @@ mobile-run:
 # 配置自检
 env-check:
 	@echo "🔍 Checking effective config + connectivity..."
-	cd backend && python scripts/check_config_effective.py
+	cd backend && ../$(BACKEND_PYTHON) scripts/check_config_effective.py
+
+fixture-init:
+	@echo "🧪 Initializing deterministic local fixtures..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/init_local_fixture.py
+
+local-config-check:
+	@echo "🔐 Auditing required local configuration..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/check_required_local_config.py
+
+local-ai-check:
+	@echo "🤖 Probing all configured AI providers..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/check_ai_providers.py
+
+auth-test:
+	@echo "🔑 Running auth + user settings smoke..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/auth_smoke.py
+
+community-test:
+	@echo "👥 Running community + gateway CQRS smoke..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/community_smoke.py
+
+file-pipeline-test:
+	@echo "📎 Running file upload + vectorization smoke..."
+	@TOKEN=$$(cd backend && ../$(BACKEND_PYTHON) -c "import httpx; resp = httpx.post('http://127.0.0.1:8000/api/v1/auth/login', json={'username':'chat_test','password':'Chat123456'}, timeout=20.0); resp.raise_for_status(); print(resp.json()['access_token'])"); \
+	DATABASE_URL=$$(cd backend && ../$(BACKEND_PYTHON) -c "import os, sys; sys.path.append(os.getcwd()); from app.config import settings; print(settings.DATABASE_URL)"); \
+	TOKEN="$$TOKEN" DATABASE_URL="$$DATABASE_URL" $(BACKEND_PYTHON) scripts/smoke_file_pipeline.py --file backend/test_weekly_report.pdf --token "$$TOKEN" --database-url "$$DATABASE_URL"
+
+worker-test:
+	@echo "⚙️ Running worker queue smoke..."
+	cd backend && ../$(BACKEND_PYTHON) scripts/worker_smoke.py
+
+local-backend-smoke: local-config-check fixture-init smoke auth-test community-test worker-test file-pipeline-test grpc-test integration-test
+	@echo "✅ Local backend acceptance passed."
+
+local-mobile-smoke:
+	@echo "📱 Running local mobile smoke suite..."
+	cd mobile && flutter test test/app/router_smoke_test.dart test/app/main_pages_load_smoke_test.dart test/app/main_actions_smoke_test.dart test/integration/full_stack_e2e_test.dart -r compact
+
+local-acceptance: local-backend-smoke local-ai-check local-mobile-smoke
+	@echo "✅ Local full-stack acceptance passed."

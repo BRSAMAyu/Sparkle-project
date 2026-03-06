@@ -21,12 +21,14 @@ func NewCommunityHandler(cmd *service.CommunityCommandService, qry *service.Comm
 	}
 }
 
-func (h *CommunityHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *CommunityHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	group := router.Group("/community")
 	{
-		group.POST("/posts", h.CreatePost)
+		protected := group.Group("")
+		protected.Use(authMiddleware)
+		protected.POST("/posts", h.CreatePost)
+		protected.POST("/posts/:id/like", h.LikePost)
 		group.GET("/feed", h.GetFeed)
-		group.POST("/posts/:id/like", h.LikePost)
 	}
 }
 

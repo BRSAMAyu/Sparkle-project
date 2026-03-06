@@ -833,6 +833,39 @@ async def create_group(
     return group_info
 
 
+@router.get("/groups/search", response_model=list[GroupListItem], summary="搜索公开群组")
+async def search_groups(
+    keyword: str | None = None,
+    group_type: GroupTypeEnum | None = None,
+    tags: list[str] | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """搜索公开群组"""
+    model_type = GroupType(group_type.value) if group_type else None
+    groups = await GroupService.search_groups(db, keyword, model_type, tags, limit)
+
+    result = []
+    for group_dict in groups:
+        days_remaining = None
+        deadline = group_dict.get('deadline')
+        if deadline:
+            delta = deadline - _utcnow()
+            days_remaining = max(0, delta.days)
+
+        result.append(GroupListItem(
+            id=group_dict['id'],
+            name=group_dict['name'],
+            type=GroupTypeEnum(group_dict['type'].value),
+            member_count=group_dict['member_count'],
+            total_flame_power=group_dict['total_flame_power'],
+            deadline=deadline,
+            days_remaining=days_remaining,
+            focus_tags=group_dict.get('focus_tags', [])
+        ))
+    return result
+
+
 @router.get("/groups/{group_id}", response_model=GroupInfo, summary="获取群组详情")
 async def get_group(
     group_id: UUID,
@@ -942,41 +975,6 @@ async def get_my_groups(
 ):
     """获取当前用户加入的所有群组"""
     return await GroupService.get_my_groups(db, current_user.id)
-
-
-@router.get("/groups/search", response_model=list[GroupListItem], summary="搜索公开群组")
-async def search_groups(
-    keyword: str | None = None,
-    group_type: GroupTypeEnum | None = None,
-    tags: list[str] | None = Query(default=None),
-    limit: int = Query(default=20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db)
-):
-    """搜索公开群组"""
-    # Convert enum to model enum if provided
-    model_type = GroupType(group_type.value) if group_type else None
-    groups = await GroupService.search_groups(db, keyword, model_type, tags, limit)
-
-    result = []
-    for group_dict in groups:
-        days_remaining = None
-        deadline = group_dict.get('deadline')
-        if deadline:
-            from datetime import UTC, datetime
-            delta = deadline - _utcnow()
-            days_remaining = max(0, delta.days)
-
-        result.append(GroupListItem(
-            id=group_dict['id'],
-            name=group_dict['name'],
-            type=GroupTypeEnum(group_dict['type'].value),
-            member_count=group_dict['member_count'],
-            total_flame_power=group_dict['total_flame_power'],
-            deadline=deadline,
-            days_remaining=days_remaining,
-            focus_tags=group_dict.get('focus_tags', [])
-        ))
-    return result
 
 
 # ============ 群消息 ============

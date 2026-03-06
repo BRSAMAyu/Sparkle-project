@@ -36,10 +36,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   final TransformationController _transformationController =
       TransformationController();
   late final GalaxyRenderEngine _renderEngine;
+  late final GalaxyNotifier _galaxyNotifier;
   late final AnimationController _selectionPulseController;
   final List<AnimationController> _transientControllers = [];
   ProviderSubscription<GalaxyState>? _focusSubscription;
   bool _isDisposing = false;
+  bool _layoutAdjustmentScheduled = false;
+  Timer? _loadingTimeoutTimer;
 
   // State
   bool _isEntering = true;
@@ -78,6 +81,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   @override
   void initState() {
     super.initState();
+    _galaxyNotifier = ref.read(galaxyProvider.notifier);
     _renderEngine = GalaxyRenderEngine();
 
     _selectionPulseController = AnimationController(
@@ -91,12 +95,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Start Performance Monitoring
     PerformanceService.instance.startMonitoring();
 
-    // Initial load
-    unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
+    // Delay provider mutations until after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_galaxyNotifier.loadGalaxy());
+    });
     unawaited(_renderEngine.prewarm());
 
     // Hide loading indicator after 5 seconds (timeout mechanism)
-    Future.delayed(const Duration(seconds: 5), () {
+    _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _loadingTimedOut = true);
     });
   }
@@ -137,6 +144,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..scaleByDouble(scale, scale, 1, 1);
   }
 
+  void _scheduleLayoutAdjustment(VoidCallback callback) {
+    if (_layoutAdjustmentScheduled || !mounted) return;
+    _layoutAdjustmentScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _layoutAdjustmentScheduled = false;
+      if (!mounted || _isDisposing) return;
+      callback();
+    });
+  }
+
   @override
   void dispose() {
     _isDisposing = true;
@@ -144,14 +161,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       controller.dispose();
     }
     _transientControllers.clear();
-    ref.read(galaxyProvider.notifier).clearEvidenceHighlight();
-    ref.read(galaxyProvider.notifier).clearFocusBounds();
-    ref.read(galaxyProvider.notifier).clearFocusNode();
+    _galaxyNotifier.clearEvidenceHighlight();
+    _galaxyNotifier.clearFocusBounds();
+    _galaxyNotifier.clearFocusNode();
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
     _focusSubscription?.close();
     _renderEngine.dispose();
+    _loadingTimeoutTimer?.cancel();
     PerformanceService.instance.stopMonitoring();
     super.dispose();
   }
@@ -895,16 +913,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                   final size = constraints.biggest;
 
                   if (!_hasCentered && size.width > 0 && size.height > 0) {
-                    _performInitialCentering(size);
-                    _hasCentered = true;
+                    _scheduleLayoutAdjustment(() {
+                      _performInitialCentering(size);
+                      _hasCentered = true;
+                    });
                   } else if (_lastLayoutSize != null &&
                       _lastLayoutSize != size &&
                       size.width > 0 &&
                       size.height > 0) {
-                    _recenterForResize(
-                      oldSize: _lastLayoutSize!,
-                      newSize: size,
-                    );
+                    _scheduleLayoutAdjustment(() {
+                      _recenterForResize(
+                        oldSize: _lastLayoutSize!,
+                        newSize: size,
+                      );
+                    });
                   }
                   _lastLayoutSize = size;
 
