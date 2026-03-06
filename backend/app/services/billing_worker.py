@@ -58,6 +58,7 @@ class BillingWorker:
         self.is_running = False
         self._batch: list[dict[str, Any]] = []
         self._last_flush_time = time.time()
+        self._dead_letter_queue = "queue:billing:dead_letter"
 
     async def start(self):
         """启动工作器"""
@@ -92,7 +93,7 @@ class BillingWorker:
             # 停止前尝试刷新最后一批
             if self._batch:
                 await self._flush_to_db()
-            await self.redis.close()
+            await self.redis.aclose()
             await self.engine.dispose()
             logger.info("BillingWorker stopped.")
 
@@ -145,43 +146,55 @@ class BillingWorker:
 
         except Exception as e:
             logger.error(f"Failed to persist billing records: {e}")
-            # 如果是唯一约束冲突（可能是重复请求），尝试逐条插入或记录错误
-            if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
-                logger.warning("Duplicate key detected, retrying individual records...")
-                await self._retry_individually()
-            else:
-                # 其他错误则保留在批中待下次重试（需谨慎处理，防止死循环）
-                logger.error("Keeping records in batch for retry...")
+            logger.warning("Batch flush failed, retrying records individually...")
+            await self._retry_individually()
 
     async def _retry_individually(self):
-        """逐条重试插入，跳过已存在的记录"""
+        """逐条重试插入，坏记录转入死信队列，避免阻塞后续合法记录。"""
         async with self.async_session_factory() as session:
             for r in self._batch:
                 try:
                     async with session.begin_nested():
-                        stmt_data = {
-                            "user_id": r["user_id"],
-                            "session_id": r["session_id"],
-                            "request_id": r["request_id"],
-                            "model": r["model"],
-                            "prompt_tokens": r["prompt_tokens"],
-                            "completion_tokens": r["completion_tokens"],
-                            "total_tokens": r["total_tokens"],
-                            "cost": r.get("cost", 0.0),
-                            "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow()
-                        }
+                        stmt_data = self._to_stmt_data(r)
                         await session.execute(insert(TokenUsage), stmt_data)
                     await session.commit()
                 except Exception as e:
                     if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
                         logger.debug(f"Skipping duplicate request_id: {r['request_id']}")
                     else:
-                        logger.error(f"Failed to persist individual record {r['request_id']}: {e}")
+                        logger.error(f"Failed to persist individual record {r.get('request_id')}: {e}")
+                        await self._move_to_dead_letter(r, str(e))
 
             await session.commit()
 
         self._batch = []
         self._last_flush_time = time.time()
+
+    def _to_stmt_data(self, record: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "user_id": record["user_id"],
+            "session_id": record["session_id"],
+            "request_id": record["request_id"],
+            "model": record["model"],
+            "prompt_tokens": record["prompt_tokens"],
+            "completion_tokens": record["completion_tokens"],
+            "total_tokens": record["total_tokens"],
+            "cost": record.get("cost", 0.0),
+            "timestamp": datetime.fromtimestamp(record["timestamp"]) if "timestamp" in record else _utcnow(),
+        }
+
+    async def _move_to_dead_letter(self, record: dict[str, Any], error: str) -> None:
+        payload = {
+            "record": record,
+            "error": error,
+            "failed_at": _utcnow().isoformat(),
+        }
+        await self.redis.rpush(self._dead_letter_queue, json.dumps(payload, ensure_ascii=False))
+        logger.warning(
+            "Moved billing record to dead letter queue: request_id=%s queue=%s",
+            record.get("request_id"),
+            self._dead_letter_queue,
+        )
 
     def stop(self):
         """停止工作器"""

@@ -154,7 +154,7 @@ async def vectorize_document(database_url: str, file_path: Path) -> None:
         """))
         await conn.execute(text("""
             INSERT INTO smoke_document_vectors (id, file_name, chunk_text, embedding)
-            VALUES (:id, :file_name, :chunk_text, :embedding::vector)
+            VALUES (:id, :file_name, :chunk_text, CAST(:embedding AS vector))
         """), {
             "id": row_id,
             "file_name": file_path.name,

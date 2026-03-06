@@ -215,7 +215,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(
+      child: Icon(
         Icons.whatshot_rounded,
         color: DS.textOnPrimary,
         size: DS.iconSizeLg,
@@ -378,7 +378,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
           ),
         ],
       ),
-      child: const Icon(
+      child: Icon(
         Icons.whatshot_rounded,
         color: DS.textOnPrimary,
         size: DS.iconSize3xl,

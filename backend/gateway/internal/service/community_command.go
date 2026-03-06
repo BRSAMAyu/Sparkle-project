@@ -51,23 +51,27 @@ func (s *CommunityCommandService) CreatePost(ctx context.Context, req CreatePost
 	}
 
 	var post db.Post
+	postID := uuid.New()
 
 	// Execute in transaction with Outbox pattern
 	err = s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		// Insert post in transaction
 		row := txCtx.QueryRow(ctx, `
-			INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, NOW(), NOW())
-			RETURNING id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at
-		`, pgtype.UUID{Bytes: req.UserID, Valid: true}, req.Content, imagesJSON,
+			INSERT INTO posts (id, user_id, content, image_urls, topic, visibility, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, 'public', NOW(), NOW())
+			RETURNING user_id, content, image_urls, topic, visibility, like_count, comment_count, id, created_at, updated_at, deleted_at
+		`, pgtype.UUID{Bytes: postID, Valid: true}, pgtype.UUID{Bytes: req.UserID, Valid: true}, req.Content, imagesJSON,
 			pgtype.Text{String: req.Topic, Valid: req.Topic != ""})
 
 		err := row.Scan(
-			&post.ID,
 			&post.UserID,
 			&post.Content,
 			&post.ImageUrls,
 			&post.Topic,
+			&post.Visibility,
+			&post.LikeCount,
+			&post.CommentCount,
+			&post.ID,
 			&post.CreatedAt,
 			&post.UpdatedAt,
 			&post.DeletedAt,

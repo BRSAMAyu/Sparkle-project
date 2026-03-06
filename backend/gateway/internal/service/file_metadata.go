@@ -44,9 +44,9 @@ func (s *FileMetadataService) CreatePendingFile(
 ) (StoredFile, error) {
 	row := s.pool.QueryRow(ctx, `
 		INSERT INTO stored_files (
-			id, user_id, file_name, mime_type, file_size, bucket, object_key, status, visibility
+			id, user_id, file_name, mime_type, file_size, bucket, object_key, status, visibility, retention_policy, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, 'uploading', 'private'
+			$1, $2, $3, $4, $5, $6, $7, 'uploading', 'private', 'standard', NOW(), NOW()
 		)
 		RETURNING id, user_id, file_name, mime_type, file_size, bucket, object_key,
 			status, visibility, created_at, updated_at, deleted_at

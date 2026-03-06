@@ -196,6 +196,64 @@ class GroupService:
     """群组服务"""
 
     @staticmethod
+    async def search_groups(
+        db: AsyncSession,
+        keyword: str | None = None,
+        group_type: Any | None = None,
+        tags: list[str] | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """搜索公开群组并返回轻量列表数据。"""
+        member_count_subquery = (
+            select(
+                GroupMember.group_id.label("group_id"),
+                func.count(GroupMember.id).label("member_count"),
+            )
+            .where(GroupMember.not_deleted_filter())
+            .group_by(GroupMember.group_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                Group,
+                func.coalesce(member_count_subquery.c.member_count, 0).label("member_count"),
+            )
+            .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
+            .where(Group.is_public.is_(True), Group.not_deleted_filter())
+            .order_by(desc(Group.updated_at))
+            .limit(limit)
+        )
+
+        if keyword:
+            pattern = f"%{keyword}%"
+            stmt = stmt.where(
+                or_(
+                    Group.name.ilike(pattern),
+                    Group.description.ilike(pattern),
+                )
+            )
+        if group_type is not None:
+            stmt = stmt.where(Group.type == group_type)
+        if tags:
+            stmt = stmt.where(Group.focus_tags.contains(tags))
+
+        result = await db.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "id": group.id,
+                "name": group.name,
+                "type": group.type,
+                "member_count": int(member_count or 0),
+                "total_flame_power": group.total_flame_power,
+                "deadline": group.deadline,
+                "focus_tags": group.focus_tags or [],
+            }
+            for group, member_count in rows
+        ]
+
+    @staticmethod
     async def create_group(
         db: AsyncSession,
         creator_id: UUID,

@@ -157,8 +157,12 @@ case "${1:-}" in
     wait_for_http "http://127.0.0.1:8000/health" "api"
     start_service "gateway" "export PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '$ROOT_DIR/backend/gateway' && go build -o bin/gateway ./cmd/server && exec ./bin/gateway"
     wait_for_http "http://127.0.0.1:8080/api/v1/health" "gateway"
+    start_service "summarization_worker" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec python scripts/start_summarization_worker.py --worker-id local-summary"
+    start_service "billing_worker" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec python scripts/start_billing_worker.py"
     ;;
   down)
+    stop_service "billing_worker"
+    stop_service "summarization_worker"
     stop_service "gateway"
     stop_service "api"
     stop_service "grpc"
@@ -166,6 +170,8 @@ case "${1:-}" in
     ;;
   status)
     (cd "$ROOT_DIR" && docker compose ps)
+    status_service "summarization_worker"
+    status_service "billing_worker"
     status_service "grpc"
     status_service "api"
     status_service "gateway"
