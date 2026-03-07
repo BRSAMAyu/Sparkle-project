@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import Integer, and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tool_history import ToolSuccessRateView, UserToolHistory, UserToolPreference
@@ -109,7 +109,7 @@ class ToolHistoryService:
         query = select(
             func.count(UserToolHistory.id).label('total'),
             func.sum(
-                func.cast(UserToolHistory.success, type_=func.Integer())
+                func.cast(UserToolHistory.success, Integer)
             ).label('success_count')
         ).where(
             and_(
@@ -153,7 +153,7 @@ class ToolHistoryService:
             UserToolHistory.tool_name,
             func.count(UserToolHistory.id).label('usage_count'),
             func.sum(
-                func.cast(UserToolHistory.success, type_=func.Integer())
+                func.cast(UserToolHistory.success, Integer)
             ).label('success_count'),
             func.avg(UserToolHistory.execution_time_ms).label('avg_time_ms'),
             func.max(UserToolHistory.created_at).label('last_used_at')
@@ -218,7 +218,7 @@ class ToolHistoryService:
             UserToolHistory.tool_name,
             func.count(UserToolHistory.id).label('usage_count'),
             func.sum(
-                func.cast(UserToolHistory.success, type_=func.Integer())
+                func.cast(UserToolHistory.success, Integer)
             ).label('success_count'),
             func.avg(UserToolHistory.execution_time_ms).label('avg_time_ms'),
             func.max(UserToolHistory.created_at).label('last_used_at')

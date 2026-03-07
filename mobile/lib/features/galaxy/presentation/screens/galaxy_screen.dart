@@ -8,22 +8,18 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/features/galaxy/data/models/galaxy_scene_snapshot.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/energy_particle.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_entrance_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_search_dialog.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_shader_background.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/parallax_star_background.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_background_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
@@ -47,20 +43,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Timer? _loadingTimeoutTimer;
 
   // State
-  bool _isEntering = true;
   bool _hasCentered = false;
   bool _loadingTimedOut = false;
   Size? _lastLayoutSize;
-  bool _showDebugOverlay = kDebugMode;
+  bool _showDebugOverlay = false;
   final Set<int> _activePointers = <int>{};
   String? _draggingNodeId;
+  String? _pendingLongPressNodeId;
+  Offset? _gestureSceneFocalPoint;
+  double? _gestureStartScale;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
   final List<_ActiveSuccessAnimation> _activeSuccessAnimations = [];
 
-  // Canvas constants - use layout engine constants
-  static const double _centralFlameSize = 60.0;
   final double _canvasCenter =
       GalaxyLayoutEngine.canvasCenter; // Canvas center coordinate (2900)
   final double _canvasSize =
@@ -74,10 +70,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Rect? _cachedRelativeViewport;
   Rect? _lastReportedRelativeViewport;
   Matrix4? _lastViewportMatrix;
+  Timer? _cameraStateSyncTimer;
 
   // 🔧 性能优化: 缓存 StarMapPainter
   StarMapPainter? _cachedPainter;
   int? _lastPainterSignature;
+  GalaxySceneSnapshot? _cachedSceneSnapshot;
 
   // Gesture conflict resolution
   bool _hasDragged = false;
@@ -92,7 +90,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _selectionPulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+    )..value = 0.35;
 
     // Listen to transformation changes for scale updates
     _transformationController.addListener(_onTransformChanged);
@@ -105,8 +103,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       if (!mounted) return;
       unawaited(_galaxyNotifier.loadGalaxy());
     });
-    unawaited(_renderEngine.prewarm());
-
     // Hide loading indicator after 5 seconds (timeout mechanism)
     _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _loadingTimedOut = true);
@@ -175,6 +171,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _focusSubscription?.close();
     _renderEngine.dispose();
     _loadingTimeoutTimer?.cancel();
+    _cameraStateSyncTimer?.cancel();
     PerformanceService.instance.stopMonitoring();
     super.dispose();
   }
@@ -184,10 +181,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   void _onTransformChanged() {
     final scale = _transformationController.value.getMaxScaleOnAxis();
 
-    // Only update if scale changed significantly (avoid excessive updates during pan)
+    // Keep camera state local during active interaction. Provider persistence is synced lazily.
     if ((scale - _lastScale).abs() > 0.02) {
       _lastScale = scale;
-      ref.read(galaxyProvider.notifier).updateScale(scale);
+      _scheduleCameraStateSync();
     }
 
     if (!mounted) return;
@@ -219,11 +216,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         Offset(-_canvasCenter, -_canvasCenter),
       );
       _cachedRelativeViewport = nextRelativeViewport;
-
       if (_viewportChangedSignificantly(nextRelativeViewport)) {
         _lastReportedRelativeViewport = nextRelativeViewport;
-        ref.read(galaxyProvider.notifier).updateViewport(nextRelativeViewport);
       }
+    }
+  }
+
+  void _scheduleCameraStateSync() {
+    _cameraStateSyncTimer?.cancel();
+    _cameraStateSyncTimer = Timer(const Duration(milliseconds: 220), () {
+      if (!mounted || _isDisposing) {
+        return;
+      }
+      ref.read(galaxyProvider.notifier).updateScale(_lastScale);
+    });
+  }
+
+  void _cancelTransientCameraAnimations() {
+    for (final controller in List<AnimationController>.from(
+      _transientControllers,
+    )) {
+      controller.stop();
+      controller.dispose();
+      _transientControllers.remove(controller);
     }
   }
 
@@ -287,76 +302,67 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       builder: (context, child) {
         // 检查是否需要重建 painter
         final needsRebuild = _shouldRebuildPainter(galaxyState);
+        final sceneSnapshot = _cachedSceneSnapshot;
 
-        if (needsRebuild) {
-          _cachedPainter = _createStarMapPainter(galaxyState, canvasCenter);
+        if (needsRebuild || sceneSnapshot == null) {
+          _cachedSceneSnapshot = _createSceneSnapshot(galaxyState);
         }
+        final activeSnapshot = _cachedSceneSnapshot!;
+        _cachedPainter = _createStarMapPainter(galaxyState, activeSnapshot);
 
-        // 使用 RepaintBoundary 隔离动画层
         return Stack(
           children: [
-            // 1. Background: Sector nebula and stars (Static, Cached)
             Positioned.fill(
-              child: RepaintBoundary(
-                child: TiledSectorBackground(
-                  width: canvasSize,
-                  height: canvasSize,
-                ),
-              ),
-            ),
-
-            // 2. Central Flame at canvas center (Static position)
-            Positioned(
-              left: canvasCenter - _centralFlameSize / 2,
-              top: canvasCenter - _centralFlameSize / 2,
-              child: Opacity(
-                opacity: _isEntering ? 0.0 : 1.0,
-                child: CentralFlame(
-                  intensity: galaxyState.userFlameIntensity,
-                  size: _centralFlameSize,
-                ),
-              ),
-            ),
-
-            // 3. Static star map layer
-            Positioned.fill(
-              child: Opacity(
-                opacity: _isEntering ? 0.0 : 1.0,
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _cachedPainter,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.08),
+                    radius: 1.18,
+                    colors: [
+                      DS.primaryBase.withValues(alpha: 0.08),
+                      DS.galaxyBackground.withValues(alpha: 0.94),
+                      DS.neutral900,
+                    ],
                   ),
                 ),
               ),
             ),
-
-            // 4. Lightweight overlay for selection and evidence pulses
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _cachedPainter,
+                ),
+              ),
+            ),
+            if (activeSnapshot.budget.showLabels &&
+                activeSnapshot.viewport.scale >= 0.75)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: _GalaxyLabelOverlay(
+                    snapshot: activeSnapshot,
+                    nodeNameLookup: {
+                      for (final node in galaxyState.nodes)
+                        node.id.hashCode: node.name,
+                    },
+                  ),
+                ),
+              ),
             if (galaxyState.selectedNodeId != null ||
                 galaxyState.highlightedNodeIdHashes.isNotEmpty)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: Opacity(
-                    opacity: _isEntering ? 0.0 : 1.0,
-                    child: RepaintBoundary(
-                      child: AnimatedBuilder(
-                        animation: _selectionPulseController,
-                        builder: (context, child) {
-                          final throttledPulse =
-                              (_selectionPulseController.value * 15).round() /
-                                  15.0;
-                          return CustomPaint(
-                            painter: SelectionOverlayPainter(
-                              nodes: galaxyState.visibleCompactNodes,
-                              selectedNodeIdHash:
-                                  galaxyState.selectedNodeId?.hashCode,
-                              highlightedNodeIdHashes:
-                                  galaxyState.highlightedNodeIdHashes,
-                              performanceTier:
-                                  PerformanceService.instance.currentTier.value,
-                              selectionPulse: throttledPulse,
-                            ),
-                          );
-                        },
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      painter: SelectionOverlayPainter(
+                        nodes: activeSnapshot.nodes,
+                        viewMatrix: _transformationController.value.clone(),
+                        selectedNodeIdHash:
+                            galaxyState.selectedNodeId?.hashCode,
+                        highlightedNodeIdHashes:
+                            galaxyState.highlightedNodeIdHashes,
+                        performanceTier:
+                            PerformanceService.instance.currentTier.value,
+                        selectionPulse: 0.35,
                       ),
                     ),
                   ),
@@ -381,44 +387,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   /// 🔧 创建 StarMapPainter
   StarMapPainter _createStarMapPainter(
     GalaxyState galaxyState,
-    double canvasCenter,
+    GalaxySceneSnapshot snapshot,
   ) {
-    final scale = _transformationController.value.getMaxScaleOnAxis();
-
-    // 🔧 使用缓存的 viewport 计算结果
-    final absoluteViewport = _cachedAbsoluteViewport ??
-        _calculateViewport(MediaQuery.of(context).size);
-
-    // 🔧 性能优化: 直接使用 Provider 预计算的 CompactNode 列表
-    // 避免每次渲染时都映射节点列表 (节省 5-10ms/帧 for 500+ nodes)
-    final compactNodes = galaxyState.visibleCompactNodes;
-
-    final selectedHash = galaxyState.selectedNodeId?.hashCode;
-    final highlightedHashes = galaxyState.highlightedNodeIdHashes;
-    final expandedHashes =
-        galaxyState.expandedEdgeNodeIds.map((id) => id.hashCode).toSet();
-    final animationHashes = galaxyState.nodeAnimationProgress
-        .map((id, val) => MapEntry(id.hashCode, val));
-
     return StarMapPainter(
-      nodes: compactNodes,
-      edges: galaxyState.visibleEdges,
-      scale: scale,
+      nodes: snapshot.nodes,
+      edges: snapshot.edges,
+      viewMatrix: snapshot.viewport.matrix,
+      maxEdges: snapshot.budget.maxEdges,
+      maxLabels: snapshot.budget.maxLabels,
+      showLabels: snapshot.budget.showLabels,
+      showTags: snapshot.budget.showTags,
+      showEdgeGlow: snapshot.budget.showEdgeGlow,
+      scale: snapshot.viewport.scale,
       performanceTier: PerformanceService.instance.currentTier.value,
       currentDpr: PerformanceService.instance.currentDpr.value,
       aggregationLevel: galaxyState.aggregationLevel,
       clusters: _centerClusters(
         galaxyState.clusters,
-        canvasCenter,
-        canvasCenter,
+        galaxyState.canvasCenter,
+        galaxyState.canvasCenter,
       ),
-      viewport: absoluteViewport,
-      center: Offset(canvasCenter, canvasCenter),
-      selectedNodeIdHash: selectedHash,
-      highlightedNodeIdHashes: highlightedHashes,
-      highlightRevision: galaxyState.highlightRevision,
-      expandedEdgeNodeIdHashes: expandedHashes,
-      nodeAnimationProgress: animationHashes,
+      viewport: snapshot.viewport.absoluteViewport,
+      center: Offset(galaxyState.canvasCenter, galaxyState.canvasCenter),
+      selectedNodeIdHash: snapshot.selectedNodeIdHash,
+      highlightedNodeIdHashes: snapshot.highlightedNodeIdHashes,
+      highlightRevision: snapshot.highlightRevision,
+      expandedEdgeNodeIdHashes: snapshot.expandedEdgeNodeIdHashes,
+      nodeAnimationProgress: const {},
       selectionPulse: 0.0,
     );
   }
@@ -435,6 +430,247 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return Rect.fromPoints(topLeft, bottomRight);
   }
 
+  GalaxySceneSnapshot _createSceneSnapshot(GalaxyState galaxyState) {
+    final absoluteViewport = _cachedAbsoluteViewport ??
+        _calculateViewport(MediaQuery.of(context).size);
+    final relativeViewport = _cachedRelativeViewport ??
+        absoluteViewport.shift(Offset(-_canvasCenter, -_canvasCenter));
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    final viewportBucket = Object.hash(
+      (absoluteViewport.center.dx / 160).round(),
+      (absoluteViewport.center.dy / 160).round(),
+      (absoluteViewport.width / 160).round(),
+      (absoluteViewport.height / 160).round(),
+    );
+    final zoomBucket = (scale * 10).round();
+
+    final viewportState = GalaxyViewportState(
+      matrix: _transformationController.value.clone(),
+      absoluteViewport: absoluteViewport,
+      relativeViewport: relativeViewport,
+      scale: scale,
+      viewportBucket: viewportBucket,
+      zoomBucket: zoomBucket,
+    );
+    final budget = _resolveRenderBudget(scale);
+    final visibleNodes =
+        _collectVisibleNodes(galaxyState, viewportState, budget);
+    final compactNodes = visibleNodes.map((node) {
+      final pos = galaxyState.nodePositions[node.id] ?? Offset.zero;
+      return node.toCompact(
+        pos.dx + galaxyState.canvasCenter,
+        pos.dy + galaxyState.canvasCenter,
+      );
+    }).toList(growable: false);
+    final visibleNodeIdsByHash = <int, String>{
+      for (final node in visibleNodes) node.id.hashCode: node.id,
+    };
+    final visibleEdges = _collectVisibleEdges(
+      galaxyState,
+      visibleNodes,
+      viewportState,
+      budget,
+    );
+    final hitTargets = compactNodes
+        .map(
+          (node) => GalaxyHitTarget(
+            nodeId: visibleNodeIdsByHash[node.idHash] ?? '',
+            nodeHash: node.idHash,
+            position: Offset(node.x, node.y),
+            radius: (20 + (node.importance * 3)) / scale.clamp(0.35, 1.6),
+          ),
+        )
+        .where((target) => target.nodeId.isNotEmpty)
+        .toList(growable: false);
+
+    return GalaxySceneSnapshot(
+      viewport: viewportState,
+      budget: budget,
+      nodes: compactNodes,
+      edges: visibleEdges,
+      hitTargets: hitTargets,
+      selectedNodeIdHash: galaxyState.selectedNodeId?.hashCode,
+      highlightedNodeIdHashes: galaxyState.highlightedNodeIdHashes,
+      expandedEdgeNodeIdHashes:
+          galaxyState.expandedEdgeNodeIds.map((id) => id.hashCode).toSet(),
+      highlightRevision: galaxyState.highlightRevision,
+    );
+  }
+
+  GalaxyRenderBudget _resolveRenderBudget(double scale) {
+    final tier = PerformanceService.instance.currentTier.value;
+    switch (tier) {
+      case PerformanceTier.ultra:
+        return GalaxyRenderBudget(
+          maxNodes: scale >= 0.95
+              ? 320
+              : scale >= 0.55
+                  ? 230
+                  : 140,
+          maxEdges: scale >= 0.95
+              ? 500
+              : scale >= 0.55
+                  ? 260
+                  : 120,
+          maxLabels: scale >= 0.95
+              ? 52
+              : scale >= 0.55
+                  ? 28
+                  : 12,
+          showLabels: scale >= 0.42,
+          showTags: scale >= 0.9,
+          showEdgeGlow: true,
+          labelScaleThreshold: 0.42,
+        );
+      case PerformanceTier.high:
+        return GalaxyRenderBudget(
+          maxNodes: scale >= 0.95
+              ? 260
+              : scale >= 0.55
+                  ? 190
+                  : 120,
+          maxEdges: scale >= 0.95
+              ? 380
+              : scale >= 0.55
+                  ? 220
+                  : 100,
+          maxLabels: scale >= 0.95
+              ? 40
+              : scale >= 0.55
+                  ? 22
+                  : 10,
+          showLabels: scale >= 0.48,
+          showTags: scale >= 1.0,
+          showEdgeGlow: true,
+          labelScaleThreshold: 0.48,
+        );
+      case PerformanceTier.medium:
+        return GalaxyRenderBudget(
+          maxNodes: scale >= 0.95
+              ? 180
+              : scale >= 0.55
+                  ? 140
+                  : 96,
+          maxEdges: scale >= 0.95
+              ? 220
+              : scale >= 0.55
+                  ? 150
+                  : 72,
+          maxLabels: scale >= 0.95
+              ? 22
+              : scale >= 0.55
+                  ? 14
+                  : 6,
+          showLabels: scale >= 0.58,
+          showTags: false,
+          showEdgeGlow: false,
+          labelScaleThreshold: 0.58,
+        );
+      case PerformanceTier.low:
+        return GalaxyRenderBudget(
+          maxNodes: scale >= 0.95 ? 120 : 80,
+          maxEdges: scale >= 0.95 ? 120 : 48,
+          maxLabels: scale >= 0.95 ? 12 : 4,
+          showLabels: scale >= 0.72,
+          showTags: false,
+          showEdgeGlow: false,
+          labelScaleThreshold: 0.72,
+        );
+    }
+  }
+
+  List<GalaxyNodeModel> _collectVisibleNodes(
+    GalaxyState galaxyState,
+    GalaxyViewportState viewportState,
+    GalaxyRenderBudget budget,
+  ) {
+    final stickyIds = <String>{
+      if (galaxyState.selectedNodeId != null) galaxyState.selectedNodeId!,
+      ...galaxyState.highlightedNodeIds,
+      ...galaxyState.expandedEdgeNodeIds,
+    };
+    final cullingRect = viewportState.relativeViewport.inflate(360);
+    final candidates = galaxyState.nodes.where((node) {
+      final pos = galaxyState.nodePositions[node.id];
+      if (pos == null) {
+        return false;
+      }
+      if (stickyIds.contains(node.id)) {
+        return true;
+      }
+      if (!cullingRect.contains(pos)) {
+        return false;
+      }
+      if (viewportState.scale < 0.3) {
+        return node.importance >= 4 || node.parentId == null;
+      }
+      if (viewportState.scale < 0.52) {
+        return node.importance >= 3 || node.parentId == null;
+      }
+      if (viewportState.scale < 0.82) {
+        return node.importance >= 2;
+      }
+      return true;
+    }).toList();
+    candidates.sort((a, b) {
+      final aPinned = stickyIds.contains(a.id);
+      final bPinned = stickyIds.contains(b.id);
+      if (aPinned != bPinned) {
+        return aPinned ? -1 : 1;
+      }
+      final byImportance = b.importance.compareTo(a.importance);
+      if (byImportance != 0) {
+        return byImportance;
+      }
+      final center = viewportState.relativeViewport.center;
+      final aPos = galaxyState.nodePositions[a.id] ?? Offset.zero;
+      final bPos = galaxyState.nodePositions[b.id] ?? Offset.zero;
+      return (aPos - center)
+          .distanceSquared
+          .compareTo((bPos - center).distanceSquared);
+    });
+    return candidates.take(budget.maxNodes).toList(growable: false);
+  }
+
+  List<GalaxyEdgeModel> _collectVisibleEdges(
+    GalaxyState galaxyState,
+    List<GalaxyNodeModel> visibleNodes,
+    GalaxyViewportState viewportState,
+    GalaxyRenderBudget budget,
+  ) {
+    final visibleIds = visibleNodes.map((node) => node.id).toSet();
+    final edges = galaxyState.edges.where((edge) {
+      if (!visibleIds.contains(edge.sourceId) ||
+          !visibleIds.contains(edge.targetId)) {
+        return false;
+      }
+      if (viewportState.scale < 0.56 &&
+          edge.relationType != EdgeRelationType.parentChild) {
+        return false;
+      }
+      return true;
+    }).toList();
+    edges.sort((a, b) {
+      final aPinned = galaxyState.expandedEdgeNodeIds.contains(a.sourceId) ||
+          galaxyState.expandedEdgeNodeIds.contains(a.targetId);
+      final bPinned = galaxyState.expandedEdgeNodeIds.contains(b.sourceId) ||
+          galaxyState.expandedEdgeNodeIds.contains(b.targetId);
+      if (aPinned != bPinned) {
+        return aPinned ? -1 : 1;
+      }
+      if (a.relationType == EdgeRelationType.parentChild &&
+          b.relationType != EdgeRelationType.parentChild) {
+        return -1;
+      }
+      if (b.relationType == EdgeRelationType.parentChild &&
+          a.relationType != EdgeRelationType.parentChild) {
+        return 1;
+      }
+      return b.strength.compareTo(a.strength);
+    });
+    return edges.take(budget.maxEdges).toList(growable: false);
+  }
+
   int _createPainterSignature(GalaxyState galaxyState) {
     final scaleBucket =
         (_transformationController.value.getMaxScaleOnAxis() * 10).round();
@@ -448,19 +684,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             (viewport.height / 120).round(),
           );
     final nodeSample = Object.hashAll(
-      galaxyState.visibleCompactNodes.take(12).map(
-          (node) => Object.hash(node.idHash, node.x.round(), node.y.round())),
+      galaxyState.nodes.take(12).map(
+        (node) {
+          final pos = galaxyState.nodePositions[node.id] ?? Offset.zero;
+          return Object.hash(node.id, pos.dx.round(), pos.dy.round());
+        },
+      ),
     );
     final edgeSample = Object.hashAll(
-      galaxyState.visibleEdges.take(12).map(
+      galaxyState.edges.take(12).map(
             (edge) =>
                 Object.hash(edge.sourceId, edge.targetId, edge.relationType),
           ),
     );
 
     return Object.hashAll([
-      galaxyState.visibleCompactNodes.length,
-      galaxyState.visibleEdges.length,
+      galaxyState.nodes.length,
+      galaxyState.edges.length,
       galaxyState.aggregationLevel,
       galaxyState.highlightRevision,
       PerformanceService.instance.currentTier.value,
@@ -474,45 +714,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   /// Handle tap on canvas to detect node clicks
   void _handleTapUp(TapUpDetails details) {
-    if (_isEntering) return;
     if (_draggingNodeId != null) return;
+    _pendingLongPressNodeId = null;
 
     // Prevent tap if user has dragged (gesture conflict resolution)
     if (_hasDragged) return;
 
-    final galaxyState = ref.read(galaxyProvider);
-    if (galaxyState.nodes.isEmpty) return;
-    final canvasCenter = galaxyState.canvasCenter;
-
-    // Convert screen tap to canvas coordinates
-    final canvasTap = _screenToCanvas(details.localPosition);
-
-    // Get current scale for dynamic hit radius
-    final scale = _transformationController.value.getMaxScaleOnAxis();
-    final effectiveScale = scale.clamp(0.3, 2.0);
-    final hitRadius = 30 / effectiveScale; // Stable hit area across zooms
-
-    // Find the tapped node
-    // Check visible nodes first for optimization
-    final searchNodes = galaxyState.visibleNodes.isNotEmpty
-        ? galaxyState.visibleNodes
-        : galaxyState.nodes;
-
-    for (final node in searchNodes) {
-      final nodePos = galaxyState.nodePositions[node.id];
-      if (nodePos == null) continue;
-
-      // Add canvas center offset to get actual position
-      final actualPos = nodePos + Offset(canvasCenter, canvasCenter);
-      final distance = (canvasTap - actualPos).distance;
-
-      // Hit test
-      if (distance < hitRadius + (node.importance * 2)) {
-        // Node tapped - Select it
-        ref.read(galaxyProvider.notifier).selectNode(node.id);
-        HapticFeedback.selectionClick();
-        return;
-      }
+    final nodeId = _hitTestNode(details.localPosition);
+    if (nodeId != null) {
+      unawaited(context.push('/galaxy/node/$nodeId'));
+      HapticFeedback.selectionClick();
+      return;
     }
 
     // If no node hit, deselect
@@ -521,17 +733,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   /// Handle long press to navigate directly
   void _handleLongPressStart(LongPressStartDetails details) {
-    if (_isEntering) return;
     final nodeId = _hitTestNode(details.localPosition);
     if (nodeId == null) return;
-    _draggingNodeId = nodeId;
-    _hasDragged = true;
-    ref.read(galaxyProvider.notifier).beginNodeDrag(nodeId);
-    HapticFeedback.mediumImpact();
+    _pendingLongPressNodeId = nodeId;
+    _draggingNodeId = null;
+    _hasDragged = false;
+    ref.read(galaxyProvider.notifier).selectNode(nodeId);
+    HapticFeedback.selectionClick();
   }
 
   void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
-    final nodeId = _draggingNodeId;
+    var nodeId = _draggingNodeId;
+    final pendingNodeId = _pendingLongPressNodeId;
+    if (nodeId == null && pendingNodeId != null) {
+      if (details.localOffsetFromOrigin.distance <= 12) {
+        return;
+      }
+      nodeId = pendingNodeId;
+      _pendingLongPressNodeId = null;
+      _draggingNodeId = nodeId;
+      _hasDragged = true;
+      ref.read(galaxyProvider.notifier).beginNodeDrag(nodeId);
+      HapticFeedback.mediumImpact();
+    }
     if (nodeId == null) return;
     final galaxyState = ref.read(galaxyProvider);
     final canvasPoint = _screenToCanvas(details.localPosition);
@@ -543,6 +767,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
+    _pendingLongPressNodeId = null;
     if (_draggingNodeId == null) return;
     final notifier = ref.read(galaxyProvider.notifier);
     _draggingNodeId = null;
@@ -553,26 +778,76 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     });
   }
 
+  void _handleScaleStart(ScaleStartDetails details) {
+    _cancelTransientCameraAnimations();
+    _gestureSceneFocalPoint = _screenToCanvas(details.localFocalPoint);
+    _gestureStartScale = _transformationController.value.getMaxScaleOnAxis();
+    _dragStartOffset = details.localFocalPoint;
+    _hasDragged = false;
+    _pendingLongPressNodeId = null;
+  }
+
+  void _handleScaleUpdate(ScaleUpdateDetails details, Size viewportSize) {
+    if (_draggingNodeId != null) return;
+
+    final sceneFocal = _gestureSceneFocalPoint;
+    if (sceneFocal == null) return;
+
+    if (_dragStartOffset != null &&
+        (details.localFocalPoint - _dragStartOffset!).distance > 8) {
+      _hasDragged = true;
+    }
+
+    final startScale = _gestureStartScale ?? 1.0;
+    final nextScale = (startScale * details.scale).clamp(0.1, 5.0);
+
+    final nextMatrix = Matrix4.identity()
+      ..translateByDouble(
+        details.localFocalPoint.dx - sceneFocal.dx * nextScale,
+        details.localFocalPoint.dy - sceneFocal.dy * nextScale,
+        0,
+        1,
+      )
+      ..scaleByDouble(nextScale, nextScale, 1, 1);
+
+    _transformationController.value =
+        _clampMatrixToViewport(nextMatrix, viewportSize);
+  }
+
+  void _handleScaleEnd(ScaleEndDetails details) {
+    _gestureSceneFocalPoint = null;
+    _gestureStartScale = null;
+    _pendingLongPressNodeId = null;
+    Future.delayed(const Duration(milliseconds: 80), () {
+      _hasDragged = false;
+      _dragStartOffset = null;
+    });
+  }
+
+  Matrix4 _clampMatrixToViewport(Matrix4 matrix, Size viewportSize) {
+    final scale = matrix.getMaxScaleOnAxis();
+    const overscroll = 240.0;
+    final minTranslateX =
+        viewportSize.width - (_canvasSize * scale) - overscroll;
+    final minTranslateY =
+        viewportSize.height - (_canvasSize * scale) - overscroll;
+    const maxTranslate = overscroll;
+
+    final clampedX = matrix[12].clamp(minTranslateX, maxTranslate).toDouble();
+    final clampedY = matrix[13].clamp(minTranslateY, maxTranslate).toDouble();
+
+    return Matrix4.identity()
+      ..translateByDouble(clampedX, clampedY, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
+  }
+
   String? _hitTestNode(Offset localPosition) {
-    final galaxyState = ref.read(galaxyProvider);
-    final canvasCenter = galaxyState.canvasCenter;
+    final snapshot =
+        _cachedSceneSnapshot ?? _createSceneSnapshot(ref.read(galaxyProvider));
     final canvasTap = _screenToCanvas(localPosition);
-    final scale = _transformationController.value.getMaxScaleOnAxis();
-    final effectiveScale = scale.clamp(0.3, 2.0);
-    final hitRadius = 30 / effectiveScale;
-
-    final searchNodes = galaxyState.visibleNodes.isNotEmpty
-        ? galaxyState.visibleNodes
-        : galaxyState.nodes;
-
-    for (final node in searchNodes) {
-      final nodePos = galaxyState.nodePositions[node.id];
-      if (nodePos == null) continue;
-      final actualPos = nodePos + Offset(canvasCenter, canvasCenter);
-
-      if ((canvasTap - actualPos).distance <
-          hitRadius + (node.importance * 2)) {
-        return node.id;
+    for (final target in snapshot.hitTargets) {
+      if ((canvasTap - target.position).distance <= target.radius) {
+        return target.nodeId;
       }
     }
     return null;
@@ -693,6 +968,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   /// Animate camera to focus on a specific node
   void _animateToNode(String nodeId) {
+    _cancelTransientCameraAnimations();
     final galaxyState = ref.read(galaxyProvider);
     final nodePos = galaxyState.nodePositions[nodeId];
     if (nodePos == null) return;
@@ -724,7 +1000,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Animate
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 420),
     );
     _transientControllers.add(controller);
 
@@ -734,7 +1010,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     ).animate(
       CurvedAnimation(
         parent: controller,
-        curve: Curves.easeInOutCubic,
+        curve: Curves.easeOutCubic,
       ),
     );
 
@@ -769,6 +1045,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _resetToInitialView() {
+    _cancelTransientCameraAnimations();
     final size = MediaQuery.of(context).size;
     if (size.width <= 0 || size.height <= 0) return;
 
@@ -782,7 +1059,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 360),
     );
     _transientControllers.add(controller);
 
@@ -840,7 +1117,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final screenSize = MediaQuery.of(context).size;
     final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
     final hasTightHeight = screenSize.height < 680;
-    final reduceBackgroundEffects = _activePointers.isNotEmpty || _hasDragged;
 
     final overlayInset = ResponsiveSystem.resolve(
       context: context,
@@ -857,15 +1133,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           desktop: 48.0,
           wide: 56.0,
         );
-    final minimapSizeBase = ResponsiveSystem.resolve(
-      context: context,
-      mobile: 96.0,
-      tablet: 120.0,
-      desktop: 140.0,
-      wide: 160.0,
-    );
-    final minimapSize =
-        isLandscapeMobile ? minimapSizeBase * 0.8 : minimapSizeBase;
     final zoomSliderHeight = ResponsiveSystem.resolve(
       context: context,
       mobile: isLandscapeMobile ? 96.0 : 140.0,
@@ -921,18 +1188,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           child: Stack(
             children: [
               Positioned.fill(
-                child: GalaxyShaderBackground(
-                  engine: _renderEngine,
-                  enabled: !reduceBackgroundEffects,
-                ),
-              ),
-              // 0. Parallax Background (Deepest Layer)
-              Positioned.fill(
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _renderEngine.isReady,
-                  builder: (context, isReady, child) => ParallaxStarBackground(
-                    transformationController: _transformationController,
-                    drawBackground: !isReady,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        DS.galaxyBackground,
+                        DS.neutral900,
+                        DS.neutral900,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                 ),
               ),
@@ -961,95 +1227,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                   _lastLayoutSize = size;
 
                   return GestureDetector(
-                    onPanStart: (details) {
-                      _hasDragged = true;
-                      _dragStartOffset = details.localPosition;
-                    },
-                    onPanUpdate: (details) {
-                      // Track if user actually dragged significant distance
-                      if (_dragStartOffset != null) {
-                        final distance =
-                            (details.localPosition - _dragStartOffset!)
-                                .distance;
-                        if (distance > 10) {
-                          _hasDragged = true;
-                        }
-                      }
-                    },
-                    onPanEnd: (details) {
-                      // Reset after a short delay to allow tap detection
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _hasDragged = false;
-                        _dragStartOffset = null;
-                      });
-                    },
+                    behavior: HitTestBehavior.opaque,
+                    onScaleStart: _handleScaleStart,
+                    onScaleUpdate: (details) =>
+                        _handleScaleUpdate(details, size),
+                    onScaleEnd: _handleScaleEnd,
                     onTapUp: _handleTapUp,
                     onLongPressStart: _handleLongPressStart,
                     onLongPressMoveUpdate: _handleLongPressMoveUpdate,
                     onLongPressEnd: _handleLongPressEnd,
-                    child: InteractiveViewer(
-                      transformationController: _transformationController,
-                      alignment: Alignment.topLeft,
-                      boundaryMargin:
-                          const EdgeInsets.all(2000), // Huge scroll area
-                      minScale: 0.1,
-                      maxScale: 5.0,
-                      panEnabled: _draggingNodeId == null,
-                      scaleEnabled: _draggingNodeId == null,
-                      constrained: false, // Infinite canvas
-                      child: SizedBox(
-                        width: _canvasSize,
-                        height: _canvasSize,
-                        // 🔧 优化: 构建优化的星图层
-                        child: _buildOptimizedStarMapLayer(
-                            galaxyState, canvasCenter, canvasSize),
+                    child: SizedBox.expand(
+                      child: _buildOptimizedStarMapLayer(
+                        galaxyState,
+                        canvasCenter,
+                        canvasSize,
                       ),
                     ),
                   );
                 },
               ),
-
-              // 2. Entrance Animation Layer
-              if (_isEntering)
-                GalaxyEntranceAnimation(
-                  onComplete: () {
-                    setState(() {
-                      _isEntering = false;
-                    });
-
-                    // Entrance Phase 2: Smooth Zoom from 0.15 to 0.25
-                    final controller = AnimationController(
-                      vsync: this,
-                      duration: const Duration(seconds: 2),
-                    );
-
-                    final startMatrix = _transformationController.value;
-                    // Calculate target matrix for 0.25 scale (still centered)
-                    final size = MediaQuery.of(context).size;
-                    const targetScale = 0.25;
-                    final tx = size.width / 2 - canvasCenter * targetScale;
-                    final ty = size.height / 2 - canvasCenter * targetScale;
-                    final targetMatrix = Matrix4.identity()
-                      ..translateByDouble(tx, ty, 0, 1)
-                      ..scaleByDouble(targetScale, targetScale, 1, 1);
-
-                    final animation = Matrix4Tween(
-                      begin: startMatrix,
-                      end: targetMatrix,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: controller,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
-
-                    animation.addListener(() {
-                      _transformationController.value = animation.value;
-                    });
-
-                    controller.forward().whenComplete(controller.dispose);
-                  },
-                ),
 
               // 3. Energy Transfer Animations Layer
               ..._activeEnergyTransfers.map(
@@ -1082,171 +1278,147 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               ),
 
               // 5. UI Overlays (Back button)
-              if (!_isEntering)
-                Positioned(
-                  top: safePadding.top + 8,
-                  left: overlayInset,
-                  child: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    size: 40,
-                    icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
-                    onPressed: () => context.pop(),
-                  ),
+              Positioned(
+                top: safePadding.top + 8,
+                left: overlayInset,
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 40,
+                  icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
+                  onPressed: () => context.pop(),
                 ),
+              ),
 
               // 5.1 Search Button (Top Right)
-              if (!_isEntering)
-                Positioned(
-                  top: safePadding.top + 8,
-                  right: overlayInset,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        size: 40,
-                        icon: Icon(Icons.search, color: DS.brandPrimary),
-                        onPressed: _showSearchDialog,
-                      ),
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        size: 40,
-                        icon: Icon(Icons.refresh, color: DS.brandPrimary),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          unawaited(
-                            ref
-                                .read(galaxyProvider.notifier)
-                                .loadGalaxy(forceRefresh: true),
-                          );
-                        },
-                      ),
-                      if (kDebugMode)
-                        Tooltip(
-                          message: 'Toggle LOD Debug Overlay',
-                          child: SparkleIconButton(
-                            variant: ButtonVariant.ghost,
-                            size: 40,
-                            icon: Icon(
-                              _showDebugOverlay
-                                  ? Icons.bug_report
-                                  : Icons.bug_report_outlined,
-                              color: DS.brandPrimaryConst,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _showDebugOverlay = !_showDebugOverlay;
-                              });
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-              if (!_isEntering)
-                Positioned(
-                  top: safePadding.top + 56,
-                  left: overlayInset,
-                  right: overlayInset,
-                  child: Center(
-                    child: OfflineIndicator(
-                      isUsingCache: galaxyState.isUsingCache,
-                      onRetry: galaxyState.isUsingCache
-                          ? () => unawaited(
-                                ref
-                                    .read(galaxyProvider.notifier)
-                                    .loadGalaxy(forceRefresh: true),
-                              )
-                          : null,
+              Positioned(
+                top: safePadding.top + 8,
+                right: overlayInset,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 40,
+                      icon: Icon(Icons.search, color: DS.brandPrimary),
+                      onPressed: _showSearchDialog,
                     ),
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 40,
+                      icon: Icon(Icons.refresh, color: DS.brandPrimary),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        unawaited(
+                          ref
+                              .read(galaxyProvider.notifier)
+                              .loadGalaxy(forceRefresh: true),
+                        );
+                      },
+                    ),
+                    if (kDebugMode)
+                      Tooltip(
+                        message: 'Toggle LOD Debug Overlay',
+                        child: SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 40,
+                          icon: Icon(
+                            _showDebugOverlay
+                                ? Icons.bug_report
+                                : Icons.bug_report_outlined,
+                            color: DS.brandPrimaryConst,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _showDebugOverlay = !_showDebugOverlay;
+                            });
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              Positioned(
+                top: safePadding.top + 56,
+                left: overlayInset,
+                right: overlayInset,
+                child: Center(
+                  child: OfflineIndicator(
+                    isUsingCache: galaxyState.isUsingCache,
+                    onRetry: galaxyState.isUsingCache
+                        ? () => unawaited(
+                              ref
+                                  .read(galaxyProvider.notifier)
+                                  .loadGalaxy(forceRefresh: true),
+                            )
+                        : null,
                   ),
                 ),
+              ),
 
-              // 6. Mini Map (Bottom Left)
-              if (!_isEntering)
-                Positioned(
-                  bottom: bottomInset,
-                  left: overlayInset,
-                  child: GalaxyMiniMap(
-                    transformationController: _transformationController,
-                    canvasSize: canvasSize,
-                    screenSize: screenSize,
-                    minimapSize: minimapSize,
-                  ),
+              // 6.1 Guide Button
+              Positioned(
+                bottom: bottomInset,
+                left: overlayInset,
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 40,
+                  icon: Icon(Icons.explore, color: DS.brandPrimary),
+                  onPressed: () {
+                    unawaited(_handleGuideTap());
+                  },
                 ),
+              ),
 
-              // 6.1 Guide Button (Above Mini Map)
-              if (!_isEntering)
-                Positioned(
-                  bottom: bottomInset + minimapSize + 12,
-                  left: overlayInset + 8,
+              // 6.2 Zoom Controls (Right side, above Spark button)
+              Positioned(
+                bottom: zoomControlsBottom,
+                right: overlayInset,
+                child: ZoomControls(
+                  transformationController: _transformationController,
+                  sliderHeight: zoomSliderHeight,
+                ),
+              ),
+
+              // 7. Spark Button (Bottom Right)
+              Positioned(
+                bottom: bottomInset,
+                right: overlayInset,
+                child: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 48,
+                  icon: Icon(Icons.bolt, color: DS.brandPrimary),
+                  onPressed: () {
+                    if (galaxyState.nodes.isNotEmpty) {
+                      final node = galaxyState.nodes[
+                          DateTime.now().millisecond %
+                              galaxyState.nodes.length];
+                      _sparkNodeWithAnimation(node.id);
+                    }
+                  },
+                ),
+              ),
+
+              Positioned(
+                bottom: bottomInset + 56,
+                right: overlayInset,
+                child: Tooltip(
+                  message: '回到全局视图',
                   child: SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     size: 40,
-                    icon: Icon(Icons.explore, color: DS.brandPrimary),
-                    onPressed: () {
-                      unawaited(_handleGuideTap());
-                    },
+                    onPressed: _resetToInitialView,
+                    icon: const Icon(Icons.public),
                   ),
                 ),
-
-              // 6.2 Zoom Controls (Right side, above Spark button)
-              if (!_isEntering)
-                Positioned(
-                  bottom: zoomControlsBottom,
-                  right: overlayInset,
-                  child: ZoomControls(
-                    transformationController: _transformationController,
-                    sliderHeight: zoomSliderHeight,
-                  ),
-                ),
-
-              // 7. Spark Button (Bottom Right)
-              if (!_isEntering)
-                Positioned(
-                  bottom: bottomInset,
-                  right: overlayInset,
-                  child: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    size: 48,
-                    icon: Icon(Icons.bolt, color: DS.brandPrimary),
-                    onPressed: () {
-                      // Pick a random node to spark for demo
-                      if (galaxyState.nodes.isNotEmpty) {
-                        final node = galaxyState.nodes[
-                            DateTime.now().millisecond %
-                                galaxyState.nodes.length];
-                        _sparkNodeWithAnimation(node.id);
-                      }
-                    },
-                  ),
-                ),
-
-              if (!_isEntering)
-                Positioned(
-                  bottom: bottomInset + 56,
-                  right: overlayInset,
-                  child: Tooltip(
-                    message: '回到全局视图',
-                    child: SparkleIconButton(
-                      variant: ButtonVariant.ghost,
-                      size: 40,
-                      onPressed: _resetToInitialView,
-                      icon: const Icon(Icons.public),
-                    ),
-                  ),
-                ),
+              ),
 
               if (galaxyState.isLoading &&
                   galaxyState.nodes.isEmpty &&
-                  !_isEntering &&
                   !_loadingTimedOut)
                 const Center(child: CircularProgressIndicator()),
 
-              if (!_isEntering &&
-                  galaxyState.lastError != null &&
-                  galaxyState.nodes.isEmpty)
+              if (galaxyState.lastError != null && galaxyState.nodes.isEmpty)
                 Positioned.fill(
                   child: GalaxyErrorPlaceholder(
                     error: galaxyState.lastError!,
@@ -1259,50 +1431,31 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 ),
 
               // 8. Node Preview Card (Overlay)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.9, end: 1.0).animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
+              if (galaxyState.selectedNodeId != null &&
+                  galaxyState.nodes.isNotEmpty)
+                Builder(
+                  key: ValueKey(galaxyState.selectedNodeId),
+                  builder: (context) {
+                    final node = galaxyState.nodes.firstWhere(
+                      (n) => n.id == galaxyState.selectedNodeId,
+                      orElse: () => galaxyState.nodes.first,
+                    );
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: safePadding.bottom),
+                      child: NodePreviewCard(
+                        node: node,
+                        onClose: () =>
+                            ref.read(galaxyProvider.notifier).deselectNode(),
+                        onTap: () => context.push('/galaxy/node/${node.id}'),
+                        bottomInset: isLandscapeMobile
+                            ? bottomInset + 56
+                            : nodePreviewBottomInset,
                       ),
-                    ),
-                    child: child,
-                  ),
+                    );
+                  },
                 ),
-                child: galaxyState.selectedNodeId != null &&
-                        galaxyState.nodes.isNotEmpty
-                    ? Builder(
-                        key: ValueKey(galaxyState.selectedNodeId),
-                        builder: (context) {
-                          final node = galaxyState.nodes.firstWhere(
-                            (n) => n.id == galaxyState.selectedNodeId,
-                            orElse: () => galaxyState.nodes.first,
-                          );
-                          return Padding(
-                            padding:
-                                EdgeInsets.only(bottom: safePadding.bottom),
-                            child: NodePreviewCard(
-                              node: node,
-                              onClose: () => ref
-                                  .read(galaxyProvider.notifier)
-                                  .deselectNode(),
-                              onTap: () =>
-                                  context.push('/galaxy/node/${node.id}'),
-                              bottomInset: isLandscapeMobile
-                                  ? bottomInset + 56
-                                  : nodePreviewBottomInset,
-                            ),
-                          );
-                        },
-                      )
-                    : const SizedBox.shrink(),
-              ),
 
-              if (kDebugMode && _showDebugOverlay && !_isEntering)
+              if (kDebugMode && _showDebugOverlay)
                 Positioned(
                   top: safePadding.top + 56,
                   right: overlayInset,
@@ -1347,6 +1500,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 class SelectionOverlayPainter extends CustomPainter {
   SelectionOverlayPainter({
     required this.nodes,
+    required this.viewMatrix,
     required this.selectedNodeIdHash,
     required this.highlightedNodeIdHashes,
     required this.performanceTier,
@@ -1354,13 +1508,17 @@ class SelectionOverlayPainter extends CustomPainter {
   });
 
   final List<CompactKnowledgeNode> nodes;
+  final Matrix4 viewMatrix;
   final int? selectedNodeIdHash;
   final Set<int> highlightedNodeIdHashes;
-  final PerformanceTier performanceTier;
+  final dynamic performanceTier;
   final double selectionPulse;
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.transform(viewMatrix.storage);
+
     final nodePositions = <int, Offset>{};
     for (final node in nodes) {
       nodePositions[node.idHash] = Offset(node.x, node.y);
@@ -1407,6 +1565,8 @@ class SelectionOverlayPainter extends CustomPainter {
       }
       canvas.drawCircle(position, pulseRadius, highlightPaint);
     }
+
+    canvas.restore();
   }
 
   @override
@@ -1414,7 +1574,60 @@ class SelectionOverlayPainter extends CustomPainter {
       oldDelegate.selectionPulse != selectionPulse ||
       oldDelegate.selectedNodeIdHash != selectedNodeIdHash ||
       oldDelegate.highlightedNodeIdHashes != highlightedNodeIdHashes ||
+      oldDelegate.viewMatrix != viewMatrix ||
       !identical(oldDelegate.nodes, nodes);
+}
+
+class _GalaxyLabelOverlay extends StatelessWidget {
+  const _GalaxyLabelOverlay({
+    required this.snapshot,
+    required this.nodeNameLookup,
+  });
+
+  final GalaxySceneSnapshot snapshot;
+  final Map<int, String> nodeNameLookup;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = snapshot.nodes
+        .where((node) => node.isUnlocked || node.importance >= 2)
+        .take(snapshot.budget.maxLabels)
+        .toList(growable: false);
+
+    return Stack(
+      children: labels.map((node) {
+        final label = nodeNameLookup[node.idHash];
+        if (label == null || label.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Positioned(
+          left: node.x - 56,
+          top: node.y + (14 + (node.importance * 2)) + 8,
+          width: 112,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: DS.surfaceOverlay.withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: DS.labelSmall.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(growable: false),
+    );
+  }
 }
 
 class _GalaxyDebugOverlay extends StatelessWidget {

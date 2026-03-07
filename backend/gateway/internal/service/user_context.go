@@ -18,11 +18,11 @@ import (
 
 // TaskSummary represents a summary of a pending task
 type TaskSummary struct {
-	ID               uuid.UUID `json:"id"`
-	Title            string    `json:"title"`
-	Type             string    `json:"type"`
-	EstimatedMinutes int32     `json:"estimated_minutes"`
-	Priority         int32     `json:"priority"`
+	ID               uuid.UUID  `json:"id"`
+	Title            string     `json:"title"`
+	Type             string     `json:"type"`
+	EstimatedMinutes int32      `json:"estimated_minutes"`
+	Priority         int32      `json:"priority"`
 	DueDate          *time.Time `json:"due_date,omitempty"`
 }
 
@@ -32,34 +32,34 @@ type PlanSummary struct {
 	Title      string     `json:"title"`
 	Type       string     `json:"type"`
 	TargetDate *time.Time `json:"target_date,omitempty"`
-	Progress   int32      `json:"progress"`
+	Progress   float64    `json:"progress"`
 }
 
 // FocusStatsSummary represents today's focus statistics
 type FocusStatsSummary struct {
-	TotalSessionsToday    int32   `json:"total_sessions_today"`
-	TotalMinutesToday     int32   `json:"total_minutes_today"`
-	AverageFocusMinutes   int32   `json:"average_focus_minutes"`
-	Streak                int32   `json:"streak"`
-	LastSessionTimestamp  *time.Time `json:"last_session_timestamp,omitempty"`
+	TotalSessionsToday   int32      `json:"total_sessions_today"`
+	TotalMinutesToday    int32      `json:"total_minutes_today"`
+	AverageFocusMinutes  int32      `json:"average_focus_minutes"`
+	Streak               int32      `json:"streak"`
+	LastSessionTimestamp *time.Time `json:"last_session_timestamp,omitempty"`
 }
 
 // ProgressEvent represents a recent task completion
 type ProgressEvent struct {
-	TaskID        uuid.UUID `json:"task_id"`
-	TaskTitle     string    `json:"task_title"`
-	CompletedAt   time.Time `json:"completed_at"`
-	TimeSpentMin  int32     `json:"time_spent_min"`
+	TaskID       uuid.UUID `json:"task_id"`
+	TaskTitle    string    `json:"task_title"`
+	CompletedAt  time.Time `json:"completed_at"`
+	TimeSpentMin int32     `json:"time_spent_min"`
 }
 
 // UserContextData holds all context information for a user
 type UserContextData struct {
-	PendingTasks   []TaskSummary       `json:"pending_tasks"`
-	ActivePlans    []PlanSummary       `json:"active_plans"`
-	FocusStats     FocusStatsSummary   `json:"focus_stats"`
-	RecentProgress []ProgressEvent     `json:"recent_progress"`
-	RealtimeVersions map[string]string `json:"realtime_versions,omitempty"`
-	OverlayGeneratedAt string           `json:"overlay_generated_at,omitempty"`
+	PendingTasks       []TaskSummary     `json:"pending_tasks"`
+	ActivePlans        []PlanSummary     `json:"active_plans"`
+	FocusStats         FocusStatsSummary `json:"focus_stats"`
+	RecentProgress     []ProgressEvent   `json:"recent_progress"`
+	RealtimeVersions   map[string]string `json:"realtime_versions,omitempty"`
+	OverlayGeneratedAt string            `json:"overlay_generated_at,omitempty"`
 }
 
 // UserContextService handles fetching user context data for the orchestrator

@@ -21,6 +21,7 @@ class DesignSystemLinter {
 
     await _checkHardcodedColors();
     await _checkHardcodedSpacing();
+    await _checkHardcodedGradientsAndShadows();
     await _checkMaterialButtonUsage();
 
     return _violations;
@@ -83,6 +84,23 @@ class DesignSystemLinter {
     }
   }
 
+  /// 检查硬编码渐变、阴影和半透明黑白
+  Future<void> _checkHardcodedGradientsAndShadows() async {
+    final dartFiles = await _findDartFiles();
+
+    for (final file in dartFiles) {
+      final content = await File(file).readAsString();
+      final lines = content.split('\n');
+
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        if (_containsHardcodedGradientOrShadow(line)) {
+          _violations.add('$file:${i + 1}: 硬编码渐变/阴影 - $line');
+        }
+      }
+    }
+  }
+
   /// 查找所有Dart文件
   Future<List<String>> _findDartFiles() async {
     final dartFiles = <String>[];
@@ -95,6 +113,10 @@ class DesignSystemLinter {
         if (!relativePath.contains('.g.') &&
             !relativePath.contains('test') &&
             !relativePath.contains('generated') &&
+            !relativePath.contains('.dart_tool/') &&
+            !relativePath.contains('linux/flutter/ephemeral/') &&
+            !relativePath.contains('.plugin_symlinks/') &&
+            !relativePath.contains('build/') &&
             !relativePath.contains('core/design/validation/') &&
             !relativePath.contains('core/design/tokens/') &&
             !relativePath.contains('core/design/tokens_v2/') &&
@@ -189,6 +211,36 @@ class DesignSystemLinter {
     return false;
   }
 
+  bool _containsHardcodedGradientOrShadow(String line) {
+    if (line.trim().startsWith('//')) return false;
+
+    final patterns = [
+      RegExp(r'\bLinearGradient\('),
+      RegExp(r'\bRadialGradient\('),
+      RegExp(r'\bSweepGradient\('),
+      RegExp(r'\bBoxShadow\('),
+      RegExp(r'Colors\.(black|white)\.with(?:Opacity|Values)\('),
+      RegExp(r'Color\(0x[0-9a-fA-F]{8}\)\.with(?:Opacity|Values)\('),
+    ];
+
+    for (final pattern in patterns) {
+      if (!pattern.hasMatch(line)) {
+        continue;
+      }
+      if (line.contains('DS.') ||
+          line.contains('sparkleTheme') ||
+          line.contains('AppThemes') ||
+          line.contains('theme_manager.dart') ||
+          line.contains('design_system.dart') ||
+          line.contains('graphite_surfaces.dart')) {
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   /// 生成检查报告
   String generateReport(List<String> violations) {
     final buffer = StringBuffer();
@@ -214,6 +266,8 @@ class DesignSystemLinter {
           violations.where((v) => v.contains('硬编码颜色')).toList();
       final spacingViolations =
           violations.where((v) => v.contains('硬编码间距')).toList();
+      final gradientViolations =
+          violations.where((v) => v.contains('硬编码渐变/阴影')).toList();
       final buttonViolations =
           violations.where((v) => v.contains('使用Material按钮')).toList();
 
@@ -239,6 +293,17 @@ class DesignSystemLinter {
         buffer.writeln();
       }
 
+      if (gradientViolations.isNotEmpty) {
+        buffer.writeln('🟣 硬编码渐变/阴影违规 (${gradientViolations.length}处):');
+        for (final violation in gradientViolations.take(10)) {
+          buffer.writeln('  • $violation');
+        }
+        if (gradientViolations.length > 10) {
+          buffer.writeln('  • ... 还有${gradientViolations.length - 10}处');
+        }
+        buffer.writeln();
+      }
+
       if (buttonViolations.isNotEmpty) {
         buffer.writeln('🔵 Material按钮使用 (${buttonViolations.length}处):');
         for (final violation in buttonViolations.take(10)) {
@@ -254,7 +319,8 @@ class DesignSystemLinter {
         ..writeln('💡 修复建议：')
         ..writeln('  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等')
         ..writeln('  2. 硬编码间距 → 使用 DS.lg, DS.xl 等')
-        ..writeln('  3. Material按钮 → 使用 SparkleButton.primary() 等');
+        ..writeln('  3. 硬编码渐变/阴影 → 使用 DS.*Gradient / DS.shadow* / Graphite 容器')
+        ..writeln('  4. Material按钮 → 使用 SparkleButton.primary() 等');
     }
 
     buffer.writeln('=' * 80);

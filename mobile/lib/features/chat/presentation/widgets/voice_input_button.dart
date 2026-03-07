@@ -9,7 +9,7 @@ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 
 /// 语音输入按钮组件
-/// 长按开始录音，松开停止录音
+/// 点击开始/结束录音；长按仍可快速按住说话。
 class VoiceInputButton extends ConsumerStatefulWidget {
   const VoiceInputButton({
     required this.onTranscription,
@@ -184,7 +184,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
   /// 停止录音
   Future<void> _stopRecording() async {
-    if (!_isRecording) return;
+    if (!_isRecording || _isProcessing) return;
 
     setState(() {
       _isProcessing = true;
@@ -237,6 +237,13 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
+      onTap: () {
+        if (_isRecording) {
+          unawaited(_stopRecording());
+        } else {
+          unawaited(_startRecording());
+        }
+      },
       onLongPressStart: (_) => _startRecording(),
       onLongPressEnd: (_) => _stopRecording(),
       onLongPressCancel: _cancelRecording,

@@ -166,8 +166,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+  Widget build(BuildContext context) => GraphiteScaffold(
+        safeArea: false,
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
@@ -175,9 +175,14 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             variant: ButtonVariant.ghost,
             size: DS.touchTargetMinSize,
           ),
-          title:
-              Text(widget.args.title, style: TextStyle(color: DS.brandPrimary)),
-          iconTheme: IconThemeData(color: DS.brandPrimary),
+          title: Text(
+            widget.args.title,
+            style: DS.titleLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          iconTheme: IconThemeData(color: DS.textPrimary),
           backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
@@ -204,7 +209,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               ),
           ],
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
             child: _buildBody(context),

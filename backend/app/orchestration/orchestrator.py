@@ -280,6 +280,13 @@ class ChatOrchestrator:
         self._ensure_tools_registered()
         self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
 
+    def _coerce_session_uuid(self, session_id: str) -> uuid.UUID:
+        raw = str(session_id).strip()
+        try:
+            return uuid.UUID(raw)
+        except Exception:
+            return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
+
     def _track_task(self, task: asyncio.Task) -> None:
         """Track background tasks for graceful shutdown."""
         self._bg_tasks.add(task)
@@ -1308,17 +1315,17 @@ class ChatOrchestrator:
                 user_id=user_id,
             )
             intent_type = prediction.get("intent_type", "unknown")
-            extracted_entities = {
-                "intent_type": intent_type,
-                "suggested_tools": prediction.get("suggested_tools", []),
-            }
-            plan_intents = {"create_plan", "time_planning"}
+            extracted_entities = self._build_sufficiency_entities(
+                intent_type=intent_type,
+                user_message=user_message,
+                prediction=prediction,
+            )
             check_result = await sufficiency_checker.check(
                 intent=intent_type,
                 extracted_entities=extracted_entities,
                 conversation_context=(conversation_context or {}).get("messages", []),
                 user_message=user_message,
-                use_llm_fallback=intent_type in plan_intents,
+                use_llm_fallback=intent_type in {"create_plan", "time_planning"},
             )
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
@@ -1346,6 +1353,37 @@ class ChatOrchestrator:
         except Exception as e:
             logger.warning(f"Sufficiency check failed, continuing: {e}")
         return False, intent_type if 'intent_type' in locals() else ""
+
+    def _build_sufficiency_entities(
+        self,
+        *,
+        intent_type: str,
+        user_message: str,
+        prediction: dict[str, Any],
+    ) -> dict[str, Any]:
+        extracted_entities = {
+                "intent_type": intent_type,
+                "suggested_tools": prediction.get("suggested_tools", []),
+            }
+        normalized_message = user_message.strip()
+        msg_lower = normalized_message.lower()
+
+        if intent_type == "knowledge_query" and normalized_message:
+            extracted_entities["query"] = normalized_message
+
+        if intent_type in {"create_plan", "time_planning"} and normalized_message:
+            extracted_entities["plan_title"] = normalized_message
+            if any(keyword in msg_lower for keyword in ["冲刺", "突击", "期末", "考试", "sprint", "exam"]):
+                extracted_entities["plan_type"] = "sprint"
+            elif any(keyword in msg_lower for keyword in ["长期", "成长", "习惯", "体系", "long-term", "growth"]):
+                extracted_entities["plan_type"] = "growth"
+            elif "计划" in normalized_message or "复习" in normalized_message:
+                extracted_entities["plan_type"] = "growth"
+
+        if intent_type == "task_management" and normalized_message:
+            extracted_entities["task_title"] = normalized_message
+
+        return extracted_entities
 
     async def _check_goal_quality(
         self,
@@ -1939,7 +1977,7 @@ class ChatOrchestrator:
         try:
             assistant_msg = ChatMessage(
                 user_id=uuid.UUID(str(user_id)),
-                session_id=uuid.UUID(str(session_id)),
+                session_id=self._coerce_session_uuid(session_id),
                 role=MessageRole.ASSISTANT,
                 content=full_response,
                 model_name=getattr(llm_service, "default_model", None),
@@ -3193,7 +3231,7 @@ class ChatOrchestrator:
             try:
                 user_msg = ChatMessage(
                     user_id=uuid.UUID(str(user_id)),
-                    session_id=uuid.UUID(str(session_id)),
+                    session_id=self._coerce_session_uuid(session_id),
                     role=MessageRole.USER,
                     content=user_message,
                     message_id=request_id,

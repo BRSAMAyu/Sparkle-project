@@ -98,7 +98,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return GraphiteScaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         flexibleSpace: ClipRect(
@@ -185,24 +185,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
-      body: DecoratedBox(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          // Use three-layer gradient matching Dashboard WeatherHeader style
-          gradient: isDark
-              ? LinearGradient(
-                  colors: [
-                    DS.surfaceAmbient,
-                    DS.surfacePrimary,
-                    DS.surfaceSecondary
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                )
-              : LinearGradient(
-                  colors: [DS.neutral50, DS.neutral100, DS.neutral200],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+          gradient: LinearGradient(
+            colors: [
+              DS.surfaceCanvas,
+              DS.surfacePanel,
+              DS.surfacePrimary,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: Stack(
           children: [
@@ -459,8 +452,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _showHistoryBottomSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     unawaited(
       showModalBottomSheet<void>(
         context: context,
@@ -480,13 +471,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             initialChildSize: initialChildSize,
             minChildSize: 0.4,
             maxChildSize: maxChildSize,
-            builder: (context, scrollController) => DecoratedBox(
-              decoration: BoxDecoration(
-                // Use surfaceSecondary to match Dashboard ceramic cards
-                color: isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(DS.spacing24)),
-              ),
+            builder: (context, scrollController) => GraphiteModalSurface(
+              padding: EdgeInsets.zero,
               child: SafeArea(
                 top: false,
                 child: Column(
@@ -502,17 +488,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(DS.lg),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                       child: Row(
                         children: [
-                          Icon(Icons.history_rounded, color: DS.primaryBase),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: DS.surfaceOverlay,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: DS.borderSubtle),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Icon(
+                                Icons.history_rounded,
+                                color: DS.primaryBase,
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: DS.md),
                           Text(
                             '历史对话',
-                            style: TextStyle(
-                              fontSize: DS.fontSizeLg,
-                              fontWeight: FontWeight.bold,
+                            style: DS.titleLarge.copyWith(
                               color: DS.textPrimary,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -574,60 +572,72 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               final isCurrent = session['id'] ==
                                   ref.read(chatProvider).conversationId;
 
-                              return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(DS.sm),
-                                  decoration: BoxDecoration(
-                                    color: isCurrent
-                                        ? DS.primaryBase.withValues(alpha: 0.1)
-                                        : DS.surfaceTertiary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    size: DS.iconSizeXs,
-                                    color: isCurrent
-                                        ? DS.primaryBase
-                                        : DS.textSecondary,
-                                  ),
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
                                 ),
-                                title: Text(
-                                  (session['title'] as String?) ?? '未命名会话',
-                                  style: TextStyle(
-                                    color: DS.textPrimary,
-                                    fontWeight: isCurrent
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  (session['updated_at'] as String?)
-                                          ?.split('T')[0] ??
-                                      '',
-                                  style: TextStyle(
-                                    fontSize: DS.fontSizeXs,
-                                    color: DS.neutral500,
-                                  ),
-                                ),
-                                trailing: isCurrent
-                                    ? Icon(
-                                        Icons.check_circle,
-                                        color: DS.primaryBase,
+                                child: GraphiteCardSurface(
+                                  padding: EdgeInsets.zero,
+                                  borderColor: isCurrent
+                                      ? DS.primaryBase.withValues(alpha: 0.22)
+                                      : DS.borderSubtle,
+                                  child: ListTile(
+                                    leading: Container(
+                                      padding: const EdgeInsets.all(DS.sm),
+                                      decoration: BoxDecoration(
+                                        color: isCurrent
+                                            ? DS.primaryBase
+                                                .withValues(alpha: 0.12)
+                                            : DS.surfaceOverlay,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.chat_bubble_outline_rounded,
                                         size: DS.iconSizeXs,
-                                      )
-                                    : null,
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  unawaited(
-                                    ref
-                                        .read(chatProvider.notifier)
-                                        .loadConversationHistory(
-                                          session['id'] as String,
-                                        ),
-                                  );
-                                },
+                                        color: isCurrent
+                                            ? DS.primaryBase
+                                            : DS.textSecondary,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      (session['title'] as String?) ?? '未命名会话',
+                                      style: DS.bodyLarge.copyWith(
+                                        color: DS.textPrimary,
+                                        fontWeight: isCurrent
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      (session['updated_at'] as String?)
+                                              ?.split('T')[0] ??
+                                          '',
+                                      style: DS.labelSmall.copyWith(
+                                        color: DS.textSecondary,
+                                      ),
+                                    ),
+                                    trailing: isCurrent
+                                        ? Icon(
+                                            Icons.check_circle,
+                                            color: DS.primaryBase,
+                                            size: DS.iconSizeXs,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      unawaited(
+                                        ref
+                                            .read(chatProvider.notifier)
+                                            .loadConversationHistory(
+                                              session['id'] as String,
+                                            ),
+                                      );
+                                    },
+                                  ),
+                                ),
                               );
                             },
                           );

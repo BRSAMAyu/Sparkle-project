@@ -9,7 +9,7 @@ class MemoryApiService {
 
   Future<List<MemoryPreferenceItem>> getPreferences() async {
     final response =
-        await _apiClient.get<Map<String, dynamic>>('/api/v1/memory/preferences');
+        await _apiClient.get<Map<String, dynamic>>('/memory/preferences');
     final items = (response.data?['items'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()
         .map(MemoryPreferenceItem.fromJson)
@@ -21,7 +21,7 @@ class MemoryApiService {
     String prefKey,
   ) async {
     final response = await _apiClient
-        .get<Map<String, dynamic>>('/api/v1/memory/preferences/$prefKey/history');
+        .get<Map<String, dynamic>>('/memory/preferences/$prefKey/history');
     final items = (response.data?['items'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()
         .map(MemoryPreferenceHistoryItem.fromJson)
@@ -35,7 +35,7 @@ class MemoryApiService {
     int limit = 20,
   }) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
-      '/api/v1/memory/goals',
+      '/memory/goals',
       queryParameters: {
         if (status != null) 'status': status,
         'include_expired': includeExpired,
@@ -55,7 +55,7 @@ class MemoryApiService {
     int limit = 20,
   }) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
-      '/api/v1/memory/episodic',
+      '/memory/episodic',
       queryParameters: {
         if (start != null) 'start': start.toIso8601String(),
         if (end != null) 'end': end.toIso8601String(),
@@ -75,7 +75,7 @@ class MemoryApiService {
     String? reason,
   }) async {
     await _apiClient.post<void>(
-      '/api/v1/memory/retract',
+      '/memory/retract',
       data: {
         'type': type,
         'id': id,
@@ -91,7 +91,7 @@ class MemoryApiService {
     String? reason,
   }) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
-      '/api/v1/memory/correct',
+      '/memory/correct',
       data: {
         'type': type,
         'id': id,
@@ -105,7 +105,7 @@ class MemoryApiService {
 
   Future<MemorySettingsModel> getMemorySettings() async {
     final response =
-        await _apiClient.get<Map<String, dynamic>>('/api/v1/memory/settings');
+        await _apiClient.get<Map<String, dynamic>>('/memory/settings');
     final payload = response.data ?? <String, dynamic>{};
     return MemorySettingsModel.fromJson(payload);
   }
@@ -114,7 +114,7 @@ class MemoryApiService {
     MemorySettingsModel settings,
   ) async {
     final response = await _apiClient.put<Map<String, dynamic>>(
-      '/api/v1/memory/settings',
+      '/memory/settings',
       data: settings.toJson(),
     );
     final payload = response.data ?? <String, dynamic>{};

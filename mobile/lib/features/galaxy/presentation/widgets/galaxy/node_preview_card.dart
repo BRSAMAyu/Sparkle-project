@@ -11,6 +11,7 @@ class NodePreviewCard extends StatelessWidget {
     this.bottomInset = 100,
     super.key,
   });
+
   final GalaxyNodeModel node;
   final VoidCallback onClose;
   final VoidCallback onTap;
@@ -26,36 +27,16 @@ class NodePreviewCard extends StatelessWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: bottomInset, left: 20, right: 20),
         width: double.infinity,
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(DS.lg),
-            decoration: BoxDecoration(
-              color: const Color(0xFF111827).withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: sectorStyle.primaryColor.withValues(alpha: 0.42),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 28,
-                  offset: const Offset(0, 14),
-                ),
-                BoxShadow(
-                  color: sectorStyle.primaryColor.withValues(alpha: 0.12),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: GraphiteCardSurface(
+          padding: const EdgeInsets.all(20),
+          borderColor: sectorStyle.primaryColor.withValues(alpha: 0.24),
+          child: Material(
+            type: MaterialType.transparency,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
@@ -75,8 +56,8 @@ class NodePreviewCard extends StatelessWidget {
                         sectorStyle.name,
                         style: TextStyle(
                           color: sectorStyle.primaryColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -90,27 +71,20 @@ class NodePreviewCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-
-                // Title
                 Text(
                   node.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
+                  style: DS.titleLarge.copyWith(
+                    color: DS.textPrimary,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Description (Placeholder if not available)
                 Text(
                   (node.description?.isNotEmpty ?? false)
                       ? node.description!
                       : '探索这个知识点以解锁更多内容。',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.68),
-                    fontSize: 14,
-                  ),
+                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -127,18 +101,18 @@ class NodePreviewCard extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
+                              color: DS.surfacePanel,
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: sectorStyle.primaryColor
-                                    .withValues(alpha: 0.24),
+                                color: sectorStyle.primaryColor.withValues(
+                                  alpha: 0.24,
+                                ),
                               ),
                             ),
                             child: Text(
                               '#$tag',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.84),
-                                fontSize: 11,
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textPrimary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -148,25 +122,19 @@ class NodePreviewCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-
-                // Progress Bar
                 if (node.isUnlocked) ...[
                   Row(
                     children: [
                       Text(
                         '掌握度',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          fontSize: 12,
-                        ),
+                        style: DS.labelSmall.copyWith(color: DS.textSecondary),
                       ),
                       const Spacer(),
                       Text(
                         '${node.masteryScore}%',
-                        style: TextStyle(
+                        style: DS.labelLarge.copyWith(
                           color: sectorStyle.primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -186,17 +154,11 @@ class NodePreviewCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-
                 Text(
-                  '长按并拖拽星点，可像关系图谱一样重构局部网络。',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.48),
-                    fontSize: 11,
-                  ),
+                  '单击进入知识详情，长按后拖拽可以重构局部关系。',
+                  style: DS.labelSmall.copyWith(color: DS.textSecondary),
                 ),
                 const SizedBox(height: 14),
-
-                // Action Button
                 SizedBox(
                   width: double.infinity,
                   child: SparkleButton(

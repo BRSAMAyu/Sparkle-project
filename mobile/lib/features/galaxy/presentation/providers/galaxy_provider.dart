@@ -530,7 +530,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   Future<void> loadGalaxy({bool forceRefresh = false}) async {
-    final hadExistingNodes = state.nodes.isNotEmpty;
     state = state.copyWith(isLoading: true, lastError: null);
     final requestId = ++_layoutRequestId;
     try {
@@ -588,14 +587,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         lastError: null,
       );
       _recalculateVisibility();
-      if ((!hadExistingNodes || forceRefresh) &&
-          state.visibleNodes.isNotEmpty) {
-        _startBloomAnimation(
-          state.visibleNodes,
-          state.visibleEdges,
-          state.visibleCompactNodes,
-        );
-      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -812,7 +803,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     }
 
     var repulsionBudget = 0;
-    for (final node in state.visibleNodes) {
+    for (final node in state.nodes) {
       if (node.id == nodeId || neighborIds.contains(node.id)) {
         continue;
       }
@@ -892,11 +883,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       state = state.copyWith(currentScale: scale);
       // Persist view state
       _ref.read(galaxyViewStateProvider.notifier).updateScale(scale);
-      // Even if level didn't change, viewport culling might change with scale?
-      // Actually usually viewport updates happen separately via updateViewport.
-      // But if we zoomed, the viewport in world coordinates changed, so the screen might call updateViewport separately.
-      // So we don't strictly need to recalculate visibility here unless we want to do strict scale-based filtering.
-      _recalculateVisibility();
+      // Visibility recalculation is driven by throttled viewport updates.
+      // Recomputing here on every scale tick causes avoidable jank during pinch.
     }
   }
 
@@ -932,71 +920,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         pos.dy + canvasCenter,
       );
     }).toList();
-  }
-
-  /// Start bloom animation for nodes
-  void _startBloomAnimation(
-    List<GalaxyNodeModel> newVisibleNodes,
-    List<GalaxyEdgeModel> newVisibleEdges,
-    List<CompactKnowledgeNode> newVisibleCompactNodes, // 🔧 新增参数
-  ) {
-    // Cancel existing timer
-    _animationTimer?.cancel();
-
-    // Initialize animation progress for all visible nodes
-    final animationProgress = <String, double>{};
-    for (final node in newVisibleNodes) {
-      animationProgress[node.id] = 0.0;
-    }
-
-    // Update state with initial animation progress
-    state = state.copyWith(
-      visibleNodes: newVisibleNodes,
-      visibleEdges: newVisibleEdges,
-      visibleCompactNodes: newVisibleCompactNodes, // 🔧 设置预计算结果
-      nodeAnimationProgress: animationProgress,
-    );
-
-    // Start animation timer
-    final startTime = DateTime.now().millisecondsSinceEpoch;
-    _animationTimer =
-        Timer.periodic(Duration(milliseconds: _animationStep.toInt()), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        _animationTimer = null;
-        return;
-      }
-
-      final elapsed = DateTime.now().millisecondsSinceEpoch - startTime;
-      final progress = (elapsed / _animationDuration).clamp(0.0, 1.0);
-
-      // EaseOutBack curve
-      final easedProgress = _easeOutBack(progress);
-
-      // Update all node animations
-      final updatedProgress = state.nodeAnimationProgress
-          .map((id, _) => MapEntry(id, easedProgress));
-
-      if (progress >= 1.0) {
-        timer.cancel();
-        _animationTimer = null;
-        // Final state: all at 1.0
-        state = state.copyWith(
-          nodeAnimationProgress: const {},
-        );
-      } else {
-        state = state.copyWith(
-          nodeAnimationProgress: updatedProgress,
-        );
-      }
-    });
-  }
-
-  /// EaseOutBack curve for bloom effect
-  double _easeOutBack(double x) {
-    const c1 = 1.70158;
-    const c3 = c1 + 1.0;
-    return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2);
   }
 
   AggregationLevel _levelForScale(double scale) {
@@ -1136,7 +1059,25 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     Map<String, Offset> posMap,
     Rect viewport,
   ) {
-    final maxNodes = state.optimizationConfig.maxNodes;
+    final scale = state.currentScale;
+    final dynamicMaxNodes = switch (state.optimizationConfig.targetFps) {
+      60 => scale >= 1.2
+          ? 420
+          : scale >= 0.8
+              ? 320
+              : scale >= 0.4
+                  ? 220
+                  : 140,
+      _ => scale >= 1.2
+          ? 260
+          : scale >= 0.8
+              ? 200
+              : scale >= 0.4
+                  ? 150
+                  : 96,
+    };
+    final maxNodes =
+        dynamicMaxNodes.clamp(80, state.optimizationConfig.maxNodes) as int;
     if (nodes.length <= maxNodes) {
       return nodes;
     }

@@ -147,8 +147,8 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+  Widget build(BuildContext context) => GraphiteScaffold(
+        safeArea: false,
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
@@ -156,12 +156,18 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             variant: ButtonVariant.ghost,
             size: DS.touchTargetMinSize,
           ),
-          title: Text('记忆控制', style: TextStyle(color: DS.brandPrimary)),
-          iconTheme: IconThemeData(color: DS.brandPrimary),
+          title: Text(
+            '记忆控制',
+            style: DS.titleLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          iconTheme: IconThemeData(color: DS.textPrimary),
           backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
         ),
-        body: _loading
+        child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? _buildError(context)

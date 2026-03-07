@@ -18,16 +18,18 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final l10n = AppLocalizations.of(context)!;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final headerHeight = screenHeight < 720 ? 248.0 : 320.0;
 
     if (user == null) return const SizedBox.shrink();
 
-    return Scaffold(
-      backgroundColor: DS.neutral50,
-      body: SingleChildScrollView(
+    return GraphiteScaffold(
+      safeArea: false,
+      child: SingleChildScrollView(
         padding: EdgeInsets.zero,
         child: Column(
           children: [
-            _buildHeader(context, user),
+            _buildHeader(context, user, headerHeight: headerHeight),
             ContentConstraint(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
@@ -48,10 +50,13 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserModel user) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildHeader(
+    BuildContext context,
+    UserModel user, {
+    required double headerHeight,
+  }) {
     return SizedBox(
-      height: 320,
+      height: headerHeight,
       child: Stack(
         children: [
           // Wave Background
@@ -74,16 +79,10 @@ class ProfileScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: DS.brandPrimary.withValues(alpha: 0.3),
-                            width: 4,
+                            color: DS.borderStrong,
+                            width: 3,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: DS.brandPrimary.withValues(alpha: 0.2),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
+                          boxShadow: DS.shadowMd,
                         ),
                         child: SparkleAvatar(
                           radius: 40,
@@ -118,37 +117,31 @@ class ProfileScreen extends ConsumerWidget {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: DS.brandPrimary.withValues(alpha: 0.2),
+                                color: DS.surfaceOverlay,
                                 borderRadius: DS.borderRadius20,
+                                border: Border.all(color: DS.borderSubtle),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.local_fire_department_rounded,
-                                    color: isDark
-                                        ? DS.neutral0
-                                        : DS.brandPrimaryConst,
+                                    color: DS.brandPrimaryConst,
                                     size: 16,
                                   ),
                                   const SizedBox(width: DS.xs),
                                   Text(
                                     'Lv.${user.flameLevel}',
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? DS.neutral0
-                                          : DS.brandPrimaryConst,
-                                      fontWeight: FontWeight.bold,
+                                    style: DS.labelLarge.copyWith(
+                                      color: DS.textPrimary,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(width: DS.sm),
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? DS.neutral0.withValues(alpha: 0.7)
-                                          : DS.textSecondary,
-                                      fontSize: 12,
+                                    style: DS.labelSmall.copyWith(
+                                      color: DS.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -173,12 +166,7 @@ class ProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) =>
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius16,
-          boxShadow: DS.shadowSm,
-        ),
+      GraphiteCardSurface(
         child: Column(
           children: [
             _buildSettingsTile(
@@ -263,33 +251,38 @@ class ProfileScreen extends ConsumerWidget {
 
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.language),
-        shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(l10n.languageChinese),
-              trailing: currentLocale.languageCode == 'zh'
-                  ? Icon(Icons.check, color: DS.primaryBase)
-                  : null,
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: Text(l10n.languageEnglish),
-              trailing: currentLocale.languageCode == 'en'
-                  ? Icon(Icons.check, color: DS.primaryBase)
-                  : null,
-              onTap: () {
-                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
-                Navigator.pop(context);
-              },
-            ),
-          ],
+      builder: (context) => Dialog(
+        child: GraphiteModalSurface(
+          title: l10n.language,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(l10n.languageChinese),
+                trailing: currentLocale.languageCode == 'zh'
+                    ? Icon(Icons.check, color: DS.primaryBase)
+                    : null,
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('zh'));
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(l10n.languageEnglish),
+                trailing: currentLocale.languageCode == 'en'
+                    ? Icon(Icons.check, color: DS.primaryBase)
+                    : null,
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(const Locale('en'));
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -302,23 +295,41 @@ class ProfileScreen extends ConsumerWidget {
   ) {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.logout),
-        content: Text(l10n.confirmLogout),
-        shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
-        actions: [
-          SparkleButton.ghost(
-            onPressed: () => Navigator.pop(context),
-            label: l10n.cancel,
+      builder: (context) => Dialog(
+        child: GraphiteModalSurface(
+          title: l10n.logout,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.confirmLogout,
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      onPressed: () => Navigator.pop(context),
+                      label: l10n.cancel,
+                    ),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Expanded(
+                    child: SparkleButton.destructive(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ref.read(authProvider.notifier).logout();
+                      },
+                      label: l10n.confirm,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          SparkleButton.destructive(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(authProvider.notifier).logout();
-            },
-            label: l10n.confirm,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -341,7 +352,8 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             gradient: gradient,
-            borderRadius: DS.borderRadius8,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
           ),
           child: Icon(icon, color: DS.neutral0, size: 20),
         ),
@@ -364,7 +376,15 @@ class _WaveHeaderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..shader = DS.primaryGradient.createShader(
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          DS.surfaceOverlay,
+          Color.lerp(DS.surfaceCanvas, DS.brandPrimary, 0.18)!,
+          Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.16)!,
+        ],
+      ).createShader(
         Rect.fromLTWH(0, 0, size.width, size.height),
       );
 

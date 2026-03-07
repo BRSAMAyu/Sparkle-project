@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,8 +15,8 @@ import (
 // STTHandler proxies WebSocket connections from Flutter to Python STT service
 type STTHandler struct {
 	pythonSTTUrl string
-	upgrader      websocket.Upgrader
-	logger        *zap.Logger
+	upgrader     websocket.Upgrader
+	logger       *zap.Logger
 }
 
 // NewSTTHandler creates a new STT handler
@@ -93,10 +94,16 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	// 3. Bidirectional forwarding using channels
 	errChan := make(chan error, 2)
 	done := make(chan struct{})
+	var closeOnce sync.Once
+	closeDone := func() {
+		closeOnce.Do(func() {
+			close(done)
+		})
+	}
 
 	// Client -> Python (forward audio data)
 	go func() {
-		defer close(done)
+		defer closeDone()
 		for {
 			select {
 			case <-done:
@@ -123,7 +130,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 
 	// Python -> Client (forward transcription results)
 	go func() {
-		defer close(done)
+		defer closeDone()
 		for {
 			select {
 			case <-done:

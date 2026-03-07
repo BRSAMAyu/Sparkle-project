@@ -302,7 +302,7 @@ class SummarizationWorker:
 
 # 工厂函数
 def create_summarization_worker(
-    redis_url: str,
+    redis_url: str | redis.Redis,
     worker_id: str = None,
     **kwargs
 ) -> SummarizationWorker:
@@ -310,20 +310,21 @@ def create_summarization_worker(
     创建 SummarizationWorker 实例
 
     Args:
-        redis_url: Redis 连接 URL
+        redis_url: Redis 连接 URL 或现成的 Redis 客户端
         worker_id: 工作器 ID
         **kwargs: 其他配置参数
 
     Returns:
         SummarizationWorker 实例
     """
-    import redis.asyncio as redis
-
     from app.config import settings
     from app.core.redis_utils import resolve_redis_password
 
-    resolved_password, _ = resolve_redis_password(redis_url, settings.REDIS_PASSWORD)
-    redis_client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
+    if isinstance(redis_url, redis.Redis):
+        redis_client = redis_url
+    else:
+        resolved_password, _ = resolve_redis_password(redis_url, settings.REDIS_PASSWORD)
+        redis_client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
     return SummarizationWorker(redis_client, worker_id=worker_id, **kwargs)
 
 
