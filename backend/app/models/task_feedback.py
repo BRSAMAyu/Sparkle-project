@@ -3,10 +3,13 @@ Task Feedback Model
 """
 import enum
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 class TaskFeedbackCategory(enum.Enum):
@@ -45,6 +48,9 @@ class TaskFeedback(BaseModel):
     task_difficulty_snapshot = Column(Integer, nullable=True)  # 任务难度快照
     task_type_snapshot = Column(String(50), nullable=True)  # 任务类型快照
     actual_minutes_snapshot = Column(Integer, nullable=True)  # 实际用时快照
+
+    # Phase 4: 结构化反思记录
+    reflection_payload = Column(JSONBCompat, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="task_feedbacks")

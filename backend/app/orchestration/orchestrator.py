@@ -86,6 +86,7 @@ from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
 from app.services.llm_service import llm_service
 from app.services.plan_progress_service import PlanProgressService
+from app.services.progress_narrative_service import ProgressNarrativeService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.shadow_prediction_service import shadow_prediction_service
@@ -295,12 +296,13 @@ class ChatOrchestrator:
     async def _drain_system_updates(
         self,
         user_id: str,
-    ) -> tuple[list[agent_service_pb2.ChatResponse], list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    ) -> tuple[list[agent_service_pb2.ChatResponse], list[dict[str, Any]], list[dict[str, Any]], list[str], dict[str, Any] | None]:
         updates = await SystemUpdateService(getattr(self, "redis", None)).drain(user_id, limit=20)
         responses: list[agent_service_pb2.ChatResponse] = []
         adaptation_records: list[dict[str, Any]] = []
         preference_learnings: list[dict[str, Any]] = []
         evolution_highlights: list[str] = []
+        progress_snapshot: dict[str, Any] | None = None
         for update in updates:
             metadata = update.get("metadata") if isinstance(update, dict) else None
             if isinstance(metadata, dict):
@@ -310,6 +312,8 @@ class ChatOrchestrator:
                     preference_learnings.append(metadata["preference_learning"])
                 if metadata.get("evolution_kind") == "highlight" and metadata.get("highlight"):
                     evolution_highlights.append(str(metadata["highlight"]).strip())
+                if metadata.get("evolution_kind") == "progress_snapshot" and isinstance(metadata.get("progress_snapshot"), dict):
+                    progress_snapshot = metadata["progress_snapshot"]
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
             responses.append(
@@ -323,7 +327,9 @@ class ChatOrchestrator:
                     )
                 )
             )
-        return responses, adaptation_records[:3], preference_learnings[:3], evolution_highlights[:3]
+        if progress_snapshot:
+            evolution_highlights = [*evolution_highlights[:2], *(progress_snapshot.get("highlights") or [])[:1]]
+        return responses, adaptation_records[:3], preference_learnings[:3], evolution_highlights[:3], progress_snapshot
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -2002,6 +2008,7 @@ class ChatOrchestrator:
             adaptation_records = list(context_data.get("adaptation_records") or [])
             preference_learnings = list(context_data.get("preference_learnings") or [])
             evolution_highlights = list(context_data.get("evolution_highlights") or [])
+            progress_snapshot = context_data.get("progress_snapshot")
             for update in updates:
                 metadata = update.get("metadata") if isinstance(update, dict) else None
                 if not isinstance(metadata, dict):
@@ -2018,12 +2025,21 @@ class ChatOrchestrator:
                     highlight = str(metadata["highlight"]).strip()
                     if highlight and highlight not in evolution_highlights:
                         evolution_highlights.append(highlight)
+                snapshot = metadata.get("progress_snapshot")
+                if metadata.get("evolution_kind") == "progress_snapshot" and isinstance(snapshot, dict):
+                    progress_snapshot = snapshot
+            if progress_snapshot is None and hasattr(self, "db_session_factory"):
+                async with self.db_session_factory() as db_session:
+                    service = ProgressNarrativeService(db_session, getattr(self, "redis", None))
+                    progress_snapshot = await service.maybe_get_lightweight_snapshot(user_id)
             if adaptation_records:
                 context_data["adaptation_records"] = adaptation_records[:3]
             if preference_learnings:
                 context_data["preference_learnings"] = preference_learnings[:3]
             if evolution_highlights:
                 context_data["evolution_highlights"] = evolution_highlights[:3]
+            if progress_snapshot:
+                context_data["progress_snapshot"] = progress_snapshot
         except Exception as e:
             logger.warning(f"Failed to hydrate evolution context: {e}")
 
@@ -2454,7 +2470,7 @@ class ChatOrchestrator:
             "metadata": response_metadata,
         }
         await self._cache_response(session_id, request_id, final_response_data)
-        update_responses, _, _, _ = await self._drain_system_updates(user_id)
+        update_responses, _, _, _, _ = await self._drain_system_updates(user_id)
         for update_resp in update_responses:
             yield update_resp
 
@@ -3308,13 +3324,15 @@ class ChatOrchestrator:
                     await queue.put(resp)
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
-                update_responses, adaptation_records, preference_learnings, evolution_highlights = await self._drain_system_updates(user_id)
+                update_responses, adaptation_records, preference_learnings, evolution_highlights, progress_snapshot = await self._drain_system_updates(user_id)
                 if adaptation_records:
                     state.context_data["adaptation_records"] = adaptation_records
                 if preference_learnings:
                     state.context_data["preference_learnings"] = preference_learnings
                 if evolution_highlights:
                     state.context_data["evolution_highlights"] = evolution_highlights
+                if progress_snapshot:
+                    state.context_data["progress_snapshot"] = progress_snapshot
                 for update_resp in update_responses:
                     yield update_resp
 
@@ -3415,7 +3433,7 @@ class ChatOrchestrator:
                     if isinstance(final_response_data, dict):
                         with tracer.start_as_current_span("orchestrator.cache_mode_response"):
                             await self._cache_response(session_id, request_id, final_response_data)
-                        followup_updates, _, _, _ = await self._drain_system_updates(user_id)
+                        followup_updates, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
                             yield update_resp
                     return
@@ -3504,7 +3522,7 @@ class ChatOrchestrator:
                         )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
-                    followup_updates, _, _, _ = await self._drain_system_updates(user_id)
+                    followup_updates, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
                     yield final_response

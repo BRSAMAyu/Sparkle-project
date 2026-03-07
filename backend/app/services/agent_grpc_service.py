@@ -32,6 +32,7 @@ from app.orchestration.chat_modes import (
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
 from app.services.response_feedback_service import ResponseFeedbackService
+from app.services.progress_narrative_service import ProgressNarrativeService
 
 
 def _utcnow() -> datetime:
@@ -501,21 +502,22 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             start_date = end_date - timedelta(days=7)
 
             async with self.db_session_factory() as db_session:
-                from app.services.analytics.weekly_stats_service import WeeklyStatsService
-
-                stats_service = WeeklyStatsService(db_session)
-                stats = await stats_service.get_weekly_summary(request.user_id, start_date, end_date)
+                snapshot_service = ProgressNarrativeService(db_session, getattr(self.orchestrator, "redis", None))
+                snapshot = await snapshot_service.build_snapshot(
+                    request.user_id,
+                    period_label="本周",
+                    period_days=7,
+                )
 
                 summary_text = (
                     f"Week {request.week_id or start_date.isocalendar()[1]}: "
-                    f"{stats.get('tasks_completed', 0)} tasks completed, "
-                    f"{stats.get('total_study_minutes', 0)} minutes studied, "
-                    f"{stats.get('focus_sessions_count', 0)} focus sessions."
+                    f"{snapshot.highlights[0]} "
+                    f"当前连胜 {snapshot.streak_info.get('current_streak', 0)} 天。"
                 )
 
                 return agent_service_pb2.WeeklyReport(
                     summary=summary_text,
-                    tasks_completed=stats.get("tasks_completed", 0),
+                    tasks_completed=int(snapshot.comparisons["tasks_completed"]["current"]),
                 )
         except Exception as e:
             logger.error(f"GetWeeklyReport error: {e}", exc_info=True)

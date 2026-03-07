@@ -10,9 +10,11 @@ Production-grade features:
 """
 import asyncio
 import contextlib
+import hashlib
 import json
 import time
 import uuid
+from uuid import UUID
 
 import redis.asyncio as redis
 from fastapi import WebSocket
@@ -20,6 +22,10 @@ from loguru import logger
 
 from app.config import settings
 from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+from app.db.session import AsyncSessionLocal
+from app.schemas.notification import NotificationCreate
+from app.services.notification_service import NotificationService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 # 延迟导入设备服务（避免循环依赖）
 _device_service = None
@@ -308,15 +314,38 @@ class ConnectionManager:
             # In single-instance mode, this is where we trigger Push.
             await self._trigger_offline_push(user_id, message)
 
-    async def _trigger_offline_push(self, user_id: str, message: dict):
-        """
-        Hook for external Push Notification services (FCM, JPush, etc.)
-        """
-        if message.get("type") == "ack" or message.get("type") == "status_update":
-            return # Don't push technical messages
+    @staticmethod
+    def _build_offline_notification(message: dict) -> tuple[str | None, str | None, str]:
+        message_type = str(message.get("type", "system"))
+        if message_type == "chat_message":
+            sender_name = message.get("sender_name") or "新消息"
+            body = str(message.get("content") or message.get("message") or "你收到了一条新聊天消息")
+            return f"{sender_name} 发来新消息", body[:240], "chat"
+        if message_type == "group_message":
+            group_name = message.get("group_name") or "群组"
+            body = str(message.get("content") or message.get("message") or "你收到一条新的群组消息")
+            return f"{group_name} 有新动态", body[:240], "group"
+        if message_type == "system":
+            title = str(message.get("title") or "Sparkle 系统提醒")
+            body = str(message.get("message") or message.get("content") or "你有一条新的系统通知")
+            return title[:120], body[:240], "system"
+        if message_type in {"action_required", "intervention", "reflection"}:
+            title = str(message.get("title") or "Sparkle 需要你的反馈")
+            body = str(message.get("message") or message.get("content") or "有一条待处理的提醒")
+            return title[:120], body[:240], "system"
+        return None, None, "system"
 
-        logger.info(f"Triggering offline push for user {user_id}")
-        # TODO: Integration with app.services.notification_service
+    @staticmethod
+    def _offline_notification_dedupe_key(user_id: str, title: str, body: str, message: dict) -> str:
+        fingerprint = hashlib.sha256(
+            json.dumps(
+                {"title": title, "body": body, "type": message.get("type"), "data": message},
+                ensure_ascii=False,
+                sort_keys=True,
+                default=str,
+            ).encode("utf-8")
+        ).hexdigest()
+        return f"offline_ws_push:{user_id}:{fingerprint}"
 
     async def notify_status_change(self, user_id: str, status: str):
         """Notify friends of status change (Optimized Distributed)"""
@@ -446,6 +475,50 @@ class ConnectionManager:
         if msg_type in ["ack", "status_update", "typing", "presence", "ping"]:
             return
 
+        title, body, notification_type = self._build_offline_notification(message)
+        if not title or not body:
+            return
+
+        dedupe_key = self._offline_notification_dedupe_key(user_id, title, body, message)
+        if self.redis:
+            locked = await self.redis.set(dedupe_key, "1", ex=60, nx=True)
+            if not locked:
+                return
+
+        try:
+            async with AsyncSessionLocal() as db:
+                await NotificationService.create(
+                    db,
+                    UUID(str(user_id)),
+                    NotificationCreate(
+                        title=title,
+                        content=body,
+                        type=notification_type,
+                        data={"source": "websocket_offline", "message": message},
+                    ),
+                )
+        except Exception as exc:
+            logger.warning(f"Failed to persist offline notification for user {user_id}: {exc}")
+
+        try:
+            await SystemUpdateService(self.redis).enqueue(
+                user_id,
+                build_system_update(
+                    update_type="system_update",
+                    category="notification",
+                    title=title,
+                    description=body,
+                    priority="medium",
+                    metadata={
+                        "source": "websocket_offline",
+                        "message_type": msg_type or "message",
+                        "widget_type": "notification_card",
+                    },
+                ),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to enqueue offline system update for user {user_id}: {exc}")
+
         # Get user device tokens
         device_tokens = await self._get_user_device_tokens(user_id)
         if not device_tokens:
@@ -454,8 +527,8 @@ class ConnectionManager:
 
         # Construct push payload
         push_data = {
-            "title": self._get_push_title(msg_type, message),
-            "body": self._get_push_body(msg_type, message),
+            "title": title,
+            "body": body,
             "data": {
                 "type": msg_type,
                 "message_id": message.get("id") or message.get("msg_id"),

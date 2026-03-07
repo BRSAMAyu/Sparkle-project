@@ -339,13 +339,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           feedbackType,
                                         );
                                   },
-                                  onWidgetAction: (actionType, payload) {
-                                    unawaited(
-                                      ref
-                                          .read(chatProvider.notifier)
-                                          .handleWidgetAction(
-                                              actionType, payload),
-                                    );
+                                  onWidgetAction: (
+                                    actionType,
+                                    payload,
+                                  ) async {
+                                    await ref
+                                        .read(chatProvider.notifier)
+                                        .handleWidgetAction(
+                                          actionType,
+                                          payload,
+                                        );
                                   },
                                 );
                               },

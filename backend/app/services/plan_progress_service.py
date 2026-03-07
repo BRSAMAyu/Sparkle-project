@@ -176,7 +176,7 @@ class PlanProgressService:
 
     async def _get_feedback_stats(self, user_id: UUID, plan_id: UUID) -> dict[str, int]:
         result = await self.db.execute(
-            select(TaskFeedback)
+            select(TaskFeedback.category)
             .join(Task, Task.id == TaskFeedback.task_id)
             .where(
                 Task.plan_id == plan_id,
@@ -185,21 +185,21 @@ class PlanProgressService:
             .order_by(TaskFeedback.created_at.desc())
             .limit(self.feedback_window)
         )
-        feedbacks = list(result.scalars().all())
+        categories = list(result.scalars().all())
         stats = {
             "too_difficult": 0,
             "too_easy": 0,
             "too_long": 0,
             "too_short": 0,
         }
-        for feedback in feedbacks:
-            if feedback.category == TaskFeedbackCategory.TOO_DIFFICULT.value:
+        for category in categories:
+            if category == TaskFeedbackCategory.TOO_DIFFICULT.value:
                 stats["too_difficult"] += 1
-            elif feedback.category == TaskFeedbackCategory.TOO_EASY.value:
+            elif category == TaskFeedbackCategory.TOO_EASY.value:
                 stats["too_easy"] += 1
-            elif feedback.category == TaskFeedbackCategory.TOO_LONG.value:
+            elif category == TaskFeedbackCategory.TOO_LONG.value:
                 stats["too_long"] += 1
-            elif feedback.category == TaskFeedbackCategory.TOO_SHORT.value:
+            elif category == TaskFeedbackCategory.TOO_SHORT.value:
                 stats["too_short"] += 1
         return stats
 

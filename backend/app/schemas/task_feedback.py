@@ -48,6 +48,7 @@ class TaskFeedbackResponse(BaseModel):
     task_difficulty_snapshot: int | None = None
     task_type_snapshot: str | None = None
     actual_minutes_snapshot: int | None = None
+    reflection_payload: dict[str, Any] | None = None
     created_at: str
     updated_at: str
 
@@ -122,6 +123,7 @@ class TaskFeedbackSubmitResponse(BaseModel):
     message: str | None = Field(None, description="响应消息")
     data: TaskFeedbackResponse | None = Field(None, description="反馈数据")
     preference_updates: PreferenceUpdateDetail | None = Field(None, description="偏好更新详情")
+    reflection_prompt: dict[str, Any] | None = Field(None, description="可选的反思引导卡片")
 
     class Config:
         json_schema_extra = {
@@ -135,3 +137,16 @@ class TaskFeedbackSubmitResponse(BaseModel):
                 }
             }
         }
+
+
+class ReflectionAnswerCreate(BaseModel):
+    """提交反思答案"""
+    selected_option: str | None = Field(None, max_length=200, description="选择的原因标签")
+    free_text: str | None = Field(None, max_length=1000, description="补充说明")
+
+
+class ReflectionAnswerResponse(BaseModel):
+    """反思答案提交响应"""
+    success: bool
+    message: str
+    reflection_payload: dict[str, Any] | None = None

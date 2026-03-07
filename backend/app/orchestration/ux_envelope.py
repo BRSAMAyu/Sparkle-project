@@ -487,6 +487,12 @@ class UXEnvelopeBuilder:
             message = str(message or "").strip()
             if message:
                 highlights.append(message)
+        progress_snapshot = context_data.get("progress_snapshot")
+        if isinstance(progress_snapshot, dict):
+            for item in (progress_snapshot.get("highlights") or [])[:2]:
+                label = str(item or "").strip()
+                if label:
+                    highlights.append(label)
         deduped: list[str] = []
         for item in highlights:
             if item and item not in deduped:
@@ -495,6 +501,7 @@ class UXEnvelopeBuilder:
             "highlights": deduped[:3],
             "adaptation_records": adaptation_records,
             "preference_learnings": preference_learnings,
+            "progress_snapshot": progress_snapshot if isinstance(progress_snapshot, dict) else None,
         }
 
     def _adaptation_records(self, final_state: Any) -> list[dict[str, Any]]:
@@ -523,7 +530,8 @@ class UXEnvelopeBuilder:
         adaptation_records = memory_updates.get("adaptation_records") or []
         preference_learnings = memory_updates.get("preference_learnings") or []
         highlights = memory_updates.get("highlights") or []
-        if not adaptation_records and not preference_learnings:
+        progress_snapshot = memory_updates.get("progress_snapshot")
+        if not adaptation_records and not preference_learnings and not progress_snapshot:
             return None
         headline = "系统正在根据你的反馈继续调整"
         summary = (
@@ -531,12 +539,16 @@ class UXEnvelopeBuilder:
             if highlights
             else "我会把这轮新学到的偏好和调整继续用于后续对话。"
         )
+        if isinstance(progress_snapshot, dict) and (progress_snapshot.get("highlights") or []):
+            headline = "这是你最近一段时间最值得看到的进步"
+            summary = str((progress_snapshot.get("highlights") or [summary])[0])
         return {
             "headline": headline,
             "summary": summary,
             "adaptation_records": adaptation_records,
             "preference_learnings": preference_learnings,
             "highlights": highlights,
+            "progress_snapshot": progress_snapshot,
         }
 
     def _dual_core_mode(self, final_state: Any) -> str:

@@ -26,6 +26,7 @@ import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 part 'chat_notifier_reviews.dart';
@@ -191,14 +192,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
                   'label': label,
                   'type': 'prompt',
                   'prompt': label,
-                })
+                },)
             .toList(),
         'retry_options': retryOptions
             .map((label) => {
                   'label': label,
                   'type': 'prompt',
                   'prompt': label,
-                })
+                },)
             .toList(),
         'recovery_message': followthrough['recovery_message'],
         'memory_updates': followthrough['memory_updates'],
@@ -208,6 +209,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final evolution = uxEnvelope['ux_evolution'];
     if (evolution is Map<String, dynamic>) {
       addWidget('evolution_card', evolution);
+      final progressSnapshot = evolution['progress_snapshot'];
+      if (progressSnapshot is Map<String, dynamic>) {
+        addWidget('progress_card', progressSnapshot);
+      }
     }
 
     final result = uxEnvelope['ux_result'];
@@ -224,7 +229,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           'completion_state': completionState,
           'retry_options': followthrough is Map<String, dynamic>
               ? followthrough['retry_options']
-              : const [],
+              : const <String>[],
         });
       }
     }
@@ -237,6 +242,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       if (category == 'evolution' && metadata is Map<String, dynamic>) {
         final adaptation = metadata['adaptation_record'];
         final preferenceLearning = metadata['preference_learning'];
+        final progressSnapshot = metadata['progress_snapshot'];
+        if (metadata['evolution_kind'] == 'progress_snapshot' &&
+            progressSnapshot is Map<String, dynamic>) {
+          return WidgetPayload(type: 'progress_card', data: progressSnapshot);
+        }
         return WidgetPayload(
           type: 'evolution_card',
           data: {
@@ -246,12 +256,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
               'adaptation_records': [adaptation],
             if (preferenceLearning is Map<String, dynamic>)
               'preference_learnings': [preferenceLearning],
-            'highlights': [
+            if (progressSnapshot is Map<String, dynamic>)
+              'progress_snapshot': progressSnapshot,
+            'highlights': <String>[
               if ((data['description']?.toString() ?? '').isNotEmpty)
                 data['description'].toString(),
             ],
           },
         );
+      }
+      if (category == 'reflection' && metadata is Map<String, dynamic>) {
+        final prompt = metadata['reflection_prompt'];
+        if (prompt is Map<String, dynamic>) {
+          return WidgetPayload(type: 'reflection_card', data: prompt);
+        }
       }
     }
     return WidgetPayload(type: type, data: data);

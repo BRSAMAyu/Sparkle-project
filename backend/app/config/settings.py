@@ -398,7 +398,11 @@ class Settings(BaseSettings):
     ENABLE_GRAPH_SYNC_WORKER: bool = False
 
     # Idempotency Store
-    IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
+    IDEMPOTENCY_STORE: str = "redis"  # 'memory' | 'redis' | 'database'
+
+    # Event Bus reliability
+    EVENT_BUS_MAX_RETRIES: int = 3
+    EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
 
     # Translation Service
     TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation

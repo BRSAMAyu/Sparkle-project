@@ -24,7 +24,7 @@ void main() {
                 'recovery_message': '如果当前节奏太重，我可以继续帮你压缩。',
               },
             ),
-            onWidgetAction: (actionType, payload) {
+            onWidgetAction: (actionType, payload) async {
               if (actionType == 'prompt') {
                 receivedPrompt = payload['prompt']?.toString();
               }
@@ -90,7 +90,7 @@ void main() {
                 'retry_options': ['补充题目', '上传材料'],
               },
             ),
-            onWidgetAction: (actionType, payload) {
+            onWidgetAction: (actionType, payload) async {
               receivedPrompt = payload['prompt']?.toString();
             },
           ),
@@ -142,5 +142,83 @@ void main() {
     expect(find.text('把任务难度偏移调整为 -0.1'), findsOneWidget);
     expect(find.text('为什么：最近 3 次反馈都觉得太难'), findsOneWidget);
     expect(find.text('预期效果：降低任务启动门槛'), findsOneWidget);
+  });
+
+  testWidgets('progress card renders highlights and comparisons', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ActionCard(
+            action: WidgetPayload(
+              type: 'progress_card',
+              data: {
+                'highlights': [
+                  '你这周完成了 8 个任务，比上周多 3 个。',
+                  '线性代数掌握度提升了 15%。',
+                ],
+                'streak_info': {
+                  'current_streak': 12,
+                  'max_streak': 12,
+                },
+                'comparisons': {
+                  'tasks_completed': {
+                    'current': 8,
+                    'previous': 5,
+                  },
+                },
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('你这周完成了 8 个任务'), findsOneWidget);
+    expect(find.textContaining('当前连胜 12 天'), findsOneWidget);
+
+    await tester.tap(find.text('查看对比数据'));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Tasks Completed'), findsOneWidget);
+    expect(find.text('8 / 上期 5'), findsOneWidget);
+  });
+
+  testWidgets('reflection card submits and enters completed state', (
+    tester,
+  ) async {
+    String? selectedOption;
+    String? freeText;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ActionCard(
+            action: WidgetPayload(
+              type: 'reflection_card',
+              data: {
+                'feedback_id': 'fb_1',
+                'question': '你觉得难在哪里？',
+                'options': ['概念没理解', '题量太大'],
+              },
+            ),
+            onWidgetAction: (actionType, payload) async {
+              selectedOption = payload['selected_option']?.toString();
+              freeText = payload['free_text']?.toString();
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('概念没理解'));
+    await tester.enterText(find.byType(TextField), '矩阵变换看不懂');
+    await tester.tap(find.text('提交反馈'));
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(selectedOption, '概念没理解');
+    expect(freeText, '矩阵变换看不懂');
+    expect(find.text('谢谢你的反馈，我会据此优化后续计划。'), findsOneWidget);
   });
 }
