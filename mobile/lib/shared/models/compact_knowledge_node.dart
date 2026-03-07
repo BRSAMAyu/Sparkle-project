@@ -15,6 +15,7 @@ class CompactKnowledgeNode {
     required this.position,
     required int packedState,
     this.parentIdHash,
+    this.primaryTag,
   }) : _packedState = packedState;
 
   /// Factory to create from individual fields
@@ -31,6 +32,7 @@ class CompactKnowledgeNode {
     int? sectorIndex,
     int? subjectId,
     int studyCount = 0,
+    String? primaryTag,
   }) {
     final resolvedSectorIndex = sectorIndex ?? subjectId;
     if (resolvedSectorIndex == null) {
@@ -70,6 +72,7 @@ class CompactKnowledgeNode {
       name: name,
       position: position,
       packedState: packed,
+      primaryTag: primaryTag,
     );
   }
 
@@ -81,6 +84,9 @@ class CompactKnowledgeNode {
 
   /// 节点名称 (Reference overhead only)
   final String name;
+
+  /// 自动标签中的首要标签，用于高倍率关系图谱展示
+  final String? primaryTag;
 
   /// [x, y] 坐标 (Immutable)
   final Float32List position;
@@ -117,6 +123,7 @@ class CompactKnowledgeNode {
   /// Create a copy with modified fields (efficiently)
   CompactKnowledgeNode copyWith({
     String? name,
+    Object? primaryTag = _noChange,
     int? mastery,
     bool? isUnlocked,
     bool? isMastered,
@@ -161,6 +168,9 @@ class CompactKnowledgeNode {
       idHash: idHash,
       parentIdHash: parentIdHash,
       name: name ?? this.name,
+      primaryTag: identical(primaryTag, _noChange)
+          ? this.primaryTag
+          : primaryTag as String?,
       position: newPosition,
       packedState: newPacked,
     );
@@ -173,6 +183,7 @@ class CompactKnowledgeNode {
         other.idHash == idHash &&
         other.parentIdHash == parentIdHash &&
         other.name == name &&
+        other.primaryTag == primaryTag &&
         other._packedState == _packedState &&
         (other.position == position ||
             (other.position[0] == position[0] &&
@@ -181,5 +192,14 @@ class CompactKnowledgeNode {
 
   @override
   int get hashCode => Object.hash(
-      idHash, parentIdHash, name, _packedState, position[0], position[1],);
+        idHash,
+        parentIdHash,
+        name,
+        primaryTag,
+        _packedState,
+        position[0],
+        position[1],
+      );
+
+  static const Object _noChange = Object();
 }

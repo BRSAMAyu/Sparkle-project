@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -72,7 +73,8 @@ class EnhancedGalaxyRepository {
         },
         onRetry: (attempt, error, delay) {
           debugPrint(
-              'EnhancedGalaxyRepository: Retry attempt $attempt for getGraph',);
+            'EnhancedGalaxyRepository: Retry attempt $attempt for getGraph',
+          );
         },
       );
 
@@ -85,7 +87,8 @@ class EnhancedGalaxyRepository {
       final cached = _graphCache.get(cacheKey);
       if (cached != null) {
         debugPrint(
-            'EnhancedGalaxyRepository: Circuit breaker open, returning stale cache',);
+          'EnhancedGalaxyRepository: Circuit breaker open, returning stale cache',
+        );
         return NetworkResult.success(cached, isFromCache: true);
       }
       return NetworkResult.failure(GalaxyError.circuitBreakerOpen());
@@ -94,9 +97,80 @@ class EnhancedGalaxyRepository {
       final cached = _graphCache.get(cacheKey);
       if (cached != null) {
         debugPrint(
-            'EnhancedGalaxyRepository: Network error, returning stale cache',);
+          'EnhancedGalaxyRepository: Network error, returning stale cache',
+        );
         return NetworkResult.success(cached, isFromCache: true);
       }
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
+  Future<NetworkResult<GalaxyGraphResponse>> getGraphForViewport({
+    required Rect viewport,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return NetworkResult.success(DemoDataService().demoGalaxy);
+    }
+
+    try {
+      final response =
+          await RetryStrategy.executeWithRetry<GalaxyGraphResponse>(
+        () async {
+          final response = await _apiClient.post<Map<String, dynamic>>(
+            ApiEndpoints.galaxyViewport,
+            data: {
+              'min_x': viewport.left,
+              'max_x': viewport.right,
+              'min_y': viewport.top,
+              'max_y': viewport.bottom,
+            },
+          );
+          final payload = ApiResponseParser.unwrapMap(
+            response.data ?? const <String, dynamic>{},
+            action: 'getGalaxyViewport',
+          );
+          return GalaxyGraphResponse.fromJson(payload);
+        },
+        config: const RetryConfig(maxAttempts: 2),
+      );
+
+      return NetworkResult.success(response);
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
+  Future<NetworkResult<void>> updateNodePositions(
+    Map<String, Offset> positions,
+  ) async {
+    if (DemoDataService.isDemoMode || positions.isEmpty) {
+      return NetworkResult.success(null);
+    }
+
+    try {
+      await RetryStrategy.executeWithRetry(
+        () => _apiClient.post<void>(
+          ApiEndpoints.galaxyPositions,
+          data: {
+            'updates': positions.entries
+                .map(
+                  (entry) => {
+                    'id': entry.key,
+                    'x': entry.value.dx,
+                    'y': entry.value.dy,
+                  },
+                )
+                .toList(),
+          },
+        ),
+        config: const RetryConfig(maxAttempts: 2),
+      );
+      return NetworkResult.success(null);
+    } on DioException catch (e) {
       return NetworkResult.failure(GalaxyError.network(e));
     } catch (e) {
       return NetworkResult.failure(GalaxyError.unknown(e.toString()));
@@ -127,7 +201,8 @@ class EnhancedGalaxyRepository {
 
   /// 获取节点详情
   Future<NetworkResult<KnowledgeDetailResponse>> getNodeDetail(
-      String nodeId,) async {
+    String nodeId,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return NetworkResult.success(DemoDataService().getDemoNodeDetail(nodeId));
     }
@@ -139,7 +214,8 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry<KnowledgeDetailResponse>(
+      final response =
+          await RetryStrategy.executeWithRetry<KnowledgeDetailResponse>(
         () async {
           final response = await _apiClient.get<Map<String, dynamic>>(
             ApiEndpoints.galaxyNodeDetail(nodeId),
@@ -170,7 +246,8 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry<KnowledgeDetailResponse?>(
+      final response =
+          await RetryStrategy.executeWithRetry<KnowledgeDetailResponse?>(
         () async {
           final response = await _apiClient.post<Map<String, dynamic>>(
             ApiEndpoints.galaxyPredictNext,
@@ -194,13 +271,15 @@ class EnhancedGalaxyRepository {
 
   /// 搜索节点
   Future<NetworkResult<List<GalaxySearchResult>>> searchNodes(
-      String query,) async {
+    String query,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return NetworkResult.success([]);
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry<List<GalaxySearchResult>>(
+      final response =
+          await RetryStrategy.executeWithRetry<List<GalaxySearchResult>>(
         () async {
           final response = await _apiClient.post<Map<String, dynamic>>(
             ApiEndpoints.galaxySearch,

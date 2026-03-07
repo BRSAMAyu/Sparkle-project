@@ -375,6 +375,27 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
   Future<List<GalaxySearchResult>> searchNodes(String query) async => [];
 
   @override
+  void beginNodeDrag(String nodeId) {
+    state = state.copyWith(
+      draggingNodeId: nodeId,
+      selectedNodeId: nodeId,
+      expandedEdgeNodeIds: {nodeId},
+    );
+  }
+
+  @override
+  void updateDraggedNodePosition(String nodeId, Offset newPosition) {
+    final positions = Map<String, Offset>.from(state.nodePositions)
+      ..[nodeId] = newPosition;
+    state = state.copyWith(nodePositions: positions);
+  }
+
+  @override
+  Future<void> endNodeDrag() async {
+    state = state.copyWith(draggingNodeId: null);
+  }
+
+  @override
   void setEvidenceHighlight(Set<String> ids, {String? focusId}) {
     state = state.copyWith(
       highlightedNodeIdHashes: ids.map((e) => e.hashCode).toSet(),

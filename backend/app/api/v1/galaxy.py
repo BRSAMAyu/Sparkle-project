@@ -2,6 +2,7 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
+
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -58,11 +59,12 @@ class MasterySyncRequest(BaseModel):
     version: datetime
     reason: str = "offline_sync"
 
+
 @router.post("/sync/mastery")
 async def sync_node_mastery(
     request: MasterySyncRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     Synchronize node mastery from mobile client (via Gateway).
@@ -73,16 +75,14 @@ async def sync_node_mastery(
         node_id=request.node_id,
         new_mastery=request.mastery,
         reason=request.reason,
-        version=request.version
+        version=request.version,
     )
 
     if not result.get("success"):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=result.get("reason", "conflict")
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.get("reason", "conflict"))
 
     return result
+
 
 # ==========================================
 # API 端点
@@ -93,7 +93,7 @@ async def get_galaxy_graph(
     include_locked: bool = Query(True, description="是否包含未解锁节点"),
     zoom_level: float = Query(1.0, description="缩放级别 (LOD控制)"),
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     获取用户的知识星图数据
@@ -104,10 +104,7 @@ async def get_galaxy_graph(
     - zoom_level >= 0.5: 返回所有节点
     """
     return await galaxy_service.get_galaxy_graph(
-        user_id=UUID(user_id),
-        sector_code=sector_code,
-        include_locked=include_locked,
-        zoom_level=zoom_level
+        user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
     )
 
 
@@ -116,7 +113,7 @@ async def spark_node(
     node_id: UUID,
     request: SparkRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     点亮/增强知识点
@@ -128,7 +125,7 @@ async def spark_node(
         node_id=node_id,
         study_minutes=request.study_minutes,
         task_id=request.task_id,
-        trigger_expansion=request.trigger_expansion
+        trigger_expansion=request.trigger_expansion,
     )
 
 
@@ -137,7 +134,7 @@ async def get_node_detail(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     获取知识点详情
@@ -147,20 +144,14 @@ async def get_node_detail(
     # 获取节点
     node = await db.get(KnowledgeNode, node_id)
     if not node:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Knowledge node not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
 
     # 获取用户状态
     user_status = await galaxy_service._get_user_status(UUID(user_id), node_id)
 
     # 获取关系
     relations_query = select(NodeRelation).where(
-        or_(
-            NodeRelation.source_node_id == node_id,
-            NodeRelation.target_node_id == node_id
-        )
+        or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
     )
     relations_result = await db.execute(relations_query)
     relations = relations_result.scalars().all()
@@ -174,10 +165,10 @@ async def get_node_detail(
                 source_node_id=rel.source_node_id,
                 target_node_id=rel.target_node_id,
                 relation_type=rel.relation_type,
-                strength=rel.strength
+                strength=rel.strength,
             )
             for rel in relations
-        ]
+        ],
     )
 
 
@@ -185,7 +176,7 @@ async def get_node_detail(
 async def search_nodes(
     request: SearchRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     语义搜索知识点
@@ -193,24 +184,17 @@ async def search_nodes(
     使用向量相似度搜索相关知识点。
     """
     results = await galaxy_service.semantic_search(
-        user_id=UUID(user_id),
-        query=request.query,
-        limit=request.limit,
-        threshold=request.threshold
+        user_id=UUID(user_id), query=request.query, limit=request.limit, threshold=request.threshold
     )
 
-    return SearchResponse(
-        query=request.query,
-        results=results,
-        total_count=len(results)
-    )
+    return SearchResponse(query=request.query, results=results, total_count=len(results))
 
 
 @router.post("/expansion/feedback", response_model=ExpansionFeedbackResponse)
 async def submit_expansion_feedback(
     request: ExpansionFeedbackRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     提交知识拓展反馈
@@ -223,7 +207,7 @@ async def submit_expansion_feedback(
         implicit_score=request.implicit_score,
         feedback_type=request.feedback_type,
         prompt_version=request.prompt_version,
-        metadata=request.metadata
+        metadata=request.metadata,
     )
     return ExpansionFeedbackResponse(success=True, feedback_id=feedback_id)
 
@@ -232,34 +216,28 @@ async def submit_expansion_feedback(
 async def get_review_suggestions(
     limit: int = Query(5, ge=1, le=20),
     user_id: str = Depends(get_current_user_id),
-    decay_service: DecayService = Depends(get_decay_service)
+    decay_service: DecayService = Depends(get_decay_service),
 ):
     """
     获取复习建议
 
     返回需要复习的知识点列表，按紧迫程度排序。
     """
-    suggestions_data = await decay_service.get_review_suggestions(
-        user_id=UUID(user_id),
-        limit=limit
-    )
+    suggestions_data = await decay_service.get_review_suggestions(user_id=UUID(user_id), limit=limit)
 
     suggestions = [
         ReviewSuggestion(
-            node_id=s['node_id'],
-            node_name=s['node_name'],
-            sector_code=SectorCode(s['sector_code']),
-            current_mastery=s['current_mastery'],
-            days_since_study=s['days_since_study'],
-            urgency=s['urgency']
+            node_id=s["node_id"],
+            node_name=s["node_name"],
+            sector_code=SectorCode(s["sector_code"]),
+            current_mastery=s["current_mastery"],
+            days_since_study=s["days_since_study"],
+            urgency=s["urgency"],
         )
         for s in suggestions_data
     ]
 
-    return ReviewSuggestionsResponse(
-        suggestions=suggestions,
-        next_review_count=len(suggestions)
-    )
+    return ReviewSuggestionsResponse(suggestions=suggestions, next_review_count=len(suggestions))
 
 
 @router.post("/node/{node_id}/decay/pause")
@@ -267,31 +245,23 @@ async def pause_node_decay(
     node_id: UUID,
     pause: bool = Query(True),
     user_id: str = Depends(get_current_user_id),
-    decay_service: DecayService = Depends(get_decay_service)
+    decay_service: DecayService = Depends(get_decay_service),
 ):
     """
     暂停/恢复知识点的遗忘衰减
 
     用户可以将重要的知识点标记为"暂停衰减"。
     """
-    await decay_service.pause_decay(
-        user_id=UUID(user_id),
-        node_id=node_id,
-        pause=pause
-    )
+    await decay_service.pause_decay(user_id=UUID(user_id), node_id=node_id, pause=pause)
 
-    return {
-        "status": "success",
-        "node_id": str(node_id),
-        "decay_paused": pause
-    }
+    return {"status": "success", "node_id": str(node_id), "decay_paused": pause}
 
 
 @router.post("/predict-next", response_model=Optional[NodeDetailResponse])
 async def predict_next_node(
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     预测下一个最佳学习节点
@@ -305,10 +275,7 @@ async def predict_next_node(
 
     # 获取关系以便前端渲染连接线
     relations_query = select(NodeRelation).where(
-        or_(
-            NodeRelation.source_node_id == node_with_status.id,
-            NodeRelation.target_node_id == node_with_status.id
-        )
+        or_(NodeRelation.source_node_id == node_with_status.id, NodeRelation.target_node_id == node_with_status.id)
     )
     relations_result = await db.execute(relations_query)
     relations = relations_result.scalars().all()
@@ -320,10 +287,10 @@ async def predict_next_node(
                 source_node_id=rel.source_node_id,
                 target_node_id=rel.target_node_id,
                 relation_type=rel.relation_type,
-                strength=rel.strength
+                strength=rel.strength,
             )
             for rel in relations
-        ]
+        ],
     )
 
 
@@ -331,7 +298,7 @@ async def predict_next_node(
 async def get_galaxy_stats(
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service),
-    decay_service: DecayService = Depends(get_decay_service)
+    decay_service: DecayService = Depends(get_decay_service),
 ):
     """
     获取星图统计数据
@@ -341,17 +308,11 @@ async def get_galaxy_stats(
     user_stats = await galaxy_service._calculate_user_stats(UUID(user_id))
     decay_stats = await decay_service.get_decay_stats(UUID(user_id))
 
-    return {
-        "user_stats": user_stats,
-        "decay_stats": decay_stats
-    }
+    return {"user_stats": user_stats, "decay_stats": decay_stats}
 
 
 @router.get("/events")
-async def galaxy_events_stream(
-    request: Request,
-    user_id: str = Depends(get_current_user_id)
-):
+async def galaxy_events_stream(request: Request, user_id: str = Depends(get_current_user_id)):
     """
     SSE 事件流
 
@@ -382,7 +343,7 @@ async def galaxy_events_stream(
         headers={
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",  # 禁用 nginx 缓冲
-        }
+        },
     )
 
     # 注册清理回调
@@ -390,12 +351,15 @@ async def galaxy_events_stream(
 
     return response
 
+
 # ==========================================
 # PR-16: Knowledge Integration Endpoints
 # ==========================================
 
+
 class CreateVocabularyNodeRequest(BaseModel):
     """Request model for creating vocabulary node from translation"""
+
     source_text: str = Field(..., description="原始文本 (e.g., 'polymorphism')")
     translation: str = Field(..., description="译文 (e.g., '多态性')")
     context: str = Field(..., description="上下文场景")
@@ -408,6 +372,7 @@ class CreateVocabularyNodeRequest(BaseModel):
 
 class VocabularyNodeResponse(BaseModel):
     """Response model for vocabulary node creation"""
+
     success: bool
     node_id: UUID
     status: str
@@ -418,7 +383,7 @@ class VocabularyNodeResponse(BaseModel):
 async def create_vocabulary_node(
     request: CreateVocabularyNodeRequest,
     user_id: str = Depends(get_current_user_id),
-    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service),
 ):
     """
     创建词汇知识节点（从翻译生成）
@@ -440,19 +405,18 @@ async def create_vocabulary_node(
             source_document_id=UUID(request.source_document_id) if request.source_document_id else None,
             language=request.language,
             domain=request.domain,
-            subject_id=request.subject_id
+            subject_id=request.subject_id,
         )
 
         return VocabularyNodeResponse(
             success=True,
             node_id=node.id,
             status=node.status,
-            message=f"Vocabulary node created: {node.name} → {request.translation}"
+            message=f"Vocabulary node created: {node.name} → {request.translation}",
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create vocabulary node: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create vocabulary node: {str(e)}"
         )
 
 
@@ -460,7 +424,7 @@ async def create_vocabulary_node(
 async def delete_draft_node(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service),
 ):
     """
     删除草稿节点
@@ -469,25 +433,18 @@ async def delete_draft_node(
     """
     try:
         await knowledge_service.delete_draft_node(node_id, UUID(user_id))
-        return {
-            "success": True,
-            "node_id": str(node_id),
-            "message": "Draft node deleted"
-        }
+        return {"success": True, "node_id": str(node_id), "message": "Draft node deleted"}
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete draft node: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete draft node: {str(e)}"
         )
 
 
 class UpdateNodeContentRequest(BaseModel):
     """Request model for updating node content"""
+
     name: str | None = None
     description: str | None = None
     keywords: list[str] | None = None
@@ -498,7 +455,7 @@ async def update_node_content(
     node_id: UUID,
     request: UpdateNodeContentRequest,
     user_id: str = Depends(get_current_user_id),
-    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service),
 ):
     """
     更新节点内容（发布前编辑）
@@ -511,24 +468,15 @@ async def update_node_content(
             user_id=UUID(user_id),
             name=request.name,
             description=request.description,
-            keywords=request.keywords
+            keywords=request.keywords,
         )
 
-        return {
-            "success": True,
-            "node_id": str(node.id),
-            "name": node.name,
-            "message": "Node content updated"
-        }
+        return {"success": True, "node_id": str(node.id), "name": node.name, "message": "Node content updated"}
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update node content: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update node content: {str(e)}"
         )
 
 
@@ -536,66 +484,48 @@ async def update_node_content(
 # Phase 3 & 4 Endpoints
 # ==========================================
 
+
 class ViewportRequest(BaseModel):
     min_x: float
     max_x: float
     min_y: float
     max_y: float
 
+
 class PositionUpdateItem(BaseModel):
     id: UUID
     x: float
     y: float
 
+
 class PositionUpdateRequest(BaseModel):
     updates: list[PositionUpdateItem]
+
 
 @router.post("/nodes/viewport", response_model=GalaxyGraphResponse)
 async def get_nodes_in_viewport(
     request: ViewportRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     Get nodes within a specific viewport (bounding box).
-    Phase 3.2 Backend Viewport API.
+    Returns a viewport-limited graph slice with real user status and local relations.
     """
-    nodes = await galaxy_service.get_nodes_in_bounds(
-        request.min_x, request.max_x, request.min_y, request.max_y
+    return await galaxy_service.get_galaxy_graph_viewport(
+        user_id=UUID(user_id),
+        min_x=request.min_x,
+        max_x=request.max_x,
+        min_y=request.min_y,
+        max_y=request.max_y,
     )
-    # Convert to GalaxyGraphResponse format (simplified for viewport)
-    # We might need to fetch status for these nodes too.
-    # For efficiency, we just return the nodes and let frontend handle status or fetch status in batch.
-    # But GalaxyGraphResponse expects NodeWithStatus.
 
-    # Quick fix: fetch status for these nodes
-    # Ideally structure service should return NodeWithStatus if we modify get_nodes_in_bounds to do join.
-    # For MVP of this feature, let's map what we have.
-
-    # We can reuse get_galaxy_graph logic but restricted by IDs if we had get_nodes_by_ids.
-    # Or just return raw nodes data in a specific response model.
-    # Reusing GalaxyGraphResponse for consistency.
-
-    # Construct minimal response
-    from app.schemas.galaxy import NodeWithStatus
-
-    mapped_nodes = []
-    for node in nodes:
-        # TODO: Fetch real status efficiently (bulk query)
-        status = UserNodeStatus(mastery_score=0, is_unlocked=False)
-        mapped_nodes.append(NodeWithStatus.from_models(node, status))
-
-    return GalaxyGraphResponse(
-        nodes=mapped_nodes,
-        relations=[], # Do not fetch relations for viewport query to save bandwidth? Or maybe local relations.
-        user_stats=None
-    )
 
 @router.post("/nodes/positions")
 async def update_node_positions(
     request: PositionUpdateRequest,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     Persist node positions calculated by frontend layout engine.
@@ -606,11 +536,12 @@ async def update_node_positions(
     count = await galaxy_service.update_node_positions(updates)
     return {"status": "success", "updated_count": count}
 
+
 @router.post("/node/{node_id}/autolink")
 async def trigger_auto_link(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
 ):
     """
     Trigger Auto-Link Worker for a specific node.
@@ -619,10 +550,10 @@ async def trigger_auto_link(
     links_created = await galaxy_service.auto_link_nodes(node_id)
     return {"status": "success", "links_created": links_created}
 
+
 @router.get("/heatmap")
 async def get_heatmap(
-    user_id: str = Depends(get_current_user_id),
-    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+    user_id: str = Depends(get_current_user_id), galaxy_service: GalaxyService = Depends(get_galaxy_service)
 ):
     """
     Get Heatmap Data for MiniMap.

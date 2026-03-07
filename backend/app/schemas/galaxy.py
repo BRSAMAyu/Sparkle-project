@@ -1,5 +1,7 @@
 from datetime import datetime
 from enum import Enum
+import math
+import re
 from typing import Any
 from uuid import UUID
 
@@ -17,13 +19,13 @@ class SectorCode(str, Enum):
 
 
 class NodeStatus(str, Enum):
-    LOCKED = "locked"       # 未解锁
-    UNLIT = "unlit"         # 已解锁但未学习
-    GLIMMER = "glimmer"     # 微光 (0-30)
-    SHINING = "shining"     # 闪耀 (30-80)
-    BRILLIANT = "brilliant" # 璀璨 (80-95)
-    MASTERED = "mastered"   # 精通 (95-100)
-    COLLAPSED = "collapsed" # 坍缩
+    LOCKED = "locked"  # 未解锁
+    UNLIT = "unlit"  # 已解锁但未学习
+    GLIMMER = "glimmer"  # 微光 (0-30)
+    SHINING = "shining"  # 闪耀 (30-80)
+    BRILLIANT = "brilliant"  # 璀璨 (80-95)
+    MASTERED = "mastered"  # 精通 (95-100)
+    COLLAPSED = "collapsed"  # 坍缩
 
 
 # ==========================================
@@ -62,7 +64,9 @@ class NodeBase(BaseModel):
     importance_level: int
     sector_code: SectorCode
     is_seed: bool
-    parent_name: str | None = None # Added for context
+    parent_id: UUID | None = None
+    parent_name: str | None = None  # Added for context
+    tags: list[str] = Field(default_factory=list)
     global_spark_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
@@ -86,11 +90,14 @@ class UserStatusInfo(BaseModel):
 
 class NodeWithStatus(NodeBase):
     """节点 + 用户状态"""
+
     user_status: UserStatusInfo | None = None
 
     # 布局信息
     position_angle: float  # 在星域中的角度
-    position_radius: float # 距离中心的半径
+    position_radius: float  # 距离中心的半径
+    position_x: float
+    position_y: float
 
     @classmethod
     def from_models(cls, node, status):
@@ -111,12 +118,13 @@ class NodeWithStatus(NodeBase):
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,
                 status=visual_status,
-                brightness=brightness
+                brightness=brightness,
             )
 
         # 处理 subject 为空的异常情况
         sector_code = SectorCode.VOID
         position_angle = 0.0
+        position_radius = 100.0 + node.importance_level * 30.0
         if node.subject:
             # 尝试匹配 SectorCode，如果不在枚举中则归为 VOID
             try:
@@ -125,6 +133,11 @@ class NodeWithStatus(NodeBase):
                 sector_code = SectorCode.VOID
 
             position_angle = float(node.subject.position_angle) if node.subject.position_angle is not None else 0.0
+        position_x, position_y = cls._resolve_position(
+            node=node,
+            angle=position_angle,
+            radius=position_radius,
+        )
 
         return cls(
             id=node.id,
@@ -134,10 +147,15 @@ class NodeWithStatus(NodeBase):
             importance_level=node.importance_level,
             sector_code=sector_code,
             is_seed=node.is_seed,
+            parent_id=node.parent_id,
+            parent_name=node.parent.name if getattr(node, "parent", None) else None,
+            tags=cls._build_auto_tags(node, sector_code),
             global_spark_count=node.global_spark_count,
             user_status=user_status,
             position_angle=position_angle,
-            position_radius=100.0 + node.importance_level * 30.0  # 简化计算
+            position_radius=position_radius,
+            position_x=position_x,
+            position_y=position_y,
         )
 
     @staticmethod
@@ -167,6 +185,56 @@ class NodeWithStatus(NodeBase):
             return 0.1
         return 0.3 + (status.mastery_score / 100.0) * 0.7
 
+    @staticmethod
+    def _resolve_position(node, angle: float, radius: float) -> tuple[float, float]:
+        if node.position_x is not None and node.position_y is not None:
+            return float(node.position_x), float(node.position_y)
+
+        seed = node.id.int % 360
+        jitter_radius = 40.0 + (node.importance_level * 12.0) + (seed % 29)
+        effective_angle = math.radians(angle + (seed % 37) - 18)
+        effective_radius = radius + jitter_radius
+        return (
+            math.cos(effective_angle) * effective_radius,
+            math.sin(effective_angle) * effective_radius,
+        )
+
+    @staticmethod
+    def _build_auto_tags(node, sector_code: SectorCode) -> list[str]:
+        tags: list[str] = []
+        seen: set[str] = set()
+
+        def add_tag(raw: str | None) -> None:
+            if raw is None:
+                return
+            tag = raw.strip()
+            if not tag:
+                return
+            normalized = tag.lower()
+            if normalized in seen:
+                return
+            seen.add(normalized)
+            tags.append(tag)
+
+        for keyword in node.keywords or []:
+            add_tag(str(keyword))
+
+        if not tags:
+            source = f"{node.name or ''} {node.description or ''}"
+            for token in re.findall(r"[\w\u4e00-\u9fff]{2,}", source):
+                add_tag(token)
+                if len(tags) >= 3:
+                    break
+
+        if sector_code != SectorCode.VOID:
+            add_tag(sector_code.value.lower())
+        if node.is_seed:
+            add_tag("seed")
+        if node.importance_level >= 4:
+            add_tag("core")
+
+        return tags[:5]
+
 
 class NodeRelationInfo(BaseModel):
     source_node_id: UUID
@@ -180,12 +248,13 @@ class GalaxyUserStats(BaseModel):
     unlocked_count: int = 0
     mastered_count: int = 0
     total_study_minutes: int = 0
-    sector_distribution: dict[str, int] = {} # {sector_code: count}
-    streak_days: int = 0 # 连续学习天数
+    sector_distribution: dict[str, int] = {}  # {sector_code: count}
+    streak_days: int = 0  # 连续学习天数
 
 
 class GalaxyGraphResponse(BaseModel):
     """星图完整数据响应"""
+
     nodes: list[NodeWithStatus]
     relations: list[NodeRelationInfo]
     user_stats: GalaxyUserStats
@@ -193,13 +262,14 @@ class GalaxyGraphResponse(BaseModel):
 
 class SparkEvent(BaseModel):
     """点亮动画事件"""
+
     node_id: UUID
     node_name: str
     sector_code: SectorCode
     old_mastery: float
     new_mastery: float
     is_first_unlock: bool  # 首次点亮 (播放特殊动画)
-    is_level_up: bool      # 升级 (跨越阈值)
+    is_level_up: bool  # 升级 (跨越阈值)
 
     # 前端动画参数
     particle_count: int = 20
@@ -210,7 +280,7 @@ class SparkResult(BaseModel):
     spark_event: SparkEvent
     expansion_queued: bool
     expanded_nodes: list[NodeBase] | None = None  # 如果同步返回
-    updated_status: Any | None = None # UserStatusInfo or dict
+    updated_status: Any | None = None  # UserStatusInfo or dict
 
 
 class SearchResultItem(BaseModel):
@@ -241,7 +311,8 @@ class ReviewSuggestion(BaseModel):
 
 class ReviewSuggestionsResponse(BaseModel):
     suggestions: list[ReviewSuggestion]
-    next_review_count: int = 0 # 未来 7 天需要复习的总数
+    next_review_count: int = 0  # 未来 7 天需要复习的总数
+
 
 class NodeDetailResponse(BaseModel):
     node: NodeWithStatus

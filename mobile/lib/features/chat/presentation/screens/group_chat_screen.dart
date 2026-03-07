@@ -11,7 +11,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
 import 'package:sparkle/features/community/presentation/widgets/thread_sheet.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -131,10 +131,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             icon: const Icon(Icons.folder_open_rounded),
             onPressed: () {
               unawaited(
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => GroupFilesScreen(groupId: widget.groupId),
-                  ),
+                context.push(
+                  CommunityRoutes.groupFiles
+                      .replaceFirst(':id', widget.groupId),
                 ),
               );
             },

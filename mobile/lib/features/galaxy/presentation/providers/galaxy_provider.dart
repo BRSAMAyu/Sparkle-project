@@ -61,6 +61,7 @@ class GalaxyState {
     this.lastError,
     this.isUsingCache = false,
     this.selectedNodeId,
+    this.draggingNodeId,
     this.focusNodeId,
     this.focusBounds,
     this.highlightedNodeIds = const {},
@@ -98,6 +99,7 @@ class GalaxyState {
 
   // Interaction state
   final String? selectedNodeId;
+  final String? draggingNodeId;
   final String? focusNodeId;
   final Rect? focusBounds;
   final Set<String> highlightedNodeIds;
@@ -107,7 +109,7 @@ class GalaxyState {
       expandedEdgeNodeIds; // Nodes whose connections should be fully visible
   final Map<String, double>
       nodeAnimationProgress; // 0.0 to 1.0 for bloom/shrink animation
-  
+
   // Performance Config
   final GalaxyOptimizationConfig optimizationConfig;
   final double canvasSize;
@@ -131,6 +133,7 @@ class GalaxyState {
     Object? lastError = _noChange,
     bool? isUsingCache,
     String? selectedNodeId,
+    Object? draggingNodeId = _noChange,
     Object? focusNodeId = _noChange,
     Object? focusBounds = _noChange,
     Set<String>? highlightedNodeIds,
@@ -148,7 +151,8 @@ class GalaxyState {
         nodePositions: nodePositions ?? this.nodePositions,
         visibleNodes: visibleNodes ?? this.visibleNodes,
         visibleEdges: visibleEdges ?? this.visibleEdges,
-        visibleCompactNodes: visibleCompactNodes ?? this.visibleCompactNodes, // 🔧 使用新字段
+        visibleCompactNodes:
+            visibleCompactNodes ?? this.visibleCompactNodes, // 🔧 使用新字段
         userFlameIntensity: userFlameIntensity ?? this.userFlameIntensity,
         isLoading: isLoading ?? this.isLoading,
         isOptimizing: isOptimizing ?? this.isOptimizing,
@@ -162,6 +166,9 @@ class GalaxyState {
             : lastError as GalaxyError?,
         isUsingCache: isUsingCache ?? this.isUsingCache,
         selectedNodeId: selectedNodeId ?? this.selectedNodeId,
+        draggingNodeId: identical(draggingNodeId, _noChange)
+            ? this.draggingNodeId
+            : draggingNodeId as String?,
         focusNodeId: identical(focusNodeId, _noChange)
             ? this.focusNodeId
             : focusNodeId as String?,
@@ -219,10 +226,10 @@ class GalaxyViewState {
 
   /// Serialize to JSON
   Map<String, dynamic> toJson() => {
-      'currentScale': currentScale,
-      'selectedNodeId': selectedNodeId,
-      'aggregationLevel': aggregationLevel.name,
-    };
+        'currentScale': currentScale,
+        'selectedNodeId': selectedNodeId,
+        'aggregationLevel': aggregationLevel.name,
+      };
 
   /// Deserialize from JSON
   static GalaxyViewState? fromJson(Map<String, dynamic> json) {
@@ -255,7 +262,8 @@ class GalaxyViewState {
 ///
 /// Persists the user's view state (scale, selected node, aggregation level).
 final galaxyViewStateProvider =
-    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>(GalaxyViewStateNotifier.new);
+    StateNotifierProvider<GalaxyViewStateNotifier, GalaxyViewState>(
+        GalaxyViewStateNotifier.new);
 
 /// Notifier for the galaxy view state
 class GalaxyViewStateNotifier extends PersistentStateNotifier<GalaxyViewState> {
@@ -312,13 +320,14 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
   String? _lastEventId;
+  final Map<String, Offset> _dirtyNodePositions = <String, Offset>{};
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;
   static const double _animationDuration = 300; // ms
   static const int _animationFps = 60;
   static const double _animationStep = 1000 / _animationFps; // ~16.67ms
-  
+
   // Performance Monitor
   VoidCallback? _tierListener;
 
@@ -342,7 +351,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   void _initPerformanceMonitor() {
     // Start monitoring
     GalaxyPerformanceMonitor.instance.startMonitoring();
-    
+
     // Set initial config
     final initialTier = _mapPerformanceTier(
       PerformanceService.instance.currentTier.value,
@@ -377,7 +386,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // Do not stop monitoring here as it might be used by other parts or singleton lifecycle
     // But for this screen it's probably fine. Let's keep it running for now or stop it?
     // If GalaxyScreen is the only consumer, we could stop it.
-    // GalaxyPerformanceMonitor.instance.stopMonitoring(); 
+    // GalaxyPerformanceMonitor.instance.stopMonitoring();
     super.dispose();
   }
 
@@ -385,12 +394,13 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   void _initEventsListener() {
     _eventsSubscription?.cancel();
-    _eventsSubscription = _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(
+    _eventsSubscription =
+        _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(
       (event) {
         if (event.id != null && event.id!.isNotEmpty) {
           _lastEventId = event.id;
         }
-        
+
         if (event.event == 'nodes_expanded') {
           _handleNodesExpanded(event.jsonData);
         } else if (event.event == 'galaxy.node.updated') {
@@ -422,7 +432,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   void _handleNodeUpdated(Map<String, dynamic>? data) {
-    if (data == null || data['node_id'] == null || data['new_mastery'] == null) {
+    if (data == null ||
+        data['node_id'] == null ||
+        data['new_mastery'] == null) {
       return;
     }
 
@@ -448,7 +460,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       nodes: updatedNodes,
       clusters: updatedClusters,
     );
-    
+
     // Recalculate visibility in case mastery affects filtering (though currently it mostly doesn't)
     _recalculateVisibility();
   }
@@ -518,6 +530,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   Future<void> loadGalaxy({bool forceRefresh = false}) async {
+    final hadExistingNodes = state.nodes.isNotEmpty;
     state = state.copyWith(isLoading: true, lastError: null);
     final requestId = ++_layoutRequestId;
     try {
@@ -550,42 +563,37 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           ? _collectExpandedEdges(selectedNodeId, response.edges)
           : const <String>{};
 
-      // Step 1: 使用新的布局引擎进行快速初始布局
-      final quickPositions = GalaxyLayoutEngine.calculateInitialLayout(
-        nodes: response.nodes,
-        edges: response.edges,
-        existingPositions:
-            state.nodePositions.isNotEmpty ? state.nodePositions : null,
+      final stablePositions = _buildStablePositions(
+        response.nodes,
+        previousPositions: state.nodePositions,
       );
 
       state = state.copyWith(
         nodes: response.nodes,
         edges: response.edges,
-        nodePositions: quickPositions,
+        nodePositions: stablePositions,
         userFlameIntensity: response.userFlameIntensity,
         aggregationLevel: aggregationLevel,
         clusters: _calculateClusters(
           aggregationLevel,
           nodes: response.nodes,
-          positions: quickPositions,
+          positions: stablePositions,
         ),
         selectedNodeId: hasSelected ? selectedNodeId : null,
         expandedEdgeNodeIds: expandedEdgeNodeIds,
         predictedNodeId: hasPredicted ? predictedNodeId : null,
         isLoading: false,
-        isOptimizing: response.nodes.isNotEmpty,
+        isOptimizing: false,
         isUsingCache: result.isFromCache,
         lastError: null,
       );
-      _recalculateVisibility(withAnimation: true);
-
-      // Step 2: 在后台进行力导向优化
-      if (response.nodes.isNotEmpty) {
-        _optimizeLayoutAsync(
-          response.nodes,
-          response.edges,
-          quickPositions,
-          requestId,
+      _recalculateVisibility();
+      if ((!hadExistingNodes || forceRefresh) &&
+          state.visibleNodes.isNotEmpty) {
+        _startBloomAnimation(
+          state.visibleNodes,
+          state.visibleEdges,
+          state.visibleCompactNodes,
         );
       }
     } catch (e) {
@@ -599,38 +607,33 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     }
   }
 
-  Future<void> _optimizeLayoutAsync(
-    List<GalaxyNodeModel> nodes,
-    List<GalaxyEdgeModel> edges,
-    Map<String, Offset> initialPositions,
-    int requestId,
-  ) async {
-    try {
-      // 使用新的布局引擎进行力导向优化
-      final optimizedPositions =
-          await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
-        nodes: nodes,
-        edges: edges,
-        initialPositions: initialPositions,
-      );
-
-      // Only update if we're still mounted and not loading something new
-      if (mounted && !state.isLoading && requestId == _layoutRequestId) {
-        state = state.copyWith(
-          nodePositions: optimizedPositions,
-          isOptimizing: false,
-          clusters: _calculateClusters(
-            state.aggregationLevel,
-            nodes: state.nodes,
-            positions: optimizedPositions,
-          ),
-        );
-        _recalculateVisibility();
+  Map<String, Offset> _buildStablePositions(
+    List<GalaxyNodeModel> nodes, {
+    required Map<String, Offset> previousPositions,
+  }) {
+    final positions = <String, Offset>{};
+    for (final node in nodes) {
+      if (node.hasStablePosition) {
+        positions[node.id] = Offset(node.positionX!, node.positionY!);
+        continue;
       }
-    } catch (e) {
-      debugPrint('Error optimizing layout: $e');
-      state = state.copyWith(isOptimizing: false);
+      final previous = previousPositions[node.id];
+      if (previous != null) {
+        positions[node.id] = previous;
+        continue;
+      }
+      positions[node.id] = _fallbackPositionFor(node);
     }
+    return positions;
+  }
+
+  Offset _fallbackPositionFor(GalaxyNodeModel node) {
+    final sectorAngle = (2 * pi / SectorEnum.values.length) * node.sector.index;
+    final seed = node.id.hashCode.abs();
+    final radius = 260.0 + (node.importance * 110.0) + (seed % 140).toDouble();
+    final jitterAngle = ((seed % 37) - 18) * (pi / 180);
+    final angle = sectorAngle + jitterAngle;
+    return Offset(cos(angle) * radius, sin(angle) * radius);
   }
 
   // Throttling for viewport updates
@@ -680,6 +683,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     state = state.copyWith(
       selectedNodeId: nodeId,
+      draggingNodeId: null,
       expandedEdgeNodeIds: expanded,
     );
     // Persist view state
@@ -698,6 +702,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       nodePositions: state.nodePositions,
       visibleNodes: state.visibleNodes,
       visibleEdges: state.visibleEdges,
+      visibleCompactNodes: state.visibleCompactNodes,
       userFlameIntensity: state.userFlameIntensity,
       isLoading: state.isLoading,
       isOptimizing: state.isOptimizing,
@@ -708,10 +713,18 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       predictedNodeId: state.predictedNodeId,
       lastError: state.lastError,
       isUsingCache: state.isUsingCache,
+      selectedNodeId: null,
       highlightRevision: state.highlightRevision + 1,
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,
       optimizationConfig: state.optimizationConfig,
+      draggingNodeId: null,
+      focusNodeId: state.focusNodeId,
+      focusBounds: state.focusBounds,
+      highlightedNodeIds: state.highlightedNodeIds,
+      highlightedNodeIdHashes: state.highlightedNodeIdHashes,
+      canvasSize: state.canvasSize,
+      canvasCenter: state.canvasCenter,
     );
     // Persist view state (clear selection)
     _ref.read(galaxyViewStateProvider.notifier).updateSelectedNode(null);
@@ -750,6 +763,109 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return result.data ?? [];
   }
 
+  void beginNodeDrag(String nodeId) {
+    if (state.draggingNodeId == nodeId) {
+      return;
+    }
+    if (!state.nodePositions.containsKey(nodeId)) {
+      return;
+    }
+    selectNode(nodeId);
+    state = state.copyWith(draggingNodeId: nodeId);
+  }
+
+  void updateDraggedNodePosition(String nodeId, Offset newPosition) {
+    if (state.draggingNodeId != nodeId) {
+      return;
+    }
+    final currentPosition = state.nodePositions[nodeId];
+    if (currentPosition == null) {
+      return;
+    }
+
+    final delta = newPosition - currentPosition;
+    if (delta.distanceSquared < 1) {
+      return;
+    }
+
+    final updatedPositions = Map<String, Offset>.from(state.nodePositions)
+      ..[nodeId] = newPosition;
+    _dirtyNodePositions[nodeId] = newPosition;
+
+    final neighborIds = <String>{};
+    for (final edge in state.edges) {
+      if (edge.sourceId == nodeId) {
+        neighborIds.add(edge.targetId);
+      } else if (edge.targetId == nodeId) {
+        neighborIds.add(edge.sourceId);
+      }
+    }
+
+    for (final neighborId in neighborIds) {
+      final neighborPosition = updatedPositions[neighborId];
+      if (neighborPosition == null) {
+        continue;
+      }
+      final attraction = delta * 0.14;
+      updatedPositions[neighborId] = neighborPosition + attraction;
+      _dirtyNodePositions[neighborId] = updatedPositions[neighborId]!;
+    }
+
+    var repulsionBudget = 0;
+    for (final node in state.visibleNodes) {
+      if (node.id == nodeId || neighborIds.contains(node.id)) {
+        continue;
+      }
+      final position = updatedPositions[node.id];
+      if (position == null) {
+        continue;
+      }
+      final toDragged = position - newPosition;
+      final distance = toDragged.distance;
+      if (distance <= 0 || distance > 220) {
+        continue;
+      }
+      final push = (220 - distance) / 220 * 18;
+      updatedPositions[node.id] = position + (toDragged / distance) * push;
+      _dirtyNodePositions[node.id] = updatedPositions[node.id]!;
+      repulsionBudget++;
+      if (repulsionBudget >= 10) {
+        break;
+      }
+    }
+
+    state = state.copyWith(
+      nodePositions: updatedPositions,
+      visibleCompactNodes: _computeCompactNodesForPositions(
+        state.visibleNodes,
+        updatedPositions,
+      ),
+    );
+  }
+
+  Future<void> endNodeDrag() async {
+    final nodeId = state.draggingNodeId;
+    state = state.copyWith(draggingNodeId: null);
+    if (nodeId == null || _dirtyNodePositions.isEmpty) {
+      return;
+    }
+
+    state = state.copyWith(
+      clusters: _calculateClusters(
+        state.aggregationLevel,
+        nodes: state.nodes,
+        positions: state.nodePositions,
+      ),
+    );
+    final payload = Map<String, Offset>.from(_dirtyNodePositions);
+    _dirtyNodePositions.clear();
+    final result = await _repository.updateNodePositions(payload);
+    if (result.isFailure && mounted) {
+      debugPrint('Failed to persist galaxy node positions: ${result.error}');
+    }
+    _recalculateVisibility();
+  }
+
   /// Update current scale and recalculate aggregation level
   void updateScale(double scale) {
     if ((scale - state.currentScale).abs() < 0.01) return;
@@ -767,9 +883,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       );
       // Persist view state
       _ref.read(galaxyViewStateProvider.notifier).updateAll(
-        scale: scale,
-        aggregationLevel: newLevel,
-      );
+            scale: scale,
+            aggregationLevel: newLevel,
+          );
       // Trigger animation when LOD changes
       _recalculateVisibility(withAnimation: true);
     } else {
@@ -787,32 +903,30 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   void _recalculateVisibility({bool withAnimation = false}) {
     final visibleNodes = _computeVisibleNodes();
     final visibleEdges = _computeVisibleEdges(visibleNodes);
-
-    // 🔧 性能优化: 预计算 CompactNode 列表
     final visibleCompactNodes = _computeCompactNodes(visibleNodes);
-
-    if (withAnimation) {
-      // Start bloom animation for new nodes
-      _startBloomAnimation(visibleNodes, visibleEdges, visibleCompactNodes);
-    } else {
-      state = state.copyWith(
-        visibleNodes: visibleNodes,
-        visibleEdges: visibleEdges,
-        visibleCompactNodes: visibleCompactNodes, // 🔧 设置预计算结果
-        nodeAnimationProgress: const {}, // Clear animations
-      );
-    }
+    state = state.copyWith(
+      visibleNodes: visibleNodes,
+      visibleEdges: visibleEdges,
+      visibleCompactNodes: visibleCompactNodes,
+      nodeAnimationProgress: const {},
+    );
   }
 
   /// 🔧 性能优化: 预计算 CompactNode 列表
   /// 避免在每次渲染时都映射节点列表
   List<CompactKnowledgeNode> _computeCompactNodes(
     List<GalaxyNodeModel> visibleNodes,
+  ) =>
+      _computeCompactNodesForPositions(visibleNodes, state.nodePositions);
+
+  List<CompactKnowledgeNode> _computeCompactNodesForPositions(
+    List<GalaxyNodeModel> visibleNodes,
+    Map<String, Offset> positions,
   ) {
     final canvasCenter = state.canvasCenter;
 
     return visibleNodes.map((node) {
-      final pos = state.nodePositions[node.id] ?? Offset.zero;
+      final pos = positions[node.id] ?? Offset.zero;
       return node.toCompact(
         pos.dx + canvasCenter,
         pos.dy + canvasCenter,
@@ -902,7 +1016,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   Set<String> _collectExpandedEdges(
-      String nodeId, List<GalaxyEdgeModel> edges,) {
+    String nodeId,
+    List<GalaxyEdgeModel> edges,
+  ) {
     final expanded = <String>{nodeId};
     for (final edge in edges) {
       if (edge.sourceId == nodeId) expanded.add(edge.targetId);
@@ -920,10 +1036,26 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     for (final nodeId in nodeIds) {
       final pos = state.nodePositions[nodeId];
       if (pos == null) continue;
-      minX = minX == null ? pos.dx : minX < pos.dx ? minX : pos.dx;
-      minY = minY == null ? pos.dy : minY < pos.dy ? minY : pos.dy;
-      maxX = maxX == null ? pos.dx : maxX > pos.dx ? maxX : pos.dx;
-      maxY = maxY == null ? pos.dy : maxY > pos.dy ? maxY : pos.dy;
+      minX = minX == null
+          ? pos.dx
+          : minX < pos.dx
+              ? minX
+              : pos.dx;
+      minY = minY == null
+          ? pos.dy
+          : minY < pos.dy
+              ? minY
+              : pos.dy;
+      maxX = maxX == null
+          ? pos.dx
+          : maxX > pos.dx
+              ? maxX
+              : pos.dx;
+      maxY = maxY == null
+          ? pos.dy
+          : maxY > pos.dy
+              ? maxY
+              : pos.dy;
     }
     if (minX == null || minY == null || maxX == null || maxY == null) {
       return null;
@@ -973,8 +1105,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // Always include selected node and its neighbors if any
     if (state.selectedNodeId != null) {
       final selectedId = state.selectedNodeId;
-      final extras = nodes.where((n) =>
-          n.id == selectedId || state.expandedEdgeNodeIds.contains(n.id),);
+      final extras = nodes.where(
+        (n) => n.id == selectedId || state.expandedEdgeNodeIds.contains(n.id),
+      );
       // Merge effectively
       final existingIds = filteredNodes.map((n) => n.id).toSet();
       for (final extra in extras) {
@@ -984,22 +1117,61 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       }
     }
 
-    // 2. Viewport Culling
-    if (viewport == null) return filteredNodes;
+    if (viewport == null) {
+      return _prioritizeVisibleNodes(filteredNodes, posMap, Rect.zero);
+    }
 
-    // Expand viewport significantly for smooth panning (was 100)
     final cullingRect = viewport.inflate(500);
-
-    return filteredNodes.where((node) {
+    final culledNodes = filteredNodes.where((node) {
       final pos = posMap[node.id];
       if (pos == null) return false;
       return cullingRect.contains(pos);
     }).toList();
+
+    return _prioritizeVisibleNodes(culledNodes, posMap, viewport);
+  }
+
+  List<GalaxyNodeModel> _prioritizeVisibleNodes(
+    List<GalaxyNodeModel> nodes,
+    Map<String, Offset> posMap,
+    Rect viewport,
+  ) {
+    final maxNodes = state.optimizationConfig.maxNodes;
+    if (nodes.length <= maxNodes) {
+      return nodes;
+    }
+
+    final stickyIds = <String>{
+      if (state.selectedNodeId != null) state.selectedNodeId!,
+      ...state.expandedEdgeNodeIds,
+    };
+    final center = viewport == Rect.zero ? Offset.zero : viewport.center;
+    final prioritized = List<GalaxyNodeModel>.from(nodes);
+    prioritized.sort((a, b) {
+      final aPinned = stickyIds.contains(a.id);
+      final bPinned = stickyIds.contains(b.id);
+      if (aPinned != bPinned) {
+        return aPinned ? -1 : 1;
+      }
+
+      final importanceOrder = b.importance.compareTo(a.importance);
+      if (importanceOrder != 0) {
+        return importanceOrder;
+      }
+
+      final aPos = posMap[a.id] ?? Offset.zero;
+      final bPos = posMap[b.id] ?? Offset.zero;
+      return (aPos - center)
+          .distanceSquared
+          .compareTo((bPos - center).distanceSquared);
+    });
+    return prioritized.take(maxNodes).toList();
   }
 
   /// Calculate visible edges based on visible nodes and LOD
   List<GalaxyEdgeModel> _computeVisibleEdges(
-      List<GalaxyNodeModel> visibleNodes,) {
+    List<GalaxyNodeModel> visibleNodes,
+  ) {
     if (visibleNodes.isEmpty) return [];
 
     final visibleNodeIds = visibleNodes.map((n) => n.id).toSet();

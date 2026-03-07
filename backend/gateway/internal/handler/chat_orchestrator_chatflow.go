@@ -2,10 +2,13 @@ package handler
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,6 +29,41 @@ const (
 	expertModeAuto  = "expert_auto"
 	expertModePref  = "expert::"
 )
+
+func shortHash(parts ...string) string {
+	h := sha1.New()
+	for _, part := range parts {
+		if _, err := h.Write([]byte(part)); err != nil {
+			return "hash_error"
+		}
+		if _, err := h.Write([]byte{0}); err != nil {
+			return "hash_error"
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))[:12]
+}
+
+func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []string, includeReferences bool) string {
+	sortedFileIDs := append([]string(nil), fileIDs...)
+	sort.Strings(sortedFileIDs)
+
+	referencesFlag := "refs_off"
+	if includeReferences {
+		referencesFlag = "refs_on"
+	}
+
+	contextHash := shortHash(userContextJSON)
+	fileHash := shortHash(strings.Join(sortedFileIDs, ","))
+
+	return fmt.Sprintf(
+		"user:%s|mode:%s|ctx:%s|files:%s|%s",
+		userID,
+		normalizeChatMode(chatMode),
+		contextHash,
+		fileHash,
+		referencesFlag,
+	)
+}
 
 func normalizeChatMode(mode string) string {
 	trimmed := strings.TrimSpace(mode)
@@ -190,7 +228,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
 	normalizedChatMode := normalizeChatMode(input.ChatMode)
-	cacheScope := fmt.Sprintf("user:%s|mode:%s", userID, normalizedChatMode)
+	cacheScope := semanticCacheScope(
+		userID,
+		normalizedChatMode,
+		userContextJSON,
+		input.FileIds,
+		input.IncludeReferences,
+	)
 	if h.semantic != nil {
 		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
 		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)

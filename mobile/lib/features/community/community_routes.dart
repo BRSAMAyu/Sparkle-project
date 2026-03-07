@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
@@ -38,132 +39,143 @@ class CommunityRoutes {
   static const String groups = '/community/groups';
   static const String groupsSearch = '/community/groups/search';
   static const String groupsCreate = '/community/groups/create';
+  static const String postsCreate = '/community/posts/create';
   static const String groupDetail = '/community/groups/:id';
   static const String groupTasks = '/community/groups/:id/tasks';
   static const String groupMembers = '/community/groups/:id/members';
   static const String groupFiles = '/community/groups/:id/files';
 
   static List<RouteBase> get routes => [
-    // Friends list (detail page, full-screen)
-    GoRoute(
-        path: friends,
-        name: 'friends',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const FriendsScreen(),
-        ),
-      ),
-    // Friends discover / recommendations (detail page, full-screen)
-    GoRoute(
-        path: friendsDiscover,
-        name: 'friendsDiscover',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const FriendsScreen(),
-        ),
-      ),
-    // User search (detail page, full-screen)
-    GoRoute(
-        path: userSearch,
-        name: 'userSearch',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const UserSearchScreen(),
-        ),
-      ),
-    // Group list (detail page, full-screen)
-    GoRoute(
-        path: groups,
-        name: 'groups',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const GroupListScreen(),
-        ),
-      ),
-    // Group search (detail page, full-screen)
-    GoRoute(
-        path: groupsSearch,
-        name: 'groupSearch',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const GroupSearchScreen(),
-        ),
-      ),
-    // Create group (modal-like, full-screen)
-    GoRoute(
-        path: groupsCreate,
-        name: 'createGroup',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const CreateGroupScreen(),
-          type: SharedAxisTransitionType.scaled,
-        ),
-      ),
-    // Group detail (full-screen, uses root navigator)
-    GoRoute(
-        path: groupDetail,
-        name: 'groupDetail',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) {
-          // id is required in path, so it won't be null
-          final groupId = state.pathParameters['id']!;
-          return _buildTransitionPage(
+        // Friends list (detail page, full-screen)
+        GoRoute(
+          path: friends,
+          name: 'friends',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: GroupDetailScreen(groupId: groupId),
-          );
-        },
-      ),
-    // Group tasks (full-screen, uses root navigator)
-    GoRoute(
-        path: groupTasks,
-        name: 'groupTasks',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) {
-          // id is required in path, so it won't be null
-          final groupId = state.pathParameters['id']!;
-          return _buildTransitionPage(
+            child: const FriendsScreen(),
+          ),
+        ),
+        // Friends discover / recommendations (detail page, full-screen)
+        GoRoute(
+          path: friendsDiscover,
+          name: 'friendsDiscover',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: GroupTasksScreen(groupId: groupId),
-          );
-        },
-      ),
-    // Group members (full-screen, uses root navigator)
-    GoRoute(
-        path: groupMembers,
-        name: 'groupMembers',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) {
-          // id is required in path, so it won't be null
-          final groupId = state.pathParameters['id']!;
-          final groupName = state.uri.queryParameters['name'] ?? '';
-          return _buildTransitionPage(
+            child: const FriendsScreen(),
+          ),
+        ),
+        // User search (detail page, full-screen)
+        GoRoute(
+          path: userSearch,
+          name: 'userSearch',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: GroupMembersScreen(
-              groupId: groupId,
-              groupName: groupName,
-            ),
-          );
-        },
-      ),
-    // Group files (full-screen, uses root navigator)
-    GoRoute(
-        path: groupFiles,
-        name: 'groupFiles',
-        parentNavigatorKey: navigatorKey,
-        pageBuilder: (context, state) {
-          // id is required in path, so it won't be null
-          final groupId = state.pathParameters['id']!;
-          return _buildTransitionPage(
+            child: const UserSearchScreen(),
+          ),
+        ),
+        // Group list (detail page, full-screen)
+        GoRoute(
+          path: groups,
+          name: 'groups',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
-            child: GroupFilesScreen(groupId: groupId),
-          );
-        },
-      ),
-  ];
+            child: const GroupListScreen(),
+          ),
+        ),
+        // Group search (detail page, full-screen)
+        GoRoute(
+          path: groupsSearch,
+          name: 'groupSearch',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const GroupSearchScreen(),
+          ),
+        ),
+        // Create group (modal-like, full-screen)
+        GoRoute(
+          path: groupsCreate,
+          name: 'createGroup',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const CreateGroupScreen(),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        GoRoute(
+          path: postsCreate,
+          name: 'createPost',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: const CreatePostScreen(),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        // Group detail (full-screen, uses root navigator)
+        GoRoute(
+          path: groupDetail,
+          name: 'groupDetail',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            // id is required in path, so it won't be null
+            final groupId = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: GroupDetailScreen(groupId: groupId),
+            );
+          },
+        ),
+        // Group tasks (full-screen, uses root navigator)
+        GoRoute(
+          path: groupTasks,
+          name: 'groupTasks',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            // id is required in path, so it won't be null
+            final groupId = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: GroupTasksScreen(groupId: groupId),
+            );
+          },
+        ),
+        // Group members (full-screen, uses root navigator)
+        GoRoute(
+          path: groupMembers,
+          name: 'groupMembers',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            // id is required in path, so it won't be null
+            final groupId = state.pathParameters['id']!;
+            final groupName = state.uri.queryParameters['name'] ?? '';
+            return _buildTransitionPage(
+              state: state,
+              child: GroupMembersScreen(
+                groupId: groupId,
+                groupName: groupName,
+              ),
+            );
+          },
+        ),
+        // Group files (full-screen, uses root navigator)
+        GoRoute(
+          path: groupFiles,
+          name: 'groupFiles',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            // id is required in path, so it won't be null
+            final groupId = state.pathParameters['id']!;
+            return _buildTransitionPage(
+              state: state,
+              child: GroupFilesScreen(groupId: groupId),
+            );
+          },
+        ),
+      ];
 }

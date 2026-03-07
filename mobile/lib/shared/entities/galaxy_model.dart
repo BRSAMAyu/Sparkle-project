@@ -52,8 +52,23 @@ class GalaxyEdgeModel {
     this.bidirectional = false,
   });
 
-  factory GalaxyEdgeModel.fromJson(Map<String, dynamic> json) =>
-      _$GalaxyEdgeModelFromJson(json);
+  factory GalaxyEdgeModel.fromJson(Map<String, dynamic> json) {
+    final sourceId =
+        (json['source_id'] ?? json['source_node_id'] ?? '').toString();
+    final targetId =
+        (json['target_id'] ?? json['target_node_id'] ?? '').toString();
+    final relationRaw = json['relation_type']?.toString();
+
+    return GalaxyEdgeModel(
+      id: (json['id'] ?? '${sourceId}_${targetId}_${relationRaw ?? 'related'}')
+          .toString(),
+      sourceId: sourceId,
+      targetId: targetId,
+      relationType: _parseRelationType(relationRaw),
+      strength: (json['strength'] as num?)?.toDouble() ?? 0.5,
+      bidirectional: json['bidirectional'] as bool? ?? false,
+    );
+  }
   final String id;
 
   @JsonKey(name: 'source_id')
@@ -71,6 +86,22 @@ class GalaxyEdgeModel {
   /// 是否双向
   final bool bidirectional;
   Map<String, dynamic> toJson() => _$GalaxyEdgeModelToJson(this);
+
+  static EdgeRelationType _parseRelationType(String? raw) {
+    return EdgeRelationType.values.firstWhere(
+      (type) => type.name == raw || _relationWireValue(type) == raw,
+      orElse: () => EdgeRelationType.related,
+    );
+  }
+
+  static String _relationWireValue(EdgeRelationType type) {
+    switch (type) {
+      case EdgeRelationType.parentChild:
+        return 'parent_child';
+      default:
+        return type.name;
+    }
+  }
 }
 
 /// LLM 提供的位置提示
@@ -124,10 +155,52 @@ class GalaxyNodeModel {
     this.positionHint,
     this.outgoingEdgeIds,
     this.incomingEdgeIds,
+    this.positionX,
+    this.positionY,
   });
 
-  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) =>
-      _$GalaxyNodeModelFromJson(json);
+  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) {
+    final userStatus = json['user_status'] as Map<String, dynamic>?;
+
+    return GalaxyNodeModel(
+      id: json['id'] as String,
+      parentId: json['parent_id']?.toString(),
+      name: json['name'] as String,
+      importance:
+          ((json['importance'] ?? json['importance_level']) as num?)?.toInt() ??
+              1,
+      sector: _parseSector(json['sector_code']),
+      baseColor: json['base_color'] as String?,
+      isUnlocked: (json['is_unlocked'] as bool?) ??
+          (userStatus?['is_unlocked'] as bool?) ??
+          false,
+      masteryScore:
+          ((json['mastery_score'] ?? userStatus?['mastery_score']) as num?)
+                  ?.toInt() ??
+              0,
+      studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
+              ?.toInt() ??
+          0,
+      tags: ((json['auto_tags'] ?? json['tags'] ?? json['keywords'])
+              as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      description: json['description'] as String?,
+      positionHint: json['position_hint'] == null
+          ? null
+          : NodePositionHint.fromJson(
+              json['position_hint'] as Map<String, dynamic>,
+            ),
+      outgoingEdgeIds: (json['outgoing_edge_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      incomingEdgeIds: (json['incoming_edge_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      positionX: (json['position_x'] as num?)?.toDouble(),
+      positionY: (json['position_y'] as num?)?.toDouble(),
+    );
+  }
   final String id;
 
   @JsonKey(name: 'parent_id')
@@ -170,6 +243,12 @@ class GalaxyNodeModel {
   /// 入边 ID 列表（该节点作为 target）
   @JsonKey(name: 'incoming_edge_ids')
   final List<String>? incomingEdgeIds;
+
+  @JsonKey(name: 'position_x')
+  final double? positionX;
+
+  @JsonKey(name: 'position_y')
+  final double? positionY;
   Map<String, dynamic> toJson() => _$GalaxyNodeModelToJson(this);
 
   /// Helper to read study_count from nested user_status if present
@@ -183,6 +262,10 @@ class GalaxyNodeModel {
 
   /// 节点半径（基于重要程度）
   double get radius => 3.0 + importance * 2.0;
+
+  bool get hasStablePosition => positionX != null && positionY != null;
+
+  List<String> get autoTags => tags ?? const [];
 
   /// Convert to CompactKnowledgeNode for rendering
   CompactKnowledgeNode toCompact(double x, double y) =>
@@ -198,6 +281,7 @@ class GalaxyNodeModel {
         sectorIndex: sector.index,
         importance: importance,
         studyCount: studyCount,
+        primaryTag: autoTags.isEmpty ? null : autoTags.first,
       );
 
   /// 复制并修改
@@ -216,6 +300,8 @@ class GalaxyNodeModel {
     NodePositionHint? positionHint,
     List<String>? outgoingEdgeIds,
     List<String>? incomingEdgeIds,
+    double? positionX,
+    double? positionY,
   }) =>
       GalaxyNodeModel(
         id: id ?? this.id,
@@ -232,7 +318,26 @@ class GalaxyNodeModel {
         positionHint: positionHint ?? this.positionHint,
         outgoingEdgeIds: outgoingEdgeIds ?? this.outgoingEdgeIds,
         incomingEdgeIds: incomingEdgeIds ?? this.incomingEdgeIds,
+        positionX: positionX ?? this.positionX,
+        positionY: positionY ?? this.positionY,
       );
+
+  static SectorEnum _parseSector(Object? raw) {
+    final value = raw?.toString();
+    return SectorEnum.values.firstWhere(
+      (sector) => sector.name == value || _sectorWireValue(sector) == value,
+      orElse: () => SectorEnum.voidSector,
+    );
+  }
+
+  static String _sectorWireValue(SectorEnum sector) {
+    switch (sector) {
+      case SectorEnum.voidSector:
+        return 'VOID';
+      default:
+        return sector.name.toUpperCase();
+    }
+  }
 }
 
 @JsonSerializable()
@@ -243,8 +348,21 @@ class GalaxyGraphResponse {
     this.edges = const [],
   });
 
-  factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) =>
-      _$GalaxyGraphResponseFromJson(json);
+  factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) {
+    final rawEdges = (json['edges'] ?? json['relations'] ?? const <dynamic>[])
+        as List<dynamic>;
+
+    return GalaxyGraphResponse(
+      nodes: (json['nodes'] as List<dynamic>)
+          .map((e) => GalaxyNodeModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      userFlameIntensity:
+          (json['user_flame_intensity'] as num?)?.toDouble() ?? 0.0,
+      edges: rawEdges
+          .map((e) => GalaxyEdgeModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
   final List<GalaxyNodeModel> nodes;
 
   /// 节点间的连接关系

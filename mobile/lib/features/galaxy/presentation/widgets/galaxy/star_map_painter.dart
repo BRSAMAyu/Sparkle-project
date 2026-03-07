@@ -66,23 +66,29 @@ class _RelationStyle {
         return _RelationStyle(color: DS.success, baseWidth: 1.8);
       case EdgeRelationType.related:
         return _RelationStyle(
-            color: DS.warning, isDashed: true, dashLength: 8, baseWidth: 1.2,);
+          color: DS.warning,
+          isDashed: true,
+          dashLength: 8,
+          baseWidth: 1.2,
+        );
       case EdgeRelationType.similar:
         return _RelationStyle(
-            color: DS.taskReflection,
-            isDashed: true,
-            dashLength: 4,
-            baseWidth: 1.0,);
+          color: DS.taskReflection,
+          isDashed: true,
+          dashLength: 4,
+          baseWidth: 1.0,
+        );
       case EdgeRelationType.contrast:
         return _RelationStyle(color: DS.error, isDashed: true, dashLength: 12);
       case EdgeRelationType.application:
         return _RelationStyle(color: DS.taskPlanning);
       case EdgeRelationType.example:
         return _RelationStyle(
-            color: DS.textSecondary,
-            isDashed: true,
-            dashLength: 6,
-            baseWidth: 1.0,);
+          color: DS.textSecondary,
+          isDashed: true,
+          dashLength: 6,
+          baseWidth: 1.0,
+        );
       case EdgeRelationType.parentChild:
         return _RelationStyle(color: DS.brandPrimaryConst, baseWidth: 1.8);
     }
@@ -153,12 +159,20 @@ class StarMapPainter extends CustomPainter {
   late final Map<int, Offset> _positionCache;
 
   int _generateCacheKey() => Object.hash(
-        identityHashCode(nodes),
-        identityHashCode(edges),
         nodes.length,
         edges.length,
-        nodes.isNotEmpty ? nodes.first.x : 0,
-        nodes.length > 10 ? nodes[nodes.length ~/ 2].y : 0,
+        Object.hashAll(
+          nodes.take(12).map(
+                (node) =>
+                    Object.hash(node.idHash, node.x.round(), node.y.round()),
+              ),
+        ),
+        Object.hashAll(
+          edges.take(12).map(
+                (edge) => Object.hash(
+                    edge.sourceId, edge.targetId, edge.relationType),
+              ),
+        ),
       );
 
   void _preprocessData() {
@@ -294,12 +308,13 @@ class StarMapPainter extends CustomPainter {
     }
 
     // Selection Highlight (always visible if selected)
-    if (selectedNodeIdHash != null &&
+    if (selectionPulse > 0 &&
+        selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
       _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash]!);
     }
 
-    if (highlightedNodeIdHashes.isNotEmpty) {
+    if (selectionPulse > 0 && highlightedNodeIdHashes.isNotEmpty) {
       _drawEvidenceHighlights(canvas);
     }
   }
@@ -314,13 +329,14 @@ class StarMapPainter extends CustomPainter {
       ..strokeWidth = 2.0 + (selectionPulse * 1.0);
 
     canvas.drawCircle(pos, radius, paint);
-    
+
     // Fill only if high tier
-    if (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high) {
-        paint.color =
-            DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
-        paint.style = PaintingStyle.fill;
-        canvas.drawCircle(pos, 40, paint);
+    if (performanceTier == PerformanceTier.ultra ||
+        performanceTier == PerformanceTier.high) {
+      paint.color =
+          DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
+      paint.style = PaintingStyle.fill;
+      canvas.drawCircle(pos, 40, paint);
     }
   }
 
@@ -347,79 +363,115 @@ class StarMapPainter extends CustomPainter {
   void _drawEdges(Canvas canvas, {required bool parentChildOnly}) {
     // Optimization: If DPR is very low, skip thin lines or use simpler drawing
     final lowRes = currentDpr < 1.5;
+    final selectedHash = selectedNodeIdHash;
 
     for (final edge in _processedEdges) {
       // Culling
       if (viewport != null) {
         final cRect = viewport!.inflate(50);
-        if (!cRect.contains(edge.start) &&
-            !cRect.contains(edge.end)) {
+        if (!cRect.contains(edge.start) && !cRect.contains(edge.end)) {
           continue;
         }
       }
-      
-      if (parentChildOnly && edge.edge.relationType != EdgeRelationType.parentChild) {
+
+      if (parentChildOnly &&
+          edge.edge.relationType != EdgeRelationType.parentChild) {
         continue;
       }
 
       // Skip weak non-structural edges on low res
-      if (lowRes && edge.edge.strength < 0.5 && edge.edge.relationType != EdgeRelationType.parentChild) {
+      if (lowRes &&
+          edge.edge.strength < 0.5 &&
+          edge.edge.relationType != EdgeRelationType.parentChild) {
         continue;
       }
 
       final style = _RelationStyle.forType(edge.edge.relationType);
-      
+      final edgeAlpha = _edgeAlphaMultiplier(edge, selectedHash);
+
       // Tier Check: Low tier = no dashed lines, simple lines
       if (performanceTier == PerformanceTier.low || lowRes) {
-         final paint = Paint()
-           ..color = style.color.withValues(alpha: 0.5)
-           ..strokeWidth = edge.strokeWidth;
-         canvas.drawLine(edge.start, edge.end, paint);
-         continue;
+        final paint = Paint()
+          ..color = style.color.withValues(alpha: 0.28 * edgeAlpha)
+          ..strokeWidth = edge.strokeWidth * (0.9 + edgeAlpha * 0.35);
+        canvas.drawLine(edge.start, edge.end, paint);
+        continue;
       }
 
       if (style.isDashed) {
-        _drawDashedEdge(canvas, edge, style);
+        _drawDashedEdge(canvas, edge, style, edgeAlpha);
       } else {
-        _drawSolidEdge(canvas, edge, style);
+        _drawSolidEdge(canvas, edge, style, edgeAlpha);
       }
 
       // Arrows only on L4+ (>=0.8)
-      if (scale >= _lod3Limit && (
-          edge.edge.relationType == EdgeRelationType.prerequisite ||
-          edge.edge.relationType == EdgeRelationType.derived)) {
+      if (scale >= _lod3Limit &&
+          (edge.edge.relationType == EdgeRelationType.prerequisite ||
+              edge.edge.relationType == EdgeRelationType.derived)) {
         _drawArrow(canvas, edge.start, edge.end, style.color, edge.strokeWidth);
       }
     }
   }
 
-  void _drawSolidEdge(Canvas canvas, ProcessedEdge edge, _RelationStyle style) {
+  double _edgeAlphaMultiplier(ProcessedEdge edge, int? selectedHash) {
+    if (selectedHash == null) {
+      return edge.edge.relationType == EdgeRelationType.parentChild
+          ? 0.92
+          : 0.72;
+    }
+
+    final sourceHash = edge.edge.sourceId.hashCode;
+    final targetHash = edge.edge.targetId.hashCode;
+    final touchesSelection =
+        sourceHash == selectedHash || targetHash == selectedHash;
+    final touchesEvidence = highlightedNodeIdHashes.contains(sourceHash) ||
+        highlightedNodeIdHashes.contains(targetHash);
+
+    if (touchesSelection) {
+      return 1.15;
+    }
+    if (touchesEvidence) {
+      return 0.96;
+    }
+    return edge.edge.relationType == EdgeRelationType.parentChild ? 0.52 : 0.34;
+  }
+
+  void _drawSolidEdge(
+    Canvas canvas,
+    ProcessedEdge edge,
+    _RelationStyle style,
+    double edgeAlpha,
+  ) {
     final paint = Paint()
-      ..strokeWidth = edge.strokeWidth
+      ..strokeWidth = edge.strokeWidth * (0.9 + edgeAlpha * 0.3)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     // Gradient only on Medium+
     if (performanceTier != PerformanceTier.low) {
-        paint.shader = ui.Gradient.linear(edge.start, edge.end, [
-            Color.lerp(edge.startColor, style.color, 0.5)!
-                .withValues(alpha: 0.6 * edge.edge.strength),
-            Color.lerp(edge.endColor, style.color, 0.5)!
-                .withValues(alpha: 0.3 * edge.edge.strength),
-        ]);
+      paint.shader = ui.Gradient.linear(edge.start, edge.end, [
+        Color.lerp(edge.startColor, style.color, 0.5)!
+            .withValues(alpha: 0.52 * edge.edge.strength * edgeAlpha),
+        Color.lerp(edge.endColor, style.color, 0.5)!
+            .withValues(alpha: 0.22 * edge.edge.strength * edgeAlpha),
+      ]);
     } else {
-        paint.color = style.color.withValues(alpha: 0.5);
+      paint.color = style.color.withValues(alpha: 0.35 * edgeAlpha);
     }
-    
+
     canvas.drawLine(edge.start, edge.end, paint);
   }
 
   void _drawDashedEdge(
-      Canvas canvas, ProcessedEdge edge, _RelationStyle style,) {
+    Canvas canvas,
+    ProcessedEdge edge,
+    _RelationStyle style,
+    double edgeAlpha,
+  ) {
     final paint = Paint()
       ..color = Color.lerp(edge.startColor, style.color, 0.5)!
-          .withValues(alpha: 0.5 * edge.edge.strength)
-      ..strokeWidth = edge.strokeWidth
+          .withValues(alpha: 0.4 * edge.edge.strength * edgeAlpha)
+      ..strokeWidth = edge.strokeWidth * (0.85 + edgeAlpha * 0.2)
       ..style = PaintingStyle.stroke;
 
     final length = (edge.end - edge.start).distance;
@@ -431,13 +483,21 @@ class StarMapPainter extends CustomPainter {
     while (curr < length) {
       final seg = math.min(dash, length - curr);
       canvas.drawLine(
-          edge.start + unit * curr, edge.start + unit * (curr + seg), paint,);
+        edge.start + unit * curr,
+        edge.start + unit * (curr + seg),
+        paint,
+      );
       curr += dash + gap;
     }
   }
 
   void _drawArrow(
-      Canvas canvas, Offset start, Offset end, Color color, double width,) {
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Color color,
+    double width,
+  ) {
     final dir = end - start;
     final len = dir.distance;
     if (len < 30) return;
@@ -447,35 +507,51 @@ class StarMapPainter extends CustomPainter {
     final tip = end - unit * 15;
     final path = Path()
       ..moveTo(tip.dx, tip.dy)
-      ..lineTo(tip.dx - unit.dx * size + perp.dx * size * 0.5,
-          tip.dy - unit.dy * size + perp.dy * size * 0.5,)
-      ..lineTo(tip.dx - unit.dx * size - perp.dx * size * 0.5,
-          tip.dy - unit.dy * size - perp.dy * size * 0.5,)
+      ..lineTo(
+        tip.dx - unit.dx * size + perp.dx * size * 0.5,
+        tip.dy - unit.dy * size + perp.dy * size * 0.5,
+      )
+      ..lineTo(
+        tip.dx - unit.dx * size - perp.dx * size * 0.5,
+        tip.dy - unit.dy * size - perp.dy * size * 0.5,
+      )
       ..close();
     canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.7));
   }
 
   void _drawSectorView(Canvas canvas) {
-     // L0 Representation
+    // L0 Representation
     for (final cluster in clusters.values) {
       final pos = cluster.position;
       final color = SectorConfig.getColor(cluster.sector);
       // Simple Halo
       canvas.drawCircle(
-          pos, 40.0, Paint()..color = color.withValues(alpha: 0.2),);
-      
+        pos,
+        40.0,
+        Paint()..color = color.withValues(alpha: 0.2),
+      );
+
       // L0 Labels (Cluster Names)
       _drawClusterLabel(canvas, cluster.name, pos, 40.0, color);
     }
   }
 
   void _drawClusterLabel(
-      Canvas canvas, String name, Offset pos, double r, Color c,) {
+    Canvas canvas,
+    String name,
+    Offset pos,
+    double r,
+    Color c,
+  ) {
     // Only draw in L0 (<0.2)
     if (scale >= _lod0Limit) return;
 
-    _textRenderer.drawText(canvas, name, pos + Offset(0, r + 8),
-        TextStyle(color: DS.brandPrimaryConst, fontSize: 12),);
+    _textRenderer.drawText(
+      canvas,
+      name,
+      pos + Offset(0, r + 8),
+      TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+    );
   }
 
   void _drawNodes(Canvas canvas, {required bool onlyLarge}) {
@@ -490,7 +566,7 @@ class StarMapPainter extends CustomPainter {
           continue;
         }
       }
-      
+
       // LOD Filtering is now handled by the provider's _computeVisibleNodes()
       // This painter receives already-filtered nodes, so we only do minimal filtering here
       // to handle edge cases during scale transitions
@@ -500,33 +576,32 @@ class StarMapPainter extends CustomPainter {
 
       // For very zoomed out views, render smaller/dimmer nodes
       final isLowDetailView = scale < 0.3;
-      final effectiveRadius = isLowDetailView && p.node.importance < 3
-          ? r * 0.6
-          : r;
-      final effectiveAlpha = isLowDetailView && p.node.importance < 3
-          ? 0.6 * progress
-          : progress;
+      final effectiveRadius =
+          isLowDetailView && p.node.importance < 3 ? r * 0.6 : r;
+      final effectiveAlpha =
+          isLowDetailView && p.node.importance < 3 ? 0.6 * progress : progress;
 
       if (p.node.isUnlocked) {
         // Glow: L3+ (>=0.6) AND (Ultra or High Tier)
         if (scale >= _lod2Limit &&
-           (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high)) {
-            final m = p.node.mastery / 100.0;
-            glowPaint.color =
-                p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * effectiveAlpha);
-            canvas.drawCircle(p.position, effectiveRadius * 3.0, glowPaint);
+            (performanceTier == PerformanceTier.ultra ||
+                performanceTier == PerformanceTier.high)) {
+          final m = p.node.mastery / 100.0;
+          glowPaint.color =
+              p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * effectiveAlpha);
+          canvas.drawCircle(p.position, effectiveRadius * 3.0, glowPaint);
         }
 
         // Main Node
         // Disable fancy shader gradient on low tier OR low DPR
         if (performanceTier != PerformanceTier.low && currentDpr >= 1.5) {
-             nodePaint.shader = ui.Gradient.radial(p.position, effectiveRadius, [
-                DS.brandPrimary.withValues(alpha: 0.9 * effectiveAlpha),
-                p.color.withValues(alpha: effectiveAlpha),
-            ]);
+          nodePaint.shader = ui.Gradient.radial(p.position, effectiveRadius, [
+            DS.brandPrimary.withValues(alpha: 0.9 * effectiveAlpha),
+            p.color.withValues(alpha: effectiveAlpha),
+          ]);
         } else {
-             nodePaint.color = p.color.withValues(alpha: effectiveAlpha);
-             nodePaint.shader = null;
+          nodePaint.color = p.color.withValues(alpha: effectiveAlpha);
+          nodePaint.shader = null;
         }
 
         canvas.drawCircle(p.position, effectiveRadius, nodePaint);
@@ -534,15 +609,20 @@ class StarMapPainter extends CustomPainter {
 
         if (p.node.studyCount >= 2 && effectiveAlpha > 0.7) {
           canvas.drawCircle(
-              p.position,
-              effectiveRadius * 1.6,
-              Paint()
-                ..color = p.color.withValues(alpha: 0.5)
-                ..style = PaintingStyle.stroke,);
+            p.position,
+            effectiveRadius * 1.6,
+            Paint()
+              ..color = p.color.withValues(alpha: 0.5)
+              ..style = PaintingStyle.stroke,
+          );
         }
       } else {
-        canvas.drawCircle(p.position, effectiveRadius * 0.8,
-            Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * effectiveAlpha),);
+        canvas.drawCircle(
+          p.position,
+          effectiveRadius * 0.8,
+          Paint()
+            ..color = DS.brandPrimary.withValues(alpha: 0.2 * effectiveAlpha),
+        );
       }
 
       // Labels Logic - aligned with LOD levels
@@ -565,22 +645,56 @@ class StarMapPainter extends CustomPainter {
         // L1: imp >= 4
         if (p.node.importance >= 4) showLabel = true;
       }
-      
+
       if (showLabel) {
-         _drawNodeLabel(canvas, p.node, p.position, p.color);
+        _drawNodeLabel(canvas, p.node, p.position, p.color);
+        _drawNodeTag(canvas, p.node, p.position, p.color);
       }
     }
   }
 
   void _drawNodeLabel(
-      Canvas canvas, CompactKnowledgeNode node, Offset pos, Color color,) {
+    Canvas canvas,
+    CompactKnowledgeNode node,
+    Offset pos,
+    Color color,
+  ) {
+    final fontSize = scale >= _lod3Limit ? 11.0 : 10.0;
     _textRenderer.drawText(
       canvas,
       node.name,
       pos + Offset(0, (3.0 + node.importance * 2.0) + 8),
       TextStyle(
-          color: DS.brandPrimary.withValues(alpha: node.isUnlocked ? 0.9 : 0.5),
-          fontSize: 10,),
+        color: DS.brandPrimary.withValues(alpha: node.isUnlocked ? 0.9 : 0.5),
+        fontSize: fontSize,
+        fontWeight: node.importance >= 4 ? FontWeight.w700 : FontWeight.w600,
+      ),
+    );
+  }
+
+  void _drawNodeTag(
+    Canvas canvas,
+    CompactKnowledgeNode node,
+    Offset pos,
+    Color color,
+  ) {
+    final tag = node.primaryTag;
+    if (tag == null ||
+        tag.isEmpty ||
+        scale < _lod2Limit ||
+        node.importance < 2) {
+      return;
+    }
+
+    _textRenderer.drawText(
+      canvas,
+      '#$tag',
+      pos + Offset(0, (3.0 + node.importance * 2.0) + 24),
+      TextStyle(
+        color: color.withValues(alpha: node.isUnlocked ? 0.74 : 0.38),
+        fontSize: scale >= _lod3Limit ? 9 : 8,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 

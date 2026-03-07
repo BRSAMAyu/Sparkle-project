@@ -1,4 +1,6 @@
 from dataclasses import replace
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -39,6 +41,18 @@ class _EmptyLLM:
     async def stream_chat(self, messages, model=None, temperature=0.5):
         if False:
             yield ""
+
+
+class _CapturingLLM:
+    def __init__(self):
+        self.messages = None
+
+    def get_current_selection(self):
+        return SimpleNamespace(config=SimpleNamespace(model_name="deep-analyst-synth"))
+
+    async def stream_chat(self, messages, model=None, temperature=0.5):
+        self.messages = messages
+        yield "综合结论"
 
 
 @pytest.mark.asyncio
@@ -121,3 +135,63 @@ async def test_execute_mode_workflow_falls_back_when_stream_empty(monkeypatch):
     deltas = [r.delta for r in responses if r.delta]
     assert any("结构化摘要" in d for d in deltas)
     assert responses[-1].finish_reason == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkeypatch):
+    orchestrator = type("O", (), {})()
+    adapter = MultiAgentWorkflowAdapter(orchestrator)
+    capturing_llm = _CapturingLLM()
+
+    monkeypatch.setattr(
+        "app.orchestration.multi_agent_adapter.get_configured_llm_service",
+        AsyncMock(return_value=capturing_llm),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.multi_agent_adapter.build_system_prompt",
+        lambda **kwargs: "BASE_SYSTEM_PROMPT",
+    )
+
+    validation_result = ExecutionValidationResult(
+        plan_id="plan-1",
+        validation_status="passed",
+        quality_score=0.92,
+        criteria_results={"all_passed": True, "checks": {}},
+        tool_summary={"total": 1, "successful": 1, "failed": 0},
+        issues=["minor drift"],
+        step_validations=[],
+        aborted=False,
+    )
+
+    responses = []
+    async for resp in adapter._stream_synthesis_response(
+        chat_mode=CHAT_MODE_DEEP_ANALYSIS,
+        user_message="帮我深度分析",
+        execution_result=None,
+        validation_result=validation_result,
+        execution_summary="- [成功] query_knowledge: {...}",
+        synthesis_template="SYNTH_TEMPLATE",
+        context_data={
+            "prompt_version": "v2",
+            "user_context": {"preferences": {"tone": "precise"}},
+            "plan_context": {"goal": "analyze"},
+            "conversation_context": {
+                "messages": [
+                    {"role": "user", "content": "前一个问题"},
+                    {"role": "assistant", "content": "前一个回答"},
+                ],
+                "summary": "历史摘要",
+                "summary_used": True,
+            },
+        },
+    ):
+        responses.append(resp)
+
+    assert responses[-1].delta == "综合结论"
+    assert capturing_llm.messages is not None
+    assert capturing_llm.messages[0]["role"] == "system"
+    assert "BASE_SYSTEM_PROMPT" in capturing_llm.messages[0]["content"]
+    assert "已验证的执行结果摘要" in capturing_llm.messages[0]["content"]
+    assert capturing_llm.messages[1]["content"] == "前一个问题"
+    assert capturing_llm.messages[2]["content"] == "前一个回答"
+    assert capturing_llm.messages[-1]["content"] == "帮我深度分析"

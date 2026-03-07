@@ -4,10 +4,12 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart'
 class GalaxyShaderBackground extends StatelessWidget {
   const GalaxyShaderBackground({
     required this.engine,
+    this.enabled = true,
     super.key,
   });
 
   final GalaxyRenderEngine engine;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -17,6 +19,9 @@ class GalaxyShaderBackground extends StatelessWidget {
           engine.settings,
         ]),
         builder: (context, child) {
+          if (!enabled) {
+            return const SizedBox.shrink();
+          }
           if (!engine.hasShader) {
             engine.logFallbackOnce();
             return const SizedBox.shrink();

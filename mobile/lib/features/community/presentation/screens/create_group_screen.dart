@@ -116,10 +116,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           await ref.read(myGroupsProvider.notifier).createGroup(groupData);
 
       if (mounted) {
-        // Clear dirty state implicitly by popping success (or setting flag if needed)
-        // But popping is enough.
-        context.pop();
-        context.push('/community/groups/${group.id}');
+        context.go('/community/groups/${group.id}');
       }
     } catch (e) {
       if (mounted) {

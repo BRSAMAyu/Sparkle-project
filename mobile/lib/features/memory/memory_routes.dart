@@ -21,9 +21,13 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class MemoryRoutes {
+  static const String panel = '/memory';
+  static const String settings = '/memory/settings';
+  static const String detail = '/memory/detail';
+
   static List<RouteBase> get routes => [
         GoRoute(
-          path: '/memory',
+          path: panel,
           name: 'memoryPanel',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
@@ -32,12 +36,31 @@ class MemoryRoutes {
           ),
         ),
         GoRoute(
-          path: '/memory/settings',
+          path: settings,
           name: 'memorySettings',
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const MemorySettingsScreen(),
           ),
+        ),
+        GoRoute(
+          path: detail,
+          name: 'memoryDetail',
+          pageBuilder: (context, state) {
+            final args = state.extra;
+            if (args is! MemoryDetailArgs) {
+              return _buildTransitionPage(
+                state: state,
+                child: const Scaffold(
+                  body: Center(child: Text('记忆详情参数缺失')),
+                ),
+              );
+            }
+            return _buildTransitionPage(
+              state: state,
+              child: MemoryDetailScreen(args: args),
+            );
+          },
         ),
       ];
 }

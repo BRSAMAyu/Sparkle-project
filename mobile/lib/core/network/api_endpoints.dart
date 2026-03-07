@@ -32,7 +32,8 @@ class ApiEndpoints {
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
-  static String nextActionSelection(String id) => '/tasks/$id/next-action-selection';
+  static String nextActionSelection(String id) =>
+      '/tasks/$id/next-action-selection';
   static const String taskSuggestions = '/tasks/suggestions';
 
   // Subtasks
@@ -60,6 +61,8 @@ class ApiEndpoints {
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
+  static const String galaxyViewport = '/galaxy/nodes/viewport';
+  static const String galaxyPositions = '/galaxy/nodes/positions';
   static const String galaxyPredictNext = '/galaxy/predict-next';
   static const String galaxySearch = '/galaxy/search';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
@@ -213,7 +216,8 @@ class ApiEndpoints {
 
   // Interventions
   static const String interventionsRequest = '/interventions/request';
-  static const String interventionsPassiveSignals = '/interventions/passive-signals';
+  static const String interventionsPassiveSignals =
+      '/interventions/passive-signals';
   static const String interventionsOutcomes = '/interventions/outcomes';
   static String interventionFeedback(String id) =>
       '/interventions/requests/$id/feedback';
@@ -227,9 +231,12 @@ class ApiEndpoints {
   static const String achievementsStats = '/achievements/stats';
   static const String achievementsMap = '/achievements/map';
   static const String achievementsStreak = '/achievements/streak';
-  static String achievementDetail(String id) => '/achievements/achievements/$id';
-  static String achievementShare(String id) => '/achievements/achievements/$id/share';
-  static String achievementPin(String id) => '/achievements/achievements/$id/pin';
+  static String achievementDetail(String id) =>
+      '/achievements/achievements/$id';
+  static String achievementShare(String id) =>
+      '/achievements/achievements/$id/share';
+  static String achievementPin(String id) =>
+      '/achievements/achievements/$id/pin';
 
   // Contracts
   static const String contracts = '/achievements/contracts';
@@ -245,21 +252,28 @@ class ApiEndpoints {
 
   // Achievement Events (internal)
   static const String achievementEventsProcess = '/achievements/events/process';
-  static const String achievementsCloseToUnlock = '/achievements/close-to-unlock';
+  static const String achievementsCloseToUnlock =
+      '/achievements/close-to-unlock';
 
   // Multi-Intent
   static const String multiIntentParse = '/multi-intent/parse';
   static const String multiIntentPreview = '/multi-intent/preview';
   static const String multiIntentExecute = '/multi-intent/execute';
-  static const String multiIntentAnalyzeExecute = '/multi-intent/analyze-and-execute';
+  static const String multiIntentAnalyzeExecute =
+      '/multi-intent/analyze-and-execute';
   static const String multiIntentTypes = '/multi-intent/intent-types';
 
   // Recommendations
-  static const String recommendationsCollaborative = '/recommendations/collaborative';
-  static const String recommendationsSimilarUsers = '/recommendations/similar-users';
-  static const String recommendationsSimilarItems = '/recommendations/similar-items';
-  static const String recommendationsMyInteractions = '/recommendations/my-interactions';
-  static const String recommendationsRecord = '/recommendations/record-interaction';
+  static const String recommendationsCollaborative =
+      '/recommendations/collaborative';
+  static const String recommendationsSimilarUsers =
+      '/recommendations/similar-users';
+  static const String recommendationsSimilarItems =
+      '/recommendations/similar-items';
+  static const String recommendationsMyInteractions =
+      '/recommendations/my-interactions';
+  static const String recommendationsRecord =
+      '/recommendations/record-interaction';
   static const String recommendationsStats = '/recommendations/stats';
 
   // Leaderboards
@@ -267,7 +281,8 @@ class ApiEndpoints {
   static const String leaderboardsSummary = '/leaderboards/summary';
   static const String leaderboardsMyRank = '/leaderboards/my-rank';
   static const String leaderboardsTypes = '/leaderboards/types';
-  static String leaderboardsTopThree(String type) => '/leaderboards/top-three/$type';
+  static String leaderboardsTopThree(String type) =>
+      '/leaderboards/top-three/$type';
   static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
 
   // Seed Libraries
@@ -283,7 +298,8 @@ class ApiEndpoints {
   static String seedLibrarySubscriptions = '/seed-libraries/my-subscriptions';
   static String seedLibraryCrossQuery = '/seed-libraries/query';
   static String seedLibraryFewShot = '/seed-libraries/query/few-shot';
-  static String seedLibraryReplyTemplate = '/seed-libraries/query/reply-template';
+  static String seedLibraryReplyTemplate =
+      '/seed-libraries/query/reply-template';
 
   // Shop System
   static const String shopItems = '/shop/items';
