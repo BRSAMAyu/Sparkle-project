@@ -99,6 +99,12 @@ class StarMapPainter extends CustomPainter {
   StarMapPainter({
     required this.nodes,
     this.edges = const [],
+    required this.viewMatrix,
+    this.maxEdges = 320,
+    this.maxLabels = 80,
+    this.showLabels = true,
+    this.showTags = true,
+    this.showEdgeGlow = true,
     this.scale = 1.0,
     this.performanceTier = PerformanceTier.high,
     this.currentDpr = 3.0, // Default to high if not provided
@@ -118,6 +124,12 @@ class StarMapPainter extends CustomPainter {
 
   final List<CompactKnowledgeNode> nodes;
   final List<GalaxyEdgeModel> edges;
+  final Matrix4 viewMatrix;
+  final int maxEdges;
+  final int maxLabels;
+  final bool showLabels;
+  final bool showTags;
+  final bool showEdgeGlow;
   final double scale;
   final PerformanceTier performanceTier;
   final double currentDpr;
@@ -289,9 +301,13 @@ class StarMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.transform(viewMatrix.storage);
+
     // L0 (<0.2): Sector view - centroids only, no nodes/edges
     if (scale < _lod0Limit) {
       _drawSectorView(canvas);
+      canvas.restore();
       return;
     }
 
@@ -308,15 +324,20 @@ class StarMapPainter extends CustomPainter {
     }
 
     // Selection Highlight (always visible if selected)
-    if (selectionPulse > 0 &&
+    if (showEdgeGlow &&
+        selectionPulse > 0 &&
         selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
       _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash]!);
     }
 
-    if (selectionPulse > 0 && highlightedNodeIdHashes.isNotEmpty) {
+    if (showEdgeGlow &&
+        selectionPulse > 0 &&
+        highlightedNodeIdHashes.isNotEmpty) {
       _drawEvidenceHighlights(canvas);
     }
+
+    canvas.restore();
   }
 
   void _drawSelectionHighlight(Canvas canvas, Offset pos) {
@@ -364,8 +385,20 @@ class StarMapPainter extends CustomPainter {
     // Optimization: If DPR is very low, skip thin lines or use simpler drawing
     final lowRes = currentDpr < 1.5;
     final selectedHash = selectedNodeIdHash;
+    final dynamicBudget = switch (performanceTier) {
+      PerformanceTier.ultra => scale >= _lod3Limit ? 720 : 420,
+      PerformanceTier.high => scale >= _lod3Limit ? 520 : 320,
+      PerformanceTier.medium => scale >= _lod3Limit ? 320 : 180,
+      PerformanceTier.low => scale >= _lod3Limit ? 180 : 96,
+    };
+    final maxRenderedEdges = math.min(dynamicBudget, maxEdges);
+    var renderedEdges = 0;
 
     for (final edge in _processedEdges) {
+      if (renderedEdges >= maxRenderedEdges) {
+        break;
+      }
+
       // Culling
       if (viewport != null) {
         final cRect = viewport!.inflate(50);
@@ -395,6 +428,7 @@ class StarMapPainter extends CustomPainter {
           ..color = style.color.withValues(alpha: 0.28 * edgeAlpha)
           ..strokeWidth = edge.strokeWidth * (0.9 + edgeAlpha * 0.35);
         canvas.drawLine(edge.start, edge.end, paint);
+        renderedEdges++;
         continue;
       }
 
@@ -410,6 +444,7 @@ class StarMapPainter extends CustomPainter {
               edge.edge.relationType == EdgeRelationType.derived)) {
         _drawArrow(canvas, edge.start, edge.end, style.color, edge.strokeWidth);
       }
+      renderedEdges++;
     }
   }
 
@@ -559,6 +594,10 @@ class StarMapPainter extends CustomPainter {
     final glowPaint = Paint()
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
 
+    final denseNodeField = _processedNodes.length > 260;
+    final ultraDenseNodeField = _processedNodes.length > 420;
+    var labelsDrawn = 0;
+
     for (final p in _processedNodes) {
       // Culling
       if (viewport != null) {
@@ -583,7 +622,8 @@ class StarMapPainter extends CustomPainter {
 
       if (p.node.isUnlocked) {
         // Glow: L3+ (>=0.6) AND (Ultra or High Tier)
-        if (scale >= _lod2Limit &&
+        if (showEdgeGlow &&
+            scale >= _lod2Limit &&
             (performanceTier == PerformanceTier.ultra ||
                 performanceTier == PerformanceTier.high)) {
           final m = p.node.mastery / 100.0;
@@ -631,6 +671,8 @@ class StarMapPainter extends CustomPainter {
       // L3 (0.6-0.8): More labels (imp >= 2)
       // L4 (>=0.8): All labels (imp >= 1)
 
+      final isSelected = selectedNodeIdHash == p.node.idHash;
+      final isHighlighted = highlightedNodeIdHashes.contains(p.node.idHash);
       var showLabel = false;
       if (scale >= _lod3Limit) {
         // L4+: All labels
@@ -646,9 +688,22 @@ class StarMapPainter extends CustomPainter {
         if (p.node.importance >= 4) showLabel = true;
       }
 
-      if (showLabel) {
+      if (denseNodeField && !isSelected && !isHighlighted) {
+        showLabel = showLabel && p.node.importance >= 4 && scale >= _lod2Limit;
+      }
+      if (ultraDenseNodeField && !isSelected && !isHighlighted) {
+        showLabel = showLabel && p.node.importance >= 5 && scale >= _lod3Limit;
+      }
+
+      if (showLabels && showLabel && labelsDrawn < maxLabels) {
         _drawNodeLabel(canvas, p.node, p.position, p.color);
-        _drawNodeTag(canvas, p.node, p.position, p.color);
+        labelsDrawn++;
+        if (showTags &&
+            labelsDrawn < maxLabels &&
+            (!denseNodeField || isSelected || isHighlighted)) {
+          _drawNodeTag(canvas, p.node, p.position, p.color);
+          labelsDrawn++;
+        }
       }
     }
   }
@@ -705,6 +760,11 @@ class StarMapPainter extends CustomPainter {
       old.currentDpr != currentDpr ||
       old.viewport != viewport ||
       !identical(old.nodes, nodes) ||
+      old.maxEdges != maxEdges ||
+      old.maxLabels != maxLabels ||
+      old.showLabels != showLabels ||
+      old.showTags != showTags ||
+      old.showEdgeGlow != showEdgeGlow ||
       old.selectionPulse != selectionPulse ||
       old.selectedNodeIdHash != selectedNodeIdHash ||
       old.highlightRevision != highlightRevision;

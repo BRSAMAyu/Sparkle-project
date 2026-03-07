@@ -1,0 +1,46 @@
+================================================================================
+设计系统合规检查报告
+================================================================================
+检查时间: 2026-03-08 00:22:53.269142
+项目根目录: .
+违规数量: 295
+
+⚠️ 发现以下设计系统违规：
+
+🔴 硬编码颜色违规 (87处):
+  • ./lib/core/design/design_system.dart:133: 硬编码颜色 -       highlightColor: Colors.transparent,
+  • ./lib/core/design/design_system.dart:142: 硬编码颜色 -         tileColor: Colors.transparent,
+  • ./lib/core/design/design_system.dart:149: 硬编码颜色 -         surfaceTintColor: Colors.transparent,
+  • ./lib/core/design/design_system.dart:161: 硬编码颜色 -         surfaceTintColor: Colors.transparent,
+  • ./lib/core/design/design_system.dart:270: 硬编码颜色 -         surfaceTintColor: Colors.transparent,
+  • ./lib/core/design/design_system.dart:501: 硬编码颜色 -       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
+  • ./lib/core/design/design_system.dart:763: 硬编码颜色 -   static Color get neutral0 => _isDark ? const Color(0xFFF4F1EB) : Colors.white;
+  • ./lib/core/design/design_system.dart:799: 硬编码颜色 -   static const Color rarityRare = Color(0xFFFFD700);
+  • ./lib/core/design/design_system.dart:801: 硬编码颜色 -       ? const Color(0xFF3D3000) // 深色模式下的暗金背景
+  • ./lib/core/design/design_system.dart:802: 硬编码颜色 -       : const Color(0xFFFFF8DC);
+  • ... 还有77处
+
+🟡 硬编码间距违规 (3处):
+  • ./lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart:73: 硬编码间距 -                 const SizedBox(height: 14),
+  • ./lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart:92: 硬编码间距 -                   const SizedBox(height: 14),
+  • ./lib/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart:161: 硬编码间距 -                 const SizedBox(height: 14),
+
+🟣 硬编码渐变/阴影违规 (205处):
+  • ./lib/core/statistics/config/statistics_chart_config.dart:276: 硬编码渐变/阴影 -   static LinearGradient getLineGradient({Color? color}) => LinearGradient(
+  • ./lib/core/statistics/config/statistics_chart_config.dart:286: 硬编码渐变/阴影 -   static LinearGradient getBarGradient({Color? color}) => LinearGradient(
+  • ./lib/core/statistics/presentation/widgets/common/statistics_period_toggle.dart:145: 硬编码渐变/阴影 -                     BoxShadow(
+  • ./lib/core/statistics/presentation/widgets/report/statistics_report_generator.dart:122: 硬编码渐变/阴影 -     final gradient = LinearGradient(
+  • ./lib/core/statistics/presentation/widgets/report/statistics_report_generator.dart:321: 硬编码渐变/阴影 -           gradient: LinearGradient(
+  • ./lib/core/design/materials.dart:125: 硬编码渐变/阴影 -         backgroundGradient: LinearGradient(
+  • ./lib/core/design/materials.dart:146: 硬编码渐变/阴影 -       backgroundGradient: LinearGradient(
+  • ./lib/core/design/materials.dart:322: 硬编码渐变/阴影 -                       gradient: RadialGradient(
+  • ./lib/core/design/materials.dart:427: 硬编码渐变/阴影 -         ..shader = LinearGradient(
+  • ./lib/core/design/components/molecules/stepper_indicator.dart:91: 硬编码渐变/阴影 -                   BoxShadow(
+  • ... 还有195处
+
+💡 修复建议：
+  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等
+  2. 硬编码间距 → 使用 DS.lg, DS.xl 等
+  3. 硬编码渐变/阴影 → 使用 DS.*Gradient / DS.shadow* / Graphite 容器
+  4. Material按钮 → 使用 SparkleButton.primary() 等
+================================================================================

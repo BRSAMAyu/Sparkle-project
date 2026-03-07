@@ -37,7 +37,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   void _showSearchOptions() {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
+      backgroundColor: Colors.transparent,
+      builder: (context) => GraphiteModalSurface(
+        title: '搜索',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -57,7 +59,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 context.push('/community/groups/search');
               },
             ),
-            const SizedBox(height: DS.spacing8),
           ],
         ),
       ),
@@ -67,7 +68,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   void _showAddOptions() {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
+      backgroundColor: Colors.transparent,
+      builder: (context) => GraphiteModalSurface(
+        title: '社群操作',
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -89,7 +92,6 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                 context.push('/community/groups/create');
               },
             ),
-            const SizedBox(height: DS.spacing8),
           ],
         ),
       ),
@@ -140,7 +142,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
   Widget build(BuildContext context) {
     final focusMode = ref.watch(focusModeProvider);
 
-    return Scaffold(
+    return GraphiteScaffold(
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -148,8 +150,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title:
-            const Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          '星火社群',
+          style: DS.titleLarge.copyWith(
+            color: DS.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         centerTitle: false,
         actions: [
           // Focus mode indicator and toggle
@@ -201,7 +208,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: TabBarView(
           controller: _tabController,
           children: [
@@ -231,13 +238,15 @@ class _FriendsListTab extends ConsumerWidget {
       data: (friends) {
         if (friends.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.people_outline, size: 64, color: DS.neutral300),
-                const SizedBox(height: DS.lg),
-                Text('还没有好友', style: TextStyle(color: DS.neutral500)),
-              ],
+            child: GraphiteCardSurface(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.people_outline, size: 64, color: DS.neutral300),
+                  const SizedBox(height: DS.lg),
+                  Text('还没有好友', style: TextStyle(color: DS.neutral500)),
+                ],
+              ),
             ),
           );
         }

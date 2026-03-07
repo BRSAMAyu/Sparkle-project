@@ -33,6 +33,7 @@ library;
 
 // 便捷导入
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/breakpoints.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
@@ -54,6 +55,7 @@ export 'tokens_v2/theme_manager.dart';
 export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
 export 'widgets/app_feedback.dart';
+export 'widgets/graphite_surfaces.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -76,23 +78,167 @@ class AppThemes {
         ? SparkleThemeExtension.light()
         : SparkleThemeExtension.dark();
 
+    final colors = theme.colors;
+    final isDark = brightness == Brightness.dark;
+    final textTheme = _buildTextTheme(theme);
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
-      primaryColor: theme.colors.brandPrimary,
-      scaffoldBackgroundColor: theme.colors.surfacePrimary,
+      primaryColor: colors.brandPrimary,
+      scaffoldBackgroundColor: colors.surfacePrimary,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: theme.colors.brandPrimary,
+        seedColor: colors.brandPrimary,
         brightness: brightness,
-        primary: theme.colors.brandPrimary,
-        secondary: theme.colors.brandSecondary,
-        surface: theme.colors.surfacePrimary,
-        error: theme.colors.semanticError,
+        primary: colors.brandPrimary,
+        onPrimary: ThemeUtils.getContrastSafeText(
+          colors.brandPrimary,
+          darkText: colors.textPrimary,
+        ),
+        secondary: colors.brandSecondary,
+        onSecondary: ThemeUtils.getContrastSafeText(
+          colors.brandSecondary,
+          darkText: colors.textPrimary,
+        ),
+        surface: colors.surfacePrimary,
+        onSurface: colors.textPrimary,
+        error: colors.semanticError,
+        onError: ThemeUtils.getContrastSafeText(
+          colors.semanticError,
+          darkText: colors.textPrimary,
+        ),
       ),
-      textTheme: _buildTextTheme(theme),
+      textTheme: textTheme,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colors.surfacePrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: colors.textPrimary),
+        actionsIconTheme: IconThemeData(color: colors.textPrimary),
+      ),
+      dividerColor: colors.surfaceTertiary,
+      dividerTheme: DividerThemeData(
+        color: colors.surfaceTertiary,
+        thickness: 1,
+        space: 1,
+      ),
+      splashFactory: InkSparkle.splashFactory,
+      highlightColor: Colors.transparent,
+      hoverColor: colors.brandPrimary.withValues(alpha: 0.04),
+      splashColor: colors.brandPrimary.withValues(alpha: 0.08),
       cardTheme: _buildCardTheme(theme),
       buttonTheme: _buildButtonTheme(theme),
       inputDecorationTheme: _buildInputTheme(theme),
+      listTileTheme: ListTileThemeData(
+        iconColor: colors.textSecondary,
+        textColor: colors.textPrimary,
+        tileColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colors.surfaceSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color:
+                colors.surfaceTertiary.withValues(alpha: isDark ? 0.95 : 0.8),
+          ),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colors.surfaceSecondary,
+        modalBackgroundColor: colors.surfaceSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: colors.surfaceTertiary,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: colors.textPrimary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: colors.surfaceSecondary,
+        selectedColor: colors.brandPrimary.withValues(alpha: 0.14),
+        disabledColor: colors.surfaceTertiary,
+        secondarySelectedColor: colors.brandSecondary.withValues(alpha: 0.12),
+        side: BorderSide(color: colors.surfaceTertiary),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        labelStyle: textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+        secondaryLabelStyle: textTheme.labelSmall?.copyWith(
+          color: colors.textPrimary,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor:
+            colors.surfaceSecondary.withValues(alpha: isDark ? 0.96 : 0.92),
+        height: 72,
+        indicatorColor: colors.brandPrimary.withValues(alpha: 0.14),
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => textTheme.labelSmall?.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? colors.textPrimary
+                : colors.textSecondary,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? colors.brandPrimary
+                : colors.textSecondary,
+          ),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: colors.surfaceTertiary,
+        labelColor: colors.textPrimary,
+        unselectedLabelColor: colors.textSecondary,
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: colors.brandPrimary, width: 2),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: colors.surfaceTertiary,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: colors.surfaceTertiary.withValues(alpha: 0.9),
+          ),
+        ),
+        textStyle: textTheme.labelSmall?.copyWith(color: colors.textPrimary),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+        },
+      ),
       extensions: [
         _SparkleThemeExtension(theme),
         sparkleExtension, // 🔧 修复：注册公开的 SparkleThemeExtension
@@ -113,10 +259,15 @@ class AppThemes {
 
   static CardThemeData _buildCardTheme(SparkleThemeData theme) => CardThemeData(
         elevation: 0,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(
+            color: theme.colors.surfaceTertiary.withValues(alpha: 0.85),
+          ),
         ),
         color: theme.colors.surfaceSecondary,
+        surfaceTintColor: Colors.transparent,
       );
 
   static ButtonThemeData _buildButtonTheme(SparkleThemeData theme) =>
@@ -133,20 +284,32 @@ class AppThemes {
   static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) =>
       InputDecorationTheme(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: theme.colors.surfaceTertiary),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: theme.colors.surfaceTertiary),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: theme.colors.brandPrimary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: theme.colors.semanticError, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: theme.colors.semanticError, width: 2),
         ),
         filled: true,
         fillColor: theme.colors.surfaceSecondary,
-        contentPadding: EdgeInsets.all(theme.spacing.lg),
+        hintStyle: TextStyle(color: theme.colors.textSecondary),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: theme.spacing.lg,
+          vertical: theme.spacing.lg,
+        ),
       );
 }
 
@@ -303,6 +466,16 @@ class DS {
         surfaceTertiary,
         _isDark ? 0.35 : 0.12,
       );
+  static Color get surfacePanel => _blend(
+        surfaceSecondary,
+        surfaceTertiary,
+        _isDark ? 0.18 : 0.06,
+      );
+  static Color get surfaceOverlay => _isDark
+      ? surfaceSecondary.withValues(alpha: 0.92)
+      : surfacePrimary.withValues(alpha: 0.92);
+  static Color get surfaceCanvas =>
+      _blend(surfaceAmbient, surfacePrimary, 0.75);
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
@@ -320,6 +493,10 @@ class DS {
       );
   static Color get onBrandPrimary => textOnPrimary;
   static Color get border => _isDark ? neutral600 : neutral300;
+  static Color get borderStrong =>
+      _blend(border, textPrimary, _isDark ? 0.16 : 0.08);
+  static Color get borderSubtle =>
+      border.withValues(alpha: _isDark ? 0.6 : 0.72);
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
 
@@ -386,11 +563,12 @@ class DS {
   // Special surfaces and accents
   // Deep space colors use surfaceAmbient and surfacePrimary for proper dark mode support
   static Color get deepSpaceStart => _isDark
-      ? _theme.colors.surfaceAmbient
-      : _blend(neutral50, brandPrimary, 0.28);
+      ? _blend(
+          _theme.colors.galaxyBackground, _theme.colors.surfaceAmbient, 0.5)
+      : _blend(neutral50, brandSecondary, 0.12);
   static Color get deepSpaceEnd => _isDark
-      ? _theme.colors.surfacePrimary
-      : _blend(neutral100, brandSecondary, 0.24);
+      ? _blend(_theme.colors.galaxyShadow, _theme.colors.surfacePrimary, 0.42)
+      : _blend(neutral100, brandPrimary, 0.08);
   static Color get deepSpaceSurface => _isDark
       ? _theme.colors.surfacePrimary
       : _blend(surfacePrimary, deepSpaceStart, 0.6);
@@ -531,8 +709,11 @@ class DS {
   // 排版
   static TextStyle get displayLarge => TypographySystem.displayLarge();
   static TextStyle get headingLarge => TypographySystem.headingLarge();
+  static TextStyle get titleLarge => TypographySystem.titleLarge();
   static TextStyle get bodyLarge => TypographySystem.bodyLarge();
+  static TextStyle get bodyMedium => TypographySystem.bodyMedium();
   static TextStyle get labelLarge => TypographySystem.labelLarge();
+  static TextStyle get labelSmall => TypographySystem.labelSmall();
 
   // Shadows
   static List<BoxShadow> get shadowSm => _theme.shadows.small;
@@ -547,9 +728,9 @@ class DS {
       ];
   static List<BoxShadow> get shadowPrimary => [
         BoxShadow(
-          color: brandPrimary.withValues(alpha: _isDark ? 0.3 : 0.2),
-          blurRadius: 16,
-          offset: const Offset(0, 8),
+          color: brandPrimary.withValues(alpha: _isDark ? 0.18 : 0.12),
+          blurRadius: 18,
+          offset: const Offset(0, 10),
         ),
       ];
 
@@ -579,7 +760,7 @@ class DS {
   static Color get statusInvisible => _theme.colors.statusInvisible;
 
   // 中性色
-  static Color get neutral0 => Colors.white;
+  static Color get neutral0 => _isDark ? const Color(0xFFF4F1EB) : Colors.white;
   static Color get neutral50 =>
       _blend(surfacePrimary, _theme.colors.neutral200, 0.4);
   static Color get neutral100 =>

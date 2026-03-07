@@ -43,6 +43,8 @@ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_reposi
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
+import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
+import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
@@ -245,7 +247,10 @@ void main() {
       await expectRoute('/profile/persona', UserPersonaScreen);
       await expectRoute('/profile/system-updates', SystemUpdatesScreen);
       await expectRoute('/profile/password-reset', PasswordResetScreen);
+      await expectRoute('/profile/memory-settings', MemorySettingsScreen);
       await expectRoute('/profile/sync-center', SyncCenterScreen);
+      await expectRoute('/memory', MemoryPanelScreen);
+      await expectRoute('/memory/settings', MemorySettingsScreen);
       await expectRoute('/errors', ErrorListScreen);
       await expectRoute('/errors/new', AddErrorScreen);
       await expectRoute('/errors/error-router-smoke', ErrorDetailScreen);

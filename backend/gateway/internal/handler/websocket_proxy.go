@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -94,11 +95,20 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 // proxyWebSocket 实现双向 WebSocket 代理
 func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, backendURL string, userID, connType, resourceID string) {
+	backendWSURL, err := p.toWebSocketURL(backendURL)
+	if err != nil {
+		p.logger.Error("Failed to normalize backend websocket URL",
+			zap.String("backend_url", backendURL),
+			zap.Error(err))
+		http.Error(w, "Invalid backend websocket URL", http.StatusBadGateway)
+		return
+	}
+
 	// 连接到后端
-	backendConn, _, err := websocket.DefaultDialer.Dial(backendURL, nil)
+	backendConn, _, err := websocket.DefaultDialer.Dial(backendWSURL, nil)
 	if err != nil {
 		p.logger.Error("Failed to dial backend",
-			zap.String("backend_url", backendURL),
+			zap.String("backend_url", backendWSURL),
 			zap.Error(err))
 		http.Error(w, "Failed to connect to backend", http.StatusBadGateway)
 		return
@@ -177,6 +187,25 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	p.logger.Info("WebSocket proxy connection closed",
 		zap.String("user_id", userID),
 		zap.String("conn_type", connType))
+}
+
+func (p *WebSocketProxy) toWebSocketURL(rawURL string) (string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+
+	switch parsed.Scheme {
+	case "http":
+		parsed.Scheme = "ws"
+	case "https":
+		parsed.Scheme = "wss"
+	case "ws", "wss":
+	default:
+		parsed.Scheme = "ws"
+	}
+
+	return parsed.String(), nil
 }
 
 // Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)

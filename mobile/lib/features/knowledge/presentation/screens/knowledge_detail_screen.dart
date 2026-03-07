@@ -16,17 +16,27 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(knowledgeDetailProvider(nodeId));
 
     return detailAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, stack) => Scaffold(
-        body: Center(
+      loading: () => const GraphiteScaffold(
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => GraphiteScaffold(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Error: $error'),
+              Text(
+                '知识节点加载失败',
+                style: DS.titleLarge.copyWith(color: DS.textPrimary),
+              ),
+              const SizedBox(height: DS.lg),
+              Text(
+                '$error',
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: DS.lg),
               SparkleButton.primary(
-                label: 'Retry',
+                label: '重新加载',
                 onPressed: () =>
                     ref.invalidate(knowledgeDetailProvider(nodeId)),
               ),
@@ -55,9 +65,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             context: context,
             isScrollControlled: true,
             backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-            builder: (context) => LearningPathDialog(
-              targetNodeId: nodeId,
-              targetNodeName: detail.node.name,
+            builder: (context) => GraphiteModalSurface(
+              title: '生成学习路径',
+              child: LearningPathDialog(
+                targetNodeId: nodeId,
+                targetNodeName: detail.node.name,
+              ),
             ),
           );
         },
@@ -68,11 +81,12 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
-            backgroundColor: sectorStyle.primaryColor,
+            backgroundColor: DS.surfaceOverlay,
+            surfaceTintColor: Colors.transparent,
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: DS.touchTargetMinSize,
-              icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
+              icon: Icon(Icons.arrow_back, color: DS.textPrimary),
               onPressed: () => context.pop(),
             ),
             actions: [
@@ -81,7 +95,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                 size: DS.touchTargetMinSize,
                 icon: Icon(
                   detail.userStats.isFavorite ? Icons.star : Icons.star_border,
-                  color: DS.brandPrimaryConst,
+                  color: detail.userStats.isFavorite
+                      ? sectorStyle.primaryColor
+                      : DS.textPrimary,
                 ),
                 onPressed: () {
                   ref.read(toggleFavoriteProvider(nodeId));
@@ -95,8 +111,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      sectorStyle.primaryColor,
-                      sectorStyle.glowColor.withAlpha(200),
+                      Color.lerp(
+                          DS.surfaceCanvas, sectorStyle.primaryColor, 0.28)!,
+                      Color.lerp(
+                          DS.surfaceCanvas, sectorStyle.glowColor, 0.16)!,
+                      DS.surfaceCanvas,
                     ],
                   ),
                 ),
@@ -120,8 +139,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           child: Text(
                             sectorStyle.name,
                             style: TextStyle(
-                              color: DS.brandPrimaryConst,
+                              color: DS.textPrimary,
                               fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -129,19 +149,17 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         // Node name
                         Text(
                           detail.node.name,
-                          style: TextStyle(
-                            color: DS.brandPrimaryConst,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                          style: DS.headingLarge.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         if (detail.node.nameEn != null) ...[
                           const SizedBox(height: DS.xs),
                           Text(
                             detail.node.nameEn!,
-                            style: TextStyle(
-                              color: DS.brandPrimary.withAlpha(200),
-                              fontSize: 14,
+                            style: DS.bodyMedium.copyWith(
+                              color: DS.textSecondary,
                             ),
                           ),
                         ],
@@ -338,10 +356,10 @@ class _MasteryCard extends StatelessWidget {
   final Color sectorColor;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => GraphiteCardSurface(
         margin: const EdgeInsets.all(DS.lg),
         child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -359,14 +377,14 @@ class _MasteryCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _getMasteryColor().withAlpha(30),
+                      color: _getMasteryColor().withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
                       stats.masteryLabel,
-                      style: TextStyle(
+                      style: DS.labelLarge.copyWith(
                         color: _getMasteryColor(),
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -380,17 +398,16 @@ class _MasteryCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: stats.masteryProgress,
                   minHeight: 12,
-                  backgroundColor: DS.brandPrimary.shade200,
+                  backgroundColor: DS.surfaceTertiary,
                   valueColor: AlwaysStoppedAnimation<Color>(_getMasteryColor()),
                 ),
               ),
               const SizedBox(height: DS.sm),
               Text(
                 '${stats.masteryScore.toStringAsFixed(0)}%',
-                style: TextStyle(
+                style: DS.titleLarge.copyWith(
                   color: _getMasteryColor(),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: DS.lg),
@@ -424,7 +441,7 @@ class _MasteryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                    color: DS.brandPrimary.withAlpha(30),
+                    color: DS.surfacePanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -437,7 +454,7 @@ class _MasteryCard extends StatelessWidget {
                       const SizedBox(width: DS.smConst),
                       Text(
                         '遗忘衰减已暂停',
-                        style: TextStyle(color: DS.brandPrimaryConst),
+                        style: DS.bodyMedium.copyWith(color: DS.textPrimary),
                       ),
                     ],
                   ),
@@ -483,17 +500,14 @@ class _StatItem extends StatelessWidget {
           const SizedBox(height: DS.xs),
           Text(
             value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+            style: DS.bodyLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
           Text(
             label,
-            style: TextStyle(
-              color: DS.brandPrimary.shade600,
-              fontSize: 12,
-            ),
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
         ],
       );
@@ -508,18 +522,15 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => GraphiteCardSurface(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+              GraphiteSectionTitle(
+                title: title,
               ),
               const SizedBox(height: DS.md),
               child,

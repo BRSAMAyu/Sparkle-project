@@ -70,6 +70,7 @@ type serviceBundle struct {
 type handlerBundle struct {
 	wsFactory                *handler.WebSocketFactory
 	wsTicketHandler          *handler.WSTicketHandler
+	chatHistoryHandler       *handler.ChatHistoryHandler
 	fileEventHandler         *handler.FileEventHandler
 	chatOrchestrator         *handler.ChatOrchestrator
 	signalPushHandler        *handler.SignalPushHandler
@@ -204,6 +205,7 @@ func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book
 func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, agentClient *agent.Client, galaxyClient *galaxy.Client, errorBookClient *error_book.Client, logger *zap.Logger) (*handlerBundle, error) {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
+	chatHistoryHandler := handler.NewChatHistoryHandler(services.chatHistory)
 	fileEventHandler := handler.NewFileEventHandler(wsFactory, services.fileEventHub, cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
@@ -245,6 +247,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	return &handlerBundle{
 		wsFactory:                wsFactory,
 		wsTicketHandler:          wsTicketHandler,
+		chatHistoryHandler:       chatHistoryHandler,
 		fileEventHandler:         fileEventHandler,
 		chatOrchestrator:         chatOrchestrator,
 		signalPushHandler:        signalPushHandler,
@@ -446,6 +449,8 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			middleware.UserBasedRateLimit(cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
 			handlers.wsTicketHandler.Issue,
 		)
+		api.GET("/chat/sessions", authMiddleware, handlers.chatHistoryHandler.GetRecentSessions)
+		api.GET("/chat/history/:conversation_id", authMiddleware, handlers.chatHistoryHandler.GetConversationHistory)
 
 		api.GET("/groups/:group_id/messages", authMiddleware, handlers.groupChatHandler.GetMessages)
 		handlers.errorBookHandler.RegisterRoutes(api, authMiddleware)

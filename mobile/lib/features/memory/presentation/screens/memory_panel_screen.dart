@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
@@ -100,8 +99,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+  Widget build(BuildContext context) => GraphiteScaffold(
+        safeArea: false,
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
@@ -109,8 +108,14 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             variant: ButtonVariant.ghost,
             size: DS.touchTargetMinSize,
           ),
-          title: Text('记忆面板', style: TextStyle(color: DS.brandPrimary)),
-          iconTheme: IconThemeData(color: DS.brandPrimary),
+          title: Text(
+            '记忆面板',
+            style: DS.titleLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          iconTheme: IconThemeData(color: DS.textPrimary),
           backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           elevation: 0,
           actions: [
@@ -122,7 +127,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             ),
           ],
         ),
-        body: _loading
+        child: _loading
             ? const Center(child: CircularProgressIndicator())
             : ContentConstraint(
                 child: _error != null

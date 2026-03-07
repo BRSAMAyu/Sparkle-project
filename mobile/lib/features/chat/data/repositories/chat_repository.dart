@@ -48,7 +48,7 @@ class ChatRepository {
       );
     }
     final response = await _dio.post<Map<String, dynamic>>(
-      '/api/v1/chat/task/$taskId',
+      '/chat/task/$taskId',
       data: {
         'message': message,
         'conversation_id': conversationId,
@@ -74,7 +74,7 @@ class ChatRepository {
     if (offset != null) queryParams['offset'] = offset;
 
     final response = await _dio.get<dynamic>(
-      '/api/v1/chat/history/$conversationId',
+      '/chat/history/$conversationId',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
@@ -96,7 +96,7 @@ class ChatRepository {
         },
       ];
     }
-    final response = await _dio.get<dynamic>('/api/v1/chat/sessions');
+    final response = await _dio.get<dynamic>('/chat/sessions');
     final data = ApiResponseParser.unwrapList(response.data,
         action: 'getRecentConversations');
     return List<Map<String, dynamic>>.from(
@@ -106,7 +106,7 @@ class ChatRepository {
 
   Future<MultiAgentCatalog> getMultiAgentCatalog() async {
     final response =
-        await _dio.get<Map<String, dynamic>>('/api/v1/multi-agent/catalog');
+        await _dio.get<Map<String, dynamic>>('/multi-agent/catalog');
     return MultiAgentCatalog.fromJson(response.data ?? const {});
   }
 
@@ -233,7 +233,7 @@ class ChatRepository {
   }) async {
     try {
       final response = await _dio.post<ResponseBody>(
-        '/api/v1/chat/stream',
+        '/chat/stream',
         data: {
           'message': message,
           'conversation_id': conversationId,

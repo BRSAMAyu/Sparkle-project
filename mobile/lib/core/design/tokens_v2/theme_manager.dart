@@ -18,9 +18,9 @@ class ThemeManager extends ChangeNotifier {
   bool get highContrast => _highContrast;
 
   // 🆕 商城皮肤支持
-  String? _equippedSkinId;  // 装备的皮肤ID（如 "skin_galaxy_nova_001"）
+  String? _equippedSkinId; // 装备的皮肤ID（如 "skin_galaxy_nova_001"）
   String? get equippedSkinId => _equippedSkinId;
-  Map<String, dynamic>? _skinConfig;  // 皮肤配置（{theme, colors}）
+  Map<String, dynamic>? _skinConfig; // 皮肤配置（{theme, colors}）
   Map<String, dynamic>? get skinConfig => _skinConfig;
 
   bool _initialized = false;
@@ -108,7 +108,8 @@ class ThemeManager extends ChangeNotifier {
   ///
   /// [skinId] - 皮肤ID（如 "skin_galaxy_nova_001"）
   /// [skinConfig] - 皮肤配置，格式：{theme: "nova", colors: ["#FF6B6B", "#4ECDC4"]}
-  Future<void> equipShopSkin(String skinId, Map<String, dynamic> skinConfig) async {
+  Future<void> equipShopSkin(
+      String skinId, Map<String, dynamic> skinConfig) async {
     _equippedSkinId = skinId;
     _skinConfig = skinConfig;
     await _saveToPrefs();
@@ -262,7 +263,10 @@ class ThemeManager extends ChangeNotifier {
           final arrayStr = value.substring(1, value.length - 1);
           result[key] = arrayStr.isEmpty
               ? <String>[]
-              : arrayStr.split(',').map((e) => e.trim().replaceAll('"', '').replaceAll("'", '')).toList();
+              : arrayStr
+                  .split(',')
+                  .map((e) => e.trim().replaceAll('"', '').replaceAll("'", ''))
+                  .toList();
         } else {
           result[key] = value.replaceAll('"', '').replaceAll("'", '');
         }
@@ -410,108 +414,108 @@ class SparkleColors {
   factory SparkleColors.light({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: Color(0xFFFF6B35),
-        brandSecondary: Color(0xFFFF6B35),
+        brandPrimary: Color(0xFF7A5430),
+        brandSecondary: Color(0xFF516079),
         semanticSuccess: Color(0xFF006400),
         semanticWarning: Color(0xFF8B4500),
         semanticError: Color(0xFF8B0000),
         semanticInfo: Color(0xFF00008B),
-        surfacePrimary: Color(0xFFFFFFFF),
-        surfaceSecondary: Color(0xFFE0E0E0),
-        surfaceTertiary: Color(0xFFC0C0C0),
-        surfaceAmbient: Color(0xFFFFFFFF),
+        surfacePrimary: Color(0xFFF4F1EA),
+        surfaceSecondary: Color(0xFFE8E1D7),
+        surfaceTertiary: Color(0xFFD8CFC3),
+        surfaceAmbient: Color(0xFFF8F5EE),
         rimLight: Color(0xFFFFFFFF),
         glowPrimary: Color(0x00000000),
         noiseColor: Color(0x00000000),
-        textPrimary: Color(0xFF000000),
-        textSecondary: Color(0xFF000000),
+        textPrimary: Color(0xFF171717),
+        textSecondary: Color(0xFF171717),
         textDisabled: Color(0xFF666666),
         brightness: Brightness.light,
-        taskLearning: Color(0xFF64B5F6),
-        taskTraining: Color(0xFFFF9800),
-        taskErrorFix: Color(0xFFEF5350),
-        taskReflection: Color(0xFF9C27B0),
-        taskSocial: Color(0xFF81C784),
-        taskPlanning: Color(0xFF009688),
-        planSprint: Color(0xFFE53935),
-        planGrowth: Color(0xFF43A047),
+        taskLearning: Color(0xFF687A96),
+        taskTraining: Color(0xFFB2844A),
+        taskErrorFix: Color(0xFFB85F52),
+        taskReflection: Color(0xFF7B6E8D),
+        taskSocial: Color(0xFF5F8672),
+        taskPlanning: Color(0xFF50737D),
+        planSprint: Color(0xFF9D5B4F),
+        planGrowth: Color(0xFF5D7B63),
         statusOnline: Color(0xFF2ECC71),
         statusOffline: Color(0xFF95A5A6),
         statusInvisible: Color(0xFF34495E),
-        neutral200: Color(0xFFF5F5F5),
-        neutral300: Color(0xFFE0E0E0),
-        neutral400: Color(0xFFBDBDBD),
-        neutral500: Color(0xFF9E9E9E),
-        neutral600: Color(0xFF757575),
+        neutral200: Color(0xFFF0ECE4),
+        neutral300: Color(0xFFD8D0C5),
+        neutral400: Color(0xFFB1A89C),
+        neutral500: Color(0xFF857B6D),
+        neutral600: Color(0xFF5A5148),
         // Chat bubble colors
-        chatBubbleUser: Color(0xFF5C6BC0),
+        chatBubbleUser: Color(0xFF4F637D),
         chatBubbleUserText: Colors.white,
-        chatBubbleOther: Color(0xFFF5F5F5),
-        chatBubbleOtherText: Color(0xFF121212),
+        chatBubbleOther: Color(0xFFEAE4DA),
+        chatBubbleOtherText: Color(0xFF171717),
         // Galaxy colors
-        galaxyBackground: Color(0xFF1A1A2E),
-        galaxyShadow: Color(0xFF0D0D1A),
+        galaxyBackground: Color(0xFFECE8E0),
+        galaxyShadow: Color(0xFFD9D0C2),
       );
     }
     return const SparkleColors(
-      brandPrimary: Color(0xFFFF6B35),
-      brandSecondary: Color(0xFF5C6BC0),
-      semanticSuccess: Color(0xFF81C784),
-      semanticWarning: Color(0xFFFFB74D),
-      semanticError: Color(0xFFEF5350),
-      semanticInfo: Color(0xFF64B5F6),
-      surfacePrimary: Color(0xFFFFFFFF),
-      surfaceSecondary: Color(0xFFF5F5F5),
-      surfaceTertiary: Color(0xFFE0E0E0),
-      surfaceAmbient: Color(0xFFFAFAF8),
+      brandPrimary: Color(0xFF8A6742),
+      brandSecondary: Color(0xFF6A7894),
+      semanticSuccess: Color(0xFF6E9074),
+      semanticWarning: Color(0xFFB2864F),
+      semanticError: Color(0xFFB86458),
+      semanticInfo: Color(0xFF6A84A2),
+      surfacePrimary: Color(0xFFF5F2EC),
+      surfaceSecondary: Color(0xFFEDE7DD),
+      surfaceTertiary: Color(0xFFE1D8CB),
+      surfaceAmbient: Color(0xFFF9F6F0),
       rimLight: Color(0x99FFFFFF), // white 0.6
-      glowPrimary: Color(0x26FF6B35), // brandPrimary 0.15
+      glowPrimary: Color(0x1F8A6742),
       noiseColor: Color(0x0D000000), // black 0.05
-      textPrimary: Color(0xFF212121),
-      textSecondary: Color(0xFF757575),
-      textDisabled: Color(0xFFBDBDBD),
+      textPrimary: Color(0xFF171717),
+      textSecondary: Color(0xFF635B50),
+      textDisabled: Color(0xFFA0988C),
       brightness: Brightness.light,
-      taskLearning: Color(0xFF64B5F6),
-      taskTraining: Color(0xFFFF9800),
-      taskErrorFix: Color(0xFFEF5350),
-      taskReflection: Color(0xFF9C27B0),
-      taskSocial: Color(0xFF81C784),
-      taskPlanning: Color(0xFF009688),
-      planSprint: Color(0xFFE53935),
-      planGrowth: Color(0xFF43A047),
+      taskLearning: Color(0xFF6A84A2),
+      taskTraining: Color(0xFFB2864F),
+      taskErrorFix: Color(0xFFB86458),
+      taskReflection: Color(0xFF7B6E8D),
+      taskSocial: Color(0xFF6B8A73),
+      taskPlanning: Color(0xFF5C7C82),
+      planSprint: Color(0xFF9D6158),
+      planGrowth: Color(0xFF69856F),
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFFF5F5F5),
-      neutral300: Color(0xFFE0E0E0),
-      neutral400: Color(0xFFBDBDBD),
-      neutral500: Color(0xFF9E9E9E),
-      neutral600: Color(0xFF757575),
+      neutral200: Color(0xFFF2EEE7),
+      neutral300: Color(0xFFD8D0C5),
+      neutral400: Color(0xFFB8AEA1),
+      neutral500: Color(0xFF8F8577),
+      neutral600: Color(0xFF655D52),
       // Chat bubble colors
-      chatBubbleUser: Color(0xFF5C6BC0),
+      chatBubbleUser: Color(0xFF5C6F87),
       chatBubbleUserText: Colors.white,
-      chatBubbleOther: Color(0xFFF5F5F5),
-      chatBubbleOtherText: Color(0xFF121212),
+      chatBubbleOther: Color(0xFFF0EBE2),
+      chatBubbleOtherText: Color(0xFF171717),
       // Galaxy colors
-      galaxyBackground: Color(0xFF1A1A2E),
-      galaxyShadow: Color(0xFF0D0D1A),
+      galaxyBackground: Color(0xFFECE7DE),
+      galaxyShadow: Color(0xFFD7CDBC),
     );
   }
 
   factory SparkleColors.dark({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: Color(0xFFFF8C5A),
-        brandSecondary: Color(0xFFFF8C5A),
+        brandPrimary: Color(0xFFE0B172),
+        brandSecondary: Color(0xFF95A6C8),
         semanticSuccess: Color(0xFF00FF00),
         semanticWarning: Color(0xFFFFFF00),
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
         // High contrast dark: deeper blacks with subtle elevation hints
-        surfacePrimary: Color(0xFF0A0A0A),
-        surfaceSecondary: Color(0xFF1A1A1A),
-        surfaceTertiary: Color(0xFF252525),
-        surfaceAmbient: Color(0xFF050505),
+        surfacePrimary: Color(0xFF0E1013),
+        surfaceSecondary: Color(0xFF171A1F),
+        surfaceTertiary: Color(0xFF23272E),
+        surfaceAmbient: Color(0xFF090B0E),
         rimLight: Color(0xFFFFFFFF),
         glowPrimary: Color(0x00000000),
         noiseColor: Color(0x00000000),
@@ -519,75 +523,75 @@ class SparkleColors {
         textSecondary: Color(0xFFFFFFFF),
         textDisabled: Color(0xFF999999),
         brightness: Brightness.dark,
-        taskLearning: Color(0xFF64B5F6),
-        taskTraining: Color(0xFFFFB74D),
-        taskErrorFix: Color(0xFFEF5350),
-        taskReflection: Color(0xFFBA68C8),
-        taskSocial: Color(0xFF81C784),
-        taskPlanning: Color(0xFF4DB6AC),
-        planSprint: Color(0xFFFF5252),
-        planGrowth: Color(0xFF66BB6A),
+        taskLearning: Color(0xFF95A6C8),
+        taskTraining: Color(0xFFE0B172),
+        taskErrorFix: Color(0xFFD37B72),
+        taskReflection: Color(0xFFA696C0),
+        taskSocial: Color(0xFF83A18C),
+        taskPlanning: Color(0xFF7B9AA3),
+        planSprint: Color(0xFFD37B72),
+        planGrowth: Color(0xFF83A18C),
         statusOnline: Color(0xFF2ECC71),
         statusOffline: Color(0xFF95A5A6),
         statusInvisible: Color(0xFF34495E),
-        neutral200: Color(0xFF2D2D2D),
-        neutral300: Color(0xFF424242),
-        neutral400: Color(0xFF616161),
-        neutral500: Color(0xFF757575),
-        neutral600: Color(0xFF9E9E9E),
+        neutral200: Color(0xFF2B3038),
+        neutral300: Color(0xFF404650),
+        neutral400: Color(0xFF626A77),
+        neutral500: Color(0xFF848D99),
+        neutral600: Color(0xFFB2BCCB),
         // Chat bubble colors
-        chatBubbleUser: Color(0xFF5C6BC0),
+        chatBubbleUser: Color(0xFF65789A),
         chatBubbleUserText: Colors.white,
-        chatBubbleOther: Color(0xFF2D2D2D),
+        chatBubbleOther: Color(0xFF23272D),
         chatBubbleOtherText: Color(0xFFF5F5F5),
         // Galaxy colors
-        galaxyBackground: Color(0xFF000814),
-        galaxyShadow: Color(0xFF000408),
+        galaxyBackground: Color(0xFF0A0E14),
+        galaxyShadow: Color(0xFF05070B),
       );
     }
     return const SparkleColors(
-      brandPrimary: Color(0xFFFF8C5A),
-      brandSecondary: Color(0xFF5C6BC0),
-      semanticSuccess: Color(0xFF81C784),
-      semanticWarning: Color(0xFFFFB74D),
-      semanticError: Color(0xFFEF5350),
-      semanticInfo: Color(0xFF64B5F6),
+      brandPrimary: Color(0xFFD0A066),
+      brandSecondary: Color(0xFF7E8FAE),
+      semanticSuccess: Color(0xFF7A9A83),
+      semanticWarning: Color(0xFFD2A56D),
+      semanticError: Color(0xFFD37B72),
+      semanticInfo: Color(0xFF8CA5C8),
       // Dark mode surface hierarchy (Material 3 elevation system)
-      surfacePrimary: Color(0xFF121212),    // Background - darkest
-      surfaceSecondary: Color(0xFF1E1E1E),  // Cards, elevated surfaces
-      surfaceTertiary: Color(0xFF2D2D2D),   // Higher elevation (dialogs, sheets)
-      surfaceAmbient: Color(0xFF0D0D0D),    // Ambient/overlay backgrounds
+      surfacePrimary: Color(0xFF0F1217),
+      surfaceSecondary: Color(0xFF171B22),
+      surfaceTertiary: Color(0xFF222831),
+      surfaceAmbient: Color(0xFF0B0E12),
       rimLight: Color(0x33FFFFFF), // white 0.2
-      glowPrimary: Color(0x66FF8C5A), // brandPrimary 0.4
+      glowPrimary: Color(0x42D0A066),
       noiseColor: Color(0x08FFFFFF), // white 0.03
-      textPrimary: Color(0xFFF5F5F5),  // Slightly off-white for less eye strain
-      textSecondary: Color(0xFFB0B0B0), // Better contrast than pure gray
-      textDisabled: Color(0xFF666666),  // More visible disabled state
+      textPrimary: Color(0xFFF4F1EB),
+      textSecondary: Color(0xFFB8B1A6),
+      textDisabled: Color(0xFF6B737E),
       brightness: Brightness.dark,
-      taskLearning: Color(0xFF64B5F6),
-      taskTraining: Color(0xFFFFB74D),
-      taskErrorFix: Color(0xFFEF5350),
-      taskReflection: Color(0xFFBA68C8),
-      taskSocial: Color(0xFF81C784),
-      taskPlanning: Color(0xFF4DB6AC),
-      planSprint: Color(0xFFFF5252),
-      planGrowth: Color(0xFF66BB6A),
+      taskLearning: Color(0xFF8CA5C8),
+      taskTraining: Color(0xFFD2A56D),
+      taskErrorFix: Color(0xFFD37B72),
+      taskReflection: Color(0xFFA08AB8),
+      taskSocial: Color(0xFF7A9A83),
+      taskPlanning: Color(0xFF7E9AA1),
+      planSprint: Color(0xFFCE817A),
+      planGrowth: Color(0xFF7A9980),
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFF2D2D2D),
-      neutral300: Color(0xFF424242),
-      neutral400: Color(0xFF616161),
-      neutral500: Color(0xFF757575),
-      neutral600: Color(0xFF9E9E9E),
+      neutral200: Color(0xFF2B313A),
+      neutral300: Color(0xFF3D4550),
+      neutral400: Color(0xFF5E6874),
+      neutral500: Color(0xFF808996),
+      neutral600: Color(0xFFADB7C8),
       // Chat bubble colors
-      chatBubbleUser: Color(0xFF5C6BC0),
+      chatBubbleUser: Color(0xFF657A96),
       chatBubbleUserText: Colors.white,
-      chatBubbleOther: Color(0xFF2D2D2D),
-      chatBubbleOtherText: Color(0xFFF5F5F5),
+      chatBubbleOther: Color(0xFF20262D),
+      chatBubbleOtherText: Color(0xFFF4F1EB),
       // Galaxy colors
-      galaxyBackground: Color(0xFF000814),
-      galaxyShadow: Color(0xFF000408),
+      galaxyBackground: Color(0xFF070B12),
+      galaxyShadow: Color(0xFF04070C),
     );
   }
   final Color brandPrimary;
@@ -602,7 +606,7 @@ class SparkleColors {
   final Color surfaceSecondary;
   final Color surfaceTertiary;
   final Color surfaceAmbient;
-  
+
   final Color rimLight;
   final Color glowPrimary;
   final Color noiseColor;
@@ -804,45 +808,53 @@ class SparkleTypography {
 
   factory SparkleTypography.standard() => const SparkleTypography(
         displayLarge: TextStyle(
-            fontSize: 48.8,
-            fontWeight: FontWeight.w800,
-            height: 1.2,
-            letterSpacing: -0.02,),
+          fontSize: 46.0,
+          fontWeight: FontWeight.w700,
+          height: 1.08,
+          letterSpacing: -0.8,
+        ),
         headingLarge: TextStyle(
-            fontSize: 31.25,
-            fontWeight: FontWeight.w700,
-            height: 1.2,
-            letterSpacing: -0.01,),
+          fontSize: 30.0,
+          fontWeight: FontWeight.w700,
+          height: 1.12,
+          letterSpacing: -0.4,
+        ),
         headingMedium: TextStyle(
-            fontSize: 25.0,
-            fontWeight: FontWeight.w600,
-            height: 1.3,
-            letterSpacing: 0,),
+          fontSize: 24.0,
+          fontWeight: FontWeight.w600,
+          height: 1.18,
+          letterSpacing: -0.2,
+        ),
         titleLarge: TextStyle(
-            fontSize: 20.0,
-            fontWeight: FontWeight.w600,
-            height: 1.5,
-            letterSpacing: 0,),
+          fontSize: 19.0,
+          fontWeight: FontWeight.w600,
+          height: 1.32,
+          letterSpacing: -0.1,
+        ),
         bodyLarge: TextStyle(
-            fontSize: 16.0,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-            letterSpacing: 0,),
+          fontSize: 16.0,
+          fontWeight: FontWeight.w400,
+          height: 1.58,
+          letterSpacing: 0.1,
+        ),
         bodyMedium: TextStyle(
-            fontSize: 14.0,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-            letterSpacing: 0,),
+          fontSize: 14.0,
+          fontWeight: FontWeight.w400,
+          height: 1.52,
+          letterSpacing: 0.1,
+        ),
         labelLarge: TextStyle(
-            fontSize: 14.0,
-            fontWeight: FontWeight.w500,
-            height: 1.2,
-            letterSpacing: 0.01,),
+          fontSize: 14.0,
+          fontWeight: FontWeight.w500,
+          height: 1.18,
+          letterSpacing: 0.12,
+        ),
         labelSmall: TextStyle(
-            fontSize: 12.8,
-            fontWeight: FontWeight.w500,
-            height: 1.2,
-            letterSpacing: 0.01,),
+          fontSize: 12.0,
+          fontWeight: FontWeight.w500,
+          height: 1.16,
+          letterSpacing: 0.18,
+        ),
       );
   final TextStyle displayLarge;
   final TextStyle headingLarge;
@@ -879,9 +891,9 @@ class SparkleSpacing {
 @immutable
 class SparkleAnimations {
   const SparkleAnimations();
-  final Duration quick = const Duration(milliseconds: 150);
-  final Duration normal = const Duration(milliseconds: 250);
-  final Duration slow = const Duration(milliseconds: 400);
+  final Duration quick = const Duration(milliseconds: 120);
+  final Duration normal = const Duration(milliseconds: 180);
+  final Duration slow = const Duration(milliseconds: 260);
 }
 
 /// 阴影系统
@@ -896,23 +908,23 @@ class SparkleShadows {
   factory SparkleShadows.light({Color? brandPrimary}) => SparkleShadows(
         small: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: const Color(0x14000000),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
         medium: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: const Color(0x16000000),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
         large: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.10),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: const Color(0x1A000000),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
         ],
       );
@@ -920,23 +932,23 @@ class SparkleShadows {
   factory SparkleShadows.dark({Color? brandPrimary}) => SparkleShadows(
         small: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: const Color(0x66000000),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
         ],
         medium: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: const Color(0x73000000),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
         large: [
           BoxShadow(
-            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: const Color(0x8A000000),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
           ),
         ],
       );
