@@ -38,6 +38,7 @@ class ChatMessageModel {
     this.workflowId,
     this.promptVersion,
     this.agentCollaboration,
+    this.uxEnvelope,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -72,9 +73,10 @@ class ChatMessageModel {
 
   // New: Chain of Thought Visualization support
   @JsonKey(
-      name: 'reasoning_steps',
-      fromJson: _reasoningStepsFromJson,
-      toJson: _reasoningStepsToJson,)
+    name: 'reasoning_steps',
+    fromJson: _reasoningStepsFromJson,
+    toJson: _reasoningStepsToJson,
+  )
   final List<ReasoningStep>? reasoningSteps; // Step-by-step thinking process
 
   @JsonKey(name: 'reasoning_summary')
@@ -98,6 +100,9 @@ class ChatMessageModel {
   // Received from backend when multi-agent mode is used
   @JsonKey(includeFromJson: true, includeToJson: false)
   final Map<String, dynamic>? agentCollaboration;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final Map<String, dynamic>? uxEnvelope;
 
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
@@ -125,6 +130,7 @@ class ChatMessageModel {
     String? workflowId,
     String? promptVersion,
     Map<String, dynamic>? agentCollaboration,
+    Map<String, dynamic>? uxEnvelope,
   }) =>
       ChatMessageModel(
         id: id ?? this.id,
@@ -150,6 +156,7 @@ class ChatMessageModel {
         workflowId: workflowId ?? this.workflowId,
         promptVersion: promptVersion ?? this.promptVersion,
         agentCollaboration: agentCollaboration ?? this.agentCollaboration,
+        uxEnvelope: uxEnvelope ?? this.uxEnvelope,
       );
 }
 

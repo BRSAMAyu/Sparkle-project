@@ -33,15 +33,20 @@ from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentTyp
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, MessageRole
 from app.models.plan import Plan
+from app.models.cognitive import CognitiveFragment
+from app.models.galaxy import KnowledgeNode
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
+from app.models.task_feedback import TaskFeedback
 
 # Phase 3: Circuit Breaker, Observability, Shadow Mode
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router
 from app.orchestration.executor import ToolExecutor
+from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
 from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
 
@@ -75,10 +80,12 @@ from app.orchestration.token_tracker import TokenTracker
 # Phase 5: Plan Execution Validation
 from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
+from app.orchestration.ux_envelope import ux_envelope_builder
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
 from app.services.llm_service import llm_service
+from app.services.plan_progress_service import PlanProgressService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.shadow_prediction_service import shadow_prediction_service
@@ -181,6 +188,7 @@ class ChatOrchestrator:
         self.validator = RequestValidator(redis_client, daily_quota=100000)
         self.tool_executor = ToolExecutor()
         self.response_composer = ResponseComposer()
+        self.dual_core_router = dual_core_router
 
         # Initialize ContextPruner (P0 feature)
         self.context_pruner = None
@@ -284,10 +292,24 @@ class ChatOrchestrator:
             await asyncio.gather(*self._bg_tasks, return_exceptions=True)
         self._bg_tasks.clear()
 
-    async def _emit_system_updates(self, user_id: str) -> list[agent_service_pb2.ChatResponse]:
-        updates = await SystemUpdateService(self.redis).drain(user_id, limit=20)
+    async def _drain_system_updates(
+        self,
+        user_id: str,
+    ) -> tuple[list[agent_service_pb2.ChatResponse], list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+        updates = await SystemUpdateService(getattr(self, "redis", None)).drain(user_id, limit=20)
         responses: list[agent_service_pb2.ChatResponse] = []
+        adaptation_records: list[dict[str, Any]] = []
+        preference_learnings: list[dict[str, Any]] = []
+        evolution_highlights: list[str] = []
         for update in updates:
+            metadata = update.get("metadata") if isinstance(update, dict) else None
+            if isinstance(metadata, dict):
+                if metadata.get("evolution_kind") == "adaptation_record" and isinstance(metadata.get("adaptation_record"), dict):
+                    adaptation_records.append(metadata["adaptation_record"])
+                if metadata.get("evolution_kind") == "preference_learning" and isinstance(metadata.get("preference_learning"), dict):
+                    preference_learnings.append(metadata["preference_learning"])
+                if metadata.get("evolution_kind") == "highlight" and metadata.get("highlight"):
+                    evolution_highlights.append(str(metadata["highlight"]).strip())
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
             responses.append(
@@ -301,7 +323,7 @@ class ChatOrchestrator:
                     )
                 )
             )
-        return responses
+        return responses, adaptation_records[:3], preference_learnings[:3], evolution_highlights[:3]
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -577,6 +599,258 @@ class ChatOrchestrator:
             logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
 
         return {"has_cognitive_patterns": False}
+
+    async def _get_recent_sentiment_distribution(
+        self,
+        user_id: str,
+        db_session: AsyncSession | None,
+        window: int = 8,
+    ) -> dict[str, int]:
+        if not db_session:
+            return {}
+        try:
+            result = await db_session.execute(
+                select(CognitiveFragment.sentiment)
+                .where(CognitiveFragment.user_id == uuid.UUID(user_id))
+                .where(CognitiveFragment.sentiment.isnot(None))
+                .order_by(desc(CognitiveFragment.created_at))
+                .limit(window)
+            )
+            rows = result.scalars().all()
+            distribution: dict[str, int] = {}
+            for raw in rows:
+                sentiment = str(raw or "").strip().lower()
+                if not sentiment:
+                    continue
+                distribution[sentiment] = distribution.get(sentiment, 0) + 1
+            return distribution
+        except Exception as e:
+            logger.warning(f"Failed to load recent sentiment distribution: {e}")
+            return {}
+
+    async def _get_recent_task_feedback_distribution(
+        self,
+        user_id: str,
+        db_session: AsyncSession | None,
+        window: int = 8,
+    ) -> dict[str, int]:
+        if not db_session:
+            return {}
+        try:
+            result = await db_session.execute(
+                select(TaskFeedback.category)
+                .where(TaskFeedback.user_id == uuid.UUID(user_id))
+                .where(TaskFeedback.category.isnot(None))
+                .order_by(desc(TaskFeedback.created_at))
+                .limit(window)
+            )
+            rows = result.scalars().all()
+            distribution: dict[str, int] = {}
+            for raw in rows:
+                category = str(raw or "").strip().lower()
+                if not category:
+                    continue
+                distribution[category] = distribution.get(category, 0) + 1
+            return distribution
+        except Exception as e:
+            logger.warning(f"Failed to load recent task feedback distribution: {e}")
+            return {}
+
+    @staticmethod
+    def _extract_primary_challenge_area(
+        plan_context: dict[str, Any] | None,
+    ) -> str | None:
+        if not isinstance(plan_context, dict):
+            return None
+        user_profile = plan_context.get("user_profile")
+        if not isinstance(user_profile, dict):
+            return None
+        derived = user_profile.get("derived_insights")
+        if not isinstance(derived, dict):
+            return None
+        value = derived.get("primary_challenge_area")
+        return str(value).strip() if value else None
+
+    @staticmethod
+    def _extract_session_length_preference(
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> int | None:
+        facts = (plan_context or {}).get("facts") if isinstance(plan_context, dict) else None
+        if isinstance(facts, dict):
+            raw = facts.get("session_length_preference")
+            if isinstance(raw, (int, float)):
+                return int(raw)
+        preferences = (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        if isinstance(preferences, dict):
+            raw = preferences.get("focus_duration_preference") or preferences.get("session_length_preference")
+            if isinstance(raw, (int, float)):
+                return int(raw)
+        profile = ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot") if isinstance(plan_context, dict) else None
+        if isinstance(profile, dict):
+            raw = profile.get("focus_duration_preference") or profile.get("inferred_session_length")
+            if isinstance(raw, (int, float)):
+                return int(raw)
+        return None
+
+    @staticmethod
+    def _extract_difficulty_preference(
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> float | None:
+        facts = (plan_context or {}).get("facts") if isinstance(plan_context, dict) else None
+        if isinstance(facts, dict):
+            raw = facts.get("difficulty_preference")
+            if isinstance(raw, (int, float)):
+                return float(raw)
+        profile = ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot") if isinstance(plan_context, dict) else None
+        if isinstance(profile, dict):
+            raw = profile.get("inferred_difficulty")
+            if isinstance(raw, (int, float)):
+                return float(raw)
+        preferences = (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        if isinstance(preferences, dict):
+            raw = preferences.get("difficulty_preference")
+            if isinstance(raw, (int, float)):
+                return float(raw)
+        return None
+
+    async def _build_dual_core_input(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        plan_id: uuid.UUID | None,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        unified_routing_result: Any | None,
+        information_sufficient: bool,
+    ) -> DualCoreRoutingInput:
+        active_plan_id = plan_id
+        if active_plan_id is None:
+            active_plans = (user_context_payload or {}).get("active_plans")
+            if isinstance(active_plans, list) and active_plans:
+                raw_plan_id = active_plans[0].get("id") if isinstance(active_plans[0], dict) else None
+                with contextlib.suppress(ValueError, TypeError, AttributeError):
+                    active_plan_id = uuid.UUID(str(raw_plan_id))
+
+        plan_health_status: str | None = None
+        if active_db and active_plan_id:
+            try:
+                report = await PlanProgressService(active_db, self.redis).evaluate_progress(
+                    uuid.UUID(user_id),
+                    active_plan_id,
+                )
+                plan_health_status = report.severity
+            except Exception as e:
+                logger.warning(f"Failed to evaluate plan health for dual core routing: {e}")
+
+        return DualCoreRoutingInput(
+            intent=(
+                unified_routing_result.primary_intent.value
+                if unified_routing_result and hasattr(unified_routing_result, "primary_intent")
+                else "chat"
+            ),
+            intent_confidence=float(getattr(unified_routing_result, "confidence", 0.5) or 0.5),
+            information_sufficient=information_sufficient,
+            primary_challenge_area=self._extract_primary_challenge_area(plan_context),
+            recent_sentiment_distribution=await self._get_recent_sentiment_distribution(user_id, active_db),
+            has_active_plan=bool(active_plan_id),
+            plan_health_status=plan_health_status,
+            recent_task_feedback_distribution=await self._get_recent_task_feedback_distribution(user_id, active_db),
+            session_length_preference=self._extract_session_length_preference(user_context_payload, plan_context),
+            difficulty_preference=self._extract_difficulty_preference(user_context_payload, plan_context),
+        )
+
+    async def _emit_dual_core_status(self, decision, stream_callback) -> None:
+        stage = "planning"
+        headline = "我会直接把目标收敛成可执行方案。"
+        detail = decision.reason
+
+        if decision.mode == "cognitive_first":
+            stage = "understanding"
+            headline = "我先处理你当前的阻力，再一起收紧计划。"
+        elif decision.mode == "balanced":
+            stage = "reviewing"
+            headline = "我会一边推进方案，一边兼顾你当前的状态。"
+
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details=headline,
+                    current_agent_name="Sparkle AI",
+                ),
+                metadata={
+                    "ux_progress": json.dumps(
+                        {
+                            "stage": stage,
+                            "headline": headline,
+                            "detail": detail,
+                            "is_blocked": False,
+                        },
+                        ensure_ascii=False,
+                    )
+                },
+            )
+        )
+
+    async def _apply_dual_core_routing(
+        self,
+        *,
+        route_decision: RouteDecision,
+        state: WorkflowState,
+        active_db: AsyncSession | None,
+        user_id: str,
+        plan_id: uuid.UUID | None,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        unified_routing_result: Any | None,
+        information_sufficient: bool,
+        stream_callback,
+    ) -> RouteDecision:
+        routing_input = await self._build_dual_core_input(
+            active_db=active_db,
+            user_id=user_id,
+            plan_id=plan_id,
+            user_context_payload=user_context_payload,
+            plan_context=plan_context,
+            unified_routing_result=unified_routing_result,
+            information_sufficient=information_sufficient,
+        )
+        decision = self.dual_core_router.route(routing_input)
+        state.context_data["dual_core_decision"] = decision.to_dict()
+        state.context_data["dual_core_prompt_instruction"] = decision.prompt_instruction
+        state.context_data["dual_core_signal_snapshot"] = {
+            "intent": routing_input.intent,
+            "intent_confidence": routing_input.intent_confidence,
+            "primary_challenge_area": routing_input.primary_challenge_area,
+            "recent_sentiment_distribution": routing_input.recent_sentiment_distribution,
+            "recent_task_feedback_distribution": routing_input.recent_task_feedback_distribution,
+            "plan_health_status": routing_input.plan_health_status,
+        }
+
+        await self._emit_dual_core_status(decision, stream_callback)
+
+        if decision.mode == "cognitive_first" and route_decision.execution_mode in ["langgraph", "hybrid"]:
+            route_decision.execution_mode = "direct"
+            route_decision.reason = (
+                f"{route_decision.reason} | dual_core:cognitive_first"
+                if route_decision.reason
+                else "dual_core:cognitive_first"
+            )
+        elif decision.mode == "execution_first" and route_decision.reason:
+            route_decision.reason = f"{route_decision.reason} | dual_core:execution_first"
+        elif decision.mode == "balanced" and route_decision.reason:
+            route_decision.reason = f"{route_decision.reason} | dual_core:balanced"
+
+        plan_meta = state.context_data.get("plan_metadata", {})
+        if isinstance(plan_meta, dict):
+            plan_meta["dual_core_mode"] = decision.mode
+            plan_meta["dual_core_reason"] = decision.reason
+            state.context_data["plan_metadata"] = plan_meta
+
+        return route_decision
 
     def _build_profile_payload(
         self,
@@ -1018,9 +1292,9 @@ class ChatOrchestrator:
         conversation_context: dict[str, Any] | None,
         stream_callback,
         queue: asyncio.Queue,
-    ) -> bool:
+    ) -> tuple[bool, str]:
         if request.HasField("tool_result"):
-            return False
+            return False, ""
         try:
             prediction = await shadow_prediction_service.predict_intent_only(
                 user_message=user_message,
@@ -1054,7 +1328,7 @@ class ChatOrchestrator:
                     },
                 ))
                 await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
-                return True
+                return True, intent_type
 
             if check_result.status == SufficiencyStatus.NEED_CONFIRMATION:
                 await stream_callback(agent_service_pb2.ChatResponse(
@@ -1062,9 +1336,82 @@ class ChatOrchestrator:
                     metadata={"requires_confirmation": "true"},
                 ))
                 await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
-                return True
+                return True, intent_type
         except Exception as e:
             logger.warning(f"Sufficiency check failed, continuing: {e}")
+        return False, intent_type if 'intent_type' in locals() else ""
+
+    async def _check_goal_quality(
+        self,
+        *,
+        intent_type: str,
+        user_message: str,
+        user_id: str,
+        plan_id: uuid.UUID | None,
+        active_db: AsyncSession | None,
+        conversation_context: dict[str, Any] | None,
+        stream_callback,
+        state: WorkflowState,
+    ) -> bool:
+        if intent_type not in {"create_plan", "set_goal"}:
+            state.context_data["goal_quality"] = {"passed": True, "skipped": True}
+            return False
+
+        if active_db and plan_id:
+            try:
+                from app.services.plan_state_service import PlanStateService
+
+                plan_state = await PlanStateService(active_db, self.redis).get_plan_state(
+                    uuid.UUID(user_id),
+                    plan_id,
+                )
+                goal_quality = ((plan_state.facts or {}).get("goal_quality")) if plan_state else None
+                if isinstance(goal_quality, dict) and goal_quality.get("passed") is True:
+                    state.context_data["goal_quality"] = goal_quality
+                    return False
+            except Exception as e:
+                logger.warning(f"Failed to load goal quality mark from plan state: {e}")
+
+        evaluation = await goal_quality_evaluator.evaluate(
+            user_message=user_message,
+            intent=intent_type,
+            conversation_context=(conversation_context or {}).get("messages", []),
+        )
+        state.context_data["goal_quality"] = evaluation.to_dict()
+
+        if not evaluation.passed:
+            question_text = "\n".join(
+                f"- {question}" for question in evaluation.clarification_questions if question
+            ) or "- 请把目标再说具体一点"
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    delta=(
+                        "我想先把目标收紧到足够可执行，再开始做计划：\n\n"
+                        f"{question_text}\n\n"
+                        "你补充这些信息后，我就能给你更靠谱的阶段方案。"
+                    ),
+                    metadata={
+                        "requires_goal_clarification": "true",
+                        "goal_quality_scores": json.dumps(evaluation.scores.to_dict(), ensure_ascii=False),
+                    },
+                )
+            )
+            await stream_callback(agent_service_pb2.ChatResponse(finish_reason=agent_service_pb2.STOP))
+            return True
+
+        if active_db and plan_id:
+            try:
+                from app.services.plan_state_service import PlanStateService
+
+                await PlanStateService(active_db, self.redis).upsert_plan_state(
+                    user_id=uuid.UUID(user_id),
+                    plan_id=plan_id,
+                    patch={"facts": {"goal_quality": evaluation.to_dict()}},
+                    bump_version=False,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to persist goal quality mark: {e}")
+
         return False
 
     async def _route_and_classify(
@@ -1471,9 +1818,9 @@ class ChatOrchestrator:
         validation_result: Any,
         user_id: str,
         session_id: str,
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         if not active_db:
-            return
+            return []
         try:
             from app.orchestration.adaptive_replanner import AdaptiveReplanner
             from app.orchestration.step_feedback_collector import StepFeedbackCollector
@@ -1487,13 +1834,15 @@ class ChatOrchestrator:
                 session_id=session_id,
             )
             replanner = AdaptiveReplanner(active_db, redis=self.redis)
-            await replanner.on_plan_execution_completed(
+            records = await replanner.on_plan_execution_completed(
                 user_id=uuid.UUID(user_id),
                 plan_id=uuid.UUID(str(executable_plan.plan_id)),
                 feedback=feedback,
             )
+            return [record.to_dict() if hasattr(record, "to_dict") else record for record in (records or [])]
         except Exception as e:
             logger.warning(f"Failed to publish execution feedback: {e}", exc_info=True)
+            return []
 
     async def _validate_plan_execution(
         self,
@@ -1512,12 +1861,13 @@ class ChatOrchestrator:
             plan_result = final_state.context_data.get("plan_execution_result")
 
             if plan_result is not None and hasattr(plan_result, "step_results"):
+                adaptation_records: list[dict[str, Any]] = []
                 validation_result = await execution_validator.validate_plan_execution(
                     plan=executable_plan,
                     plan_result=plan_result,
                     user_id=uuid.UUID(user_id),
                 )
-                await self._publish_execution_feedback(
+                adaptation_records = await self._publish_execution_feedback(
                     active_db=active_db,
                     executable_plan=executable_plan,
                     plan_result=plan_result,
@@ -1525,6 +1875,8 @@ class ChatOrchestrator:
                     user_id=user_id,
                     session_id=session_id,
                 )
+                if adaptation_records:
+                    final_state.context_data["adaptation_records"] = adaptation_records
                 logger.info(
                     "DAG plan execution validation: plan_id={} status={} score={:.2f} steps={} aborted={}",
                     validation_result.plan_id,
@@ -1636,6 +1988,45 @@ class ChatOrchestrator:
             logger.warning(f"Failed to record decision: {e}")
             logger.debug(f"llm_profile_meta type: {type(llm_profile_meta)}, content: {llm_profile_meta}")
 
+    async def _hydrate_evolution_context(
+        self,
+        *,
+        final_state: WorkflowState,
+        user_id: str,
+    ) -> None:
+        try:
+            updates = await SystemUpdateService(getattr(self, "redis", None)).list_updates(user_id, limit=20)
+            if not updates:
+                return
+            context_data = final_state.context_data
+            adaptation_records = list(context_data.get("adaptation_records") or [])
+            preference_learnings = list(context_data.get("preference_learnings") or [])
+            evolution_highlights = list(context_data.get("evolution_highlights") or [])
+            for update in updates:
+                metadata = update.get("metadata") if isinstance(update, dict) else None
+                if not isinstance(metadata, dict):
+                    continue
+                adaptation = metadata.get("adaptation_record")
+                if metadata.get("evolution_kind") == "adaptation_record" and isinstance(adaptation, dict):
+                    if adaptation not in adaptation_records:
+                        adaptation_records.append(adaptation)
+                pref = metadata.get("preference_learning")
+                if metadata.get("evolution_kind") == "preference_learning" and isinstance(pref, dict):
+                    if pref not in preference_learnings:
+                        preference_learnings.append(pref)
+                if metadata.get("evolution_kind") == "highlight" and metadata.get("highlight"):
+                    highlight = str(metadata["highlight"]).strip()
+                    if highlight and highlight not in evolution_highlights:
+                        evolution_highlights.append(highlight)
+            if adaptation_records:
+                context_data["adaptation_records"] = adaptation_records[:3]
+            if preference_learnings:
+                context_data["preference_learnings"] = preference_learnings[:3]
+            if evolution_highlights:
+                context_data["evolution_highlights"] = evolution_highlights[:3]
+        except Exception as e:
+            logger.warning(f"Failed to hydrate evolution context: {e}")
+
     async def _build_final_response(
         self,
         *,
@@ -1699,6 +2090,22 @@ class ChatOrchestrator:
         if execution_validation:
             response_metadata["execution_validation"] = execution_validation
 
+        await self._hydrate_evolution_context(final_state=final_state, user_id=user_id)
+        ux_envelope = ux_envelope_builder.build(
+            user_message=self._extract_latest_user_message(final_state.messages),
+            full_response=full_response,
+            final_state=final_state,
+            executable_plan=executable_plan,
+            route_decision=route_decision,
+            include_references=bool(final_state.context_data.get("include_references")),
+            file_ids=list(final_state.context_data.get("file_ids") or []),
+            execution_validation=execution_validation,
+            conversation_context=final_state.context_data.get("conversation_context"),
+            plan_context=final_state.context_data.get("plan_context"),
+            user_context_payload=user_context_payload,
+        )
+        response_metadata.update(ux_envelope_builder.to_metadata_map(ux_envelope))
+
         await self._persist_assistant_message(
             active_db=active_db,
             user_id=user_id,
@@ -1730,6 +2137,13 @@ class ChatOrchestrator:
             finish_reason=agent_service_pb2.STOP,
         )
         return final_response, final_response_data
+
+    @staticmethod
+    def _extract_latest_user_message(messages: list[dict[str, Any]]) -> str:
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                return str(msg.get("content") or "")
+        return ""
 
     def _build_nonempty_fallback_response(
         self,
@@ -2011,13 +2425,37 @@ class ChatOrchestrator:
             "preference_version": (user_context_payload or {}).get("preference_version", 0),
             "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
         }
+        ux_envelope = ux_envelope_builder.build(
+            user_message=self._extract_latest_user_message(conversation_history),
+            full_response=full_response,
+            final_state=WorkflowState(messages=conversation_history, context_data={
+                "chat_mode": CHAT_MODE_STANDARD,
+                "conversation_context": conversation_context,
+                "include_references": False,
+                "file_ids": [],
+            }),
+            executable_plan=None,
+            route_decision=RouteDecision(
+                execution_mode="direct",
+                reason="tool_continuation",
+                risk_level="low",
+            ),
+            include_references=False,
+            file_ids=[],
+            execution_validation=None,
+            conversation_context=conversation_context,
+            plan_context=None,
+            user_context_payload=user_context_payload,
+        )
+        response_metadata.update(ux_envelope_builder.to_metadata_map(ux_envelope))
         final_response_data = {
             "message": full_response,
             "tool_results": [tool_result],
             "metadata": response_metadata,
         }
         await self._cache_response(session_id, request_id, final_response_data)
-        for update_resp in await self._emit_system_updates(user_id):
+        update_responses, _, _, _ = await self._drain_system_updates(user_id)
+        for update_resp in update_responses:
             yield update_resp
 
         yield agent_service_pb2.ChatResponse(
@@ -2328,6 +2766,30 @@ class ChatOrchestrator:
                 user_id=user_id,
                 plan_id=plan_id_str,
             )
+            planning_constraints = {}
+            if isinstance(plan_context, dict) and isinstance(plan_context.get("constraints"), dict):
+                planning_constraints = dict(plan_context.get("constraints") or {})
+            weak_knowledge_node_ids = planning_constraints.get("weak_knowledge_node_ids") or []
+            if weak_knowledge_node_ids and active_db:
+                resolved_nodes: list[dict[str, Any]] = []
+                normalized_ids: list[uuid.UUID] = []
+                for node_id in weak_knowledge_node_ids[:5]:
+                    with contextlib.suppress(Exception):
+                        normalized_ids.append(uuid.UUID(str(node_id)))
+                if normalized_ids:
+                    nodes_result = await active_db.execute(
+                        select(KnowledgeNode).where(KnowledgeNode.id.in_(normalized_ids))
+                    )
+                    for node in nodes_result.scalars().all():
+                        resolved_nodes.append(
+                            {
+                                "id": str(node.id),
+                                "name": node.name,
+                                "description": (node.description or "")[:160],
+                            }
+                        )
+                if resolved_nodes:
+                    planning_constraints["weak_knowledge_nodes"] = resolved_nodes
 
             chat_mode = str(state.context_data.get("chat_mode", CHAT_MODE_STANDARD))
             mode_config = get_workflow_config(chat_mode)
@@ -2354,6 +2816,7 @@ class ChatOrchestrator:
                 execution_feedback=execution_feedback,
                 mode_config=mode_config,
                 state_overrides=state_overrides or None,
+                planning_constraints=planning_constraints or None,
             )
 
             await self.observability.log_langgraph_plan(
@@ -2444,6 +2907,8 @@ class ChatOrchestrator:
             validation_result = await self.grounding_validator.validate_plan(
                 plan=executable_plan,
                 snapshot=snapshot,
+                db_session=active_db,
+                user_id=user_id,
             )
             if not validation_result.is_valid:
                 await stream_callback(agent_service_pb2.ChatResponse(
@@ -2457,6 +2922,19 @@ class ChatOrchestrator:
                 )
                 await self.langgraph_breaker.on_failure("validation_failed")
                 return route_decision, executable_plan, snapshot, True
+            if validation_result.warnings:
+                state.context_data["knowledge_readiness_warnings"] = validation_result.warnings
+                for warning in validation_result.warnings[:3]:
+                    message = str(warning.get("message") or "").strip()
+                    if message and f"knowledge_warning:{message}" not in executable_plan.risk_flags:
+                        executable_plan.risk_flags.append(f"knowledge_warning:{message}")
+                first_warning = validation_result.warnings[0]
+                warning_message = str(first_warning.get("message") or "").strip()
+                if warning_message:
+                    existing_rationale = (executable_plan.rationale or "").strip()
+                    suffix = f" 知识前置提醒：{warning_message}。"
+                    if suffix.strip() not in existing_rationale:
+                        executable_plan.rationale = f"{existing_rationale}{suffix}".strip()
 
             preflight = await self.grounding_validator.preflight_check(
                 plan=executable_plan,
@@ -2829,9 +3307,43 @@ class ChatOrchestrator:
                     resp.trace_id = resp.trace_id or trace_id
                     await queue.put(resp)
 
+                # Step 4.5: Proactively emit unread evolution/system updates at session start
+                update_responses, adaptation_records, preference_learnings, evolution_highlights = await self._drain_system_updates(user_id)
+                if adaptation_records:
+                    state.context_data["adaptation_records"] = adaptation_records
+                if preference_learnings:
+                    state.context_data["preference_learnings"] = preference_learnings
+                if evolution_highlights:
+                    state.context_data["evolution_highlights"] = evolution_highlights
+                for update_resp in update_responses:
+                    yield update_resp
+
                 # Step 5: Sufficiency check (may short-circuit)
                 with tracer.start_as_current_span("orchestrator.sufficiency_check"):
-                    if await self._check_sufficiency(request=request, user_message=user_message, user_id=user_id, plan_id=plan_id, conversation_context=conversation_context, stream_callback=stream_callback, queue=queue):
+                    sufficiency_handled, intent_type = await self._check_sufficiency(
+                        request=request,
+                        user_message=user_message,
+                        user_id=user_id,
+                        plan_id=plan_id,
+                        conversation_context=conversation_context,
+                        stream_callback=stream_callback,
+                        queue=queue,
+                    )
+                    if sufficiency_handled:
+                        async for queued in self._drain_queue(queue):
+                            yield queued
+                        return
+                with tracer.start_as_current_span("orchestrator.goal_quality_check"):
+                    if await self._check_goal_quality(
+                        intent_type=intent_type,
+                        user_message=user_message,
+                        user_id=user_id,
+                        plan_id=plan_id,
+                        active_db=active_db,
+                        conversation_context=conversation_context,
+                        stream_callback=stream_callback,
+                        state=state,
+                    ):
                         async for queued in self._drain_queue(queue):
                             yield queued
                         return
@@ -2903,7 +3415,8 @@ class ChatOrchestrator:
                     if isinstance(final_response_data, dict):
                         with tracer.start_as_current_span("orchestrator.cache_mode_response"):
                             await self._cache_response(session_id, request_id, final_response_data)
-                        for update_resp in await self._emit_system_updates(user_id):
+                        followup_updates, _, _, _ = await self._drain_system_updates(user_id)
+                        for update_resp in followup_updates:
                             yield update_resp
                     return
 
@@ -2919,6 +3432,19 @@ class ChatOrchestrator:
                         if route_decision.reason
                         else f"unified_mode:{chat_mode}"
                     )
+
+                route_decision = await self._apply_dual_core_routing(
+                    route_decision=route_decision,
+                    state=state,
+                    active_db=active_db,
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
+                    unified_routing_result=unified_routing_result,
+                    information_sufficient=bool((state.context_data.get("goal_quality") or {}).get("passed", True)),
+                    stream_callback=stream_callback,
+                )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
@@ -2978,7 +3504,8 @@ class ChatOrchestrator:
                         )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
-                    for update_resp in await self._emit_system_updates(user_id):
+                    followup_updates, _, _, _ = await self._drain_system_updates(user_id)
+                    for update_resp in followup_updates:
                         yield update_resp
                     yield final_response
 

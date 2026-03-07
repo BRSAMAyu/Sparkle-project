@@ -1,0 +1,284 @@
+"""
+BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
+"""
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
+
+from loguru import logger
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.cognitive import CognitiveFragment
+from app.models.plan_state import PlanStateStatus
+from app.models.task import Task, TaskStatus
+from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.orchestration.adaptive_replanner import AdaptiveReplanner
+from app.services.cognitive_service import CognitiveService
+from app.services.plan_state_service import PlanStateService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class BehaviorSignalCollector:
+    """Aggregate noisy low-level events into throttled cognitive fragments."""
+
+    SIGNAL_COOLDOWN = timedelta(hours=24)
+    FEEDBACK_STREAK = 3
+    PLAN_MOD_WINDOW = timedelta(hours=24)
+    PLAN_MOD_THRESHOLD = 4
+    INACTIVITY_DAYS = 3
+    OVERRUN_RATIO = 1.5
+    OVERRUN_STREAK = 3
+
+    def __init__(self, db: AsyncSession, redis=None):
+        self.db = db
+        self.redis = redis
+        self.cognitive_service = CognitiveService(db)
+        self.plan_state_service = PlanStateService(db, redis)
+
+    async def handle_task_feedback_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        task_id = UUID(str(event["task_id"]))
+        category = str(event.get("category") or "").strip().lower()
+
+        if category == TaskFeedbackCategory.TOO_DIFFICULT.value:
+            await self._maybe_emit_too_difficult_streak(user_id)
+
+        await self._maybe_emit_inactivity_signal(user_id)
+        await self._maybe_emit_pattern_adjustment(user_id)
+
+    async def handle_task_abandoned_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        task_id = UUID(str(event["task_id"]))
+        task = await self.db.get(Task, task_id)
+        title = getattr(task, "title", None) or "未命名任务"
+        time_spent = event.get("time_spent")
+        signal_key = f"abandoned:{task_id}"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户放弃了任务《{title}》，已执行 {time_spent or 0} 分钟。",
+            source_type="behavior_auto",
+            context_tags={
+                "task_id": str(task_id),
+                "task_title": title,
+                "time_spent": time_spent,
+                "signal_key": signal_key,
+            },
+            error_tags=["execution.abandonment"],
+            severity=2,
+            task_id=task_id,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+        await self._maybe_emit_inactivity_signal(user_id)
+
+    async def handle_task_completed_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        await self._maybe_emit_overrun_pattern(user_id)
+        await self._maybe_emit_inactivity_signal(user_id)
+
+    async def handle_plan_replanned_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        plan_id = str(event.get("plan_id") or event.get("original_plan_id") or "")
+        if not plan_id:
+            return
+        await self._track_plan_modification(user_id, plan_id)
+        await self._maybe_emit_inactivity_signal(user_id)
+
+    async def handle_behavior_pattern_event(self, event: dict) -> None:
+        user_id = UUID(str(event["user_id"]))
+        confidence = float(event.get("confidence_score") or 0.0)
+        if confidence < 0.7:
+            return
+
+        states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
+        for state in states:
+            if state.status != PlanStateStatus.ACTIVE.value:
+                continue
+            replanner = AdaptiveReplanner(self.db, self.redis)
+            await replanner.on_behavior_pattern_detected(
+                user_id=user_id,
+                plan_id=state.plan_id,
+                pattern_name=str(event.get("pattern_name") or ""),
+            )
+
+    async def _maybe_emit_too_difficult_streak(self, user_id: UUID) -> None:
+        signal_key = "too_difficult_streak"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        result = await self.db.execute(
+            select(TaskFeedback, Task.title)
+            .join(Task, Task.id == TaskFeedback.task_id)
+            .where(TaskFeedback.user_id == user_id)
+            .order_by(TaskFeedback.created_at.desc())
+            .limit(self.FEEDBACK_STREAK)
+        )
+        rows = result.all()
+        if len(rows) < self.FEEDBACK_STREAK:
+            return
+        if any(str(feedback.category or "") != TaskFeedbackCategory.TOO_DIFFICULT.value for feedback, _ in rows):
+            return
+
+        titles = [title or "未命名任务" for _, title in rows]
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户连续3次反馈任务太难：{', '.join(titles)}",
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "task_titles": titles,
+                "feedback_count": len(rows),
+            },
+            error_tags=["execution.task_resistance"],
+            severity=3,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _maybe_emit_overrun_pattern(self, user_id: UUID) -> None:
+        signal_key = "overrun_streak"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        result = await self.db.execute(
+            select(Task.title, Task.estimated_minutes, Task.actual_minutes)
+            .where(Task.user_id == user_id, Task.status == TaskStatus.COMPLETED)
+            .order_by(Task.completed_at.desc())
+            .limit(self.OVERRUN_STREAK)
+        )
+        rows = result.all()
+        if len(rows) < self.OVERRUN_STREAK:
+            return
+
+        titles: list[str] = []
+        for title, estimated, actual in rows:
+            if not estimated or not actual:
+                return
+            if float(actual) / float(estimated) < self.OVERRUN_RATIO:
+                return
+            titles.append(title or "未命名任务")
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"最近{len(rows)}次任务实际用时都超过预估50%以上：{', '.join(titles)}",
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "task_titles": titles,
+            },
+            error_tags=["planning.underestimate"],
+            severity=2,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _track_plan_modification(self, user_id: UUID, plan_id: str) -> None:
+        key = f"behavior:plan_mods:{user_id}:{plan_id}"
+        if not self.redis:
+            return
+        now = _utcnow().timestamp()
+        cutoff = now - self.PLAN_MOD_WINDOW.total_seconds()
+        await self.redis.zadd(key, {f"{now}": now})
+        await self.redis.zremrangebyscore(key, "-inf", cutoff)
+        await self.redis.expire(key, int(self.PLAN_MOD_WINDOW.total_seconds()))
+        count = await self.redis.zcard(key)
+
+        signal_key = f"plan_modifications:{plan_id}"
+        if count < self.PLAN_MOD_THRESHOLD or await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content=f"用户在24小时内修改了计划 {plan_id} 共 {count} 次。",
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "plan_id": plan_id,
+                "modification_count": int(count),
+            },
+            error_tags=["emotional.overplanning"],
+            severity=2,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _maybe_emit_inactivity_signal(self, user_id: UUID) -> None:
+        signal_key = "inactive_with_active_plan"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
+
+        states = await self.plan_state_service.get_active_plan_states(user_id, limit=1)
+        if not states:
+            return
+
+        cutoff = _utcnow() - timedelta(days=self.INACTIVITY_DAYS)
+        result = await self.db.execute(
+            select(func.count(Task.id))
+            .where(
+                Task.user_id == user_id,
+                Task.plan_id == states[0].plan_id,
+                Task.status == TaskStatus.COMPLETED,
+                Task.completed_at.is_not(None),
+                Task.completed_at >= cutoff,
+            )
+        )
+        completed_count = int(result.scalar() or 0)
+        if completed_count > 0:
+            return
+
+        fragment = await self.cognitive_service.create_fragment(
+            user_id=user_id,
+            content="用户有活跃计划但连续3天未完成任何任务。",
+            source_type="behavior_auto",
+            context_tags={
+                "signal_key": signal_key,
+                "plan_id": str(states[0].plan_id),
+            },
+            error_tags=["execution.inactive_stall"],
+            severity=2,
+            source_event_id=f"behavior_auto:{signal_key}",
+        )
+        await self.cognitive_service.analyze_behavior(user_id, fragment.id)
+        await self._mark_signal_emitted(user_id, signal_key)
+
+    async def _maybe_emit_pattern_adjustment(self, user_id: UUID) -> None:
+        states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
+        for state in states:
+            replanner = AdaptiveReplanner(self.db, self.redis)
+            await replanner.on_behavior_pattern_detected(
+                user_id=user_id,
+                plan_id=state.plan_id,
+                pattern_name=None,
+            )
+
+    async def _signal_on_cooldown(self, user_id: UUID, signal_key: str) -> bool:
+        if not self.redis:
+            return False
+        raw = await self.redis.get(self._cooldown_key(user_id, signal_key))
+        return bool(raw)
+
+    async def _mark_signal_emitted(self, user_id: UUID, signal_key: str) -> None:
+        if not self.redis:
+            return
+        await self.redis.setex(
+            self._cooldown_key(user_id, signal_key),
+            int(self.SIGNAL_COOLDOWN.total_seconds()),
+            json.dumps({"emitted_at": _utcnow().isoformat()}),
+        )
+
+    @staticmethod
+    def _cooldown_key(user_id: UUID, signal_key: str) -> str:
+        return f"behavior:auto:cooldown:{user_id}:{signal_key}"

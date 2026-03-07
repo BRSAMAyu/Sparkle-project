@@ -16,6 +16,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
@@ -1118,6 +1119,16 @@ Please review this plan and provide your assessment."""
                 new_plan_id=new_plan_id,
                 feedback=feedback,
             )
+        )
+        await event_bus.publish(
+            "plan.replanned",
+            {
+                "event_type": "plan.replanned",
+                "user_id": user_id,
+                "original_plan_id": plan_id,
+                "plan_id": new_plan_id,
+                "feedback": feedback,
+            },
         )
 
         return {

@@ -5,7 +5,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
@@ -336,6 +338,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           msg,
                                           feedbackType,
                                         );
+                                  },
+                                  onWidgetAction: (actionType, payload) {
+                                    unawaited(
+                                      ref
+                                          .read(chatProvider.notifier)
+                                          .handleWidgetAction(
+                                              actionType, payload),
+                                    );
                                   },
                                 );
                               },
@@ -789,6 +799,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     BoxConstraints constraints,
   ) {
     final transparentMode = ref.watch(transparentModeProvider);
+    ChatMessageModel? latestAssistant;
+    for (final message in chatState.messages.reversed) {
+      if (message.role == MessageRole.assistant) {
+        latestAssistant = message;
+        break;
+      }
+    }
+    final latestEnvelope =
+        latestAssistant?.uxEnvelope ?? const <String, dynamic>{};
+    final continuityBanner =
+        latestEnvelope['continuity_banner'] as Map<String, dynamic>?;
+    final modeExplanation =
+        latestEnvelope['mode_explanation'] as Map<String, dynamic>?;
+    final currentMode = ref.watch(chatModeProvider);
+    final dynamicPrompts = _buildPromptStarters(currentMode.apiValue);
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -816,7 +841,57 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           const PlanSelectorPill(),
           const ChatModeSelectorPill(),
+          if (modeExplanation != null || currentMode.apiValue != 'standard')
+            Padding(
+              padding: const EdgeInsets.only(
+                left: DS.spacing16,
+                right: DS.spacing16,
+                top: DS.spacing8,
+              ),
+              child: _ContextStrip(
+                icon: Icons.auto_awesome,
+                title:
+                    modeExplanation?['label']?.toString() ?? currentMode.label,
+                description: modeExplanation?['description']?.toString() ??
+                    currentMode.description,
+              ),
+            ),
+          if (continuityBanner != null)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: DS.spacing16,
+                right: DS.spacing16,
+                top: DS.spacing8,
+              ),
+              child: _ContextStrip(
+                icon: Icons.link_rounded,
+                title: continuityBanner['title']?.toString() ?? '继续当前上下文',
+                description: continuityBanner['message']?.toString() ?? '',
+              ),
+            ),
           const IntentPredictionBar(showIdle: false),
+          if (!chatState.isSending && dynamicPrompts.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: DS.spacing16,
+                right: DS.spacing16,
+                top: DS.spacing8,
+              ),
+              child: Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: dynamicPrompts
+                    .map(
+                      (prompt) => ActionChip(
+                        label: Text(prompt),
+                        onPressed: () => unawaited(
+                          ref.read(chatProvider.notifier).sendMessage(prompt),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ChatInput(
             enabled: !chatState.isSending,
             onTextChanged: (text) {
@@ -850,6 +925,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
+
+  List<String> _buildPromptStarters(String mode) {
+    switch (mode) {
+      case 'deep_analysis':
+        return const ['先给综合判断，再展开依据', '只看关键结论和风险', '补一个反方观点帮我校准'];
+      case 'study_plan':
+        return const ['先按今天能开始的节奏排', '拆成今天/本周两个层级', '按我现在水平再降一点难度'];
+      case 'error_diagnosis':
+        return const ['先定位错因和证据', '给我一条针对性修复练习', '告诉我下次怎么避免再错'];
+      case 'expert_auto':
+        return const ['自动选专家给我综合结论', '先告诉我这轮请了谁', '把专家结果压成执行清单'];
+      default:
+        return const ['直接回答我的当前问题', '先给我 3 步执行清单', '结合我当前计划继续推进'];
+    }
+  }
 }
 
 class _QuickActionChip extends StatefulWidget {
@@ -868,6 +958,66 @@ class _QuickActionChip extends StatefulWidget {
 
   @override
   State<_QuickActionChip> createState() => _QuickActionChipState();
+}
+
+class _ContextStrip extends StatelessWidget {
+  const _ContextStrip({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    if (title.trim().isEmpty && description.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DS.surfaceTertiary,
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.neutral200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: DS.iconSizeSm, color: DS.primaryBase),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (title.trim().isNotEmpty)
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: DS.fontWeightSemibold,
+                            color: DS.textPrimary,
+                          ),
+                    ),
+                  if (description.trim().isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _QuickActionChipState extends State<_QuickActionChip> {

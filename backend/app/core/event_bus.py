@@ -76,7 +76,8 @@ class ErrorCreated(Event):
 class TaskCompleted(Event):
     def __init__(self, user_id: str, task_id: str, estimated_minutes: int,
                  actual_minutes: int, difficulty: int, completion_rate: float,
-                 user_note: str | None = None, plan_id: str | None = None):
+                 user_note: str | None = None, plan_id: str | None = None,
+                 source: str = "personal", source_metadata: dict[str, Any] | None = None):
         self.user_id = user_id
         self.task_id = task_id
         self.estimated_minutes = estimated_minutes
@@ -85,6 +86,8 @@ class TaskCompleted(Event):
         self.completion_rate = completion_rate
         self.user_note = user_note
         self.plan_id = plan_id
+        self.source = source
+        self.source_metadata = source_metadata or {}
         self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
@@ -98,6 +101,8 @@ class TaskCompleted(Event):
             "completion_rate": self.completion_rate,
             "user_note": self.user_note,
             "plan_id": self.plan_id,
+            "source": self.source,
+            "source_metadata": self.source_metadata,
             "timestamp": self.timestamp.isoformat()
         }
 

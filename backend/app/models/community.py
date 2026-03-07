@@ -78,6 +78,7 @@ class SharedResourceType(str, enum.Enum):
     """共享资源类型"""
     PLAN = "plan"
     TASK = "task"
+    KNOWLEDGE_NODE = "knowledge_node"
     COGNITIVE_FRAGMENT = "cognitive_fragment"
     CURIOSITY_CAPSULE = "curiosity_capsule"
     COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
@@ -451,6 +452,7 @@ class SharedResource(BaseModel):
     # 实际运行时 SQLAlchemy 会解析
     plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
     task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
     cognitive_fragment_id = Column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
     curiosity_capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id"), nullable=True)
     behavior_pattern_id = Column(GUID(), ForeignKey("behavior_patterns.id"), nullable=True)
@@ -471,6 +473,7 @@ class SharedResource(BaseModel):
     # but strictly Plan/Task should be imported. For now we assume they are available in registry)
     plan = relationship("Plan", foreign_keys=[plan_id])
     task = relationship("Task", foreign_keys=[task_id])
+    knowledge_node = relationship("KnowledgeNode", foreign_keys=[knowledge_node_id])
     cognitive_fragment = relationship("CognitiveFragment", foreign_keys=[cognitive_fragment_id])
     curiosity_capsule = relationship("CuriosityCapsule", foreign_keys=[curiosity_capsule_id])
     behavior_pattern = relationship("BehaviorPattern", foreign_keys=[behavior_pattern_id])
@@ -479,6 +482,7 @@ class SharedResource(BaseModel):
         Index('idx_share_group', 'group_id'),
         Index('idx_share_target_user', 'target_user_id'),
         Index('idx_share_resource_plan', 'plan_id'),
+        Index('idx_share_resource_knowledge_node', 'knowledge_node_id'),
         Index('idx_share_resource_capsule', 'curiosity_capsule_id'),
         Index('idx_share_resource_pattern', 'behavior_pattern_id'),
     )

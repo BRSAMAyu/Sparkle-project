@@ -25,6 +25,7 @@ class ChatBubble extends StatefulWidget {
     this.onActionConfirm,
     this.onActionDismiss,
     this.onResponseFeedback,
+    this.onWidgetAction,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
@@ -35,6 +36,8 @@ class ChatBubble extends StatefulWidget {
   final void Function(WidgetPayload action)? onActionDismiss;
   final void Function(ChatMessageModel message, String feedbackType)?
       onResponseFeedback;
+  final void Function(String actionType, Map<String, dynamic> payload)?
+      onWidgetAction;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -482,6 +485,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               widget.onActionDismiss != null
                                           ? () => widget.onActionDismiss!(w)
                                           : null,
+                                      onWidgetAction: widget.onWidgetAction,
                                     ),
                                   );
                                 },

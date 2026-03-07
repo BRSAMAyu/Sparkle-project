@@ -94,6 +94,169 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return true;
   }
 
+  List<String> _parseSelectedExperts(dynamic raw) {
+    if (raw is List) {
+      return raw.map((e) => '$e').toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      if (raw.trim().startsWith('[')) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is List) {
+            return decoded.map((e) => '$e').toList();
+          }
+        } catch (_) {}
+      }
+      return raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> _extractUxEnvelope(Map<String, dynamic>? metadata) {
+    if (metadata == null) return const {};
+    final envelope = <String, dynamic>{};
+    for (final key in const [
+      'ux_turn',
+      'ux_progress',
+      'ux_result',
+      'ux_followthrough',
+      'ux_sources',
+      'ux_evolution',
+      'continuity_banner',
+      'mode_explanation',
+      'collaboration_summary',
+    ]) {
+      final value = metadata[key];
+      if (value is Map<String, dynamic> && value.isNotEmpty) {
+        envelope[key] = value;
+      }
+    }
+    return envelope;
+  }
+
+  void _appendUxWidgets(
+    List<WidgetPayload> target,
+    Map<String, dynamic>? uxEnvelope,
+  ) {
+    if (uxEnvelope == null || uxEnvelope.isEmpty) return;
+
+    void addWidget(String type, Map<String, dynamic>? data) {
+      if (data == null || data.isEmpty) return;
+      final exists = target.any((widget) => widget.type == type);
+      if (!exists) {
+        target.add(WidgetPayload(type: type, data: data));
+      }
+    }
+
+    final continuity = uxEnvelope['continuity_banner'];
+    if (continuity is Map<String, dynamic>) {
+      addWidget('continuity_banner', continuity);
+    }
+
+    final modeExplanation = uxEnvelope['mode_explanation'];
+    if (modeExplanation is Map<String, dynamic>) {
+      addWidget('mode_explanation', modeExplanation);
+    }
+
+    final sources = uxEnvelope['ux_sources'];
+    if (sources is Map<String, dynamic>) {
+      final result = uxEnvelope['ux_result'];
+      addWidget('source_summary', {
+        ...sources,
+        if (result is Map<String, dynamic>) ...{
+          'headline': result['headline'],
+          'first_screen_focus': result['first_screen_focus'],
+        },
+      });
+    }
+
+    final followthrough = uxEnvelope['ux_followthrough'];
+    if (followthrough is Map<String, dynamic>) {
+      final nextActionsRaw = followthrough['next_actions'];
+      final retryOptionsRaw = followthrough['retry_options'];
+      final nextActions = (nextActionsRaw is List)
+          ? nextActionsRaw.map((e) => '$e').where((e) => e.isNotEmpty).toList()
+          : <String>[];
+      final retryOptions = (retryOptionsRaw is List)
+          ? retryOptionsRaw.map((e) => '$e').where((e) => e.isNotEmpty).toList()
+          : <String>[];
+      addWidget('next_actions', {
+        'title': followthrough['next_actions_title']?.toString() ?? '下一步建议',
+        'actions': nextActions
+            .map((label) => {
+                  'label': label,
+                  'type': 'prompt',
+                  'prompt': label,
+                })
+            .toList(),
+        'retry_options': retryOptions
+            .map((label) => {
+                  'label': label,
+                  'type': 'prompt',
+                  'prompt': label,
+                })
+            .toList(),
+        'recovery_message': followthrough['recovery_message'],
+        'memory_updates': followthrough['memory_updates'],
+      });
+    }
+
+    final evolution = uxEnvelope['ux_evolution'];
+    if (evolution is Map<String, dynamic>) {
+      addWidget('evolution_card', evolution);
+    }
+
+    final result = uxEnvelope['ux_result'];
+    if (result is Map<String, dynamic>) {
+      final completionState = result['completion_state']?.toString();
+      if (completionState == 'needs_input' || completionState == 'blocked') {
+        addWidget('blocked_input_request', {
+          'title': result['headline']?.toString() ?? '继续前我还需要你确认一下',
+          'reason': result['why_this_answer'],
+          'failure_kind': result['failure_kind'],
+          'recovery_message': followthrough is Map<String, dynamic>
+              ? followthrough['recovery_message']
+              : null,
+          'completion_state': completionState,
+          'retry_options': followthrough is Map<String, dynamic>
+              ? followthrough['retry_options']
+              : const [],
+        });
+      }
+    }
+  }
+
+  WidgetPayload _normalizeWidgetPayload(String type, Map<String, dynamic> data) {
+    if (type == 'system_update') {
+      final category = data['category']?.toString();
+      final metadata = data['metadata'];
+      if (category == 'evolution' && metadata is Map<String, dynamic>) {
+        final adaptation = metadata['adaptation_record'];
+        final preferenceLearning = metadata['preference_learning'];
+        return WidgetPayload(
+          type: 'evolution_card',
+          data: {
+            'headline': data['title']?.toString() ?? '系统正在继续适应你',
+            'summary': data['description']?.toString() ?? '',
+            if (adaptation is Map<String, dynamic>)
+              'adaptation_records': [adaptation],
+            if (preferenceLearning is Map<String, dynamic>)
+              'preference_learnings': [preferenceLearning],
+            'highlights': [
+              if ((data['description']?.toString() ?? '').isNotEmpty)
+                data['description'].toString(),
+            ],
+          },
+        );
+      }
+    }
+    return WidgetPayload(type: type, data: data);
+  }
+
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
     // 获取当前用户信息
@@ -142,6 +305,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String? lastAiStatus;
     final accumulatedWidgets = <WidgetPayload>[];
     Map<String, dynamic>? accumulatedCollaboration;
+    Map<String, dynamic>? accumulatedUxEnvelope;
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
     String? pendingStreamingContent;
@@ -228,6 +392,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
         if (event is TextEvent) {
           final metadata = event.metadata;
+          final uxEnvelope = _extractUxEnvelope(metadata);
+          if (uxEnvelope.isNotEmpty) {
+            accumulatedUxEnvelope = {
+              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+              ...uxEnvelope,
+            };
+          }
           final planContext = metadata?['plan_context'];
           final showPlanContext = metadata?['show_plan_context'] == true;
           if (!planContextInjected &&
@@ -259,27 +430,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 fallbackReason != null ||
                 routeConfidence != null ||
                 expertEntrySource != null) {
-              List<String> selectedExperts = const [];
-              if (selectedExpertsRaw is List) {
-                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
-              } else if (selectedExpertsRaw is String &&
-                  selectedExpertsRaw.isNotEmpty) {
-                if (selectedExpertsRaw.trim().startsWith('[')) {
-                  try {
-                    final decoded = jsonDecode(selectedExpertsRaw);
-                    if (decoded is List) {
-                      selectedExperts = decoded.map((e) => '$e').toList();
-                    }
-                  } catch (_) {}
-                }
-                if (selectedExperts.isEmpty) {
-                  selectedExperts = selectedExpertsRaw
-                      .split(',')
-                      .map((e) => e.trim())
-                      .where((e) => e.isNotEmpty)
-                      .toList();
-                }
-              }
+              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
@@ -296,9 +447,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
           flushPending();
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
+          final uxProgress = event.metadata?['ux_progress'];
           lastAiStatus = event.state;
           pendingAiStatus = event.state;
-          pendingAiStatusDetails = event.details;
+          if (uxProgress is Map<String, dynamic>) {
+            final headline = uxProgress['headline']?.toString();
+            final detail = uxProgress['detail']?.toString();
+            pendingAiStatusDetails = [headline, detail]
+                .whereType<String>()
+                .where((item) => item.trim().isNotEmpty)
+                .join(' · ');
+          } else {
+            pendingAiStatusDetails = event.details;
+          }
           state = state.copyWith(
             currentAgentName: event.currentAgentName,
             activeAgentType: event.activeAgentType,
@@ -316,6 +477,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
           final metadata = event.metadata;
+          final uxEnvelope = _extractUxEnvelope(metadata);
+          if (uxEnvelope.isNotEmpty) {
+            accumulatedUxEnvelope = {
+              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+              ...uxEnvelope,
+            };
+          }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
             final routingStrategy = metadata['routing_strategy'];
@@ -327,27 +495,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 fallbackReason != null ||
                 routeConfidence != null ||
                 expertEntrySource != null) {
-              List<String> selectedExperts = const [];
-              if (selectedExpertsRaw is List) {
-                selectedExperts = selectedExpertsRaw.map((e) => '$e').toList();
-              } else if (selectedExpertsRaw is String &&
-                  selectedExpertsRaw.isNotEmpty) {
-                if (selectedExpertsRaw.trim().startsWith('[')) {
-                  try {
-                    final decoded = jsonDecode(selectedExpertsRaw);
-                    if (decoded is List) {
-                      selectedExperts = decoded.map((e) => '$e').toList();
-                    }
-                  } catch (_) {}
-                }
-                if (selectedExperts.isEmpty) {
-                  selectedExperts = selectedExpertsRaw
-                      .split(',')
-                      .map((e) => e.trim())
-                      .where((e) => e.isNotEmpty)
-                      .toList();
-                }
-              }
+              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
               accumulatedCollaboration = {
                 ...(accumulatedCollaboration ?? const <String, dynamic>{}),
                 'selected_experts': selectedExperts,
@@ -368,10 +516,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
             event.code,
             event.message,
           );
+          final actionSuggestion =
+              ErrorMessages.getActionSuggestion(event.code);
           final isRetryable = ErrorMessages.isRetryable(event.code);
 
           state = state.copyWith(
-            error: userFriendlyMessage,
+            error: actionSuggestion.isEmpty
+                ? userFriendlyMessage
+                : '$userFriendlyMessage\n建议：$actionSuggestion',
             errorCode: event.code,
             isErrorRetryable: isRetryable,
             isSending: false,
@@ -388,10 +540,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             continue;
           }
           accumulatedWidgets.add(
-            WidgetPayload(
-              type: event.widgetType,
-              data: event.widgetData,
-            ),
+            _normalizeWidgetPayload(event.widgetType, event.widgetData),
           );
         } else if (event is ToolStartEvent) {
           // 显示"正在使用工具: xxx"
@@ -418,13 +567,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 !_shouldIncludeSystemUpdate(widgetData)) {
               continue;
             }
-            accumulatedWidgets.add(
-              WidgetPayload(
-                type: widgetType,
-                data: widgetData,
-              ),
-            );
+            accumulatedWidgets.add(_normalizeWidgetPayload(widgetType, widgetData));
           }
+        } else if (event is CitationEvent) {
+          accumulatedWidgets.add(
+            WidgetPayload(
+              type: 'source_summary',
+              data: {
+                'citations_available': event.citations.isNotEmpty,
+                'reference_scope': event.citations.every(
+                  (citation) =>
+                      (citation['file_id']?.toString() ?? '').isNotEmpty,
+                )
+                    ? 'file_only'
+                    : 'mixed',
+                'evidence_summary': event.citations.isNotEmpty
+                    ? '这轮回答带有可展开的依据来源。'
+                    : '这轮回答没有附带可展开的引用来源。',
+                'citations': event.citations,
+              },
+            ),
+          );
         } else if (event is UsageEvent) {
           state = state.copyWith(
             lastPromptTokens: event.promptTokens,
@@ -518,10 +681,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
 
       _streamDebouncer.cancel();
+      _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
       // 流结束后，将累积的内容转为正式消息
       if (accumulatedContent.isNotEmpty ||
           accumulatedWidgets.isNotEmpty ||
-          accumulatedCollaboration != null) {
+          accumulatedCollaboration != null ||
+          accumulatedUxEnvelope != null) {
         // Calculate total duration if reasoning steps exist
         String? reasoningSummary;
         if (accumulatedReasoningSteps.isNotEmpty &&
@@ -551,6 +716,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          uxEnvelope: accumulatedUxEnvelope,
         );
 
         state = state.copyWith(

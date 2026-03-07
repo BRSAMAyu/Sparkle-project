@@ -1,5 +1,5 @@
 """
-Task 事件消费者 - 处理任务完成/放弃事件，分析行为模式
+Task 事件消费者 - 处理任务与计划相关事件，驱动认知闭环。
 """
 import asyncio
 from datetime import UTC, datetime
@@ -13,7 +13,8 @@ from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
-from app.services.cognitive_service import CognitiveService
+from app.services.behavior_signal_collector import BehaviorSignalCollector
+from app.services.community_signal_bridge import CommunitySignalBridge
 
 
 def _utcnow() -> datetime:
@@ -21,7 +22,7 @@ def _utcnow() -> datetime:
 
 
 class TaskEventConsumer:
-    """消费 task.completed 和 task.abandoned 事件"""
+    """消费任务 / 计划相关事件"""
 
     STREAM_NAME = "sparkle_events"
     GROUP_NAME = "task_event_consumer"
@@ -58,44 +59,28 @@ class TaskEventConsumer:
             await self._handle_task_completed(event)
         elif event_type == "task.abandoned":
             await self._handle_task_abandoned(event)
+        elif event_type == "task.feedback_submitted":
+            await self._handle_task_feedback(event)
+        elif event_type == "plan.replanned":
+            await self._handle_plan_replanned(event)
+        elif event_type == "behavior.pattern.updated":
+            await self._handle_behavior_pattern(event)
 
     async def _handle_task_completed(self, event: dict):
-        """处理任务完成 - 分析时间估算偏差"""
+        """处理任务完成。"""
         try:
             user_id = UUID(event["user_id"])
             task_id = UUID(event["task_id"])
 
             async with AsyncSessionLocal() as db:
-                cognitive_service = CognitiveService(db)
+                collector = BehaviorSignalCollector(db, cache_service.redis)
+                bridge = CommunitySignalBridge(db, cache_service.redis)
 
-                # 检测规划乐观偏差
                 estimated = event.get("estimated_minutes", 0)
                 actual = event.get("actual_minutes", 0)
                 completion_rate = actual / estimated if estimated > 0 else 1.0
-
-                # 如果实际时间明显超过预估，创建分析片段
-                if completion_rate > 1.3:  # 超过30%
-                    content = (
-                        f"任务完成时间偏差: 预估{estimated}分钟, 实际{actual}分钟"
-                    )
-                    # 生成唯一的事件ID用于幂等性保护
-                    source_event_id = f"task_completed:{task_id}"
-                    await cognitive_service.create_fragment(
-                        user_id=user_id,
-                        content=content,
-                        source_type="task_completion",
-                        context_tags={
-                            "task_id": str(task_id),
-                            "estimated_minutes": estimated,
-                            "actual_minutes": actual,
-                            "completion_rate": completion_rate
-                        },
-                        error_tags=["planning.underestimate"] if completion_rate > 1.5 else None,
-                        severity=2 if completion_rate > 1.5 else 1,
-                        task_id=task_id,
-                        source_event_id=source_event_id  # 幂等性保护
-                    )
-                    logger.info(f"Created time estimation fragment for user {user_id}")
+                await collector.handle_task_completed_event(event)
+                await bridge.handle_group_task_completed(event)
 
                 plan_id = event.get("plan_id")
                 if not plan_id or plan_id == "None":
@@ -120,35 +105,38 @@ class TaskEventConsumer:
             logger.error(f"Failed to handle task.completed: {e}")
 
     async def _handle_task_abandoned(self, event: dict):
-        """处理任务放弃 - 分析放弃原因"""
+        """处理任务放弃。"""
         try:
-            user_id = UUID(event["user_id"])
-            task_id = UUID(event["task_id"])
-
             async with AsyncSessionLocal() as db:
-                cognitive_service = CognitiveService(db)
-
-                content = f"任务放弃: {event.get('reason', '未指定原因')}"
-                # 生成唯一的事件ID用于幂等性保护
-                source_event_id = f"task_abandoned:{task_id}"
-                await cognitive_service.create_fragment(
-                    user_id=user_id,
-                    content=content,
-                    source_type="task_abandon",
-                    context_tags={
-                        "task_id": str(task_id),
-                        "reason": event.get("reason"),
-                        "time_spent": event.get("time_spent")
-                    },
-                    error_tags=["execution.abandonment"],
-                    severity=2,
-                    task_id=task_id,
-                    source_event_id=source_event_id  # 幂等性保护
-                )
-                logger.info(f"Created task abandonment fragment for user {user_id}")
+                collector = BehaviorSignalCollector(db, cache_service.redis)
+                await collector.handle_task_abandoned_event(event)
 
         except Exception as e:
             logger.error(f"Failed to handle task.abandoned: {e}")
+
+    async def _handle_task_feedback(self, event: dict):
+        try:
+            async with AsyncSessionLocal() as db:
+                collector = BehaviorSignalCollector(db, cache_service.redis)
+                await collector.handle_task_feedback_event(event)
+        except Exception as e:
+            logger.error(f"Failed to handle task.feedback_submitted: {e}")
+
+    async def _handle_plan_replanned(self, event: dict):
+        try:
+            async with AsyncSessionLocal() as db:
+                collector = BehaviorSignalCollector(db, cache_service.redis)
+                await collector.handle_plan_replanned_event(event)
+        except Exception as e:
+            logger.error(f"Failed to handle plan.replanned: {e}")
+
+    async def _handle_behavior_pattern(self, event: dict):
+        try:
+            async with AsyncSessionLocal() as db:
+                collector = BehaviorSignalCollector(db, cache_service.redis)
+                await collector.handle_behavior_pattern_event(event)
+        except Exception as e:
+            logger.error(f"Failed to handle behavior.pattern.updated: {e}")
 
     def stop(self):
         """停止消费者"""

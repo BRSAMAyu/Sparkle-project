@@ -76,6 +76,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 
 
+{dual_core_section}
+
+
+
 {preference_instructions}
 
 
@@ -129,6 +133,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {intent_section}
+
+
+
+{dual_core_section}
 
 
 
@@ -202,6 +210,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 
+{dual_core_section}
+
+
+
 {preference_instructions}
 
 
@@ -269,6 +281,10 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {intent_section}
+
+
+
+{dual_core_section}
 
 
 
@@ -356,6 +372,8 @@ def build_system_prompt(
 
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
 
+    dual_core_instruction: str = None,
+
     context_level: str = "full",  # full | light
 
     chat_mode: str = "standard",
@@ -381,6 +399,7 @@ def build_system_prompt(
         plan_context: 计划上下文（从PlanContextBuilder获取）
 
         intent_instruction: 显式意图指令（从RequestRouter获取）
+        dual_core_instruction: 双核心路由指令（优先级低于显式意图，高于一般偏好）
 
 
 
@@ -459,6 +478,14 @@ def build_system_prompt(
 
         intent_section = f"\n## 当前意图指令 (最高优先级)\n{intent_instruction}\n请务必执行此意图对应的操作 (如调用相关工具)。"
 
+    dual_core_section = ""
+    if dual_core_instruction:
+        dual_core_section = (
+            "\n## 双核心路由指令 (高优先级)\n"
+            f"{dual_core_instruction}\n"
+            "请先遵循这组路径与约束，再结合用户一般偏好组织回答。"
+        )
+
 
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context)
@@ -474,6 +501,7 @@ def build_system_prompt(
                 preference_instructions=preference_instructions,
                 plan_context_section=plan_context_section,
                 intent_section=intent_section,
+                dual_core_section=dual_core_section,
                 task_awareness_section=TASK_AWARENESS_SECTION,
                 cognitive_prism_section=cognitive_prism_section,
             )
@@ -495,6 +523,9 @@ def build_system_prompt(
         if intent_instruction:
 
              prompt += f"\n\n## 当前意图指令\n{intent_instruction}"
+        if dual_core_instruction:
+
+             prompt += f"\n\n## 双核心路由指令\n{dual_core_instruction}"
 
 
 

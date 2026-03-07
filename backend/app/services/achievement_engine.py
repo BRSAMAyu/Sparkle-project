@@ -2,6 +2,7 @@
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
+import asyncio
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
@@ -21,7 +23,9 @@ from app.models.achievement import (
     UserStreakStats,
     UserTitle,
 )
+from app.models.community import GroupTaskClaim
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
@@ -57,6 +61,7 @@ class AchievementEvent:
 
 class AchievementEngine:
     """成就引擎 - 核心服务"""
+    GROUP_TASK_WEIGHT_FACTOR = 0.7
 
     # 成就定义缓存（内存缓存）
     _achievement_cache: dict[str, Achievement] = {}
@@ -272,15 +277,30 @@ class AchievementEngine:
             case "TASKS_TOTAL":
                 from app.models.task import Task, TaskStatus
                 target = config.get("count", 10)
-                query = select(func.count()).select_from(Task).where(
+                claim_ids_query = select(GroupTaskClaim.personal_task_id).where(
+                    GroupTaskClaim.user_id == user_id,
+                    GroupTaskClaim.personal_task_id.is_not(None),
+                )
+                solo_query = select(func.count()).select_from(Task).where(
                     and_(
                         Task.user_id == user_id,
-                        Task.status == TaskStatus.COMPLETED
+                        Task.status == TaskStatus.COMPLETED,
+                        Task.id.not_in(claim_ids_query),
                     )
                 )
-                result = await self.db.execute(query)
-                current = result.scalar_one() or 0
-                return (min(current / target, 1.0), current, target)
+                group_query = select(func.count()).select_from(GroupTaskClaim).where(
+                    and_(
+                        GroupTaskClaim.user_id == user_id,
+                        GroupTaskClaim.is_completed.is_(True),
+                    )
+                )
+                solo_result = await self.db.execute(solo_query)
+                group_result = await self.db.execute(group_query)
+                solo_completed = int(solo_result.scalar_one() or 0)
+                group_completed = int(group_result.scalar_one() or 0)
+                effective_total = solo_completed + (group_completed * self.GROUP_TASK_WEIGHT_FACTOR)
+                progress = min(effective_total / target, 1.0)
+                return (progress, int(round(effective_total)), target)
 
             # 知识点数量
             case "NODES_UNLOCKED":
@@ -555,8 +575,7 @@ class AchievementEngine:
 
         # 处理奖励
         await self._grant_rewards(user_id, achievement)
-
-        return {
+        unlock_payload = {
             "achievement_id": achievement.id,
             "name": achievement.name,
             "rarity": achievement.rarity,
@@ -564,8 +583,48 @@ class AchievementEngine:
             "visual_effect_type": achievement.visual_effect_type,
             "rewards": achievement.reward_config,
             "is_first": is_first,
-            "unlocked_at": now
+            "unlocked_at": now,
         }
+        asyncio.create_task(self._broadcast_unlock_signals(user_id, unlock_payload))
+
+        return unlock_payload
+
+    async def _broadcast_unlock_signals(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
+        try:
+            rarity = unlock_payload.get("rarity")
+            rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
+            await event_bus.publish(
+                "achievement.unlocked",
+                {
+                    "event_type": "achievement.unlocked",
+                    "user_id": str(user_id),
+                    "achievement_id": unlock_payload["achievement_id"],
+                    "achievement_name": unlock_payload["name"],
+                    "achievement_type": "achievement_unlock",
+                    "rarity": rarity_value,
+                    "visual_effect_type": unlock_payload.get("visual_effect_type"),
+                    "trigger_reason": "achievement_condition_met",
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
+            await SystemUpdateService().enqueue(
+                user_id,
+                build_system_update(
+                    update_type="achievement_unlocked",
+                    category="evolution",
+                    title=f"解锁成就：{unlock_payload['name']}",
+                    description=f"你刚刚解锁了「{unlock_payload['name']}」，这意味着你在相关领域已经取得了实质性进步。",
+                    priority="low",
+                    metadata={
+                        "evolution_kind": "highlight",
+                        "highlight": f"你刚刚解锁了「{unlock_payload['name']}」。",
+                        "source": "achievement_engine",
+                        "rarity": rarity_value,
+                    },
+                ),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to broadcast achievement unlock signals: {exc}")
 
     async def _grant_rewards(self, user_id: str, achievement: Achievement):
         """发放奖励"""

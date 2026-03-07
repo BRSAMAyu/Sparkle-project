@@ -41,7 +41,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      - ./minio_data:/data
+      - sparkle_minio_data:/data
 
   sparkle_api:
     build:
@@ -150,3 +150,6 @@ services:
       - ./monitoring/tempo.yaml:/etc/tempo.yaml
     ports:
       - "4317:4317"
+
+volumes:
+  sparkle_minio_data:

@@ -293,12 +293,15 @@ class ValidationResult:
     is_valid: bool
     failure_reason: str | None = None
     risk_flags: list[str] = None
+    warnings: list[dict[str, Any]] = None
     requires_confirmation: bool = False
     requires_hitl: bool = False
 
     def __post_init__(self):
         if self.risk_flags is None:
             self.risk_flags = []
+        if self.warnings is None:
+            self.warnings = []
 
 
 # ============ Phase 3: Circuit Breaker ============
