@@ -170,6 +170,61 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.Equal(t, "0.82", meta["route_confidence"])
 }
 
+func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-status",
+		RequestId:  "req-status",
+		Content: &agentv1.ChatResponse_StatusUpdate{
+			StatusUpdate: &agentv1.AgentStatus{
+				State:   agentv1.AgentStatus_EXECUTING_TOOL,
+				Details: "正在执行 2 个任务...",
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	uxProgress, ok := meta["ux_progress"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "executing", uxProgress["stage"])
+	assert.Equal(t, "我在替你执行需要的步骤", uxProgress["headline"])
+}
+
+func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
+	payload, err := structpb.NewStruct(map[string]interface{}{
+		"plan_id": "plan-1",
+		"tasks":   3,
+	})
+	assert.NoError(t, err)
+
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-tool",
+		RequestId:  "req-tool",
+		Content: &agentv1.ChatResponse_ToolResult{
+			ToolResult: &agentv1.ToolResultPayload{
+				ToolName:     "create_plan",
+				Success:      true,
+				Data:         payload,
+				ToolCallId:   "tool-1",
+				WidgetType:   "",
+				WidgetData:   nil,
+				Suggestion:   "继续查看最终回答",
+				ErrorMessage: "",
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp, "")
+	toolResult, ok := result["tool_result"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "execution_summary", toolResult["widget_type"])
+	widgetData, ok := toolResult["widget_data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "success", widgetData["status"])
+	assert.Equal(t, "继续查看最终回答", widgetData["next_action"])
+}
+
 func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	resp := &agentv1.ChatResponse{

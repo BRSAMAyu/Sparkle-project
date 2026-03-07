@@ -25,7 +25,8 @@ class ErrorMessages {
       if (technicalMessage.contains('服务器') || technicalMessage.contains('打盹')) {
         return l10n.errorServerIssue;
       }
-      if (technicalMessage.contains('太频繁') || technicalMessage.contains('休息一下')) {
+      if (technicalMessage.contains('太频繁') ||
+          technicalMessage.contains('休息一下')) {
         return l10n.errorRateLimit;
       }
       if (technicalMessage.contains('权限') || technicalMessage.contains('管理员')) {
@@ -82,7 +83,8 @@ class ErrorMessages {
       case 'UNKNOWN':
       default:
         // 如果是英文环境，且没有匹配到已知模式，则尝试剥离 "Exception: " 前缀
-        if (technicalMessage != null && technicalMessage.startsWith('Exception: ')) {
+        if (technicalMessage != null &&
+            technicalMessage.startsWith('Exception: ')) {
           return technicalMessage.substring(11);
         }
         return technicalMessage ?? l10n.errorServerIssue;
@@ -111,30 +113,30 @@ class ErrorMessages {
     switch (errorCode.toUpperCase()) {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
-        return '网络似乎有些不给力，请检查一下连接~';
+        return '连接中断了，我没法继续拿到后续结果。';
       case 'CONNECTION_TIMEOUT':
-        return '连接超时啦，请稍后再试';
+        return '这轮等待超时了，我只拿到部分结果。';
       case 'MAX_RETRIES_EXCEEDED':
-        return '服务器可能暂时打盹了，检查一下网络再试试吧';
+        return '重试次数已经用完，这轮链路没有稳定恢复。';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':
-        return '请先登录后再使用这个功能哦';
+        return '当前登录状态无效，这轮请求没有被服务端接受。';
       case 'TOKEN_EXPIRED':
-        return '登录信息已过期，请重新登录~';
+        return '登录已过期，需要重新建立会话。';
       case 'SERVER_ERROR':
       case 'INTERNAL_ERROR':
-        return '服务器正在打盹，请稍后再试';
+        return '服务端处理这轮请求时出错了。';
       case 'SERVICE_UNAVAILABLE':
-        return '服务暂时不可用，请稍后再试';
+        return '当前能力暂时不可用，这轮只能中断。';
       case 'RATE_LIMIT_EXCEEDED':
-        return '操作太频繁啦，休息一下再试吧~';
+        return '请求过于频繁，这轮被限流了。';
       case 'LLM_ERROR':
       case 'AI_ERROR':
-        return 'AI 服务暂时不可用，请稍后再试';
+        return '模型服务这轮没有稳定返回结果。';
       case 'CONTEXT_LENGTH_EXCEEDED':
-        return '对话内容太长啦，开始新的对话吧';
+        return '上下文太长，这轮无法继续带着全部历史处理。';
       default:
-        return technicalMessage ?? '遇到未预料的问题，我们正在处理~';
+        return technicalMessage ?? '这轮请求遇到了未分类错误。';
     }
   }
 
@@ -158,17 +160,24 @@ class ErrorMessages {
   }
 
   /// 获取错误对应的建议操作
-  static String getActionSuggestion(String errorCode, {AppLocalizations? l10n}) {
+  static String getActionSuggestion(String errorCode,
+      {AppLocalizations? l10n}) {
     // 建议操作也可以根据 l10n 进一步细化，目前保持简单
     switch (errorCode.toUpperCase()) {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
       case 'CONNECTION_TIMEOUT':
-        return '请检查网络连接后点击重试';
+        return '检查网络后重试，或先看当前已返回的部分结果';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':
       case 'TOKEN_EXPIRED':
         return '请重新登录';
+      case 'LLM_ERROR':
+      case 'AI_ERROR':
+      case 'SERVICE_UNAVAILABLE':
+        return '稍后重试，或切换到标准模式先拿主结论';
+      case 'CONTEXT_LENGTH_EXCEEDED':
+        return '新开一个会话，或把问题缩短后再发';
       default:
         return '请稍后重试';
     }

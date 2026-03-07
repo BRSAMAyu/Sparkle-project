@@ -8,7 +8,10 @@ import time
 import uuid
 from pathlib import Path
 
+import boto3
 import httpx
+from botocore.client import Config as BotoConfig
+from botocore.exceptions import ClientError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -25,6 +28,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--token", default=os.getenv("TOKEN", ""))
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL", ""))
     parser.add_argument("--minio-health-url", default=os.getenv("MINIO_HEALTH_URL", "http://localhost:9000/minio/health/ready"))
+    parser.add_argument("--minio-endpoint", default=os.getenv("MINIO_ENDPOINT", "http://localhost:9000"))
+    parser.add_argument("--minio-access-key", default=os.getenv("MINIO_ACCESS_KEY", "minioadmin"))
+    parser.add_argument("--minio-secret-key", default=os.getenv("MINIO_SECRET_KEY", "minioadmin"))
+    parser.add_argument("--minio-bucket", default=os.getenv("MINIO_BUCKET", "sparkle-files"))
+    parser.add_argument("--minio-region", default=os.getenv("MINIO_REGION", ""))
     parser.add_argument("--skip-upload", action="store_true", help="Skip gateway upload flow.")
     parser.add_argument("--skip-vectorize", action="store_true", help="Skip document parse + embedding + pgvector insert.")
     parser.add_argument("--skip-minio-check", action="store_true", help="Skip MinIO health check.")
@@ -53,6 +61,33 @@ def check_minio(minio_health_url: str) -> None:
         resp = client.get(minio_health_url)
         resp.raise_for_status()
     log("   MinIO is healthy.")
+
+
+def ensure_minio_bucket(endpoint: str, access_key: str, secret_key: str, bucket: str, region: str) -> None:
+    log("1.5 Ensuring MinIO bucket exists...")
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region or None,
+        config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
+    )
+
+    try:
+        s3.head_bucket(Bucket=bucket)
+        log(f"   Bucket '{bucket}' is ready.")
+        return
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "")
+        if error_code not in {"404", "NoSuchBucket", "NotFound"}:
+            raise
+
+    create_kwargs = {"Bucket": bucket}
+    if region and region != "us-east-1":
+        create_kwargs["CreateBucketConfiguration"] = {"LocationConstraint": region}
+    s3.create_bucket(**create_kwargs)
+    log(f"   Bucket '{bucket}' created.")
 
 
 def prepare_upload(client: httpx.Client, gateway_url: str, token: str, file_path: Path, file_size: int, mime: str) -> dict:
@@ -177,6 +212,13 @@ async def run() -> int:
 
     if not args.skip_minio_check:
         check_minio(args.minio_health_url)
+        ensure_minio_bucket(
+            endpoint=args.minio_endpoint,
+            access_key=args.minio_access_key,
+            secret_key=args.minio_secret_key,
+            bucket=args.minio_bucket,
+            region=args.minio_region,
+        )
 
     if not args.skip_upload:
         with httpx.Client(timeout=20.0) as client:

@@ -22,6 +22,7 @@ from app.models.community import (
     GroupTaskClaim,
     MessageType,
 )
+from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import CheckinRequest, GroupCreate, GroupTaskCreate, MessageEdit, MessageSend
 
@@ -1080,10 +1081,24 @@ class GroupTaskService:
 
         # 转换日期 (DateTime -> Date)
         personal_due_date = group_task.due_date.date() if group_task.due_date else None
+        linked_plan_id = None
+        if group_task.group and group_task.group.type == GroupType.SPRINT:
+            linked_plan_result = await db.execute(
+                select(Plan.id)
+                .where(
+                    Plan.user_id == user_id,
+                    Plan.is_active.is_(True),
+                    Plan.type == PlanType.SPRINT,
+                )
+                .order_by(desc(Plan.is_primary), desc(Plan.created_at))
+                .limit(1)
+            )
+            linked_plan_id = linked_plan_result.scalar_one_or_none()
 
         personal_task_in = TaskCreate(
             title=f"[{group_task.group.name}] {group_task.title}" if group_task.group else f"[群任务] {group_task.title}",
             type=PersonalTaskType.LEARNING, # 默认设为学习类
+            plan_id=linked_plan_id,
             tags=group_task.tags or [],
             estimated_minutes=group_task.estimated_minutes,
             difficulty=group_task.difficulty,

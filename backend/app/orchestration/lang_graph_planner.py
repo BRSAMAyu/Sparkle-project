@@ -72,6 +72,7 @@ class LangGraphPlanner:
         execution_feedback: dict[str, Any] | None = None,  # Phase C: past feedback
         mode_config: Any | None = None,
         state_overrides: dict[str, Any] | None = None,
+        planning_constraints: dict[str, Any] | None = None,
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -94,6 +95,8 @@ class LangGraphPlanner:
 
         # Build initial state
         messages = [HumanMessage(content=message)]
+        if planning_constraints:
+            messages.insert(0, HumanMessage(content=self._build_constraints_context(planning_constraints)))
 
         # Phase C: Inject execution feedback as system context
         if execution_feedback:
@@ -113,7 +116,10 @@ class LangGraphPlanner:
             "messages": messages,
             "user_id": user_id,
             "session_id": session_id,
-            "user_profile": snapshot.to_dict() if snapshot else {},
+            "user_profile": {
+                **(snapshot.to_dict() if snapshot else {}),
+                **({"plan_constraints": planning_constraints} if planning_constraints else {}),
+            },
             "next_step": None,
             "active_agent": None,
             "require_approval": False,
@@ -129,6 +135,7 @@ class LangGraphPlanner:
             "_plan_id": plan_id,
             # Phase C: Execution feedback for planning context
             "_execution_feedback": execution_feedback,
+            "_planning_constraints": planning_constraints or {},
         }
         if mode_config:
             initial_state["mode_name"] = getattr(mode_config, "chat_mode", None)
@@ -170,6 +177,29 @@ class LangGraphPlanner:
 
         # Convert to ExecutablePlan
         return self._convert_to_plan(final_state, snapshot, user_id, session_id)
+
+    @staticmethod
+    def _build_constraints_context(planning_constraints: dict[str, Any]) -> str:
+        lines = ["规划约束（必须尽量满足）："]
+        weak_nodes = planning_constraints.get("weak_knowledge_nodes") or []
+        if planning_constraints.get("insert_prerequisite_review") and isinstance(weak_nodes, list) and weak_nodes:
+            names = [str(item.get("name") or "").strip() for item in weak_nodes if isinstance(item, dict)]
+            descriptions = [
+                f"{item.get('name')}: {item.get('description')}"
+                for item in weak_nodes
+                if isinstance(item, dict) and item.get("name") and item.get("description")
+            ]
+            if names:
+                lines.append(f"- 在开始目标任务前，先安排一个针对「{'、'.join(names[:3])}」的复习任务。")
+            for description in descriptions[:3]:
+                lines.append(f"- 薄弱知识点说明: {description}")
+        for key, value in planning_constraints.items():
+            if key == "_meta":
+                continue
+            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes"}:
+                continue
+            lines.append(f"- {key}: {value}")
+        return "\n".join(lines)
 
     def _convert_to_plan(
         self,

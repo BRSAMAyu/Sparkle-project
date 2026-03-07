@@ -10,6 +10,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
@@ -105,6 +106,18 @@ class TaskFeedbackService:
 
         await self.db.commit()
         await self.db.refresh(feedback)
+
+        await event_bus.publish(
+            "task.feedback_submitted",
+            {
+                "event_type": "task.feedback_submitted",
+                "user_id": str(user_id),
+                "task_id": str(task_id),
+                "plan_id": str(task.plan_id) if task.plan_id else "",
+                "category": feedback.category or "",
+                "feedback_text": feedback.feedback_text or "",
+            },
+        )
 
         return feedback
 

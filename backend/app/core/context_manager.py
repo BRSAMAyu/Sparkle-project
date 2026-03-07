@@ -5,9 +5,11 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
 from app.schemas.task import TaskListQuery, TaskStatus
 from app.services.error_book_service import ErrorBookService
@@ -45,6 +47,7 @@ class CognitiveContext(BaseModel):
     # User Profile (User)
     preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
+    community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -102,6 +105,7 @@ class ContextOrchestrator:
             self._get_error_profile(uid),
             self._get_task_profile(uid),
             self._get_user_profile(uid),
+            self._get_community_profile(uid),
             self._get_preference_version(user_id),
             return_exceptions=True
         )
@@ -111,7 +115,8 @@ class ContextOrchestrator:
         error_data = self._handle_result(results[1], "error", {})
         task_data = self._handle_result(results[2], "task", {})
         user_data = self._handle_result(results[3], "user", {})
-        preference_version = self._handle_result(results[4], "preference_version", 0)
+        community_data = self._handle_result(results[4], "community", {})
+        preference_version = self._handle_result(results[5], "preference_version", 0)
 
         # Construct Context Object
         context = CognitiveContext(
@@ -129,6 +134,7 @@ class ContextOrchestrator:
 
             preferences=user_data.get("preferences", {}),
             engagement_metrics=user_data.get("metrics") or {},
+            community_context=community_data or {},
 
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
@@ -278,3 +284,88 @@ class ContextOrchestrator:
         except Exception as e:
             logger.warning(f"Failed to get preference version for {user_id}: {e}")
             return 0
+
+    async def _get_community_profile(self, user_id: UUID) -> dict[str, Any]:
+        membership_result = await self.db.execute(
+            select(GroupMember, Group)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.deleted_at.is_(None),
+                Group.deleted_at.is_(None),
+            )
+        )
+        rows = membership_result.all()
+        if not rows:
+            return {}
+
+        active_groups = []
+        sprint_summaries: list[str] = []
+        type_counts = {"sprint": 0, "squad": 0, "official": 0}
+        latest_active_at: datetime | None = None
+
+        for member, group in rows:
+            active_groups.append(group)
+            group_type = str(group.type.value if hasattr(group.type, "value") else group.type).lower()
+            type_counts[group_type] = type_counts.get(group_type, 0) + 1
+            if member.last_active_at and (latest_active_at is None or member.last_active_at > latest_active_at):
+                latest_active_at = member.last_active_at
+            if group_type == "sprint":
+                claim_counts = await self.db.execute(
+                    select(
+                        func.count(GroupTaskClaim.id),
+                        func.sum(cast(GroupTaskClaim.is_completed, Integer)),
+                    )
+                    .join(GroupMember, GroupMember.user_id == GroupTaskClaim.user_id)
+                    .join(Group, Group.id == GroupMember.group_id)
+                    .where(
+                        GroupMember.user_id == user_id,
+                        Group.id == group.id,
+                        GroupTaskClaim.deleted_at.is_(None),
+                    )
+                )
+                total_claims, completed_claims = claim_counts.one()
+                total_claims = int(total_claims or 0)
+                completed_claims = int(completed_claims or 0)
+                progress = round((completed_claims / total_claims) * 100) if total_claims else 0
+                sprint_summaries.append(
+                    f"\"{group.name}\" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务"
+                )
+
+        unfinished_claims = await self.db.execute(
+            select(func.count(GroupTaskClaim.id))
+            .join(GroupMember, GroupMember.user_id == GroupTaskClaim.user_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupTaskClaim.is_completed.is_(False),
+                GroupTaskClaim.deleted_at.is_(None),
+                GroupMember.deleted_at.is_(None),
+                Group.deleted_at.is_(None),
+            )
+        )
+        pending_group_tasks = int(unfinished_claims.scalar_one() or 0)
+        recent_interaction = None
+        if latest_active_at:
+            delta_days = max(0, (_utcnow() - latest_active_at).days)
+            recent_interaction = f"{delta_days}天前" if delta_days > 0 else "今天"
+
+        summary_lines = [
+            f"活跃群组: {len(active_groups)}个（{type_counts.get('sprint', 0)}个冲刺群、{type_counts.get('squad', 0)}个学习小队）",
+        ]
+        if sprint_summaries:
+            summary_lines.append(f"冲刺进度: {sprint_summaries[0]}")
+        if recent_interaction:
+            summary_lines.append(f"最近互动: {recent_interaction}")
+        if pending_group_tasks:
+            summary_lines.append(f"未完成群组任务: {pending_group_tasks}个")
+
+        return {
+            "active_group_count": len(active_groups),
+            "active_group_types": {k: v for k, v in type_counts.items() if v},
+            "sprint_progress": sprint_summaries[:1],
+            "recent_interaction": recent_interaction,
+            "has_pending_group_tasks": pending_group_tasks > 0,
+            "pending_group_task_count": pending_group_tasks,
+            "summary_lines": summary_lines,
+        }

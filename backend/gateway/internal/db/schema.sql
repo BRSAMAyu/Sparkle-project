@@ -2909,6 +2909,21 @@ COMMENT ON COLUMN shop_purchases.photon_balance_after IS '购买后光子余额'
 
 
 --
+-- Name: smoke_document_vectors; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE smoke_document_vectors (
+    id uuid NOT NULL,
+    file_name text NOT NULL,
+    chunk_text text NOT NULL,
+    embedding vector(1024) NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE smoke_document_vectors OWNER TO postgres;
+
+--
 -- Name: spark_contracts; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4594,6 +4609,14 @@ ALTER TABLE ONLY shop_items
 
 ALTER TABLE ONLY shop_purchases
     ADD CONSTRAINT shop_purchases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: smoke_document_vectors smoke_document_vectors_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY smoke_document_vectors
+    ADD CONSTRAINT smoke_document_vectors_pkey PRIMARY KEY (id);
 
 
 --

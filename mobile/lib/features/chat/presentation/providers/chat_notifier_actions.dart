@@ -1,6 +1,32 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierActions on ChatNotifier {
+  Future<void> handleWidgetAction(
+    String actionType,
+    Map<String, dynamic> payload,
+  ) async {
+    switch (actionType) {
+      case 'prompt':
+        final prompt =
+            payload['prompt']?.toString() ?? payload['label']?.toString() ?? '';
+        if (prompt.isNotEmpty) {
+          await sendMessage(prompt);
+        }
+        return;
+      case 'route':
+        final route = payload['route']?.toString() ?? '';
+        if (route.isNotEmpty) {
+          state = state.copyWith(
+            lastActionStatus: 'navigation_ready',
+            lastActionMessage: route,
+          );
+        }
+        return;
+      default:
+        debugPrint('ℹ️ Unsupported widget action: $actionType');
+    }
+  }
+
   void startNewSession() {
     state = state.copyWith(clearConversation: true, messages: []);
     if (DemoDataService.isDemoMode) {

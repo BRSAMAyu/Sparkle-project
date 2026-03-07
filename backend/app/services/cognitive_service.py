@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.config.phase5_config import phase5_config
+from app.core.event_bus import event_bus
 from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
@@ -375,6 +376,19 @@ class CognitiveService:
                         "confidence": new_confidence,
                     },
                 ),
+            )
+        if new_confidence >= 0.7:
+            await event_bus.publish(
+                "behavior.pattern.updated",
+                {
+                    "event_type": "behavior.pattern.updated",
+                    "user_id": str(user_id),
+                    "pattern_id": str(pattern.id),
+                    "pattern_name": pattern_name,
+                    "pattern_type": analysis.get("pattern_type", "execution"),
+                    "confidence_score": new_confidence,
+                    "source_fragment_id": str(fragment_id),
+                },
             )
 
     async def get_fragments(self, user_id: UUID, limit: int = 20, offset: int = 0) -> list[CognitiveFragment]:

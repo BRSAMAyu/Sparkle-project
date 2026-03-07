@@ -1,5 +1,5 @@
 """
-Grounding Validator - Phase 1 & Phase 2
+Grounding Validator - Phase 1, Phase 2 & Phase 3
 
 Validates executable plans before execution.
 Uses hybrid mode: cached allowlist with refresh interface.
@@ -11,9 +11,15 @@ Phase 2 enhancements:
 - Snapshot-aware validation
 """
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.task import Task
+from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.schemas import ExecutablePlan, StateSnapshot, ValidationResult
 
@@ -46,6 +52,7 @@ class GroundingValidator:
 
     # 需要任务数量检查的工具
     TASK_LIMIT_CHECK_TOOLS = {"create_task", "batch_create_tasks"}
+    KNOWLEDGE_READINESS_THRESHOLD = 30.0
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
@@ -55,7 +62,9 @@ class GroundingValidator:
     async def validate_plan(
         self,
         plan: ExecutablePlan,
-        snapshot: StateSnapshot | None = None
+        snapshot: StateSnapshot | None = None,
+        db_session: AsyncSession | None = None,
+        user_id: str | None = None,
     ) -> ValidationResult:
         """验证执行计划 (Phase 1 & Phase 2)
 
@@ -76,6 +85,7 @@ class GroundingValidator:
             ValidationResult: 验证结果
         """
         risk_flags = []
+        knowledge_warnings: list[dict[str, Any]] = []
 
         # === Phase 1 检查 ===
 
@@ -129,6 +139,13 @@ class GroundingValidator:
                     requires_confirmation=False
                 )
 
+        if db_session is not None and user_id:
+            knowledge_warnings = await self._collect_knowledge_readiness_warnings(
+                plan=plan,
+                db_session=db_session,
+                user_id=user_id,
+            )
+
         # 5. Check if confirmation or HITL needed
         requires_confirmation = len(risk_flags) > 0
         requires_hitl = False
@@ -145,9 +162,111 @@ class GroundingValidator:
         return ValidationResult(
             is_valid=True,
             risk_flags=risk_flags,
+            warnings=knowledge_warnings,
             requires_confirmation=requires_confirmation,
             requires_hitl=requires_hitl
         )
+
+    async def _collect_knowledge_readiness_warnings(
+        self,
+        *,
+        plan: ExecutablePlan,
+        db_session: AsyncSession,
+        user_id: str,
+    ) -> list[dict[str, Any]]:
+        warnings: list[dict[str, Any]] = []
+        user_uuid = UUID(str(user_id))
+        for tool_call in plan.tool_calls:
+            if tool_call.name in {"create_task", "batch_create_tasks"}:
+                warnings.extend(self._annotate_planned_task_warnings(tool_call.params))
+                continue
+
+            task_id = tool_call.params.get("task_id")
+            if not task_id:
+                continue
+            try:
+                task_uuid = UUID(str(task_id))
+            except Exception:
+                continue
+
+            task = await db_session.get(Task, task_uuid)
+            if not task or str(task.user_id) != str(user_uuid):
+                continue
+
+            result = await db_session.execute(
+                select(TaskKnowledgeLink, KnowledgeNode, UserNodeStatus)
+                .join(KnowledgeNode, KnowledgeNode.id == TaskKnowledgeLink.knowledge_node_id)
+                .outerjoin(
+                    UserNodeStatus,
+                    (UserNodeStatus.user_id == task.user_id)
+                    & (UserNodeStatus.node_id == TaskKnowledgeLink.knowledge_node_id),
+                )
+                .where(
+                    TaskKnowledgeLink.task_id == task.id,
+                    TaskKnowledgeLink.relation_type == "prerequisite",
+                    TaskKnowledgeLink.is_primary.is_(True),
+                )
+            )
+            prerequisite_rows = result.all()
+            if not prerequisite_rows:
+                continue
+
+            weak_nodes: list[str] = []
+            for _, node, status in prerequisite_rows:
+                mastery = float(status.mastery_score or 0.0) if status else 0.0
+                if mastery < self.KNOWLEDGE_READINESS_THRESHOLD:
+                    weak_nodes.append(node.name)
+
+            if not weak_nodes:
+                continue
+
+            warning = {
+                "task_id": str(task.id),
+                "task_title": task.title,
+                "missing_prerequisites": weak_nodes,
+                "message": f"建议先复习{weak_nodes[0]}基础",
+            }
+            warnings.append(warning)
+
+        return warnings[:5]
+
+    @staticmethod
+    def _annotate_planned_task_warnings(params: dict[str, Any]) -> list[dict[str, Any]]:
+        warnings: list[dict[str, Any]] = []
+
+        def _append_note(task_payload: dict[str, Any], note: str) -> None:
+            description = str(task_payload.get("description") or "").strip()
+            if note in description:
+                return
+            task_payload["description"] = f"{description}\n\n{note}".strip() if description else note
+
+        def _extract_and_apply(task_payload: dict[str, Any]) -> None:
+            weak_nodes = task_payload.get("weak_knowledge_nodes") or []
+            if not isinstance(weak_nodes, list) or not weak_nodes:
+                return
+            names = [str(item.get("name") or "").strip() for item in weak_nodes if isinstance(item, dict)]
+            names = [name for name in names if name]
+            if not names:
+                return
+            note = f"建议先复习{names[0]}基础。"
+            _append_note(task_payload, note)
+            warnings.append(
+                {
+                    "task_title": str(task_payload.get("title") or "未命名任务"),
+                    "missing_prerequisites": names,
+                    "message": note,
+                }
+            )
+
+        if isinstance(params, dict):
+            if isinstance(params.get("tasks"), list):
+                for task_payload in params["tasks"]:
+                    if isinstance(task_payload, dict):
+                        _extract_and_apply(task_payload)
+            else:
+                _extract_and_apply(params)
+
+        return warnings
 
     async def _get_allowlist(self) -> set[str]:
         """获取工具 allowlist（混合模式：缓存）"""

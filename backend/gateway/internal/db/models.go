@@ -2726,6 +2726,14 @@ type ShopPurchase struct {
 	DeletedAt          pgtype.Timestamp `json:"deleted_at"`
 }
 
+type SmokeDocumentVector struct {
+	ID        pgtype.UUID        `json:"id"`
+	FileName  string             `json:"file_name"`
+	ChunkText string             `json:"chunk_text"`
+	Embedding pgvector.Vector    `json:"embedding"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type SparkContract struct {
 	UserID             pgtype.UUID        `json:"user_id"`
 	TargetStudyMinutes pgtype.Int4        `json:"target_study_minutes"`

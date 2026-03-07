@@ -13,6 +13,7 @@ from app.config import settings
 from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
+from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
@@ -140,17 +141,34 @@ class MemoryService:
         except Exception as exc:
             logger.warning(f"Failed to track preference evolution: {exc}")
 
+        adaptation_record = self._build_preference_adaptation_record(
+            pref_key=pref_key,
+            latest=latest,
+            record=record,
+        )
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
                 update_type="memory_preference_updated",
-                category="memory",
+                category="memory" if adaptation_record is None else "evolution",
                 title=f"更新了偏好：{pref_key}",
-                description="已记录你的最新学习偏好",
+                description=(
+                    "已记录你的最新学习偏好"
+                    if adaptation_record is None
+                    else adaptation_record.user_facing_message
+                ),
                 priority="low",
                 metadata={
                     "pref_key": pref_key,
                     "version": record.version,
+                    **(
+                        {
+                            "evolution_kind": "preference_learning",
+                            "preference_learning": adaptation_record.to_dict(),
+                        }
+                        if adaptation_record is not None
+                        else {}
+                    ),
                 },
             ),
         )
@@ -210,6 +228,56 @@ class MemoryService:
             ),
         )
         return record
+
+    def _build_preference_adaptation_record(
+        self,
+        *,
+        pref_key: str,
+        latest: MemoryPreference | None,
+        record: MemoryPreference,
+    ) -> AdaptationRecord | None:
+        if latest is None:
+            return None
+
+        old_value = latest.pref_value or {}
+        new_value = record.pref_value or {}
+        if old_value == new_value:
+            return None
+
+        old_display = self._describe_preference_value(pref_key, old_value)
+        new_display = self._describe_preference_value(pref_key, new_value)
+        label = pref_key.replace("_", " ")
+        return AdaptationRecord(
+            what_changed=f"把 {label} 从“{old_display}”更新为“{new_display}”",
+            why=f"你最近的反馈和显式设置已经显示出新的 {label} 偏好。",
+            expected_effect=f"后续回答和计划会优先按“{new_display}”来组织。",
+            user_facing_message=f"我记住了你更喜欢{new_display}的回答方式。",
+            source="memory_preference",
+        )
+
+    def _describe_preference_value(self, pref_key: str, pref_value: dict[str, Any]) -> str:
+        value = pref_value.get("value")
+        if pref_key == "depth_preference" and isinstance(value, (int, float)):
+            if value >= 0.7:
+                return "深入详尽"
+            if value <= 0.3:
+                return "简洁概览"
+            return "适中平衡"
+        if pref_key == "curiosity_preference" and isinstance(value, (int, float)):
+            if value >= 0.7:
+                return "探索扩展"
+            if value <= 0.3:
+                return "专注聚焦"
+            return "适中平衡"
+        if pref_key == "session_length_preference" and isinstance(value, (int, float)):
+            return f"{int(value)} 分钟节奏"
+        if pref_key == "difficulty_preference" and isinstance(value, (int, float)):
+            if value >= 0.7:
+                return "更有挑战"
+            if value <= 0.3:
+                return "更轻量"
+            return "适中难度"
+        return str(value) if value is not None else "新的偏好"
 
     async def update_goal(
         self,

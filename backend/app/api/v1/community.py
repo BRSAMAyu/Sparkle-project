@@ -20,6 +20,7 @@ from app.db.session import AsyncSessionLocal, get_db
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import GroupMember, GroupMessage, GroupRole, GroupType, PrivateMessage, SharedResourceType
 from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.galaxy import KnowledgeNode
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.task import Task
@@ -92,6 +93,7 @@ from app.schemas.community import (
     UserStatusUpdate,
 )
 from app.services.collaboration_service import collaboration_service
+from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -320,6 +322,13 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             "tags": task.tags or [],
             "due_date": task.due_date.isoformat() if task.due_date else None,
         })
+    if resource_type == SharedResourceType.KNOWLEDGE_NODE:
+        node = resource
+        return _compact_dict({
+            "importance_level": node.importance_level,
+            "keywords": node.keywords or [],
+            "source_type": node.source_type,
+        })
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = resource
         return _compact_dict({
@@ -352,6 +361,10 @@ def _build_share_brief(resource_type: SharedResourceType, resource: object) -> d
         task = resource
         title = task.title
         summary = task.user_note or task.guide_content
+    elif resource_type == SharedResourceType.KNOWLEDGE_NODE:
+        node = resource
+        title = node.name
+        summary = node.description
     elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = resource
         title = capsule.title
@@ -376,6 +389,8 @@ def _share_message_type(resource_type: SharedResourceType) -> MessageTypeEnum:
         return MessageTypeEnum.PLAN_SHARE
     if resource_type == SharedResourceType.TASK:
         return MessageTypeEnum.TASK_SHARE
+    if resource_type == SharedResourceType.KNOWLEDGE_NODE:
+        return MessageTypeEnum.CAPSULE_SHARE
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         return MessageTypeEnum.CAPSULE_SHARE
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
@@ -402,6 +417,11 @@ async def _get_share_resource(
         if task.user_id != owner_id:
             raise HTTPException(status_code=403, detail="您没有权限分享这个任务")
         return task
+    if resource_type == SharedResourceType.KNOWLEDGE_NODE:
+        node = await db.get(KnowledgeNode, resource_id)
+        if not node:
+            raise HTTPException(status_code=404, detail="没有找到这个知识节点")
+        return node
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = await db.get(CuriosityCapsule, resource_id)
         if not capsule:
@@ -1793,6 +1813,13 @@ async def share_resource(
                 )
             )
             message_info = _build_message_info(message)
+            await CommunitySignalBridge(db).handle_resource_shared(
+                user_id=current_user.id,
+                resource_type=resource_type.value,
+                resource_id=data.resource_id,
+                target_group_id=data.target_group_id,
+                share_id=shared.id,
+            )
         elif data.target_user_id:
             message = await PrivateMessageService.send_message(
                 db,
@@ -1878,6 +1905,11 @@ async def get_group_resources(
             brief = _build_share_brief(SharedResourceType.TASK, res.task)
             resource_title = brief["title"]
             resource_summary = brief["summary"]
+        elif res.knowledge_node_id and res.knowledge_node:
+            r_type_str = "knowledge_node"
+            brief = _build_share_brief(SharedResourceType.KNOWLEDGE_NODE, res.knowledge_node)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
         elif res.cognitive_fragment_id and res.cognitive_fragment:
             r_type_str = "cognitive_fragment"
             brief = _build_share_brief(SharedResourceType.COGNITIVE_FRAGMENT, res.cognitive_fragment)
@@ -1901,6 +1933,7 @@ async def get_group_resources(
             resource_type=r_type_str,
             plan_id=res.plan_id,
             task_id=res.task_id,
+            knowledge_node_id=res.knowledge_node_id,
             cognitive_fragment_id=res.cognitive_fragment_id,
             curiosity_capsule_id=res.curiosity_capsule_id,
             behavior_pattern_id=res.behavior_pattern_id,

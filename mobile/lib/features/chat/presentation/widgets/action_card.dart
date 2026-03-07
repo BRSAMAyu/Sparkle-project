@@ -15,10 +15,13 @@ class ActionCard extends StatefulWidget {
     super.key,
     this.onConfirm,
     this.onDismiss,
+    this.onWidgetAction,
   });
   final WidgetPayload action;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
+  final void Function(String actionType, Map<String, dynamic> payload)?
+      onWidgetAction;
 
   @override
   State<ActionCard> createState() => _ActionCardState();
@@ -280,6 +283,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'nightly_review':
         return DS.cardGradientNeutral;
+      case 'execution_summary':
+        return DS.infoGradient;
+      case 'evolution_card':
+        return DS.infoGradient;
+      case 'source_summary':
+        return DS.secondaryGradient;
+      case 'next_actions':
+        return DS.primaryGradient;
+      case 'continuity_banner':
+      case 'mode_explanation':
+        return DS.cardGradientNeutral;
+      case 'blocked_input_request':
+        return DS.warningGradient;
       default:
         return DS.primaryGradient;
     }
@@ -310,6 +326,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'nightly_review':
         return DS.neutral700;
+      case 'execution_summary':
+        return DS.info;
+      case 'evolution_card':
+        return DS.info;
+      case 'source_summary':
+        return DS.secondaryBase;
+      case 'next_actions':
+        return DS.primaryBase;
+      case 'continuity_banner':
+      case 'mode_explanation':
+        return DS.neutral700;
+      case 'blocked_input_request':
+        return DS.warning;
       default:
         return DS.primaryBase;
     }
@@ -345,6 +374,20 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.auto_awesome_rounded;
       case 'nightly_review':
         return Icons.nightlight_round;
+      case 'execution_summary':
+        return Icons.task_alt_rounded;
+      case 'evolution_card':
+        return Icons.auto_awesome_motion_rounded;
+      case 'source_summary':
+        return Icons.fact_check_rounded;
+      case 'next_actions':
+        return Icons.alt_route_rounded;
+      case 'continuity_banner':
+        return Icons.link_rounded;
+      case 'mode_explanation':
+        return Icons.tips_and_updates_rounded;
+      case 'blocked_input_request':
+        return Icons.help_outline_rounded;
       default:
         return Icons.touch_app_rounded;
     }
@@ -368,6 +411,20 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return '系统更新';
       case 'nightly_review':
         return '夜间复盘';
+      case 'execution_summary':
+        return '执行结果摘要';
+      case 'evolution_card':
+        return '系统进化';
+      case 'source_summary':
+        return '依据与来源';
+      case 'next_actions':
+        return '建议下一步';
+      case 'continuity_banner':
+        return '继续当前上下文';
+      case 'mode_explanation':
+        return '当前协作模式';
+      case 'blocked_input_request':
+        return '继续前需要你确认';
       default:
         return 'AI建议操作';
     }
@@ -393,6 +450,25 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'task_list') {
       return _buildTaskListContent(context, action);
+    }
+    if (action.type == 'execution_summary') {
+      return _buildExecutionSummary(context, action);
+    }
+    if (action.type == 'evolution_card') {
+      return _buildEvolutionCard(context, action);
+    }
+    if (action.type == 'source_summary') {
+      return _buildSourceSummary(context, action);
+    }
+    if (action.type == 'next_actions') {
+      return _buildNextActions(context, action);
+    }
+    if (action.type == 'continuity_banner' ||
+        action.type == 'mode_explanation') {
+      return _buildNarrativeBanner(context, action);
+    }
+    if (action.type == 'blocked_input_request') {
+      return _buildBlockedInputRequest(context, action);
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -669,6 +745,579 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ],
       ],
     );
+  }
+
+  Widget _buildExecutionSummary(BuildContext context, WidgetPayload action) {
+    final status = action.data['status']?.toString() ?? 'success';
+    final impact = action.data['impact_summary']?.toString() ?? '';
+    final nextAction = action.data['next_action']?.toString() ?? '';
+    final affected = (action.data['affected_objects'] as List<dynamic>? ?? [])
+        .map((e) => '$e')
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final statusColor = switch (status) {
+      'failed' => DS.error,
+      'partial' => DS.warning,
+      _ => DS.success,
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing10,
+            vertical: DS.spacing6,
+          ),
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.12),
+            borderRadius: DS.borderRadius8,
+          ),
+          child: Text(
+            status == 'failed'
+                ? '执行失败'
+                : status == 'partial'
+                    ? '部分完成'
+                    : '执行完成',
+            style: TextStyle(
+              color: statusColor,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ),
+        if (impact.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            impact,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                ),
+          ),
+        ],
+        if (affected.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: affected
+                .map(
+                  (item) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing10,
+                      vertical: DS.spacing6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.neutral100,
+                      borderRadius: DS.borderRadius8,
+                    ),
+                    child: Text(item),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        if (nextAction.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '下一步：$nextAction',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSourceSummary(BuildContext context, WidgetPayload action) {
+    final headline = action.data['headline']?.toString() ?? '';
+    final focus = action.data['first_screen_focus']?.toString() ?? '';
+    final confidenceBand = action.data['confidence_band']?.toString() ?? '';
+    final completionState = action.data['completion_state']?.toString() ?? '';
+    final whyThisAnswer = action.data['why_this_answer']?.toString() ?? '';
+    final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
+    final citations = (action.data['citations'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (headline.isNotEmpty) ...[
+          Text(
+            headline,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (confidenceBand.isNotEmpty || completionState.isNotEmpty) ...[
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (confidenceBand.isNotEmpty)
+                _buildMetaPill(_mapConfidenceLabel(confidenceBand)),
+              if (completionState.isNotEmpty)
+                _buildMetaPill(_mapCompletionLabel(completionState)),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+        ],
+        if (focus.isNotEmpty) ...[
+          Text(
+            focus,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (whyThisAnswer.isNotEmpty) ...[
+          Text(
+            '为什么这样回答',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            whyThisAnswer,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (evidenceSummary.isNotEmpty)
+          Text(
+            evidenceSummary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                ),
+          ),
+        if (citations.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          ...citations.take(3).map((citation) {
+            final title = citation['title']?.toString() ?? '未命名来源';
+            final sectionTitle = citation['section_title']?.toString() ?? '';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Container(
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
+                    ),
+                    if (sectionTitle.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        sectionTitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.neutral600,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNextActions(BuildContext context, WidgetPayload action) {
+    final title = action.data['title']?.toString() ?? '';
+    final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
+    final actions = (action.data['actions'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final memoryUpdatesRaw = action.data['memory_updates'];
+    final memoryUpdates = memoryUpdatesRaw is Map<String, dynamic>
+        ? (memoryUpdatesRaw['highlights'] as List<dynamic>? ?? [])
+            .map((e) => '$e')
+            .toList()
+        : (action.data['memory_updates'] as List<dynamic>? ?? [])
+            .map((e) => '$e')
+            .toList();
+
+    Widget buildActionChip(Map<String, dynamic> item,
+        {bool secondary = false}) {
+      final label = item['label']?.toString() ?? '';
+      return InkWell(
+        onTap: label.isEmpty
+            ? null
+            : () => widget.onWidgetAction?.call(
+                  item['type']?.toString() ?? 'prompt',
+                  item,
+                ),
+        borderRadius: DS.borderRadius20,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: secondary
+                ? DS.surfaceTertiary
+                : DS.primaryBase.withValues(alpha: 0.12),
+            borderRadius: DS.borderRadius20,
+            border: Border.all(
+              color: secondary
+                  ? DS.neutral200
+                  : DS.primaryBase.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: secondary ? DS.neutral700 : DS.primaryBase,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title.isNotEmpty) ...[
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (actions.isNotEmpty)
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: actions.map(buildActionChip).toList(),
+          ),
+        if (recoveryMessage.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            recoveryMessage,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                ),
+          ),
+        ],
+        if (retryOptions.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '如果这轮还不够，可以这样继续：',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: retryOptions
+                .map((item) => buildActionChip(item, secondary: true))
+                .toList(),
+          ),
+        ],
+        if (memoryUpdates.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          ...memoryUpdates.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing4),
+              child: Text(
+                '• $item',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral600,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEvolutionCard(BuildContext context, WidgetPayload action) {
+    final headline = action.data['headline']?.toString() ?? '系统正在继续适应你';
+    final summary = action.data['summary']?.toString() ?? '';
+    final adaptationRecords =
+        (action.data['adaptation_records'] as List<dynamic>? ?? [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+    final preferenceLearnings =
+        (action.data['preference_learnings'] as List<dynamic>? ?? [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+
+    Widget buildDetailBlock(Map<String, dynamic> item) {
+      final what = item['what_changed']?.toString() ?? '';
+      final why = item['why']?.toString() ?? '';
+      final effect = item['expected_effect']?.toString() ?? '';
+      return Container(
+        margin: const EdgeInsets.only(top: DS.spacing8),
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (what.isNotEmpty)
+              Text(
+                what,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.neutral900,
+                    ),
+              ),
+            if (why.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing6),
+              Text(
+                '为什么：$why',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral700,
+                    ),
+              ),
+            ],
+            if (effect.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing6),
+              Text(
+                '预期效果：$effect',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral700,
+                    ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          headline,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: DS.fontWeightSemibold,
+                color: DS.neutral900,
+              ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                ),
+          ),
+        ],
+        if (adaptationRecords.isNotEmpty || preferenceLearnings.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            title: Text(
+              '了解详情',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.info,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+            children: [
+              ...adaptationRecords.map(buildDetailBlock),
+              ...preferenceLearnings.map(buildDetailBlock),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNarrativeBanner(BuildContext context, WidgetPayload action) {
+    final title = action.data['title']?.toString() ??
+        action.data['label']?.toString() ??
+        '';
+    final body = action.data['message']?.toString() ??
+        action.data['description']?.toString() ??
+        '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title.isNotEmpty)
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+        if (body.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBlockedInputRequest(BuildContext context, WidgetPayload action) {
+    final title = action.data['title']?.toString() ?? '';
+    final reason = action.data['reason']?.toString() ?? '';
+    final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
+    final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
+        .map((e) => '$e')
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title.isNotEmpty) ...[
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (recoveryMessage.isNotEmpty) ...[
+          Text(
+            recoveryMessage,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+        ],
+        if (reason.isNotEmpty)
+          Text(
+            reason,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral800,
+                ),
+          ),
+        if (retryOptions.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: retryOptions
+                .map(
+                  (item) => InkWell(
+                    onTap: () => widget.onWidgetAction?.call(
+                      'prompt',
+                      {'prompt': item, 'label': item},
+                    ),
+                    borderRadius: DS.borderRadius20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing12,
+                        vertical: DS.spacing8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceTertiary,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(color: DS.neutral200),
+                      ),
+                      child: Text(
+                        item,
+                        style: TextStyle(
+                          color: DS.neutral700,
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMetaPill(String label) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.neutral100,
+          borderRadius: DS.borderRadius20,
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: DS.neutral700,
+            fontWeight: DS.fontWeightSemibold,
+          ),
+        ),
+      );
+
+  String _mapConfidenceLabel(String band) {
+    switch (band) {
+      case 'high':
+        return '可信度高';
+      case 'cautious':
+        return '结论需审慎';
+      default:
+        return '可信度中等';
+    }
+  }
+
+  String _mapCompletionLabel(String state) {
+    switch (state) {
+      case 'done':
+        return '本轮已完成';
+      case 'partial':
+        return '部分完成';
+      case 'needs_input':
+        return '等待你补充';
+      case 'blocked':
+        return '当前受阻';
+      default:
+        return '处理中';
+    }
   }
 
   void _handleFocusCardAction(BuildContext context, WidgetPayload action) {

@@ -264,9 +264,22 @@ class TaskService:
 
         # Publish task completion event for cognitive analysis
         from app.core.event_bus import TaskCompleted, event_bus
+        from app.models.community import GroupTaskClaim
 
         estimated = db_obj.estimated_minutes or 0
         completion_rate = actual_minutes / estimated if estimated > 0 else 1.0
+        claim_result = await db.execute(
+            select(GroupTaskClaim).where(GroupTaskClaim.personal_task_id == db_obj.id)
+        )
+        linked_claim = claim_result.scalar_one_or_none()
+        source = "group" if linked_claim else "personal"
+        source_metadata = {}
+        if linked_claim:
+            source_metadata = {
+                "group_task_claim_id": str(linked_claim.id),
+                "group_task_id": str(linked_claim.group_task_id),
+                "group_weight_factor": 0.7,
+            }
 
         event = TaskCompleted(
             user_id=str(db_obj.user_id),
@@ -277,6 +290,8 @@ class TaskService:
             completion_rate=completion_rate,
             user_note=note,
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
+            source=source,
+            source_metadata=source_metadata,
         )
         await event_bus.publish("task.completed", event.to_dict())
 

@@ -37,6 +37,15 @@ var jsonMetadataKeys = map[string]bool{
 	"fallback_reason":        true,
 	"route_confidence":       true,
 	"expert_entry_source":    true,
+	"ux_turn":                true,
+	"ux_progress":            true,
+	"ux_result":              true,
+	"ux_followthrough":       true,
+	"ux_sources":             true,
+	"ux_evolution":           true,
+	"continuity_banner":      true,
+	"mode_explanation":       true,
+	"collaboration_summary":  true,
 }
 
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
@@ -94,6 +103,9 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 		}
 	case *agentv1.ChatResponse_StatusUpdate:
 		result["type"] = "status_update"
+		if _, ok := metadata["ux_progress"]; !ok {
+			metadata["ux_progress"] = deriveUXProgress(content.StatusUpdate.State.String(), sanitizer.Sanitize(content.StatusUpdate.Details))
+		}
 		result["status"] = map[string]interface{}{
 			"state":              content.StatusUpdate.State.String(),
 			"details":            sanitizer.Sanitize(content.StatusUpdate.Details),
@@ -141,6 +153,9 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 			}
 		}
 		result["citations"] = citations
+		if _, ok := metadata["ux_sources"]; !ok {
+			metadata["ux_sources"] = buildSourceSummary(citations)
+		}
 	case *agentv1.ChatResponse_ToolResult:
 		result["type"] = "tool_result"
 		tool := content.ToolResult
@@ -152,13 +167,26 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 		if tool.WidgetData != nil {
 			widgetData = tool.WidgetData.AsMap()
 		}
+		widgetType := tool.WidgetType
+		if widgetType == "" {
+			widgetType = "execution_summary"
+		}
+		if len(widgetData) == 0 {
+			widgetData = buildExecutionSummaryWidget(tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
+		} else if widgetType == "execution_summary" {
+			merged := buildExecutionSummaryWidget(tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
+			for k, v := range widgetData {
+				merged[k] = v
+			}
+			widgetData = merged
+		}
 		result["tool_result"] = map[string]interface{}{
 			"tool_name":     tool.ToolName,
 			"success":       tool.Success,
 			"data":          data,
 			"error_message": tool.ErrorMessage,
 			"suggestion":    tool.Suggestion,
-			"widget_type":   tool.WidgetType,
+			"widget_type":   widgetType,
 			"widget_data":   widgetData,
 			"tool_call_id":  tool.ToolCallId,
 		}
@@ -199,20 +227,24 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 				}
 			}
 			intervention = map[string]interface{}{
-				"id":             req.Id,
-				"dedupe_key":     req.DedupeKey,
-				"topic":          req.Topic,
-				"created_at_ms":  req.CreatedAtMs,
-				"expires_at_ms":  req.ExpiresAtMs,
-				"is_retractable": req.IsRetractable,
-				"supersedes_id":  req.SupersedesId,
-				"schema_version": req.SchemaVersion,
-				"policy_version": req.PolicyVersion,
-				"model_version":  req.ModelVersion,
-				"reason":         reason,
-				"level":          req.Level.String(),
-				"on_reject":      cooldown,
-				"content":        contentMap,
+				"id":                  req.Id,
+				"dedupe_key":          req.DedupeKey,
+				"topic":               req.Topic,
+				"created_at_ms":       req.CreatedAtMs,
+				"expires_at_ms":       req.ExpiresAtMs,
+				"is_retractable":      req.IsRetractable,
+				"supersedes_id":       req.SupersedesId,
+				"schema_version":      req.SchemaVersion,
+				"policy_version":      req.PolicyVersion,
+				"model_version":       req.ModelVersion,
+				"reason":              reason,
+				"level":               req.Level.String(),
+				"on_reject":           cooldown,
+				"content":             contentMap,
+				"user_visible_reason": reason["explanation_text"],
+				"reversible":          req.IsRetractable,
+				"primary_action":      contentMap["primary_action"],
+				"secondary_action":    contentMap["secondary_action"],
 			}
 		}
 		result["intervention"] = intervention
@@ -228,6 +260,120 @@ func convertResponseToJSON(resp *agentv1.ChatResponse, sessionID string) map[str
 	}
 
 	return result
+}
+
+func deriveUXProgress(state string, details string) map[string]interface{} {
+	stage := "understanding"
+	headline := "我先理解你的问题"
+	blocked := false
+
+	switch state {
+	case "THINKING":
+		stage = "planning"
+		headline = "我在整理你的目标和思路"
+	case "SEARCHING":
+		stage = "retrieving"
+		headline = "我在查找相关依据和上下文"
+	case "EXECUTING_TOOL":
+		stage = "executing"
+		headline = "我在替你执行需要的步骤"
+	case "GENERATING":
+		stage = "answering"
+		headline = "我在组织最终回答"
+	case "IDLE":
+		stage = "answering"
+		headline = "这轮处理已经完成"
+	}
+
+	if strings.Contains(details, "等待") || strings.Contains(details, "确认") || strings.Contains(details, "补充") {
+		blocked = true
+	}
+
+	return map[string]interface{}{
+		"stage":      stage,
+		"headline":   headline,
+		"detail":     details,
+		"is_blocked": blocked,
+	}
+}
+
+func buildExecutionSummaryWidget(toolName string, success bool, data map[string]interface{}, errorMessage string, suggestion string, toolCallID string) map[string]interface{} {
+	state := "success"
+	headline := fmt.Sprintf("%s 已执行", toolName)
+	impact := "已更新相关结果。"
+	if !success {
+		state = "failed"
+		headline = fmt.Sprintf("%s 执行失败", toolName)
+		impact = "这一步没有成功完成，结果可能部分受影响。"
+	} else if len(data) == 0 {
+		state = "partial"
+		impact = "执行已完成，但暂时没有返回可展示的详细对象。"
+	}
+
+	affected := make([]string, 0, minInt(3, len(data)))
+	for key := range data {
+		affected = append(affected, key)
+		if len(affected) >= 3 {
+			break
+		}
+	}
+
+	nextAction := "继续查看最终回答"
+	if !success {
+		nextAction = "补充信息后重试，或换一种方式继续"
+	} else if suggestion != "" {
+		nextAction = suggestion
+	}
+
+	return map[string]interface{}{
+		"title":            headline,
+		"tool_name":        toolName,
+		"status":           state,
+		"impact_summary":   impact,
+		"affected_objects": affected,
+		"next_action":      nextAction,
+		"error_message":    errorMessage,
+		"execution_id":     toolCallID,
+		"reversible":       false,
+	}
+}
+
+func buildSourceSummary(citations []map[string]interface{}) map[string]interface{} {
+	scope := "mixed"
+	if len(citations) == 0 {
+		scope = "none"
+	}
+	if len(citations) > 0 {
+		fileOnly := true
+		for _, cite := range citations {
+			if cite["file_id"] == "" || cite["file_id"] == nil {
+				fileOnly = false
+				break
+			}
+		}
+		if fileOnly {
+			scope = "file_only"
+		}
+	}
+
+	summary := "本轮回答带有可展开的依据来源。"
+	if len(citations) == 0 {
+		summary = "本轮回答没有附带可展开的引用来源。"
+	}
+
+	return map[string]interface{}{
+		"citations_available": len(citations) > 0,
+		"reference_scope":     scope,
+		"evidence_summary":    summary,
+		"citations":           citations,
+	}
+}
+
+func minInt(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func parseEnvelopeJSON(msg []byte) (*wsEnvelopeIn, bool) {
