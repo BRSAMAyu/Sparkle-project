@@ -25,7 +25,7 @@ class GraphStructureService:
         summary: str,
         subject_id: int | None = None,
         tags: list[str] = None,
-        parent_node_id: UUID | None = None
+        parent_node_id: UUID | None = None,
     ) -> KnowledgeNode:
         """Create a new knowledge node (Structure)"""
         if tags is None:
@@ -37,19 +37,15 @@ class GraphStructureService:
             keywords=tags,
             parent_id=parent_node_id,
             is_seed=False,
-            source_type='user_created',
-            importance_level=1
+            source_type="user_created",
+            importance_level=1,
         )
         self.db.add(node)
-        await self.db.flush() # Get ID
+        await self.db.flush()  # Get ID
 
         # Initialize status
         status = UserNodeStatus(
-            user_id=user_id,
-            node_id=node.id,
-            is_unlocked=True,
-            mastery_score=0,
-            first_unlock_at=_utcnow()
+            user_id=user_id, node_id=node.id, is_unlocked=True, mastery_score=0, first_unlock_at=_utcnow()
         )
         self.db.add(status)
 
@@ -57,19 +53,10 @@ class GraphStructureService:
         await self.db.refresh(node)
         return node
 
-    async def create_edge(
-        self,
-        user_id: UUID,
-        source_id: UUID,
-        target_id: UUID,
-        relation_type: str
-    ) -> NodeRelation:
+    async def create_edge(self, user_id: UUID, source_id: UUID, target_id: UUID, relation_type: str) -> NodeRelation:
         """Create a relation between nodes"""
         edge = NodeRelation(
-            source_node_id=source_id,
-            target_node_id=target_id,
-            relation_type=relation_type,
-            created_by='user'
+            source_node_id=source_id, target_node_id=target_id, relation_type=relation_type, created_by="user"
         )
         self.db.add(edge)
         await self.db.commit()
@@ -83,7 +70,7 @@ class GraphStructureService:
             .options(
                 selectinload(KnowledgeNode.subject),
                 selectinload(KnowledgeNode.parent),
-                selectinload(KnowledgeNode.children)
+                selectinload(KnowledgeNode.children),
             )
             .where(KnowledgeNode.id == node_id)
         )
@@ -95,12 +82,7 @@ class GraphStructureService:
         # Find edges where node is source or target
         stmt = (
             select(NodeRelation)
-            .where(
-                or_(
-                    NodeRelation.source_node_id == node_id,
-                    NodeRelation.target_node_id == node_id
-                )
-            )
+            .where(or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id))
             .limit(limit)
         )
         result = await self.db.execute(stmt)
@@ -132,28 +114,17 @@ class GraphStructureService:
         # Since updates are individual per ID, using mappings is best
 
         # Transform to list of dicts for update
-        update_data = [
-            {'id': item['id'], 'position_x': item['x'], 'position_y': item['y']}
-            for item in updates
-        ]
+        update_data = [{"id": item["id"], "position_x": item["x"], "position_y": item["y"]} for item in updates]
 
         if not update_data:
             return 0
 
-        await self.db.execute(
-            update(KnowledgeNode),
-            update_data
-        )
+        await self.db.execute(update(KnowledgeNode), update_data)
         await self.db.commit()
         return len(update_data)
 
     async def get_nodes_in_bounds(
-        self,
-        min_x: float,
-        max_x: float,
-        min_y: float,
-        max_y: float,
-        limit: int = 1000
+        self, min_x: float, max_x: float, min_y: float, max_y: float, limit: int = 1000
     ) -> list[KnowledgeNode]:
         """Get nodes within a bounding box (Viewport Query)"""
         stmt = (
@@ -163,7 +134,7 @@ class GraphStructureService:
                     KnowledgeNode.position_x >= min_x,
                     KnowledgeNode.position_x <= max_x,
                     KnowledgeNode.position_y >= min_y,
-                    KnowledgeNode.position_y <= max_y
+                    KnowledgeNode.position_y <= max_y,
                 )
             )
             .limit(limit)
@@ -171,23 +142,70 @@ class GraphStructureService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_graph_view(
+    async def get_graph_viewport(
         self,
         user_id: UUID,
-        sector_code: str | None = None,
-        include_locked: bool = True,
-        zoom_level: float = 1.0
+        min_x: float,
+        max_x: float,
+        min_y: float,
+        max_y: float,
+        limit: int = 800,
+    ):
+        """Fetch a viewport-limited graph slice with user status and local relations."""
+        query = (
+            select(KnowledgeNode, UserNodeStatus)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent),
+            )
+            .outerjoin(
+                UserNodeStatus,
+                and_(
+                    UserNodeStatus.node_id == KnowledgeNode.id,
+                    UserNodeStatus.user_id == user_id,
+                ),
+            )
+            .where(
+                and_(
+                    KnowledgeNode.position_x >= min_x,
+                    KnowledgeNode.position_x <= max_x,
+                    KnowledgeNode.position_y >= min_y,
+                    KnowledgeNode.position_y <= max_y,
+                )
+            )
+            .order_by(KnowledgeNode.importance_level.desc(), KnowledgeNode.global_spark_count.desc())
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        nodes_with_status = result.all()
+
+        node_ids = [node.id for node, _ in nodes_with_status]
+        relations = []
+        if node_ids:
+            relations_query = select(NodeRelation).where(
+                and_(
+                    NodeRelation.source_node_id.in_(node_ids),
+                    NodeRelation.target_node_id.in_(node_ids),
+                )
+            )
+            relations_result = await self.db.execute(relations_query)
+            relations = relations_result.scalars().all()
+
+        return nodes_with_status, relations
+
+    async def get_graph_view(
+        self, user_id: UUID, sector_code: str | None = None, include_locked: bool = True, zoom_level: float = 1.0
     ) -> GalaxyGraphResponse:
         """Fetch graph structure for visualization"""
         # 1. Query nodes with status
         query = (
             select(KnowledgeNode, UserNodeStatus)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent),
+            )
             .outerjoin(
-                UserNodeStatus,
-                and_(
-                    UserNodeStatus.node_id == KnowledgeNode.id,
-                    UserNodeStatus.user_id == user_id
-                )
+                UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id)
             )
             .outerjoin(Subject, KnowledgeNode.subject_id == Subject.id)
         )
@@ -198,31 +216,21 @@ class GraphStructureService:
         # LOD Filtering
         if zoom_level < 0.5:
             query = query.where(
-                or_(
-                    KnowledgeNode.importance_level >= 3,
-                    KnowledgeNode.is_seed,
-                    UserNodeStatus.is_unlocked
-                )
+                or_(KnowledgeNode.importance_level >= 3, KnowledgeNode.is_seed, UserNodeStatus.is_unlocked)
             )
 
         result = await self.db.execute(query)
         nodes_with_status = result.all()
 
         if not include_locked:
-            nodes_with_status = [
-                (node, status) for node, status in nodes_with_status
-                if status and status.is_unlocked
-            ]
+            nodes_with_status = [(node, status) for node, status in nodes_with_status if status and status.is_unlocked]
 
         # 2. Query Relations
         node_ids = [node.id for node, _ in nodes_with_status]
         relations = []
         if node_ids:
             relations_query = select(NodeRelation).where(
-                and_(
-                    NodeRelation.source_node_id.in_(node_ids),
-                    NodeRelation.target_node_id.in_(node_ids)
-                )
+                and_(NodeRelation.source_node_id.in_(node_ids), NodeRelation.target_node_id.in_(node_ids))
             )
             relations_result = await self.db.execute(relations_query)
             relations = relations_result.scalars().all()

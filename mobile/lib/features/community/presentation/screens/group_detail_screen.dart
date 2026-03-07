@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/community/presentation/screens/group_members_screen.dart';
 import 'package:sparkle/features/community/presentation/widgets/bonfire_widget.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
@@ -257,14 +256,8 @@ class GroupDetailScreen extends ConsumerWidget {
                             text: 'Members',
                             icon: Icons.people_outline,
                             onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (context) => GroupMembersScreen(
-                                    groupId: groupId,
-                                    groupName: group.name,
-                                    myRole: group.myRole,
-                                  ),
-                                ),
+                              context.push(
+                                '/community/groups/$groupId/members?name=${Uri.encodeComponent(group.name)}',
                               );
                             },
                           ),

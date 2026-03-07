@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/memory/memory.dart';
-import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
-import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -190,11 +187,7 @@ class ProfileScreen extends ConsumerWidget {
               title: '个人资料',
               gradient: DS.primaryGradient,
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EditProfileScreen(),
-                  ),
-                );
+                context.push(UserRoutes.editProfile);
               },
             ),
             const Divider(height: 1, indent: 60),
@@ -204,11 +197,7 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.schedulePreferences,
               gradient: DS.secondaryGradient,
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const UnifiedSettingsScreen(),
-                  ),
-                );
+                context.push(UserRoutes.settings);
               },
             ),
             const Divider(height: 1, indent: 60),
@@ -218,11 +207,7 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.myPersona,
               gradient: DS.infoGradient,
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const UserPersonaScreen(),
-                  ),
-                );
+                context.push(UserRoutes.persona);
               },
             ),
             const Divider(height: 1, indent: 60),
@@ -232,11 +217,7 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.systemActivity,
               gradient: DS.secondaryGradient,
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SystemUpdatesScreen(),
-                  ),
-                );
+                context.push(UserRoutes.systemUpdates);
               },
             ),
             if (AppFeatureFlags.enableUserMemoryControls) ...[
@@ -247,11 +228,7 @@ class ProfileScreen extends ConsumerWidget {
                 title: l10n.memoryControl,
                 gradient: DS.primaryGradient,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const MemorySettingsScreen(),
-                    ),
-                  );
+                  context.push(UserRoutes.memorySettings);
                 },
               ),
             ],

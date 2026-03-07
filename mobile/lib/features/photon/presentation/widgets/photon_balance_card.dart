@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
+import 'package:sparkle/features/photon/presentation/widgets/transaction_history_list.dart';
 
 /// Photon Balance Card Widget
 /// 光子余额卡片组件
@@ -22,12 +25,7 @@ class PhotonBalanceCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap ??
           () {
-            // Navigate to transaction history
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => const TransactionHistoryScreen(),
-              ),
-            );
+            context.push(PhotonRoutes.transactionHistory);
           },
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -144,8 +142,8 @@ class TransactionHistoryScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('交易历史'),
         ),
-        body: const Center(
-          child: Text('Transaction History - To be implemented'),
+        body: const ContentConstraint(
+          child: TransactionHistoryList(),
         ),
       );
 }

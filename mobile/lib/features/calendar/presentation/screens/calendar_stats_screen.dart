@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
+import 'package:sparkle/features/calendar/calendar_routes.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
@@ -38,7 +40,9 @@ Color _resolveCalendarColor(int colorValue) {
 }
 
 class CalendarStatsScreen extends ConsumerStatefulWidget {
-  const CalendarStatsScreen({super.key});
+  const CalendarStatsScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<CalendarStatsScreen> createState() =>
@@ -54,6 +58,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      _focusedDay = widget.initialDate!;
+    }
     _selectedDay = _focusedDay;
     // Load task summaries for the initial month
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -373,10 +380,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             // Let's add an "Enter Detail" button in the list header or make the list tapable.
           } else {
             // If tapping already selected day, open detail
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => DailyDetailScreen(date: selectedDay),
-              ),
+            context.push(
+              '${CalendarRoutes.dailyDetail}?date=${selectedDay.toIso8601String()}',
             );
           }
         },
@@ -622,12 +627,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               SparkleButton.ghost(
                 label: '查看详情',
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => DailyDetailScreen(
-                        date: _selectedDay ?? _focusedDay,
-                      ),
-                    ),
+                  context.push(
+                    '${CalendarRoutes.dailyDetail}?date=${(_selectedDay ?? _focusedDay).toIso8601String()}',
                   );
                 },
                 icon: const Icon(Icons.info_outline, size: 16),

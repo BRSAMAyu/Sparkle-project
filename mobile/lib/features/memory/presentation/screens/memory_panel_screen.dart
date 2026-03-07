@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
+import 'package:sparkle/features/memory/memory_routes.dart';
 
 enum MemoryEntryType { preference, goal, episodic }
 
@@ -409,11 +411,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   void _openDetail(BuildContext context, MemoryDetailArgs args) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MemoryDetailScreen(args: args),
-      ),
-    );
+    context.push(MemoryRoutes.detail, extra: args);
   }
 
   String _formatUpdated(DateTime? value) {

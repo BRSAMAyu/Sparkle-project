@@ -925,10 +925,31 @@ class ChatOrchestrator:
             last_activity
         )
 
-    async def _get_tools_schema(self) -> list[dict[str, Any]]:
-        """Get tools from dynamic registry"""
+    async def _get_tools_schema(self, active_tools: list[str] | None = None) -> list[dict[str, Any]]:
+        """Get tools from dynamic registry, optionally filtered by request-scoped allowlist."""
         try:
-            return dynamic_tool_registry.get_openai_tools_schema()
+            requested_tools = [tool_name.strip() for tool_name in (active_tools or []) if tool_name and tool_name.strip()]
+            if not requested_tools:
+                return dynamic_tool_registry.get_openai_tools_schema()
+
+            tools_by_name = {tool.name: tool for tool in dynamic_tool_registry.get_all_tools()}
+            filtered_tools: list[dict[str, Any]] = []
+            unknown_tools: list[str] = []
+            seen: set[str] = set()
+            for tool_name in requested_tools:
+                if tool_name in seen:
+                    continue
+                seen.add(tool_name)
+                tool = tools_by_name.get(tool_name)
+                if tool is None:
+                    unknown_tools.append(tool_name)
+                    continue
+                filtered_tools.append(tool.to_openai_schema())
+
+            if unknown_tools:
+                logger.warning(f"Ignoring unknown active_tools: {unknown_tools}")
+
+            return filtered_tools
         except Exception as e:
             logger.error(f"Failed to get tools schema: {e}")
             return []
@@ -1145,6 +1166,67 @@ class ChatOrchestrator:
                 summary_content = summary_content[:600] + "..."
             history = [{"role": "system", "content": f"Summary of prior conversation: {summary_content}"}] + history
         return history
+
+    @staticmethod
+    def _normalize_proto_history(history_messages: list[Any]) -> list[dict[str, Any]]:
+        normalized_history: list[dict[str, Any]] = []
+        for msg in history_messages or []:
+            role = str(getattr(msg, "role", "") or "").strip().lower()
+            if not role:
+                continue
+
+            history_item: dict[str, Any] = {
+                "role": role,
+                "content": str(getattr(msg, "content", "") or ""),
+            }
+
+            name = str(getattr(msg, "name", "") or "").strip()
+            if name:
+                history_item["name"] = name
+
+            tool_call_id = str(getattr(msg, "tool_call_id", "") or "").strip()
+            if tool_call_id:
+                history_item["tool_call_id"] = tool_call_id
+
+            metadata = {
+                str(k): str(v)
+                for k, v in dict(getattr(msg, "metadata", {}) or {}).items()
+            }
+            if metadata:
+                history_item["metadata"] = metadata
+                raw_tool_calls = metadata.get("tool_calls")
+                if raw_tool_calls:
+                    with contextlib.suppress(json.JSONDecodeError, TypeError):
+                        parsed_tool_calls = json.loads(raw_tool_calls)
+                        if isinstance(parsed_tool_calls, list):
+                            history_item["tool_calls"] = parsed_tool_calls
+
+            normalized_history.append(history_item)
+
+        return normalized_history
+
+    def _merge_request_history_into_conversation_context(
+        self,
+        conversation_context: dict[str, Any] | None,
+        request_history: list[Any],
+    ) -> dict[str, Any]:
+        proto_history = self._normalize_proto_history(request_history)
+        if not proto_history:
+            return conversation_context or {"messages": [], "summary": None}
+
+        merged_context = dict(conversation_context or {"messages": [], "summary": None})
+        existing_messages = merged_context.get("messages")
+        existing_history = [m for m in existing_messages if isinstance(m, dict)] if isinstance(existing_messages, list) else []
+
+        overlap = 0
+        max_overlap = min(len(existing_history), len(proto_history))
+        for size in range(max_overlap, 0, -1):
+            if existing_history[-size:] == proto_history[:size]:
+                overlap = size
+                break
+
+        merged_context["messages"] = existing_history + proto_history[overlap:]
+        return merged_context
 
     @staticmethod
     def _has_conversation_summary(conversation_context: dict[str, Any] | None) -> bool:
@@ -1748,6 +1830,7 @@ class ChatOrchestrator:
         state: WorkflowState,
         request_id: str,
         response_id: str,
+        active_tools: list[str],
         stream_callback,
         tracer,
     ) -> tuple[TransparencyDataGenerator, "typing.Callable"]:
@@ -1790,10 +1873,10 @@ class ChatOrchestrator:
         transparency_generator.start_step(tools_step)
         await emit_transparency_event(transparency_generator.get_step_event())
         with tracer.start_as_current_span("orchestrator.get_tools"):
-            tools = await self._get_tools_schema()
+            tools = await self._get_tools_schema(active_tools=active_tools)
         transparency_generator.complete_step(
             tools_step,
-            metadata={"tool_count": len(tools)},
+            metadata={"tool_count": len(tools), "requested_tool_count": len(active_tools)},
         )
         await emit_transparency_event(transparency_generator.get_step_event())
 
@@ -1806,8 +1889,148 @@ class ChatOrchestrator:
 
         # Inject tools into state
         state.context_data["tools_schema"] = tools
+        state.context_data["active_tools"] = list(active_tools)
 
         return transparency_generator, emit_transparency_event
+
+    @staticmethod
+    def _coerce_tool_result_payload(raw_result_json: str) -> Any:
+        if not raw_result_json:
+            return {}
+        try:
+            return json.loads(raw_result_json)
+        except json.JSONDecodeError:
+            return {"raw_result": raw_result_json}
+
+    @staticmethod
+    def _iter_text_chunks(text: str, chunk_size: int = 240) -> list[str]:
+        if not text:
+            return []
+        return [text[idx:idx + chunk_size] for idx in range(0, len(text), chunk_size)]
+
+    async def _continue_after_tool_result(
+        self,
+        *,
+        request: agent_service_pb2.ChatRequest,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        user_context_payload: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        tr = request.tool_result
+        conversation_history = self._build_routing_history(conversation_context)
+        tool_result = {
+            "tool_call_id": tr.tool_call_id,
+            "tool_name": tr.tool_name,
+            "result": self._coerce_tool_result_payload(tr.result_json),
+            "success": not tr.is_error,
+            "is_error": bool(tr.is_error),
+            "error_message": tr.error_message,
+        }
+
+        try:
+            llm_response = await llm_service.continue_with_tool_results(
+                conversation_history=conversation_history,
+                tool_results=[tool_result],
+            )
+        except Exception as exc:
+            logger.error(f"Tool result continuation failed: {exc}", exc_info=True)
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                error=agent_service_pb2.Error(
+                    message=f"工具结果续跑失败: {exc}",
+                    retryable=True,
+                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
+                ),
+                finish_reason=agent_service_pb2.ERROR,
+            )
+            return
+
+        full_response = (llm_response.content or "").strip()
+        if not full_response:
+            full_response = "工具执行已完成，但没有生成补充说明。请继续告诉我下一步需要处理什么。"
+            RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="tool_result_empty_final").inc()
+
+        yield agent_service_pb2.ChatResponse(
+            response_id=response_id,
+            created_at=int(datetime.now().timestamp()),
+            request_id=request_id,
+            trace_id=trace_id,
+            workflow_id=workflow_id,
+            prompt_version=prompt_version,
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.GENERATING,
+                details=f"正在整合工具结果：{tr.tool_name}",
+                current_agent_name="Sparkle AI",
+            ),
+        )
+
+        for chunk in self._iter_text_chunks(full_response):
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                delta=chunk,
+            )
+
+        await self._persist_assistant_message(
+            active_db=active_db,
+            user_id=user_id,
+            session_id=session_id,
+            full_response=full_response,
+        )
+        llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
+        await self._record_decision(
+            active_db=active_db,
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            llm_profile_meta=llm_profile_meta,
+            full_response=full_response,
+        )
+
+        response_metadata = {
+            "response_id": response_id,
+            "trace_id": trace_id,
+            "tool_continuation": "true",
+            "tool_name": tr.tool_name,
+            "tool_error": str(bool(tr.is_error)).lower(),
+            "preference_version": (user_context_payload or {}).get("preference_version", 0),
+            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+        }
+        final_response_data = {
+            "message": full_response,
+            "tool_results": [tool_result],
+            "metadata": response_metadata,
+        }
+        await self._cache_response(session_id, request_id, final_response_data)
+        for update_resp in await self._emit_system_updates(user_id):
+            yield update_resp
+
+        yield agent_service_pb2.ChatResponse(
+            response_id=response_id,
+            created_at=int(datetime.now().timestamp()),
+            request_id=request_id,
+            trace_id=trace_id,
+            workflow_id=workflow_id,
+            prompt_version=prompt_version,
+            metadata={str(k): str(v) for k, v in response_metadata.items()},
+            full_text=full_response,
+            finish_reason=agent_service_pb2.STOP,
+        )
 
     async def _handle_multi_agent_mode(
         self,
@@ -1841,6 +2064,8 @@ class ChatOrchestrator:
             "conversation_context": conversation_context,
             "plan_context": plan_context,
             "db_session": active_db,
+            "prompt_version": prompt_version,
+            "workflow_id": workflow_id,
         }
         full_text_parts: list[str] = []
         full_text_override = ""
@@ -2549,13 +2774,14 @@ class ChatOrchestrator:
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
-                if not user_message and request.HasField("tool_result"):
-                    tr = request.tool_result
-                    user_message = f"Tool '{tr.tool_name}' execution result: {tr.result_json}"
 
                 # Step 4: Build full context
                 grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = \
                     await self._build_full_context(request=request, active_db=active_db, user_id=user_id, session_id=session_id, user_message=user_message, request_id=request_id, tracer=tracer)
+                conversation_context = self._merge_request_history_into_conversation_context(
+                    conversation_context,
+                    list(request.history),
+                )
 
                 expert_routing_decision = None
                 if settings.ENABLE_EXPERT_STRATEGY_V1 and is_expert_chat_mode(chat_mode):
@@ -2590,7 +2816,8 @@ class ChatOrchestrator:
                         )
 
                 state = WorkflowState()
-                state.append_message("user", user_message)
+                if user_message:
+                    state.append_message("user", user_message)
                 queue: asyncio.Queue = asyncio.Queue()
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
@@ -2610,7 +2837,36 @@ class ChatOrchestrator:
                         return
 
                 # Step 6: Prepare runtime context (transparency, tools)
-                transparency_generator, emit_transparency_event = await self._prepare_runtime_context(state, request_id, response_id, stream_callback, tracer)
+                transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
+                    state,
+                    request_id,
+                    response_id,
+                    list(request.active_tools),
+                    stream_callback,
+                    tracer,
+                )
+
+                if request.HasField("tool_result"):
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    async for continued_response in self._continue_after_tool_result(
+                        request=request,
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        user_context_payload=user_context_payload,
+                        conversation_context=conversation_context,
+                    ):
+                        yield continued_response
+                    await self._update_state(session_id, STATE_DONE, "Tool result continuation completed")
+                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                    COLLABORATION_SUCCESS.labels(workflow_type="standard_chat", agents_used="orchestrator", outcome="success").inc()
+                    return
 
                 # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)

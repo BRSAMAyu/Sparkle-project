@@ -44,10 +44,10 @@ class TranslationHistoryItem {
 }
 
 class LocalTranslationRepository {
-  late final IsarCollection<TranslationRecord> _collection;
+  IsarCollection<TranslationRecord>? _collection;
 
   void init(LocalDatabase db) {
-    _collection = db.translationRecords;
+    _collection ??= db.translationRecords;
   }
 
   /// Save a new translation record
@@ -68,7 +68,7 @@ class LocalTranslationRepository {
       isFavorited: isFavorited,
     );
 
-    return _collection.put(record);
+    return _requireCollection().put(record);
   }
 
   /// Get all translation records
@@ -82,17 +82,45 @@ class LocalTranslationRepository {
 
     switch (sortOrder) {
       case TranslationSortOrder.newestFirst:
-        final tempRecords = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
+        final tempRecords = await _requireCollection()
+            .where()
+            .sortByCreatedAt()
+            .offset(offset)
+            .limit(limit)
+            .findAll();
         records = tempRecords.cast<TranslationRecord>().reversed.toList();
       case TranslationSortOrder.oldestFirst:
-        records = await _collection.where().sortByCreatedAt().offset(offset).limit(limit).findAll();
+        records = await _requireCollection()
+            .where()
+            .sortByCreatedAt()
+            .offset(offset)
+            .limit(limit)
+            .findAll();
       case TranslationSortOrder.highestRating:
-        final tempRecords3 = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        final tempRecords3 = await _requireCollection()
+            .where()
+            .sortByRating()
+            .thenByCreatedAt()
+            .offset(offset)
+            .limit(limit)
+            .findAll();
         records = tempRecords3.cast<TranslationRecord>().reversed.toList();
       case TranslationSortOrder.lowestRating:
-        records = await _collection.where().sortByRating().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        records = await _requireCollection()
+            .where()
+            .sortByRating()
+            .thenByCreatedAt()
+            .offset(offset)
+            .limit(limit)
+            .findAll();
       case TranslationSortOrder.mostViewed:
-        final tempRecords5 = await _collection.where().sortByViewCount().thenByCreatedAt().offset(offset).limit(limit).findAll();
+        final tempRecords5 = await _requireCollection()
+            .where()
+            .sortByViewCount()
+            .thenByCreatedAt()
+            .offset(offset)
+            .limit(limit)
+            .findAll();
         records = tempRecords5.cast<TranslationRecord>().reversed.toList();
     }
 
@@ -103,12 +131,14 @@ class LocalTranslationRepository {
   Future<List<TranslationHistoryItem>> search(String query) async {
     final lowerQuery = query.toLowerCase();
 
-    final records = await _collection
+    final records = await _requireCollection()
         .filter()
-        .group((q) => q
-            .originalTextContains(lowerQuery, caseSensitive: false)
-            .or()
-            .translatedTextContains(lowerQuery, caseSensitive: false),)
+        .group(
+          (q) => q
+              .originalTextContains(lowerQuery, caseSensitive: false)
+              .or()
+              .translatedTextContains(lowerQuery, caseSensitive: false),
+        )
         .sortByCreatedAt()
         .limit(50)
         .findAll();
@@ -118,55 +148,55 @@ class LocalTranslationRepository {
 
   /// Update rating for a translation record
   Future<bool> updateRating(Id id, int rating) async {
-    final record = await _collection.get(id);
+    final record = await _requireCollection().get(id);
     if (record == null) return false;
 
     record.rating = rating.clamp(1, 5);
-    return await _collection.put(record) >= 0;
+    return await _requireCollection().put(record) >= 0;
   }
 
   /// Toggle favorite status
   Future<bool?> toggleFavorite(Id id) async {
-    final record = await _collection.get(id);
+    final record = await _requireCollection().get(id);
     if (record == null) return null;
 
     record.isFavorited = !record.isFavorited;
-    await _collection.put(record);
+    await _requireCollection().put(record);
     return record.isFavorited;
   }
 
   /// Increment view count
   Future<void> incrementViewCount(Id id) async {
-    final record = await _collection.get(id);
+    final record = await _requireCollection().get(id);
     if (record != null) {
       record.incrementViewCount();
-      await _collection.put(record);
+      await _requireCollection().put(record);
     }
   }
 
   /// Delete a translation record
-  Future<bool> delete(Id id) async => _collection.delete(id);
+  Future<bool> delete(Id id) async => _requireCollection().delete(id);
 
   /// Delete all records
-  Future<void> deleteAll() async => _collection.clear();
+  Future<void> deleteAll() async => _requireCollection().clear();
 
   /// Delete favorites only
   Future<int> deleteFavorites() async {
-    final favorites = await _collection
-        .filter()
-        .isFavoritedEqualTo(true)
-        .findAll();
-    return _collection.deleteAll(favorites.map((r) => r.id).toList());
+    final favorites =
+        await _requireCollection().filter().isFavoritedEqualTo(true).findAll();
+    return _requireCollection().deleteAll(favorites.map((r) => r.id).toList());
   }
 
   /// Get statistics
   Future<Map<String, int>> getStatistics() async {
-    final total = await _collection.count();
-    final favorites = await _collection.filter().isFavoritedEqualTo(true).count();
-    final highRated = await _collection.filter().ratingGreaterThan(3).count();
+    final total = await _requireCollection().count();
+    final favorites =
+        await _requireCollection().filter().isFavoritedEqualTo(true).count();
+    final highRated =
+        await _requireCollection().filter().ratingGreaterThan(3).count();
 
     // Get total views
-    final records = await _collection.where().findAll();
+    final records = await _requireCollection().where().findAll();
     final totalViews = records.fold<int>(0, (sum, r) => sum + r.viewCount);
 
     return {
@@ -179,29 +209,38 @@ class LocalTranslationRepository {
 
   /// Get a single record by ID
   Future<TranslationHistoryItem?> getById(Id id) async {
-    final record = await _collection.get(id);
+    final record = await _requireCollection().get(id);
     if (record == null) return null;
 
     // Increment view count
     record.incrementViewCount();
-    await _collection.put(record);
+    await _requireCollection().put(record);
 
     return _toHistoryItem(record);
   }
 
+  IsarCollection<TranslationRecord> _requireCollection() {
+    final collection = _collection;
+    if (collection == null) {
+      throw StateError('LocalTranslationRepository.init must be called first');
+    }
+    return collection;
+  }
+
   /// Convert TranslationRecord to TranslationHistoryItem
-  TranslationHistoryItem _toHistoryItem(TranslationRecord record) => TranslationHistoryItem(
-      id: record.id,
-      originalText: record.originalText,
-      translatedText: record.translatedText,
-      sourceLanguage: record.sourceLanguage,
-      targetLanguage: record.targetLanguage,
-      rating: record.rating,
-      isFavorited: record.isFavorited,
-      viewCount: record.viewCount,
-      createdAt: record.createdAt,
-      lastViewedAt: record.lastViewedAt,
-    );
+  TranslationHistoryItem _toHistoryItem(TranslationRecord record) =>
+      TranslationHistoryItem(
+        id: record.id,
+        originalText: record.originalText,
+        translatedText: record.translatedText,
+        sourceLanguage: record.sourceLanguage,
+        targetLanguage: record.targetLanguage,
+        rating: record.rating,
+        isFavorited: record.isFavorited,
+        viewCount: record.viewCount,
+        createdAt: record.createdAt,
+        lastViewedAt: record.lastViewedAt,
+      );
 
   /// Check if a similar translation exists (to avoid duplicates)
   Future<TranslationHistoryItem?> findSimilar({
@@ -209,7 +248,7 @@ class LocalTranslationRepository {
     required String sourceLanguage,
     required String targetLanguage,
   }) async {
-    final records = await _collection
+    final records = await _requireCollection()
         .filter()
         .originalTextEqualTo(originalText)
         .and()

@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/user/presentation/widgets/avatar_selection_dialog.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
@@ -330,11 +330,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PasswordResetScreen(),
-                      ),
-                    );
+                    context.push(UserRoutes.passwordReset);
                   },
                 ),
               ),

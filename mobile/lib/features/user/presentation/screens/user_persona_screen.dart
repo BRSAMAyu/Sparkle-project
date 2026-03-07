@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 class UserPersonaScreen extends ConsumerWidget {
   const UserPersonaScreen({super.key});
@@ -18,8 +19,7 @@ class UserPersonaScreen extends ConsumerWidget {
         title: const Text('我的画像'),
       ),
       body: profileAsync.when(
-        data: (data) =>
-            _buildContent(context, ref, data, onboardingCompleted),
+        data: (data) => _buildContent(context, ref, data, onboardingCompleted),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Text('加载失败：$err'),
@@ -38,122 +38,121 @@ class UserPersonaScreen extends ConsumerWidget {
     final layer2 = data['layer_2'] as Map<String, dynamic>? ?? {};
     final layer3 = data['layer_3'] as Map<String, dynamic>? ?? {};
 
-    final preferences = (layer1['preferences'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
-    final goals =
-        (layer1['goals'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final preferences = _normalizeEntries(layer1['preferences']);
+    final goals = _normalizeEntries(layer1['goals']);
     final persona = layer2['persona'] as Map<String, dynamic>? ?? {};
-    final tags =
-        (persona['tags'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
-    final capabilities = (persona['capabilities'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
-    final patterns =
-        (layer3['patterns'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
-    final fragments =
-        (layer3['fragments'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final tags = _normalizeEntries(persona['tags'], keyName: 'value');
+    final capabilities = _normalizeEntries(persona['capabilities']);
+    final patterns = _normalizeEntries(layer3['patterns']);
+    final fragments = _normalizeEntries(layer3['fragments']);
 
     return ContentConstraint(
       child: ListView(
         padding: const EdgeInsets.all(DS.spacing16),
         children: [
-        _buildOnboardingBanner(context, completed),
-        _sectionTitle('L1 用户声明'),
-        _subSectionList(
-          '偏好',
-          preferences.map((item) => _preferenceRow(ref, context, item)).toList(),
-        ),
-        _subSectionList(
-          '目标',
-          goals.map((item) => _goalRow(ref, context, item)).toList(),
-        ),
-        const SizedBox(height: DS.spacing24),
-        _sectionTitle('L2 协作校准'),
-        _subSectionList(
-          '标签',
-          tags
-              .map((item) => _suggestableRow(
+          _buildOnboardingBanner(context, completed),
+          _sectionTitle('L1 用户声明'),
+          _subSectionList(
+            '偏好',
+            preferences
+                .map((item) => _preferenceRow(ref, context, item))
+                .toList(),
+          ),
+          _subSectionList(
+            '目标',
+            goals.map((item) => _goalRow(ref, context, item)).toList(),
+          ),
+          const SizedBox(height: DS.spacing24),
+          _sectionTitle('L2 协作校准'),
+          _subSectionList(
+            '标签',
+            tags
+                .map(
+                  (item) => _suggestableRow(
                     ref,
                     context,
                     label: item['value']?.toString() ?? '',
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_tag',
-                  ),)
-              .toList(),
-        ),
-        _subSectionList(
-          '能力',
-          capabilities
-              .map((item) => _suggestableRow(
+                  ),
+                )
+                .toList(),
+          ),
+          _subSectionList(
+            '能力',
+            capabilities
+                .map(
+                  (item) => _suggestableRow(
                     ref,
                     context,
                     label: '${item['key']}: ${item['value']}',
                     metadata: item['metadata'] as Map<String, dynamic>? ?? {},
                     targetType: 'persona_capability',
                     fieldName: item['key']?.toString(),
-                  ),)
-              .toList(),
-        ),
-        const SizedBox(height: DS.spacing24),
-        _sectionTitle('L3 系统推断'),
-        Padding(
-          padding: const EdgeInsets.only(bottom: DS.spacing8),
-          child: Text(
-            '以下内容来自系统分析，仅供参考',
-            style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+                  ),
+                )
+                .toList(),
           ),
-        ),
-        _subSectionList(
-          '行为模式',
-          patterns.map(_readonlyRow).toList(),
-        ),
-        _subSectionList(
-          '认知碎片',
-          fragments.map(_readonlyRow).toList(),
-        ),
-      ],
+          const SizedBox(height: DS.spacing24),
+          _sectionTitle('L3 系统推断'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing8),
+            child: Text(
+              '以下内容来自系统分析，仅供参考',
+              style: TextStyle(color: DS.neutral500, fontSize: DS.fontSizeSm),
+            ),
+          ),
+          _subSectionList(
+            '行为模式',
+            patterns.map(_readonlyRow).toList(),
+          ),
+          _subSectionList(
+            '认知碎片',
+            fragments.map(_readonlyRow).toList(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildOnboardingBanner(BuildContext context, bool completed) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: DS.secondaryGradient,
-          borderRadius: DS.borderRadius12,
-          boxShadow: DS.shadowSm,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Row(
-            children: [
-              Icon(Icons.assignment_turned_in_outlined,
-                  color: DS.brandPrimaryConst,),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Text(
-                  completed ? '画像已完善，可随时重新填写' : '完善画像，提升个性化体验',
-                  style: TextStyle(
-                    color: DS.brandPrimaryConst,
-                    fontWeight: DS.fontWeightSemibold,
+  Widget _buildOnboardingBanner(BuildContext context, bool completed) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing16),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: DS.secondaryGradient,
+            borderRadius: DS.borderRadius12,
+            boxShadow: DS.shadowSm,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.assignment_turned_in_outlined,
+                  color: DS.brandPrimaryConst,
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Text(
+                    completed ? '画像已完善，可随时重新填写' : '完善画像，提升个性化体验',
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
                   ),
                 ),
-              ),
-              SparkleButton.ghost(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const PersonaOnboardingScreen(),
-                    ),
-                  );
-                },
-                label: completed ? '再次填写' : '开始',
-              ),
-            ],
+                SparkleButton.ghost(
+                  onPressed: () {
+                    context.push(UserRoutes.personaOnboarding);
+                  },
+                  label: completed ? '再次填写' : '开始',
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing8),
@@ -168,38 +167,38 @@ class UserPersonaScreen extends ConsumerWidget {
       );
 
   Widget _subSectionList(String title, List<Widget> items) => Padding(
-      padding: const EdgeInsets.only(bottom: DS.spacing16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.surfacePrimaryElevated,
-          borderRadius: DS.borderRadius12,
-          boxShadow: DS.shadowSm,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.textSecondary,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              if (items.isEmpty)
+        padding: const EdgeInsets.only(bottom: DS.spacing16),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfacePrimaryElevated,
+            borderRadius: DS.borderRadius12,
+            boxShadow: DS.shadowSm,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  '暂无数据',
-                  style: TextStyle(color: DS.neutral500),
-                )
-              else
-                ...items,
-            ],
+                  title,
+                  style: TextStyle(
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                if (items.isEmpty)
+                  Text(
+                    '暂无数据',
+                    style: TextStyle(color: DS.neutral500),
+                  )
+                else
+                  ...items,
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _preferenceRow(
     WidgetRef ref,
@@ -219,7 +218,8 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
         if (canEdit)
           SparkleButton.ghost(
-            onPressed: () => _openEditPreferenceDialog(ref, context, key, value),
+            onPressed: () =>
+                _openEditPreferenceDialog(ref, context, key, value),
             label: '编辑',
           ),
         if (canRollback)
@@ -236,7 +236,8 @@ class UserPersonaScreen extends ConsumerWidget {
     BuildContext context,
     Map<String, dynamic> item,
   ) {
-    final title = item['title']?.toString() ?? '目标';
+    final title =
+        item['title']?.toString() ?? item['value']?.toString() ?? '目标';
     final status = item['status']?.toString() ?? 'unknown';
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
     final goalId = item['id']?.toString();
@@ -248,7 +249,8 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
         if (goalId != null)
           SparkleButton.ghost(
-            onPressed: () => _openEditGoalDialog(ref, context, goalId, title, status),
+            onPressed: () =>
+                _openEditGoalDialog(ref, context, goalId, title, status),
             label: '编辑',
           ),
       ],
@@ -313,7 +315,8 @@ class UserPersonaScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text('• $label', style: TextStyle(color: DS.textPrimary)),
+                child:
+                    Text('• $label', style: TextStyle(color: DS.textPrimary)),
               ),
               _levelChip(level),
             ],
@@ -342,6 +345,7 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget _readonlyRow(Map<String, dynamic> item) {
     final label = item['name']?.toString() ??
         item['content']?.toString() ??
+        item['value']?.toString() ??
         '条目';
     final meta = item['metadata'] as Map<String, dynamic>? ?? {};
     return _metadataRow(label, meta);
@@ -585,11 +589,11 @@ class UserPersonaScreen extends ConsumerWidget {
                   }
                   return;
                 }
-              await repo.updateGoal(
-                goalId: goalId,
-                title: nextTitle,
-                status: nextStatus,
-              );
+                await repo.updateGoal(
+                  goalId: goalId,
+                  title: nextTitle,
+                  status: nextStatus,
+                );
                 ref.invalidate(transparentProfileProvider);
                 if (context.mounted) {
                   Navigator.of(context).pop();
@@ -601,5 +605,37 @@ class UserPersonaScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<Map<String, dynamic>> _normalizeEntries(
+    dynamic source, {
+    String keyName = 'key',
+  }) {
+    if (source is List) {
+      return source.map((item) {
+        if (item is Map) {
+          return Map<String, dynamic>.from(item);
+        }
+        return <String, dynamic>{
+          keyName: item.toString(),
+          'value': item,
+          'metadata': const <String, dynamic>{},
+        };
+      }).toList();
+    }
+
+    if (source is Map) {
+      return source.entries
+          .map(
+            (entry) => <String, dynamic>{
+              keyName: entry.key.toString(),
+              'value': entry.value,
+              'metadata': const <String, dynamic>{},
+            },
+          )
+          .toList();
+    }
+
+    return const <Map<String, dynamic>>[];
   }
 }

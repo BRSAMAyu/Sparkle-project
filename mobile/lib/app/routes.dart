@@ -17,8 +17,11 @@ import 'package:sparkle/features/insights/insights.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/plan/plan.dart';
+import 'package:sparkle/features/photon/photon_routes.dart';
+import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/splash/splash.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/translation/translation.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/user.dart';
 
@@ -157,6 +160,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...SplashRoutes.routes,
       ...AuthRoutes.routes,
       // Other feature routes (at root level, outside shell)
+      ...HomeRoutes.routes,
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
@@ -171,6 +175,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...MemoryRoutes.routes,
       ...AchievementRoutes.routes,
       ...NotificationCenterRoutes.routes,
+      ...PhotonRoutes.routes,
+      ...TranslationRoutes.routes,
+      ...SeedLibraryRoutes.routes,
     ],
   );
 });

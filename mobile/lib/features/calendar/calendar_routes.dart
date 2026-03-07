@@ -21,15 +21,51 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class CalendarRoutes {
+  static const String calendar = '/calendar';
+  static const String calendarStats = '/calendar-stats';
+  static const String dailyDetail = '/calendar/day';
+
   static List<RouteBase> get routes => [
-    GoRoute(
-        path: '/calendar-stats',
-        name: 'calendarStats',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const CalendarStatsScreen(),
-          type: SharedAxisTransitionType.scaled,
+        GoRoute(
+          path: calendar,
+          name: 'calendar',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: CalendarStatsScreen(
+              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            ),
+            type: SharedAxisTransitionType.scaled,
+          ),
         ),
-      ),
-  ];
+        GoRoute(
+          path: calendarStats,
+          name: 'calendarStats',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: CalendarStatsScreen(
+              initialDate: _parseInitialDate(state.uri.queryParameters['date']),
+            ),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        GoRoute(
+          path: dailyDetail,
+          name: 'calendarDailyDetail',
+          pageBuilder: (context, state) => _buildTransitionPage(
+            state: state,
+            child: DailyDetailScreen(
+              date: _parseInitialDate(state.uri.queryParameters['date']) ??
+                  DateTime.now(),
+            ),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+      ];
+
+  static DateTime? _parseInitialDate(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(raw);
+  }
 }

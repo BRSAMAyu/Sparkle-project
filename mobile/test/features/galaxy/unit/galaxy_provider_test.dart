@@ -36,6 +36,18 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   }
 
   @override
+  Future<NetworkResult<GalaxyGraphResponse>> getGraphForViewport({
+    required Rect viewport,
+  }) async =>
+      graphResult;
+
+  @override
+  Future<NetworkResult<void>> updateNodePositions(
+    Map<String, Offset> positions,
+  ) async =>
+      NetworkResult.success(null);
+
+  @override
   Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) => eventsStream;
 
   @override
@@ -240,6 +252,37 @@ void main() {
         final state = container.read(galaxyProvider);
         expect(state.selectedNodeId, isNull);
         expect(state.expandedEdgeNodeIds, isEmpty);
+      });
+
+      test('dragging a node updates position and clears drag state on end',
+          () async {
+        final testNodes = _generateMockNodes(6);
+        final testEdges = _generateMockEdges(testNodes);
+
+        mockRepository.graphResult = NetworkResult.success(
+          GalaxyGraphResponse(
+            nodes: testNodes,
+            edges: testEdges,
+            userFlameIntensity: 0.5,
+          ),
+        );
+
+        final notifier = container.read(galaxyProvider.notifier);
+        await notifier.loadGalaxy();
+
+        final initial = container.read(galaxyProvider).nodePositions['node_0']!;
+        notifier.beginNodeDrag('node_0');
+        notifier.updateDraggedNodePosition(
+          'node_0',
+          initial + const Offset(80, 24),
+        );
+
+        final duringDrag = container.read(galaxyProvider);
+        expect(duringDrag.draggingNodeId, 'node_0');
+        expect(duringDrag.nodePositions['node_0'], isNot(initial));
+
+        await notifier.endNodeDrag();
+        expect(container.read(galaxyProvider).draggingNodeId, isNull);
       });
     });
 

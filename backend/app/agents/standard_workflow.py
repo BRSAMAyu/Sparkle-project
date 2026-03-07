@@ -23,6 +23,7 @@ from app.agents.graph.nodes.review_nodes import (
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
+from app.core.agent_profiles import TaskType
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
@@ -31,11 +32,37 @@ from app.orchestration.prompts import build_system_prompt
 from app.orchestration.statechart_engine import StateGraph, WorkflowState
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.knowledge_service import KnowledgeService
-from app.services.llm_service import llm_service
+from app.services.llm_service import get_configured_llm_service, llm_service
 
 # ==========================================
 # Nodes
 # ==========================================
+
+
+def _resolve_generation_agent_role(state: WorkflowState) -> str:
+    explicit_role = state.context_data.get("agent_role")
+    if explicit_role:
+        return str(explicit_role)
+
+    selected_experts = state.context_data.get("selected_experts")
+    if isinstance(selected_experts, list):
+        for expert in selected_experts:
+            cleaned = str(expert).strip()
+            if cleaned:
+                return cleaned
+
+    return "generation"
+
+
+def _resolve_generation_task_type(state: WorkflowState) -> TaskType:
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    if chat_mode == "deep_analysis":
+        return TaskType.DEEP_REASONING
+    if chat_mode == "study_plan":
+        return TaskType.TASK_DECOMPOSITION
+    if chat_mode == "error_diagnosis":
+        return TaskType.ERROR_DIAGNOSIS
+    return TaskType.STANDARD_RESPONSE
 
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
@@ -163,6 +190,14 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     if conversation_context is None or not isinstance(conversation_context, dict):
         conversation_context = {"messages": state.messages[:-1]}
     prompt_version = state.context_data.get("prompt_version") or "v1"
+    agent_role = _resolve_generation_agent_role(state)
+    task_type = _resolve_generation_task_type(state)
+
+    try:
+        generation_llm = await get_configured_llm_service(agent_role, task_type)
+    except Exception as e:
+        logger.warning(f"Failed to configure role-scoped LLM for {agent_role}/{task_type.value}: {e}")
+        generation_llm = llm_service
 
     # Extract plan_context from state if available
     plan_context = state.context_data.get("plan_context")
@@ -203,8 +238,10 @@ Ask about their available time and current tasks if needed.
         user_context,
         conversation_history=conversation_context,
         prompt_version=prompt_version,
+        agent_role=getattr(generation_llm, "agent_role", "generation"),
         plan_context=plan_context,
         intent_instruction=intent_instruction, # Vision Item 4b
+        chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
     )
 
     knowledge_context = state.context_data.get("knowledge_context") or ""
@@ -221,10 +258,7 @@ Ask about their available time and current tasks if needed.
     # 检查是否使用思考模式，如果是则发送状态更新
     # 这会让前端显示"思考中"提示
     try:
-        current_llm = llm_service.__class__
-        # 创建临时实例来检查思考模式
-        temp_llm = current_llm(agent_role=state.context_data.get("agent_role", "generation"), enable_dynamic_routing=True)
-        is_thinking = temp_llm.is_thinking_mode()
+        is_thinking = generation_llm.is_thinking_mode()
 
         if is_thinking and stream_callback:
             await stream_callback(agent_service_pb2.ChatResponse(
@@ -241,8 +275,12 @@ Ask about their available time and current tasks if needed.
     tool_calls = []
     first_chunk_sent = False  # Track first chunk for status transition
 
-    # We assume llm_service is available globally
-    async for chunk in llm_service.chat_stream_with_tools(
+    state.context_data["active_generation_agent_role"] = str(getattr(generation_llm, "agent_role", agent_role))
+    selection = generation_llm.get_current_selection()
+    if selection is not None:
+        state.context_data["active_generation_model"] = selection.config.model_name
+
+    async for chunk in generation_llm.chat_stream_with_tools(
         system_prompt=system_prompt,
         user_message=user_message,
         tools=tools,

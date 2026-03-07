@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from app.core.agent_profiles import AgentRole, TaskType
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
@@ -21,9 +22,10 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_STUDY_PLAN,
 )
 from app.orchestration.mode_workflow_config import get_workflow_config
+from app.orchestration.prompts import build_system_prompt
 from app.orchestration.schemas import StateSnapshot
 from app.orchestration.step_feedback_collector import StepFeedbackCollector
-from app.services.llm_service import llm_service
+from app.services.llm_service import get_configured_llm_service, llm_service
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 
@@ -142,6 +144,7 @@ class MultiAgentWorkflowAdapter:
             validation_result=validation_result,
             execution_summary=summary_text,
             synthesis_template=config.synthesis_template,
+            context_data=context_data,
         ):
             yield chunk
 
@@ -221,28 +224,74 @@ class MultiAgentWorkflowAdapter:
         validation_result,
         execution_summary: str,
         synthesis_template: str,
+        context_data: dict[str, Any],
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         summary = execution_summary
-        system_prompt = synthesis_template or self._default_synthesis_prompt(chat_mode)
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": (
-                    f"用户原始请求:\n{user_message}\n\n"
-                    f"执行结果摘要:\n{summary}\n\n"
-                    "请基于以上执行结果给出最终回答。"
-                ),
-            },
-        ]
+        synthesis_role = self._resolve_synthesis_agent_role(chat_mode)
+        synthesis_task_type = self._resolve_synthesis_task_type(chat_mode)
+        synthesis_llm = await self._resolve_synthesis_llm(synthesis_role, synthesis_task_type)
+        prompt_version = str(context_data.get("prompt_version") or "v1")
+        conversation_context = context_data.get("conversation_context")
+        if not isinstance(conversation_context, dict):
+            conversation_context = {"messages": []}
+        user_context = context_data.get("user_context")
+        if not isinstance(user_context, dict):
+            user_context = {}
+        plan_context = context_data.get("plan_context")
+        if not isinstance(plan_context, dict):
+            plan_context = None
+
+        base_system_prompt = build_system_prompt(
+            user_context=user_context,
+            conversation_history=conversation_context,
+            prompt_version=prompt_version,
+            agent_role=synthesis_role,
+            plan_context=plan_context,
+            chat_mode=chat_mode,
+        )
+        synthesis_guidance = synthesis_template or self._default_synthesis_prompt(chat_mode)
+        validation_issues = getattr(validation_result, "issues", None) or []
+        validation_summary = (
+            f"validation_status={validation_result.validation_status}, "
+            f"quality_score={validation_result.quality_score:.2f}, "
+            f"aborted={validation_result.aborted}"
+        )
+        if validation_issues:
+            validation_summary += "\nissues=" + " | ".join(str(issue) for issue in validation_issues[:5])
+
+        system_prompt = (
+            f"{base_system_prompt}\n\n"
+            "## 多Agent综合约束\n"
+            f"{synthesis_guidance}\n\n"
+            "你必须同时遵守以下要求：\n"
+            "1. 最终回答必须以已执行完成的工具结果为事实基础。\n"
+            "2. 保留用户画像、历史上下文、当前计划上下文的一致性。\n"
+            "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。\n\n"
+            "## 已验证的执行结果摘要\n"
+            f"{summary}\n\n"
+            "## 执行质量验证\n"
+            f"{validation_summary}"
+        )
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in self._recent_conversation_messages(conversation_context):
+            messages.append(msg)
+        messages.append({"role": "user", "content": user_message})
 
         first_chunk = True
         emitted_content = False
-        async for chunk in self.llm_service.stream_chat(messages=messages, model=None, temperature=0.5):
+        selection_getter = getattr(synthesis_llm, "get_current_selection", None)
+        selection = selection_getter() if callable(selection_getter) else None
+        model_name = selection.config.model_name if selection else getattr(synthesis_llm, "default_model", "")
+        async for chunk in synthesis_llm.stream_chat(messages=messages, model=None, temperature=0.5):
             if not chunk:
                 continue
             if first_chunk:
                 yield agent_service_pb2.ChatResponse(
+                    metadata={
+                        "synthesis_agent_role": str(synthesis_role.value),
+                        "synthesis_model": model_name,
+                    },
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.GENERATING,
                         details="正在合成最终结果...",
@@ -255,6 +304,10 @@ class MultiAgentWorkflowAdapter:
         if not emitted_content:
             if first_chunk:
                 yield agent_service_pb2.ChatResponse(
+                    metadata={
+                        "synthesis_agent_role": str(synthesis_role.value),
+                        "synthesis_model": model_name,
+                    },
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.GENERATING,
                         details="正在合成最终结果...",
@@ -267,6 +320,48 @@ class MultiAgentWorkflowAdapter:
                 "如需我继续输出完整报告，请告诉我你关注的重点。"
             )
             yield agent_service_pb2.ChatResponse(delta=fallback_text)
+
+    @staticmethod
+    def _recent_conversation_messages(conversation_context: dict[str, Any], limit: int = 6) -> list[dict[str, str]]:
+        messages = conversation_context.get("messages", [])
+        if not isinstance(messages, list):
+            return []
+
+        normalized_messages: list[dict[str, str]] = []
+        for msg in messages[-limit:]:
+            if not isinstance(msg, dict):
+                continue
+            role = str(msg.get("role", "")).strip().lower()
+            if role not in {"user", "assistant", "system"}:
+                continue
+            content = str(msg.get("content", "") or "").strip()
+            if not content:
+                continue
+            normalized_messages.append({"role": role, "content": content})
+        return normalized_messages
+
+    @staticmethod
+    def _resolve_synthesis_agent_role(chat_mode: str) -> AgentRole:
+        mapping = {
+            CHAT_MODE_DEEP_ANALYSIS: AgentRole.DEEP_ANALYST,
+            CHAT_MODE_STUDY_PLAN: AgentRole.STUDY_PLANNER,
+            CHAT_MODE_ERROR_DIAGNOSIS: AgentRole.ERROR_ANALYST,
+        }
+        return mapping.get(chat_mode, AgentRole.ORCHESTRATOR)
+
+    @staticmethod
+    def _resolve_synthesis_task_type(chat_mode: str) -> TaskType:
+        mapping = {
+            CHAT_MODE_DEEP_ANALYSIS: TaskType.DEEP_REASONING,
+            CHAT_MODE_STUDY_PLAN: TaskType.TASK_DECOMPOSITION,
+            CHAT_MODE_ERROR_DIAGNOSIS: TaskType.ERROR_DIAGNOSIS,
+        }
+        return mapping.get(chat_mode, TaskType.COLLABORATION)
+
+    async def _resolve_synthesis_llm(self, agent_role: AgentRole, task_type: TaskType):
+        if self.llm_service is not llm_service:
+            return self.llm_service
+        return await get_configured_llm_service(agent_role, task_type)
 
     def _format_execution_summary(self, execution_result, validation_result) -> str:
         lines = []
@@ -312,23 +407,39 @@ class MultiAgentWorkflowAdapter:
         extra_notice: str | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         preamble = extra_notice or ""
-        system = (
-            f"你是 {chat_mode} 模式助手。请提供结构化、可执行的回答。"
-            f"\n{preamble}" if preamble else f"你是 {chat_mode} 模式助手。请提供结构化、可执行的回答。"
+        synthesis_role = self._resolve_synthesis_agent_role(chat_mode)
+        synthesis_task_type = self._resolve_synthesis_task_type(chat_mode)
+        synthesis_llm = await self._resolve_synthesis_llm(synthesis_role, synthesis_task_type)
+        conversation_context = context_data.get("conversation_context")
+        if not isinstance(conversation_context, dict):
+            conversation_context = {"messages": []}
+        user_context = context_data.get("user_context")
+        if not isinstance(user_context, dict):
+            user_context = {}
+        plan_context = context_data.get("plan_context")
+        if not isinstance(plan_context, dict):
+            plan_context = None
+
+        base_prompt = build_system_prompt(
+            user_context=user_context,
+            conversation_history=conversation_context,
+            prompt_version=str(context_data.get("prompt_version") or "v1"),
+            agent_role=synthesis_role,
+            plan_context=plan_context,
+            chat_mode=chat_mode,
         )
-        history = context_data.get("conversation_context", {}).get("messages", [])
+        system = (
+            f"{base_prompt}\n\n"
+            f"## 模式回退说明\n你当前处于 {chat_mode} 模式，但本轮未形成可执行计划。"
+        )
+        if preamble:
+            system += f"\n{preamble}"
+
         messages: list[dict[str, str]] = [{"role": "system", "content": system}]
-        for msg in history[-6:]:
-            content = msg.get("content", "")
-            if not content:
-                continue
-            if msg.get("role") == "assistant":
-                messages.append({"role": "assistant", "content": content})
-            else:
-                messages.append({"role": "user", "content": content})
+        messages.extend(self._recent_conversation_messages(conversation_context))
         messages.append({"role": "user", "content": message})
 
-        async for chunk in self.llm_service.stream_chat(messages=messages, model=None, temperature=0.6):
+        async for chunk in synthesis_llm.stream_chat(messages=messages, model=None, temperature=0.6):
             if chunk:
                 yield agent_service_pb2.ChatResponse(delta=chunk)
 

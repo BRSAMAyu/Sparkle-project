@@ -132,7 +132,7 @@ class PlanReviewCard extends StatefulWidget {
 
 class _PlanReviewCardState extends State<PlanReviewCard>
     with TickerProviderStateMixin {
-  late AnimationController _pulseController;
+  late AnimationController _highlightController;
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
   late AnimationController _slideInController;
@@ -144,13 +144,13 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _highlightController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2200),
+    );
 
     _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _highlightController, curve: Curves.easeInOut),
     );
 
     _pressController = AnimationController(
@@ -163,14 +163,43 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       duration: SparkleMotion.normal,
     );
     _slideInController.forward();
+    _syncHighlightAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant PlanReviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.review != widget.review || _isSubmitting || _isSubmitted) {
+      _syncHighlightAnimation();
+    }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _highlightController.dispose();
     _pressController.dispose();
     _slideInController.dispose();
     super.dispose();
+  }
+
+  bool get _showActions =>
+      !_isSubmitted &&
+      !widget.review.autoApproved &&
+      widget.review.decision != ReviewDecision.approved &&
+      (widget.onDecision != null ||
+          widget.onApprove != null ||
+          widget.onReject != null ||
+          widget.onModify != null);
+
+  void _syncHighlightAnimation() {
+    if (_showActions && !_isSubmitting) {
+      if (!_highlightController.isAnimating) {
+        _highlightController.repeat(reverse: true);
+      }
+    } else {
+      _highlightController.stop();
+      _highlightController.value = 0;
+    }
   }
 
   /// Handle user decision on the plan review
@@ -211,6 +240,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
+        _syncHighlightAnimation();
       }
     }
   }
@@ -240,15 +270,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     final color = _getDecisionColor(decision);
     final icon = _getDecisionIcon(decision);
     final title = _getDecisionTitle(decision);
-
-    // For approved plans, don't show action buttons (auto-approved)
-    final showActions = !_isSubmitted &&
-        !widget.review.autoApproved &&
-        decision != ReviewDecision.approved &&
-        (widget.onDecision != null ||
-            widget.onApprove != null ||
-            widget.onReject != null ||
-            widget.onModify != null);
+    final showActions = _showActions;
 
     return SlideTransition(
       position: Tween<Offset>(
@@ -264,80 +286,68 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         onTapDown: showActions ? (_) => _pressController.forward() : null,
         onTapUp: showActions ? (_) => _pressController.reverse() : null,
         onTapCancel: showActions ? () => _pressController.reverse() : null,
-        child: SparkleMotion.pressScale(
-          animation: _pressController,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
-            decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
-              borderRadius: DS.borderRadius16,
-              boxShadow: DS.shadowMd,
-              border: Border.all(
-                color: color.withValues(alpha: 0.3),
-                width: 1.5,
+        child: RepaintBoundary(
+          child: SparkleMotion.pressScale(
+            animation: _pressController,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
+              decoration: BoxDecoration(
+                color: context.colors.surfaceCard,
+                borderRadius: DS.borderRadius16,
+                boxShadow: DS.shadowMd,
+                border: Border.all(
+                  color: color.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
               ),
-            ),
-            child: ClipRRect(
-              borderRadius: DS.borderRadius16,
-              child: Stack(
-                children: [
-                  // Gradient stripe
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 5,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: gradient,
+              child: ClipRRect(
+                borderRadius: DS.borderRadius16,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 5,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(gradient: gradient),
                       ),
                     ),
-                  ),
-
-                  // Shimmer overlay for pending reviews
-                  if (showActions)
-                    Positioned.fill(
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: -2.0, end: 2.0),
-                        duration: const Duration(seconds: 3),
-                        builder: (context, value, child) => Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                DS.surfacePrimary.withValues(alpha: 0),
-                                color.withValues(alpha: 0.08),
-                                DS.surfacePrimary.withValues(alpha: 0),
-                              ],
-                              stops: [
-                                (value - 0.3).clamp(0.0, 1.0),
-                                value.clamp(0.0, 1.0),
-                                (value + 0.3).clamp(0.0, 1.0),
-                              ],
-                            ),
+                    if (showActions)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: AnimatedBuilder(
+                            animation: _highlightController,
+                            builder: (context, child) {
+                              final progress = _highlightController.value;
+                              return DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      DS.surfacePrimary.withValues(alpha: 0),
+                                      color.withValues(
+                                          alpha: 0.03 + (progress * 0.05)),
+                                      DS.surfacePrimary.withValues(alpha: 0),
+                                    ],
+                                    stops: const [0.2, 0.5, 0.8],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        onEnd: () {
-                          if (mounted) setState(() {});
-                        },
                       ),
-                    ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header with icon and title
-                        Row(
-                          children: [
-                            AnimatedBuilder(
-                              animation: _iconScaleAnimation,
-                              builder: (context, child) => Transform.scale(
-                                scale: showActions
-                                    ? _iconScaleAnimation.value
-                                    : 1.0,
+                    Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              AnimatedBuilder(
+                                animation: _iconScaleAnimation,
                                 child: Container(
                                   padding: const EdgeInsets.all(DS.spacing10),
                                   decoration: BoxDecoration(
@@ -357,100 +367,97 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                     size: DS.iconSizeBase,
                                   ),
                                 ),
+                                builder: (context, child) => Transform.scale(
+                                  scale: showActions
+                                      ? _iconScaleAnimation.value
+                                      : 1,
+                                  child: child,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: DS.spacing12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: DS.fontWeightBold,
-                                          color: DS.neutral900,
-                                        ),
-                                  ),
-                                  if (widget.review.confidence > 0)
+                              const SizedBox(width: DS.spacing12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      '置信度: ${(widget.review.confidence * 100).toInt()}%',
+                                      title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: DS.fontWeightBold,
+                                            color: DS.neutral900,
+                                          ),
+                                    ),
+                                    if (widget.review.confidence > 0)
+                                      Text(
+                                        '置信度: ${(widget.review.confidence * 100).toInt()}%',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: DS.neutral600,
+                                            ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              _buildDecisionBadge(decision),
+                            ],
+                          ),
+                          if (widget.review.userFacingReason != null) ...[
+                            const SizedBox(height: DS.spacing12),
+                            Container(
+                              padding: const EdgeInsets.all(DS.spacing12),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.08),
+                                borderRadius: DS.borderRadius8,
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: DS.iconSizeSm,
+                                    color: color,
+                                  ),
+                                  const SizedBox(width: DS.spacing8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.review.userFacingReason!,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: DS.neutral600,
+                                            color: DS.neutral800,
+                                            height: 1.4,
                                           ),
                                     ),
+                                  ),
                                 ],
                               ),
                             ),
-                            // Decision badge
-                            _buildDecisionBadge(decision),
                           ],
-                        ),
-
-                        // User-facing reason
-                        if (widget.review.userFacingReason != null) ...[
-                          const SizedBox(height: DS.spacing12),
-                          Container(
-                            padding: const EdgeInsets.all(DS.spacing12),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.08),
-                              borderRadius: DS.borderRadius8,
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: DS.iconSizeSm,
-                                  color: color,
-                                ),
-                                const SizedBox(width: DS.spacing8),
-                                Expanded(
-                                  child: Text(
-                                    widget.review.userFacingReason!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: DS.neutral800,
-                                          height: 1.4,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          if (widget.review.comments.isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing16),
+                            _buildCommentsSection(),
+                          ],
+                          if (widget.review.confidence > 0 &&
+                              !widget.review.autoApproved) ...[
+                            const SizedBox(height: DS.spacing12),
+                            _buildConfidenceBar(),
+                          ],
+                          if (showActions) ...[
+                            const SizedBox(height: DS.spacing16),
+                            _buildActionButtons(decision, gradient),
+                          ],
                         ],
-
-                        // Comments section
-                        if (widget.review.comments.isNotEmpty) ...[
-                          const SizedBox(height: DS.spacing16),
-                          _buildCommentsSection(),
-                        ],
-
-                        // Confidence bar
-                        if (widget.review.confidence > 0 &&
-                            !widget.review.autoApproved) ...[
-                          const SizedBox(height: DS.spacing12),
-                          _buildConfidenceBar(),
-                        ],
-
-                        // Action buttons
-                        if (showActions) ...[
-                          const SizedBox(height: DS.spacing16),
-                          _buildActionButtons(decision, gradient),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

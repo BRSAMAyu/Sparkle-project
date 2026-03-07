@@ -3,12 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/features/translation/translation_routes.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
-import 'package:sparkle/features/translation/presentation/screens/translation_history_screen.dart';
 
 /// 支持的语言
 class Language {
@@ -481,12 +482,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                     SparkleButton.ghost(
                       label: '历史',
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TranslationHistoryScreen(),
-                          ),
-                        );
+                        context.push(TranslationRoutes.history);
                       },
                       icon: const Icon(Icons.history, size: 16),
                     ),

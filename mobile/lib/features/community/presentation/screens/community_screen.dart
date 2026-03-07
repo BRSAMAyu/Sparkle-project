@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
-import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
 
 class CommunityScreen extends ConsumerWidget {
@@ -21,11 +22,7 @@ class CommunityScreen extends ConsumerWidget {
         size: DS.touchTargetMinSize,
         icon: const Icon(Icons.edit),
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (ctx) => const CreatePostScreen(),
-            ),
-          );
+          context.push(CommunityRoutes.postsCreate);
         },
       ),
       body: SafeArea(

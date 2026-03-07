@@ -1101,6 +1101,22 @@ def get_llm_service(agent_role: AgentRole | str) -> LLMService:
     return LLMService(agent_role=agent_role, enable_dynamic_routing=True)
 
 
+async def get_configured_llm_service(
+    agent_role: AgentRole | str,
+    task_type: TaskType | None = None,
+) -> LLMService:
+    """
+    获取已按角色/任务完成模型路由的 LLM 服务实例。
+
+    该 helper 用于避免调用方只切换了 prompt / workflow，
+    但底层仍落到全局 generation 模型。
+    """
+    service = get_llm_service(agent_role)
+    if task_type is not None:
+        await service.switch_model_for_task(task_type)
+    return service
+
+
 def get_llm_service_for_task(task_type: TaskType) -> LLMService:
     """
     获取适合特定任务的LLM服务实例

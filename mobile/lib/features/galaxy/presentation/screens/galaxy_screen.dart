@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart';
@@ -23,6 +24,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_backg
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/zoom_controls.dart';
+import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -51,6 +53,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Size? _lastLayoutSize;
   bool _showDebugOverlay = kDebugMode;
   final Set<int> _activePointers = <int>{};
+  String? _draggingNodeId;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -69,10 +72,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   // 🔧 性能优化: 缓存 Viewport 计算结果
   Rect? _cachedAbsoluteViewport;
   Rect? _cachedRelativeViewport;
+  Rect? _lastReportedRelativeViewport;
   Matrix4? _lastViewportMatrix;
 
   // 🔧 性能优化: 缓存 StarMapPainter
   StarMapPainter? _cachedPainter;
+  int? _lastPainterSignature;
 
   // Gesture conflict resolution
   bool _hasDragged = false;
@@ -210,15 +215,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _cachedAbsoluteViewport = Rect.fromPoints(topLeft, bottomRight);
 
       // Relative Viewport (Center Relative -2500..2500) - For Provider Culling
-      _cachedRelativeViewport = _cachedAbsoluteViewport!.shift(
+      final nextRelativeViewport = _cachedAbsoluteViewport!.shift(
         Offset(-_canvasCenter, -_canvasCenter),
       );
+      _cachedRelativeViewport = nextRelativeViewport;
 
-      // 🔧 优化: 添加阈值判断，避免微小移动时频繁更新 provider
-      if (_viewportChangedSignificantly(_cachedRelativeViewport!)) {
-        ref
-            .read(galaxyProvider.notifier)
-            .updateViewport(_cachedRelativeViewport!);
+      if (_viewportChangedSignificantly(nextRelativeViewport)) {
+        _lastReportedRelativeViewport = nextRelativeViewport;
+        ref.read(galaxyProvider.notifier).updateViewport(nextRelativeViewport);
       }
     }
   }
@@ -234,10 +238,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   /// 🔧 检查 viewport 是否显著变化
   bool _viewportChangedSignificantly(Rect newViewport) {
-    // 首次计算
-    if (_cachedRelativeViewport == null) return true;
-
-    final old = _cachedRelativeViewport!;
+    final old = _lastReportedRelativeViewport;
+    if (old == null) return true;
     const threshold = 50.0; // 50 个单位的变化才更新
 
     return (newViewport.left - old.left).abs() > threshold ||
@@ -316,32 +318,50 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               ),
             ),
 
-            // 3. Star map with selection pulse animation
-            // 🔧 优化: 降低脉冲动画频率，从 60fps 降到 30fps
+            // 3. Static star map layer
             Positioned.fill(
               child: Opacity(
                 opacity: _isEntering ? 0.0 : 1.0,
                 child: RepaintBoundary(
-                  child: AnimatedBuilder(
-                    animation: _selectionPulseController,
-                    builder: (context, child) {
-                      // 🔧 降频优化: 每 2 帧才更新一次（30fps instead of 60fps）
-                      final throttledPulse =
-                          (_selectionPulseController.value * 15).round() / 15.0;
-
-                      // StarMapPainter 内部有 SmartCache，重复数据不会重新处理
-                      return CustomPaint(
-                        painter: _createStarMapPainterWithPulse(
-                          galaxyState,
-                          canvasCenter,
-                          throttledPulse,
-                        ),
-                      );
-                    },
+                  child: CustomPaint(
+                    painter: _cachedPainter,
                   ),
                 ),
               ),
             ),
+
+            // 4. Lightweight overlay for selection and evidence pulses
+            if (galaxyState.selectedNodeId != null ||
+                galaxyState.highlightedNodeIdHashes.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: _isEntering ? 0.0 : 1.0,
+                    child: RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _selectionPulseController,
+                        builder: (context, child) {
+                          final throttledPulse =
+                              (_selectionPulseController.value * 15).round() /
+                                  15.0;
+                          return CustomPaint(
+                            painter: SelectionOverlayPainter(
+                              nodes: galaxyState.visibleCompactNodes,
+                              selectedNodeIdHash:
+                                  galaxyState.selectedNodeId?.hashCode,
+                              highlightedNodeIdHashes:
+                                  galaxyState.highlightedNodeIdHashes,
+                              performanceTier:
+                                  PerformanceService.instance.currentTier.value,
+                              selectionPulse: throttledPulse,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -350,23 +370,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   /// 🔧 检查是否需要重建 painter
   bool _shouldRebuildPainter(GalaxyState state) {
-    if (_cachedPainter == null) return true;
-
-    // 检查关键数据是否变化
-    // - nodes/edges 列表变化
-    // - 选中节点变化
-    // - 高亮节点变化
-    // - 聚合等级变化
-    // - viewport 显著变化
-    // - 性能档位变化
-
-    // 简化判断: 使用 painterRevision 标记
-    // painterRevision 在以下情况递增:
-    // - 缩放变化 (in _onTransformChanged)
-    // - provider 数据更新 (需要在 provider 中设置)
-
-    // 这里可以添加更细粒度的检查
-    return false; // 默认不重建，依赖 painterRevision
+    final signature = _createPainterSignature(state);
+    if (_cachedPainter == null || _lastPainterSignature != signature) {
+      _lastPainterSignature = signature;
+      return true;
+    }
+    return false;
   }
 
   /// 🔧 创建 StarMapPainter
@@ -410,7 +419,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       highlightRevision: galaxyState.highlightRevision,
       expandedEdgeNodeIdHashes: expandedHashes,
       nodeAnimationProgress: animationHashes,
-      selectionPulse: _selectionPulseController.value,
+      selectionPulse: 0.0,
     );
   }
 
@@ -426,54 +435,47 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     return Rect.fromPoints(topLeft, bottomRight);
   }
 
-  /// 🔧 创建带有特定 pulse 值的 StarMapPainter
-  /// 用于脉冲动画更新
-  StarMapPainter _createStarMapPainterWithPulse(
-    GalaxyState galaxyState,
-    double canvasCenter,
-    double pulse,
-  ) {
-    final scale = _transformationController.value.getMaxScaleOnAxis();
-
-    final absoluteViewport = _cachedAbsoluteViewport ??
-        _calculateViewport(MediaQuery.of(context).size);
-
-    // 🔧 性能优化: 直接使用预计算的 CompactNode 列表
-    final compactNodes = galaxyState.visibleCompactNodes;
-
-    final selectedHash = galaxyState.selectedNodeId?.hashCode;
-    final highlightedHashes = galaxyState.highlightedNodeIdHashes;
-    final expandedHashes =
-        galaxyState.expandedEdgeNodeIds.map((id) => id.hashCode).toSet();
-    final animationHashes = galaxyState.nodeAnimationProgress
-        .map((id, val) => MapEntry(id.hashCode, val));
-
-    return StarMapPainter(
-      nodes: compactNodes,
-      edges: galaxyState.visibleEdges,
-      scale: scale,
-      performanceTier: PerformanceService.instance.currentTier.value,
-      currentDpr: PerformanceService.instance.currentDpr.value,
-      aggregationLevel: galaxyState.aggregationLevel,
-      clusters: _centerClusters(
-        galaxyState.clusters,
-        canvasCenter,
-        canvasCenter,
-      ),
-      viewport: absoluteViewport,
-      center: Offset(canvasCenter, canvasCenter),
-      selectedNodeIdHash: selectedHash,
-      highlightedNodeIdHashes: highlightedHashes,
-      highlightRevision: galaxyState.highlightRevision,
-      expandedEdgeNodeIdHashes: expandedHashes,
-      nodeAnimationProgress: animationHashes,
-      selectionPulse: pulse, // 使用传入的 pulse 值
+  int _createPainterSignature(GalaxyState galaxyState) {
+    final scaleBucket =
+        (_transformationController.value.getMaxScaleOnAxis() * 10).round();
+    final viewport = _cachedAbsoluteViewport;
+    final viewportBucket = viewport == null
+        ? 0
+        : Object.hash(
+            (viewport.center.dx / 120).round(),
+            (viewport.center.dy / 120).round(),
+            (viewport.width / 120).round(),
+            (viewport.height / 120).round(),
+          );
+    final nodeSample = Object.hashAll(
+      galaxyState.visibleCompactNodes.take(12).map(
+          (node) => Object.hash(node.idHash, node.x.round(), node.y.round())),
     );
+    final edgeSample = Object.hashAll(
+      galaxyState.visibleEdges.take(12).map(
+            (edge) =>
+                Object.hash(edge.sourceId, edge.targetId, edge.relationType),
+          ),
+    );
+
+    return Object.hashAll([
+      galaxyState.visibleCompactNodes.length,
+      galaxyState.visibleEdges.length,
+      galaxyState.aggregationLevel,
+      galaxyState.highlightRevision,
+      PerformanceService.instance.currentTier.value,
+      PerformanceService.instance.currentDpr.value.round(),
+      scaleBucket,
+      viewportBucket,
+      nodeSample,
+      edgeSample,
+    ]);
   }
 
   /// Handle tap on canvas to detect node clicks
   void _handleTapUp(TapUpDetails details) {
     if (_isEntering) return;
+    if (_draggingNodeId != null) return;
 
     // Prevent tap if user has dragged (gesture conflict resolution)
     if (_hasDragged) return;
@@ -520,13 +522,41 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   /// Handle long press to navigate directly
   void _handleLongPressStart(LongPressStartDetails details) {
     if (_isEntering) return;
+    final nodeId = _hitTestNode(details.localPosition);
+    if (nodeId == null) return;
+    _draggingNodeId = nodeId;
+    _hasDragged = true;
+    ref.read(galaxyProvider.notifier).beginNodeDrag(nodeId);
+    HapticFeedback.mediumImpact();
+  }
 
-    // Prevent long press if user has dragged (gesture conflict resolution)
-    if (_hasDragged) return;
+  void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
+    final nodeId = _draggingNodeId;
+    if (nodeId == null) return;
+    final galaxyState = ref.read(galaxyProvider);
+    final canvasPoint = _screenToCanvas(details.localPosition);
+    final relativePosition = canvasPoint -
+        Offset(galaxyState.canvasCenter, galaxyState.canvasCenter);
+    ref
+        .read(galaxyProvider.notifier)
+        .updateDraggedNodePosition(nodeId, relativePosition);
+  }
 
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    if (_draggingNodeId == null) return;
+    final notifier = ref.read(galaxyProvider.notifier);
+    _draggingNodeId = null;
+    unawaited(notifier.endNodeDrag());
+    Future.delayed(const Duration(milliseconds: 80), () {
+      _hasDragged = false;
+      _dragStartOffset = null;
+    });
+  }
+
+  String? _hitTestNode(Offset localPosition) {
     final galaxyState = ref.read(galaxyProvider);
     final canvasCenter = galaxyState.canvasCenter;
-    final canvasTap = _screenToCanvas(details.localPosition);
+    final canvasTap = _screenToCanvas(localPosition);
     final scale = _transformationController.value.getMaxScaleOnAxis();
     final effectiveScale = scale.clamp(0.3, 2.0);
     final hitRadius = 30 / effectiveScale;
@@ -542,14 +572,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
       if ((canvasTap - actualPos).distance <
           hitRadius + (node.importance * 2)) {
-        // Long press - Navigate
-        context.push('/galaxy/node/${node.id}');
-        // Also select it to be consistent
-        ref.read(galaxyProvider.notifier).selectNode(node.id);
-        HapticFeedback.mediumImpact();
-        return;
+        return node.id;
       }
     }
+    return null;
   }
 
   /// Parse a hex color string to Color
@@ -814,6 +840,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final screenSize = MediaQuery.of(context).size;
     final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
     final hasTightHeight = screenSize.height < 680;
+    final reduceBackgroundEffects = _activePointers.isNotEmpty || _hasDragged;
 
     final overlayInset = ResponsiveSystem.resolve(
       context: context,
@@ -894,7 +921,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           child: Stack(
             children: [
               Positioned.fill(
-                child: GalaxyShaderBackground(engine: _renderEngine),
+                child: GalaxyShaderBackground(
+                  engine: _renderEngine,
+                  enabled: !reduceBackgroundEffects,
+                ),
               ),
               // 0. Parallax Background (Deepest Layer)
               Positioned.fill(
@@ -955,6 +985,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     },
                     onTapUp: _handleTapUp,
                     onLongPressStart: _handleLongPressStart,
+                    onLongPressMoveUpdate: _handleLongPressMoveUpdate,
+                    onLongPressEnd: _handleLongPressEnd,
                     child: InteractiveViewer(
                       transformationController: _transformationController,
                       alignment: Alignment.topLeft,
@@ -962,6 +994,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           const EdgeInsets.all(2000), // Huge scroll area
                       minScale: 0.1,
                       maxScale: 5.0,
+                      panEnabled: _draggingNodeId == null,
+                      scaleEnabled: _draggingNodeId == null,
                       constrained: false, // Infinite canvas
                       child: SizedBox(
                         width: _canvasSize,
@@ -1308,6 +1342,79 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ),
         ),
       );
+}
+
+class SelectionOverlayPainter extends CustomPainter {
+  SelectionOverlayPainter({
+    required this.nodes,
+    required this.selectedNodeIdHash,
+    required this.highlightedNodeIdHashes,
+    required this.performanceTier,
+    required this.selectionPulse,
+  });
+
+  final List<CompactKnowledgeNode> nodes;
+  final int? selectedNodeIdHash;
+  final Set<int> highlightedNodeIdHashes;
+  final PerformanceTier performanceTier;
+  final double selectionPulse;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final nodePositions = <int, Offset>{};
+    for (final node in nodes) {
+      nodePositions[node.idHash] = Offset(node.x, node.y);
+    }
+
+    if (selectedNodeIdHash != null) {
+      final selectedPosition = nodePositions[selectedNodeIdHash!];
+      if (selectedPosition != null) {
+        final radius = 40.0 + (selectionPulse * 8.0);
+        final outline = Paint()
+          ..color =
+              DS.brandPrimary.withValues(alpha: 0.35 + (selectionPulse * 0.2))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0 + selectionPulse;
+        canvas.drawCircle(selectedPosition, radius, outline);
+
+        if (performanceTier == PerformanceTier.ultra ||
+            performanceTier == PerformanceTier.high) {
+          final fill = Paint()
+            ..color = DS.brandPrimary
+                .withValues(alpha: 0.08 + (selectionPulse * 0.05))
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(selectedPosition, 40.0, fill);
+        }
+      }
+    }
+
+    if (highlightedNodeIdHashes.isEmpty) {
+      return;
+    }
+
+    final highlightPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = DS.info.withValues(alpha: 0.55);
+    final pulseRadius = 24.0 + (selectionPulse * 4.0);
+    for (final nodeHash in highlightedNodeIdHashes) {
+      if (nodeHash == selectedNodeIdHash) {
+        continue;
+      }
+      final position = nodePositions[nodeHash];
+      if (position == null) {
+        continue;
+      }
+      canvas.drawCircle(position, pulseRadius, highlightPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SelectionOverlayPainter oldDelegate) =>
+      oldDelegate.selectionPulse != selectionPulse ||
+      oldDelegate.selectedNodeIdHash != selectedNodeIdHash ||
+      oldDelegate.highlightedNodeIdHashes != highlightedNodeIdHashes ||
+      !identical(oldDelegate.nodes, nodes);
 }
 
 class _GalaxyDebugOverlay extends StatelessWidget {

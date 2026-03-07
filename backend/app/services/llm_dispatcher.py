@@ -238,6 +238,8 @@ class LLMDispatcher:
 
     def _cache_key(self, request: inference_pb2.InferenceRequest) -> str:
         payload = {
+            "user_id": request.user_id,
+            "task_type": int(request.task_type),
             "messages": [
                 {"role": msg.role, "content": msg.content}
                 for msg in request.messages
@@ -248,6 +250,8 @@ class LLMDispatcher:
             ],
             "response_format": int(request.response_format),
             "metadata": dict(request.metadata),
+            "file_ids": list(request.file_ids),
+            "artifact_scope": int(request.artifact_scope),
         }
         raw = json.dumps(payload, ensure_ascii=True, sort_keys=True)
         content_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()

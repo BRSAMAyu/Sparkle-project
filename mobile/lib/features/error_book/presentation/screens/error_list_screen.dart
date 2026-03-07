@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
-import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
-import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
@@ -368,11 +366,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       );
 
   Future<void> _navigateToAddError(BuildContext context) async {
-    final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (context) => const AddErrorScreen(),
-      ),
-    );
+    final result = await context.push<bool>('/errors/new');
 
     if ((result ?? false) && mounted) {
       // 刷新列表
@@ -382,11 +376,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Future<void> _navigateToDetail(BuildContext context, String errorId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ErrorDetailScreen(errorId: errorId),
-      ),
-    );
+    await context.push('/errors/$errorId');
 
     // 详情页可能会更新错题，返回时刷新列表
     if (mounted) {
