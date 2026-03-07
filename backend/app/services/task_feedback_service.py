@@ -9,12 +9,14 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.core.event_bus import event_bus
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.personalization.preference_service import PreferenceService
+from app.services.task_reflection_service import TaskReflectionService
 
 
 class TaskFeedbackService:
@@ -39,7 +41,7 @@ class TaskFeedbackService:
         completion_quality: int | None = None,
         feedback_text: str | None = None,
         category: str | None = None,
-    ) -> TaskFeedback:
+    ) -> tuple[TaskFeedback, dict[str, Any] | None]:
         """
         提交任务反馈
 
@@ -104,8 +106,38 @@ class TaskFeedbackService:
             except Exception as e:
                 logger.warning(f"[TaskFeedback] Adaptive replanning failed: {e}")
 
+        reflection_prompt = None
+        try:
+            reflection_service = TaskReflectionService(self.db, self.redis)
+            reflection_prompt = await reflection_service.maybe_enqueue_reflection_prompt(
+                user_id=user_id,
+                task=task,
+                feedback=feedback,
+                category=feedback.category,
+                time_spent_minutes=task.actual_minutes,
+            )
+        except Exception as e:
+            logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
+
         await self.db.commit()
-        await self.db.refresh(feedback)
+        await self.db.refresh(
+            feedback,
+            attribute_names=[
+                "id",
+                "user_id",
+                "task_id",
+                "completion_quality",
+                "feedback_text",
+                "category",
+                "inferred_depth_delta",
+                "inferred_difficulty_delta",
+                "task_difficulty_snapshot",
+                "task_type_snapshot",
+                "actual_minutes_snapshot",
+                "created_at",
+                "updated_at",
+            ],
+        )
 
         await event_bus.publish(
             "task.feedback_submitted",
@@ -119,7 +151,7 @@ class TaskFeedbackService:
             },
         )
 
-        return feedback
+        return feedback, reflection_prompt
 
     async def _get_and_validate_task(self, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -146,7 +178,25 @@ class TaskFeedbackService:
     async def _get_existing_feedback(self, user_id: UUID, task_id: UUID) -> TaskFeedback | None:
         """查询现有反馈"""
         result = await self.db.execute(
-            select(TaskFeedback).where(
+            select(TaskFeedback)
+            .options(
+                load_only(
+                    TaskFeedback.id,
+                    TaskFeedback.user_id,
+                    TaskFeedback.task_id,
+                    TaskFeedback.completion_quality,
+                    TaskFeedback.feedback_text,
+                    TaskFeedback.category,
+                    TaskFeedback.inferred_depth_delta,
+                    TaskFeedback.inferred_difficulty_delta,
+                    TaskFeedback.task_difficulty_snapshot,
+                    TaskFeedback.task_type_snapshot,
+                    TaskFeedback.actual_minutes_snapshot,
+                    TaskFeedback.created_at,
+                    TaskFeedback.updated_at,
+                )
+            )
+            .where(
                 TaskFeedback.user_id == user_id,
                 TaskFeedback.task_id == task_id,
             )

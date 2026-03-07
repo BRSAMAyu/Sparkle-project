@@ -476,6 +476,28 @@ class TaskRepository {
     }
   }
 
+  Future<void> submitReflectionAnswer(
+    String feedbackId, {
+    String? selectedOption,
+    String? freeText,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+    try {
+      await _apiClient.post<void>(
+        ApiEndpoints.taskFeedbackReflection(feedbackId),
+        data: {
+          if (selectedOption != null && selectedOption.isNotEmpty)
+            'selected_option': selectedOption,
+          if (freeText != null && freeText.isNotEmpty) 'free_text': freeText,
+        },
+      );
+    } on DioException catch (e) {
+      _handleDioError<void>(e, 'submitReflectionAnswer');
+    }
+  }
+
   /// Record user interaction with next action suggestions
   Future<void> recordNextActionSelection(
     String taskId,

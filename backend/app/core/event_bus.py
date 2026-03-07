@@ -142,6 +142,145 @@ class EventBus:
         self._consumers = []
         self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
+        self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
+        self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
+
+    def _dlq_stream(self, stream: str) -> str:
+        return f"{stream}{self.dlq_suffix}"
+
+    @staticmethod
+    def _serialize_stream_body(message: dict[str, Any]) -> dict[str, str]:
+        msg_body: dict[str, str] = {}
+        for key, value in message.items():
+            if isinstance(value, (dict, list)):
+                msg_body[key] = json.dumps(value, ensure_ascii=False, default=str)
+            else:
+                msg_body[key] = str(value)
+        return msg_body
+
+    @staticmethod
+    def _extract_retry_count(message: dict[str, Any]) -> int:
+        try:
+            return int(message.get("_retry_count", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    async def _move_to_dlq(
+        self,
+        *,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        message_id: str,
+        parsed_data: dict[str, Any],
+        error: Exception,
+        retry_count: int,
+    ) -> None:
+        if not self.redis:
+            return
+
+        payload = {
+            "event": parsed_data,
+            "error": str(error),
+            "stream": stream,
+            "group_name": group_name,
+            "consumer_name": consumer_name,
+            "message_id": message_id,
+            "retry_count": retry_count,
+            "failed_at": datetime.now(UTC).isoformat(),
+        }
+        await self.redis.xadd(
+            self._dlq_stream(stream),
+            {"data": json.dumps(payload, ensure_ascii=False, default=str)},
+        )
+        await self.redis.xack(stream, group_name, message_id)
+        logger.error(
+            "Moved event to DLQ: stream={} group={} consumer={} message_id={} retry_count={} error={}",
+            stream,
+            group_name,
+            consumer_name,
+            message_id,
+            retry_count,
+            error,
+        )
+
+    async def _requeue_for_retry(
+        self,
+        *,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        message_id: str,
+        parsed_data: dict[str, Any],
+        error: Exception,
+        retry_count: int,
+    ) -> None:
+        if not self.redis:
+            return
+
+        next_retry = retry_count + 1
+        retry_payload = dict(parsed_data)
+        retry_payload["_retry_count"] = next_retry
+        retry_payload["_last_error"] = str(error)
+        retry_payload["_failed_consumer_group"] = group_name
+        retry_payload["_failed_consumer_name"] = consumer_name
+        retry_payload["_failed_at"] = datetime.now(UTC).isoformat()
+        retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
+
+        await self.redis.xadd(stream, self._serialize_stream_body(retry_payload))
+        await self.redis.xack(stream, group_name, message_id)
+        logger.warning(
+            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} error={}",
+            stream,
+            group_name,
+            consumer_name,
+            message_id,
+            next_retry,
+            self.max_retries,
+            error,
+        )
+
+    async def _handle_failed_message(
+        self,
+        *,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        message_id: str,
+        parsed_data: dict[str, Any],
+        error: Exception,
+    ) -> None:
+        retry_count = self._extract_retry_count(parsed_data)
+        try:
+            if retry_count >= self.max_retries:
+                await self._move_to_dlq(
+                    stream=stream,
+                    group_name=group_name,
+                    consumer_name=consumer_name,
+                    message_id=message_id,
+                    parsed_data=parsed_data,
+                    error=error,
+                    retry_count=retry_count,
+                )
+            else:
+                await self._requeue_for_retry(
+                    stream=stream,
+                    group_name=group_name,
+                    consumer_name=consumer_name,
+                    message_id=message_id,
+                    parsed_data=parsed_data,
+                    error=error,
+                    retry_count=retry_count,
+                )
+        except Exception as dlq_error:
+            logger.error(
+                "Failed to requeue/DLQ event: stream={} group={} message_id={} original_error={} dlq_error={}",
+                stream,
+                group_name,
+                message_id,
+                error,
+                dlq_error,
+            )
 
     async def connect(self):
         """Establish Redis connection"""
@@ -216,12 +355,7 @@ class EventBus:
             # However, standard stream usage often puts fields directly.
             # Let's stringify values.
 
-            msg_body = {}
-            for k, v in message.items():
-                if isinstance(v, (dict, list)):
-                    msg_body[k] = json.dumps(v)
-                else:
-                    msg_body[k] = str(v)
+            msg_body = self._serialize_stream_body(message)
 
             # XADD
             msg_id = await self.redis.xadd(stream, msg_body)
@@ -302,7 +436,14 @@ class EventBus:
 
                         except Exception as e:
                             logger.error(f"Error processing message {message_id}: {e}")
-                            # TODO: Implement Dead Letter Queue or Retry logic here
+                            await self._handle_failed_message(
+                                stream=stream,
+                                group_name=group_name,
+                                consumer_name=consumer_name,
+                                message_id=message_id,
+                                parsed_data=parsed_data,
+                                error=e,
+                            )
 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")

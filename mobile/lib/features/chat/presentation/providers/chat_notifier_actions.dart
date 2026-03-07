@@ -22,6 +22,21 @@ extension ChatNotifierActions on ChatNotifier {
           );
         }
         return;
+      case 'reflection_submit':
+        final feedbackId = payload['feedback_id']?.toString() ?? '';
+        if (feedbackId.isEmpty) {
+          return;
+        }
+        await _ref.read(taskRepositoryProvider).submitReflectionAnswer(
+              feedbackId,
+              selectedOption: payload['selected_option']?.toString(),
+              freeText: payload['free_text']?.toString(),
+            );
+        state = state.copyWith(
+          lastActionStatus: 'reflection_submitted',
+          lastActionMessage: '谢谢你的反馈，我会据此优化后续计划。',
+        );
+        return;
       default:
         debugPrint('ℹ️ Unsupported widget action: $actionType');
     }
@@ -72,7 +87,7 @@ extension ChatNotifierActions on ChatNotifier {
     if (action.type == 'nightly_review') {
       final reviewId = action.data['review_id']?.toString() ?? '';
       if (reviewId.isNotEmpty) {
-        _markNightlyReviewed(reviewId);
+        unawaited(_markNightlyReviewed(reviewId));
         return;
       }
     }
@@ -465,7 +480,10 @@ extension ChatNotifierActions on ChatNotifier {
 
   /// Get user-friendly reflection result message
   String _getReflectionResultMessage(
-      String outcome, double scoreDelta, int rounds) {
+    String outcome,
+    double scoreDelta,
+    int rounds,
+  ) {
     final roundsInfo = rounds > 1 ? ' ($rounds轮)' : '';
     switch (outcome) {
       case 'fixed':

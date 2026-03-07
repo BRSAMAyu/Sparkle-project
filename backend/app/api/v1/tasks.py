@@ -27,6 +27,8 @@ from app.schemas.task import (
     TaskUpdate,
 )
 from app.schemas.task_feedback import (
+    ReflectionAnswerCreate,
+    ReflectionAnswerResponse,
     NextActionSelectionCreate,
     TaskFeedbackCreate,
     TaskFeedbackResponse,
@@ -262,6 +264,23 @@ async def abandon_task(
         reason=request.reason
     )
 
+    try:
+        from app.services.task_reflection_service import TaskReflectionService
+
+        time_spent = None
+        if task.started_at and task.completed_at:
+            time_spent = int((task.completed_at - task.started_at).total_seconds() / 60)
+        reflection_service = TaskReflectionService(db, cache_service.redis)
+        await reflection_service.create_abandon_feedback_and_prompt(
+            user_id=current_user.id,
+            task=task,
+            reason=request.reason,
+            time_spent_minutes=time_spent,
+        )
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to enqueue abandon reflection prompt: {e}")
+
     return {"data": TaskDetail.model_validate(task)}
 
 @router.post("/{task_id}/complete", response_model=dict[str, Any])
@@ -458,7 +477,7 @@ async def submit_task_feedback(
     service = TaskFeedbackService(db, cache_service.redis)
 
     try:
-        feedback = await service.submit_feedback(
+        feedback, reflection_prompt = await service.submit_feedback(
             user_id=current_user.id,
             task_id=task_id,
             completion_quality=feedback_in.completion_quality,
@@ -479,9 +498,41 @@ async def submit_task_feedback(
             message="偏好已更新" if preference_updates else "反馈已提交",
             data=TaskFeedbackResponse.model_validate(feedback),
             preference_updates=preference_updates,
+            reflection_prompt=reflection_prompt,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/feedback/{feedback_id}/reflection",
+    response_model=ReflectionAnswerResponse,
+)
+async def submit_task_reflection_answer(
+    reflection_in: ReflectionAnswerCreate,
+    feedback_id: UUID = Path(..., description="Task feedback ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """提交任务反思答案，并回流认知棱镜。"""
+    from app.services.task_reflection_service import TaskReflectionService
+
+    service = TaskReflectionService(db, cache_service.redis)
+    try:
+        reflection_payload = await service.submit_reflection_answer(
+            user_id=current_user.id,
+            feedback_id=feedback_id,
+            selected_option=reflection_in.selected_option,
+            free_text=reflection_in.free_text,
+        )
+        await db.commit()
+        return ReflectionAnswerResponse(
+            success=True,
+            message="谢谢你的反馈，我会据此优化后续计划。",
+            reflection_payload=reflection_payload,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/{task_id}/feedback", response_model=dict[str, Any])

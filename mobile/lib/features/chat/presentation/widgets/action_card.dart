@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +22,7 @@ class ActionCard extends StatefulWidget {
   final WidgetPayload action;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
-  final void Function(String actionType, Map<String, dynamic> payload)?
+  final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
   @override
@@ -31,6 +33,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
+  final TextEditingController _reflectionController = TextEditingController();
+  String? _selectedReflectionOption;
+  bool _reflectionSubmitted = false;
 
   @override
   void initState() {
@@ -38,7 +43,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    unawaited(_pulseController.repeat(reverse: true));
 
     _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -52,6 +58,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _reflectionController.dispose();
     _pulseController.dispose();
     _pressController.dispose();
     super.dispose();
@@ -287,6 +294,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'evolution_card':
         return DS.infoGradient;
+      case 'progress_card':
+        return LinearGradient(
+          colors: [DS.success, DS.secondaryBase],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'reflection_card':
+        return DS.warningGradient;
       case 'source_summary':
         return DS.secondaryGradient;
       case 'next_actions':
@@ -330,6 +345,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'evolution_card':
         return DS.info;
+      case 'progress_card':
+        return DS.success;
+      case 'reflection_card':
+        return DS.warning;
       case 'source_summary':
         return DS.secondaryBase;
       case 'next_actions':
@@ -378,6 +397,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.task_alt_rounded;
       case 'evolution_card':
         return Icons.auto_awesome_motion_rounded;
+      case 'progress_card':
+        return Icons.insights_rounded;
+      case 'reflection_card':
+        return Icons.psychology_alt_rounded;
       case 'source_summary':
         return Icons.fact_check_rounded;
       case 'next_actions':
@@ -415,6 +438,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return '执行结果摘要';
       case 'evolution_card':
         return '系统进化';
+      case 'progress_card':
+        return '成长回顾';
+      case 'reflection_card':
+        return '反思引导';
       case 'source_summary':
         return '依据与来源';
       case 'next_actions':
@@ -457,6 +484,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (action.type == 'evolution_card') {
       return _buildEvolutionCard(context, action);
     }
+    if (action.type == 'progress_card') {
+      return _buildProgressCard(context, action);
+    }
     if (action.type == 'source_summary') {
       return _buildSourceSummary(context, action);
     }
@@ -469,6 +499,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'blocked_input_request') {
       return _buildBlockedInputRequest(context, action);
+    }
+    if (action.type == 'reflection_card') {
+      return _buildReflectionCard(context, action);
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -678,7 +711,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildNightlyReviewContent(
-      BuildContext context, WidgetPayload action) {
+    BuildContext context,
+    WidgetPayload action,
+  ) {
     final summary = action.data['summary']?.toString() ?? '';
     final reviewDate = action.data['review_date']?.toString() ?? '';
     final rawTodos = action.data['todo_items'] as List<dynamic>? ?? [];
@@ -838,8 +873,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final whyThisAnswer = action.data['why_this_answer']?.toString() ?? '';
     final evidenceSummary = action.data['evidence_summary']?.toString() ?? '';
     final citations = (action.data['citations'] as List<dynamic>? ?? [])
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
         .toList();
 
     return Column(
@@ -947,12 +982,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final title = action.data['title']?.toString() ?? '';
     final recoveryMessage = action.data['recovery_message']?.toString() ?? '';
     final actions = (action.data['actions'] as List<dynamic>? ?? [])
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
         .toList();
     final retryOptions = (action.data['retry_options'] as List<dynamic>? ?? [])
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
+        .whereType<Map<dynamic, dynamic>>()
+        .map(Map<String, dynamic>.from)
         .toList();
     final memoryUpdatesRaw = action.data['memory_updates'];
     final memoryUpdates = memoryUpdatesRaw is Map<String, dynamic>
@@ -963,15 +998,19 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             .map((e) => '$e')
             .toList();
 
-    Widget buildActionChip(Map<String, dynamic> item,
-        {bool secondary = false}) {
+    Widget buildActionChip(
+      Map<String, dynamic> item, {
+      bool secondary = false,
+    }) {
       final label = item['label']?.toString() ?? '';
       return InkWell(
         onTap: label.isEmpty
             ? null
-            : () => widget.onWidgetAction?.call(
-                  item['type']?.toString() ?? 'prompt',
-                  item,
+            : () => unawaited(
+                  widget.onWidgetAction?.call(
+                    item['type']?.toString() ?? 'prompt',
+                    item,
+                  ),
                 ),
         borderRadius: DS.borderRadius20,
         child: Container(
@@ -1069,13 +1108,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final summary = action.data['summary']?.toString() ?? '';
     final adaptationRecords =
         (action.data['adaptation_records'] as List<dynamic>? ?? [])
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
             .toList();
     final preferenceLearnings =
         (action.data['preference_learnings'] as List<dynamic>? ?? [])
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
             .toList();
 
     Widget buildDetailBlock(Map<String, dynamic> item) {
@@ -1165,6 +1204,173 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildProgressCard(BuildContext context, WidgetPayload action) {
+    final highlights = (action.data['highlights'] as List<dynamic>? ?? [])
+        .map((e) => '$e')
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final streakInfo =
+        (action.data['streak_info'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
+            .map<String, dynamic>((key, value) => MapEntry('$key', value));
+    final comparisons =
+        (action.data['comparisons'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{})
+            .map<String, dynamic>((key, value) => MapEntry('$key', value));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (highlights.isNotEmpty)
+          ...highlights.take(3).map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.spacing8),
+                  child: Text(
+                    '• $item',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.neutral900,
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
+                  ),
+                ),
+              ),
+        if ((streakInfo['current_streak'] ?? 0) != 0) ...[
+          const SizedBox(height: DS.spacing8),
+          _buildMetaPill(
+            '当前连胜 ${streakInfo['current_streak']} 天 / 最长 ${streakInfo['max_streak'] ?? 0} 天',
+          ),
+        ],
+        if (comparisons.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            title: Text(
+              '查看对比数据',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.success,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+            children: comparisons.entries.map((entry) {
+              final value = entry.value is Map<dynamic, dynamic>
+                  ? Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>)
+                  : const <String, dynamic>{};
+              return Container(
+                margin: const EdgeInsets.only(top: DS.spacing8),
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(color: DS.neutral200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_formatParamKey(entry.key)),
+                    Text('${value['current'] ?? '-'} / 上期 ${value['previous'] ?? '-'}'),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildReflectionCard(BuildContext context, WidgetPayload action) {
+    final question = action.data['question']?.toString() ?? '';
+    final feedbackId = action.data['feedback_id']?.toString() ?? '';
+    final options = (action.data['options'] as List<dynamic>? ?? [])
+        .map((e) => '$e')
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final initialStatus = action.data['status']?.toString() ?? '';
+    final submitted = _reflectionSubmitted || initialStatus == 'completed';
+
+    if (submitted) {
+      return Text(
+        '谢谢你的反馈，我会据此优化后续计划。',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: DS.neutral700,
+            ),
+      );
+    }
+
+    Future<void> submit() async {
+      if (feedbackId.isEmpty) {
+        return;
+      }
+      await widget.onWidgetAction?.call(
+        'reflection_submit',
+        {
+          'feedback_id': feedbackId,
+          'selected_option': _selectedReflectionOption,
+          'free_text': _reflectionController.text.trim(),
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _reflectionSubmitted = true;
+        });
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (question.isNotEmpty)
+          Text(
+            question,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral900,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+        if (options.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: options
+                .map(
+                  (option) => ChoiceChip(
+                    label: Text(option),
+                    selected: _selectedReflectionOption == option,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedReflectionOption = option;
+                      });
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        const SizedBox(height: DS.spacing12),
+        TextField(
+          controller: _reflectionController,
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: '可选补充说明',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: DS.spacing12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: CustomButton.primary(
+            text: '提交反馈',
+            onPressed: submit,
+            size: CustomButtonSize.small,
+            customGradient: DS.warningGradient,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildNarrativeBanner(BuildContext context, WidgetPayload action) {
     final title = action.data['title']?.toString() ??
         action.data['label']?.toString() ??
@@ -1243,9 +1449,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             children: retryOptions
                 .map(
                   (item) => InkWell(
-                    onTap: () => widget.onWidgetAction?.call(
-                      'prompt',
-                      {'prompt': item, 'label': item},
+                    onTap: () => unawaited(
+                      widget.onWidgetAction?.call(
+                        'prompt',
+                        {'prompt': item, 'label': item},
+                      ),
                     ),
                     borderRadius: DS.borderRadius20,
                     child: Container(
@@ -1328,7 +1536,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         'focus_${DateTime.now().millisecondsSinceEpoch}';
 
     // 导航到正念模式（番茄钟）
-    context.push('/focus/mindfulness/$taskId');
+    unawaited(context.push('/focus/mindfulness/$taskId'));
   }
 
   IconData _getParamIcon(String key) {
@@ -1351,11 +1559,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
   }
 
-  String _formatParamKey(String key) {
-    // Convert snake_case to readable format
-    return key
-        .split('_')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
-  }
+  String _formatParamKey(String key) => key
+      .split('_')
+      .map((word) => word[0].toUpperCase() + word.substring(1))
+      .join(' ');
 }

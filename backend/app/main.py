@@ -32,6 +32,7 @@ from app.core.websocket import manager
 from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
 from app.orchestration.summarization_worker import create_summarization_worker
+from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
@@ -110,6 +111,12 @@ async def lifespan(app: FastAPI):
         task_consumer = TaskEventConsumer(event_bus=event_bus)
         task_consumer_task = asyncio.create_task(task_consumer.start())
         app.state.task_consumer_task = task_consumer_task
+
+    achievement_consumer_task = None
+    if cache_service.redis:
+        achievement_consumer = AchievementEventConsumer(event_bus=event_bus)
+        achievement_consumer_task = asyncio.create_task(achievement_consumer.start())
+        app.state.achievement_consumer_task = achievement_consumer_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -197,6 +204,12 @@ async def lifespan(app: FastAPI):
         task_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await task_consumer_task
+
+    achievement_consumer_task = getattr(app.state, "achievement_consumer_task", None)
+    if achievement_consumer_task:
+        achievement_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await achievement_consumer_task
 
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)
@@ -295,7 +308,7 @@ app.add_middleware(
 )
 
 # 🆕 幂等性中间件
-idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "memory")
+idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "redis")
 app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
 
 

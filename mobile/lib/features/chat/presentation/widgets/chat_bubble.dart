@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class ChatBubble extends StatefulWidget {
   final void Function(WidgetPayload action)? onActionDismiss;
   final void Function(ChatMessageModel message, String feedbackType)?
       onResponseFeedback;
-  final void Function(String actionType, Map<String, dynamic> payload)?
+  final Future<void> Function(String actionType, Map<String, dynamic> payload)?
       onWidgetAction;
 
   @override
@@ -70,7 +71,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),
     );
 
-    _entryController.forward();
+    unawaited(_entryController.forward());
   }
 
   @override
@@ -155,7 +156,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       final heroTag = 'message_${chatMessage.id}';
 
       // 打开详情视图
-      Navigator.of(context).push(
+      unawaited(Navigator.of(context).push(
         PageRouteBuilder<void>(
           opaque: false, // 使用半透明背景
           barrierColor: DS.overlay30.withValues(alpha: 0),
@@ -169,7 +170,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ),
           transitionDuration: const Duration(milliseconds: 250),
         ),
-      );
+      ),);
     }
   }
 
@@ -180,7 +181,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final canRevoke =
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
-    showModalBottomSheet<void>(
+    unawaited(showModalBottomSheet<void>(
       context: context,
       backgroundColor: DS.overlay30.withValues(alpha: 0),
       builder: (context) => DecoratedBox(
@@ -240,7 +241,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                 leading: const Icon(Icons.copy_rounded),
                 title: const Text('复制'),
                 onTap: () {
-                  Clipboard.setData(ClipboardData(text: _content));
+                  unawaited(
+                    Clipboard.setData(ClipboardData(text: _content)),
+                  );
                   if (mounted) {
                     Navigator.pop(context);
                     AppFeedback.info(context, '已复制到剪贴板');
@@ -263,7 +266,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
+    ),);
   }
 
   @override
@@ -402,7 +405,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                         final contentWidget = MarkdownBody(
                                           data: _content,
                                           styleSheet: _getMarkdownStyle(
-                                              context, isUser),
+                                            context,
+                                            isUser,
+                                          ),
                                           onTapLink: (text, href, title) async {
                                             if (href == null) return;
                                             final uri = Uri.tryParse(href);
@@ -421,15 +426,18 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
                                             try {
                                               if (await canLaunchUrl(uri)) {
-                                                await launchUrl(
-                                                  uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication,
+                                                unawaited(
+                                                  launchUrl(
+                                                    uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication,
+                                                  ),
                                                 );
                                               }
                                             } catch (e) {
                                               debugPrint(
-                                                  'Failed to launch URL: $e');
+                                                'Failed to launch URL: $e',
+                                              );
                                             }
                                           },
                                         );

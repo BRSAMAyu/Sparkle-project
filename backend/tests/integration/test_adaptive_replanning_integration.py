@@ -279,7 +279,7 @@ async def test_feedback_loop_integration(db_session: AsyncSession):
     feedback_service = TaskFeedbackService(db_session, redis=None)
 
     # Submit feedback
-    feedback = await feedback_service.submit_feedback(
+    feedback, _ = await feedback_service.submit_feedback(
         user_id=user_id,
         task_id=task.id,
         completion_quality=2,  # Low rating
