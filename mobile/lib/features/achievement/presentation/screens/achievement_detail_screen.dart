@@ -54,9 +54,10 @@ class _AchievementDetailScreenState
     final state = ref.watch(achievementProvider);
 
     if (state.isLoading) {
-      return Scaffold(
+      return SparklePageScaffold(
+        role: SparklePageRole.immersive,
         appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -65,14 +66,17 @@ class _AchievementDetailScreenState
         .firstOrNull;
 
     if (achievement == null) {
-      return Scaffold(
+      return SparklePageScaffold(
+        role: SparklePageRole.immersive,
         appBar: AppBar(),
-        body: _buildNotFoundView(),
+        child: _buildNotFoundView(),
       );
     }
 
-    return Scaffold(
-      body: ContentConstraint(
+    return SparklePageScaffold(
+      role: SparklePageRole.immersive,
+      safeArea: false,
+      child: ContentConstraint(
         child: CustomScrollView(
           slivers: [
             // 自定义顶部

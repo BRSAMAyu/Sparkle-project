@@ -77,48 +77,50 @@ class _UnselectedPill extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        child: GestureDetector(
-          onTap: onTap,
-          child: MaterialStyler(
-            material: AppMaterials.ceramic.copyWith(
-              // Use surfaceTertiary for consistent theming with Dashboard
-              backgroundColor: DS.surfaceTertiary,
-            ),
-            borderRadius: DS.borderRadius20,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing8,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: DS.iconSizeSm,
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: MaterialStyler(
+          material: AppMaterials.ceramic.copyWith(
+            // Use surfaceTertiary for consistent theming with Dashboard
+            backgroundColor: DS.surfaceTertiary,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: DS.iconSizeSm,
+                color: DS.textSecondary,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                '选择模式',
+                style: TextStyle(
                   color: DS.textSecondary,
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightMedium,
                 ),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  '选择模式',
-                  style: TextStyle(
-                    color: DS.textSecondary,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing4),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: DS.iconSizeSm,
+                color: DS.textSecondary,
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _SelectedPill extends StatelessWidget {
@@ -139,60 +141,65 @@ class _SelectedPill extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        child: GestureDetector(
-          onTap: onTap,
-          child: MaterialStyler(
-            material: AppMaterials.neoGlass.copyWith(
-              backgroundGradient: LinearGradient(
-                colors: [
-                  mode.color.withValues(alpha: 0.18),
-                  mode.color.withValues(alpha: 0.08),
-                ],
-              ),
-              borderColor: mode.color.withValues(alpha: 0.35),
-            ),
-            borderRadius: DS.borderRadius20,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing8,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  mode.icon,
-                  size: DS.iconSizeSm,
-                  color: mode.color,
-                ),
-                const SizedBox(width: DS.spacing6),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: mode.apiValue.startsWith(expertChatModePrefix)
-                        ? 84
-                        : 120,
-                  ),
-                  child: Text(
-                    _displayLabel,
-                    style: TextStyle(
-                      color: DS.textPrimary,
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightMedium,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing4),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
-                ),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foregroundColor = isDark ? const Color(0xFFF1E7DA) : DS.textPrimary;
+    final chevronColor =
+        isDark ? foregroundColor.withValues(alpha: 0.72) : DS.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: MaterialStyler(
+          material: AppMaterials.neoGlass.copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                mode.color.withValues(alpha: 0.18),
+                mode.color.withValues(alpha: 0.08),
               ],
             ),
+            borderColor: mode.color.withValues(alpha: 0.35),
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                mode.icon,
+                size: DS.iconSizeSm,
+                color: foregroundColor,
+              ),
+              const SizedBox(width: DS.spacing6),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      mode.apiValue.startsWith(expertChatModePrefix) ? 84 : 120,
+                ),
+                child: Text(
+                  _displayLabel,
+                  style: TextStyle(
+                    color: foregroundColor,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: DS.iconSizeSm,
+                color: chevronColor,
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }

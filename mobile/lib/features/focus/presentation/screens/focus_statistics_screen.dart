@@ -42,13 +42,10 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(feature.focusStatisticsProvider);
 
-    return Scaffold(
-      backgroundColor: DS.neutral50,
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('专注统计'),
-        backgroundColor: DS.brandPrimary,
-        foregroundColor: DS.neutral0,
-        elevation: 0,
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -62,7 +59,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
           child: SingleChildScrollView(
@@ -143,19 +140,9 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
   }
 
   Widget _buildSection({required String title, required Widget child}) =>
-      Container(
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: DS.neutral0,
-          borderRadius: BorderRadius.circular(DS.md),
-          boxShadow: [
-            BoxShadow(
-              color: DS.neutral900.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         child: child,
       );
 }

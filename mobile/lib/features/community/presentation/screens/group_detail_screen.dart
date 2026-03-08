@@ -18,13 +18,16 @@ class GroupDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupState = ref.watch(groupDetailProvider(groupId));
 
-    return Scaffold(
-      body: groupState.when(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      safeArea: false,
+      child: groupState.when(
         data: (group) => _buildContent(context, ref, group),
         loading: () => const _DetailLoading(),
-        error: (e, s) => Scaffold(
+        error: (e, s) => SparklePageScaffold(
+          role: SparklePageRole.content,
           appBar: AppBar(),
-          body: Center(
+          child: Center(
             child: CustomErrorWidget.page(
               context: context,
               message: e.toString(),
@@ -68,15 +71,14 @@ class GroupDetailScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   gradient: isSprint
                       ? LinearGradient(
-                          colors: [Colors.deepOrange, DS.warningAccent],
+                          colors: [
+                            DS.surfaceRoleColor(SparkleSurfaceRole.accent),
+                            DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
-                      : LinearGradient(
-                          colors: [DS.primaryBase, DS.secondaryBase],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                      : DS.pageGradientForRole(SparklePageRole.content),
                 ),
                 child: Center(
                   child: Hero(
@@ -274,18 +276,12 @@ class GroupDetailScreen extends ConsumerWidget {
                               .read(groupDetailProvider(groupId).notifier)
                               .joinGroup();
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Welcome to the group!'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
+                            AppFeedback.success(
+                                context, 'Welcome to the group!');
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to join: $e')),
-                            );
+                            AppFeedback.error(context, 'Failed to join: $e');
                           }
                         }
                       },
@@ -307,14 +303,9 @@ class GroupDetailScreen extends ConsumerWidget {
     String value,
     IconData icon,
   ) =>
-      Container(
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: DS.shadowSm,
-          border: Border.all(color: DS.neutral100),
-        ),
         child: Column(
           children: [
             Icon(icon, color: DS.primaryBase, size: 24),
@@ -324,7 +315,7 @@ class GroupDetailScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DS.neutral900,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(height: DS.xs),
@@ -332,7 +323,7 @@ class GroupDetailScreen extends ConsumerWidget {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: DS.neutral500,
+                color: DS.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -344,81 +335,67 @@ class GroupDetailScreen extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 8, bottom: 20),
+      builder: (context) => GraphiteModalSurface(
+        surfaceRole: SparkleSurfaceRole.modal,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
-                  color: DS.neutral300,
-                  borderRadius: BorderRadius.circular(2),
+                  color: DS.error.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.exit_to_app,
+                  color: DS.error.shade700,
+                  size: 20,
                 ),
               ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
-                    color: DS.error.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.exit_to_app,
-                    color: DS.error.shade700,
-                    size: 20,
-                  ),
+              title: Text(
+                'Leave Group',
+                style: TextStyle(
+                  color: DS.error.shade700,
+                  fontWeight: FontWeight.bold,
                 ),
-                title: Text(
-                  'Leave Group',
-                  style: TextStyle(
-                    color: DS.error.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Leave Group?'),
-                      content: const Text(
-                        'Are you sure you want to leave this group?',
-                      ),
-                      actions: [
-                        SparkleButton.ghost(
-                          label: 'Cancel',
-                          onPressed: () => Navigator.pop(context, false),
-                        ),
-                        SparkleButton.destructive(
-                          label: 'Leave',
-                          onPressed: () => Navigator.pop(context, true),
-                        ),
-                      ],
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Leave Group?'),
+                    content: const Text(
+                      'Are you sure you want to leave this group?',
                     ),
-                  );
+                    actions: [
+                      SparkleButton.ghost(
+                        label: 'Cancel',
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      SparkleButton.destructive(
+                        label: 'Leave',
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ],
+                  ),
+                );
 
-                  if (confirm ?? false) {
-                    try {
-                      await ref
-                          .read(groupDetailProvider(groupId).notifier)
-                          .leaveGroup();
-                      if (context.mounted) context.pop();
-                    } catch (e) {
-                      // Handle error
-                    }
+                if (confirm ?? false) {
+                  try {
+                    await ref
+                        .read(groupDetailProvider(groupId).notifier)
+                        .leaveGroup();
+                    if (context.mounted) context.pop();
+                  } catch (e) {
+                    // Handle error
                   }
-                },
-              ),
-              const SizedBox(height: DS.lg),
-            ],
-          ),
+                }
+              },
+            ),
+            const SizedBox(height: DS.lg),
+          ],
         ),
       ),
     );

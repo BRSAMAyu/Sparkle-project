@@ -24,10 +24,9 @@ class TaskDetailScreen extends ConsumerWidget {
     // P1: Design System Adoption - Wrap screen in NeoGlass material
     return MaterialStyler(
       material: AppMaterials.neoGlass,
-      child: Scaffold(
-        backgroundColor: DS.surfacePrimary
-            .withValues(alpha: 0), // Allow glass effect to show
-        body: taskAsync.when(
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        child: taskAsync.when(
           data: (task) => _TaskDetailView(task: task),
           loading: () => Center(
             child: LoadingIndicator.circular(

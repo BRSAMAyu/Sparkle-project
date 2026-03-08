@@ -89,11 +89,12 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           title: const Text('创建种子库'),
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: Form(
             key: _formKey,
             child: ListView(

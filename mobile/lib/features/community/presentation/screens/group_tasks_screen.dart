@@ -16,7 +16,8 @@ class GroupTasksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksState = ref.watch(groupTasksProvider(groupId));
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -35,7 +36,7 @@ class GroupTasksScreen extends ConsumerWidget {
           _showCreateTaskDialog(context, ref);
         },
       ),
-      body: tasksState.when(
+      child: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
             return const Center(
@@ -56,7 +57,9 @@ class GroupTasksScreen extends ConsumerWidget {
                     const SizedBox(height: DS.md),
                 itemBuilder: (context, index) {
                   final task = tasks[index];
-                  return Card(
+                  return GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.card,
+                    padding: EdgeInsets.zero,
                     child: ListTile(
                       title: Text(task.title),
                       subtitle: Column(
@@ -74,7 +77,7 @@ class GroupTasksScreen extends ConsumerWidget {
                               Icon(
                                 Icons.timer,
                                 size: 14,
-                                color: DS.brandPrimaryConst,
+                                color: DS.textSecondary,
                               ),
                               const SizedBox(width: DS.xs),
                               Text('${task.estimatedMinutes} min'),
@@ -82,7 +85,7 @@ class GroupTasksScreen extends ConsumerWidget {
                               Icon(
                                 Icons.people,
                                 size: 14,
-                                color: DS.brandPrimaryConst,
+                                color: DS.textSecondary,
                               ),
                               const SizedBox(width: DS.xs),
                               Text('${task.totalClaims} claimed'),

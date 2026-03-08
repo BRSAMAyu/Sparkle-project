@@ -10,6 +10,15 @@ class HomeNotificationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardMaterial = AppMaterials.ceramic.copyWith(
+      backgroundColor: isDark
+          ? DS.surfaceTertiary.withValues(alpha: 0.94)
+          : DS.surfacePrimaryElevated,
+      borderColor:
+          isDark ? DS.borderStrong.withValues(alpha: 0.55) : DS.borderSubtle,
+      rimLightColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
+    );
     final notificationsAsync = ref.watch(unreadNotificationsProvider);
     final unreadMessageCount = ref.watch(unreadMessageCountProvider);
 
@@ -40,7 +49,7 @@ class HomeNotificationCard extends ConsumerWidget {
           child: GestureDetector(
             onTap: () => context.push('/notifications'),
             child: MaterialStyler(
-              material: AppMaterials.ceramic,
+              material: cardMaterial,
               borderRadius: BorderRadius.circular(16),
               padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing16,
@@ -141,94 +150,104 @@ class HomeNotificationCard extends ConsumerWidget {
   Color _getIconColor(String type) {
     switch (type) {
       case 'fragmented_time':
-        return DS.warningAccent;
+        return DS.warning;
       case 'system':
-        return DS.brandPrimaryAccent;
+        return DS.brandSecondary;
       case 'reminder':
-        return DS.successAccent;
+        return DS.success;
       default:
-        return DS.capsuleAccent;
+        return DS.info;
     }
   }
 
   Widget _buildCommunityNotificationCard(
     BuildContext context,
     int unreadCount,
-  ) =>
-      GestureDetector(
-        onTap: () => context.push('/community'),
-        child: MaterialStyler(
-          material: AppMaterials.ceramic,
-          borderRadius: BorderRadius.circular(16),
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing16,
-            vertical: DS.spacing12,
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: DS.capsuleAccent.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.forum_outlined,
-                  color: DS.capsuleAccent,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: DS.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '社交消息',
-                      style: TextStyle(
-                        color: DS.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '你有 $unreadCount 条未读消息',
-                      style: TextStyle(
-                        color: DS.textSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8,
-                  vertical: DS.spacing4,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.error,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  unreadCount > 99 ? '99+' : '$unreadCount',
-                  style: TextStyle(
-                    color: DS.textOnPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: DS.sm),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: DS.textSecondary,
-                size: 18,
-              ),
-            ],
-          ),
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardMaterial = AppMaterials.ceramic.copyWith(
+      backgroundColor: isDark
+          ? DS.surfaceTertiary.withValues(alpha: 0.94)
+          : DS.surfacePrimaryElevated,
+      borderColor:
+          isDark ? DS.borderStrong.withValues(alpha: 0.55) : DS.borderSubtle,
+      rimLightColor: isDark ? Colors.white.withValues(alpha: 0.06) : null,
+    );
+    return GestureDetector(
+      onTap: () => context.push('/community'),
+      child: MaterialStyler(
+        material: cardMaterial,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
         ),
-      );
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
+                color: DS.capsuleAccent.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.forum_outlined,
+                color: DS.capsuleAccent,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: DS.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '社交消息',
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '你有 $unreadCount 条未读消息',
+                    style: TextStyle(
+                      color: DS.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing8,
+                vertical: DS.spacing4,
+              ),
+              decoration: BoxDecoration(
+                color: DS.error,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                unreadCount > 99 ? '99+' : '$unreadCount',
+                style: TextStyle(
+                  color: DS.textOnPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.sm),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: DS.textSecondary,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

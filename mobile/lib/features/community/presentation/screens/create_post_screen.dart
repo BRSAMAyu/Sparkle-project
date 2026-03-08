@@ -70,8 +70,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -79,7 +79,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
           title: const Text('New Post'),
           actions: [
             Padding(
@@ -94,64 +93,67 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
           ],
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _contentController,
-                  autofocus: true,
-                  maxLines: 8,
-                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
-                  decoration: InputDecoration(
-                    hintText: "What's on your mind?",
-                    hintStyle: TextStyle(
-                        color: DS.brandPrimary.withValues(alpha: 0.3)),
-                    border: InputBorder.none,
-                  ),
-                ),
-                Divider(color: DS.brandPrimary.withValues(alpha: 0.24)),
-                TextField(
-                  controller: _topicController,
-                  style: TextStyle(color: DS.brandSecondary),
-                  decoration: InputDecoration(
-                    prefixText: '# ',
-                    hintText: 'Topic (optional)',
-                    hintStyle: TextStyle(
-                        color: DS.brandPrimary.withValues(alpha: 0.3)),
-                    border: InputBorder.none,
-                  ),
-                ),
-                const Spacer(),
-                // Toolbar (Placeholder)
-                Row(
-                  children: [
-                    SparkleIconButton(
-                      variant: ButtonVariant.ghost,
-                      size: DS.touchTargetMinSize,
-                      icon: Icon(
-                        Icons.image_outlined,
-                        color: _selectedImage != null
-                            ? DS.brandPrimary
-                            : DS.brandPrimary,
-                      ),
-                      onPressed: _pickImage,
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _contentController,
+                    autofocus: true,
+                    maxLines: 8,
+                    style: TextStyle(color: DS.textPrimary, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: "What's on your mind?",
+                      hintStyle: TextStyle(
+                          color: DS.textSecondary.withValues(alpha: 0.7)),
+                      border: InputBorder.none,
                     ),
-                    SparkleIconButton(
-                      variant: ButtonVariant.ghost,
-                      size: DS.touchTargetMinSize,
-                      icon: Icon(
-                        Icons.location_on_outlined,
-                        color: _selectedLocation != null
-                            ? DS.brandPrimary
-                            : DS.brandPrimary,
-                      ),
-                      onPressed: _pickLocation,
+                  ),
+                  Divider(color: DS.borderSubtle),
+                  TextField(
+                    controller: _topicController,
+                    style: TextStyle(color: DS.textPrimary),
+                    decoration: InputDecoration(
+                      prefixText: '# ',
+                      hintText: 'Topic (optional)',
+                      hintStyle: TextStyle(
+                          color: DS.textSecondary.withValues(alpha: 0.7)),
+                      border: InputBorder.none,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const Spacer(),
+                  // Toolbar (Placeholder)
+                  Row(
+                    children: [
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
+                        icon: Icon(
+                          Icons.image_outlined,
+                          color: _selectedImage != null
+                              ? DS.brandPrimary
+                              : DS.brandPrimary,
+                        ),
+                        onPressed: _pickImage,
+                      ),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: DS.touchTargetMinSize,
+                        icon: Icon(
+                          Icons.location_on_outlined,
+                          color: _selectedLocation != null
+                              ? DS.brandPrimary
+                              : DS.brandPrimary,
+                        ),
+                        onPressed: _pickLocation,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

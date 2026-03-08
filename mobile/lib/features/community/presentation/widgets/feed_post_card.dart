@@ -33,12 +33,15 @@ class FeedPostCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: DS.primaryBase,
+                  backgroundColor: DS.avatarFallbackBackground,
                   backgroundImage: post.user.avatarUrl != null
                       ? NetworkImage(post.user.avatarUrl!)
                       : null,
                   child: post.user.avatarUrl == null
-                      ? Text(post.user.username[0].toUpperCase())
+                      ? Text(
+                          post.user.username[0].toUpperCase(),
+                          style: TextStyle(color: DS.avatarFallbackForeground),
+                        )
                       : null,
                 ),
                 const SizedBox(width: DS.md),

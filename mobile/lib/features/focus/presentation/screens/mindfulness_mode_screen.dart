@@ -32,6 +32,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _clockFadeAnimation;
+  late Animation<Offset> _statusSlideAnimation;
+  late Animation<Offset> _contentSlideAnimation;
+  late Animation<Offset> _bottomSlideAnimation;
 
   bool _isExiting = false;
   bool _isInitialized = false;
@@ -49,7 +52,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     // 入场动画控制器
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 560),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -67,6 +70,36 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     _clockFadeAnimation = CurvedAnimation(
       parent: _entryController,
       curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+    );
+
+    _statusSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, -0.16),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.0, 0.42, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _contentSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.14, 0.82, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _bottomSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.18),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.52, 1.0, curve: Curves.easeOutCubic),
+      ),
     );
 
     // 开始入场动画
@@ -190,9 +223,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               children: [
                 const Positioned.fill(
                   child: AnimatedStarBackground(
-                    fadeInDuration: Duration(milliseconds: 220),
-                    starCount: 68,
-                    enableTwinkle: false,
+                    fadeInDuration: Duration(milliseconds: 420),
+                    starCount: 88,
+                    enableTwinkle: true,
                   ),
                 ),
                 Positioned.fill(
@@ -215,49 +248,58 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                 SafeArea(
                   child: Column(
                     children: [
-                      // 顶部状态栏
-                      _buildStatusBar(mindfulness),
-
-                      // 中间内容
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _statusSlideAnimation,
+                          child: _buildStatusBar(mindfulness),
+                        ),
+                      ),
                       Expanded(
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // 任务卡片
-                              ScaleTransition(
-                                scale: _scaleAnimation,
-                                child: FadeTransition(
-                                  opacity: _fadeAnimation,
-                                  child: _buildTaskCard(task),
-                                ),
+                          child: FadeTransition(
+                            opacity: _clockFadeAnimation,
+                            child: SlideTransition(
+                              position: _contentSlideAnimation,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ScaleTransition(
+                                    scale: _scaleAnimation,
+                                    child: FadeTransition(
+                                      opacity: _fadeAnimation,
+                                      child: _buildTaskCard(task),
+                                    ),
+                                  ),
+                                  const SizedBox(height: DS.xxxl),
+                                  FadeTransition(
+                                    opacity: _clockFadeAnimation,
+                                    child: SimpleFlipClock(
+                                      seconds: mindfulness.elapsedSeconds,
+                                      fontSize: 72,
+                                    ),
+                                  ),
+                                  const SizedBox(height: DS.xxl),
+                                  FadeTransition(
+                                    opacity: _clockFadeAnimation,
+                                    child: ScaleTransition(
+                                      scale: _scaleAnimation,
+                                      child: _buildFlameAnimation(),
+                                    ),
+                                  ),
+                                ],
                               ),
-
-                              const SizedBox(height: DS.xxxl),
-
-                              // 翻页时钟
-                              FadeTransition(
-                                opacity: _clockFadeAnimation,
-                                child: SimpleFlipClock(
-                                  seconds: mindfulness.elapsedSeconds,
-                                  fontSize: 72,
-                                ),
-                              ),
-
-                              const SizedBox(height: DS.xxl),
-
-                              // 火焰动画
-                              FadeTransition(
-                                opacity: _clockFadeAnimation,
-                                child: _buildFlameAnimation(),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-
-                      // 底部退出按钮
-                      _buildExitButton(),
+                      FadeTransition(
+                        opacity: _clockFadeAnimation,
+                        child: SlideTransition(
+                          position: _bottomSlideAnimation,
+                          child: _buildExitButton(),
+                        ),
+                      ),
                     ],
                   ),
                 ),

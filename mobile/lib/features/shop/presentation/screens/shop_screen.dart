@@ -35,7 +35,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(shopItemsProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('光子商城'),
         bottom: TabBar(
@@ -50,7 +51,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
           ],
         ),
       ),
-      body: RefreshIndicator(
+      child: RefreshIndicator(
         onRefresh: () async {
           await ref.read(shopItemsProvider.notifier).refresh();
         },
@@ -72,9 +73,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
     ShopItemType? type,
     ShopItemsState state,
   ) {
-    final items = type == null
-        ? state.items
-        : state.getItemsByType(type);
+    final items = type == null ? state.items : state.getItemsByType(type);
 
     if (state.isLoading && items.isEmpty) {
       return const Center(
@@ -136,15 +135,15 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       builder: (context) => PurchaseConfirmationDialog(
         item: item,
         onConfirm: () async {
-          final success = await ref
-              .read(shopItemsProvider.notifier)
-              .purchaseItem(item.id);
+          final success =
+              await ref.read(shopItemsProvider.notifier).purchaseItem(item.id);
 
           if (success && mounted) {
             Navigator.of(context).pop();
             AppFeedback.success(context, '成功购买 ${item.name}');
           } else if (mounted) {
-            AppFeedback.error(context, ref.read(shopItemsProvider).error ?? '购买失败');
+            AppFeedback.error(
+                context, ref.read(shopItemsProvider).error ?? '购买失败');
           }
         },
       ),

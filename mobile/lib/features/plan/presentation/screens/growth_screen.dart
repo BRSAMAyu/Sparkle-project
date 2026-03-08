@@ -15,7 +15,8 @@ class GrowthScreen extends ConsumerWidget {
         .where((p) => p.type == PlanType.growth && p.isActive)
         .toList();
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -36,20 +37,20 @@ class GrowthScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ContentConstraint(
-        child: RefreshIndicator(
-          onRefresh: () => ref
-              .read(planListProvider.notifier)
-              .loadPlans(type: PlanType.growth),
-          child: _buildBody(context, planState, growthPlans),
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           context.push('/plans/new?type=growth');
         },
         icon: const Icon(Icons.add),
         label: const Text('New Plan'),
+      ),
+      child: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: () => ref
+              .read(planListProvider.notifier)
+              .loadPlans(type: PlanType.growth),
+          child: _buildBody(context, planState, growthPlans),
+        ),
       ),
     );
   }
@@ -82,9 +83,10 @@ class _GrowthPlanCard extends StatelessWidget {
   final PlanModel plan;
 
   @override
-  Widget build(BuildContext context) => Card(
-        elevation: 2,
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
+        padding: EdgeInsets.zero,
         child: InkWell(
           onTap: () {
             context.push('/plans/${plan.id}');

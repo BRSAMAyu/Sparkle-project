@@ -16,8 +16,8 @@ class FocusMainScreen extends ConsumerWidget {
         .where((t) => t.status != TaskStatus.completed)
         .toList();
 
-    return Scaffold(
-      backgroundColor: DS.surfacePrimary,
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -26,11 +26,9 @@ class FocusMainScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: const Text('选择专注任务'),
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        elevation: 0,
-        foregroundColor: DS.textPrimary,
       ),
-      body: SafeArea(
+      safeArea: false,
+      child: SafeArea(
         child: ContentConstraint(
           child: Column(
             children: [
@@ -123,14 +121,11 @@ class FocusMainScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _buildTaskItem(BuildContext context, TaskModel task) => Card(
+  Widget _buildTaskItem(BuildContext context, TaskModel task) =>
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.only(bottom: 12),
-        color: DS.surfaceSecondary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: DS.border, width: 0.5),
-        ),
+        padding: EdgeInsets.zero,
         child: Consumer(
           builder: (context, ref, child) => ListTile(
             contentPadding:

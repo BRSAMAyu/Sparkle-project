@@ -128,7 +128,8 @@ class _TranslationHistoryScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(translationHistoryProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('翻译历史'),
         elevation: 0,
@@ -178,37 +179,41 @@ class _TranslationHistoryScreenState
             ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             // Search bar
             Padding(
               padding: const EdgeInsets.all(DS.md),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: '搜索翻译记录...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? SparkleIconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            ref
-                                .read(translationHistoryProvider.notifier)
-                                .clearSearch();
-                          },
-                          variant: ButtonVariant.ghost,
-                          size: DS.touchTargetMinSize,
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.panel,
+                padding: EdgeInsets.zero,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: '搜索翻译记录...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? SparkleIconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref
+                                  .read(translationHistoryProvider.notifier)
+                                  .clearSearch();
+                            },
+                            variant: ButtonVariant.ghost,
+                            size: DS.touchTargetMinSize,
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  onChanged: (value) {
+                    ref.read(translationHistoryProvider.notifier).search(value);
+                  },
                 ),
-                onChanged: (value) {
-                  ref.read(translationHistoryProvider.notifier).search(value);
-                },
               ),
             ),
 

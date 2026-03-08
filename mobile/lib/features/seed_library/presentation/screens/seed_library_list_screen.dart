@@ -83,7 +83,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     final state = ref.watch(seedLibraryListProvider(params));
     final notifier = ref.read(seedLibraryListProvider(params).notifier);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('种子库'),
         actions: [
@@ -101,36 +102,39 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             // Search bar
             Padding(
               padding: const EdgeInsets.all(DS.spacing16),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: '搜索种子库...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? SparkleIconButton(
-                          variant: ButtonVariant.ghost,
-                          size: DS.spacing32,
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            _applyFilters();
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.panel,
+                padding: EdgeInsets.zero,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: '搜索种子库...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? SparkleIconButton(
+                            variant: ButtonVariant.ghost,
+                            size: DS.spacing32,
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _applyFilters();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                   ),
-                  filled: true,
-                  fillColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  onSubmitted: (_) => _applyFilters(),
                 ),
-                onSubmitted: (_) => _applyFilters(),
               ),
             ),
 

@@ -48,7 +48,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(leaderboardProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('排行榜'),
         bottom: TabBar(
@@ -65,7 +66,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           ),
         ],
       ),
-      body: state.isLoading
+      child: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
               ? _buildErrorView()

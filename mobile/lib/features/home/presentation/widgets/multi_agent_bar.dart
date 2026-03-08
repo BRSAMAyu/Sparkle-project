@@ -126,52 +126,56 @@ class _ModeChipState extends State<_ModeChip> {
   bool _isPressed = false;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) {
-          setState(() => _isPressed = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _isPressed = false),
-        child: AnimatedScale(
-          scale: _isPressed ? 0.95 : 1.0,
-          duration: AnimationSystem.quick,
-          curve: AnimationSystem.smooth,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing6,
-            ),
-            decoration: BoxDecoration(
+  Widget build(BuildContext context) {
+    final foregroundColor =
+        widget.isDark ? const Color(0xFFF1E7DA) : DS.neutral900;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: AnimationSystem.quick,
+        curve: AnimationSystem.smooth,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing6,
+          ),
+          decoration: BoxDecoration(
+            color:
+                widget.mode.color.withValues(alpha: _isPressed ? 0.25 : 0.15),
+            borderRadius: DS.borderRadiusFull,
+            border: Border.all(
               color:
-                  widget.mode.color.withValues(alpha: _isPressed ? 0.25 : 0.15),
-              borderRadius: DS.borderRadiusFull,
-              border: Border.all(
-                color:
-                    widget.mode.color.withValues(alpha: _isPressed ? 0.5 : 0.3),
-                width: _isPressed ? 1.5 : 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.mode.icon,
-                  size: DS.iconSizeXs,
-                  color: widget.mode.color,
-                ),
-                const SizedBox(width: DS.spacing4),
-                Text(
-                  widget.mode.label,
-                  style: TextStyle(
-                    color: widget.isDark ? DS.neutral100 : DS.neutral900,
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-                ),
-              ],
+                  widget.mode.color.withValues(alpha: _isPressed ? 0.5 : 0.3),
+              width: _isPressed ? 1.5 : 1.0,
             ),
           ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.mode.icon,
+                size: DS.iconSizeXs,
+                color: foregroundColor,
+              ),
+              const SizedBox(width: DS.spacing4),
+              Text(
+                widget.mode.label,
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
 }

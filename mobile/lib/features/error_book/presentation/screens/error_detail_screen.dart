@@ -25,7 +25,8 @@ class ErrorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final errorAsync = ref.watch(errorDetailProvider(errorId));
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -90,7 +91,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               const SizedBox.shrink(),
         ],
       ),
-      body: errorAsync.when(
+      child: errorAsync.when(
         data: (error) => _buildDetailContent(context, ref, error),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) =>

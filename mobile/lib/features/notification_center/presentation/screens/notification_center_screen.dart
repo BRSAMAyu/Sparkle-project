@@ -33,7 +33,8 @@ class _NotificationCenterScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(notificationCenterProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('通知中心'),
         actions: [
@@ -67,7 +68,7 @@ class _NotificationCenterScreenState
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             // Filter bar
@@ -83,56 +84,53 @@ class _NotificationCenterScreenState
     );
   }
 
-  Widget _buildFilterBar() => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
+  Widget _buildFilterBar() => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing12,
+          DS.spacing16,
+          0,
         ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.colorCode.surface,
-          border: Border(
-            bottom: BorderSide(
-              color: Theme.of(context).colorScheme.colorCode.borderSubtle,
-            ),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.panel,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing12,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status filter chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: NotificationFilter.values
-                    .map(
-                      (filter) => NotificationFilterChip(
-                        label: _getFilterLabel(filter),
-                        isSelected: _filter == filter,
-                        onTap: () => _setFilter(filter),
-                      ),
-                    )
-                    .toList(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: NotificationFilter.values
+                      .map(
+                        (filter) => NotificationFilterChip(
+                          label: _getFilterLabel(filter),
+                          isSelected: _filter == filter,
+                          onTap: () => _setFilter(filter),
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-
-            const SizedBox(height: DS.spacing8),
-
-            // Source type filter chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: SourceTypeFilter.values
-                    .map(
-                      (filter) => NotificationFilterChip(
-                        label: _getSourceFilterLabel(filter),
-                        isSelected: _sourceFilter == filter,
-                        onTap: () => _setSourceFilter(filter),
-                      ),
-                    )
-                    .toList(),
+              const SizedBox(height: DS.spacing8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: SourceTypeFilter.values
+                      .map(
+                        (filter) => NotificationFilterChip(
+                          label: _getSourceFilterLabel(filter),
+                          isSelected: _sourceFilter == filter,
+                          onTap: () => _setSourceFilter(filter),
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 

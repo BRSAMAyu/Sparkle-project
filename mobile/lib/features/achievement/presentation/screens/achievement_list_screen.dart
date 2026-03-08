@@ -73,8 +73,10 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(achievementProvider);
 
-    return Scaffold(
-      body: ContentConstraint(
+    return SparklePageScaffold(
+      role: SparklePageRole.immersive,
+      safeArea: false,
+      child: ContentConstraint(
         child: CustomScrollView(
           slivers: [
             // 顶部统计面板

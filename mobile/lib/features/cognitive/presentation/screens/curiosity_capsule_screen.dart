@@ -13,7 +13,8 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final capsuleState = ref.watch(capsuleProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -22,10 +23,8 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
           size: DS.touchTargetMinSize,
         ),
         title: const Text('好奇心胶囊'),
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        elevation: 0,
       ),
-      body: capsuleState.when(
+      child: capsuleState.when(
         data: (capsules) => capsules.isEmpty
             ? _buildEmptyState()
             : RefreshIndicator(
@@ -66,12 +65,12 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
             const SizedBox(height: DS.lg),
             Text(
               '今天还没有新的好奇心胶囊',
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
+              style: TextStyle(color: DS.textPrimary, fontSize: 16),
             ),
             const SizedBox(height: DS.sm),
             Text(
               '继续学习，激发更多灵感吧！',
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
+              style: TextStyle(color: DS.textSecondary, fontSize: 14),
             ),
           ],
         ),

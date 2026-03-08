@@ -51,4 +51,58 @@ void main() {
     expect(find.text('操作已完成'), findsOneWidget);
     expect(find.text('撤销'), findsOneWidget);
   });
+
+  testWidgets('page scaffold and card surface stay stable on theme changes',
+      (tester) async {
+    await tester.pumpWidget(const _ThemeHarness());
+
+    expect(find.text('card-body'), findsOneWidget);
+
+    await tester.tap(find.text('toggle-theme'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('card-body'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+class _ThemeHarness extends StatefulWidget {
+  const _ThemeHarness();
+
+  @override
+  State<_ThemeHarness> createState() => _ThemeHarnessState();
+}
+
+class _ThemeHarnessState extends State<_ThemeHarness> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: AppThemes.lightTheme,
+      darkTheme: AppThemes.darkTheme,
+      themeMode: _themeMode,
+      home: SparklePageScaffold(
+        role: SparklePageRole.content,
+        child: Column(
+          children: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _themeMode = _themeMode == ThemeMode.light
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
+                });
+              },
+              child: const Text('toggle-theme'),
+            ),
+            const GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Text('card-body'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

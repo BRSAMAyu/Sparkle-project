@@ -83,10 +83,10 @@ class DashboardScreen extends ConsumerWidget {
       DeviceCategory.phablet => double.infinity,
     };
 
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: DS.pageScaffoldBackground(SparklePageRole.dashboard),
-      body: Stack(
+    return SparklePageScaffold(
+      role: SparklePageRole.dashboard,
+      safeArea: false,
+      child: Stack(
         children: [
           Positioned.fill(
             child: DecoratedBox(
@@ -237,9 +237,14 @@ class DashboardScreen extends ConsumerWidget {
                         backgroundImage: user?.avatarUrl != null
                             ? NetworkImage(user!.avatarUrl!)
                             : null,
-                        backgroundColor: DS.primaryBase,
+                        backgroundColor: DS.avatarFallbackBackground,
                         child: user?.avatarUrl == null
-                            ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                            ? Text(
+                                (user?.nickname ?? 'U')[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: DS.avatarFallbackForeground,
+                                ),
+                              )
                             : null,
                       ),
                       const SizedBox(width: 10),

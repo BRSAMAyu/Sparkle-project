@@ -349,7 +349,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
         padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
-          color: isMe ? DS.primaryBase : DS.brandPrimary,
+          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -361,13 +361,13 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           boxShadow: isMe
               ? [
                   BoxShadow(
-                    color: DS.primaryBase.withValues(alpha: 0.3),
+                    color: DS.chatBubbleUser.withValues(alpha: 0.24),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : DS.shadowSm,
-          border: isMe ? null : Border.all(color: DS.neutral100),
+          border: isMe ? null : Border.all(color: DS.borderSubtle),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +378,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             Text(
               widget.message.content ?? '',
               style: TextStyle(
-                color: isMe ? DS.brandPrimary : DS.neutral900,
+                color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
                 fontSize: 16,
                 height: 1.4,
               ),
@@ -396,11 +396,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: isMe ? DS.brandPrimary.withValues(alpha: 0.15) : DS.neutral100,
+        color: isMe
+            ? Colors.white.withValues(alpha: 0.12)
+            : DS.surfacePrimaryElevated,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
-            color: isMe ? DS.brandPrimary70 : DS.primaryBase,
+            color:
+                isMe ? Colors.white.withValues(alpha: 0.52) : DS.brandSecondary,
             width: 3,
           ),
         ),
@@ -415,8 +418,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: isMe
-                    ? DS.brandPrimary.withValues(alpha: 0.9)
-                    : DS.neutral700,
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : DS.textSecondary,
               ),
             ),
           if (quoted != null) const SizedBox(height: 2),
@@ -426,8 +429,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color:
-                  isMe ? DS.brandPrimary.withValues(alpha: 0.9) : DS.neutral600,
+              color: isMe
+                  ? Colors.white.withValues(alpha: 0.84)
+                  : DS.textSecondary,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -447,20 +451,27 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isMe
-              ? [DS.brandPrimary.shade600, Colors.deepOrange.shade600]
-              : [DS.brandPrimary.shade50, DS.brandPrimary.shade100],
+              ? [
+                  DS.chatBubbleUser,
+                  Color.lerp(DS.chatBubbleUser, DS.brandSecondary, 0.32)!,
+                ]
+              : [
+                  DS.surfacePrimaryElevated,
+                  Color.lerp(DS.surfaceSecondary, DS.brandSecondary, 0.08)!,
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: DS.brandPrimary.withValues(alpha: 0.3),
+            color: (isMe ? DS.chatBubbleUser : DS.brandSecondary)
+                .withValues(alpha: 0.18),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: isMe ? null : Border.all(color: DS.brandPrimary.shade200),
+        border: isMe ? null : Border.all(color: DS.borderSubtle),
       ),
       child: Stack(
         children: [
@@ -487,11 +498,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: isMe
-                            ? DS.brandPrimary.withValues(alpha: 0.2)
-                            : DS.brandPrimary,
+                            ? Colors.white.withValues(alpha: 0.16)
+                            : DS.brandSecondary.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.bolt, color: DS.warning, size: 18),
+                      child: Icon(
+                        Icons.bolt,
+                        color: isMe ? Colors.white : DS.brandSecondary,
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: DS.sm),
                     Text(
@@ -499,8 +514,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color:
-                            isMe ? DS.brandPrimary : Colors.deepOrange.shade800,
+                        color: isMe ? Colors.white : DS.textPrimary,
                       ),
                     ),
                   ],
@@ -522,16 +536,16 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: isMe
-                          ? DS.brandPrimary.withValues(alpha: 0.1)
-                          : DS.brandPrimary.withValues(alpha: 0.6),
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : DS.surfaceOverlay,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       widget.message.content!,
                       style: TextStyle(
                         color: isMe
-                            ? DS.brandPrimary.withValues(alpha: 0.9)
-                            : DS.warning.shade900,
+                            ? Colors.white.withValues(alpha: 0.9)
+                            : DS.textSecondary,
                         fontStyle: FontStyle.italic,
                         fontSize: 13,
                       ),
@@ -553,14 +567,16 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: isMe ? DS.brandPrimary : Colors.deepOrange.shade900,
+              color: isMe ? Colors.white : DS.textPrimary,
             ),
           ),
           Text(
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isMe ? DS.brandPrimary70 : Colors.deepOrange.shade700,
+              color: isMe
+                  ? Colors.white.withValues(alpha: 0.72)
+                  : DS.textSecondary,
             ),
           ),
         ],
@@ -569,23 +585,26 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   Widget _buildTaskShareBubble(BuildContext context, bool isMe) => Container(
         padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
-          color: isMe ? DS.brandPrimary.shade600 : DS.brandPrimary.shade50,
+          color: isMe
+              ? Color.lerp(DS.chatBubbleUser, DS.brandSecondary, 0.2)
+              : DS.surfacePrimaryElevated,
           borderRadius: BorderRadius.circular(16),
           boxShadow: DS.shadowSm,
+          border: isMe ? null : Border.all(color: DS.borderSubtle),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.task_alt,
-              color: isMe ? DS.brandPrimary : DS.brandPrimary,
+              color: isMe ? Colors.white : DS.brandSecondary,
             ),
             const SizedBox(width: DS.sm),
             Flexible(
               child: Text(
                 widget.message.content ?? 'Shared a task',
                 style: TextStyle(
-                  color: isMe ? DS.brandPrimary : DS.brandPrimary.shade900,
+                  color: isMe ? Colors.white : DS.textPrimary,
                 ),
               ),
             ),

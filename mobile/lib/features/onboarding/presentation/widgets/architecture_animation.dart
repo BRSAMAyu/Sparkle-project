@@ -145,7 +145,9 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
       );
 
   Widget _buildStarField() => CustomPaint(
-        painter: _StarFieldPainter(),
+        painter: _StarFieldPainter(
+          starColor: DS.brandPrimary.withValues(alpha: 0.3),
+        ),
       );
 
   Widget _buildStepIndicator() => Row(
@@ -454,9 +456,13 @@ class _ArchitecturePainter extends CustomPainter {
 }
 
 class _StarFieldPainter extends CustomPainter {
+  const _StarFieldPainter({required this.starColor});
+
+  final Color starColor;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = DS.brandPrimary.withValues(alpha: 0.3);
+    final paint = Paint()..color = starColor;
 
     final random = math.Random(42); // Fixed seed for consistent stars
 
@@ -470,5 +476,6 @@ class _StarFieldPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _StarFieldPainter oldDelegate) =>
+      oldDelegate.starColor != starColor;
 }

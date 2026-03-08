@@ -31,7 +31,8 @@ class _NotificationAnalyticsScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(providers.notificationAnalyticsProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('通知统计'),
         actions: [
@@ -57,7 +58,7 @@ class _NotificationAnalyticsScreenState
           ),
         ],
       ),
-      body: state.isLoading
+      child: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
               ? _buildError(state.error!)
@@ -150,15 +151,10 @@ class _NotificationAnalyticsScreenState
         ],
       );
 
-  Widget _buildStatCard(String title, String value, IconData icon) => Container(
+  Widget _buildStatCard(String title, String value, IconData icon) =>
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -212,16 +208,10 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildTypeStatCard(
           String title, int sent, int viewed, double viewRate) =>
-      Container(
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         margin: const EdgeInsets.only(bottom: DS.spacing12),
         padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -289,19 +279,9 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          Container(
-            height: 200,
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
             padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.3),
-              ),
-            ),
             child: _buildTrendChart(trends),
           ),
         ],
@@ -329,19 +309,9 @@ class _NotificationAnalyticsScreenState
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: DS.spacing16),
-          Container(
-            height: 150,
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
             padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.3),
-              ),
-            ),
             child: _buildHourlyChart(distribution),
           ),
         ],

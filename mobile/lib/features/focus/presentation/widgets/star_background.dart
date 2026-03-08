@@ -84,6 +84,9 @@ class _StarBackgroundState extends State<StarBackground>
             stars: _stars,
             animationValue: _controller.value,
             enableTwinkle: widget.enableTwinkle,
+            backgroundStart: DS.deepSpaceStart,
+            backgroundEnd: DS.deepSpaceEnd,
+            starColor: DS.brandPrimary,
           ),
           size: Size.infinite,
         ),
@@ -96,10 +99,16 @@ class _StarPainter extends CustomPainter {
     required this.stars,
     required this.animationValue,
     required this.enableTwinkle,
+    required this.backgroundStart,
+    required this.backgroundEnd,
+    required this.starColor,
   });
   final List<_Star> stars;
   final double animationValue;
   final bool enableTwinkle;
+  final Color backgroundStart;
+  final Color backgroundEnd;
+  final Color starColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -110,8 +119,8 @@ class _StarPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          DS.deepSpaceStart,
-          DS.deepSpaceEnd,
+          backgroundStart,
+          backgroundEnd,
         ],
       ).createShader(bgRect);
 
@@ -130,13 +139,12 @@ class _StarPainter extends CustomPainter {
         opacity = 0.8;
       }
 
-      final starPaint = Paint()
-        ..color = DS.brandPrimary.withValues(alpha: opacity);
+      final starPaint = Paint()..color = starColor.withValues(alpha: opacity);
 
       // 绘制星星光晕
       if (star.size > 1.5) {
         final glowPaint = Paint()
-          ..color = DS.brandPrimary.withValues(alpha: opacity * 0.3)
+          ..color = starColor.withValues(alpha: opacity * 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
         canvas.drawCircle(
@@ -157,7 +165,11 @@ class _StarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StarPainter oldDelegate) =>
-      oldDelegate.animationValue != animationValue;
+      oldDelegate.animationValue != animationValue ||
+      oldDelegate.enableTwinkle != enableTwinkle ||
+      oldDelegate.backgroundStart != backgroundStart ||
+      oldDelegate.backgroundEnd != backgroundEnd ||
+      oldDelegate.starColor != starColor;
 }
 
 /// 带渐入动画的星空背景

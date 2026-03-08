@@ -15,17 +15,19 @@ class TransparencySettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(transparencyPreferencesProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         title: const Text('透明模式设置'),
       ),
-      body: preferences.when(
+      child: preferences.when(
         data: (prefs) => ContentConstraint(
           child: ListView(
             padding: const EdgeInsets.all(DS.md),
             children: [
               // Global toggle
-              Card(
+              GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
                 child: SwitchListTile(
                   title: const Text('启用透明模式'),
                   subtitle: Text(
@@ -51,7 +53,8 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                 ),
                 const SizedBox(height: DS.sm),
-                Card(
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.card,
                   child: Column(
                     children: [
                       SwitchListTile(
@@ -104,8 +107,8 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 const SizedBox(height: DS.lg),
 
                 // Performance warning
-                Card(
-                  color: DS.warning.withValues(alpha: 0.1),
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.accent,
                   child: Padding(
                     padding: const EdgeInsets.all(DS.md),
                     child: Row(
