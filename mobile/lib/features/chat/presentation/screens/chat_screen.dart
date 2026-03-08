@@ -101,6 +101,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GraphiteScaffold(
+      role: SparklePageRole.content,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         flexibleSpace: ClipRect(
@@ -108,22 +109,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    (isDark ? DS.surfaceAmbient : DS.surfacePrimary)
-                        .withValues(alpha: 0.9),
-                    (isDark ? DS.surfacePrimary : DS.neutral50)
-                        .withValues(alpha: 0.9),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+                color: DS.surfaceOverlay.withValues(alpha: isDark ? 0.9 : 0.96),
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark
-                        ? DS.brandPrimary.withValues(alpha: 0.1)
-                        : DS.brandPrimary.withValues(alpha: 0.05),
-                    width: 0.5,
+                    color: DS.borderSubtle,
+                    width: 0.6,
                   ),
                 ),
               ),
@@ -137,8 +127,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
-                gradient: DS.secondaryGradient,
+                color: DS.surfacePanel,
                 shape: BoxShape.circle,
+                border: Border.all(color: DS.borderSubtle),
               ),
               child: Icon(
                 Icons.auto_awesome,
@@ -191,9 +182,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              DS.surfaceCanvas,
-              DS.surfacePanel,
               DS.surfacePrimary,
+              Color.lerp(DS.surfacePrimary, DS.surfaceCanvas, 0.5)!,
+              DS.surfaceCanvas,
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -838,8 +829,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentMode = ref.watch(chatModeProvider);
     final dynamicPrompts = _buildPromptStarters(currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
-    final activePlans = ref.watch(planListProvider.select((s) => s.activePlans));
-    final activePlan = activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
+    final activePlans =
+        ref.watch(planListProvider.select((s) => s.activePlans));
+    final activePlan =
+        activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -980,8 +973,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   bool _isCompactMobileContext(BuildContext context) {
     final media = MediaQuery.of(context);
-    return media.orientation == Orientation.portrait &&
-        media.size.width < 430;
+    return media.orientation == Orientation.portrait && media.size.width < 430;
   }
 
   List<String> _buildPromptStarters(String mode) {

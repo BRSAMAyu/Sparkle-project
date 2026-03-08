@@ -148,6 +148,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
 
   @override
   Widget build(BuildContext context) => GraphiteScaffold(
+        role: SparklePageRole.settings,
         safeArea: false,
         appBar: AppBar(
           leading: SparkleIconButton(
@@ -375,9 +376,8 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing8),
       decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : Border(bottom: BorderSide(color: DS.borderSubtle)),
+        border:
+            isLast ? null : Border(bottom: BorderSide(color: DS.borderSubtle)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +494,8 @@ class _MemoryFilterChip extends StatelessWidget {
       backgroundColor: DS.surfaceSecondary,
       disabledColor: DS.surfaceSecondary.withValues(alpha: 0.8),
       side: BorderSide(
-        color: selected ? DS.primaryBase.withValues(alpha: 0.22) : DS.borderSubtle,
+        color:
+            selected ? DS.primaryBase.withValues(alpha: 0.22) : DS.borderSubtle,
       ),
       labelStyle: DS.bodySmall.copyWith(
         color: enabled

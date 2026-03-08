@@ -5,11 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
 import 'package:sparkle/features/focus/presentation/widgets/reflection_dialog.dart';
+import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -183,11 +183,33 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               Navigator.of(context).pop();
             }
           },
-          child: Scaffold(
-            backgroundColor: DS.surfaceCanvas,
-            body: Stack(
+          child: SparklePageScaffold(
+            role: SparklePageRole.immersive,
+            safeArea: false,
+            child: Stack(
               children: [
-                const Positioned.fill(child: _FocusBackdrop()),
+                const Positioned.fill(
+                  child: AnimatedStarBackground(
+                    fadeInDuration: Duration(milliseconds: 220),
+                    starCount: 68,
+                    enableTwinkle: false,
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          DS.deepSpaceStart.withValues(alpha: 0.18),
+                          Colors.transparent,
+                          DS.deepSpaceEnd.withValues(alpha: 0.32),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
                 // 2. 主内容
                 SafeArea(
@@ -244,13 +266,15 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           ),
         );
       },
-      loading: () => Scaffold(
-        backgroundColor: DS.surfaceCanvas,
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => const SparklePageScaffold(
+        role: SparklePageRole.immersive,
+        safeArea: false,
+        child: Center(child: CircularProgressIndicator()),
       ),
-      error: (err, stack) => Scaffold(
-        backgroundColor: DS.surfaceCanvas,
-        body: Center(
+      error: (err, stack) => SparklePageScaffold(
+        role: SparklePageRole.immersive,
+        safeArea: false,
+        child: Center(
             child: Text('加载失败: $err', style: TextStyle(color: DS.textPrimary))),
       ),
     );
@@ -376,46 +400,57 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   Widget _buildTaskCard(TaskModel task) => GraphiteCardSurface(
         margin: const EdgeInsets.symmetric(horizontal: 40),
         padding: const EdgeInsets.all(DS.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 任务标题
-            Text(
-              task.title,
-              style: TextStyle(
-                color: DS.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            const SizedBox(height: DS.md),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: DS.borderSubtle),
-              ),
-              child: Text(
-                task.type.name.toUpperCase(),
-                style: TextStyle(
-                  color: DS.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+        borderColor: DS.brandPrimary.withValues(alpha: 0.14),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfaceOverlay.withValues(alpha: 0.78),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
+                const SizedBox(height: DS.md),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: DS.brandPrimary.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    task.type.name.toUpperCase(),
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 
   Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.98, end: 1.02),
-        duration: const Duration(milliseconds: 1200),
+        tween: Tween(begin: 0.985, end: 1.025),
+        duration: const Duration(milliseconds: 1400),
         curve: Curves.easeInOut,
         builder: (context, scale, child) => Transform.scale(
           scale: scale,
@@ -431,9 +466,23 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            color: DS.surfaceSecondary,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                DS.brandPrimary.withValues(alpha: 0.22),
+                DS.brandSecondary.withValues(alpha: 0.16),
+              ],
+            ),
             shape: BoxShape.circle,
-            border: Border.all(color: DS.borderSubtle),
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+            boxShadow: [
+              BoxShadow(
+                color: DS.brandPrimary.withValues(alpha: 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Icon(
             Icons.local_fire_department_rounded,
@@ -452,55 +501,4 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           onPressed: _handleExit,
         ),
       );
-}
-
-class _FocusBackdrop extends StatelessWidget {
-  const _FocusBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: const Alignment(0, -0.2),
-          radius: 1.15,
-          colors: [
-            const Color(0xFF202B38).withValues(alpha: 0.96),
-            const Color(0xFF121820).withValues(alpha: 0.99),
-            const Color(0xFF090D13),
-          ],
-        ),
-      ),
-      child: IgnorePointer(
-        child: CustomPaint(
-          painter: _FocusBackdropPainter(
-            starCount: PerformanceService.instance.focusStarCount.clamp(24, 56),
-          ),
-          size: Size.infinite,
-        ),
-      ),
-    );
-  }
-}
-
-class _FocusBackdropPainter extends CustomPainter {
-  const _FocusBackdropPainter({required this.starCount});
-
-  final int starCount;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    for (var index = 0; index < starCount; index++) {
-      final x = ((index * 73) % 97) / 97 * size.width;
-      final y = ((index * 41) % 89) / 89 * size.height;
-      final radius = 0.8 + (index % 3) * 0.3;
-      paint.color = Colors.white.withValues(alpha: 0.12 + (index % 4) * 0.03);
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _FocusBackdropPainter oldDelegate) =>
-      oldDelegate.starCount != starCount;
 }

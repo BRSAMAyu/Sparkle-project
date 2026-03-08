@@ -14,6 +14,8 @@ class GraphiteScaffold extends StatelessWidget {
     this.safeArea = true,
     this.padding,
     this.backgroundGradient,
+    this.role,
+    this.motionToken = SparkleMotionToken.standard,
   });
 
   final Widget child;
@@ -24,12 +26,24 @@ class GraphiteScaffold extends StatelessWidget {
   final bool safeArea;
   final EdgeInsetsGeometry? padding;
   final Gradient? backgroundGradient;
+  final SparklePageRole? role;
+  final SparkleMotionToken motionToken;
 
   @override
   Widget build(BuildContext context) {
-    final body = Container(
+    final duration = DS.motionDuration(
+      motionToken,
+      reduceMotion: context.reduceMotion,
+    );
+    final curve = DS.motionCurve(motionToken);
+    final body = AnimatedContainer(
+      duration: duration,
+      curve: curve,
       decoration: BoxDecoration(
-        gradient: backgroundGradient ?? DS.deepSpaceGradient,
+        gradient: backgroundGradient ??
+            (role != null
+                ? DS.pageGradientForRole(role!)
+                : DS.deepSpaceGradient),
       ),
       child: safeArea
           ? SafeArea(
@@ -47,7 +61,8 @@ class GraphiteScaffold extends StatelessWidget {
     );
 
     return Scaffold(
-      backgroundColor: DS.surfaceCanvas,
+      backgroundColor:
+          role != null ? DS.pageScaffoldBackground(role!) : DS.surfaceCanvas,
       appBar: appBar,
       extendBodyBehindAppBar: extendBodyBehindAppBar,
       floatingActionButton: floatingActionButton,
@@ -118,6 +133,8 @@ class GraphiteCardSurface extends StatelessWidget {
     this.margin,
     this.onTap,
     this.borderColor,
+    this.surfaceRole,
+    this.motionToken = SparkleMotionToken.standard,
   });
 
   final Widget child;
@@ -125,14 +142,24 @@ class GraphiteCardSurface extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
   final Color? borderColor;
+  final SparkleSurfaceRole? surfaceRole;
+  final SparkleMotionToken motionToken;
 
   @override
   Widget build(BuildContext context) {
-    final content = Container(
+    final duration = DS.motionDuration(
+      motionToken,
+      reduceMotion: context.reduceMotion,
+    );
+    final content = AnimatedContainer(
+      duration: duration,
+      curve: DS.motionCurve(motionToken),
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: DS.surfaceOverlay,
+        color: surfaceRole != null
+            ? DS.surfaceRoleColor(surfaceRole!)
+            : DS.surfaceOverlay,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: borderColor ?? DS.borderSubtle,
@@ -157,24 +184,32 @@ class GraphiteModalSurface extends StatelessWidget {
     super.key,
     this.title,
     this.padding = const EdgeInsets.fromLTRB(20, 16, 20, 20),
+    this.surfaceRole = SparkleSurfaceRole.modal,
   });
 
   final Widget child;
   final String? title;
   final EdgeInsetsGeometry padding;
+  final SparkleSurfaceRole surfaceRole;
 
   @override
   Widget build(BuildContext context) {
+    final duration = DS.motionDuration(
+      SparkleMotionToken.standard,
+      reduceMotion: context.reduceMotion,
+    );
     return SafeArea(
       top: false,
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
+          child: AnimatedContainer(
+            duration: duration,
+            curve: DS.motionCurve(SparkleMotionToken.standard),
             padding: padding,
             decoration: BoxDecoration(
-              color: DS.surfaceOverlay,
+              color: DS.surfaceRoleColor(surfaceRole),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
@@ -240,4 +275,45 @@ class GraphiteSectionTitle extends StatelessWidget {
       ],
     );
   }
+}
+
+class SparklePageScaffold extends StatelessWidget {
+  const SparklePageScaffold({
+    required this.child,
+    required this.role,
+    super.key,
+    this.appBar,
+    this.floatingActionButton,
+    this.bottomNavigationBar,
+    this.extendBodyBehindAppBar = false,
+    this.safeArea = true,
+    this.padding,
+    this.backgroundGradient,
+    this.motionToken = SparkleMotionToken.standard,
+  });
+
+  final Widget child;
+  final SparklePageRole role;
+  final PreferredSizeWidget? appBar;
+  final Widget? floatingActionButton;
+  final Widget? bottomNavigationBar;
+  final bool extendBodyBehindAppBar;
+  final bool safeArea;
+  final EdgeInsetsGeometry? padding;
+  final Gradient? backgroundGradient;
+  final SparkleMotionToken motionToken;
+
+  @override
+  Widget build(BuildContext context) => GraphiteScaffold(
+        role: role,
+        appBar: appBar,
+        floatingActionButton: floatingActionButton,
+        bottomNavigationBar: bottomNavigationBar,
+        extendBodyBehindAppBar: extendBodyBehindAppBar,
+        safeArea: safeArea,
+        padding: padding,
+        backgroundGradient: backgroundGradient,
+        motionToken: motionToken,
+        child: child,
+      );
 }

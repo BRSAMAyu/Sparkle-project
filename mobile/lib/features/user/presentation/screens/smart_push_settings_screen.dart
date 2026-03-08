@@ -120,7 +120,8 @@ class _SmartPushSettingsScreenState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.settings,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -150,45 +151,63 @@ class _SmartPushSettingsScreenState
               ),
           ],
         ),
-        body: ContentConstraint(
+        child: ContentConstraint(
           child: ListView(
             padding: const EdgeInsets.all(DS.lg),
             children: [
-              _buildSectionTitle('角色设定 (Persona)'),
-              const SizedBox(height: DS.sm),
-              _buildPersonaSelector(),
-              const SizedBox(height: DS.xl),
-              _buildSectionTitle('频控设置 (每日上限)'),
-              _buildFrequencySlider(),
-              const SizedBox(height: DS.xl),
-              _buildSectionTitle('活跃时间段 (Active Slots)'),
-              Text(
-                '仅在这些时间段内发送推送，避开休息时间。',
-                style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+              GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('角色设定 (Persona)'),
+                    const SizedBox(height: DS.sm),
+                    _buildPersonaSelector(),
+                    const SizedBox(height: DS.xl),
+                    _buildSectionTitle('频控设置 (每日上限)'),
+                    _buildFrequencySlider(),
+                  ],
+                ),
               ),
-              const SizedBox(height: DS.sm),
-              _buildActiveSlotsList(),
-              const SizedBox(height: DS.sm),
-              SparkleButton(
-                onPressed: _addSlot,
-                icon: const Icon(Icons.add),
-                label: '添加时间段',
-                expand: true,
-              ),
-              const SizedBox(height: DS.spacing40),
-              const Divider(),
-              Center(
-                child: SparkleButton.ghost(
-                  onPressed: () {
-                    ref.read(notificationServiceProvider).showSmartPush(
-                      title: '⚡ 调试：记忆临界点',
-                      body: '你的 [线性代数] 正在遗忘，点击立即复习！',
-                      payload: {'taskId': 'debug_123'},
-                    );
-                    AppFeedback.info(context, '测试通知已发送 (需退回桌面查看)');
-                  },
-                  icon: const Icon(Icons.bug_report),
-                  label: '发送测试通知 (Dev)',
+              const SizedBox(height: DS.spacing20),
+              GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('活跃时间段 (Active Slots)'),
+                    Text(
+                      '仅在这些时间段内发送推送，避开休息时间。',
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: DS.sm),
+                    _buildActiveSlotsList(),
+                    const SizedBox(height: DS.sm),
+                    SparkleButton(
+                      onPressed: _addSlot,
+                      icon: const Icon(Icons.add),
+                      label: '添加时间段',
+                      expand: true,
+                    ),
+                    const SizedBox(height: DS.spacing24),
+                    const Divider(),
+                    const SizedBox(height: DS.spacing16),
+                    Center(
+                      child: SparkleButton.ghost(
+                        onPressed: () {
+                          ref.read(notificationServiceProvider).showSmartPush(
+                            title: '⚡ 调试：记忆临界点',
+                            body: '你的 [线性代数] 正在遗忘，点击立即复习！',
+                            payload: {'taskId': 'debug_123'},
+                          );
+                          AppFeedback.info(context, '测试通知已发送 (需退回桌面查看)');
+                        },
+                        icon: const Icon(Icons.bug_report),
+                        label: '发送测试通知 (Dev)',
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: DS.spacing20),

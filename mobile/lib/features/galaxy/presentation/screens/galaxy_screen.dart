@@ -1150,9 +1150,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final zoomControlsBottom =
         globalViewBottom + overlayButtonSize + overlayButtonGap;
 
-    return Scaffold(
-      backgroundColor: DS.galaxyBackground, // Deep space background
-      body: Listener(
+    return SparklePageScaffold(
+      role: SparklePageRole.immersive,
+      safeArea: false,
+      child: Listener(
         onPointerDown: (event) => _activePointers.add(event.pointer),
         onPointerUp: (event) => _activePointers.remove(event.pointer),
         onPointerCancel: (event) => _activePointers.remove(event.pointer),
@@ -1629,19 +1630,27 @@ class _GalaxyBackdropPainter extends CustomPainter {
 
   final bool isDark;
 
+  Color _mix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    final topColor = isDark
+        ? _mix(DS.deepSpaceStart, DS.brandSecondary, 0.16)
+        : const Color(0xFFD9E6F5);
+    final midColor = isDark
+        ? _mix(DS.deepSpaceEnd, DS.brandPrimary, 0.10)
+        : const Color(0xFFBED0E6);
+    final bottomColor =
+        isDark ? const Color(0xFF09111B) : const Color(0xFFF3F7FB);
     final background = Paint()
       ..shader = RadialGradient(
-        center: const Alignment(0, -0.18),
-        radius: 1.12,
+        center: const Alignment(0, -0.14),
+        radius: 1.2,
         colors: [
-          (isDark ? const Color(0xFF263545) : const Color(0xFFE7EDF3))
-              .withValues(alpha: 0.96),
-          (isDark ? const Color(0xFF141B24) : const Color(0xFFF3F5F7))
-              .withValues(alpha: 0.99),
-          isDark ? const Color(0xFF090D13) : const Color(0xFFFAFBFC),
+          topColor.withValues(alpha: 0.98),
+          midColor.withValues(alpha: 0.97),
+          bottomColor,
         ],
       ).createShader(rect);
     canvas.drawRect(rect, background);
@@ -1651,17 +1660,18 @@ class _GalaxyBackdropPainter extends CustomPainter {
       (
         center: Offset(size.width * 0.16, size.height * 0.24),
         radius: size.shortestSide * 0.30,
-        color: const Color(0xFF7F97B5).withValues(alpha: isDark ? 0.10 : 0.12),
+        color: DS.brandPrimary.withValues(alpha: isDark ? 0.14 : 0.10),
       ),
       (
         center: Offset(size.width * 0.84, size.height * 0.18),
         radius: size.shortestSide * 0.24,
-        color: const Color(0xFF9BAEC0).withValues(alpha: isDark ? 0.08 : 0.10),
+        color: DS.brandSecondary.withValues(alpha: isDark ? 0.12 : 0.09),
       ),
       (
         center: Offset(size.width * 0.54, size.height * 0.78),
         radius: size.shortestSide * 0.32,
-        color: const Color(0xFF3A526C).withValues(alpha: isDark ? 0.11 : 0.07),
+        color: _mix(DS.brandPrimary, DS.brandSecondary, 0.5)
+            .withValues(alpha: isDark ? 0.11 : 0.07),
       ),
     ];
     for (final glow in glows) {
@@ -1680,12 +1690,31 @@ class _GalaxyBackdropPainter extends CustomPainter {
       final x = (math.sin(index * 91.17) * 0.5 + 0.5) * size.width;
       final y = (math.cos(index * 57.31) * 0.5 + 0.5) * size.height;
       final radius = 0.6 + (index % 3) * 0.35;
-      final alpha =
-          isDark ? 0.16 + (index % 4) * 0.04 : 0.10 + (index % 4) * 0.03;
-      starPaint.color =
-          Colors.white.withValues(alpha: alpha.clamp(0.08, 0.30));
+      if (isDark) {
+        final alpha = 0.18 + (index % 4) * 0.04;
+        starPaint.color =
+            Colors.white.withValues(alpha: alpha.clamp(0.10, 0.34));
+      } else {
+        final alpha = 0.16 + (index % 4) * 0.03;
+        starPaint.color = _mix(const Color(0xFF35506F), DS.brandPrimary, 0.35)
+            .withValues(alpha: alpha.clamp(0.12, 0.26));
+      }
       canvas.drawCircle(Offset(x, y), radius, starPaint);
     }
+
+    final vignette = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.18,
+        colors: [
+          Colors.transparent,
+          Colors.transparent,
+          (isDark ? Colors.black : const Color(0xFF7B8FA7))
+              .withValues(alpha: isDark ? 0.18 : 0.08),
+        ],
+        stops: const [0.0, 0.72, 1.0],
+      ).createShader(rect);
+    canvas.drawRect(rect, vignette);
   }
 
   @override

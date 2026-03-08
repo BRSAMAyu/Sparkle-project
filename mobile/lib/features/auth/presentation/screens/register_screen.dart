@@ -70,7 +70,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // Successful registration is handled by router redirect
     });
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.auth,
+      safeArea: false,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -82,130 +84,131 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         elevation: 0,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       ),
-      body: SafeArea(
+      child: SafeArea(
         child: ContentConstraint(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.xl),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: DS.spacing20),
-                  Text(
-                    l10n.joinSparkle,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.secondary,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.all(DS.xl),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: DS.spacing20),
+                        Text(
+                          l10n.joinSparkle,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
                         ),
-                  ),
-                  const SizedBox(height: DS.xxl),
-
-                  // Username field
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: InputDecoration(
-                      labelText: l10n.username,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return l10n.pleaseEnterUsername;
-                      }
-                      if (value.length < 3) {
-                        return l10n.usernameMinLength;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DS.lg),
-
-                  // Email field
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: l10n.email,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.email_outlined),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null ||
-                          !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return l10n.invalidEmail;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DS.lg),
-
-                  // Password field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: l10n.password,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: SparkleIconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off
-                              : Icons.visibility,
+                        const SizedBox(height: DS.xxl),
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            labelText: l10n.username,
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.person_outline),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.pleaseEnterUsername;
+                            }
+                            if (value.length < 3) {
+                              return l10n.usernameMinLength;
+                            }
+                            return null;
+                          },
                         ),
-                        onPressed: () => setState(
-                          () => _isPasswordVisible = !_isPasswordVisible,
+                        const SizedBox(height: DS.lg),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: l10n.email,
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.email_outlined),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null ||
+                                !RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                    .hasMatch(value)) {
+                              return l10n.invalidEmail;
+                            }
+                            return null;
+                          },
                         ),
-                        variant: ButtonVariant.ghost,
-                        size: DS.touchTargetMinSize,
-                      ),
+                        const SizedBox(height: DS.lg),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          decoration: InputDecoration(
+                            labelText: l10n.password,
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: SparkleIconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () => setState(
+                                () => _isPasswordVisible = !_isPasswordVisible,
+                              ),
+                              variant: ButtonVariant.ghost,
+                              size: DS.touchTargetMinSize,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.length < 6) {
+                              return l10n.passwordMinLength;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: DS.lg),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: !_isPasswordVisible,
+                          decoration: InputDecoration(
+                            labelText: l10n.confirmPassword,
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.lock_person_outlined),
+                          ),
+                          validator: (value) {
+                            if (value != _passwordController.text) {
+                              return l10n.passwordsDoNotMatch;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: DS.xl),
+                        SparkleButton(
+                          label: l10n.register,
+                          onPressed: authState.isLoading ? null : _submit,
+                          variant: ButtonVariant.primary,
+                          expand: true,
+                          loading: authState.isLoading,
+                          disabled: authState.isLoading,
+                        ),
+                        const Spacer(),
+                        SparkleButton.ghost(
+                          label: l10n.hasAccount,
+                          onPressed: () => context.go('/login'),
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                      ],
                     ),
-                    validator: (value) {
-                      if (value == null || value.length < 6) {
-                        return l10n.passwordMinLength;
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: DS.lg),
-
-                  // Confirm Password field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: l10n.confirmPassword,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock_person_outlined),
-                    ),
-                    validator: (value) {
-                      if (value != _passwordController.text) {
-                        return l10n.passwordsDoNotMatch;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DS.xl),
-
-                  // Register Button
-                  SparkleButton(
-                    label: l10n.register,
-                    onPressed: authState.isLoading ? null : _submit,
-                    variant: ButtonVariant.primary,
-                    expand: true,
-                    loading: authState.isLoading,
-                    disabled: authState.isLoading,
-                  ),
-                  const SizedBox(height: DS.lg),
-
-                  // Login Link
-                  SparkleButton.ghost(
-                    label: l10n.hasAccount,
-                    onPressed: () => context.go('/login'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

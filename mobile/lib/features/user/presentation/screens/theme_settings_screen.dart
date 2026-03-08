@@ -21,7 +21,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
     final currentPreset = ref.watch(brandPresetProvider);
     final highContrast = ref.watch(highContrastProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -34,7 +35,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         foregroundColor: Theme.of(context).textTheme.titleLarge?.color,
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -44,40 +45,41 @@ class ThemeSettingsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Theme Mode Section
-                _ThemeModeSection(
-                  currentMode: currentMode,
-                  onModeChanged: themeManager.setAppThemeMode,
+                GraphiteCardSurface(
+                  child: _ThemeModeSection(
+                    currentMode: currentMode,
+                    onModeChanged: themeManager.setAppThemeMode,
+                  ),
                 ),
                 const SizedBox(height: DS.xl),
-
-                // Brand Preset Section
-                _BrandPresetSection(
-                  currentPreset: currentPreset,
-                  onPresetChanged: themeManager.setBrandPreset,
+                GraphiteCardSurface(
+                  child: _BrandPresetSection(
+                    currentPreset: currentPreset,
+                    onPresetChanged: themeManager.setBrandPreset,
+                  ),
                 ),
                 const SizedBox(height: DS.xl),
-
-                // High Contrast Section
-                _HighContrastSection(
-                  highContrast: highContrast,
-                  onToggled: themeManager.toggleHighContrast,
+                GraphiteCardSurface(
+                  child: _HighContrastSection(
+                    highContrast: highContrast,
+                    onToggled: themeManager.toggleHighContrast,
+                  ),
                 ),
                 const SizedBox(height: DS.xl),
-
-                // Reset to Defaults Button
-                _ResetButton(
-                  onPressed: () {
-                    themeManager.reset();
-                    if (context.mounted) {
-                      AppFeedback.success(context, '已恢复为默认设置');
-                    }
-                  },
+                GraphiteCardSurface(
+                  child: _ResetButton(
+                    onPressed: () {
+                      themeManager.reset();
+                      if (context.mounted) {
+                        AppFeedback.success(context, '已恢复为默认设置');
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(height: DS.xl),
-
-                // Color Preview Section
-                const _ColorPreviewSection(),
+                const GraphiteCardSurface(
+                  child: _ColorPreviewSection(),
+                ),
               ],
             ),
           ),
@@ -261,11 +263,6 @@ class _HighContrastSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          border: Border.all(color: DS.brandPrimary30),
-          borderRadius: BorderRadius.circular(DS.md),
-        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

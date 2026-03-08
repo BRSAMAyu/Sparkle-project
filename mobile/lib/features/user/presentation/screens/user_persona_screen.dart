@@ -14,11 +14,12 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(transparentProfileProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         title: const Text('我的画像'),
       ),
-      body: profileAsync.when(
+      child: profileAsync.when(
         data: (data) => _buildContent(context, ref, data, onboardingCompleted),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
@@ -118,38 +119,32 @@ class UserPersonaScreen extends ConsumerWidget {
   Widget _buildOnboardingBanner(BuildContext context, bool completed) =>
       Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: DS.secondaryGradient,
-            borderRadius: DS.borderRadius12,
-            boxShadow: DS.shadowSm,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing12),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.assignment_turned_in_outlined,
-                  color: DS.brandPrimaryConst,
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Text(
-                    completed ? '画像已完善，可随时重新填写' : '完善画像，提升个性化体验',
-                    style: TextStyle(
-                      color: DS.brandPrimaryConst,
-                      fontWeight: DS.fontWeightSemibold,
-                    ),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.accent,
+          padding: const EdgeInsets.all(DS.spacing12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.assignment_turned_in_outlined,
+                color: DS.primaryBase,
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Text(
+                  completed ? '画像已完善，可随时重新填写' : '完善画像，提升个性化体验',
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
-                SparkleButton.ghost(
-                  onPressed: () {
-                    context.push(UserRoutes.personaOnboarding);
-                  },
-                  label: completed ? '再次填写' : '开始',
-                ),
-              ],
-            ),
+              ),
+              SparkleButton.ghost(
+                onPressed: () {
+                  context.push(UserRoutes.personaOnboarding);
+                },
+                label: completed ? '再次填写' : '开始',
+              ),
+            ],
           ),
         ),
       );
@@ -168,34 +163,28 @@ class UserPersonaScreen extends ConsumerWidget {
 
   Widget _subSectionList(String title, List<Widget> items) => Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing16),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: DS.surfacePrimaryElevated,
-            borderRadius: DS.borderRadius12,
-            boxShadow: DS.shadowSm,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: DS.fontWeightSemibold,
-                    color: DS.textSecondary,
-                  ),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          padding: const EdgeInsets.all(DS.spacing12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.textSecondary,
                 ),
-                const SizedBox(height: DS.spacing8),
-                if (items.isEmpty)
-                  Text(
-                    '暂无数据',
-                    style: TextStyle(color: DS.neutral500),
-                  )
-                else
-                  ...items,
-              ],
-            ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              if (items.isEmpty)
+                Text(
+                  '暂无数据',
+                  style: TextStyle(color: DS.neutral500),
+                )
+              else
+                ...items,
+            ],
           ),
         ),
       );

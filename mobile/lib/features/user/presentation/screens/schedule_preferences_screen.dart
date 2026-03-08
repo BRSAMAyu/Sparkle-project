@@ -95,7 +95,8 @@ class _SchedulePreferencesScreenState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.settings,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -113,29 +114,32 @@ class _SchedulePreferencesScreenState
             ),
           ],
         ),
-        body: ContentConstraint(
-          child: Padding(
+        child: ContentConstraint(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(DS.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Set your fragmented time slots to receive proactive task suggestions.',
-                  style: TextStyle(color: DS.brandPrimary),
-                ),
-                const SizedBox(height: 20),
-                _buildTimeSlot(
-                  'Commute Time',
-                  _commuteStartController,
-                  _commuteEndController,
-                ),
-                const SizedBox(height: 20),
-                _buildTimeSlot(
-                  'Lunch Break',
-                  _lunchStartController,
-                  _lunchEndController,
-                ),
-              ],
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Set your fragmented time slots to receive proactive task suggestions.',
+                    style: TextStyle(color: DS.brandPrimary),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTimeSlot(
+                    'Commute Time',
+                    _commuteStartController,
+                    _commuteEndController,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTimeSlot(
+                    'Lunch Break',
+                    _lunchStartController,
+                    _lunchEndController,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

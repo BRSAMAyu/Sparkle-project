@@ -85,9 +85,16 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+      backgroundColor: DS.pageScaffoldBackground(SparklePageRole.dashboard),
       body: Stack(
         children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: DS.pageGradientForRole(SparklePageRole.dashboard),
+              ),
+            ),
+          ),
           // Layer 1: Weather Background
           const Positioned.fill(child: WeatherHeader()),
 
@@ -205,66 +212,74 @@ class DashboardScreen extends ConsumerWidget {
     UserModel? user,
     AppLocalizations l10n,
   ) =>
-      Padding(
-        padding: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          DS.spacing8,
-          DS.spacing8,
-          DS.spacing8,
-        ),
-        child: Row(
-          children: [
-            // Avatar and user info
-            Expanded(
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundImage: user?.avatarUrl != null
-                        ? NetworkImage(user!.avatarUrl!)
-                        : null,
-                    backgroundColor: DS.primaryBase,
-                    child: user?.avatarUrl == null
-                        ? Text((user?.nickname ?? 'U')[0].toUpperCase())
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Lv.${user?.flameLevel ?? 1}',
-                          style: TextStyle(
-                            fontSize: DS.fontSizeXs,
-                            fontWeight: DS.fontWeightBold,
-                            color: DS.warning,
-                          ),
-                        ),
-                        Text(
-                          user?.nickname ??
-                              (user?.username ?? l10n.exploreGalaxy),
-                          style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            fontWeight: DS.fontWeightBold,
-                            color: DS.brandPrimaryConst,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing8,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.glass,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing12,
             ),
-            // Theme toggle button
-            _ThemeToggleButton(
-              onTap: () {
-                ref.read(themeManagerProvider).toggleDarkMode();
-              },
+            child: Row(
+              children: [
+                // Avatar and user info
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: user?.avatarUrl != null
+                            ? NetworkImage(user!.avatarUrl!)
+                            : null,
+                        backgroundColor: DS.primaryBase,
+                        child: user?.avatarUrl == null
+                            ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Lv.${user?.flameLevel ?? 1}',
+                              style: TextStyle(
+                                fontSize: DS.fontSizeXs,
+                                fontWeight: DS.fontWeightBold,
+                                color: DS.warning,
+                              ),
+                            ),
+                            Text(
+                              user?.nickname ??
+                                  (user?.username ?? l10n.exploreGalaxy),
+                              style: TextStyle(
+                                fontSize: DS.fontSizeSm,
+                                fontWeight: DS.fontWeightBold,
+                                color: DS.brandPrimaryConst,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _ThemeToggleButton(
+                  onTap: () {
+                    ref.read(themeManagerProvider).toggleDarkMode();
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 

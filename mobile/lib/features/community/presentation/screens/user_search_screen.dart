@@ -93,7 +93,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(userSearchProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -107,9 +108,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           decoration: InputDecoration(
             hintText: 'Search users by name or username...',
             border: InputBorder.none,
-            hintStyle: TextStyle(color: DS.brandPrimary70),
+            hintStyle: TextStyle(color: DS.textSecondary),
           ),
-          style: TextStyle(color: DS.brandPrimary),
+          style: TextStyle(color: DS.textPrimary),
           onSubmitted: (_) => _handleSearch(),
           textInputAction: TextInputAction.search,
         ),
@@ -122,7 +123,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           ),
         ],
       ),
-      body: searchState.when(
+      child: searchState.when(
         data: (users) {
           if (users.isEmpty) {
             return Center(
@@ -148,8 +149,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                     const SizedBox(height: DS.md),
                 itemBuilder: (context, index) {
                   final user = users[index];
-                  return Card(
-                    elevation: 2,
+                  return GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.card,
+                    padding: EdgeInsets.zero,
                     child: ListTile(
                       leading: Stack(
                         children: [

@@ -167,7 +167,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -190,185 +191,172 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.spacing24),
-          child: Column(
-            children: [
-              // Avatar Section
-              Center(
-                child: GestureDetector(
-                  onTap: _isLoading ? null : _pickAndUploadAvatar,
-                  child: Stack(
-                    children: [
-                      SparkleAvatar(
-                        radius: 50,
-                        backgroundColor: isDark
-                            ? DS.brandPrimary.shade800
-                            : DS.brandPrimary.shade200,
-                        url: user?.avatarStatus == AvatarStatus.pending
-                            ? (user?.pendingAvatarUrl ?? user?.avatarUrl)
-                            : user?.avatarUrl,
-                        fallbackText: user?.nickname ?? user?.username ?? 'U',
-                        status: user?.avatarStatus ?? AvatarStatus.approved,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: DS.primaryBase,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark
-                                  ? DS.brandPrimary.shade900
-                                  : DS.brandPrimary,
-                              width: 2,
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Column(
+              children: [
+                // Avatar Section
+                Center(
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _pickAndUploadAvatar,
+                    child: Stack(
+                      children: [
+                        SparkleAvatar(
+                          radius: 50,
+                          backgroundColor: isDark
+                              ? DS.brandPrimary.shade800
+                              : DS.brandPrimary.shade200,
+                          url: user?.avatarStatus == AvatarStatus.pending
+                              ? (user?.pendingAvatarUrl ?? user?.avatarUrl)
+                              : user?.avatarUrl,
+                          fallbackText: user?.nickname ?? user?.username ?? 'U',
+                          status: user?.avatarStatus ?? AvatarStatus.approved,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: DS.primaryBase,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark
+                                    ? DS.brandPrimary.shade900
+                                    : DS.brandPrimary,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt_rounded,
+                              size: 16,
+                              color: DS.brandPrimaryConst,
                             ),
                           ),
-                          child: Icon(
-                            Icons.camera_alt_rounded,
-                            size: 16,
-                            color: DS.brandPrimaryConst,
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              if (user?.avatarStatus == AvatarStatus.pending) ...[
-                const SizedBox(height: DS.md),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing12,
-                    vertical: DS.spacing6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: DS.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: DS.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.hourglass_empty_rounded,
-                        size: 14,
-                        color: DS.warning,
-                      ),
-                      const SizedBox(width: DS.spacing6),
-                      Text(
-                        '新头像正在审核中...',
-                        style: TextStyle(
-                          fontSize: 12,
+                if (user?.avatarStatus == AvatarStatus.pending) ...[
+                  const SizedBox(height: DS.md),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: DS.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.hourglass_empty_rounded,
+                          size: 14,
                           color: DS.warning,
-                          fontWeight: FontWeight.bold,
                         ),
+                        const SizedBox(width: DS.spacing6),
+                        Text(
+                          '新头像正在审核中...',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: DS.warning,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: DS.sm),
+                SparkleButton(
+                  label: '更换头像',
+                  variant: ButtonVariant.ghost,
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          unawaited(_pickAndUploadAvatar());
+                        },
+                ),
+                const SizedBox(height: DS.spacing24),
+
+                // Form Fields
+                _buildInputField(
+                  label: '昵称',
+                  controller: _nicknameController,
+                  hint: '请输入昵称',
+                  icon: Icons.person_outline_rounded,
+                ),
+                const SizedBox(height: DS.spacing16),
+                _buildInputField(
+                  label: '邮箱',
+                  controller: _emailController,
+                  hint: '请输入邮箱',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: DS.spacing16),
+                _buildReadOnlyField(
+                  label: '用户名',
+                  value: user?.username ?? '',
+                  icon: Icons.badge_outlined,
+                  helperText: '用户名不可修改',
+                ),
+                const SizedBox(height: DS.spacing24),
+
+                // Security Section
+                _buildSectionHeader(isDark, '账户安全'),
+                const SizedBox(height: DS.spacing12),
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.panel,
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading:
+                        Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
+                    title: const Text(
+                      '重置密码',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      context.push(UserRoutes.passwordReset);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: DS.spacing24),
+
+                // Account Info Section
+                _buildSectionHeader(isDark, '账户信息'),
+                const SizedBox(height: DS.spacing12),
+                GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.panel,
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoRow('火焰等级', 'Lv.${user?.flameLevel ?? 1}'),
+                      _buildInfoRow(
+                        '火焰亮度',
+                        '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
+                      ),
+                      _buildInfoRow(
+                        '账户类型',
+                        user?.id.startsWith('guest') ?? false ? '游客账户' : '正式账户',
                       ),
                     ],
                   ),
                 ),
               ],
-              const SizedBox(height: DS.sm),
-              SparkleButton(
-                label: '更换头像',
-                variant: ButtonVariant.ghost,
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        unawaited(_pickAndUploadAvatar());
-                      },
-              ),
-              const SizedBox(height: DS.spacing24),
-
-              // Form Fields
-              _buildInputField(
-                label: '昵称',
-                controller: _nicknameController,
-                hint: '请输入昵称',
-                icon: Icons.person_outline_rounded,
-              ),
-              const SizedBox(height: DS.spacing16),
-              _buildInputField(
-                label: '邮箱',
-                controller: _emailController,
-                hint: '请输入邮箱',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: DS.spacing16),
-              _buildReadOnlyField(
-                label: '用户名',
-                value: user?.username ?? '',
-                icon: Icons.badge_outlined,
-                helperText: '用户名不可修改',
-              ),
-              const SizedBox(height: DS.spacing24),
-
-              // Security Section
-              _buildSectionHeader(isDark, '账户安全'),
-              const SizedBox(height: DS.spacing12),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary,
-                  borderRadius: DS.borderRadius12,
-                  border: Border.all(
-                    color: isDark
-                        ? DS.brandPrimary.shade800
-                        : DS.brandPrimary.shade200,
-                  ),
-                ),
-                child: ListTile(
-                  leading:
-                      Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
-                  title: const Text(
-                    '重置密码',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {
-                    context.push(UserRoutes.passwordReset);
-                  },
-                ),
-              ),
-
-              const SizedBox(height: DS.spacing24),
-
-              // Account Info Section
-              _buildSectionHeader(isDark, '账户信息'),
-              const SizedBox(height: DS.spacing12),
-              Container(
-                padding: const EdgeInsets.all(DS.spacing16),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? DS.brandPrimary.shade900
-                      : DS.brandPrimary.shade50,
-                  borderRadius: DS.borderRadius12,
-                  border: Border.all(
-                    color: isDark
-                        ? DS.brandPrimary.shade800
-                        : DS.brandPrimary.shade200,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow('火焰等级', 'Lv.${user?.flameLevel ?? 1}'),
-                    _buildInfoRow(
-                      '火焰亮度',
-                      '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%',
-                    ),
-                    _buildInfoRow(
-                      '账户类型',
-                      user?.id.startsWith('guest') ?? false ? '游客账户' : '正式账户',
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -420,25 +408,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             prefixIcon: Icon(icon, size: 20),
             filled: true,
             fillColor: enabled
-                ? (isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade50)
-                : (isDark
-                    ? DS.brandPrimary.shade800
-                    : DS.brandPrimary.shade100),
+                ? DS.surfaceRoleColor(SparkleSurfaceRole.panel)
+                : DS.surfaceRoleColor(SparkleSurfaceRole.elevated),
             border: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(
-                color: isDark
-                    ? DS.brandPrimary.shade700
-                    : DS.brandPrimary.shade300,
-              ),
+              borderSide: BorderSide(color: DS.borderSubtle),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(
-                color: isDark
-                    ? DS.brandPrimary.shade700
-                    : DS.brandPrimary.shade300,
-              ),
+              borderSide: BorderSide(color: DS.borderSubtle),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
@@ -446,11 +424,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(
-                color: isDark
-                    ? DS.brandPrimary.shade800
-                    : DS.brandPrimary.shade200,
-              ),
+              borderSide: BorderSide(color: DS.borderSubtle),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
@@ -495,12 +469,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           padding:
               const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
           decoration: BoxDecoration(
-            color: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade100,
+            color: DS.surfaceRoleColor(SparkleSurfaceRole.elevated),
             borderRadius: DS.borderRadius12,
-            border: Border.all(
-              color:
-                  isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade200,
-            ),
+            border: Border.all(color: DS.borderSubtle),
           ),
           child: Row(
             children: [
