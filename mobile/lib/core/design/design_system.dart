@@ -487,6 +487,7 @@ class DS {
   static Color get textSecondary => _theme.colors.textSecondary;
   static Color get textTertiary =>
       _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+  static Color get textDisabled => _theme.colors.textDisabled;
   static Color get textOnPrimary => ThemeUtils.getContrastSafeText(
         brandPrimary,
         darkText: neutral900,
@@ -499,6 +500,8 @@ class DS {
       border.withValues(alpha: _isDark ? 0.6 : 0.72);
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
+  static Color get overlay50 =>
+      (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.5);
 
   static Color get brandPrimary10 => brandPrimary.withValues(alpha: 0.1);
   static Color get brandPrimary12 => brandPrimary.withValues(alpha: 0.12);
@@ -630,6 +633,7 @@ class DS {
   static const double spacing10 = 10.0;
   static const double spacing12 = 12.0;
   static const double spacing16 = 16.0;
+  static const double spacing18 = 18.0;
   static const double spacing20 = 20.0;
   static const double spacing24 = 24.0;
   static const double spacing32 = 32.0;
@@ -712,6 +716,7 @@ class DS {
   static TextStyle get titleLarge => TypographySystem.titleLarge();
   static TextStyle get bodyLarge => TypographySystem.bodyLarge();
   static TextStyle get bodyMedium => TypographySystem.bodyMedium();
+  static TextStyle get bodySmall => TypographySystem.labelSmall();
   static TextStyle get labelLarge => TypographySystem.labelLarge();
   static TextStyle get labelSmall => TypographySystem.labelSmall();
 

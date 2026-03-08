@@ -312,11 +312,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ),
               backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
               elevation: 0,
-              iconTheme: IconThemeData(color: DS.neutral900),
+              iconTheme: IconThemeData(color: DS.textPrimary),
               title: Text(
                 activeTask.title,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: DS.neutral900),
+                style: TextStyle(color: DS.textPrimary),
               ),
             ),
             child: DecoratedBox(
@@ -404,15 +404,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 const SizedBox(height: DS.spacing16),
 
                               // 2. Task Guide Area
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: DS.brandPrimaryConst,
-                                  borderRadius: DS.borderRadius16,
-                                  boxShadow: DS.shadowMd,
-                                  border: Border.all(
-                                    color: DS.neutral200,
-                                  ),
-                                ),
+                              GraphiteCardSurface(
+                                padding: EdgeInsets.zero,
                                 child: ExpansionTile(
                                   shape:
                                       const Border(), // Remove default borders
@@ -425,20 +418,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          gradient: DS.infoGradient,
+                                          color: DS.surfaceSecondary,
                                           shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: DS.info
-                                                  .withValues(alpha: 0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
+                                          border: Border.all(
+                                            color: DS.borderSubtle,
+                                          ),
                                         ),
                                         child: Icon(
                                           Icons.description_outlined,
-                                          color: DS.brandPrimaryConst,
+                                          color: DS.primaryBase,
                                           size: 22,
                                         ),
                                       ),
@@ -492,7 +480,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                               ),
                                           code: TextStyle(
                                             backgroundColor: DS.neutral100,
-                                            color: DS.primaryDark,
+                                            color: DS.textPrimary,
                                             fontFamily: 'monospace',
                                             fontSize: DS.fontSizeSm,
                                           ),
@@ -534,91 +522,77 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 behavior: HitTestBehavior.opaque,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        DS.brandPrimary.withValues(alpha: 0.7),
-                        DS.primaryBase.withValues(alpha: 0.3),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+                    color: DS.overlay50.withValues(alpha: 0.84),
                   ),
                   child: SuccessAnimation(
                     playAnimation: true,
                     onAnimationComplete: _onCelebrationComplete,
                     child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(DS.xl),
-                            decoration: BoxDecoration(
-                              gradient: DS.successGradient,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: DS.success.withValues(alpha: 0.5),
-                                  blurRadius: 30,
-                                  spreadRadius: 10,
-                                ),
-                              ],
+                      child: GraphiteCardSurface(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(DS.xl),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: DS.borderSubtle),
+                              ),
+                              child: Icon(
+                                Icons.check_circle,
+                                color: DS.success,
+                                size: 72,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.check_circle,
-                              color: DS.brandPrimaryConst,
-                              size: 80,
-                            ),
-                          ),
-                          const SizedBox(height: DS.spacing24),
-                          Text(
-                            '任务完成！',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: DS.brandPrimaryConst,
-                                  fontWeight: DS.fontWeightBold,
-                                ),
-                          ),
-                          const SizedBox(height: DS.spacing12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing20,
-                              vertical: DS.spacing8,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: DS.warningGradient,
-                              borderRadius: DS.borderRadius20,
-                              boxShadow: DS.shadowLg,
-                            ),
-                            child: Text(
-                              '+${activeTask.difficulty * 10} 经验值',
+                            const SizedBox(height: DS.spacing24),
+                            Text(
+                              '任务完成',
                               style: Theme.of(context)
                                   .textTheme
-                                  .titleLarge
+                                  .headlineSmall
                                   ?.copyWith(
-                                    color: DS.brandPrimaryConst,
+                                    color: DS.textPrimary,
                                     fontWeight: DS.fontWeightBold,
                                   ),
                             ),
-                          ),
-                          const SizedBox(height: DS.spacing16),
-                          Text(
-                            '轻点任意位置可继续',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: DS.brandPrimaryConst
-                                      .withValues(alpha: 0.88),
-                                ),
-                          ),
-                          const SizedBox(height: DS.spacing16),
-                          SparkleButton.ghost(
-                            label: '跳过动画',
-                            onPressed: _skipCelebration,
-                          ),
-                        ],
+                            const SizedBox(height: DS.spacing12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing18,
+                                vertical: DS.spacing8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                borderRadius: DS.borderRadius20,
+                                border: Border.all(color: DS.borderSubtle),
+                              ),
+                              child: Text(
+                                '+${activeTask.difficulty * 10} 经验值',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: DS.textPrimary,
+                                      fontWeight: DS.fontWeightBold,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(height: DS.spacing16),
+                            Text(
+                              '轻点任意位置可继续',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                            const SizedBox(height: DS.spacing16),
+                            SparkleButton.ghost(
+                              label: '跳过动画',
+                              onPressed: _skipCelebration,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -631,30 +605,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   }
 
   Widget _buildFocusEntryCard(BuildContext context, TaskModel task) =>
-      Container(
+      GraphiteCardSurface(
         margin: const EdgeInsets.symmetric(horizontal: DS.spacing4),
         padding: const EdgeInsets.all(DS.xl),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              DS.primaryBase.withValues(alpha: 0.08),
-              DS.secondaryBase.withValues(alpha: 0.08),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: DS.borderRadius20,
-          border: Border.all(
-            color: DS.primaryBase.withValues(alpha: 0.2),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: DS.primaryBase.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -663,12 +616,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 Container(
                   padding: const EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
-                    gradient: DS.flameGradient,
+                    color: DS.surfaceSecondary,
                     shape: BoxShape.circle,
+                    border: Border.all(color: DS.borderSubtle),
                   ),
                   child: Icon(
                     Icons.local_fire_department_rounded,
-                    color: DS.brandPrimaryConst,
+                    color: DS.primaryBase,
                     size: 28,
                   ),
                 ),
@@ -679,7 +633,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: DS.fontWeightBold,
-                      color: DS.neutral900,
+                      color: DS.textPrimary,
                     ),
                   ),
                 ),
@@ -702,7 +656,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             CustomButton.primary(
               text: '立即开始',
               icon: Icons.arrow_forward_rounded,
-              customGradient: DS.primaryGradient,
               onPressed: () {
                 context.push('/focus/mindfulness/${task.id}');
               },
@@ -758,8 +711,9 @@ class _FeatureChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: DS.brandPrimaryConst.withValues(alpha: 0.1),
+          color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -768,7 +722,7 @@ class _FeatureChip extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(fontSize: 12, color: DS.neutral700),
+              style: TextStyle(fontSize: 12, color: DS.textSecondary),
             ),
           ],
         ),
@@ -916,7 +870,6 @@ class _BottomControls extends ConsumerWidget {
               child: CustomButton.primary(
                 text: '完成任务',
                 onPressed: () => _showCompleteDialog(context, ref),
-                customGradient: DS.successGradient,
               ),
             ),
           ],

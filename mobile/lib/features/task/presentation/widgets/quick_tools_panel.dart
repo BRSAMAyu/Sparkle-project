@@ -41,19 +41,19 @@ class QuickToolsPanel extends StatelessWidget {
           _ToolButton(
             icon: Icons.calculate_outlined,
             label: '计算器',
-            color: DS.brandPrimaryConst,
+            color: DS.primaryBase,
             onTap: () => _showTool(context, const CalculatorTool()),
           ),
           _ToolButton(
             icon: Icons.translate_outlined,
             label: '翻译',
-            color: DS.prismPurple,
+            color: DS.textSecondary,
             onTap: () => _showTool(context, const TranslatorTool()),
           ),
           _ToolButton(
             icon: Icons.note_alt_outlined,
             label: '笔记',
-            color: DS.brandPrimaryConst,
+            color: DS.primaryBase,
             onTap: () => _showTool(context, const NotesTool()),
           ),
           _ToolButton(
@@ -78,13 +78,13 @@ class QuickToolsPanel extends StatelessWidget {
           _ToolButton(
             icon: Icons.air,
             label: '呼吸',
-            color: DS.brandSecondary,
+            color: DS.textSecondary,
             onTap: () => _showTool(context, const BreathingTool()),
           ),
           _ToolButton(
             icon: Icons.bar_chart,
             label: '统计',
-            color: DS.taskReflection,
+            color: DS.textSecondary,
             onTap: () => _showTool(context, const FocusStatsTool()),
           ),
         ],
@@ -108,11 +108,8 @@ class _ToolButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Use appropriate colors based on theme
-    final bgColor = isDark
-        ? color.withValues(alpha: 0.15) // Semi-transparent for dark mode
-        : color.withValues(alpha: 0.1); // Lighter for light mode
-
-    final surfaceColor = isDark ? DS.neutral800 : DS.neutral100;
+    final bgColor = color.withValues(alpha: isDark ? 0.10 : 0.08);
+    final surfaceColor = DS.surfaceOverlay;
 
     return Semantics(
       button: true,
@@ -126,16 +123,9 @@ class _ToolButton extends StatelessWidget {
             color: surfaceColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: bgColor,
-              width: 1.5,
+              color: DS.borderSubtle,
+              width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: Column(
             children: [
@@ -153,7 +143,7 @@ class _ToolButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? DS.neutral300 : DS.neutral700,
+                  color: DS.textSecondary,
                 ),
               ),
             ],

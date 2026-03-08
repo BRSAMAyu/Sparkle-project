@@ -2778,6 +2778,7 @@ class ChatOrchestrator:
         active_db: AsyncSession | None,
         plan_id: uuid.UUID | None,
         conversation_context: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
         stream_callback,
         state: WorkflowState,
         user_context_payload: dict[str, Any] | None,
@@ -3506,6 +3507,7 @@ class ChatOrchestrator:
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
                     route_decision=route_decision, user_message=user_message, user_id=user_id, session_id=session_id,
                     active_db=active_db, plan_id=plan_id, conversation_context=conversation_context,
+                    plan_context=plan_context,
                     stream_callback=stream_callback, state=state, user_context_payload=user_context_payload,
                 )
                 if should_return:

@@ -10,7 +10,6 @@ import 'package:sparkle/features/focus/presentation/providers/mindfulness_provid
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
 import 'package:sparkle/features/focus/presentation/widgets/reflection_dialog.dart';
-import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -50,7 +49,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     // 入场动画控制器
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 280),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -58,10 +57,10 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       curve: const Interval(0, 0.4, curve: Curves.easeOut),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.96, end: 1.0).animate(
       CurvedAnimation(
         parent: _entryController,
-        curve: const Interval(0.2, 0.7, curve: Curves.elasticOut),
+        curve: const Interval(0.12, 1.0, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -185,17 +184,10 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             }
           },
           child: Scaffold(
-            backgroundColor: DS.deepSpaceStart,
+            backgroundColor: DS.surfaceCanvas,
             body: Stack(
               children: [
-                // 1. 星空背景
-                Positioned.fill(
-                  child: AnimatedStarBackground(
-                    starCount: PerformanceService.instance.focusStarCount,
-                    enableTwinkle:
-                        PerformanceService.instance.enableFocusTwinkle,
-                  ),
-                ),
+                const Positioned.fill(child: _FocusBackdrop()),
 
                 // 2. 主内容
                 SafeArea(
@@ -253,14 +245,13 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         );
       },
       loading: () => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+        backgroundColor: DS.surfaceCanvas,
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (err, stack) => Scaffold(
-        backgroundColor: DS.deepSpaceStart,
+        backgroundColor: DS.surfaceCanvas,
         body: Center(
-            child: Text('加载失败: $err',
-                style: TextStyle(color: DS.brandPrimaryConst))),
+            child: Text('加载失败: $err', style: TextStyle(color: DS.textPrimary))),
       ),
     );
   }
@@ -278,14 +269,14 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               children: [
                 Icon(
                   Icons.self_improvement_rounded,
-                  color: DS.brandPrimary.withValues(alpha: 0.7),
+                  color: DS.textSecondary,
                   size: 20,
                 ),
                 const SizedBox(width: DS.sm),
                 Text(
                   '正念模式',
                   style: TextStyle(
-                    color: DS.brandPrimary.withValues(alpha: 0.7),
+                    color: DS.textSecondary,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -299,7 +290,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               size: 40,
               icon: Icon(
                 state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                color: DS.brandPrimary.withValues(alpha: 0.7),
+                color: DS.textSecondary,
               ),
               onPressed: () {
                 if (state.isPaused) {
@@ -325,35 +316,47 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   Future<void> _returnToTaskExecution() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: DS.deepSpaceSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          '返回任务执行',
-          style: TextStyle(
-            color: DS.brandPrimaryConst,
-            fontWeight: FontWeight.bold,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: GraphiteModalSurface(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '返回任务执行',
+                style: DS.titleLarge.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                '专注记录会暂停，并返回任务执行页面。',
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.spacing20),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton(
+                      label: '取消',
+                      variant: ButtonVariant.ghost,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: SparkleButton(
+                      label: '确认返回',
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        content: Text(
-          '专注记录将暂停并返回任务页面',
-          style: TextStyle(
-            color: DS.brandPrimary.withValues(alpha: 0.7),
-          ),
-        ),
-        actions: [
-          SparkleButton(
-            label: '取消',
-            variant: ButtonVariant.ghost,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          SparkleButton(
-            label: '确认返回',
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-        ],
       ),
     );
 
@@ -370,23 +373,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     }
   }
 
-  Widget _buildTaskCard(TaskModel task) => Container(
+  Widget _buildTaskCard(TaskModel task) => GraphiteCardSurface(
         margin: const EdgeInsets.symmetric(horizontal: 40),
         padding: const EdgeInsets.all(DS.xl),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: DS.brandPrimary.withValues(alpha: 0.15),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: DS.brandPrimary.withValues(alpha: 0.3),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -394,7 +383,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             Text(
               task.title,
               style: TextStyle(
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
@@ -407,13 +396,14 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                gradient: DS.primaryGradient,
+                color: DS.surfaceSecondary,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: DS.borderSubtle),
               ),
               child: Text(
                 task.type.name.toUpperCase(),
                 style: TextStyle(
-                  color: DS.brandPrimaryConst,
+                  color: DS.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -424,8 +414,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       );
 
   Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.9, end: 1.1),
-        duration: const Duration(milliseconds: 1500),
+        tween: Tween(begin: 0.98, end: 1.02),
+        duration: const Duration(milliseconds: 1200),
         curve: Curves.easeInOut,
         builder: (context, scale, child) => Transform.scale(
           scale: scale,
@@ -441,19 +431,13 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            gradient: DS.flameGradient,
+            color: DS.surfaceSecondary,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: DS.flameCore.withValues(alpha: 0.6),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
+            border: Border.all(color: DS.borderSubtle),
           ),
           child: Icon(
             Icons.local_fire_department_rounded,
-            color: DS.brandPrimaryConst,
+            color: DS.primaryBase,
             size: 32,
           ),
         ),
@@ -468,4 +452,55 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           onPressed: _handleExit,
         ),
       );
+}
+
+class _FocusBackdrop extends StatelessWidget {
+  const _FocusBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: const Alignment(0, -0.2),
+          radius: 1.15,
+          colors: [
+            const Color(0xFF202B38).withValues(alpha: 0.96),
+            const Color(0xFF121820).withValues(alpha: 0.99),
+            const Color(0xFF090D13),
+          ],
+        ),
+      ),
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _FocusBackdropPainter(
+            starCount: PerformanceService.instance.focusStarCount.clamp(24, 56),
+          ),
+          size: Size.infinite,
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusBackdropPainter extends CustomPainter {
+  const _FocusBackdropPainter({required this.starCount});
+
+  final int starCount;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var index = 0; index < starCount; index++) {
+      final x = ((index * 73) % 97) / 97 * size.width;
+      final y = ((index * 41) % 89) / 89 * size.height;
+      final radius = 0.8 + (index % 3) * 0.3;
+      paint.color = Colors.white.withValues(alpha: 0.12 + (index % 4) * 0.03);
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FocusBackdropPainter oldDelegate) =>
+      oldDelegate.starCount != starCount;
 }

@@ -6,7 +6,7 @@ import 'package:sparkle/features/community/data/repositories/community_repositor
 import 'package:uuid/uuid.dart';
 
 class MockCommunityRepository implements CommunityRepository {
-  MockCommunityRepository();
+  MockCommunityRepository() : this._init();
 
   MockCommunityRepository._init() {
     // Create current user matching DemoDataService
@@ -324,8 +324,9 @@ class MockCommunityRepository implements CommunityRepository {
         id: id ?? const Uuid().v4(),
         username: name.toLowerCase(),
         nickname: name,
-        avatarUrl:
-            'https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed ?? name}',
+        // Keep local/demo rendering deterministic. External avatar CDNs should
+        // not be a hard dependency for community screens or tests.
+        avatarUrl: null,
         flameLevel: level,
         flameBrightness: (0.5 + (level / 40.0)).clamp(0.0, 1.0),  // 🔧 修复：确保不超过1.0
         status: status,

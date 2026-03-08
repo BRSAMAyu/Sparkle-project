@@ -36,15 +36,16 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   final TextEditingController _reflectionController = TextEditingController();
   String? _selectedReflectionOption;
   bool _reflectionSubmitted = false;
+  late bool _detailsExpanded;
 
   @override
   void initState() {
     super.initState();
+    _detailsExpanded = !_isCollapsedByDefault(_resolveActionType(widget.action));
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    unawaited(_pulseController.repeat(reverse: true));
 
     _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -54,6 +55,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       vsync: this,
       duration: SparkleMotion.fast,
     );
+
+    if (widget.onConfirm != null || widget.onDismiss != null) {
+      unawaited(_pulseController.repeat(reverse: true));
+    }
   }
 
   @override
@@ -106,6 +111,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
     final confirmLabel = _getConfirmLabel(widget.action.type);
     final dismissLabel = _getDismissLabel(widget.action.type);
+    final resolvedType = _resolveActionType(widget.action);
+    final isCollapsible = _isCollapsedByDefault(resolvedType);
 
     return GestureDetector(
       onTapDown: hasAction ? (_) => _pressController.forward() : null,
@@ -204,8 +211,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
-                          Expanded(
-                            child: Text(
+                      Expanded(
+                        child: Text(
                               _getTitleForAction(widget.action.type),
                               style: Theme.of(context)
                                   .textTheme
@@ -219,7 +226,30 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         ],
                       ),
                       const SizedBox(height: DS.spacing16),
-                      _buildContentForAction(context, widget.action),
+                      if (isCollapsible && !_detailsExpanded)
+                        _buildCollapsedPreview(context, widget.action)
+                      else
+                        _buildContentForAction(context, widget.action),
+                      if (isCollapsible) ...[
+                        const SizedBox(height: DS.spacing12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _detailsExpanded = !_detailsExpanded;
+                              });
+                            },
+                            icon: Icon(
+                              _detailsExpanded
+                                  ? Icons.unfold_less_rounded
+                                  : Icons.unfold_more_rounded,
+                              size: DS.iconSizeSm,
+                            ),
+                            label: Text(_detailsExpanded ? '收起' : '展开'),
+                          ),
+                        ),
+                      ],
                       if (hasAction) ...[
                         const SizedBox(height: DS.spacing16),
                         Row(
@@ -629,6 +659,58 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ),
       ],
     );
+  }
+
+  bool _isCollapsedByDefault(String type) {
+    switch (type) {
+      case 'source_summary':
+      case 'next_actions':
+      case 'continuity_banner':
+      case 'mode_explanation':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  Widget _buildCollapsedPreview(BuildContext context, WidgetPayload action) {
+    final preview = _collapsedPreviewText(action);
+    return Text(
+      preview,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: DS.neutral700,
+            height: 1.45,
+          ),
+    );
+  }
+
+  String _collapsedPreviewText(WidgetPayload action) {
+    switch (action.type) {
+      case 'source_summary':
+        return action.data['headline']?.toString() ??
+            action.data['evidence_summary']?.toString() ??
+            '查看本轮回答的依据与来源。';
+      case 'next_actions':
+        final actions = (action.data['actions'] as List<dynamic>? ?? [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map((item) => item['label']?.toString() ?? '')
+            .where((label) => label.isNotEmpty)
+            .take(2)
+            .join(' · ');
+        return actions.isNotEmpty
+            ? '建议操作：$actions'
+            : (action.data['title']?.toString() ?? '查看这一轮建议下一步。');
+      case 'continuity_banner':
+      case 'mode_explanation':
+        return action.data['message']?.toString() ??
+            action.data['description']?.toString() ??
+            action.data['label']?.toString() ??
+            '查看当前协作上下文。';
+      default:
+        return '';
+    }
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {

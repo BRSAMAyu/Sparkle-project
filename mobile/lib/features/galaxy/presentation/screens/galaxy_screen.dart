@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -50,8 +51,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   final Set<int> _activePointers = <int>{};
   String? _draggingNodeId;
   String? _pendingLongPressNodeId;
-  Offset? _gestureSceneFocalPoint;
+  Offset? _gestureStartFocalPoint;
   double? _gestureStartScale;
+  Matrix4? _gestureStartMatrix;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -312,21 +314,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
         return Stack(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.08),
-                    radius: 1.18,
-                    colors: [
-                      DS.primaryBase.withValues(alpha: 0.08),
-                      DS.galaxyBackground.withValues(alpha: 0.94),
-                      DS.neutral900,
-                    ],
-                  ),
-                ),
-              ),
-            ),
             Positioned.fill(
               child: RepaintBoundary(
                 child: CustomPaint(
@@ -780,8 +767,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _handleScaleStart(ScaleStartDetails details) {
     _cancelTransientCameraAnimations();
-    _gestureSceneFocalPoint = _screenToCanvas(details.localFocalPoint);
+    _gestureStartFocalPoint = details.localFocalPoint;
     _gestureStartScale = _transformationController.value.getMaxScaleOnAxis();
+    _gestureStartMatrix = _transformationController.value.clone();
     _dragStartOffset = details.localFocalPoint;
     _hasDragged = false;
     _pendingLongPressNodeId = null;
@@ -790,8 +778,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   void _handleScaleUpdate(ScaleUpdateDetails details, Size viewportSize) {
     if (_draggingNodeId != null) return;
 
-    final sceneFocal = _gestureSceneFocalPoint;
-    if (sceneFocal == null) return;
+    final startFocal = _gestureStartFocalPoint;
+    final startMatrix = _gestureStartMatrix;
+    if (startFocal == null || startMatrix == null) return;
 
     if (_dragStartOffset != null &&
         (details.localFocalPoint - _dragStartOffset!).distance > 8) {
@@ -799,24 +788,27 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     final startScale = _gestureStartScale ?? 1.0;
-    final nextScale = (startScale * details.scale).clamp(0.1, 5.0);
-
+    final nextScale = (startScale * details.scale).clamp(0.14, 4.0);
+    final scaleRatio = nextScale / startScale;
     final nextMatrix = Matrix4.identity()
       ..translateByDouble(
-        details.localFocalPoint.dx - sceneFocal.dx * nextScale,
-        details.localFocalPoint.dy - sceneFocal.dy * nextScale,
+        details.localFocalPoint.dx,
+        details.localFocalPoint.dy,
         0,
         1,
       )
-      ..scaleByDouble(nextScale, nextScale, 1, 1);
+      ..scaleByDouble(scaleRatio, scaleRatio, 1, 1)
+      ..translateByDouble(-startFocal.dx, -startFocal.dy, 0, 1);
+    nextMatrix.multiply(startMatrix);
 
     _transformationController.value =
         _clampMatrixToViewport(nextMatrix, viewportSize);
   }
 
   void _handleScaleEnd(ScaleEndDetails details) {
-    _gestureSceneFocalPoint = null;
+    _gestureStartFocalPoint = null;
     _gestureStartScale = null;
+    _gestureStartMatrix = null;
     _pendingLongPressNodeId = null;
     Future.delayed(const Duration(milliseconds: 80), () {
       _hasDragged = false;
@@ -826,7 +818,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   Matrix4 _clampMatrixToViewport(Matrix4 matrix, Size viewportSize) {
     final scale = matrix.getMaxScaleOnAxis();
-    const overscroll = 240.0;
+    const overscroll = 160.0;
     final minTranslateX =
         viewportSize.width - (_canvasSize * scale) - overscroll;
     final minTranslateY =
@@ -1117,6 +1109,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final screenSize = MediaQuery.of(context).size;
     final isLandscapeMobile = ResponsiveSystem.isLandscapeMobile(context);
     final hasTightHeight = screenSize.height < 680;
+    const overlayButtonSize = 44.0;
+    const overlayButtonGap = 12.0;
 
     final overlayInset = ResponsiveSystem.resolve(
       context: context,
@@ -1152,14 +1146,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodePreviewBottomInset =
           nodePreviewBottomInset.clamp(bottomInset + 40, bottomInset + 200);
     }
-    // Zoom controls should be positioned above the spark button (bottomInset)
-    // and reset button (bottomInset + 56). Adding 56 for reset button height + 12 gap.
-    final zoomControlsBottom = isLandscapeMobile
-        ? bottomInset + 56 + 48 + 12 // Above reset button with gap
-        : bottomInset +
-            56 +
-            48 +
-            12; // Same for portrait - consistent positioning
+    final globalViewBottom = bottomInset + overlayButtonSize + overlayButtonGap;
+    final zoomControlsBottom =
+        globalViewBottom + overlayButtonSize + overlayButtonGap;
 
     return Scaffold(
       backgroundColor: DS.galaxyBackground, // Deep space background
@@ -1188,19 +1177,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           child: Stack(
             children: [
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        DS.galaxyBackground,
-                        DS.neutral900,
-                        DS.neutral900,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
+                child: const _GalaxyBackdrop(),
               ),
 
               // 1. Star Map (Interactive)
@@ -1362,7 +1339,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 left: overlayInset,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
-                  size: 40,
+                  size: overlayButtonSize,
                   icon: Icon(Icons.explore, color: DS.brandPrimary),
                   onPressed: () {
                     unawaited(_handleGuideTap());
@@ -1376,6 +1353,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 right: overlayInset,
                 child: ZoomControls(
                   transformationController: _transformationController,
+                  viewportSize: screenSize,
                   sliderHeight: zoomSliderHeight,
                 ),
               ),
@@ -1386,7 +1364,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 right: overlayInset,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
-                  size: 48,
+                  size: overlayButtonSize,
                   icon: Icon(Icons.bolt, color: DS.brandPrimary),
                   onPressed: () {
                     if (galaxyState.nodes.isNotEmpty) {
@@ -1400,13 +1378,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               ),
 
               Positioned(
-                bottom: bottomInset + 56,
+                bottom: globalViewBottom,
                 right: overlayInset,
                 child: Tooltip(
                   message: '回到全局视图',
                   child: SparkleIconButton(
                     variant: ButtonVariant.ghost,
-                    size: 40,
+                    size: overlayButtonSize,
                     onPressed: _resetToInitialView,
                     icon: const Icon(Icons.public),
                   ),
@@ -1628,6 +1606,91 @@ class _GalaxyLabelOverlay extends StatelessWidget {
       }).toList(growable: false),
     );
   }
+}
+
+class _GalaxyBackdrop extends StatelessWidget {
+  const _GalaxyBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _GalaxyBackdropPainter(
+          isDark: Theme.of(context).brightness == Brightness.dark,
+        ),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _GalaxyBackdropPainter extends CustomPainter {
+  const _GalaxyBackdropPainter({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final background = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, -0.18),
+        radius: 1.12,
+        colors: [
+          (isDark ? const Color(0xFF263545) : const Color(0xFFE7EDF3))
+              .withValues(alpha: 0.96),
+          (isDark ? const Color(0xFF141B24) : const Color(0xFFF3F5F7))
+              .withValues(alpha: 0.99),
+          isDark ? const Color(0xFF090D13) : const Color(0xFFFAFBFC),
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, background);
+
+    final glowPaint = Paint()..blendMode = BlendMode.screen;
+    final glows = <({Offset center, double radius, Color color})>[
+      (
+        center: Offset(size.width * 0.16, size.height * 0.24),
+        radius: size.shortestSide * 0.30,
+        color: const Color(0xFF7F97B5).withValues(alpha: isDark ? 0.10 : 0.12),
+      ),
+      (
+        center: Offset(size.width * 0.84, size.height * 0.18),
+        radius: size.shortestSide * 0.24,
+        color: const Color(0xFF9BAEC0).withValues(alpha: isDark ? 0.08 : 0.10),
+      ),
+      (
+        center: Offset(size.width * 0.54, size.height * 0.78),
+        radius: size.shortestSide * 0.32,
+        color: const Color(0xFF3A526C).withValues(alpha: isDark ? 0.11 : 0.07),
+      ),
+    ];
+    for (final glow in glows) {
+      glowPaint.shader = RadialGradient(
+        colors: [
+          glow.color,
+          glow.color.withValues(alpha: glow.color.a * 0.42),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: glow.center, radius: glow.radius));
+      canvas.drawCircle(glow.center, glow.radius, glowPaint);
+    }
+
+    final starPaint = Paint()..style = PaintingStyle.fill;
+    for (var index = 0; index < 96; index++) {
+      final x = (math.sin(index * 91.17) * 0.5 + 0.5) * size.width;
+      final y = (math.cos(index * 57.31) * 0.5 + 0.5) * size.height;
+      final radius = 0.6 + (index % 3) * 0.35;
+      final alpha =
+          isDark ? 0.16 + (index % 4) * 0.04 : 0.10 + (index % 4) * 0.03;
+      starPaint.color =
+          Colors.white.withValues(alpha: alpha.clamp(0.08, 0.30));
+      canvas.drawCircle(Offset(x, y), radius, starPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GalaxyBackdropPainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
 }
 
 class _GalaxyDebugOverlay extends StatelessWidget {

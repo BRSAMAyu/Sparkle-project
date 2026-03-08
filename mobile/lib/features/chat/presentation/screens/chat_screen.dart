@@ -22,6 +22,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -33,6 +34,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _showContextControls = false;
 
   @override
   void initState() {
@@ -755,6 +757,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Calculate bottom padding for ListView to prevent messages being hidden
   /// behind fixed components at the bottom.
   double _calculateBottomPadding(BuildContext context, ChatState chatState) {
+    final isCompactMobile = _isCompactMobileContext(context);
+
+    if (isCompactMobile && !_showContextControls) {
+      return 132 + MediaQuery.of(context).padding.bottom;
+    }
+
     // Use a more generous calculation based on actual screen height
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenHeight < 700;
@@ -811,6 +819,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ChatState chatState,
     BoxConstraints constraints,
   ) {
+    final isCompactMobile = _isCompactMobileContext(context);
+    final showExpandedContext = !isCompactMobile || _showContextControls;
     final transparentMode = ref.watch(transparentModeProvider);
     ChatMessageModel? latestAssistant;
     for (final message in chatState.messages.reversed) {
@@ -827,13 +837,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         latestEnvelope['mode_explanation'] as Map<String, dynamic>?;
     final currentMode = ref.watch(chatModeProvider);
     final dynamicPrompts = _buildPromptStarters(currentMode.apiValue);
+    final activePlanId = ref.watch(activePlanProvider);
+    final activePlans = ref.watch(planListProvider.select((s) => s.activePlans));
+    final activePlan = activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (transparentMode)
+          if (isCompactMobile)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing12,
+                0,
+                DS.spacing12,
+                DS.spacing8,
+              ),
+              child: _ChatContextToggle(
+                isExpanded: _showContextControls,
+                modeLabel: currentMode.apiValue == 'standard'
+                    ? '标准对话'
+                    : currentMode.label,
+                planLabel: activePlan?.name ?? '未绑定计划',
+                onTap: () {
+                  setState(() {
+                    _showContextControls = !_showContextControls;
+                  });
+                },
+              ),
+            ),
+          if (showExpandedContext && transparentMode)
             Padding(
               padding: const EdgeInsets.only(bottom: DS.spacing12),
               child: TransparencyPanel(
@@ -852,9 +886,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 currentStepIndex: chatState.currentStepIndex,
               ),
             ),
-          const PlanSelectorPill(),
-          const ChatModeSelectorPill(),
-          if (modeExplanation != null || currentMode.apiValue != 'standard')
+          if (showExpandedContext) ...[
+            const PlanSelectorPill(),
+            const ChatModeSelectorPill(),
+          ],
+          if (showExpandedContext &&
+              (modeExplanation != null || currentMode.apiValue != 'standard'))
             Padding(
               padding: const EdgeInsets.only(
                 left: DS.spacing16,
@@ -869,7 +906,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     currentMode.description,
               ),
             ),
-          if (continuityBanner != null)
+          if (showExpandedContext && continuityBanner != null)
             Padding(
               padding: const EdgeInsets.only(
                 left: DS.spacing16,
@@ -882,8 +919,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 description: continuityBanner['message']?.toString() ?? '',
               ),
             ),
-          const IntentPredictionBar(showIdle: false),
-          if (!chatState.isSending && dynamicPrompts.isNotEmpty)
+          if (showExpandedContext) const IntentPredictionBar(showIdle: false),
+          if (showExpandedContext &&
+              !chatState.isSending &&
+              dynamicPrompts.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(
                 left: DS.spacing16,
@@ -937,6 +976,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  bool _isCompactMobileContext(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return media.orientation == Orientation.portrait &&
+        media.size.width < 430;
   }
 
   List<String> _buildPromptStarters(String mode) {
@@ -1027,6 +1072,73 @@ class _ContextStrip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatContextToggle extends StatelessWidget {
+  const _ChatContextToggle({
+    required this.isExpanded,
+    required this.modeLabel,
+    required this.planLabel,
+    required this.onTap,
+  });
+
+  final bool isExpanded;
+  final String modeLabel;
+  final String planLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: DS.borderRadius16,
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: DS.surfaceOverlay,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing10,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    '$modeLabel · ${planLabel.isEmpty ? '未绑定计划' : planLabel}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.keyboard_arrow_up_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
