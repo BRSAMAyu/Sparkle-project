@@ -13,10 +13,9 @@ class CommunityScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedState = ref.watch(feedProvider);
 
-    return Scaffold(
-      backgroundColor: DS.surfacePrimary.withValues(
-        alpha: 0,
-      ), // Background handled by parent scaffold/stack
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      safeArea: false,
       floatingActionButton: SparkleIconButton(
         variant: ButtonVariant.primary,
         size: DS.touchTargetMinSize,
@@ -25,7 +24,7 @@ class CommunityScreen extends ConsumerWidget {
           context.push(CommunityRoutes.postsCreate);
         },
       ),
-      body: SafeArea(
+      child: SafeArea(
         child: ContentConstraint(
           child: RefreshIndicator(
             onRefresh: () => ref.read(feedProvider.notifier).refresh(),
@@ -86,7 +85,7 @@ class CommunityScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
                 letterSpacing: 1.2,
               ),
             ),
@@ -95,7 +94,7 @@ class CommunityScreen extends ConsumerWidget {
               'Discover what others are learning',
               style: TextStyle(
                 fontSize: 14,
-                color: DS.brandPrimary400,
+                color: DS.textSecondary,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -150,16 +149,18 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? DS.primaryBase : DS.brandPrimary10,
+          color: isSelected
+              ? DS.surfaceRoleColor(SparkleSurfaceRole.accent)
+              : DS.surfaceRoleColor(SparkleSurfaceRole.panel),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? DS.primaryBase : DS.brandPrimary24,
+            color: isSelected ? DS.brandPrimary : DS.borderSubtle,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? DS.brandPrimary : DS.brandPrimary70,
+            color: isSelected ? DS.textPrimary : DS.textSecondary,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

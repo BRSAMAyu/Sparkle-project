@@ -13,7 +13,8 @@ class PlanHistoryScreen extends ConsumerWidget {
     final planState = ref.watch(planListProvider);
     final archivedPlans = planState.plans.where((p) => !p.isActive).toList();
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -23,7 +24,7 @@ class PlanHistoryScreen extends ConsumerWidget {
         ),
         title: const Text('历史计划'),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: RefreshIndicator(
           onRefresh: () => ref.read(planListProvider.notifier).refresh(),
           child: _buildBody(context, archivedPlans, planState.isLoading),
@@ -87,8 +88,10 @@ class _PlanHistorySection extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             ...plans.map(
-              (plan) => Card(
+              (plan) => GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.card,
                 margin: const EdgeInsets.only(bottom: DS.spacing12),
+                padding: EdgeInsets.zero,
                 child: ListTile(
                   title: Text(plan.name),
                   subtitle: Text(

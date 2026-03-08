@@ -143,8 +143,15 @@ class _TimerWidgetState extends State<TimerWidget>
               progress: progress,
               gradient: LinearGradient(
                 colors: [
-                  DS.primaryBase.withValues(alpha: 0.92),
-                  DS.textSecondary.withValues(alpha: 0.72),
+                  DS.primaryBase.withValues(alpha: 0.95),
+                  Color.lerp(
+                    DS.primaryBase,
+                    DS.surfaceTertiary,
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 0.26
+                        : 0.18,
+                  )!
+                      .withValues(alpha: 0.88),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -160,7 +167,7 @@ class _TimerWidgetState extends State<TimerWidget>
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                         fontFamily: 'monospace',
-                        color: DS.neutral900,
+                        color: DS.textPrimary,
                       ),
                 ),
               ),

@@ -118,6 +118,7 @@ class StarMapPainter extends CustomPainter {
     this.expandedEdgeNodeIdHashes = const {},
     this.nodeAnimationProgress = const {},
     this.selectionPulse = 0.0,
+    this.isDarkMode = true,
   }) {
     _preprocessData();
   }
@@ -143,6 +144,7 @@ class StarMapPainter extends CustomPainter {
   final Set<int> expandedEdgeNodeIdHashes;
   final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
+  final bool isDarkMode;
 
   // LOD Thresholds - Clear scale boundaries
   // L0: <0.2 - Sector view (centroids only)
@@ -185,6 +187,7 @@ class StarMapPainter extends CustomPainter {
                     edge.sourceId, edge.targetId, edge.relationType),
               ),
         ),
+        isDarkMode,
       );
 
   void _preprocessData() {
@@ -720,7 +723,10 @@ class StarMapPainter extends CustomPainter {
       node.name,
       pos + Offset(0, (3.0 + node.importance * 2.0) + 8),
       TextStyle(
-        color: DS.brandPrimary.withValues(alpha: node.isUnlocked ? 0.9 : 0.5),
+        color: isDarkMode
+            ? DS.brandPrimary.withValues(alpha: node.isUnlocked ? 0.9 : 0.5)
+            : Color.lerp(const Color(0xFF23384E), DS.brandPrimary, 0.28)!
+                .withValues(alpha: node.isUnlocked ? 0.94 : 0.62),
         fontSize: fontSize,
         fontWeight: node.importance >= 4 ? FontWeight.w700 : FontWeight.w600,
       ),
@@ -766,6 +772,7 @@ class StarMapPainter extends CustomPainter {
       old.showTags != showTags ||
       old.showEdgeGlow != showEdgeGlow ||
       old.selectionPulse != selectionPulse ||
+      old.isDarkMode != isDarkMode ||
       old.selectedNodeIdHash != selectedNodeIdHash ||
       old.highlightRevision != highlightRevision;
 }

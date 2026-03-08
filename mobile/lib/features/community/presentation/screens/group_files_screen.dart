@@ -51,9 +51,8 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -98,7 +97,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
           );
         },
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             Padding(
@@ -109,7 +108,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                   hintText: '搜索文件',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: isDark ? DS.neutral800 : DS.neutral100,
+                  fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -211,12 +210,9 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
   Widget _buildListItem(GroupFileInfo file) => InkWell(
         onTap: () => _openFile(file),
-        child: Container(
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
           padding: const EdgeInsets.all(DS.md),
-          decoration: BoxDecoration(
-            color: DS.neutral100,
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Row(
             children: [
               const Icon(Icons.insert_drive_file, size: 32),
@@ -233,7 +229,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '${_formatSize(file.fileSize)} · ${_statusLabel(file.status)}',
-                      style: TextStyle(color: DS.neutral600),
+                      style: TextStyle(color: DS.textSecondary),
                     ),
                   ],
                 ),
@@ -246,12 +242,9 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
 
   Widget _buildGridItem(GroupFileInfo file) => InkWell(
         onTap: () => _openFile(file),
-        child: Container(
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
           padding: const EdgeInsets.all(DS.md),
-          decoration: BoxDecoration(
-            color: DS.neutral100,
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -261,7 +254,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
               const Spacer(),
               Text(
                 _formatSize(file.fileSize),
-                style: TextStyle(color: DS.neutral600, fontSize: 12),
+                style: TextStyle(color: DS.textSecondary, fontSize: 12),
               ),
             ],
           ),

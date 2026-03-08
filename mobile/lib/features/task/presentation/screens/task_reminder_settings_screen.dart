@@ -49,9 +49,7 @@ class _TaskReminderSettingsScreenState
       final granted = await android.requestNotificationsPermission();
       if ((granted ?? false) == false && mounted) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('通知权限被拒绝，您将无法收到任务提醒')),
-          );
+          AppFeedback.warning(context, '通知权限被拒绝，您将无法收到任务提醒');
         }
       }
     }
@@ -62,12 +60,8 @@ class _TaskReminderSettingsScreenState
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: DS.surfaceBase,
-          title: Text('开启通知权限', style: TextStyle(color: DS.brandPrimary)),
-          content: Text(
-            '为了在任务到期前提醒您，请允许发送通知',
-            style: TextStyle(color: DS.brandPrimary70),
-          ),
+          title: const Text('开启通知权限'),
+          content: const Text('为了在任务到期前提醒您，请允许发送通知'),
           actions: [
             SparkleButton(
               label: '取消',
@@ -91,22 +85,18 @@ class _TaskReminderSettingsScreenState
   Widget build(BuildContext context) {
     final config = ref.watch(taskReminderConfigProvider);
 
-    return Scaffold(
-      backgroundColor: DS.deepSpaceStart,
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
       appBar: AppBar(
-        backgroundColor: DS.deepSpaceStart,
-        title: Text(
-          '任务提醒设置',
-          style: TextStyle(color: DS.brandPrimary),
-        ),
+        title: const Text('任务提醒设置'),
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           size: DS.touchTargetMinSize,
-          icon: Icon(Icons.arrow_back_ios_new, color: DS.brandPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: ListView(
           children: [
             _buildEnableSwitch(config),
@@ -122,65 +112,72 @@ class _TaskReminderSettingsScreenState
     );
   }
 
-  Widget _buildEnableSwitch(TaskReminderConfig config) => SwitchListTile(
-        title: Text('启用任务提醒', style: TextStyle(color: DS.brandPrimary)),
-        subtitle: Text(
-          '在任务到期前发送通知',
-          style: TextStyle(color: DS.brandPrimary54),
+  Widget _buildEnableSwitch(TaskReminderConfig config) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        margin: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.zero,
+        child: SwitchListTile(
+          title: const Text('启用任务提醒'),
+          subtitle: const Text('在任务到期前发送通知'),
+          value: config.enabled,
+          onChanged: (value) {
+            ref.read(taskReminderConfigProvider.notifier).updateConfig(
+                  enabled: value,
+                );
+          },
+          activeThumbColor: DS.primaryBase,
         ),
-        value: config.enabled,
-        onChanged: (value) {
-          ref.read(taskReminderConfigProvider.notifier).updateConfig(
-                enabled: value,
-              );
-        },
-        activeThumbColor: DS.primaryBase,
       );
 
-  Widget _buildReminderTimesSection(TaskReminderConfig config) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(DS.lg),
-            child: Text(
-              '提醒时间',
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+  Widget _buildReminderTimesSection(TaskReminderConfig config) =>
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        margin: const EdgeInsets.symmetric(horizontal: DS.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(DS.lg),
+              child: Text(
+                '提醒时间',
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          ...TaskReminderSettingsConfigExt.defaultReminders.map(
-            (minutes) => CheckboxListTile(
-              title: Text(
-                _formatReminderTime(minutes),
-                style: TextStyle(color: DS.brandPrimary),
-              ),
-              value: config.reminders.contains(minutes),
-              onChanged: config.enabled
-                  ? (value) {
-                      final newReminders = List<int>.from(config.reminders);
-                      if (value ?? false) {
-                        if (!newReminders.contains(minutes)) {
-                          newReminders.add(minutes);
-                          newReminders.sort();
+            ...TaskReminderSettingsConfigExt.defaultReminders.map(
+              (minutes) => CheckboxListTile(
+                title: Text(
+                  _formatReminderTime(minutes),
+                  style: TextStyle(color: DS.textPrimary),
+                ),
+                value: config.reminders.contains(minutes),
+                onChanged: config.enabled
+                    ? (value) {
+                        final newReminders = List<int>.from(config.reminders);
+                        if (value ?? false) {
+                          if (!newReminders.contains(minutes)) {
+                            newReminders.add(minutes);
+                            newReminders.sort();
+                          }
+                        } else {
+                          newReminders.remove(minutes);
                         }
-                      } else {
-                        newReminders.remove(minutes);
+                        ref
+                            .read(taskReminderConfigProvider.notifier)
+                            .updateConfig(
+                              reminders: newReminders,
+                            );
                       }
-                      ref
-                          .read(taskReminderConfigProvider.notifier)
-                          .updateConfig(
-                            reminders: newReminders,
-                          );
-                    }
-                  : null,
-              activeColor: DS.primaryBase,
-              checkColor: DS.brandPrimary,
+                    : null,
+                activeColor: DS.primaryBase,
+                checkColor: DS.textPrimary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
 
   Widget _buildRefreshButton() => Padding(
@@ -195,9 +192,7 @@ class _TaskReminderSettingsScreenState
             await scheduler.refreshAllReminders(tasks.items, config: config);
 
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已刷新所有任务提醒')),
-              );
+              AppFeedback.success(context, '已刷新所有任务提醒');
             }
           },
           icon: Icon(Icons.refresh, color: DS.brandPrimary),
@@ -214,12 +209,9 @@ class _TaskReminderSettingsScreenState
 
   Widget _buildInfoSection() => Padding(
         padding: const EdgeInsets.all(DS.lg),
-        child: Container(
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.accent,
           padding: const EdgeInsets.all(DS.lg),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary10Const,
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -230,7 +222,7 @@ class _TaskReminderSettingsScreenState
                   Text(
                     '关于任务提醒',
                     style: TextStyle(
-                      color: DS.brandPrimaryConst,
+                      color: DS.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -243,7 +235,7 @@ class _TaskReminderSettingsScreenState
                 '• 完成或删除任务会自动取消提醒\n'
                 '• 建议开启系统通知权限以接收提醒',
                 style: TextStyle(
-                  color: DS.brandPrimary70Const,
+                  color: DS.textSecondary,
                   fontSize: 13,
                   height: 1.5,
                 ),

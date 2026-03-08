@@ -94,7 +94,7 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         child: SparkleAvatar(
                           radius: 40,
-                          backgroundColor: DS.brandPrimary,
+                          backgroundColor: DS.avatarFallbackBackground,
                           url: user.avatarStatus == AvatarStatus.pending
                               ? (user.pendingAvatarUrl ?? user.avatarUrl)
                               : user.avatarUrl,
@@ -181,7 +181,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.person_outline_rounded,
               title: '个人资料',
-              gradient: DS.primaryGradient,
+              accentColor: const Color(0xFF9B7A72),
               onTap: () {
                 context.push(UserRoutes.editProfile);
               },
@@ -191,7 +191,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.tune_rounded,
               title: l10n.schedulePreferences,
-              gradient: DS.secondaryGradient,
+              accentColor: const Color(0xFF7087A6),
               onTap: () {
                 context.push(UserRoutes.settings);
               },
@@ -201,7 +201,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.psychology_alt_outlined,
               title: l10n.myPersona,
-              gradient: DS.infoGradient,
+              accentColor: const Color(0xFF8877A6),
               onTap: () {
                 context.push(UserRoutes.persona);
               },
@@ -211,7 +211,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.history_rounded,
               title: l10n.systemActivity,
-              gradient: DS.secondaryGradient,
+              accentColor: const Color(0xFF7B948E),
               onTap: () {
                 context.push(UserRoutes.systemUpdates);
               },
@@ -222,7 +222,7 @@ class ProfileScreen extends ConsumerWidget {
                 context,
                 icon: Icons.memory_rounded,
                 title: l10n.memoryControl,
-                gradient: DS.primaryGradient,
+                accentColor: const Color(0xFF6D9282),
                 onTap: () {
                   context.push(UserRoutes.memorySettings);
                 },
@@ -233,7 +233,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.language_rounded,
               title: l10n.language,
-              gradient: DS.infoGradient,
+              accentColor: const Color(0xFF6E8FAE),
               onTap: () {
                 _showLanguageDialog(context, ref);
               },
@@ -243,7 +243,7 @@ class ProfileScreen extends ConsumerWidget {
               context,
               icon: Icons.logout_rounded,
               title: l10n.logout,
-              gradient: DS.errorGradient,
+              accentColor: const Color(0xFFB06F67),
               isDestructive: true,
               onTap: () {
                 _showLogoutDialog(context, ref, l10n);
@@ -346,38 +346,49 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
-    required LinearGradient gradient,
+    required Color accentColor,
     required VoidCallback onTap,
     bool isDestructive = false,
-  }) =>
-      ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing4,
-        ),
-        leading: Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(color: DS.borderSubtle),
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing4,
+      ),
+      leading: Container(
+        padding: const EdgeInsets.all(DS.sm),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accentColor.withValues(alpha: isDark ? 0.28 : 0.20),
+              Color.lerp(accentColor, DS.surfacePrimaryElevated, 0.68)!,
+            ],
           ),
-          child: Icon(icon, color: DS.neutral0, size: 20),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isDestructive ? DS.error : DS.textPrimary,
-            fontWeight: DS.fontWeightMedium,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(
+            color: accentColor.withValues(alpha: isDark ? 0.36 : 0.18),
           ),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 16,
-          color: DS.neutral400,
+        child: Icon(icon, color: accentColor, size: 20),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDestructive ? DS.error : DS.textPrimary,
+          fontWeight: DS.fontWeightMedium,
         ),
-      );
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: 16,
+        color: DS.neutral400,
+      ),
+    );
+  }
 }
 
 class _WaveHeaderPainter extends CustomPainter {

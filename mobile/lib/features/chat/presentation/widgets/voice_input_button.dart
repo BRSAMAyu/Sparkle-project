@@ -275,14 +275,16 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
                 : null,
           ),
           child: Center(
-            child: _buildButtonContent(),
+            child: _buildButtonContent(isDark: isDark),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildButtonContent() {
+  Widget _buildButtonContent({required bool isDark}) {
+    final idleIconColor =
+        isDark ? DS.textSecondary.withValues(alpha: 0.92) : DS.neutral600;
     if (_isProcessing) {
       return SizedBox(
         width: 22,
@@ -300,14 +302,14 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
         children: [
           Icon(
             Icons.mic,
-            color: DS.brandPrimaryConst,
+            color: DS.textOnPrimary,
             size: 20,
           ),
           Text(
             _formatDuration(_recordingDuration),
             style: TextStyle(
               fontSize: 8,
-              color: DS.brandPrimaryConst,
+              color: DS.textOnPrimary,
               fontWeight: DS.fontWeightBold,
             ),
           ),
@@ -317,7 +319,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
     return Icon(
       Icons.mic_none,
-      color: DS.neutral600,
+      color: idleIconColor,
       size: 20,
     );
   }

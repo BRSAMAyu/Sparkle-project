@@ -21,6 +21,23 @@ import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
+LinearGradient _taskWarmActionGradient(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return LinearGradient(
+    colors: [
+      DS.primaryBase,
+      Color.lerp(
+            DS.primaryBase,
+            isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
+            isDark ? 0.24 : 0.16,
+          ) ??
+          DS.primaryBase,
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+}
+
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key});
 
@@ -656,6 +673,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             CustomButton.primary(
               text: '立即开始',
               icon: Icons.arrow_forward_rounded,
+              customGradient: _taskWarmActionGradient(context),
               onPressed: () {
                 context.push('/focus/mindfulness/${task.id}');
               },
@@ -816,6 +834,7 @@ class _BottomControls extends ConsumerWidget {
                     child: CustomButton.primary(
                       text: '确认完成',
                       icon: Icons.check_rounded,
+                      customGradient: _taskWarmActionGradient(context),
                       onPressed: () {
                         HapticFeedback.heavyImpact();
                         Navigator.of(ctx).pop();
@@ -869,6 +888,7 @@ class _BottomControls extends ConsumerWidget {
               flex: 2,
               child: CustomButton.primary(
                 text: '完成任务',
+                customGradient: _taskWarmActionGradient(context),
                 onPressed: () => _showCompleteDialog(context, ref),
               ),
             ),
@@ -995,13 +1015,16 @@ class _TaskExitConfirmationDialogState
                     ),
                     const SizedBox(width: DS.lg),
                     Expanded(
-                      child: CustomButton.primary(
-                        text: _getConfirmText(),
-                        onPressed: _nextStep,
-                        customGradient: _currentStep == _TaskExitStep.third
-                            ? DS.warningGradient
-                            : null,
-                      ),
+                      child: _currentStep == _TaskExitStep.third
+                          ? CustomButton.primary(
+                              text: _getConfirmText(),
+                              onPressed: _nextStep,
+                              customGradient: DS.warningGradient,
+                            )
+                          : CustomButton.secondary(
+                              text: _getConfirmText(),
+                              onPressed: _nextStep,
+                            ),
                     ),
                   ],
                 ),

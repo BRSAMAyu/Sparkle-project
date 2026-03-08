@@ -37,38 +37,32 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   Widget build(BuildContext context) {
     final cognitiveState = ref.watch(cognitiveProvider);
 
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: DS.deepSpaceGradient,
-        ),
-        child: SafeArea(
-          child: ContentConstraint(
-            child: Column(
-              children: [
-                // Custom app bar
-                _buildAppBar(context),
-
-                // Content
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadPatterns,
-                    child: cognitiveState.isLoading &&
-                            cognitiveState.patterns.isEmpty
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                DS.brandPrimary70,
-                              ),
+    return SparklePageScaffold(
+      role: SparklePageRole.immersive,
+      safeArea: false,
+      child: SafeArea(
+        child: ContentConstraint(
+          child: Column(
+            children: [
+              _buildAppBar(context),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _loadPatterns,
+                  child: cognitiveState.isLoading &&
+                          cognitiveState.patterns.isEmpty
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              DS.brandPrimary70,
                             ),
-                          )
-                        : cognitiveState.patterns.isEmpty
-                            ? _buildEmptyState()
-                            : _buildPatternList(cognitiveState.patterns),
-                  ),
+                          ),
+                        )
+                      : cognitiveState.patterns.isEmpty
+                          ? _buildEmptyState()
+                          : _buildPatternList(cognitiveState.patterns),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -96,7 +90,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimaryConst,
+                  color: DS.textPrimary,
                 ),
               ),
             ),
@@ -141,7 +135,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: DS.textPrimary,
               ),
             ),
             const SizedBox(height: DS.sm),
@@ -150,7 +144,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: DS.brandPrimary.withAlpha(150),
+                color: DS.textSecondary,
                 height: 1.5,
               ),
             ),

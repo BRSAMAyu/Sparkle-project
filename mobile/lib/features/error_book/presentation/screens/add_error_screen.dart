@@ -76,7 +76,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -102,7 +103,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Form(
           key: _formKey,
           child: ListView(

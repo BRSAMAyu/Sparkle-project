@@ -402,6 +402,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       expandedEdgeNodeIdHashes: snapshot.expandedEdgeNodeIdHashes,
       nodeAnimationProgress: const {},
       selectionPulse: 0.0,
+      isDarkMode: true,
     );
   }
 
@@ -696,6 +697,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       viewportBucket,
       nodeSample,
       edgeSample,
+      true,
     ]);
   }
 
@@ -1149,6 +1151,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final globalViewBottom = bottomInset + overlayButtonSize + overlayButtonGap;
     final zoomControlsBottom =
         globalViewBottom + overlayButtonSize + overlayButtonGap;
+    final navigationAccent = DS.secondaryLight;
+    final sparkAccent = DS.warningLight;
 
     return SparklePageScaffold(
       role: SparklePageRole.immersive,
@@ -1262,7 +1266,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: 40,
-                  icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
+                  icon: Icon(Icons.arrow_back, color: navigationAccent),
                   onPressed: () => context.pop(),
                 ),
               ),
@@ -1277,13 +1281,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 40,
-                      icon: Icon(Icons.search, color: DS.brandPrimary),
+                      icon: Icon(Icons.search, color: navigationAccent),
                       onPressed: _showSearchDialog,
                     ),
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 40,
-                      icon: Icon(Icons.refresh, color: DS.brandPrimary),
+                      icon: Icon(Icons.refresh, color: navigationAccent),
                       onPressed: () {
                         HapticFeedback.selectionClick();
                         unawaited(
@@ -1303,7 +1307,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                             _showDebugOverlay
                                 ? Icons.bug_report
                                 : Icons.bug_report_outlined,
-                            color: DS.brandPrimaryConst,
+                            color: navigationAccent,
                           ),
                           onPressed: () {
                             setState(() {
@@ -1341,7 +1345,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: overlayButtonSize,
-                  icon: Icon(Icons.explore, color: DS.brandPrimary),
+                  icon: Icon(Icons.explore, color: navigationAccent),
                   onPressed: () {
                     unawaited(_handleGuideTap());
                   },
@@ -1366,7 +1370,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: overlayButtonSize,
-                  icon: Icon(Icons.bolt, color: DS.brandPrimary),
+                  icon: Icon(Icons.bolt, color: sparkAccent),
                   onPressed: () {
                     if (galaxyState.nodes.isNotEmpty) {
                       final node = galaxyState.nodes[
@@ -1387,7 +1391,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     variant: ButtonVariant.ghost,
                     size: overlayButtonSize,
                     onPressed: _resetToInitialView,
-                    icon: const Icon(Icons.public),
+                    icon: Icon(Icons.public, color: navigationAccent),
                   ),
                 ),
               ),
@@ -1617,7 +1621,7 @@ class _GalaxyBackdrop extends StatelessWidget {
     return RepaintBoundary(
       child: CustomPaint(
         painter: _GalaxyBackdropPainter(
-          isDark: Theme.of(context).brightness == Brightness.dark,
+          isDark: true,
         ),
         size: Size.infinite,
       ),
@@ -1635,14 +1639,9 @@ class _GalaxyBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final topColor = isDark
-        ? _mix(DS.deepSpaceStart, DS.brandSecondary, 0.16)
-        : const Color(0xFFD9E6F5);
-    final midColor = isDark
-        ? _mix(DS.deepSpaceEnd, DS.brandPrimary, 0.10)
-        : const Color(0xFFBED0E6);
-    final bottomColor =
-        isDark ? const Color(0xFF09111B) : const Color(0xFFF3F7FB);
+    final topColor = _mix(DS.deepSpaceStart, DS.brandSecondary, 0.16);
+    final midColor = _mix(DS.deepSpaceEnd, DS.brandPrimary, 0.10);
+    const bottomColor = Color(0xFF09111B);
     final background = Paint()
       ..shader = RadialGradient(
         center: const Alignment(0, -0.14),
@@ -1655,30 +1654,29 @@ class _GalaxyBackdropPainter extends CustomPainter {
       ).createShader(rect);
     canvas.drawRect(rect, background);
 
-    final glowPaint = Paint()..blendMode = BlendMode.screen;
+    final glowPaint = Paint();
     final glows = <({Offset center, double radius, Color color})>[
       (
         center: Offset(size.width * 0.16, size.height * 0.24),
-        radius: size.shortestSide * 0.30,
-        color: DS.brandPrimary.withValues(alpha: isDark ? 0.14 : 0.10),
+        radius: size.shortestSide * 0.22,
+        color: const Color(0xFF7B6D73).withValues(alpha: 0.08),
       ),
       (
         center: Offset(size.width * 0.84, size.height * 0.18),
-        radius: size.shortestSide * 0.24,
-        color: DS.brandSecondary.withValues(alpha: isDark ? 0.12 : 0.09),
+        radius: size.shortestSide * 0.18,
+        color: const Color(0xFF6E82A6).withValues(alpha: 0.08),
       ),
       (
-        center: Offset(size.width * 0.54, size.height * 0.78),
-        radius: size.shortestSide * 0.32,
-        color: _mix(DS.brandPrimary, DS.brandSecondary, 0.5)
-            .withValues(alpha: isDark ? 0.11 : 0.07),
+        center: Offset(size.width * 0.52, size.height * 0.72),
+        radius: size.shortestSide * 0.22,
+        color: const Color(0xFF4F6579).withValues(alpha: 0.07),
       ),
     ];
     for (final glow in glows) {
       glowPaint.shader = RadialGradient(
         colors: [
           glow.color,
-          glow.color.withValues(alpha: glow.color.a * 0.42),
+          glow.color.withValues(alpha: glow.color.a * 0.32),
           Colors.transparent,
         ],
       ).createShader(Rect.fromCircle(center: glow.center, radius: glow.radius));
@@ -1690,15 +1688,8 @@ class _GalaxyBackdropPainter extends CustomPainter {
       final x = (math.sin(index * 91.17) * 0.5 + 0.5) * size.width;
       final y = (math.cos(index * 57.31) * 0.5 + 0.5) * size.height;
       final radius = 0.6 + (index % 3) * 0.35;
-      if (isDark) {
-        final alpha = 0.18 + (index % 4) * 0.04;
-        starPaint.color =
-            Colors.white.withValues(alpha: alpha.clamp(0.10, 0.34));
-      } else {
-        final alpha = 0.16 + (index % 4) * 0.03;
-        starPaint.color = _mix(const Color(0xFF35506F), DS.brandPrimary, 0.35)
-            .withValues(alpha: alpha.clamp(0.12, 0.26));
-      }
+      final alpha = 0.18 + (index % 4) * 0.04;
+      starPaint.color = Colors.white.withValues(alpha: alpha.clamp(0.10, 0.34));
       canvas.drawCircle(Offset(x, y), radius, starPaint);
     }
 
@@ -1709,8 +1700,7 @@ class _GalaxyBackdropPainter extends CustomPainter {
         colors: [
           Colors.transparent,
           Colors.transparent,
-          (isDark ? Colors.black : const Color(0xFF7B8FA7))
-              .withValues(alpha: isDark ? 0.18 : 0.08),
+          Colors.black.withValues(alpha: 0.18),
         ],
         stops: const [0.0, 0.72, 1.0],
       ).createShader(rect);

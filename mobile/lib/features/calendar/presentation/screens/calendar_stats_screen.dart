@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/calendar_routes.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
-import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 // Import task provider for updating tasks
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
@@ -119,15 +117,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final selectedEvents =
         notifier.getEventsForDay(_selectedDay ?? _focusedDay);
 
-    return Scaffold(
-      backgroundColor: DS.deepSpaceStart,
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      safeArea: false,
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
         onPressed: () => _showAddEventDialog(context),
         variant: ButtonVariant.primary,
         size: 56,
       ),
-      body: Stack(
+      child: Stack(
         children: [
           const Positioned.fill(child: WeatherHeader()),
           SafeArea(

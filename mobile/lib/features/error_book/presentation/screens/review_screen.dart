@@ -54,7 +54,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   Widget build(BuildContext context) {
     final reviewListAsync = ref.watch(todayReviewListProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -75,7 +76,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           ),
         ],
       ),
-      body: reviewListAsync.when(
+      child: reviewListAsync.when(
         data: (errors) {
           if (errors.isEmpty) {
             return _buildEmptyState(context);

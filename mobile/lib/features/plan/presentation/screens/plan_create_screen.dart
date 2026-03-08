@@ -12,11 +12,13 @@ class PlanCreateScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (l10n == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return const SparklePageScaffold(
+        role: SparklePageRole.content,
+        child: Center(child: CircularProgressIndicator()),
       );
     }
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(planType == 'growth'
             ? l10n.createGrowthPlan
@@ -28,28 +30,31 @@ class PlanCreateScreen extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-              const SizedBox(height: DS.lg),
-              Text(
-                l10n.featureComingSoon,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: DS.sm),
-              Text(
-                l10n.stayTuned,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.xl),
-              SparkleButton.primary(
-                label: l10n.back,
-                onPressed: () => context.pop(),
-              ),
-            ],
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.construction, size: 80, color: DS.brandPrimary),
+                const SizedBox(height: DS.lg),
+                Text(
+                  l10n.featureComingSoon,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: DS.sm),
+                Text(
+                  l10n.stayTuned,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.xl),
+                SparkleButton.primary(
+                  label: l10n.back,
+                  onPressed: () => context.pop(),
+                ),
+              ],
+            ),
           ),
         ),
       ),

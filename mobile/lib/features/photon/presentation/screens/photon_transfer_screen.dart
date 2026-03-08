@@ -36,11 +36,12 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     final balanceState = ref.watch(photonBalanceProvider);
     final currentBalance = balanceState.balance?.balance ?? 0;
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: const Text('转账光子'),
       ),
-      body: SingleChildScrollView(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(DS.xl),
         child: Form(
           key: _formKey,
@@ -48,22 +49,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Current Balance Card
-              Container(
+              GraphiteCardSurface(
+                surfaceRole: SparkleSurfaceRole.accent,
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.8),
-                      Theme.of(context).colorScheme.primary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 child: Row(
                   children: [
                     Icon(

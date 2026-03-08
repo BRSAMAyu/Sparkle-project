@@ -38,7 +38,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
   Widget build(BuildContext context) {
     final membersState = ref.watch(groupMembersProvider(widget.groupId));
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -55,15 +56,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
               icon: const Icon(Icons.person_add),
               onPressed: () {
                 // TODO: Navigate to invite members screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Invite members feature coming soon')),
-                );
+                AppFeedback.info(context, 'Invite members feature coming soon');
               },
             ),
         ],
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             // Search bar
@@ -89,7 +87,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                     borderRadius: BorderRadius.circular(DS.borderRadiusMD),
                   ),
                   filled: true,
-                  fillColor: DS.neutral50,
+                  fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                 ),
                 onChanged: (value) =>
                     setState(() => _searchQuery = value.toLowerCase()),
@@ -203,14 +201,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
     final isOwner = member.role == GroupRole.owner;
     final isAdmin = member.role == GroupRole.admin;
 
-    return Container(
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
       margin:
           const EdgeInsets.symmetric(horizontal: DS.spacing16, vertical: DS.xs),
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: BorderRadius.circular(DS.borderRadiusMD),
-        border: Border.all(color: DS.neutral200),
-      ),
+      padding: EdgeInsets.zero,
       child: ListTile(
         leading: Stack(
           children: [
@@ -241,7 +236,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                   decoration: BoxDecoration(
                     color: DS.success,
                     shape: BoxShape.circle,
-                    border: Border.all(color: DS.brandPrimaryConst, width: 2),
+                    border: Border.all(
+                      color: DS.surfaceRoleColor(SparkleSurfaceRole.card),
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -387,9 +385,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
             : null,
         onTap: () {
           // TODO: Navigate to user profile
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('View ${member.user.displayName}\'s profile')),
+          AppFeedback.info(
+            context,
+            'View ${member.user.displayName}\'s profile',
           );
         },
       ),
@@ -429,17 +427,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 .read(groupMembersProvider(widget.groupId).notifier)
                 .promoteMember(member.user.id);
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content:
-                        Text('${member.user.displayName} promoted to admin')),
+              AppFeedback.success(
+                context,
+                '${member.user.displayName} promoted to admin',
               );
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to promote: $e')),
-              );
+              AppFeedback.error(context, 'Failed to promote: $e');
             }
           }
         }
@@ -455,17 +450,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 .read(groupMembersProvider(widget.groupId).notifier)
                 .demoteMember(member.user.id);
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content:
-                        Text('${member.user.displayName} demoted to member')),
+              AppFeedback.success(
+                context,
+                '${member.user.displayName} demoted to member',
               );
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to demote: $e')),
-              );
+              AppFeedback.error(context, 'Failed to demote: $e');
             }
           }
         }
@@ -483,17 +475,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 .transferOwnership(member.user.id);
             if (mounted) {
               context.pop(); // Go back to group detail
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'Ownership transferred to ${member.user.displayName}')),
+              AppFeedback.success(
+                context,
+                'Ownership transferred to ${member.user.displayName}',
               );
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to transfer: $e')),
-              );
+              AppFeedback.error(context, 'Failed to transfer: $e');
             }
           }
         }
@@ -510,17 +499,14 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen> {
                 .read(groupMembersProvider(widget.groupId).notifier)
                 .kickMember(member.user.id);
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content:
-                        Text('${member.user.displayName} removed from group')),
+              AppFeedback.success(
+                context,
+                '${member.user.displayName} removed from group',
               );
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to remove: $e')),
-              );
+              AppFeedback.error(context, 'Failed to remove: $e');
             }
           }
         }

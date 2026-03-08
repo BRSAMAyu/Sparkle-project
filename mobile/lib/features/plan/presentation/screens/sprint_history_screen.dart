@@ -16,7 +16,8 @@ class SprintHistoryScreen extends ConsumerWidget {
     final historyState = ref.watch(sprintHistoryProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -34,7 +35,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      child: RefreshIndicator(
         onRefresh: () => ref.read(sprintHistoryProvider.notifier).refresh(),
         child: _buildBody(context, historyState, l10n),
       ),
@@ -145,15 +146,9 @@ class _SprintHistoryCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => _showDetail(context),
-      child: Container(
+      child: GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius12,
-          border: Border.all(
-            color: DS.border,
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

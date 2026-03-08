@@ -31,8 +31,8 @@ class DailyDetailScreen extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardProvider);
     final lunarData = LunarService().getLunarData(date);
 
-    return Scaffold(
-      backgroundColor: DS.surfacePrimary, // Use design system surface
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
@@ -40,12 +40,10 @@ class DailyDetailScreen extends ConsumerWidget {
           variant: ButtonVariant.ghost,
           size: DS.touchTargetMinSize,
         ),
-        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        elevation: 0,
         title: Text(DateFormat('MM月dd日').format(date)),
         centerTitle: true,
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.lg),
           child: Column(
@@ -85,19 +83,9 @@ class DailyDetailScreen extends ConsumerWidget {
     DateTime date,
     LunarData lunar,
   ) =>
-      Container(
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.accent,
         padding: const EdgeInsets.all(DS.spacing20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              DS.primaryBase.withAlpha(150),
-              DS.primaryBase.withAlpha(50),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
         child: Row(
           children: [
             Text(
@@ -167,15 +155,11 @@ class DailyDetailScreen extends ConsumerWidget {
     required IconData icon,
     required Color color,
   }) =>
-      Container(
+      GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.symmetric(
           vertical: DS.spacing16,
           horizontal: DS.spacing12,
-        ),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withAlpha(15),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: DS.brandPrimary.withAlpha(20)),
         ),
         child: Column(
           children: [

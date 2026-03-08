@@ -23,11 +23,8 @@ class SparkleAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final effectiveBackgroundColor = backgroundColor ??
-        (isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade200);
+    final effectiveBackgroundColor =
+        backgroundColor ?? DS.avatarFallbackBackground;
 
     Widget avatar;
     if (url == null || url!.isEmpty) {
@@ -127,7 +124,7 @@ class SparkleAvatar extends StatelessWidget {
               ? fallbackText![0].toUpperCase()
               : '?',
           style: TextStyle(
-            color: DS.brandPrimary.shade600,
+            color: DS.avatarFallbackForeground,
             fontSize: radius * 0.8,
             fontWeight: FontWeight.bold,
           ),

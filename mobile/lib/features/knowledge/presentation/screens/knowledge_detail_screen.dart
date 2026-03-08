@@ -17,9 +17,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
 
     return detailAsync.when(
       loading: () => const GraphiteScaffold(
+        role: SparklePageRole.content,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => GraphiteScaffold(
+        role: SparklePageRole.content,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -56,7 +58,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       floatingActionButton: SparkleButton(
         label: '生成学习路径',
         icon: const Icon(Icons.timeline),
@@ -75,7 +78,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           );
         },
       ),
-      body: CustomScrollView(
+      child: CustomScrollView(
         slivers: [
           // Hero Header with sector gradient
           SliverAppBar(

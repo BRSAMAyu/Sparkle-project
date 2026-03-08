@@ -26,7 +26,8 @@ class _SeedLibraryDetailScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(seedLibraryDetailProvider(widget.libraryId));
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(state.library?.name ?? '种子库详情'),
         actions: [
@@ -66,7 +67,7 @@ class _SeedLibraryDetailScreenState
           ),
         ],
       ),
-      body: _buildBody(context, state),
+      child: _buildBody(context, state),
     );
   }
 

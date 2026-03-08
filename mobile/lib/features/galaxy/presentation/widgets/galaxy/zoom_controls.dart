@@ -133,22 +133,20 @@ class _ZoomControlsState extends State<ZoomControls>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final controlAccent = DS.secondaryLight;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
-        color: isDark
-            ? DS.surfaceHigh.withValues(alpha: 0.7)
-            : DS.surfacePrimary.withValues(alpha: 0.8),
+        color: const Color(0xCC131B26),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? DS.neutral700 : DS.neutral300,
+          color: DS.borderStrong.withValues(alpha: 0.7),
         ),
         boxShadow: [
           BoxShadow(
-            color: DS.overlay30.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -160,7 +158,7 @@ class _ZoomControlsState extends State<ZoomControls>
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: 36,
-              icon: Icon(Icons.add, color: DS.brandPrimary),
+              icon: Icon(Icons.add, color: controlAccent),
               onPressed: () => _updateZoom(_currentScale * 1.2),
             ),
           ),
@@ -171,10 +169,10 @@ class _ZoomControlsState extends State<ZoomControls>
               child: SliderTheme(
                 data: SliderThemeData(
                   trackHeight: 2,
-                  activeTrackColor: DS.brandPrimary,
-                  inactiveTrackColor: isDark ? DS.neutral700 : DS.neutral300,
-                  thumbColor: DS.brandPrimary,
-                  overlayColor: DS.brandPrimary.withValues(alpha: 0.2),
+                  activeTrackColor: controlAccent,
+                  inactiveTrackColor: Colors.white.withValues(alpha: 0.16),
+                  thumbColor: controlAccent,
+                  overlayColor: controlAccent.withValues(alpha: 0.18),
                   thumbShape:
                       const RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape:
@@ -195,7 +193,7 @@ class _ZoomControlsState extends State<ZoomControls>
             child: Text(
               '${(_currentScale * 100).round()}%',
               style: DS.bodySmall.copyWith(
-                color: DS.textSecondary,
+                color: Colors.white.withValues(alpha: 0.82),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -205,7 +203,7 @@ class _ZoomControlsState extends State<ZoomControls>
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               size: 36,
-              icon: Icon(Icons.remove, color: DS.brandPrimary),
+              icon: Icon(Icons.remove, color: controlAccent),
               onPressed: () => _updateZoom(_currentScale / 1.2),
             ),
           ),

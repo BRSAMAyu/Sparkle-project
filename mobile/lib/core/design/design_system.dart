@@ -692,6 +692,11 @@ class DS {
       surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
   static Color get glassBorder =>
       _blend(surfaceTertiary, brandPrimary, 0.4).withValues(alpha: 0.25);
+  static Color get avatarFallbackBackground => _isDark
+      ? _blend(surfaceTertiary, brandSecondary, 0.18)
+      : _blend(surfaceSecondary, brandSecondary, 0.12);
+  static Color get avatarFallbackForeground =>
+      _isDark ? textPrimary : _shiftLightness(brandSecondary, -0.18);
   static Color get prismBlue => info;
   static Color get prismGreen => success;
   static Color get prismPurple => brandSecondary;
@@ -700,10 +705,18 @@ class DS {
       _shiftLightness(brandSecondary, _isDark ? 0.12 : -0.05);
 
   // Gradients
-  static LinearGradient get primaryGradient =>
-      _buildGradient(brandPrimary, brandSecondary);
-  static LinearGradient get secondaryGradient =>
-      _buildGradient(brandSecondary, brandPrimary);
+  static LinearGradient get primaryGradient => _buildGradient(
+        _isDark
+            ? _blend(surfaceSecondary, brandSecondary, 0.12)
+            : _blend(surfacePrimaryElevated, brandSecondary, 0.05),
+        _isDark ? surfaceTertiary : surfaceSecondary,
+      );
+  static LinearGradient get secondaryGradient => _buildGradient(
+        _isDark ? surfaceTertiary : surfacePrimaryElevated,
+        _isDark
+            ? _blend(surfaceSecondary, brandSecondary, 0.08)
+            : _blend(surfaceSecondary, brandSecondary, 0.04),
+      );
   static LinearGradient get secondaryGradientDark =>
       _buildGradient(secondaryBaseDark, brandPrimary);
   static LinearGradient get accentGradient =>

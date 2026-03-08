@@ -62,7 +62,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     // 获取统计数据
     final statsAsync = ref.watch(errorStatsProvider);
 
-    return Scaffold(
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
@@ -119,7 +120,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ],
         ),
       ),
-      body: ContentConstraint(
+      child: ContentConstraint(
         child: Column(
           children: [
             // 如果有认知维度筛选，显示提示条

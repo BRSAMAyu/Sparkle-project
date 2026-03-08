@@ -21,7 +21,8 @@ class PlanDetailScreen extends ConsumerWidget {
 
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -57,7 +58,7 @@ class PlanDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: planAsync.when(
+        child: planAsync.when(
           data: (plan) => TabBarView(
             children: [
               _PlanOverviewTab(plan: plan),
@@ -90,47 +91,42 @@ class _PlanOverviewTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(DS.lg),
         children: [
-          Card(
-            elevation: 2,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(DS.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    plan.name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  if (plan.description != null &&
-                      plan.description!.isNotEmpty) ...[
-                    const SizedBox(height: DS.sm),
-                    Text(
-                      plan.description!,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                  const SizedBox(height: DS.lg),
-                  LinearProgressIndicator(
-                    value: plan.progress,
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan.name,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                if (plan.description != null &&
+                    plan.description!.isNotEmpty) ...[
                   const SizedBox(height: DS.sm),
-                  Text('${(plan.progress * 100).toStringAsFixed(0)}% 进度'),
-                  if (targetDate != null) ...[
-                    const SizedBox(height: DS.md),
-                    Row(
-                      children: [
-                        Icon(Icons.event, size: 16, color: DS.textSecondary),
-                        const SizedBox(width: DS.xs),
-                        Text('目标日期: $targetDate'),
-                      ],
-                    ),
-                  ],
+                  Text(
+                    plan.description!,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ],
-              ),
+                const SizedBox(height: DS.lg),
+                LinearProgressIndicator(
+                  value: plan.progress,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: DS.sm),
+                Text('${(plan.progress * 100).toStringAsFixed(0)}% 进度'),
+                if (targetDate != null) ...[
+                  const SizedBox(height: DS.md),
+                  Row(
+                    children: [
+                      Icon(Icons.event, size: 16, color: DS.textSecondary),
+                      const SizedBox(width: DS.xs),
+                      Text('目标日期: $targetDate'),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: DS.lg),

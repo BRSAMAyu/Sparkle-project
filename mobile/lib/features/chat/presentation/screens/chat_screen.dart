@@ -1085,6 +1085,11 @@ class _ChatContextToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor =
+        isDark ? DS.textPrimary.withValues(alpha: 0.92) : DS.textSecondary;
+    final iconColor =
+        isDark ? DS.secondaryLight.withValues(alpha: 0.92) : DS.textSecondary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1092,9 +1097,15 @@ class _ChatContextToggle extends StatelessWidget {
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            color: DS.surfaceOverlay,
+            color: isDark
+                ? DS.surfaceTertiary.withValues(alpha: 0.92)
+                : DS.surfaceOverlay,
             borderRadius: DS.borderRadius16,
-            border: Border.all(color: DS.borderSubtle),
+            border: Border.all(
+              color: isDark
+                  ? DS.borderStrong.withValues(alpha: 0.68)
+                  : DS.borderSubtle,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -1106,7 +1117,7 @@ class _ChatContextToggle extends StatelessWidget {
                 Icon(
                   Icons.tune_rounded,
                   size: DS.iconSizeSm,
-                  color: DS.textSecondary,
+                  color: iconColor,
                 ),
                 const SizedBox(width: DS.spacing8),
                 Expanded(
@@ -1115,7 +1126,7 @@ class _ChatContextToggle extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DS.bodySmall.copyWith(
-                      color: DS.textSecondary,
+                      color: labelColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1126,7 +1137,7 @@ class _ChatContextToggle extends StatelessWidget {
                       ? Icons.keyboard_arrow_down_rounded
                       : Icons.keyboard_arrow_up_rounded,
                   size: DS.iconSizeSm,
-                  color: DS.textSecondary,
+                  color: iconColor,
                 ),
               ],
             ),
